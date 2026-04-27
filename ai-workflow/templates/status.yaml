@@ -1,0 +1,23 @@
+phase: discovery
+risk_level: medium
+requires_design: false
+current_task_id: null
+blocked_by: []
+artifacts:
+  discovery: missing
+  spec: missing
+  design: not_required
+  tasks: missing
+  test_plan: missing
+  notes: optional
+implementation:
+  ready: false
+  completed_task_ids: []
+  in_progress_task_id: null
+validation:
+  tests_green: false
+  coverage_gate_passed: false
+documentation:
+  ready: false
+  done: false
+feature_status: drafting
