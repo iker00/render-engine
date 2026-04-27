@@ -15,7 +15,7 @@ Orden recomendado de lectura:
 - [`./pages-and-navigation.md`](./pages-and-navigation.md): modelo de páginas, navegación interna y uso de `routeParams`.
 - [`./queries-and-feedback.md`](./queries-and-feedback.md): queries, precargas, mutaciones, refetch y estados de feedback.
 - [`./forms-and-validation.md`](./forms-and-validation.md): formularios, campos, items dinámicos, valores por defecto y validación básica.
-- [`./development-workflow.md`](./development-workflow.md): soporte de desarrollo local con `config.json` y panel editable.
+- [`./development-workflow.md`](./development-workflow.md): bootstrap de desarrollo local con `src/dev/config.json`, prioridad de `data-config` y límites del modo sin backend.
 
 ## Guía rápida de selección
 - Si la petición afecta al shape del JSON o a referencias dinámicas, leer `config-contract.md`.

@@ -1,0 +1,11 @@
+{
+  "api": {},
+  "pages": [
+    {
+      "id": "bootstrap-home",
+      "title": "Bootstrap Home",
+      "description": "Development config loaded from the repository."
+    }
+  ],
+  "initialPage": "bootstrap-home"
+}

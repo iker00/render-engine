@@ -4,21 +4,21 @@
 Permitir iterar sobre la configuración JSON sin depender del backend real.
 
 ## Soporte esperado en v1
-- un `config.json` local para cargar la configuración en desarrollo
-- un panel visible/ocultable para inspeccionar y editar la configuración en tiempo real
+- un `config.json` local versionado para cargar la configuración en desarrollo
+- una frontera de arranque que también pueda leer `data-config` cuando el contenedor lo aporte
 
 ## Qué debe permitir
-- cargar una configuración inicial desde fichero local
-- editar la configuración y rerenderizar
-- detectar errores de configuración con mensajes comprensibles
-- facilitar iteración de pantallas, formularios, queries y navegación sin integración backend completa
+- cargar una configuración inicial desde `src/dev/config.json` en desarrollo
+- priorizar `data-config` cuando exista en el elemento root
+- detectar errores de bootstrap con mensajes comprensibles cuando el JSON sea inválido o falte la fuente esperada
+- facilitar el arranque y la validación inicial del runtime antes de implementar capacidades funcionales
 
 ## Valor funcional
 - reduce la fricción para desarrollar el runtime
-- permite validar contratos antes de integrarlos con backend
-- ayuda a depurar referencias, layouts y estados visuales
+- permite validar el punto de entrada del runtime antes de integrarlo con backend
+- deja una base estable para evolucionar el contrato de configuración sin acoplarlo todavía al árbol React completo
 
 ## Límites de v1
 - no sustituye la integración real con backend
-- no pretende ser un editor visual completo
-- no incluye todavía herramientas avanzadas de inspección o exportación
+- no incluye todavía panel editable en vivo
+- no incluye todavía validación estructural completa del JSON ni herramientas avanzadas de inspección o exportación

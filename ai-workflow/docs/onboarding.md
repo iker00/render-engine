@@ -1,30 +1,39 @@
 # Onboarding local
 
 ## Estado actual
-La implementación todavía no existe, pero este documento fija el arranque local esperado para la v1 y evita depender de conocimiento oral cuando se haga el bootstrap técnico.
+El bootstrap técnico ya existe y permite instalar dependencias, arrancar la app localmente y validar la base del proyecto sin depender de backend real.
 
 ## Requisitos
-- versión LTS actual de Node.js
+- Node.js `22`
 - `pnpm`
-- variables de entorno solo si aparecen durante la integración real con backend
-- no se requiere backend para la iteración inicial si se usa el `config.json` local de desarrollo
+- no se requieren variables de entorno en esta fase
+- no se requiere backend para el arranque local inicial
 
 ## Primer arranque
-- instalar dependencias
-- arrancar el entorno local con la configuración de desarrollo
-- cargar una configuración JSON local
-- abrir el panel de edición/inspección de config si está habilitado
+1. Ejecutar `pnpm install`.
+2. Arrancar el entorno local con `pnpm dev`.
+3. Abrir la URL que expone Vite.
+4. Verificar que el shell muestra `src/dev/config.json` como fuente activa cuando el contenedor no aporta `data-config`.
+
+## Resolución de configuración
+- Si el elemento root expone `data-config`, esa configuración tiene prioridad.
+- Si `data-config` no existe y la app corre en desarrollo, se usa `src/dev/config.json`.
+- Si el JSON de `data-config` no se puede parsear, la app muestra un error de bootstrap comprensible.
+- Si no existe ninguna fuente soportada fuera de desarrollo, la app muestra un error de bootstrap en lugar de fallar de forma opaca.
 
 ## Verificación rápida
-- comprobar que la aplicación levanta
-- comprobar que el renderer valida la configuración
-- comprobar que el panel de desarrollo refleja cambios en tiempo real
-- comprobar que una página simple con preload, formulario y lista se renderiza correctamente
-- comprobar que los tests básicos y el lint pasan
+- comprobar que `pnpm dev` levanta la aplicación sin errores de bootstrap
+- comprobar que `pnpm build` genera el bundle de producción
+- comprobar que `pnpm lint` pasa
+- comprobar que `pnpm test` pasa y aplica el gate de coverage sobre `src/`
+- comprobar que el shell refleja la fuente de configuración activa y la `initialPage`
 
 ## Estructura inicial esperada
 - `src/app/`
-- `src/features/`
-- `src/shared/`
-- `src/tests/` o `tests/` según la organización final
-- `src/dev/config.json` o ubicación equivalente para la configuración local
+- `src/tests/`
+- `src/dev/config.json`
+
+## Límites del bootstrap actual
+- todavía no existe panel editable de configuración en tiempo real
+- todavía no existe validación con `Zod` del contrato funcional completo
+- todavía no existen navegación, formularios, queries ni integración real con backend

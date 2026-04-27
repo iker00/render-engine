@@ -15,3 +15,4 @@ Cada feature nueva debería usar, cuando aplique:
 La política completa está en [`../docs/workflow.md`](../docs/workflow.md).
 
 ## Completadas
+- `0001-bootstrap-project-dependencies`: bootstrap técnico reproducible con frontend de paquete único, scripts base de desarrollo/validación y carga inicial de configuración desde `data-config` o `src/dev/config.json`.

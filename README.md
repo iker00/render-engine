@@ -21,6 +21,30 @@ El proyecto actúa como runtime de UI configurable:
 - [`ai-workflow/docs/workflow.md`](ai-workflow/docs/workflow.md): workflow guiado por specs
 - [`ai-workflow/features/index.md`](ai-workflow/features/index.md): índice de features planificadas
 
+## Bootstrap local
+
+Requisitos mínimos:
+- Node.js `22`
+- `pnpm`
+
+Comandos base:
+- `pnpm install`
+- `pnpm dev`
+- `pnpm build`
+- `pnpm lint`
+- `pnpm test`
+
+Comportamiento actual del arranque:
+- en desarrollo, la app usa `src/dev/config.json` si el contenedor no aporta `data-config`
+- si existe `data-config` en el elemento root, esa fuente tiene prioridad
+- si falta una fuente soportada o el JSON es inválido, el shell muestra un error de bootstrap legible
+
 ## Estado actual
 
-La base documental ya está orientada a la nueva app, pero todavía no se ha abierto ninguna feature concreta del workflow. El siguiente paso natural es usar este contexto para redactar la primera `spec.md` cuando cerremos la feature inicial.
+El repositorio ya dispone de bootstrap técnico reproducible:
+- aplicación frontend de paquete único en la raíz
+- shell inicial renderizado con `React`
+- infraestructura de `lint`, `test` y `build`
+- frontera explícita de arranque para resolver configuración desde `data-config` o `src/dev/config.json`
+
+Todavía no existe el runtime declarativo funcional: no hay navegación, formularios, queries ni validación estructural completa del contrato JSON.
