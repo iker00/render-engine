@@ -22,6 +22,7 @@ src/
   runtime/
     layout-renderer.tsx
     layout-node-renderer.tsx
+    runtime-node-styling.ts
     runtime-page.tsx
     nodes/
       container-layout-node.tsx
@@ -36,6 +37,7 @@ Lectura operativa de esa estructura:
 - `validate-runtime-config.ts` concentra la validación previa al render y deja `config/` preparada para crecer sin mezclar contrato y lógica.
 - `layout-renderer.tsx` conserva la responsabilidad de renderizar colecciones ordenadas de nodos.
 - `layout-node-renderer.tsx` es el punto central de resolución `type -> pieza de render`.
+- `runtime-node-styling.ts` concentra la convención visual base del runtime y la compatibilidad acotada para `gap` arbitrarios.
 - `runtime/nodes/` materializa solo nodos con uso real inmediato, sin introducir subsistemas vacíos para capacidades futuras.
 
 ## Módulos previstos para próximas features
@@ -60,4 +62,5 @@ Lectura operativa de esa estructura:
 - La configuración se valida antes de renderizar y falla con errores semánticos explícitos cuando `initialPage` o `layout` no cumplen el contrato soportado.
 - La primera UI estable del runtime es un renderer estático para `container`, `heading`, `paragraph` y `list`.
 - La organización interna del runtime separa contrato, validación, render de colecciones y render concreto por nodo sin cambiar el comportamiento observable.
+- La presentación base de los nodos visibles del runtime se expresa con utilidades de `Tailwind`, con una excepción acotada basada en variable CSS para `container.props.gap` cuando llega un valor arbitrario.
 - Los errores de bootstrap y validación deben ser diagnósticos en desarrollo; en producción, los errores marcados como solo de desarrollo degradan sin mensaje visible genérico.

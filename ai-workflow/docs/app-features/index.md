@@ -10,7 +10,7 @@ Orden recomendado de lectura:
 4. [`../current-state.md`](../current-state.md) si hace falta confirmar qué está implementado hoy
 
 ## Features documentadas
-- [`./config-driven-ui-runtime.md`](./config-driven-ui-runtime.md): visión general del runtime declarativo ya implementado, su renderer estático inicial y sus límites actuales.
+- [`./config-driven-ui-runtime.md`](./config-driven-ui-runtime.md): visión general del runtime declarativo ya implementado, su renderer estático inicial, la convención visual base con `Tailwind` y sus límites actuales.
 - [`./config-contract.md`](./config-contract.md): contrato funcional del JSON soportado hoy, incluida la raíz `layout` basada en colección y las reglas de validación del arranque.
 - [`./pages-and-navigation.md`](./pages-and-navigation.md): modelo de páginas, `layout` por colección ordenada, resolución de `initialPage` y estado actual de la navegación pendiente.
 - [`./queries-and-feedback.md`](./queries-and-feedback.md): queries, precargas, mutaciones, refetch y estados de feedback.

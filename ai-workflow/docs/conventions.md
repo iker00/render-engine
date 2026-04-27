@@ -62,6 +62,19 @@ src/
 - Centralizar validaciones repetibles cuando formen parte del contrato del producto.
 - Si una regla es parcial o manual, documentarlo en vez de sobreautomatizarla.
 
+## Estilos
+
+### Principios
+- Usar `Tailwind CSS` como mecanismo por defecto para los estilos de la UI renderizada.
+- Evitar estilos inline en componentes del runtime salvo casos excepcionales y explícitamente justificados.
+- No introducir todavía una capa de theming, tokens de diseño o API visual configurable hasta que exista una feature específica para ello.
+
+### Convención
+- Los componentes visuales del runtime deben expresar su presentación con `className` y utilidades de `Tailwind`.
+- Si `container.props.gap` recibe un valor arbitrario fuera de los alias soportados, la única excepción admitida es pasar una variable CSS local para alimentar una clase de `Tailwind`; no se debe reintroducir un objeto `style` completo para toda la presentación del nodo.
+- Si un requisito visual no encaja todavía en una escala de diseño estable, se debe resolver con utilidades de `Tailwind` locales y revisables, no con un sistema de theme implícito.
+- Si una necesidad futura exige theming o tokens compartidos, debe abrirse como alcance nuevo en vez de mezclarse silenciosamente con la conversión a `Tailwind`.
+
 ## Errores
 
 ### Principios
