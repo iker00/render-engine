@@ -8,51 +8,45 @@ const devConfig: RuntimeConfig = {
   pages: [
     {
       id: 'draft-page',
-      layout: {
-        type: 'container',
-        children: [
-          {
-            type: 'heading',
-            props: {
-              text: 'Draft Page',
-              level: 1,
-            },
+      layout: [
+        {
+          type: 'heading',
+          props: {
+            text: 'Draft Page',
+            level: 1,
           },
-          {
-            type: 'paragraph',
-            props: {
-              text: 'This page should stay hidden.',
-            },
+        },
+        {
+          type: 'paragraph',
+          props: {
+            text: 'This page should stay hidden.',
           },
-        ],
-      },
+        },
+      ],
     },
     {
       id: 'dev-home',
-      layout: {
-        type: 'container',
-        children: [
-          {
-            type: 'heading',
-            props: {
-              text: 'Dev Home',
-              level: 1,
-            },
+      layout: [
+        {
+          type: 'heading',
+          props: {
+            text: 'Dev Home',
+            level: 1,
           },
-          {
-            type: 'paragraph',
-            props: {
-              text: 'Local development configuration.',
-            },
+        },
+        {
+          type: 'paragraph',
+          props: {
+            text: 'Local development configuration.',
           },
-          {
-            type: 'list',
-            props: {
-              items: ['Shown from the selected page'],
-            },
+        },
+        {
+          type: 'list',
+          props: {
+            items: ['Shown from the selected page'],
           },
-        ],
-      },
+        },
+      ],
     },
   ],
   initialPage: 'dev-home',
@@ -76,39 +70,33 @@ describe('App bootstrap', () => {
       pages: [
         {
           id: 'html-hidden',
-          layout: {
-            type: 'container',
-            children: [
-              {
-                type: 'heading',
-                props: {
-                  text: 'Hidden HTML Page',
-                  level: 1,
-                },
+          layout: [
+            {
+              type: 'heading',
+              props: {
+                text: 'Hidden HTML Page',
+                level: 1,
               },
-            ],
-          },
+            },
+          ],
         },
         {
           id: 'html-home',
-          layout: {
-            type: 'container',
-            children: [
-              {
-                type: 'heading',
-                props: {
-                  text: 'HTML Home',
-                  level: 1,
-                },
+          layout: [
+            {
+              type: 'heading',
+              props: {
+                text: 'HTML Home',
+                level: 1,
               },
-              {
-                type: 'paragraph',
-                props: {
-                  text: 'Provided by the HTML container.',
-                },
+            },
+            {
+              type: 'paragraph',
+              props: {
+                text: 'Provided by the HTML container.',
               },
-            ],
-          },
+            },
+          ],
         },
       ],
       initialPage: 'html-home',
@@ -145,21 +133,23 @@ describe('App bootstrap', () => {
           pages: [
             {
               id: 'broken-layout',
-              layout: {
-                type: 'container',
-                children: 'invalid-children',
-              },
+              layout: [
+                {
+                  type: 'container',
+                  children: 'invalid-children',
+                },
+              ],
             },
           ],
           initialPage: 'broken-layout',
-        }}
+        } as unknown as RuntimeConfig}
         isDevelopment
         rootElement={document.createElement('div')}
       />,
     )
 
     expect(screen.getByRole('heading', { name: /runtime configuration could not be loaded/i })).toBeInTheDocument()
-    expect(screen.getByText(/page "broken-layout" has an invalid layout at "layout.children"/i)).toBeInTheDocument()
+    expect(screen.getByText(/page "broken-layout" has an invalid layout at "layout\[0\]\.children"/i)).toBeInTheDocument()
   })
 
   it('shows a readable development error when a node type is not supported', () => {
@@ -170,13 +160,15 @@ describe('App bootstrap', () => {
           pages: [
             {
               id: 'unsupported-node',
-              layout: {
-                type: 'hero-banner',
-              },
+              layout: [
+                {
+                  type: 'hero-banner',
+                },
+              ],
             },
           ],
           initialPage: 'unsupported-node',
-        }}
+        } as unknown as RuntimeConfig}
         isDevelopment
         rootElement={document.createElement('div')}
       />,
@@ -184,7 +176,7 @@ describe('App bootstrap', () => {
 
     expect(screen.getByRole('heading', { name: /runtime configuration could not be loaded/i })).toBeInTheDocument()
     expect(
-      screen.getByText(/page "unsupported-node" uses unsupported layout node type "hero-banner" at "layout"/i),
+      screen.getByText(/page "unsupported-node" uses unsupported layout node type "hero-banner" at "layout\[0\]"/i),
     ).toBeInTheDocument()
   })
 
@@ -195,10 +187,12 @@ describe('App bootstrap', () => {
       pages: [
         {
           id: 'broken-layout',
-          layout: {
-            type: 'container',
-            children: 'invalid-children',
-          },
+          layout: [
+            {
+              type: 'container',
+              children: 'invalid-children',
+            },
+          ],
         },
       ],
       initialPage: 'broken-layout',
@@ -224,9 +218,11 @@ describe('App bootstrap', () => {
       pages: [
         {
           id: 'unsupported-node',
-          layout: {
-            type: 'hero-banner',
-          },
+          layout: [
+            {
+              type: 'hero-banner',
+            },
+          ],
         },
       ],
       initialPage: 'unsupported-node',

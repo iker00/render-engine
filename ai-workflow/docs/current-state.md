@@ -7,7 +7,8 @@
 - Scripts estables de `dev`, `build`, `lint` y `test` disponibles con `pnpm`.
 - Frontera de bootstrap para resolver configuración desde `data-config` o `src/dev/config.json`.
 - Validación estructural mínima del runtime config antes de renderizar.
-- Renderer estático inicial operativo para `container`, `heading`, `paragraph` y `list`.
+- Contrato de página estable con `pages[].layout` como colección ordenada de bloques y rechazo explícito del shape raíz antiguo basado en objeto.
+- Renderer estático inicial operativo para `container`, `heading`, `paragraph` y `list`, con soporte para varios hermanos en la raíz de página sin `container` sintético.
 - Resolución de `initialPage` con soporte para varias páginas declaradas y render exclusivo de la página seleccionada.
 - Manejo explícito de errores de configuración con diagnóstico visible en desarrollo y degradación silenciosa en producción para errores marcados como `development-only`.
 - Tests automatizados del bootstrap, del validador y del renderer, con gate global de coverage activo sobre `src/`.
@@ -18,6 +19,7 @@
 - No hay integración real con backend; solo existe la lectura de `data-config` como frontera de entrada.
 - No existen todavía navegación interna, formularios ni queries funcionales.
 - La sección `api` del JSON aún no se ejecuta.
+- El catálogo visual sigue limitado a `container`, `heading`, `paragraph` y `list`.
 - No se resuelven referencias dinámicas ni `routeParams`.
 
 ## Infraestructura vigente
@@ -26,7 +28,7 @@
 - Contrato de entorno explicitado con `.nvmrc`, `engines.node` y `packageManager`.
 - Estándares de testing, estilo, errores y seguridad definidos en `ai-workflow/standards/`.
 - Base de runtime estático ya integrada en la app en sustitución del shell provisional.
-- Segunda feature del workflow cerrada sobre esta base, dejando preparado el salto a navegación, formularios y datos remotos en iteraciones posteriores.
+- Tercera feature del workflow cerrada sobre esta base, simplificando la raíz de página antes de añadir navegación, formularios y datos remotos en iteraciones posteriores.
 
 ## Referencias
 

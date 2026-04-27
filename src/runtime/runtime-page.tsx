@@ -8,7 +8,7 @@ export interface RuntimePageProps {
 export function RuntimePage({ page }: RuntimePageProps) {
   return (
     <section data-testid="runtime-page">
-      <LayoutRenderer node={page.layout} />
+      <LayoutRenderer nodes={page.layout} />
     </section>
   )
 }

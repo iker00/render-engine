@@ -5,70 +5,78 @@ import { RuntimePage } from '../runtime/runtime-page'
 
 const page: RuntimePageConfig = {
   id: 'home',
-  layout: {
-    type: 'container',
-    props: {
-      direction: 'column',
-      gap: 'md',
+  layout: [
+    {
+      type: 'heading',
+      props: {
+        text: 'Welcome',
+        level: 1,
+      },
     },
-    children: [
-      {
-        type: 'heading',
-        props: {
-          text: 'Welcome',
-          level: 1,
-        },
+    {
+      type: 'paragraph',
+      props: {
+        text: 'Build forms from configuration.',
       },
-      {
-        type: 'paragraph',
-        props: {
-          text: 'Build forms from configuration.',
-        },
+    },
+    {
+      type: 'container',
+      props: {
+        direction: 'row',
+        gap: 'sm',
       },
-      {
-        type: 'container',
-        props: {
-          direction: 'row',
-          gap: 'sm',
-        },
-        children: [
-          {
-            type: 'list',
-            props: {
-              items: ['Reusable layout nodes', 'Static content'],
-            },
+      children: [
+        {
+          type: 'list',
+          props: {
+            items: ['Reusable layout nodes', 'Static content'],
           },
-        ],
-      },
-    ],
-  },
+        },
+      ],
+    },
+  ],
 }
 
 describe('RuntimePage', () => {
-  it('renders a valid layout tree with container, heading, paragraph and list', () => {
+  it('renders multiple root nodes in the declared order', () => {
     render(<RuntimePage page={page} />)
+
+    const pageRoot = screen.getByTestId('runtime-page')
+    const renderedNodes = pageRoot.querySelectorAll('[data-layout-node]')
 
     expect(screen.getByRole('heading', { name: 'Welcome', level: 1 })).toBeInTheDocument()
     expect(screen.getByText('Build forms from configuration.')).toBeInTheDocument()
     expect(screen.getByRole('list')).toBeInTheDocument()
     expect(screen.getByText('Reusable layout nodes')).toBeInTheDocument()
     expect(screen.getByText('Static content')).toBeInTheDocument()
+    expect(renderedNodes[0]).toHaveAttribute('data-layout-node', 'heading')
+    expect(renderedNodes[1]).toHaveAttribute('data-layout-node', 'paragraph')
+    expect(renderedNodes[2]).toHaveAttribute('data-layout-node', 'container')
   })
 
-  it('renders an empty container without inventing fallback content', () => {
+  it('does not add a synthetic container around root siblings', () => {
+    render(<RuntimePage page={page} />)
+
+    const pageRoot = screen.getByTestId('runtime-page')
+
+    expect(pageRoot.children).toHaveLength(3)
+    expect(pageRoot.children[0]).toHaveAttribute('data-layout-node', 'heading')
+    expect(pageRoot.children[1]).toHaveAttribute('data-layout-node', 'paragraph')
+    expect(pageRoot.children[2]).toHaveAttribute('data-layout-node', 'container')
+  })
+
+  it('renders an empty layout without inventing fallback content', () => {
     render(
       <RuntimePage
         page={{
           id: 'empty',
-          layout: {
-            type: 'container',
-          },
+          layout: [],
         }}
       />,
     )
 
     const pageRoot = screen.getByTestId('runtime-page')
-    expect(pageRoot.firstElementChild).not.toBeNull()
+    expect(pageRoot.childElementCount).toBe(0)
     expect(pageRoot).not.toHaveTextContent(/\S/)
   })
 
@@ -77,12 +85,14 @@ describe('RuntimePage', () => {
       <RuntimePage
         page={{
           id: 'empty-list',
-          layout: {
-            type: 'list',
-            props: {
-              items: [],
+          layout: [
+            {
+              type: 'list',
+              props: {
+                items: [],
+              },
             },
-          },
+          ],
         }}
       />,
     )
@@ -96,55 +106,57 @@ describe('RuntimePage', () => {
       <RuntimePage
         page={{
           id: 'leaf-nodes',
-          layout: {
-            type: 'container',
-            children: [
-              {
-                type: 'heading',
-                props: {
-                  text: 'Leaf heading',
-                  level: 2,
-                },
-                children: [
-                  {
-                    type: 'paragraph',
-                    props: {
-                      text: 'Unexpected child',
-                    },
+          layout: [
+            {
+              type: 'container',
+              children: [
+                {
+                  type: 'heading',
+                  props: {
+                    text: 'Leaf heading',
+                    level: 2,
                   },
-                ],
-              },
-              {
-                type: 'paragraph',
-                props: {
-                  text: 'Leaf paragraph',
-                },
-                children: [
-                  {
-                    type: 'heading',
-                    props: {
-                      text: 'Hidden child',
-                      level: 3,
+                  children: [
+                    {
+                      type: 'paragraph',
+                      props: {
+                        text: 'Unexpected child',
+                      },
                     },
-                  },
-                ],
-              },
-              {
-                type: 'list',
-                props: {
-                  items: ['Visible item'],
+                  ],
                 },
-                children: [
-                  {
-                    type: 'paragraph',
-                    props: {
-                      text: 'Another hidden child',
-                    },
+                {
+                  type: 'paragraph',
+                  props: {
+                    text: 'Leaf paragraph',
                   },
-                ],
-              },
-            ],
-          },
+                  children: [
+                    {
+                      type: 'heading',
+                      props: {
+                        text: 'Hidden child',
+                        level: 3,
+                      },
+                    },
+                  ],
+                },
+                {
+                  type: 'list',
+                  props: {
+                    items: ['Visible item'],
+                  },
+                  children: [
+                    {
+                      type: 'paragraph',
+                      props: {
+                        text: 'Another hidden child',
+                      },
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
         }}
       />,
     )

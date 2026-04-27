@@ -2,15 +2,17 @@ import devConfig from '../dev/config.json'
 import { AppShell } from './app-shell'
 import { readRuntimeConfig, type RuntimeConfig } from './bootstrap/read-runtime-config'
 
+const defaultDevConfig = devConfig as RuntimeConfig
+
 interface AppProps {
-  devConfigOverride?: RuntimeConfig
-  isDevelopment?: boolean
-  rootElement?: HTMLElement | null
+  devConfigOverride: RuntimeConfig
+  isDevelopment: boolean
+  rootElement: HTMLElement | null
 }
 
 export function App({
-  devConfigOverride = devConfig,
-  isDevelopment = import.meta.env.DEV,
+  devConfigOverride = defaultDevConfig,
+  isDevelopment = import.meta.env.DEV || false,
   rootElement = document.getElementById('root'),
 }: AppProps) {
   const runtimeConfig = readRuntimeConfig({

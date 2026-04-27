@@ -6,8 +6,9 @@ Definir cómo se organiza el catálogo de páginas del runtime y cuál es el alc
 ## Modelo de páginas
 - La configuración declara varias páginas en `pages`.
 - Cada página tiene un `id` único.
-- Cada página contiene su propio `layout`.
+- Cada página contiene su propio `layout` como colección ordenada de bloques.
 - En la capacidad actualmente implementada, el runtime valida todas las páginas declaradas pero solo renderiza una.
+- La página seleccionada puede empezar por varios bloques hermanos sin `container` raíz artificial.
 
 ## Página inicial
 - La configuración declara `initialPage`.

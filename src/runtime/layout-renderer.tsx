@@ -1,5 +1,5 @@
 import type { CSSProperties, ReactNode } from 'react'
-import type { LayoutNode } from '../config/runtime-config'
+import type { LayoutNode, LayoutNodeCollection } from '../config/runtime-config'
 
 const gapMap: Record<string, string> = {
   sm: '0.75rem',
@@ -8,11 +8,17 @@ const gapMap: Record<string, string> = {
 }
 
 export interface LayoutRendererProps {
-  node: LayoutNode
+  nodes: LayoutNodeCollection
 }
 
-export function LayoutRenderer({ node }: LayoutRendererProps) {
-  return renderLayoutNode(node)
+export function LayoutRenderer({ nodes }: LayoutRendererProps) {
+  return (
+    <>
+      {nodes.map((node, index) => (
+        <LayoutFragment key={node.id ?? `${node.type}-${index}`} node={node} />
+      ))}
+    </>
+  )
 }
 
 function renderLayoutNode(node: LayoutNode): ReactNode {
@@ -57,7 +63,11 @@ function renderLayoutNode(node: LayoutNode): ReactNode {
   }
 }
 
-function LayoutFragment({ node }: LayoutRendererProps) {
+interface LayoutFragmentProps {
+  node: LayoutNode
+}
+
+function LayoutFragment({ node }: LayoutFragmentProps) {
   return <>{renderLayoutNode(node)}</>
 }
 

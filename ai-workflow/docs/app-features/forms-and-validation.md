@@ -3,6 +3,11 @@
 ## Objetivo
 Soportar formularios declarativos con estado interno, campos reutilizables y validación básica.
 
+## Encaje actual en el contrato de páginas
+- El runtime actual todavía no implementa nodos `form`.
+- La raíz de `pages[].layout` ya es una colección ordenada, así que una futura feature podrá introducir formularios como bloques hermanos de primer nivel sin rehacer otra vez la estructura raíz de página.
+- La composición estructural existente sigue usando `children` en `container`; esta feature no adelanta todavía el shape interno de formularios dentro del árbol declarativo.
+
 ## Modelo de formulario
 - Cada formulario tiene `id`.
 - Los campos escriben en un estado interno por `forms.{formId}.{fieldId}`.

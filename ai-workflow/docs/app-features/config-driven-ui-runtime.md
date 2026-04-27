@@ -6,7 +6,7 @@ Renderizar la primera página estática del runtime a partir de una configuraci�
 ## Qué resuelve
 - Permite que la configuración declare varias páginas aunque, por ahora, solo se resuelva la indicada por `initialPage`.
 - Valida el contrato mínimo del runtime antes de renderizar.
-- Interpreta un árbol declarativo de layout con un catálogo inicial y acotado de nodos.
+- Interpreta un layout raíz basado en colección ordenada y un catálogo inicial y acotado de nodos.
 - Sustituye el shell provisional por una página visible renderizada desde configuración.
 
 ## Áreas funcionales principales
@@ -26,6 +26,8 @@ Cada página soportada define al menos:
 - `id`
 - `layout`
 
+En el estado actual, `layout` es una colección ordenada de bloques hermanos. La página puede empezar por varios elementos raíz sin requerir un `container` sintético.
+
 ## Catálogo inicial de nodos
 El renderer estático soporta estos nodos:
 - `container`
@@ -34,6 +36,8 @@ El renderer estático soporta estos nodos:
 - `list`
 
 Reglas funcionales vigentes:
+- La raíz de página se renderiza como colección; el runtime no inventa un `container` de layout para envolver hermanos.
+- `layout: []` es válido y resuelve una página vacía.
 - Solo `container` admite `children`.
 - `container.props` soporta `direction` y `gap`.
 - `heading.props` soporta `text` y `level`.
@@ -42,7 +46,7 @@ Reglas funcionales vigentes:
 
 ## Comportamiento de errores
 - Si `initialPage` no coincide con ninguna página declarada, el runtime muestra un error visible.
-- Si el `layout` es inválido o aparece un nodo no soportado, en desarrollo se muestra un error diagnóstico.
+- Si el `layout` es inválido, usa el shape raíz antiguo basado en objeto o aparece un nodo no soportado, en desarrollo se muestra un error diagnóstico.
 - En producción, los errores marcados como `development-only` degradan a una superficie vacía en lugar de mostrar un mensaje genérico o inventar contenido.
 
 ## Límites actuales

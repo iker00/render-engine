@@ -9,28 +9,30 @@ const devConfig: RuntimeConfig = {
   pages: [
     {
       id: 'dev-home',
-      layout: {
-        type: 'container',
-        props: {
-          direction: 'column',
-          gap: 'md',
+      layout: [
+        {
+          type: 'heading',
+          props: {
+            text: 'Dev Home',
+            level: 1,
+          },
         },
-        children: [
-          {
-            type: 'heading',
-            props: {
-              text: 'Dev Home',
-              level: 1,
-            },
+        {
+          type: 'container',
+          props: {
+            direction: 'column',
+            gap: 'md',
           },
-          {
-            type: 'paragraph',
-            props: {
-              text: 'Local development configuration.',
+          children: [
+            {
+              type: 'paragraph',
+              props: {
+                text: 'Local development configuration.',
+              },
             },
-          },
-        ],
-      },
+          ],
+        },
+      ],
     },
   ],
   initialPage: 'dev-home',
@@ -59,18 +61,15 @@ describe('readRuntimeConfig', () => {
       pages: [
         {
           id: 'html-home',
-          layout: {
-            type: 'container',
-            children: [
-              {
-                type: 'heading',
-                props: {
-                  text: 'HTML Home',
-                  level: 1,
-                },
+          layout: [
+            {
+              type: 'heading',
+              props: {
+                text: 'HTML Home',
+                level: 1,
               },
-            ],
-          },
+            },
+          ],
         },
       ],
       initialPage: 'html-home',
@@ -90,36 +89,30 @@ describe('readRuntimeConfig', () => {
         pages: [
           {
             id: 'html-home',
-            layout: {
-              type: 'container',
-              children: [
-                {
-                  type: 'heading',
-                  props: {
-                    text: 'HTML Home',
-                    level: 1,
-                  },
+            layout: [
+              {
+                type: 'heading',
+                props: {
+                  text: 'HTML Home',
+                  level: 1,
                 },
-              ],
-            },
+              },
+            ],
           },
         ],
         initialPage: 'html-home',
       },
       page: {
         id: 'html-home',
-        layout: {
-          type: 'container',
-          children: [
-            {
-              type: 'heading',
-              props: {
-                text: 'HTML Home',
-                level: 1,
-              },
+        layout: [
+          {
+            type: 'heading',
+            props: {
+              text: 'HTML Home',
+              level: 1,
             },
-          ],
-        },
+          },
+        ],
       },
     })
   })

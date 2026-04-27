@@ -44,9 +44,11 @@ export type LayoutNode =
   | ParagraphLayoutNode
   | ListLayoutNode
 
+export type LayoutNodeCollection = LayoutNode[]
+
 export interface RuntimePageConfig {
   id: string
-  layout: LayoutNode
+  layout: LayoutNodeCollection
 }
 
 export interface RuntimeConfig {
@@ -109,7 +111,7 @@ export function validateRuntimeConfig(rawConfig: unknown): RuntimeConfigValidati
       return invalidLayout(`The page at "pages[${index}].id" must be a non-empty string.`)
     }
 
-    const layoutResult = validateLayoutNode(page.layout, 'layout', page.id)
+    const layoutResult = validateLayoutCollection(page.layout, 'layout', page.id)
 
     if (layoutResult.status === 'error') {
       return layoutResult
@@ -117,7 +119,7 @@ export function validateRuntimeConfig(rawConfig: unknown): RuntimeConfigValidati
 
     pages.push({
       id: page.id,
-      layout: layoutResult.node,
+      layout: layoutResult.nodes,
     })
   }
 
@@ -144,6 +146,33 @@ export function validateRuntimeConfig(rawConfig: unknown): RuntimeConfigValidati
     status: 'ready',
     config,
     page,
+  }
+}
+
+function validateLayoutCollection(
+  rawNodes: unknown,
+  path: string,
+  pageId: string,
+): { status: 'ready'; nodes: LayoutNodeCollection } | { status: 'error'; error: RuntimeConfigError } {
+  if (!Array.isArray(rawNodes)) {
+    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}".`)
+  }
+
+  const nodes: LayoutNode[] = []
+
+  for (let index = 0; index < rawNodes.length; index += 1) {
+    const nodeResult = validateLayoutNode(rawNodes[index], `${path}[${index}]`, pageId)
+
+    if (nodeResult.status === 'error') {
+      return nodeResult
+    }
+
+    nodes.push(nodeResult.node)
+  }
+
+  return {
+    status: 'ready',
+    nodes,
   }
 }
 
@@ -189,6 +218,8 @@ function validateLayoutNode(
     case 'list':
       return validateListNode(rawNode, path, pageId)
   }
+
+  return invalidLayout(`Page "${pageId}" uses an invalid layout node at "${path}".`)
 }
 
 function validateContainerNode(
@@ -196,9 +227,13 @@ function validateContainerNode(
   path: string,
   pageId: string,
 ): { status: 'ready'; node: ContainerLayoutNode } | { status: 'error'; error: RuntimeConfigError } {
-  const props = rawNode.props
+  const props = getOptionalRecord(rawNode.props)
 
-  if (props !== undefined) {
+  if (rawNode.props !== undefined && !props) {
+    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props".`)
+  }
+
+  if (props) {
     if ('direction' in props && props.direction !== undefined && typeof props.direction !== 'string') {
       return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.direction".`)
     }
@@ -228,16 +263,10 @@ function validateContainerNode(
     return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.children".`)
   }
 
-  const children: LayoutNode[] = []
+  const childrenResult = validateLayoutCollection(rawNode.children, `${path}.children`, pageId)
 
-  for (let index = 0; index < rawNode.children.length; index += 1) {
-    const childResult = validateLayoutNode(rawNode.children[index], `${path}.children[${index}]`, pageId)
-
-    if (childResult.status === 'error') {
-      return childResult
-    }
-
-    children.push(childResult.node)
+  if (childrenResult.status === 'error') {
+    return childrenResult
   }
 
   return {
@@ -251,7 +280,7 @@ function validateContainerNode(
             gap: typeof props.gap === 'string' ? props.gap : undefined,
           }
         : undefined,
-      children,
+      children: childrenResult.nodes,
     },
   }
 }
@@ -352,4 +381,8 @@ function invalidLayout(message: string): { status: 'error'; error: RuntimeConfig
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function getOptionalRecord(value: unknown): Record<string, unknown> | undefined {
+  return isRecord(value) ? value : undefined
 }
