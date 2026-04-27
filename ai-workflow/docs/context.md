@@ -20,6 +20,7 @@ Permitir que una aplicación legacy o de negocio pueda describir pantallas y flu
 - En desarrollo debe existir un mecanismo local para cargar y editar la configuración sin depender del backend.
 - La navegación inicial es interna al renderer y no modifica la URL del navegador.
 - La configuración usa referencias string por convención, por ejemplo `queries.searchUsers.data` o `forms.user.name`, para reducir fricción con el backend legacy.
+- Mientras no exista un sistema de theming definido, los estilos del runtime deben implementarse con utilidades de `Tailwind CSS` en lugar de estilos inline u otra capa visual paralela.
 - La primera versión deja fuera autenticación, permisos, subida de archivos, tablas avanzadas y plantillas de texto interpolado complejas.
 
 ## Propiedad de datos
