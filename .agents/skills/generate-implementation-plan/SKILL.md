@@ -2,7 +2,7 @@
 name: generate-implementation-plan
 description: Genera el plan técnico de implementación para una feature de este proyecto una vez exista la spec funcional. Úsala para solicitudes de escritura de `tasks.md` y `test-plan.md`, incluyendo el impacto en código, tests y documentación de cada tarea.
 preferred_profile: heavy
-profile_rationale: La planificación debe producir tareas atómicas y contractuales que la skill de implementación pueda seguir sin reinterpretar alcance, orden ni impacto.
+profile_rationale: La planificación debe cerrar partición, dependencias, validación e impacto con suficiente rigor para que distintos agentes implementen resultados funcionalmente equivalentes sin reinterpretar el alcance.
 ---
 
 # Generar plan de implementación
