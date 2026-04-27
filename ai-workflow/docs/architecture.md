@@ -4,15 +4,15 @@
 Describir la arquitectura estable de la aplicación para que las features nuevas se apoyen en una estructura clara y no tengan que deducir desde cero cómo se separan render, estado, validación e integraciones.
 
 ## Módulos principales
-- `app/`: arranque, composición raíz, shell inicial y carga de configuración desde `src/dev/config.json` o `data-config`.
-- `tests/`: fixtures, helpers y tests del bootstrap actual.
+- `app/`: arranque, composición raíz, lectura de configuración desde `src/dev/config.json` o `data-config` y surface de errores visibles.
+- `config/`: tipos y validación estructural mínima del runtime config y del árbol `layout`.
+- `runtime/`: renderer estático de layout y composición de la página resuelta por `initialPage`.
+- `tests/`: tests del bootstrap, validación de configuración y renderer visible.
 
 ## Módulos previstos para próximas features
-- `runtime/`: interpretación de la configuración, navegación interna, ejecución de acciones y coordinación del estado compartido.
-- `components/`: componentes visuales soportados por el renderer declarativo.
+- `components/`: componentes visuales soportados por futuras ampliaciones del renderer declarativo.
 - `forms/`: estado de formularios, validación básica y resolución de valores por `formId.fieldId`.
 - `queries/`: definición y ejecución de endpoints declarados, junto con estado `status/data/error`.
-- `config/`: tipos y validación estructural del JSON soportado.
 - `devtools/`: soporte de desarrollo local para cargar y editar configuración sin backend.
 - `shared/`: utilidades, adaptadores y piezas reutilizables entre módulos.
 
@@ -28,5 +28,6 @@ Describir la arquitectura estable de la aplicación para que las features nuevas
 - El contrato operativo base del proyecto es `pnpm install`, `pnpm dev`, `pnpm build`, `pnpm lint` y `pnpm test`.
 - La entrada de producción será `data-config` en el elemento root HTML.
 - En desarrollo existe una fuente local versionada en `src/dev/config.json` para iterar sin backend.
-- La validación de configuración usará `Zod` cuando el contrato funcional del runtime se implemente.
-- Los errores de bootstrap de configuración deben mostrarse con diagnóstico claro.
+- La configuración se valida antes de renderizar y falla con errores semánticos explícitos cuando `initialPage` o `layout` no cumplen el contrato soportado.
+- La primera UI estable del runtime es un renderer estático para `container`, `heading`, `paragraph` y `list`.
+- Los errores de bootstrap y validación deben ser diagnósticos en desarrollo; en producción, los errores marcados como solo de desarrollo degradan sin mensaje visible genérico.

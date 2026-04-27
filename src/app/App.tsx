@@ -19,5 +19,5 @@ export function App({
     rootElement,
   })
 
-  return <AppShell runtimeConfig={runtimeConfig} />
+  return <AppShell isDevelopment={isDevelopment} runtimeConfig={runtimeConfig} />
 }

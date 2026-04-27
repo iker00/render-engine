@@ -1,43 +1,55 @@
 # Runtime UI configurable
 
 ## Objetivo
-Renderizar una aplicación multipágina a partir de una configuración JSON servida por backend, sin necesidad de desarrollar una pantalla React específica por cada caso de uso.
+Renderizar la primera página estática del runtime a partir de una configuración JSON validada, sin depender todavía de navegación interactiva, formularios ni datos remotos.
 
 ## Qué resuelve
-- Permite que backend describa páginas, layouts y flujos de interacción.
-- Centraliza la ejecución de endpoints declarados.
-- Expone estado compartido para queries, formularios y navegación.
-- Hace posible construir pantallas de búsqueda, detalle o edición sin una implementación frontend dedicada por caso.
+- Permite que la configuración declare varias páginas aunque, por ahora, solo se resuelva la indicada por `initialPage`.
+- Valida el contrato mínimo del runtime antes de renderizar.
+- Interpreta un árbol declarativo de layout con un catálogo inicial y acotado de nodos.
+- Sustituye el shell provisional por una página visible renderizada desde configuración.
 
 ## Áreas funcionales principales
 - Configuración y contrato JSON.
-- Páginas y navegación interna.
-- Queries, mutaciones y feedback de carga/error/vacío.
-- Formularios, campos y validación básica.
+- Selección de página inicial.
+- Render estático de layout.
+- Gestión de errores de configuración entre desarrollo y producción.
 - Modo desarrollo local sin backend.
 
 ## Estructura de alto nivel
-La configuración de v1 se organiza alrededor de:
+La configuración soportada hoy se organiza alrededor de:
 - `api`
 - `pages`
 - `initialPage`
 
-Cada página define al menos:
+Cada página soportada define al menos:
 - `id`
 - `layout`
-- `preloads` opcionales
 
-## Estado compartido
-El runtime mantiene contexto compartido para:
-- formularios
-- navegación interna
-- route params
-- resultados y estado de queries
+## Catálogo inicial de nodos
+El renderer estático soporta estos nodos:
+- `container`
+- `heading`
+- `paragraph`
+- `list`
 
-Cada query expone en v1:
-- `status`: `idle | loading | success | error`
-- `data`
-- `error`
+Reglas funcionales vigentes:
+- Solo `container` admite `children`.
+- `container.props` soporta `direction` y `gap`.
+- `heading.props` soporta `text` y `level`.
+- `paragraph.props` soporta `text`.
+- `list.props` soporta `items` como array de strings.
+
+## Comportamiento de errores
+- Si `initialPage` no coincide con ninguna página declarada, el runtime muestra un error visible.
+- Si el `layout` es inválido o aparece un nodo no soportado, en desarrollo se muestra un error diagnóstico.
+- En producción, los errores marcados como `development-only` degradan a una superficie vacía en lugar de mostrar un mensaje genérico o inventar contenido.
+
+## Límites actuales
+- No existe navegación entre páginas.
+- No se ejecutan `preloads`, queries ni endpoints declarados en `api`.
+- No existe todavía estado compartido de formularios, queries o navegación.
+- No se resuelven referencias dinámicas como `forms.*`, `queries.*` o `routeParams.*`.
 
 ## Referencias relacionadas
 - [`./config-contract.md`](./config-contract.md)

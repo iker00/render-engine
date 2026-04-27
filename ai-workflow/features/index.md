@@ -16,3 +16,4 @@ La política completa está en [`../docs/workflow.md`](../docs/workflow.md).
 
 ## Completadas
 - `0001-bootstrap-project-dependencies`: bootstrap técnico reproducible con frontend de paquete único, scripts base de desarrollo/validación y carga inicial de configuración desde `data-config` o `src/dev/config.json`.
+- `0002-basic-static-renderer`: contrato mínimo de `pages` + `initialPage` + `layout`, renderer estático inicial para `container`, `heading`, `paragraph` y `list`, y sustitución del shell provisional por la primera página declarativa visible.

@@ -3,8 +3,37 @@
   "pages": [
     {
       "id": "bootstrap-home",
-      "title": "Bootstrap Home",
-      "description": "Development config loaded from the repository."
+      "layout": {
+        "type": "container",
+        "props": {
+          "direction": "column",
+          "gap": "lg"
+        },
+        "children": [
+          {
+            "type": "heading",
+            "props": {
+              "text": "Bootstrap Home",
+              "level": 1
+            }
+          },
+          {
+            "type": "paragraph",
+            "props": {
+              "text": "Development config loaded from the repository."
+            }
+          },
+          {
+            "type": "list",
+            "props": {
+              "items": [
+                "Static runtime contract validated before rendering.",
+                "Initial page resolved from the active config source."
+              ]
+            }
+          }
+        ]
+      }
     }
   ],
   "initialPage": "bootstrap-home"

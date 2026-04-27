@@ -10,9 +10,9 @@ Orden recomendado de lectura:
 4. [`../current-state.md`](../current-state.md) si hace falta confirmar qué está implementado hoy
 
 ## Features documentadas
-- [`./config-driven-ui-runtime.md`](./config-driven-ui-runtime.md): visión general del runtime declarativo, su objetivo y sus áreas funcionales.
-- [`./config-contract.md`](./config-contract.md): contrato funcional del JSON soportado y reglas generales de validación.
-- [`./pages-and-navigation.md`](./pages-and-navigation.md): modelo de páginas, navegación interna y uso de `routeParams`.
+- [`./config-driven-ui-runtime.md`](./config-driven-ui-runtime.md): visión general del runtime declarativo ya implementado, su renderer estático inicial y sus límites actuales.
+- [`./config-contract.md`](./config-contract.md): contrato funcional del JSON soportado hoy y reglas de validación del arranque.
+- [`./pages-and-navigation.md`](./pages-and-navigation.md): modelo de páginas, resolución de `initialPage` y estado actual de la navegación pendiente.
 - [`./queries-and-feedback.md`](./queries-and-feedback.md): queries, precargas, mutaciones, refetch y estados de feedback.
 - [`./forms-and-validation.md`](./forms-and-validation.md): formularios, campos, items dinámicos, valores por defecto y validación básica.
 - [`./development-workflow.md`](./development-workflow.md): bootstrap de desarrollo local con `src/dev/config.json`, prioridad de `data-config` y límites del modo sin backend.

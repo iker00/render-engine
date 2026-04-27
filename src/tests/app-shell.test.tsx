@@ -2,20 +2,18 @@ import { render, screen } from '@testing-library/react'
 import { App } from '../app/App'
 
 describe('App shell', () => {
-  it('renders the bootstrap shell copy and capability cards', () => {
+  it('renders the default development runtime page instead of the bootstrap shell copy', () => {
     render(<App />)
 
+    expect(screen.getByRole('heading', { name: 'Bootstrap Home', level: 1 })).toBeInTheDocument()
+    expect(screen.getByText('Development config loaded from the repository.')).toBeInTheDocument()
     expect(
-      screen.getByRole('heading', {
+      screen.getByText('Static runtime contract validated before rendering.'),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole('heading', {
         name: /frontend bootstrap ready for the first runtime features/i,
       }),
-    ).toBeInTheDocument()
-    expect(
-      screen.getByText(/single-package frontend with pnpm-managed dependencies/i),
-    ).toBeInTheDocument()
-    expect(screen.getByText(/run a local shell without backend dependencies/i)).toBeInTheDocument()
-    expect(
-      screen.getByText(/resolve config from data-config or the local development fixture/i),
-    ).toBeInTheDocument()
+    ).not.toBeInTheDocument()
   })
 })

@@ -1,34 +1,34 @@
 # Páginas y navegación
 
 ## Objetivo
-Permitir flujos multipágina dentro del runtime sin cambiar la URL del navegador.
+Definir cómo se organiza el catálogo de páginas del runtime y cuál es el alcance real de la navegación en el estado actual del producto.
 
 ## Modelo de páginas
 - La configuración declara varias páginas en `pages`.
 - Cada página tiene un `id` único.
 - Cada página contiene su propio `layout`.
-- Cada página puede declarar `preloads` para cargar datos al activarse.
+- En la capacidad actualmente implementada, el runtime valida todas las páginas declaradas pero solo renderiza una.
 
 ## Página inicial
 - La configuración declara `initialPage`.
 - El runtime entra en esa página al arrancar.
+- Si `initialPage` no coincide con ningún `id`, el arranque falla con un error claro.
 
-## Navegación soportada en v1
-Acciones soportadas:
-- `navigateTo`
-- `goBack`
+## Estado actual de navegación
+- Todavía no existen acciones `navigateTo` ni `goBack`.
+- No hay historial interno de páginas.
+- La URL del navegador no cambia.
+- Declarar varias páginas ya es válido como preparación para features posteriores, pero no habilita navegación por sí mismo.
 
 ## Route params
-- `navigateTo` puede pasar `routeParams` a la página destino.
-- La página destino puede leer esos valores para renderizado, params de endpoints o valores por defecto de formulario.
+- `routeParams` siguen fuera de alcance en la implementación actual.
+- El runtime todavía no expone parámetros de navegación a las páginas.
 
-## Casos de uso objetivo
-- búsqueda a listado
-- listado a detalle
-- detalle a edición
-- volver a la página anterior sin depender del navegador
+## Relación con futuras iteraciones
+- El modelo actual ya separa `pages` e `initialPage` para que la navegación interna pueda añadirse más adelante sin rehacer el contrato base.
+- La futura navegación seguirá siendo interna al runtime y no dependerá del router del navegador en la primera versión funcional.
 
 ## Límites de v1
-- la URL del navegador no cambia
 - no hay deep links
 - no hay sincronización con historial externo del navegador
+- no se ejecutan `preloads`

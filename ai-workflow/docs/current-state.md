@@ -4,24 +4,29 @@
 - Flujo documental base de `ai-workflow` disponible.
 - Contexto del producto ya orientado a la nueva app de UI configurable.
 - Bootstrap frontend de paquete único ya creado en la raíz del repositorio.
-- Shell inicial de `React` operativo para validar arranque sin backend.
 - Scripts estables de `dev`, `build`, `lint` y `test` disponibles con `pnpm`.
 - Frontera de bootstrap para resolver configuración desde `data-config` o `src/dev/config.json`.
-- Tests automatizados del bootstrap y gate global de coverage activos sobre `src/`.
+- Validación estructural mínima del runtime config antes de renderizar.
+- Renderer estático inicial operativo para `container`, `heading`, `paragraph` y `list`.
+- Resolución de `initialPage` con soporte para varias páginas declaradas y render exclusivo de la página seleccionada.
+- Manejo explícito de errores de configuración con diagnóstico visible en desarrollo y degradación silenciosa en producción para errores marcados como `development-only`.
+- Tests automatizados del bootstrap, del validador y del renderer, con gate global de coverage activo sobre `src/`.
 
 ## Límites actuales
-- El renderer declarativo aún no está implementado.
-- No existe todavía validación estructural completa del runtime config con `Zod`.
+- No existe todavía validación con `Zod`; el contrato actual se valida con lógica propia.
 - No existe todavía panel de desarrollo local para editar configuración en vivo.
 - No hay integración real con backend; solo existe la lectura de `data-config` como frontera de entrada.
 - No existen todavía navegación interna, formularios ni queries funcionales.
+- La sección `api` del JSON aún no se ejecuta.
+- No se resuelven referencias dinámicas ni `routeParams`.
 
 ## Infraestructura vigente
 - Repositorio preparado para trabajar con documentación guiada por specs.
 - Stack frontend inicial versionado con `Vite`, `React`, `Tailwind`, `TypeScript` y `Vitest`.
 - Contrato de entorno explicitado con `.nvmrc`, `engines.node` y `packageManager`.
 - Estándares de testing, estilo, errores y seguridad definidos en `ai-workflow/standards/`.
-- Primera feature del workflow implementada y pendiente solo de futuras capacidades funcionales sobre esta base.
+- Base de runtime estático ya integrada en la app en sustitución del shell provisional.
+- Segunda feature del workflow cerrada sobre esta base, dejando preparado el salto a navegación, formularios y datos remotos en iteraciones posteriores.
 
 ## Referencias
 

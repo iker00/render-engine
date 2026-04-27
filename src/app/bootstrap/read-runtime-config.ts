@@ -1,14 +1,11 @@
-export interface RuntimePageConfig {
-  id: string
-  title: string
-  description: string
-}
+import {
+  validateRuntimeConfig,
+  type RuntimeConfig,
+  type RuntimeConfigError,
+  type RuntimePageConfig,
+} from '../../config/runtime-config'
 
-export interface RuntimeConfig {
-  api: Record<string, unknown>
-  pages: RuntimePageConfig[]
-  initialPage: string
-}
+export type { RuntimeConfig, RuntimeConfigError, RuntimePageConfig }
 
 interface ReadRuntimeConfigOptions {
   devConfig: RuntimeConfig
@@ -21,10 +18,11 @@ export type RuntimeConfigResult =
       status: 'ready'
       source: 'data-config' | 'dev-config'
       config: RuntimeConfig
+      page: RuntimePageConfig
     }
   | {
       status: 'error'
-      message: string
+      error: RuntimeConfigError
     }
 
 export function readRuntimeConfig({
@@ -36,29 +34,51 @@ export function readRuntimeConfig({
 
   if (serializedConfig) {
     try {
+      const validationResult = validateRuntimeConfig(JSON.parse(serializedConfig))
+
+      if (validationResult.status === 'error') {
+        return validationResult
+      }
+
       return {
         status: 'ready',
         source: 'data-config',
-        config: JSON.parse(serializedConfig) as RuntimeConfig,
+        config: validationResult.config,
+        page: validationResult.page,
       }
     } catch {
       return {
         status: 'error',
-        message: 'The runtime config in data-config is not valid JSON.',
+        error: {
+          code: 'invalid-json',
+          displayMode: 'always',
+          message: 'The runtime config in data-config is not valid JSON.',
+        },
       }
     }
   }
 
   if (isDevelopment) {
+    const validationResult = validateRuntimeConfig(devConfig)
+
+    if (validationResult.status === 'error') {
+      return validationResult
+    }
+
     return {
       status: 'ready',
       source: 'dev-config',
-      config: devConfig,
+      config: validationResult.config,
+      page: validationResult.page,
     }
   }
 
   return {
     status: 'error',
-    message: 'No runtime config was provided in data-config for this environment.',
+    error: {
+      code: 'missing-config',
+      displayMode: 'always',
+      message: 'No runtime config was provided in data-config for this environment.',
+    },
   }
 }

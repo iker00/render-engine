@@ -9,8 +9,28 @@ const devConfig: RuntimeConfig = {
   pages: [
     {
       id: 'dev-home',
-      title: 'Dev Home',
-      description: 'Local development configuration.',
+      layout: {
+        type: 'container',
+        props: {
+          direction: 'column',
+          gap: 'md',
+        },
+        children: [
+          {
+            type: 'heading',
+            props: {
+              text: 'Dev Home',
+              level: 1,
+            },
+          },
+          {
+            type: 'paragraph',
+            props: {
+              text: 'Local development configuration.',
+            },
+          },
+        ],
+      },
     },
   ],
   initialPage: 'dev-home',
@@ -28,6 +48,7 @@ describe('readRuntimeConfig', () => {
       status: 'ready',
       source: 'dev-config',
       config: devConfig,
+      page: devConfig.pages[0],
     })
   })
 
@@ -38,8 +59,18 @@ describe('readRuntimeConfig', () => {
       pages: [
         {
           id: 'html-home',
-          title: 'HTML Home',
-          description: 'Provided by the HTML container.',
+          layout: {
+            type: 'container',
+            children: [
+              {
+                type: 'heading',
+                props: {
+                  text: 'HTML Home',
+                  level: 1,
+                },
+              },
+            ],
+          },
         },
       ],
       initialPage: 'html-home',
@@ -59,11 +90,36 @@ describe('readRuntimeConfig', () => {
         pages: [
           {
             id: 'html-home',
-            title: 'HTML Home',
-            description: 'Provided by the HTML container.',
+            layout: {
+              type: 'container',
+              children: [
+                {
+                  type: 'heading',
+                  props: {
+                    text: 'HTML Home',
+                    level: 1,
+                  },
+                },
+              ],
+            },
           },
         ],
         initialPage: 'html-home',
+      },
+      page: {
+        id: 'html-home',
+        layout: {
+          type: 'container',
+          children: [
+            {
+              type: 'heading',
+              props: {
+                text: 'HTML Home',
+                level: 1,
+              },
+            },
+          ],
+        },
       },
     })
   })
@@ -80,7 +136,11 @@ describe('readRuntimeConfig', () => {
 
     expect(result).toEqual({
       status: 'error',
-      message: 'The runtime config in data-config is not valid JSON.',
+      error: {
+        code: 'invalid-json',
+        displayMode: 'always',
+        message: 'The runtime config in data-config is not valid JSON.',
+      },
     })
   })
 
@@ -93,7 +153,11 @@ describe('readRuntimeConfig', () => {
 
     expect(result).toEqual({
       status: 'error',
-      message: 'No runtime config was provided in data-config for this environment.',
+      error: {
+        code: 'missing-config',
+        displayMode: 'always',
+        message: 'No runtime config was provided in data-config for this environment.',
+      },
     })
   })
 })
