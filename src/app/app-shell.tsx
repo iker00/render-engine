@@ -1,5 +1,6 @@
 import type { RuntimeConfigResult } from './bootstrap/read-runtime-config'
 import { RuntimePage } from '../runtime/runtime-page'
+import { RuntimeStateProvider } from '../runtime/runtime-state/runtime-state-provider'
 
 interface AppShellProps {
   isDevelopment: boolean
@@ -31,7 +32,9 @@ export function AppShell({ isDevelopment, runtimeConfig }: AppShellProps) {
     <main className="min-h-screen" data-testid="runtime-app">
       <section className="mx-auto flex min-h-screen w-full max-w-4xl items-center px-6 py-16 sm:px-8">
         <div className="w-full rounded-[2rem] border border-white/10 bg-slate-950/70 p-8 shadow-2xl shadow-cyan-950/30 backdrop-blur">
-          <RuntimePage page={runtimeConfig.page} />
+          <RuntimeStateProvider config={runtimeConfig.config}>
+            <RuntimePage />
+          </RuntimeStateProvider>
         </div>
       </section>
     </main>
