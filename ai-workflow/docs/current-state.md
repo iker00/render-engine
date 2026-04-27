@@ -11,6 +11,11 @@
 - Renderer estático inicial operativo para `container`, `heading`, `paragraph` y `list`, con soporte para varios hermanos en la raíz de página sin `container` sintético y con dispatcher central por `type` en `src/runtime/`.
 - Presentación base del runtime migrada a `Tailwind CSS` para `container`, `heading`, `paragraph` y `list`, con convención centralizada en `src/runtime/runtime-node-styling.ts`.
 - Resolución de `initialPage` con soporte para varias páginas declaradas y render exclusivo de la página seleccionada.
+- Núcleo de estado compartido por instancia ya integrado en `src/runtime/runtime-state/` para navegación, formularios y queries.
+- Navegación visible resuelta desde `navigation.currentPageId`, con historial interno mínimo y error recuperable al navegar a una página inexistente.
+- Dominio base de formularios disponible con almacenamiento por `forms.{formId}.{fieldId}`, `defaultValue`, `error`, `touched`, `dirty` y reset por formulario.
+- Dominio base de queries disponible con almacenamiento por nombre, `status/data/error`, conservación del último dato válido durante recargas y reset por query.
+- Aislamiento validado entre varias instancias del runtime y limpieza completa del estado al desmontar y remontar.
 - Manejo explícito de errores de configuración con diagnóstico visible en desarrollo y degradación silenciosa en producción para errores marcados como `development-only`.
 - Tests automatizados del bootstrap, del validador y del renderer, con gate global de coverage activo sobre `src/`.
 
@@ -18,8 +23,9 @@
 - No existe todavía validación con `Zod`; el contrato actual se valida con lógica propia.
 - No existe todavía panel de desarrollo local para editar configuración en vivo.
 - No hay integración real con backend; solo existe la lectura de `data-config` como frontera de entrada.
-- No existen todavía navegación interna, formularios ni queries funcionales.
+- No existe todavía una UI declarativa final para navegación, formularios o feedback de queries.
 - La sección `api` del JSON aún no se ejecuta.
+- No existen todavía `preloads` reales, acciones API declarativas activas ni consumidores del layout que lean `forms.*` o `queries.*`.
 - El catálogo visual sigue limitado a `container`, `heading`, `paragraph` y `list`.
 - No existe todavía theming, tokens de diseño ni personalización visual declarativa desde JSON.
 - No se resuelven referencias dinámicas ni `routeParams`.
@@ -33,6 +39,7 @@
 - Tercera feature del workflow cerrada sobre esta base, simplificando la raíz de página antes de añadir navegación, formularios y datos remotos en iteraciones posteriores.
 - Cuarta feature del workflow cerrada para reorganizar la estructura interna del runtime sin cambiar el contrato funcional observable.
 - Quinta feature del workflow cerrada para alinear el styling visible del runtime con `Tailwind CSS` sin introducir theming.
+- Sexta feature del workflow cerrada para introducir el núcleo de estado compartido del runtime sin abrir todavía la capa declarativa de interacción y datos remotos.
 
 ## Referencias
 

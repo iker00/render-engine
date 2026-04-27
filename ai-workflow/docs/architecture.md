@@ -6,8 +6,8 @@ Describir la arquitectura estable de la aplicación para que las features nuevas
 ## Módulos principales
 - `app/`: arranque, composición raíz, lectura de configuración desde `src/dev/config.json` o `data-config` y surface de errores visibles.
 - `config/`: fachada pública del contrato, tipos del runtime config y validación estructural mínima del árbol `layout`.
-- `runtime/`: renderer estático de layout, dispatcher central por tipo de nodo, piezas concretas por nodo soportado y composición de la página resuelta por `initialPage`.
-- `tests/`: tests del bootstrap, validación de configuración y renderer visible.
+- `runtime/`: renderer de layout, estado compartido por instancia del runtime, dispatcher central por tipo de nodo, piezas concretas por nodo soportado y composición de la página resuelta desde navegación interna.
+- `tests/`: tests del bootstrap, validación de configuración, renderer visible y estado compartido del runtime.
 
 ## Estructura estable vigente
 
@@ -24,6 +24,12 @@ src/
     layout-node-renderer.tsx
     runtime-node-styling.ts
     runtime-page.tsx
+    runtime-state/
+      runtime-state-context.ts
+      runtime-state-provider.tsx
+      runtime-state-reducer.ts
+      runtime-state-selectors.ts
+      runtime-state-types.ts
     nodes/
       container-layout-node.tsx
       heading-layout-node.tsx
@@ -38,12 +44,14 @@ Lectura operativa de esa estructura:
 - `layout-renderer.tsx` conserva la responsabilidad de renderizar colecciones ordenadas de nodos.
 - `layout-node-renderer.tsx` es el punto central de resolución `type -> pieza de render`.
 - `runtime-node-styling.ts` concentra la convención visual base del runtime y la compatibilidad acotada para `gap` arbitrarios.
+- `runtime-state/` concentra un store por instancia basado en `useReducer` + `Context`, con dominios separados para navegación, formularios y queries.
 - `runtime/nodes/` materializa solo nodos con uso real inmediato, sin introducir subsistemas vacíos para capacidades futuras.
+- `runtime-page.tsx` ya no decide la página visible por selección ad hoc; la resuelve desde el estado compartido del runtime.
 
 ## Módulos previstos para próximas features
 - `components/`: componentes visuales soportados por futuras ampliaciones del renderer declarativo.
-- `forms/`: estado de formularios, validación básica y resolución de valores por `formId.fieldId`.
-- `queries/`: definición y ejecución de endpoints declarados, junto con estado `status/data/error`.
+- `forms/`: piezas visuales, validación declarativa y submit apoyados en el dominio `forms` ya existente en `runtime-state/`.
+- `queries/`: ejecución real de endpoints declarados, preloads y consumidores visuales apoyados en el dominio `queries` ya existente en `runtime-state/`.
 - `devtools/`: soporte de desarrollo local para cargar y editar configuración sin backend.
 - `shared/`: utilidades, adaptadores y piezas reutilizables entre módulos.
 
@@ -63,4 +71,6 @@ Lectura operativa de esa estructura:
 - La primera UI estable del runtime es un renderer estático para `container`, `heading`, `paragraph` y `list`.
 - La organización interna del runtime separa contrato, validación, render de colecciones y render concreto por nodo sin cambiar el comportamiento observable.
 - La presentación base de los nodos visibles del runtime se expresa con utilidades de `Tailwind`, con una excepción acotada basada en variable CSS para `container.props.gap` cuando llega un valor arbitrario.
+- El runtime crea un store compartido aislado por instancia, con `useReducer` + `Context`, para sostener navegación, formularios y queries sin depender todavía de subsistemas visuales separados.
+- La navegación visible ya se resuelve desde `navigation.currentPageId`; la URL del navegador queda fuera del contrato de esta primera capa interactiva.
 - Los errores de bootstrap y validación deben ser diagnósticos en desarrollo; en producción, los errores marcados como solo de desarrollo degradan sin mensaje visible genérico.

@@ -1,7 +1,7 @@
 # Runtime UI configurable
 
 ## Objetivo
-Renderizar la primera página estática del runtime a partir de una configuración JSON validada, sin depender todavía de navegación interactiva, formularios ni datos remotos.
+Renderizar el runtime a partir de una configuración JSON validada, apoyado ya en un estado compartido por instancia para navegación, formularios y queries, sin depender todavía de features visuales de formulario ni de ejecución remota real.
 
 ## Qué resuelve
 - Permite que la configuración declare varias páginas aunque, por ahora, solo se resuelva la indicada por `initialPage`.
@@ -9,6 +9,7 @@ Renderizar la primera página estática del runtime a partir de una configuraci�
 - Interpreta un layout raíz basado en colección ordenada y un catálogo inicial y acotado de nodos.
 - Sustituye el shell provisional por una página visible renderizada desde configuración.
 - Mantiene una estructura interna separada entre validación de configuración, render de colecciones y piezas concretas por nodo soportado.
+- Mantiene un store compartido por instancia para navegación, formularios y queries, con aislamiento entre runtimes montados a la vez.
 - Implementa la presentación visible del runtime con utilidades de `Tailwind CSS`, sin abrir todavía una capa de theming definida.
 
 ## Áreas funcionales principales
@@ -56,6 +57,7 @@ Reglas funcionales vigentes:
 - `src/runtime/layout-renderer.tsx` renderiza colecciones ordenadas y conserva el soporte de varios hermanos raíz.
 - `src/runtime/layout-node-renderer.tsx` centraliza la resolución `type -> pieza de render`.
 - `src/runtime/runtime-node-styling.ts` centraliza la convención visual base y la compatibilidad acotada de `gap`.
+- `src/runtime/runtime-state/` concentra el provider, reducer, tipos, selectors y acciones del estado compartido del runtime.
 - `src/runtime/nodes/` contiene una pieza concreta por nodo soportado hoy: `container`, `heading`, `paragraph` y `list`.
 
 ## Comportamiento de errores
@@ -64,9 +66,9 @@ Reglas funcionales vigentes:
 - En producción, los errores marcados como `development-only` degradan a una superficie vacía en lugar de mostrar un mensaje genérico o inventar contenido.
 
 ## Límites actuales
-- No existe navegación entre páginas.
+- La navegación ya vive en estado compartido, pero todavía no existe una UI declarativa final para dispararla desde el árbol JSON.
 - No se ejecutan `preloads`, queries ni endpoints declarados en `api`.
-- No existe todavía estado compartido de formularios, queries o navegación.
+- El estado compartido de formularios y queries ya existe, pero todavía no hay nodos visuales de formulario ni consumidores declarativos de datos remotos dentro del layout.
 - No se resuelven referencias dinámicas como `forms.*`, `queries.*` o `routeParams.*`.
 - La presentación base del runtime sigue siendo intencionadamente mínima y no define todavía theming, tokens de diseño ni personalización visual declarativa.
 
