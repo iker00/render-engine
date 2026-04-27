@@ -8,6 +8,7 @@ Renderizar la primera página estática del runtime a partir de una configuraci�
 - Valida el contrato mínimo del runtime antes de renderizar.
 - Interpreta un layout raíz basado en colección ordenada y un catálogo inicial y acotado de nodos.
 - Sustituye el shell provisional por una página visible renderizada desde configuración.
+- Mantiene una estructura interna separada entre validación de configuración, render de colecciones y piezas concretas por nodo soportado.
 
 ## Áreas funcionales principales
 - Configuración y contrato JSON.
@@ -43,6 +44,14 @@ Reglas funcionales vigentes:
 - `heading.props` soporta `text` y `level`.
 - `paragraph.props` soporta `text`.
 - `list.props` soporta `items` como array de strings.
+
+## Organización estable del runtime
+- `src/config/runtime-config.ts` actúa como fachada pública mínima del contrato del runtime.
+- `src/config/runtime-config-types.ts` concentra los tipos del contrato y los shapes de resultado/error de validación.
+- `src/config/validate-runtime-config.ts` contiene la validación estructural previa al render.
+- `src/runtime/layout-renderer.tsx` renderiza colecciones ordenadas y conserva el soporte de varios hermanos raíz.
+- `src/runtime/layout-node-renderer.tsx` centraliza la resolución `type -> pieza de render`.
+- `src/runtime/nodes/` contiene una pieza concreta por nodo soportado hoy: `container`, `heading`, `paragraph` y `list`.
 
 ## Comportamiento de errores
 - Si `initialPage` no coincide con ninguna página declarada, el runtime muestra un error visible.

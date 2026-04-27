@@ -6,9 +6,9 @@
 - Bootstrap frontend de paquete único ya creado en la raíz del repositorio.
 - Scripts estables de `dev`, `build`, `lint` y `test` disponibles con `pnpm`.
 - Frontera de bootstrap para resolver configuración desde `data-config` o `src/dev/config.json`.
-- Validación estructural mínima del runtime config antes de renderizar.
+- Validación estructural mínima del runtime config antes de renderizar, separada en tipos, fachada pública y validador dedicado dentro de `src/config/`.
 - Contrato de página estable con `pages[].layout` como colección ordenada de bloques y rechazo explícito del shape raíz antiguo basado en objeto.
-- Renderer estático inicial operativo para `container`, `heading`, `paragraph` y `list`, con soporte para varios hermanos en la raíz de página sin `container` sintético.
+- Renderer estático inicial operativo para `container`, `heading`, `paragraph` y `list`, con soporte para varios hermanos en la raíz de página sin `container` sintético y con dispatcher central por `type` en `src/runtime/`.
 - Resolución de `initialPage` con soporte para varias páginas declaradas y render exclusivo de la página seleccionada.
 - Manejo explícito de errores de configuración con diagnóstico visible en desarrollo y degradación silenciosa en producción para errores marcados como `development-only`.
 - Tests automatizados del bootstrap, del validador y del renderer, con gate global de coverage activo sobre `src/`.
@@ -29,6 +29,7 @@
 - Estándares de testing, estilo, errores y seguridad definidos en `ai-workflow/standards/`.
 - Base de runtime estático ya integrada en la app en sustitución del shell provisional.
 - Tercera feature del workflow cerrada sobre esta base, simplificando la raíz de página antes de añadir navegación, formularios y datos remotos en iteraciones posteriores.
+- Cuarta feature del workflow cerrada para reorganizar la estructura interna del runtime sin cambiar el contrato funcional observable.
 
 ## Referencias
 

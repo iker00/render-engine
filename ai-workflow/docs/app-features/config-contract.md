@@ -66,6 +66,11 @@ Pero el runtime implementado en esta fase no las resuelve todavía dentro del la
 - En desarrollo, los errores de configuración deben ser diagnósticos y visibles.
 - En producción, los errores `development-only` degradan sin mostrar mensaje genérico visible.
 
+La frontera estable de esta validación queda organizada así:
+- `src/config/runtime-config.ts`: fachada pública para consumidores como bootstrap y tests.
+- `src/config/runtime-config-types.ts`: tipos del contrato y shape del resultado de validación.
+- `src/config/validate-runtime-config.ts`: validación estructural mínima del runtime.
+
 ## Límites de v1
 - `api` no se ejecuta todavía.
 - No hay `preloads` funcionales.
