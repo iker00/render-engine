@@ -1,4 +1,23 @@
 export type LayoutNodeType = 'container' | 'heading' | 'paragraph' | 'list'
+export type RuntimeApiMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
+export type RuntimeApiQueryValue = string | number | boolean
+export type RuntimeApiQuery = Record<string, RuntimeApiQueryValue>
+export type RuntimeApiBodyValue =
+  | string
+  | number
+  | boolean
+  | null
+  | RuntimeApiBodyValue[]
+  | { [key: string]: RuntimeApiBodyValue }
+
+export interface RuntimeApiOperation {
+  method: RuntimeApiMethod
+  endpoint: string
+  query?: RuntimeApiQuery
+  body?: RuntimeApiBodyValue
+}
+
+export type RuntimeApiConfig = Record<string, RuntimeApiOperation>
 
 export interface ContainerLayoutNode {
   type: 'container'
@@ -52,7 +71,7 @@ export interface RuntimePageConfig {
 }
 
 export interface RuntimeConfig {
-  api: Record<string, unknown>
+  api: RuntimeApiConfig
   pages: RuntimePageConfig[]
   initialPage: string
 }

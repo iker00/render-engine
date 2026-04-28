@@ -1,0 +1,515 @@
+import { describe, expect, it, vi } from 'vitest'
+import type { RuntimeConfig } from '../config/runtime-config'
+import {
+  buildRuntimeApiRequest,
+  executeRuntimeApiOperation,
+} from '../queries/runtime-api-executor'
+import type { RuntimeState } from '../runtime/runtime-state/runtime-state-types'
+
+const runtimeState: RuntimeState = {
+  navigation: {
+    currentPageId: 'home',
+    history: ['home'],
+    lastError: null,
+  },
+  forms: {
+    userSearch: {
+      term: {
+        value: 'Ada',
+        error: null,
+        touched: true,
+        dirty: true,
+        defaultValue: '',
+      },
+      page: {
+        value: 2,
+        error: null,
+        touched: true,
+        dirty: true,
+        defaultValue: 1,
+      },
+      active: {
+        value: true,
+        error: null,
+        touched: true,
+        dirty: true,
+        defaultValue: false,
+      },
+      nullable: {
+        value: null,
+        error: null,
+        touched: true,
+        dirty: false,
+        defaultValue: null,
+      },
+      callback: {
+        value: () => 'not-json',
+        error: null,
+        touched: true,
+        dirty: true,
+        defaultValue: null,
+      },
+    },
+  },
+  queries: {
+    selectedUser: {
+      status: 'success',
+      data: {
+        id: 'user-1',
+        profile: {
+          nickname: 'Countess',
+        },
+        tags: ['math', 'logic'],
+      },
+      error: null,
+    },
+  },
+}
+
+const runtimeConfig: RuntimeConfig = {
+  api: {
+    searchUsers: {
+      method: 'GET',
+      endpoint: '/api/users',
+      query: {
+        search: 'forms.userSearch.term',
+        page: 'forms.userSearch.page',
+        active: 'forms.userSearch.active',
+      },
+    },
+    createUser: {
+      method: 'POST',
+      endpoint: '/api/users',
+      body: {
+        name: 'forms.userSearch.term',
+        profile: {
+          nickname: 'queries.selectedUser.data.profile.nickname',
+        },
+      },
+    },
+    replaceUser: {
+      method: 'PUT',
+      endpoint: '/api/users/user-1',
+      body: {
+        name: 'Ada Lovelace',
+      },
+    },
+    patchUser: {
+      method: 'PATCH',
+      endpoint: '/api/users/user-1',
+      body: {
+        active: 'forms.userSearch.active',
+      },
+    },
+    deleteUser: {
+      method: 'DELETE',
+      endpoint: '/api/users/user-1',
+      query: {
+        hard: false,
+      },
+    },
+    clearUser: {
+      method: 'PATCH',
+      endpoint: '/api/users/user-1',
+      body: null,
+    },
+    escapedQuery: {
+      method: 'GET',
+      endpoint: '/api/literals',
+      query: {
+        literal: '\\forms.userSearch.term',
+      },
+    },
+    mixedBody: {
+      method: 'POST',
+      endpoint: '/api/mixed',
+      body: {
+        literal: 'plain text',
+        escaped: '\\queries.selectedUser.data.profile.nickname',
+        derivedId: 'queries.selectedUser.data.id',
+        tags: 'queries.selectedUser.data.tags',
+      },
+    },
+    missingQueryValue: {
+      method: 'GET',
+      endpoint: '/api/users',
+      query: {
+        search: 'forms.userSearch.missingField',
+      },
+    },
+    invalidQueryValue: {
+      method: 'GET',
+      endpoint: '/api/users',
+      query: {
+        search: 'forms.userSearch.nullable',
+      },
+    },
+    invalidBodyReference: {
+      method: 'POST',
+      endpoint: '/api/users',
+      body: {
+        callback: 'forms.userSearch.callback',
+      },
+    },
+  },
+  initialPage: 'home',
+  pages: [
+    {
+      id: 'home',
+      layout: [],
+    },
+  ],
+}
+
+describe('Runtime api execution', () => {
+  it('builds a GET request with flat query string values and no body', () => {
+    const result = buildRuntimeApiRequest({
+      config: runtimeConfig,
+      operationName: 'searchUsers',
+      state: runtimeState,
+    })
+
+    expect(result).toEqual({
+      status: 'ready',
+      request: {
+        operationName: 'searchUsers',
+        operation: runtimeConfig.api.searchUsers,
+        url: '/api/users?search=Ada&page=2&active=true',
+        init: {
+          method: 'GET',
+        },
+      },
+    })
+  })
+
+  it('builds POST, PUT, PATCH and DELETE requests with the supported payload channel', () => {
+    expect(
+      buildRuntimeApiRequest({
+        config: runtimeConfig,
+        operationName: 'createUser',
+        state: runtimeState,
+      }),
+    ).toEqual({
+      status: 'ready',
+      request: {
+        operationName: 'createUser',
+        operation: runtimeConfig.api.createUser,
+        url: '/api/users',
+        init: {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+          },
+          body: JSON.stringify({
+            name: 'Ada',
+            profile: {
+              nickname: 'Countess',
+            },
+          }),
+        },
+      },
+    })
+
+    expect(
+      buildRuntimeApiRequest({
+        config: runtimeConfig,
+        operationName: 'replaceUser',
+        state: runtimeState,
+      }),
+    ).toEqual({
+      status: 'ready',
+      request: {
+        operationName: 'replaceUser',
+        operation: runtimeConfig.api.replaceUser,
+        url: '/api/users/user-1',
+        init: {
+          method: 'PUT',
+          headers: {
+            'content-type': 'application/json',
+          },
+          body: JSON.stringify({
+            name: 'Ada Lovelace',
+          }),
+        },
+      },
+    })
+
+    expect(
+      buildRuntimeApiRequest({
+        config: runtimeConfig,
+        operationName: 'patchUser',
+        state: runtimeState,
+      }),
+    ).toEqual({
+      status: 'ready',
+      request: {
+        operationName: 'patchUser',
+        operation: runtimeConfig.api.patchUser,
+        url: '/api/users/user-1',
+        init: {
+          method: 'PATCH',
+          headers: {
+            'content-type': 'application/json',
+          },
+          body: JSON.stringify({
+            active: true,
+          }),
+        },
+      },
+    })
+
+    expect(
+      buildRuntimeApiRequest({
+        config: runtimeConfig,
+        operationName: 'deleteUser',
+        state: runtimeState,
+      }),
+    ).toEqual({
+      status: 'ready',
+      request: {
+        operationName: 'deleteUser',
+        operation: runtimeConfig.api.deleteUser,
+        url: '/api/users/user-1?hard=false',
+        init: {
+          method: 'DELETE',
+        },
+      },
+    })
+  })
+
+  it('treats body null as an explicit request without serialized json body', () => {
+    const result = buildRuntimeApiRequest({
+      config: runtimeConfig,
+      operationName: 'clearUser',
+      state: runtimeState,
+    })
+
+    expect(result).toEqual({
+      status: 'ready',
+      request: {
+        operationName: 'clearUser',
+        operation: runtimeConfig.api.clearUser,
+        url: '/api/users/user-1',
+        init: {
+          method: 'PATCH',
+        },
+      },
+    })
+  })
+
+  it('keeps literal strings, escaped references and supported references distinct in query and body payloads', () => {
+    expect(
+      buildRuntimeApiRequest({
+        config: runtimeConfig,
+        operationName: 'escapedQuery',
+        state: runtimeState,
+      }),
+    ).toEqual({
+      status: 'ready',
+      request: {
+        operationName: 'escapedQuery',
+        operation: runtimeConfig.api.escapedQuery,
+        url: '/api/literals?literal=forms.userSearch.term',
+        init: {
+          method: 'GET',
+        },
+      },
+    })
+
+    expect(
+      buildRuntimeApiRequest({
+        config: runtimeConfig,
+        operationName: 'mixedBody',
+        state: runtimeState,
+      }),
+    ).toEqual({
+      status: 'ready',
+      request: {
+        operationName: 'mixedBody',
+        operation: runtimeConfig.api.mixedBody,
+        url: '/api/mixed',
+        init: {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+          },
+          body: JSON.stringify({
+            literal: 'plain text',
+            escaped: 'queries.selectedUser.data.profile.nickname',
+            derivedId: 'user-1',
+            tags: ['math', 'logic'],
+          }),
+        },
+      },
+    })
+  })
+
+  it('rejects missing or unsupported final query values before emitting a request', () => {
+    expect(
+      buildRuntimeApiRequest({
+        config: runtimeConfig,
+        operationName: 'missingQueryValue',
+        state: runtimeState,
+      }),
+    ).toEqual({
+      status: 'error',
+      error: {
+        code: 'request-build-failed',
+        message:
+          'The api operation "missingQueryValue" could not resolve "forms.userSearch.missingField" for "query.search".',
+      },
+    })
+
+    expect(
+      buildRuntimeApiRequest({
+        config: runtimeConfig,
+        operationName: 'invalidQueryValue',
+        state: runtimeState,
+      }),
+    ).toEqual({
+      status: 'error',
+      error: {
+        code: 'request-build-failed',
+        message:
+          'The api operation "invalidQueryValue" resolved "query.search" to an unsupported query value.',
+      },
+    })
+  })
+
+  it('rejects resolved body references that do not produce valid json data', () => {
+    expect(
+      buildRuntimeApiRequest({
+        config: runtimeConfig,
+        operationName: 'invalidBodyReference',
+        state: runtimeState,
+      }),
+    ).toEqual({
+      status: 'error',
+      error: {
+        code: 'request-build-failed',
+        message: 'The api operation "invalidBodyReference" could not build its JSON body.',
+      },
+    })
+  })
+
+  it('fails fast when the requested operation does not exist', async () => {
+    const fetchMock = vi.fn()
+
+    await expect(
+      executeRuntimeApiOperation({
+        config: runtimeConfig,
+        operationName: 'missingOperation',
+        state: runtimeState,
+        fetch: fetchMock,
+      }),
+    ).resolves.toEqual({
+      status: 'error',
+      error: {
+        code: 'operation-not-found',
+        message: 'The api operation "missingOperation" does not exist.',
+      },
+    })
+
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('normalizes fetch failures, http errors and invalid json responses with stable error codes', async () => {
+    await expect(
+      executeRuntimeApiOperation({
+        config: runtimeConfig,
+        operationName: 'searchUsers',
+        state: runtimeState,
+        fetch: vi.fn().mockRejectedValue(new Error('socket hang up')),
+      }),
+    ).resolves.toEqual({
+      status: 'error',
+      error: {
+        code: 'network-error',
+        message: 'The api operation "searchUsers" failed due to a network error.',
+      },
+    })
+
+    await expect(
+      executeRuntimeApiOperation({
+        config: runtimeConfig,
+        operationName: 'searchUsers',
+        state: runtimeState,
+        fetch: vi.fn().mockResolvedValue(
+          new Response(JSON.stringify({ message: 'Forbidden' }), {
+            status: 403,
+            headers: {
+              'content-type': 'application/json',
+            },
+          }),
+        ),
+      }),
+    ).resolves.toEqual({
+      status: 'error',
+      error: {
+        code: 'http-error',
+        message: 'The api operation "searchUsers" failed with HTTP status 403.',
+      },
+    })
+
+    await expect(
+      executeRuntimeApiOperation({
+        config: runtimeConfig,
+        operationName: 'searchUsers',
+        state: runtimeState,
+        fetch: vi.fn().mockResolvedValue(
+          new Response('{"broken"', {
+            status: 200,
+            headers: {
+              'content-type': 'application/json',
+            },
+          }),
+        ),
+      }),
+    ).resolves.toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-json-response',
+        message: 'The api operation "searchUsers" returned invalid JSON.',
+      },
+    })
+  })
+
+  it('returns success with parsed data for valid json and data null for empty successful responses', async () => {
+    await expect(
+      executeRuntimeApiOperation({
+        config: runtimeConfig,
+        operationName: 'searchUsers',
+        state: runtimeState,
+        fetch: vi.fn().mockResolvedValue(
+          new Response(JSON.stringify({ results: ['Ada', 'Grace'] }), {
+            status: 200,
+            headers: {
+              'content-type': 'application/json',
+            },
+          }),
+        ),
+      }),
+    ).resolves.toEqual({
+      status: 'success',
+      data: {
+        results: ['Ada', 'Grace'],
+      },
+    })
+
+    await expect(
+      executeRuntimeApiOperation({
+        config: runtimeConfig,
+        operationName: 'deleteUser',
+        state: runtimeState,
+        fetch: vi.fn().mockResolvedValue(
+          new Response(null, {
+            status: 204,
+          }),
+        ),
+      }),
+    ).resolves.toEqual({
+      status: 'success',
+      data: null,
+    })
+  })
+})

@@ -1,6 +1,10 @@
 import type {
   ContainerLayoutNode,
   HeadingLayoutNode,
+  RuntimeApiBodyValue,
+  RuntimeApiConfig,
+  RuntimeApiMethod,
+  RuntimeApiOperation,
   LayoutNode,
   LayoutNodeCollection,
   LayoutNodeType,
@@ -13,6 +17,7 @@ import type {
 } from './runtime-config-types'
 
 const supportedNodeTypes: LayoutNodeType[] = ['container', 'heading', 'paragraph', 'list']
+const supportedApiMethods: RuntimeApiMethod[] = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']
 
 export function validateRuntimeConfig(rawConfig: unknown): RuntimeConfigValidationResult {
   if (!isRecord(rawConfig)) {
@@ -21,6 +26,12 @@ export function validateRuntimeConfig(rawConfig: unknown): RuntimeConfigValidati
 
   if (!isRecord(rawConfig.api)) {
     return invalidLayout('The runtime config field "api" must be an object.')
+  }
+
+  const apiResult = validateApiConfig(rawConfig.api)
+
+  if (apiResult.status === 'error') {
+    return apiResult
   }
 
   if (!Array.isArray(rawConfig.pages)) {
@@ -57,7 +68,7 @@ export function validateRuntimeConfig(rawConfig: unknown): RuntimeConfigValidati
   }
 
   const config: RuntimeConfig = {
-    api: rawConfig.api,
+    api: apiResult.api,
     pages,
     initialPage: rawConfig.initialPage,
   }
@@ -79,6 +90,145 @@ export function validateRuntimeConfig(rawConfig: unknown): RuntimeConfigValidati
     status: 'ready',
     config,
     page,
+  }
+}
+
+function validateApiConfig(
+  rawApiConfig: Record<string, unknown>,
+): { status: 'ready'; api: RuntimeApiConfig } | { status: 'error'; error: RuntimeConfigError } {
+  const api: RuntimeApiConfig = {}
+
+  for (const [operationName, rawOperation] of Object.entries(rawApiConfig)) {
+    if (!isRecord(rawOperation)) {
+      return invalidLayout(`The api operation "${operationName}" must be an object.`)
+    }
+
+    const operationResult = validateApiOperation(operationName, rawOperation)
+
+    if (operationResult.status === 'error') {
+      return operationResult
+    }
+
+    api[operationName] = operationResult.operation
+  }
+
+  return {
+    status: 'ready',
+    api,
+  }
+}
+
+function validateApiOperation(
+  operationName: string,
+  rawOperation: Record<string, unknown>,
+): { status: 'ready'; operation: RuntimeApiOperation } | { status: 'error'; error: RuntimeConfigError } {
+  if (!supportedApiMethods.includes(rawOperation.method as RuntimeApiMethod)) {
+    return invalidLayout(`The api operation "${operationName}" uses unsupported method "${String(rawOperation.method)}".`)
+  }
+
+  if (typeof rawOperation.endpoint !== 'string' || rawOperation.endpoint.trim().length === 0) {
+    return invalidLayout(`The api operation "${operationName}" must declare a non-empty endpoint.`)
+  }
+
+  const method = rawOperation.method as RuntimeApiMethod
+  const queryResult = validateApiQuery(operationName, rawOperation.query)
+
+  if (queryResult.status === 'error') {
+    return queryResult
+  }
+
+  const bodyResult = validateApiBody(operationName, method, rawOperation.body)
+
+  if (bodyResult.status === 'error') {
+    return bodyResult
+  }
+
+  const operation: RuntimeApiOperation = {
+    method,
+    endpoint: rawOperation.endpoint,
+  }
+
+  if (queryResult.query !== undefined) {
+    operation.query = queryResult.query
+  }
+
+  if (bodyResult.hasBody) {
+    operation.body = bodyResult.body
+  }
+
+  return {
+    status: 'ready',
+    operation,
+  }
+}
+
+function validateApiQuery(
+  operationName: string,
+  rawQuery: unknown,
+):
+  | { status: 'ready'; query: RuntimeApiOperation['query'] }
+  | { status: 'error'; error: RuntimeConfigError } {
+  if (rawQuery === undefined) {
+    return {
+      status: 'ready',
+      query: undefined,
+    }
+  }
+
+  if (!isRecord(rawQuery)) {
+    return invalidLayout(`The api operation "${operationName}.query" must be an object with non-empty keys.`)
+  }
+
+  const query: NonNullable<RuntimeApiOperation['query']> = {}
+
+  for (const [key, value] of Object.entries(rawQuery)) {
+    if (key.length === 0) {
+      return invalidLayout(`The api operation "${operationName}.query" contains an empty key.`)
+    }
+
+    if (!isRuntimeApiQueryValue(value)) {
+      return invalidLayout(
+        `The api operation "${operationName}.query.${key}" must resolve to a string, number, or boolean.`,
+      )
+    }
+
+    query[key] = value
+  }
+
+  return {
+    status: 'ready',
+    query,
+  }
+}
+
+function validateApiBody(
+  operationName: string,
+  method: RuntimeApiMethod,
+  rawBody: unknown,
+):
+  | { status: 'ready'; hasBody: boolean; body?: RuntimeApiBodyValue }
+  | { status: 'error'; error: RuntimeConfigError } {
+  if (rawBody === undefined) {
+    return {
+      status: 'ready',
+      hasBody: false,
+    }
+  }
+
+  if (method === 'GET') {
+    return invalidLayout(`The api operation "${operationName}" uses method "${method}" but declares an unsupported body.`)
+  }
+
+  const bodyValidation = isRuntimeApiBodyValue(rawBody, `${operationName}.body`)
+
+  if (bodyValidation !== true) {
+    return invalidLayout(`The api operation "${bodyValidation}" must be valid JSON data.`)
+  }
+
+  return {
+    status: 'ready',
+    hasBody: true,
+    body: rawBody as RuntimeApiBodyValue,
   }
 }
 
@@ -313,9 +463,62 @@ function invalidLayout(message: string): { status: 'error'; error: RuntimeConfig
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
+  return isPlainObject(value)
 }
 
 function getOptionalRecord(value: unknown): Record<string, unknown> | undefined {
   return isRecord(value) ? value : undefined
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return false
+  }
+
+  const prototype = Object.getPrototypeOf(value)
+  return prototype === Object.prototype || prototype === null
+}
+
+function isRuntimeApiQueryValue(value: unknown): value is RuntimeApiOperation['query'][string] {
+  return typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean'
+}
+
+function isRuntimeApiBodyValue(value: unknown, path: string): true | string {
+  if (value === null) {
+    return true
+  }
+
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+    return true
+  }
+
+  if (Array.isArray(value)) {
+    for (let index = 0; index < value.length; index += 1) {
+      const childValidation = isRuntimeApiBodyValue(value[index], `${path}[${index}]`)
+
+      if (childValidation !== true) {
+        return childValidation
+      }
+    }
+
+    return true
+  }
+
+  if (!isPlainObject(value)) {
+    return path
+  }
+
+  for (const [key, childValue] of Object.entries(value)) {
+    if (key.length === 0) {
+      return `${path}.${key}`
+    }
+
+    const childValidation = isRuntimeApiBodyValue(childValue, `${path}.${key}`)
+
+    if (childValidation !== true) {
+      return childValidation
+    }
+  }
+
+  return true
 }

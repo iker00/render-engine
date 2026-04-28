@@ -1,6 +1,19 @@
 import { describe, expect, it } from 'vitest'
 import { validateRuntimeConfig } from '../config/runtime-config'
 
+function createConfigWithApi(api: Record<string, unknown>) {
+  return {
+    api,
+    pages: [
+      {
+        id: 'home',
+        layout: [],
+      },
+    ],
+    initialPage: 'home',
+  }
+}
+
 describe('validateRuntimeConfig', () => {
   it('accepts a page with multiple root layout nodes in order', () => {
     const result = validateRuntimeConfig({
@@ -256,6 +269,247 @@ describe('validateRuntimeConfig', () => {
         message:
           'Page "home" uses unsupported layout node type "hero-banner" at "layout[0].children[1]".',
       },
+    })
+  })
+
+  describe('declarative api contract', () => {
+    it('accepts a GET operation with endpoint and flat query parameters', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithApi({
+          searchUsers: {
+            method: 'GET',
+            endpoint: '/api/users',
+            query: {
+              search: 'Ada',
+              page: 2,
+              active: true,
+            },
+          },
+        }),
+      )
+
+      expect(result.status).toBe('ready')
+    })
+
+    it('accepts POST, PUT, PATCH and DELETE operations with their supported payload channels', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithApi({
+          createUser: {
+            method: 'POST',
+            endpoint: '/api/users',
+            body: {
+              name: 'Ada',
+              tags: ['admin'],
+            },
+          },
+          replaceUser: {
+            method: 'PUT',
+            endpoint: '/api/users/ada',
+            body: {
+              name: 'Ada Lovelace',
+              active: true,
+            },
+          },
+          updateUser: {
+            method: 'PATCH',
+            endpoint: '/api/users/ada',
+            body: {
+              nickname: 'Ada',
+            },
+          },
+          deleteUser: {
+            method: 'DELETE',
+            endpoint: '/api/users/ada',
+            query: {
+              hard: false,
+            },
+          },
+        }),
+      )
+
+      expect(result.status).toBe('ready')
+    })
+
+    it('accepts body null only for methods that admit body', () => {
+      expect(
+        validateRuntimeConfig(
+          createConfigWithApi({
+            clearUser: {
+              method: 'PATCH',
+              endpoint: '/api/users/ada',
+              body: null,
+            },
+          }),
+        ).status,
+      ).toBe('ready')
+
+      expect(
+        validateRuntimeConfig(
+          createConfigWithApi({
+            searchUsers: {
+              method: 'GET',
+              endpoint: '/api/users',
+              body: null,
+            },
+          }),
+        ),
+      ).toEqual({
+        status: 'error',
+        error: {
+          code: 'invalid-layout',
+          displayMode: 'development-only',
+          message: 'The api operation "searchUsers" uses method "GET" but declares an unsupported body.',
+        },
+      })
+    })
+
+    it('rejects operations with unsupported methods or empty endpoints', () => {
+      expect(
+        validateRuntimeConfig(
+          createConfigWithApi({
+            searchUsers: {
+              method: 'HEAD',
+              endpoint: '/api/users',
+            },
+          }),
+        ),
+      ).toEqual({
+        status: 'error',
+        error: {
+          code: 'invalid-layout',
+          displayMode: 'development-only',
+          message: 'The api operation "searchUsers" uses unsupported method "HEAD".',
+        },
+      })
+
+      expect(
+        validateRuntimeConfig(
+          createConfigWithApi({
+            searchUsers: {
+              method: 'GET',
+              endpoint: '',
+            },
+          }),
+        ),
+      ).toEqual({
+        status: 'error',
+        error: {
+          code: 'invalid-layout',
+          displayMode: 'development-only',
+          message: 'The api operation "searchUsers" must declare a non-empty endpoint.',
+        },
+      })
+    })
+
+    it('rejects query shapes outside the supported flat scalar contract', () => {
+      expect(
+        validateRuntimeConfig(
+          createConfigWithApi({
+            searchUsers: {
+              method: 'GET',
+              endpoint: '/api/users',
+              query: [],
+            },
+          }),
+        ),
+      ).toEqual({
+        status: 'error',
+        error: {
+          code: 'invalid-layout',
+          displayMode: 'development-only',
+          message: 'The api operation "searchUsers.query" must be an object with non-empty keys.',
+        },
+      })
+
+      expect(
+        validateRuntimeConfig({
+          ...createConfigWithApi({}),
+          api: {
+            searchUsers: {
+              method: 'GET',
+              endpoint: '/api/users',
+              query: {
+                '': 'Ada',
+              },
+            },
+          },
+        }),
+      ).toEqual({
+        status: 'error',
+        error: {
+          code: 'invalid-layout',
+          displayMode: 'development-only',
+          message: 'The api operation "searchUsers.query" contains an empty key.',
+        },
+      })
+
+      expect(
+        validateRuntimeConfig(
+          createConfigWithApi({
+            searchUsers: {
+              method: 'GET',
+              endpoint: '/api/users',
+              query: {
+                filters: {
+                  active: true,
+                },
+              },
+            },
+          }),
+        ),
+      ).toEqual({
+        status: 'error',
+        error: {
+          code: 'invalid-layout',
+          displayMode: 'development-only',
+          message:
+            'The api operation "searchUsers.query.filters" must resolve to a string, number, or boolean.',
+        },
+      })
+    })
+
+    it('rejects body trees with non-json values or incompatible shapes', () => {
+      expect(
+        validateRuntimeConfig(
+          createConfigWithApi({
+            createUser: {
+              method: 'POST',
+              endpoint: '/api/users',
+              body: {
+                createdAt: new Date('2024-01-01T00:00:00.000Z'),
+              },
+            },
+          }),
+        ),
+      ).toEqual({
+        status: 'error',
+        error: {
+          code: 'invalid-layout',
+          displayMode: 'development-only',
+          message: 'The api operation "createUser.body.createdAt" must be valid JSON data.',
+        },
+      })
+
+      expect(
+        validateRuntimeConfig(
+          createConfigWithApi({
+            createUser: {
+              method: 'POST',
+              endpoint: '/api/users',
+              body: {
+                tags: [undefined],
+              },
+            },
+          }),
+        ),
+      ).toEqual({
+        status: 'error',
+        error: {
+          code: 'invalid-layout',
+          displayMode: 'development-only',
+          message: 'The api operation "createUser.body.tags[0]" must be valid JSON data.',
+        },
+      })
     })
   })
 })

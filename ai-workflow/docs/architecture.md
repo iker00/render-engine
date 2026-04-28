@@ -5,8 +5,9 @@ Describir la arquitectura estable de la aplicación para que las features nuevas
 
 ## Módulos principales
 - `app/`: arranque, composición raíz, lectura de configuración desde `src/dev/config.json` o `data-config` y surface de errores visibles.
-- `config/`: fachada pública del contrato, tipos del runtime config y validación estructural mínima del árbol `layout`.
-- `runtime/`: renderer de layout, estado compartido por instancia del runtime, dispatcher central por tipo de nodo, piezas concretas por nodo soportado y composición de la página resuelta desde navegación interna.
+- `config/`: fachada pública del contrato, tipos del runtime config y validación estructural del árbol `layout` y del catálogo declarativo `api`.
+- `queries/`: construcción de requests, ejecución de operaciones remotas por nombre y normalización de errores de red o respuesta.
+- `runtime/`: renderer de layout, estado compartido por instancia del runtime, dispatcher central por tipo de nodo, piezas concretas por nodo soportado, resolución de referencias y composición de la página resuelta desde navegación interna.
 - `tests/`: tests del bootstrap, validación de configuración, renderer visible y estado compartido del runtime.
 
 ## Estructura estable vigente
@@ -19,6 +20,10 @@ src/
     runtime-config.ts
     runtime-config-types.ts
     validate-runtime-config.ts
+  queries/
+    runtime-api-types.ts
+    runtime-api-request.ts
+    runtime-api-executor.ts
   runtime/
     layout-renderer.tsx
     layout-node-renderer.tsx
@@ -45,19 +50,20 @@ src/
 
 Lectura operativa de esa estructura:
 - `runtime-config.ts` mantiene una superficie pública austera para no acoplar consumidores a la organización interna.
-- `validate-runtime-config.ts` concentra la validación previa al render y deja `config/` preparada para crecer sin mezclar contrato y lógica.
+- `validate-runtime-config.ts` concentra la validación previa al render y fija también el contrato estable de `config.api`.
+- `queries/` encapsula la frontera HTTP del runtime: resolución de payloads, construcción de `RequestInit`, ejecución contra `fetch` y errores normalizados.
 - `layout-renderer.tsx` conserva la responsabilidad de renderizar colecciones ordenadas de nodos.
 - `layout-node-renderer.tsx` es el punto central de resolución `type -> pieza de render`.
 - `runtime-node-styling.ts` concentra la convención visual base del runtime y la compatibilidad acotada para `gap` arbitrarios.
 - `runtime-references/` fija la semántica central de referencias string, distingue `literal | supported | unsupported | invalid` y evita lógica dispersa en nodos visuales.
-- `runtime-state/` concentra un store por instancia basado en `useReducer` + `Context`, con dominios separados para navegación, formularios y queries.
+- `runtime-state/` concentra un store por instancia basado en `useReducer` + `Context`, con dominios separados para navegación, formularios y queries, y expone la fachada mínima `executeQueryOperation()` sin absorber la lógica de red.
 - `runtime/nodes/` materializa solo nodos con uso real inmediato, sin introducir subsistemas vacíos para capacidades futuras.
 - `runtime-page.tsx` ya no decide la página visible por selección ad hoc; la resuelve desde el estado compartido del runtime.
 
 ## Módulos previstos para próximas features
 - `components/`: componentes visuales soportados por futuras ampliaciones del renderer declarativo.
 - `forms/`: piezas visuales, validación declarativa y submit apoyados en el dominio `forms` ya existente en `runtime-state/`.
-- `queries/`: ejecución real de endpoints declarados, preloads y consumidores visuales apoyados en el dominio `queries` ya existente en `runtime-state/`.
+- `queries/`: ampliaciones futuras para `preloads`, refetch declarativo y consumidores visuales apoyados en la frontera remota ya existente.
 - `devtools/`: soporte de desarrollo local para cargar y editar configuración sin backend.
 - `shared/`: utilidades, adaptadores y piezas reutilizables entre módulos.
 
@@ -81,4 +87,5 @@ Lectura operativa de esa estructura:
 - La navegación visible ya se resuelve desde `navigation.currentPageId`; la URL del navegador queda fuera del contrato de esta primera capa interactiva.
 - La resolución de referencias declarativas vive en `src/runtime/runtime-references/` y hoy solo abre navegación anidada adicional bajo `queries.{queryName}.data.*`.
 - La navegación de subrutas de query usa una semántica iterativa única: índices solo sobre arrays, claves literales sobre objetos y resultado `missing` para rutas bien formadas cuyo dato no está disponible.
+- La ejecución remota declarativa vive en `src/queries/`, reutiliza la convención central de referencias del runtime y deja sus resultados visibles solo a través de `queries.{operationName}`.
 - Los errores de bootstrap y validación deben ser diagnósticos en desarrollo; en producción, los errores marcados como solo de desarrollo degradan sin mensaje visible genérico.

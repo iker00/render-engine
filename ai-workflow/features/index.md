@@ -15,7 +15,6 @@ Cada feature nueva debería usar, cuando aplique:
 La política completa está en [`../docs/workflow.md`](../docs/workflow.md).
 
 ## Planificadas
-- `0007-centralized-runtime-reference-resolution`: convención funcional central para resolver referencias string del JSON como `forms.*` y `queries.*` desde una capa común y extensible del runtime, evitando lógica dispersa en nodos visuales.
 
 ## Completadas
 - `0001-bootstrap-project-dependencies`: bootstrap técnico reproducible con frontend de paquete único, scripts base de desarrollo/validación y carga inicial de configuración desde `data-config` o `src/dev/config.json`.
@@ -24,3 +23,6 @@ La política completa está en [`../docs/workflow.md`](../docs/workflow.md).
 - `0004-runtime-structure-reorganization`: reorganización interna de `src/config/` y `src/runtime/` para separar contrato, validación y render por nodo sin cambiar el comportamiento funcional del runtime.
 - `0005-tailwind-runtime-styling-baseline`: migración del styling visible de `container`, `heading`, `paragraph` y `list` a `Tailwind CSS`, con compatibilidad acotada para `gap` arbitrarios y sin introducir todavía theming ni una API visual declarativa.
 - `0006-shared-runtime-state-core`: núcleo de estado compartido por instancia para navegación interna, formularios y queries, validado con aislamiento entre runtimes y preparado como base para las próximas features interactivas.
+- `0007-centralized-runtime-reference-resolution`: convención funcional central para resolver referencias string del JSON como `forms.*` y `queries.*` desde una capa común y extensible del runtime, evitando lógica dispersa en nodos visuales.
+- `0008-nested-query-data-reference-navigation`: ampliación de la convención de referencias para permitir subrutas anidadas dentro de `queries.{queryName}.data`, incluyendo navegación por objetos y colecciones sin abrir un lenguaje general de expresiones.
+- `0009-declarative-api-boundary`: `api` ya actúa como catálogo declarativo tipado y validado, con construcción de requests, ejecución real por nombre y proyección del resultado en `queries.{operationName}` sin acoplar la UI a detalles HTTP.

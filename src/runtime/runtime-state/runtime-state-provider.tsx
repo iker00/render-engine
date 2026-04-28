@@ -2,6 +2,7 @@ import { useCallback } from 'react'
 import type { ReactNode } from 'react'
 import { useContext, useMemo, useReducer, useRef } from 'react'
 import type { RuntimeConfig } from '../../config/runtime-config'
+import { executeRuntimeApiOperation } from '../../queries/runtime-api-executor'
 import { RuntimeStateContext } from './runtime-state-context'
 import { createRuntimeState, runtimeStateReducer } from './runtime-state-reducer'
 import { selectCurrentPage } from './runtime-state-selectors'
@@ -34,7 +35,7 @@ export function useRuntimeState() {
 }
 
 export function useRuntimeStateActions() {
-  const { config, dispatch, initialState } = useRuntimeStateContext()
+  const { config, dispatch, initialState, state } = useRuntimeStateContext()
 
   const navigateToPage = useCallback(
     (pageId: string) => {
@@ -180,8 +181,65 @@ export function useRuntimeStateActions() {
     [dispatch],
   )
 
+  const executeQueryOperation = useCallback(
+    async (operationName: string, options?: { fetch?: typeof fetch }) => {
+      const operation = config.api[operationName]
+
+      if (!operation) {
+        dispatch({
+          type: 'queries/set-error',
+          payload: {
+            queryName: operationName,
+            error: {
+              code: 'operation-not-found',
+              message: `The api operation "${operationName}" does not exist.`,
+            },
+          },
+        })
+
+        return
+      }
+
+      dispatch({
+        type: 'queries/set-loading',
+        payload: {
+          queryName: operationName,
+        },
+      })
+
+      const result = await executeRuntimeApiOperation({
+        config,
+        operationName,
+        state,
+        fetch: options?.fetch,
+      })
+
+      if (result.status === 'success') {
+        dispatch({
+          type: 'queries/set-success',
+          payload: {
+            queryName: operationName,
+            data: result.data,
+          },
+        })
+
+        return
+      }
+
+      dispatch({
+        type: 'queries/set-error',
+        payload: {
+          queryName: operationName,
+          error: result.error satisfies RuntimeQueryError,
+        },
+      })
+    },
+    [config, dispatch, state],
+  )
+
   return useMemo(
     () => ({
+      executeQueryOperation,
       initializeForm,
       initializeQuery,
       navigateToPage,
@@ -207,6 +265,7 @@ export function useRuntimeStateActions() {
       initializeForm,
       initializeQuery,
       navigateToPage,
+      executeQueryOperation,
       resetForm,
       resetQuery,
       setFormFieldError,

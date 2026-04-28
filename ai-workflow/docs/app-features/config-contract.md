@@ -5,9 +5,24 @@ Definir la estructura funcional mínima del JSON que el runtime interpreta hoy p
 
 ## Estructura vigente
 La configuración parte de tres bloques principales:
-- `api`: objeto requerido, reservado para capacidades futuras y todavía no ejecutado por el runtime actual
+- `api`: objeto requerido que define un catálogo declarativo de operaciones remotas nombradas
 - `pages`: array requerido de páginas declaradas
 - `initialPage`: identificador requerido de la página de entrada
+
+## Modelo de `api`
+Cada operación declarada dentro de `api` debe incluir:
+- `method`: `GET | POST | PUT | PATCH | DELETE`
+- `endpoint`: string no vacío
+- `query`: objeto plano opcional con valores finales `string | number | boolean`
+- `body`: payload JSON opcional para métodos distintos de `GET`
+
+Reglas funcionales vigentes:
+- `GET` no admite `body`.
+- `POST`, `PUT`, `PATCH` y `DELETE` pueden declarar `body`.
+- `query` se mantiene plano; no existe soporte estable para nested params, claves repetidas ni arrays serializados en query string.
+- `body` puede contener objetos, arrays, strings, números, booleanos y `null` siempre que el árbol completo siga siendo JSON serializable.
+- `body: null` en la raíz es válido para métodos con body y significa petición explícita sin body JSON serializado.
+- varias operaciones pueden reutilizar el mismo `endpoint` con distinto nombre o método sin colisionar.
 
 ## Modelo de página
 Cada página debe incluir:
@@ -54,6 +69,12 @@ Las referencias dinámicas ya forman parte del contrato visible actual, pero con
 - el escape literal con `\` permite mostrar una referencia tal cual, por ejemplo `\queries.searchUsers.data.results.0.name`
 - no existe interpolación parcial dentro de strings
 
+Además, la misma convención de referencias completas se reutiliza dentro de `api.query` y en cualquier hoja string de `api.body`:
+- un string literal se conserva como literal
+- un string escapado con `\` se conserva sin el prefijo de escape
+- una referencia soportada se resuelve contra el estado actual del runtime en el momento de invocación
+- una referencia soportada pero sin valor disponible no invalida el config en bootstrap; produce un error de construcción del request al ejecutar la operación
+
 Referencias soportadas hoy:
 - `forms.{formId}.{fieldId}`
 - `queries.{queryName}`
@@ -84,7 +105,7 @@ La frontera estable de esta validación queda organizada así:
 - `src/config/validate-runtime-config.ts`: validación estructural mínima del runtime.
 
 ## Límites de v1
-- `api` no se ejecuta todavía.
+- `api` no tiene todavía disparadores declarativos visuales; la ejecución actual ocurre mediante la fachada imperativa del provider.
 - No hay `preloads` funcionales.
 - No hay interpolación compleja dentro de strings.
 - No hay sistema de plugins para componentes externos.

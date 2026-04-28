@@ -17,6 +17,9 @@
 - Dominio base de queries disponible con almacenamiento por nombre, `status/data/error`, conservación del último dato válido durante recargas y reset por query.
 - Capa central de referencias del runtime ya operativa para `forms.*`, `queries.{queryName}`, `queries.{queryName}.data`, `queries.{queryName}.status` y `queries.{queryName}.error`.
 - Navegación anidada de datos de query ya soportada bajo `queries.{queryName}.data.*`, con recorrido uniforme por objetos y arrays y consumo visible actual en `heading.props.text` y `paragraph.props.text`.
+- `config.api` ya funciona como catálogo declarativo tipado y validado de operaciones remotas con `method`, `endpoint`, `query` y `body`.
+- Capa `src/queries/` ya integrada para construir requests desde referencias del runtime, ejecutar operaciones por nombre y normalizar errores remotos con códigos estables orientados a UI.
+- Fachada `executeQueryOperation(operationName)` ya expuesta desde el provider para hidratar `queries.{operationName}` con transiciones `loading | success | error`.
 - Aislamiento validado entre varias instancias del runtime y limpieza completa del estado al desmontar y remontar.
 - Manejo explícito de errores de configuración con diagnóstico visible en desarrollo y degradación silenciosa en producción para errores marcados como `development-only`.
 - Tests automatizados del bootstrap, del validador y del renderer, con gate global de coverage activo sobre `src/`.
@@ -24,9 +27,8 @@
 ## Límites actuales
 - No existe todavía validación con `Zod`; el contrato actual se valida con lógica propia.
 - No existe todavía panel de desarrollo local para editar configuración en vivo.
-- No hay integración real con backend; solo existe la lectura de `data-config` como frontera de entrada.
+- No existe todavía una integración completa de producto con backend más allá de `data-config` como frontera de entrada y de las operaciones remotas declarativas ejecutadas por `fetch`.
 - No existe todavía una UI declarativa final para navegación, formularios o feedback de queries.
-- La sección `api` del JSON aún no se ejecuta.
 - No existen todavía `preloads` reales ni acciones API declarativas activas.
 - El catálogo visual sigue limitado a `container`, `heading`, `paragraph` y `list`.
 - No existen todavía consumidores de referencias fuera de `heading.props.text` y `paragraph.props.text`, ni interpolación parcial dentro de strings.
@@ -45,6 +47,7 @@
 - Sexta feature del workflow cerrada para introducir el núcleo de estado compartido del runtime sin abrir todavía la capa declarativa de interacción y datos remotos.
 - Séptima feature del workflow cerrada para centralizar la resolución de referencias string del runtime.
 - Octava feature del workflow cerrada para ampliar `queries.{queryName}.data` con navegación anidada por objetos y colecciones.
+- Novena feature del workflow cerrada para convertir `api` en una frontera declarativa operativa y conectar su ejecución con el dominio compartido `queries`.
 
 ## Referencias
 

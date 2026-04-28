@@ -37,11 +37,24 @@ Semántica estable:
 
 ## Ejecución de endpoints
 - Los endpoints se declaran en `api` y se invocan por nombre.
-- `GET` usa query string.
-- `POST`, `PUT`, `PATCH` y `DELETE` permiten body JSON.
-- Una acción puede llamar a uno o varios endpoints.
+- `GET` usa query string cuando la operación la declara.
+- `POST`, `PUT`, `PATCH` y `DELETE` pueden enviar body JSON.
+- La fachada pública actual del runtime expone `executeQueryOperation(operationName)` para ejecutar una operación declarada y escribir su resultado en `queries.{operationName}`.
+- La UI no construye manualmente URLs, query strings ni payloads JSON.
 
-La infraestructura de estado ya está preparada para recibir resultados compartidos, pero la ejecución real de endpoints sigue pendiente.
+Semántica estable de ejecución:
+- si la operación no existe, el runtime deja `queries.{operationName}` en `status: error` con `code: operation-not-found` y no emite red
+- si faltan datos para resolver referencias en `query` o `body`, el runtime deja `status: error` con `code: request-build-failed` y no emite red
+- si la llamada falla por red, el runtime usa `code: network-error`
+- si la respuesta HTTP no es `ok`, el runtime usa `code: http-error`
+- si la respuesta satisfactoria trae JSON inválido, el runtime usa `code: invalid-json-response`
+- si la respuesta es satisfactoria pero no trae body consumible, incluido `204 No Content`, el runtime guarda `data: null`
+
+Reglas de payload vigentes:
+- `query` admite solo valores finales `string`, `number` y `boolean`
+- `body` admite cualquier árbol JSON serializable
+- `body: null` en la raíz equivale a una petición deliberada sin body serializado
+- referencias completas y strings escapados siguen la misma convención central del runtime
 
 ## Precargas
 - Las precargas se declaran a nivel de página.
@@ -55,7 +68,7 @@ Todavía no existe ejecución real de `preloads`; esta sección describe el cont
 - Caso típico: borrar un item y recargar el listado.
 - La intención funcional es soportar este patrón sin exigir lógica imperativa dispersa.
 
-La base de estado para ese patrón ya existe mediante transiciones controladas del store compartido, pero todavía no hay acciones declarativas finales ni red real conectada.
+La base de estado y la red real ya están conectadas para ejecución por nombre, pero siguen pendientes los disparadores declarativos finales y la orquestación automática de refetch.
 
 ## Feedback visual
 - El layout puede definir explícitamente qué mostrar en `loading`, `error` y estado vacío.

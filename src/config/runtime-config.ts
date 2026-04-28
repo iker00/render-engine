@@ -1,4 +1,10 @@
 export type {
+  RuntimeApiBodyValue,
+  RuntimeApiConfig,
+  RuntimeApiMethod,
+  RuntimeApiOperation,
+  RuntimeApiQuery,
+  RuntimeApiQueryValue,
   ContainerLayoutNode,
   HeadingLayoutNode,
   LayoutNode,

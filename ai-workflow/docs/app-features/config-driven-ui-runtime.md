@@ -1,7 +1,7 @@
 # Runtime UI configurable
 
 ## Objetivo
-Renderizar el runtime a partir de una configuración JSON validada, apoyado ya en un estado compartido por instancia para navegación, formularios y queries, sin depender todavía de features visuales de formulario ni de ejecución remota real.
+Renderizar el runtime a partir de una configuración JSON validada, apoyado ya en un estado compartido por instancia para navegación, formularios y queries, con una frontera declarativa real para ejecutar operaciones remotas sin acoplar la UI a HTTP.
 
 ## Qué resuelve
 - Permite que la configuración declare varias páginas aunque, por ahora, solo se resuelva la indicada por `initialPage`.
@@ -11,6 +11,7 @@ Renderizar el runtime a partir de una configuración JSON validada, apoyado ya e
 - Mantiene una estructura interna separada entre validación de configuración, render de colecciones y piezas concretas por nodo soportado.
 - Mantiene un store compartido por instancia para navegación, formularios y queries, con aislamiento entre runtimes montados a la vez.
 - Resuelve referencias dinámicas desde una capa central del runtime para las superficies textuales ya soportadas.
+- Ejecuta operaciones remotas declaradas en `api` mediante una capa dedicada en `src/queries/` y refleja sus resultados en `queries.{operationName}`.
 - Implementa la presentación visible del runtime con utilidades de `Tailwind CSS`, sin abrir todavía una capa de theming definida.
 
 ## Áreas funcionales principales
@@ -59,6 +60,7 @@ Reglas funcionales vigentes:
 - `src/runtime/layout-node-renderer.tsx` centraliza la resolución `type -> pieza de render`.
 - `src/runtime/runtime-node-styling.ts` centraliza la convención visual base y la compatibilidad acotada de `gap`.
 - `src/runtime/runtime-references/` centraliza parsing, resolución y diagnóstico de referencias string del runtime.
+- `src/queries/` concentra la construcción de requests, la ejecución contra `fetch` y la normalización de errores remotos.
 - `src/runtime/runtime-state/` concentra el provider, reducer, tipos, selectors y acciones del estado compartido del runtime.
 - `src/runtime/nodes/` contiene una pieza concreta por nodo soportado hoy: `container`, `heading`, `paragraph` y `list`.
 
@@ -89,7 +91,7 @@ Límites funcionales de esa capa:
 
 ## Límites actuales
 - La navegación ya vive en estado compartido, pero todavía no existe una UI declarativa final para dispararla desde el árbol JSON.
-- No se ejecutan `preloads`, queries ni endpoints declarados en `api`.
+- No se ejecutan todavía `preloads` ni existen disparadores declarativos finales desde layout para lanzar operaciones de `api`.
 - El estado compartido de formularios y queries ya existe, pero todavía no hay nodos visuales de formulario ni consumidores declarativos de datos remotos fuera de `heading.props.text` y `paragraph.props.text`.
 - `routeParams.*`, `params.*` y `navigation.*` siguen sin resolverse como referencias soportadas.
 - La presentación base del runtime sigue siendo intencionadamente mínima y no define todavía theming, tokens de diseño ni personalización visual declarativa.

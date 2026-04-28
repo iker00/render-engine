@@ -1,6 +1,6 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { useEffect } from 'react'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import type { RuntimeConfig } from '../config/runtime-config'
 import {
   RuntimeStateProvider,
@@ -27,6 +27,31 @@ const runtimeConfig: RuntimeConfig = {
       layout: [],
     },
   ],
+}
+
+const runtimeApiConfig: RuntimeConfig = {
+  api: {
+    searchUsers: {
+      method: 'GET',
+      endpoint: '/api/users',
+      query: {
+        search: 'forms.userSearch.name',
+      },
+    },
+    invalidSearch: {
+      method: 'GET',
+      endpoint: '/api/users',
+      query: {
+        search: 'forms.userSearch.missingField',
+      },
+    },
+    clearUsers: {
+      method: 'DELETE',
+      endpoint: '/api/users',
+    },
+  },
+  initialPage: 'home',
+  pages: runtimeConfig.pages,
 }
 
 function RuntimeStateSnapshot({ testId }: { testId: string }) {
@@ -155,6 +180,37 @@ function RuntimeInstanceFixture({ name, initialPage }: { name: string; initialPa
       </button>
       <RuntimeStateSnapshot testId={`${name}-state`} />
       <RuntimePage />
+    </>
+  )
+}
+
+function QueryOperationFixture({
+  operationName,
+  fetchMock,
+}: {
+  operationName: string
+  fetchMock?: typeof fetch
+}) {
+  const { executeQueryOperation, initializeForm, initializeQuery, setQuerySuccess } = useRuntimeStateActions()
+
+  useEffect(() => {
+    initializeForm('userSearch', {
+      name: {
+        defaultValue: 'Ada',
+      },
+    })
+    initializeQuery('searchUsers')
+  }, [initializeForm, initializeQuery])
+
+  return (
+    <>
+      <button type="button" onClick={() => setQuerySuccess('searchUsers', ['Ada'])}>
+        Seed prior query success
+      </button>
+      <button type="button" onClick={() => void executeQueryOperation(operationName, { fetch: fetchMock })}>
+        Execute operation
+      </button>
+      <RuntimeStateSnapshot testId="runtime-state" />
     </>
   )
 }
@@ -490,6 +546,160 @@ describe('Runtime shared state store', () => {
     expect(screen.getByTestId('runtime-page')).toHaveAttribute('data-runtime-page-id', 'details')
     expect(screen.getByTestId('runtime-state')).toHaveTextContent(
       '"queries":{"searchUsers":{"status":"success","data":["Ada","Grace"],"error":null}}',
+    )
+  })
+
+  it('executes a declared operation by name and stores the successful result in queries', async () => {
+    render(
+      <RuntimeStateProvider config={runtimeApiConfig}>
+        <QueryOperationFixture
+          operationName="searchUsers"
+          fetchMock={vi.fn().mockResolvedValue(
+            new Response(JSON.stringify({ results: ['Ada', 'Grace'] }), {
+              status: 200,
+              headers: {
+                'content-type': 'application/json',
+              },
+            }),
+          )}
+        />
+      </RuntimeStateProvider>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Execute operation' }))
+
+    await waitFor(() =>
+      expect(screen.getByTestId('runtime-state')).toHaveTextContent(
+        '"queries":{"searchUsers":{"status":"success","data":{"results":["Ada","Grace"]},"error":null}}',
+      ),
+    )
+  })
+
+  it('keeps the last successful data while the operation reload is in flight', async () => {
+    let resolveFetch: ((response: Response) => void) | null = null
+    const fetchMock = vi.fn(
+      () =>
+        new Promise<Response>((resolve) => {
+          resolveFetch = resolve
+        }),
+    )
+
+    render(
+      <RuntimeStateProvider config={runtimeApiConfig}>
+        <QueryOperationFixture operationName="searchUsers" fetchMock={fetchMock} />
+      </RuntimeStateProvider>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Seed prior query success' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Execute operation' }))
+
+    expect(screen.getByTestId('runtime-state')).toHaveTextContent(
+      '"queries":{"searchUsers":{"status":"loading","data":["Ada"],"error":null}}',
+    )
+
+    resolveFetch?.(
+      new Response(JSON.stringify({ results: ['Ada', 'Grace'] }), {
+        status: 200,
+        headers: {
+          'content-type': 'application/json',
+        },
+      }),
+    )
+
+    await waitFor(() =>
+      expect(screen.getByTestId('runtime-state')).toHaveTextContent(
+        '"queries":{"searchUsers":{"status":"success","data":{"results":["Ada","Grace"]},"error":null}}',
+      ),
+    )
+  })
+
+  it('stores stable query errors without dropping the last successful data', async () => {
+    render(
+      <RuntimeStateProvider config={runtimeApiConfig}>
+        <QueryOperationFixture
+          operationName="searchUsers"
+          fetchMock={vi.fn().mockResolvedValue(
+            new Response(JSON.stringify({ message: 'Boom' }), {
+              status: 500,
+              headers: {
+                'content-type': 'application/json',
+              },
+            }),
+          )}
+        />
+      </RuntimeStateProvider>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Seed prior query success' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Execute operation' }))
+
+    await waitFor(() =>
+      expect(screen.getByTestId('runtime-state')).toHaveTextContent(
+        '"queries":{"searchUsers":{"status":"error","data":["Ada"],"error":{"code":"http-error","message":"The api operation \\"searchUsers\\" failed with HTTP status 500."}}}',
+      ),
+    )
+  })
+
+  it('stores an operation-not-found error without calling fetch', async () => {
+    const fetchMock = vi.fn()
+
+    render(
+      <RuntimeStateProvider config={runtimeApiConfig}>
+        <QueryOperationFixture operationName="missingOperation" fetchMock={fetchMock} />
+      </RuntimeStateProvider>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Execute operation' }))
+
+    await waitFor(() =>
+      expect(screen.getByTestId('runtime-state')).toHaveTextContent(
+        '"missingOperation":{"status":"error","data":null,"error":{"code":"operation-not-found","message":"The api operation \\"missingOperation\\" does not exist."}}',
+      ),
+    )
+
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('stores a request-build-failed error without calling fetch when references are not resolvable', async () => {
+    const fetchMock = vi.fn()
+
+    render(
+      <RuntimeStateProvider config={runtimeApiConfig}>
+        <QueryOperationFixture operationName="invalidSearch" fetchMock={fetchMock} />
+      </RuntimeStateProvider>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Execute operation' }))
+
+    await waitFor(() =>
+      expect(screen.getByTestId('runtime-state')).toHaveTextContent(
+        '"invalidSearch":{"status":"error","data":null,"error":{"code":"request-build-failed","message":"The api operation \\"invalidSearch\\" could not resolve \\"forms.userSearch.missingField\\" for \\"query.search\\"."}}',
+      ),
+    )
+
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('stores data null in queries when an operation succeeds with an empty response body', async () => {
+    render(
+      <RuntimeStateProvider config={runtimeApiConfig}>
+        <QueryOperationFixture
+          operationName="clearUsers"
+          fetchMock={vi.fn().mockResolvedValue(
+            new Response(null, {
+              status: 204,
+            }),
+          )}
+        />
+      </RuntimeStateProvider>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Execute operation' }))
+
+    await waitFor(() =>
+      expect(screen.getByTestId('runtime-state')).toHaveTextContent(
+        '"clearUsers":{"status":"success","data":null,"error":null}',
+      ),
     )
   })
 
