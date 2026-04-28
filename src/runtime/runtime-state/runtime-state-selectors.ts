@@ -13,8 +13,16 @@ export function selectQueriesState(state: RuntimeState) {
   return state.queries
 }
 
+export function selectPageEntryState(state: RuntimeState) {
+  return state.pageEntry
+}
+
 export function selectCurrentPageId(state: RuntimeState) {
   return state.navigation.currentPageId
+}
+
+export function selectPageEntryStatus(state: RuntimeState) {
+  return state.pageEntry.status
 }
 
 export function selectCurrentPage(config: RuntimeConfig, state: RuntimeState) {

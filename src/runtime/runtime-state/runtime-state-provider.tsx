@@ -1,21 +1,76 @@
-import { useCallback } from 'react'
-import type { ReactNode } from 'react'
+import { useCallback, useEffect } from 'react'
+import type { Dispatch, ReactNode } from 'react'
 import { useContext, useMemo, useReducer, useRef } from 'react'
 import type { RuntimeConfig } from '../../config/runtime-config'
 import { executeRuntimeApiOperation } from '../../queries/runtime-api-executor'
 import { RuntimeStateContext } from './runtime-state-context'
 import { createRuntimeState, runtimeStateReducer } from './runtime-state-reducer'
 import { selectCurrentPage } from './runtime-state-selectors'
-import type { RuntimeFormFieldDefinition, RuntimeQueryError } from './runtime-state-types'
+import type { RuntimeFormFieldDefinition, RuntimeQueryError, RuntimeState, RuntimeStateAction } from './runtime-state-types'
 
 interface RuntimeStateProviderProps {
   config: RuntimeConfig
   children: ReactNode
 }
 
+async function executeQueryOperationWithSnapshot({
+  config,
+  dispatch,
+  operationName,
+  snapshotState,
+  fetchImplementation,
+}: {
+  config: RuntimeConfig
+  dispatch: Dispatch<RuntimeStateAction>
+  operationName: string
+  snapshotState: RuntimeState
+  fetchImplementation?: typeof fetch
+}) {
+  dispatch({
+    type: 'queries/set-loading',
+    payload: {
+      queryName: operationName,
+    },
+  })
+
+  const result = await executeRuntimeApiOperation({
+    config,
+    operationName,
+    state: snapshotState,
+    fetch: fetchImplementation,
+  })
+
+  if (result.status === 'success') {
+    dispatch({
+      type: 'queries/set-success',
+      payload: {
+        queryName: operationName,
+        data: result.data,
+      },
+    })
+
+    return result
+  }
+
+  dispatch({
+    type: 'queries/set-error',
+    payload: {
+      queryName: operationName,
+      error: result.error satisfies RuntimeQueryError,
+    },
+  })
+
+  return result
+}
+
 export function RuntimeStateProvider({ config, children }: RuntimeStateProviderProps) {
   const initialStateRef = useRef(createRuntimeState(config))
   const [state, dispatch] = useReducer(runtimeStateReducer, initialStateRef.current)
+  const pageEntryIdRef = useRef(initialStateRef.current.pageEntry.entryId)
+  const isFirstEntryRef = useRef(true)
+  const latestStateRef = useRef(state)
+
+  latestStateRef.current = state
 
   const contextValue = useMemo(
     () => ({
@@ -26,6 +81,70 @@ export function RuntimeStateProvider({ config, children }: RuntimeStateProviderP
     }),
     [config, state],
   )
+
+  useEffect(() => {
+    const activePage = config.pages.find((page) => page.id === state.navigation.currentPageId)
+
+    if (!activePage) {
+      isFirstEntryRef.current = false
+      return
+    }
+
+    const preloadNames = activePage.preloads ?? []
+
+    if (preloadNames.length === 0 && isFirstEntryRef.current) {
+      isFirstEntryRef.current = false
+      return
+    }
+
+    isFirstEntryRef.current = false
+    pageEntryIdRef.current += 1
+
+    const entryId = pageEntryIdRef.current
+
+    if (preloadNames.length === 0) {
+      dispatch({
+        type: 'page-entry/set-idle',
+        payload: {
+          entryId,
+          pageId: activePage.id,
+          preloadNames,
+        },
+      })
+
+      return
+    }
+
+    dispatch({
+      type: 'page-entry/set-loading',
+      payload: {
+        entryId,
+        pageId: activePage.id,
+        preloadNames,
+      },
+    })
+
+    const snapshotState = latestStateRef.current
+
+    void Promise.all(
+      preloadNames.map((operationName) =>
+        executeQueryOperationWithSnapshot({
+          config,
+          dispatch,
+          operationName,
+          snapshotState,
+        }),
+      ),
+    ).then((results) => {
+      dispatch({
+        type: 'page-entry/set-settled',
+        payload: {
+          entryId,
+          status: results.every((result) => result.status === 'success') ? 'success' : 'error',
+        },
+      })
+    })
+  }, [config, dispatch, state.navigation.currentPageId])
 
   return <RuntimeStateContext.Provider value={contextValue}>{children}</RuntimeStateContext.Provider>
 }
@@ -183,55 +302,12 @@ export function useRuntimeStateActions() {
 
   const executeQueryOperation = useCallback(
     async (operationName: string, options?: { fetch?: typeof fetch }) => {
-      const operation = config.api[operationName]
-
-      if (!operation) {
-        dispatch({
-          type: 'queries/set-error',
-          payload: {
-            queryName: operationName,
-            error: {
-              code: 'operation-not-found',
-              message: `The api operation "${operationName}" does not exist.`,
-            },
-          },
-        })
-
-        return
-      }
-
-      dispatch({
-        type: 'queries/set-loading',
-        payload: {
-          queryName: operationName,
-        },
-      })
-
-      const result = await executeRuntimeApiOperation({
+      await executeQueryOperationWithSnapshot({
         config,
+        dispatch,
         operationName,
-        state,
-        fetch: options?.fetch,
-      })
-
-      if (result.status === 'success') {
-        dispatch({
-          type: 'queries/set-success',
-          payload: {
-            queryName: operationName,
-            data: result.data,
-          },
-        })
-
-        return
-      }
-
-      dispatch({
-        type: 'queries/set-error',
-        payload: {
-          queryName: operationName,
-          error: result.error satisfies RuntimeQueryError,
-        },
+        snapshotState: state,
+        fetchImplementation: options?.fetch,
       })
     },
     [config, dispatch, state],

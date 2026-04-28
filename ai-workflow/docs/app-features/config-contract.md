@@ -27,6 +27,7 @@ Reglas funcionales vigentes:
 ## Modelo de página
 Cada página debe incluir:
 - `id`: string no vacío y único dentro de `pages`
+- `preloads`: array opcional y ordenado de nombres de operación declarados en `api`
 - `layout`: array ordenado obligatorio de elementos declarativos
 
 La página ya no depende de `title` ni `description` fuera del árbol `layout`.
@@ -105,8 +106,8 @@ La frontera estable de esta validación queda organizada así:
 - `src/config/validate-runtime-config.ts`: validación estructural mínima del runtime.
 
 ## Límites de v1
-- `api` no tiene todavía disparadores declarativos visuales; la ejecución actual ocurre mediante la fachada imperativa del provider.
-- No hay `preloads` funcionales.
+- `api` no tiene todavía disparadores declarativos visuales desde el árbol `layout`; la ejecución activa hoy ocurre mediante la fachada imperativa del provider y por `preloads` de página al entrar en ella.
+- `preloads` solo admite una lista plana de strings; no hay condiciones, prioridades, secuencialidad, dependencias ni políticas de caché.
 - No hay interpolación compleja dentro de strings.
 - No hay sistema de plugins para componentes externos.
 - No hay soporte para nodos distintos de `container`, `heading`, `paragraph` y `list`.

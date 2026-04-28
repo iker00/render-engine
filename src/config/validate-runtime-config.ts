@@ -61,10 +61,22 @@ export function validateRuntimeConfig(rawConfig: unknown): RuntimeConfigValidati
       return layoutResult
     }
 
-    pages.push({
+    const preloadResult = validatePagePreloads(page.preloads, index)
+
+    if (preloadResult.status === 'error') {
+      return preloadResult
+    }
+
+    const validatedPage: RuntimePageConfig = {
       id: page.id,
       layout: layoutResult.nodes,
-    })
+    }
+
+    if (preloadResult.preloads !== undefined) {
+      validatedPage.preloads = preloadResult.preloads
+    }
+
+    pages.push(validatedPage)
   }
 
   const config: RuntimeConfig = {
@@ -90,6 +102,41 @@ export function validateRuntimeConfig(rawConfig: unknown): RuntimeConfigValidati
     status: 'ready',
     config,
     page,
+  }
+}
+
+function validatePagePreloads(
+  rawPreloads: unknown,
+  pageIndex: number,
+):
+  | { status: 'ready'; preloads: string[] | undefined }
+  | { status: 'error'; error: RuntimeConfigError } {
+  if (rawPreloads === undefined) {
+    return {
+      status: 'ready',
+      preloads: undefined,
+    }
+  }
+
+  if (!Array.isArray(rawPreloads)) {
+    return invalidLayout(`The page at "pages[${pageIndex}].preloads" must be an array of non-empty strings.`)
+  }
+
+  const preloads: string[] = []
+
+  for (let preloadIndex = 0; preloadIndex < rawPreloads.length; preloadIndex += 1) {
+    const preloadName = rawPreloads[preloadIndex]
+
+    if (typeof preloadName !== 'string' || preloadName.trim().length === 0) {
+      return invalidLayout(`The page at "pages[${pageIndex}].preloads[${preloadIndex}]" must be a non-empty string.`)
+    }
+
+    preloads.push(preloadName)
+  }
+
+  return {
+    status: 'ready',
+    preloads,
   }
 }
 

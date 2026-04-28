@@ -56,14 +56,14 @@ Lectura operativa de esa estructura:
 - `layout-node-renderer.tsx` es el punto central de resolución `type -> pieza de render`.
 - `runtime-node-styling.ts` concentra la convención visual base del runtime y la compatibilidad acotada para `gap` arbitrarios.
 - `runtime-references/` fija la semántica central de referencias string, distingue `literal | supported | unsupported | invalid` y evita lógica dispersa en nodos visuales.
-- `runtime-state/` concentra un store por instancia basado en `useReducer` + `Context`, con dominios separados para navegación, formularios y queries, y expone la fachada mínima `executeQueryOperation()` sin absorber la lógica de red.
+- `runtime-state/` concentra un store por instancia basado en `useReducer` + `Context`, con dominios separados para navegación, formularios, queries y `pageEntry`, y expone la fachada mínima `executeQueryOperation()` sin absorber la lógica de red.
 - `runtime/nodes/` materializa solo nodos con uso real inmediato, sin introducir subsistemas vacíos para capacidades futuras.
 - `runtime-page.tsx` ya no decide la página visible por selección ad hoc; la resuelve desde el estado compartido del runtime.
 
 ## Módulos previstos para próximas features
 - `components/`: componentes visuales soportados por futuras ampliaciones del renderer declarativo.
 - `forms/`: piezas visuales, validación declarativa y submit apoyados en el dominio `forms` ya existente en `runtime-state/`.
-- `queries/`: ampliaciones futuras para `preloads`, refetch declarativo y consumidores visuales apoyados en la frontera remota ya existente.
+- `queries/`: ampliaciones futuras para refetch declarativo y consumidores visuales apoyados en la frontera remota ya existente.
 - `devtools/`: soporte de desarrollo local para cargar y editar configuración sin backend.
 - `shared/`: utilidades, adaptadores y piezas reutilizables entre módulos.
 
@@ -88,4 +88,5 @@ Lectura operativa de esa estructura:
 - La resolución de referencias declarativas vive en `src/runtime/runtime-references/` y hoy solo abre navegación anidada adicional bajo `queries.{queryName}.data.*`.
 - La navegación de subrutas de query usa una semántica iterativa única: índices solo sobre arrays, claves literales sobre objetos y resultado `missing` para rutas bien formadas cuyo dato no está disponible.
 - La ejecución remota declarativa vive en `src/queries/`, reutiliza la convención central de referencias del runtime y deja sus resultados visibles solo a través de `queries.{operationName}`.
+- La orquestación automática de `preloads` vive en `runtime-state-provider.tsx`, reutiliza la frontera `src/queries/`, captura un snapshot común del estado por entrada y limita la semántica latest-only al agregado `pageEntry`, no a las queries individuales.
 - Los errores de bootstrap y validación deben ser diagnósticos en desarrollo; en producción, los errores marcados como solo de desarrollo degradan sin mensaje visible genérico.

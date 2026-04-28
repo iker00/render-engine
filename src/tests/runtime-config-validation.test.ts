@@ -134,6 +134,193 @@ describe('validateRuntimeConfig', () => {
     })
   })
 
+  it('accepts pages without preloads', () => {
+    const result = validateRuntimeConfig({
+      api: {},
+      pages: [
+        {
+          id: 'home',
+          layout: [],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(result).toEqual({
+      status: 'ready',
+      config: {
+        api: {},
+        pages: [
+          {
+            id: 'home',
+            layout: [],
+          },
+        ],
+        initialPage: 'home',
+      },
+      page: {
+        id: 'home',
+        layout: [],
+      },
+    })
+  })
+
+  it('accepts pages with an empty preloads list', () => {
+    const result = validateRuntimeConfig({
+      api: {},
+      pages: [
+        {
+          id: 'home',
+          preloads: [],
+          layout: [],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(result).toEqual({
+      status: 'ready',
+      config: {
+        api: {},
+        pages: [
+          {
+            id: 'home',
+            preloads: [],
+            layout: [],
+          },
+        ],
+        initialPage: 'home',
+      },
+      page: {
+        id: 'home',
+        preloads: [],
+        layout: [],
+      },
+    })
+  })
+
+  it('accepts pages with preloads in declared order', () => {
+    const result = validateRuntimeConfig({
+      api: {},
+      pages: [
+        {
+          id: 'home',
+          preloads: ['searchUsers', 'loadTeams'],
+          layout: [],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(result).toEqual({
+      status: 'ready',
+      config: {
+        api: {},
+        pages: [
+          {
+            id: 'home',
+            preloads: ['searchUsers', 'loadTeams'],
+            layout: [],
+          },
+        ],
+        initialPage: 'home',
+      },
+      page: {
+        id: 'home',
+        preloads: ['searchUsers', 'loadTeams'],
+        layout: [],
+      },
+    })
+  })
+
+  it('rejects preloads when it is not an array', () => {
+    const result = validateRuntimeConfig({
+      api: {},
+      pages: [
+        {
+          id: 'home',
+          preloads: 'searchUsers',
+          layout: [],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(result).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message: 'The page at "pages[0].preloads" must be an array of non-empty strings.',
+      },
+    })
+  })
+
+  it('rejects preloads entries that are empty, whitespace-only, or not strings', () => {
+    expect(
+      validateRuntimeConfig({
+        api: {},
+        pages: [
+          {
+            id: 'home',
+            preloads: ['searchUsers', '', 'loadTeams'],
+            layout: [],
+          },
+        ],
+        initialPage: 'home',
+      }),
+    ).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message: 'The page at "pages[0].preloads[1]" must be a non-empty string.',
+      },
+    })
+
+    expect(
+      validateRuntimeConfig({
+        api: {},
+        pages: [
+          {
+            id: 'home',
+            preloads: ['searchUsers', '   '],
+            layout: [],
+          },
+        ],
+        initialPage: 'home',
+      }),
+    ).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message: 'The page at "pages[0].preloads[1]" must be a non-empty string.',
+      },
+    })
+
+    expect(
+      validateRuntimeConfig({
+        api: {},
+        pages: [
+          {
+            id: 'home',
+            preloads: ['searchUsers', 42],
+            layout: [],
+          },
+        ],
+        initialPage: 'home',
+      }),
+    ).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message: 'The page at "pages[0].preloads[1]" must be a non-empty string.',
+      },
+    })
+  })
+
   it('returns an explicit error when initialPage does not exist in pages', () => {
     const result = validateRuntimeConfig({
       api: {},

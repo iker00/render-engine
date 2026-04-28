@@ -38,16 +38,29 @@ export interface RuntimeQueryState {
   error: RuntimeQueryError | null
 }
 
+export type RuntimePageEntryStatus = 'idle' | 'loading' | 'success' | 'error'
+
+export interface RuntimePageEntryState {
+  entryId: number
+  pageId: string
+  preloadNames: string[]
+  status: RuntimePageEntryStatus
+}
+
 export interface RuntimeState {
   navigation: RuntimeNavigationState
   forms: Record<string, RuntimeFormState>
   queries: Record<string, RuntimeQueryState>
+  pageEntry: RuntimePageEntryState
 }
 
 export type RuntimeStateAction =
   | { type: 'runtime/reset'; payload: { state: RuntimeState } }
   | { type: 'navigation/navigate'; payload: { pageId: string } }
   | { type: 'navigation/set-error'; payload: { error: RuntimeNavigationError } }
+  | { type: 'page-entry/set-idle'; payload: { entryId: number; pageId: string; preloadNames: string[] } }
+  | { type: 'page-entry/set-loading'; payload: { entryId: number; pageId: string; preloadNames: string[] } }
+  | { type: 'page-entry/set-settled'; payload: { entryId: number; status: 'success' | 'error' } }
   | { type: 'forms/initialize'; payload: { formId: string; fields: Record<string, RuntimeFormFieldDefinition> } }
   | { type: 'forms/set-value'; payload: { formId: string; fieldId: string; value: unknown } }
   | { type: 'forms/set-error'; payload: { formId: string; fieldId: string; error: string | null } }

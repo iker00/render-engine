@@ -64,6 +64,12 @@ const runtimeState: RuntimeState = {
       error: null,
     },
   },
+  pageEntry: {
+    entryId: 0,
+    pageId: 'home',
+    preloadNames: [],
+    status: 'idle',
+  },
 }
 
 const runtimeConfig: RuntimeConfig = {

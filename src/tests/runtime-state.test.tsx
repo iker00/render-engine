@@ -11,6 +11,7 @@ import { RuntimePage } from '../runtime/runtime-page'
 import {
   selectFormFieldValue,
   selectNestedQueryDataValue,
+  selectPageEntryState,
   selectQueryReferenceValue,
 } from '../runtime/runtime-state/runtime-state-selectors'
 
@@ -241,6 +242,12 @@ describe('Runtime shared state store', () => {
     expect(screen.getByTestId('second-state')).toHaveTextContent('"currentPageId":"details"')
     expect(screen.getByTestId('first-state')).toHaveTextContent('"history":["home"]')
     expect(screen.getByTestId('second-state')).toHaveTextContent('"history":["details"]')
+    expect(screen.getByTestId('first-state')).toHaveTextContent(
+      '"pageEntry":{"entryId":0,"pageId":"home","preloadNames":[],"status":"idle"}',
+    )
+    expect(screen.getByTestId('second-state')).toHaveTextContent(
+      '"pageEntry":{"entryId":0,"pageId":"details","preloadNames":[],"status":"idle"}',
+    )
   })
 
   it('initializes navigation, forms and queries in the base state', () => {
@@ -255,6 +262,9 @@ describe('Runtime shared state store', () => {
     )
     expect(screen.getByTestId('runtime-state')).toHaveTextContent('"forms":{}')
     expect(screen.getByTestId('runtime-state')).toHaveTextContent('"queries":{}')
+    expect(screen.getByTestId('runtime-state')).toHaveTextContent(
+      '"pageEntry":{"entryId":0,"pageId":"home","preloadNames":[],"status":"idle"}',
+    )
   })
 
   it('seeds navigation from initialPage with the minimal history shape', () => {
@@ -272,6 +282,9 @@ describe('Runtime shared state store', () => {
     expect(screen.getByTestId('navigation-state')).toHaveTextContent('"currentPageId":"details"')
     expect(screen.getByTestId('navigation-state')).toHaveTextContent('"history":["details"]')
     expect(screen.getByTestId('navigation-state')).toHaveTextContent('"lastError":null')
+    expect(screen.getByTestId('navigation-state')).toHaveTextContent(
+      '"pageEntry":{"entryId":0,"pageId":"details","preloadNames":[],"status":"idle"}',
+    )
   })
 
   it('resets the full runtime state back to the initial instance snapshot', () => {
@@ -285,6 +298,9 @@ describe('Runtime shared state store', () => {
     expect(screen.getByTestId('state-after-reset')).toHaveTextContent('"history":["home"]')
     expect(screen.getByTestId('state-after-reset')).toHaveTextContent('"forms":{}')
     expect(screen.getByTestId('state-after-reset')).toHaveTextContent('"queries":{}')
+    expect(screen.getByTestId('state-after-reset')).toHaveTextContent(
+      '"pageEntry":{"entryId":0,"pageId":"home","preloadNames":[],"status":"idle"}',
+    )
   })
 
   it('renders the visible page from navigation.currentPageId and changes it without touching the URL', () => {
@@ -381,6 +397,12 @@ describe('Runtime shared state store', () => {
           },
           error: null,
         },
+      },
+      pageEntry: {
+        entryId: 0,
+        pageId: 'home',
+        preloadNames: [],
+        status: 'idle',
       },
     }
 
@@ -521,6 +543,12 @@ describe('Runtime shared state store', () => {
           error: null,
         },
       },
+      pageEntry: {
+        entryId: 2,
+        pageId: 'home',
+        preloadNames: ['searchUsers'],
+        status: 'success' as const,
+      },
     }
 
     expect(selectFormFieldValue(snapshot, 'userSearch', 'name')).toBe('Grace')
@@ -529,6 +557,7 @@ describe('Runtime shared state store', () => {
     expect(selectQueryReferenceValue(snapshot, 'searchUsers', 'data')).toEqual(['Ada', 'Grace'])
     expect(selectQueryReferenceValue(snapshot, 'searchUsers', 'status')).toBe('success')
     expect(selectQueryReferenceValue(snapshot, 'searchUsers', 'error')).toBeNull()
+    expect(selectPageEntryState(snapshot)).toBe(snapshot.pageEntry)
   })
 
   it('keeps query state across page changes inside the same runtime instance', () => {

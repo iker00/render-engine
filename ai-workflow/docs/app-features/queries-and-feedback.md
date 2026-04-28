@@ -60,15 +60,20 @@ Reglas de payload vigentes:
 - Las precargas se declaran a nivel de página.
 - Se ejecutan al entrar en la página.
 - La página puede depender de esos datos para mostrar su layout o bloques concretos.
-
-Todavía no existe ejecución real de `preloads`; esta sección describe el contrato funcional objetivo, no una capacidad ya activa.
+- Cada entrada de página crea una tanda agregada con `entryId`, `pageId`, `preloadNames` y `status`.
+- El agregado distingue `idle | loading | success | error`.
+- `idle` representa explícitamente la entrada actual sin precargas que ejecutar.
+- Las operaciones de una misma tanda se lanzan en paralelo.
+- Si al menos una precarga falla, el agregado final queda en `error`, pero las queries exitosas conservan sus datos.
+- El agregado es latest-only: una tanda antigua puede seguir cerrando sus queries individuales, pero no puede reescribir el resultado agregado de una entrada más reciente.
+- Todas las precargas de una misma tanda resuelven sus referencias contra un snapshot común del estado al inicio de la entrada.
 
 ## Refetch y acciones mutadoras
 - Algunas acciones pueden necesitar relanzar queries después de éxito.
 - Caso típico: borrar un item y recargar el listado.
 - La intención funcional es soportar este patrón sin exigir lógica imperativa dispersa.
 
-La base de estado y la red real ya están conectadas para ejecución por nombre, pero siguen pendientes los disparadores declarativos finales y la orquestación automática de refetch.
+La base de estado y la red real ya están conectadas para ejecución por nombre y para precargas automáticas al entrar en página, pero siguen pendientes los disparadores declarativos finales desde layout y la orquestación automática de refetch.
 
 ## Feedback visual
 - El layout puede definir explícitamente qué mostrar en `loading`, `error` y estado vacío.

@@ -20,6 +20,9 @@
 - `config.api` ya funciona como catálogo declarativo tipado y validado de operaciones remotas con `method`, `endpoint`, `query` y `body`.
 - Capa `src/queries/` ya integrada para construir requests desde referencias del runtime, ejecutar operaciones por nombre y normalizar errores remotos con códigos estables orientados a UI.
 - Fachada `executeQueryOperation(operationName)` ya expuesta desde el provider para hidratar `queries.{operationName}` con transiciones `loading | success | error`.
+- Las páginas ya pueden declarar `preloads` como lista opcional de operaciones `api` y dispararlas automáticamente al entrar tanto en `initialPage` como en navegaciones posteriores.
+- Dominio agregado `pageEntry` ya disponible en el store compartido con `entryId`, `pageId`, `preloadNames` y `status: idle | loading | success | error`.
+- La tanda agregada de `preloads` ya usa semántica latest-only para no dejar que cierres tardíos de entradas antiguas sobrescriban la entrada activa más reciente.
 - Aislamiento validado entre varias instancias del runtime y limpieza completa del estado al desmontar y remontar.
 - Manejo explícito de errores de configuración con diagnóstico visible en desarrollo y degradación silenciosa en producción para errores marcados como `development-only`.
 - Tests automatizados del bootstrap, del validador y del renderer, con gate global de coverage activo sobre `src/`.
@@ -29,7 +32,7 @@
 - No existe todavía panel de desarrollo local para editar configuración en vivo.
 - No existe todavía una integración completa de producto con backend más allá de `data-config` como frontera de entrada y de las operaciones remotas declarativas ejecutadas por `fetch`.
 - No existe todavía una UI declarativa final para navegación, formularios o feedback de queries.
-- No existen todavía `preloads` reales ni acciones API declarativas activas.
+- No existen todavía acciones API declarativas activas desde el árbol `layout` ni consumidores declarativos finales del agregado `pageEntry`.
 - El catálogo visual sigue limitado a `container`, `heading`, `paragraph` y `list`.
 - No existen todavía consumidores de referencias fuera de `heading.props.text` y `paragraph.props.text`, ni interpolación parcial dentro de strings.
 - `routeParams.*`, `params.*` y `navigation.*` siguen sin resolverse como referencias soportadas.
@@ -48,6 +51,7 @@
 - Séptima feature del workflow cerrada para centralizar la resolución de referencias string del runtime.
 - Octava feature del workflow cerrada para ampliar `queries.{queryName}.data` con navegación anidada por objetos y colecciones.
 - Novena feature del workflow cerrada para convertir `api` en una frontera declarativa operativa y conectar su ejecución con el dominio compartido `queries`.
+- Décima feature del workflow cerrada para soportar `preloads` por página y su orquestación automática con agregado de entrada latest-only.
 
 ## Referencias
 

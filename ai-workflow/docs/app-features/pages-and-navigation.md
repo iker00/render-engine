@@ -13,6 +13,7 @@ Definir cómo se organiza el catálogo de páginas del runtime y cuál es el alc
 ## Página inicial
 - La configuración declara `initialPage`.
 - El runtime entra en esa página al arrancar.
+- Si la página inicial declara `preloads`, el runtime dispara automáticamente esa tanda al montar la instancia.
 - Si `initialPage` no coincide con ningún `id`, el arranque falla con un error claro.
 
 ## Estado actual de navegación
@@ -20,6 +21,8 @@ Definir cómo se organiza el catálogo de páginas del runtime y cuál es el alc
 - Existe una acción interna `navigateToPage(pageId)` para cambiar de página sin tocar la URL del navegador.
 - El estado base conserva `history` como preparación para historial interno, aunque todavía no existe una UI declarativa final de `goBack`.
 - Si se intenta navegar a una página inexistente, el runtime conserva la página anterior y guarda un error recuperable `page-not-found`.
+- Cada entrada a una página con `preloads` dispara una nueva tanda automática de operaciones, también al volver a una página ya visitada.
+- La misma entrada de página no relanza sus `preloads` por rerenders del provider ni por cambios internos de estado mientras `navigation.currentPageId` no cambie.
 - La URL del navegador no cambia.
 - Declarar varias páginas ya permite navegación interna controlada desde el runtime, aunque la configuración JSON todavía no expone acciones declarativas finales para ello.
 
@@ -34,5 +37,5 @@ Definir cómo se organiza el catálogo de páginas del runtime y cuál es el alc
 ## Límites de v1
 - no hay deep links
 - no hay sincronización con historial externo del navegador
-- no se ejecutan `preloads`
+- no existen políticas alternativas de reentrada, caché, secuencialidad ni dependencias entre `preloads`
 - no existen todavía `routeParams`

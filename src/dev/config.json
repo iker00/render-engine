@@ -1,8 +1,16 @@
 {
-  "api": {},
+  "api": {
+    "searchUsers": {
+      "method": "GET",
+      "endpoint": "https://jsonplaceholder.typicode.com/posts"
+    }
+  },
   "pages": [
     {
       "id": "bootstrap-home",
+      "preloads": [
+        "searchUsers"
+      ],
       "layout": [
         {
           "type": "heading",
@@ -22,8 +30,27 @@
           "props": {
             "items": [
               "Static runtime contract validated before rendering.",
-              "Initial page resolved from the active config source."
+              "Initial page resolved from the active config source.",
+              "Page entry preloads can hydrate shared query state on mount."
             ]
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "queries.searchUsers.status"
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "Primer post:"
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "queries.searchUsers.data.0.title"
           }
         }
       ]

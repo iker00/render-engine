@@ -12,6 +12,7 @@ Permitir iterar sobre la configuración JSON sin depender del backend real.
 - priorizar `data-config` cuando exista en el elemento root
 - detectar errores de bootstrap con mensajes comprensibles cuando el JSON sea inválido o falte la fuente esperada
 - facilitar el arranque y la validación inicial del runtime antes de implementar capacidades funcionales
+- permitir ejemplos locales que ya ejerciten `api` y `preloads` sin depender de un backend real, por ejemplo mediante recursos estáticos servidos por Vite desde `public/`
 
 ## Valor funcional
 - reduce la fricción para desarrollar el runtime

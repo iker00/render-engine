@@ -2,6 +2,7 @@ import type { RuntimeConfig } from '../../config/runtime-config'
 import type {
   RuntimeFormFieldDefinition,
   RuntimeFormFieldState,
+  RuntimePageEntryState,
   RuntimeFormState,
   RuntimeQueryState,
   RuntimeState,
@@ -9,6 +10,8 @@ import type {
 } from './runtime-state-types'
 
 export function createRuntimeState(config: RuntimeConfig): RuntimeState {
+  const initialPage = config.pages.find((page) => page.id === config.initialPage)
+
   return {
     navigation: {
       currentPageId: config.initialPage,
@@ -17,6 +20,12 @@ export function createRuntimeState(config: RuntimeConfig): RuntimeState {
     },
     forms: {},
     queries: {},
+    pageEntry: createRuntimePageEntryState({
+      entryId: 0,
+      pageId: config.initialPage,
+      preloadNames: initialPage?.preloads ?? [],
+      status: 'idle',
+    }),
   }
 }
 
@@ -50,6 +59,38 @@ export function runtimeStateReducer(state: RuntimeState, action: RuntimeStateAct
           ...state.navigation,
           lastError: action.payload.error,
         },
+      }
+    case 'page-entry/set-idle':
+      return {
+        ...state,
+        pageEntry: createRuntimePageEntryState({
+          entryId: action.payload.entryId,
+          pageId: action.payload.pageId,
+          preloadNames: action.payload.preloadNames,
+          status: 'idle',
+        }),
+      }
+    case 'page-entry/set-loading':
+      return {
+        ...state,
+        pageEntry: createRuntimePageEntryState({
+          entryId: action.payload.entryId,
+          pageId: action.payload.pageId,
+          preloadNames: action.payload.preloadNames,
+          status: 'loading',
+        }),
+      }
+    case 'page-entry/set-settled':
+      if (state.pageEntry.entryId !== action.payload.entryId) {
+        return state
+      }
+
+      return {
+        ...state,
+        pageEntry: createRuntimePageEntryState({
+          ...state.pageEntry,
+          status: action.payload.status,
+        }),
       }
     case 'forms/initialize':
       return {
@@ -217,5 +258,14 @@ function createRuntimeQueryState(): RuntimeQueryState {
     status: 'idle',
     data: null,
     error: null,
+  }
+}
+
+function createRuntimePageEntryState(pageEntryState: RuntimePageEntryState): RuntimePageEntryState {
+  return {
+    entryId: pageEntryState.entryId,
+    pageId: pageEntryState.pageId,
+    preloadNames: [...pageEntryState.preloadNames],
+    status: pageEntryState.status,
   }
 }

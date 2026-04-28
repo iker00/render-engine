@@ -30,6 +30,12 @@ const runtimeState: RuntimeState = {
       },
     },
   },
+  pageEntry: {
+    entryId: 0,
+    pageId: 'home',
+    preloadNames: [],
+    status: 'idle',
+  },
 }
 
 const nestedQueryRuntimeState: RuntimeState = {
