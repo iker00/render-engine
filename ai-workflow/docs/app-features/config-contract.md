@@ -1,7 +1,7 @@
 # Contrato de configuración
 
 ## Objetivo
-Definir la estructura funcional mínima del JSON que el runtime interpreta hoy para resolver y renderizar una página estática inicial.
+Definir la estructura funcional mínima del JSON que el runtime interpreta hoy para resolver y renderizar la UI configurable ya disponible, incluidas las referencias dinámicas textuales soportadas por el runtime.
 
 ## Estructura vigente
 La configuración parte de tres bloques principales:
@@ -36,10 +36,10 @@ Nodos soportados hoy:
   - `props.direction`: string opcional, con soporte visual actual para `row` y fallback a columna
   - `props.gap`: string opcional, con aliases como `sm`, `md` y `lg` o cualquier valor CSS válido
 - `heading`
-  - `props.text`: string obligatorio
+  - `props.text`: string obligatorio, literal o referencia dinámica completa soportada por el runtime
   - `props.level`: número entero obligatorio
 - `paragraph`
-  - `props.text`: string obligatorio
+  - `props.text`: string obligatorio, literal o referencia dinámica completa soportada por el runtime
 - `list`
   - `props.items`: array obligatorio de strings
 
@@ -49,14 +49,26 @@ Nodos soportados hoy:
 - Si `initialPage` no existe dentro de `pages`, el arranque falla con un error explícito.
 
 ## Referencias dinámicas
-Las referencias dinámicas siguen formando parte del marco general del producto, por ejemplo:
-- `forms.userSearch.name`
-- `queries.searchUsers.data`
-- `item.id`
-- `routeParams.userId`
-- `params.id`
+Las referencias dinámicas ya forman parte del contrato visible actual, pero con un alcance intencionadamente acotado:
+- solo se interpretan cuando el string completo de `heading.props.text` o `paragraph.props.text` coincide con una referencia soportada
+- el escape literal con `\` permite mostrar una referencia tal cual, por ejemplo `\queries.searchUsers.data.results.0.name`
+- no existe interpolación parcial dentro de strings
 
-Pero el runtime implementado en esta fase no las resuelve todavía dentro del layout.
+Referencias soportadas hoy:
+- `forms.{formId}.{fieldId}`
+- `queries.{queryName}`
+- `queries.{queryName}.data`
+- `queries.{queryName}.status`
+- `queries.{queryName}.error`
+- `queries.{queryName}.data.{segmentosAnidados}`
+
+Reglas funcionales vigentes:
+- la navegación anidada adicional solo se admite bajo `queries.{queryName}.data`
+- los segmentos anidados pueden recorrer objetos y arrays
+- un segmento numérico se interpreta como índice solo cuando el valor actual es un array; sobre objetos se trata como clave literal
+- `queries.{queryName}.status.*` y `queries.{queryName}.error.*` siguen fuera del contrato y se consideran rutas inválidas
+- `routeParams.*`, `params.*` y `navigation.*` siguen reservadas pero no soportadas
+- una referencia bien formada cuyo dato no existe todavía se degrada según la política visible del consumidor; en superficies textuales actuales eso significa string vacío
 
 ## Validación
 - La configuración debe validarse antes de renderizarse.
@@ -77,3 +89,4 @@ La frontera estable de esta validación queda organizada así:
 - No hay interpolación compleja dentro de strings.
 - No hay sistema de plugins para componentes externos.
 - No hay soporte para nodos distintos de `container`, `heading`, `paragraph` y `list`.
+- No hay consumidores declarativos de referencias fuera de `heading.props.text` y `paragraph.props.text`.

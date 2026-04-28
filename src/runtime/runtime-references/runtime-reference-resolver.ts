@@ -2,6 +2,7 @@ import type { RuntimeState } from '../runtime-state/runtime-state-types'
 import {
   selectFormFieldState,
   selectFormFieldValue,
+  selectNestedQueryDataValue,
   selectQueryState,
   selectQueryReferenceValue,
 } from '../runtime-state/runtime-state-selectors'
@@ -93,13 +94,21 @@ function resolveSupportedReferenceValue(reference: RuntimeSupportedReference, st
     } as const
   }
 
-  const [queryName, property] = reference.path as [string, ('data' | 'status' | 'error')?]
+  const [queryName, property, ...nestedDataPath] = reference.path as [
+    string,
+    ('data' | 'status' | 'error')?,
+    ...string[],
+  ]
   const queryState = selectQueryState(state, queryName)
 
   if (queryState === null) {
     return {
       found: false,
     } as const
+  }
+
+  if (property === 'data' && nestedDataPath.length > 0) {
+    return selectNestedQueryDataValue(state, queryName, nestedDataPath)
   }
 
   return {

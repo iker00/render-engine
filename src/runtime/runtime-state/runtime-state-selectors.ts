@@ -54,3 +54,66 @@ export function selectQueryReferenceValue(
 
   return queryState[property]
 }
+
+export function selectNestedQueryDataValue(state: RuntimeState, queryName: string, path: string[]) {
+  const queryState = selectQueryState(state, queryName)
+
+  if (queryState === null) {
+    return {
+      found: false,
+    } as const
+  }
+
+  let currentValue = queryState.data
+
+  for (const segment of path) {
+    if (currentValue == null) {
+      return {
+        found: false,
+      } as const
+    }
+
+    if (Array.isArray(currentValue)) {
+      if (!isArrayIndexSegment(segment)) {
+        return {
+          found: false,
+        } as const
+      }
+
+      currentValue = currentValue[Number(segment)]
+
+      if (typeof currentValue === 'undefined') {
+        return {
+          found: false,
+        } as const
+      }
+
+      continue
+    }
+
+    if (typeof currentValue !== 'object') {
+      return {
+        found: false,
+      } as const
+    }
+
+    const objectValue = currentValue as Record<string, unknown>
+
+    if (!Object.hasOwn(objectValue, segment)) {
+      return {
+        found: false,
+      } as const
+    }
+
+    currentValue = objectValue[segment]
+  }
+
+  return {
+    found: true,
+    value: currentValue,
+  } as const
+}
+
+function isArrayIndexSegment(segment: string) {
+  return /^(0|[1-9]\d*)$/.test(segment)
+}

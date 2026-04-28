@@ -10,6 +10,7 @@ Renderizar el runtime a partir de una configuración JSON validada, apoyado ya e
 - Sustituye el shell provisional por una página visible renderizada desde configuración.
 - Mantiene una estructura interna separada entre validación de configuración, render de colecciones y piezas concretas por nodo soportado.
 - Mantiene un store compartido por instancia para navegación, formularios y queries, con aislamiento entre runtimes montados a la vez.
+- Resuelve referencias dinámicas desde una capa central del runtime para las superficies textuales ya soportadas.
 - Implementa la presentación visible del runtime con utilidades de `Tailwind CSS`, sin abrir todavía una capa de theming definida.
 
 ## Áreas funcionales principales
@@ -57,8 +58,29 @@ Reglas funcionales vigentes:
 - `src/runtime/layout-renderer.tsx` renderiza colecciones ordenadas y conserva el soporte de varios hermanos raíz.
 - `src/runtime/layout-node-renderer.tsx` centraliza la resolución `type -> pieza de render`.
 - `src/runtime/runtime-node-styling.ts` centraliza la convención visual base y la compatibilidad acotada de `gap`.
+- `src/runtime/runtime-references/` centraliza parsing, resolución y diagnóstico de referencias string del runtime.
 - `src/runtime/runtime-state/` concentra el provider, reducer, tipos, selectors y acciones del estado compartido del runtime.
 - `src/runtime/nodes/` contiene una pieza concreta por nodo soportado hoy: `container`, `heading`, `paragraph` y `list`.
+
+## Referencias dinámicas ya activas
+El runtime resuelve hoy referencias completas en:
+- `heading.props.text`
+- `paragraph.props.text`
+
+Contrato visible vigente:
+- `forms.{formId}.{fieldId}`
+- `queries.{queryName}`
+- `queries.{queryName}.data`
+- `queries.{queryName}.status`
+- `queries.{queryName}.error`
+- `queries.{queryName}.data.{segmentosAnidados}`
+
+Límites funcionales de esa capa:
+- no existe interpolación parcial dentro de strings
+- la navegación anidada solo se permite bajo `queries.{queryName}.data`
+- objetos y arrays pueden recorrerse de izquierda a derecha con una única semántica central
+- `status`, `error`, `navigation.*`, `routeParams.*` y `params.*` no se abren como navegación dinámica soportada
+- las referencias textuales no resolubles degradan a string vacío y mantienen diagnóstico de desarrollo coherente con la referencia original
 
 ## Comportamiento de errores
 - Si `initialPage` no coincide con ninguna página declarada, el runtime muestra un error visible.
@@ -68,8 +90,8 @@ Reglas funcionales vigentes:
 ## Límites actuales
 - La navegación ya vive en estado compartido, pero todavía no existe una UI declarativa final para dispararla desde el árbol JSON.
 - No se ejecutan `preloads`, queries ni endpoints declarados en `api`.
-- El estado compartido de formularios y queries ya existe, pero todavía no hay nodos visuales de formulario ni consumidores declarativos de datos remotos dentro del layout.
-- No se resuelven referencias dinámicas como `forms.*`, `queries.*` o `routeParams.*`.
+- El estado compartido de formularios y queries ya existe, pero todavía no hay nodos visuales de formulario ni consumidores declarativos de datos remotos fuera de `heading.props.text` y `paragraph.props.text`.
+- `routeParams.*`, `params.*` y `navigation.*` siguen sin resolverse como referencias soportadas.
 - La presentación base del runtime sigue siendo intencionadamente mínima y no define todavía theming, tokens de diseño ni personalización visual declarativa.
 
 ## Referencias relacionadas

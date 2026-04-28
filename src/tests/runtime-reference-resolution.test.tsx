@@ -32,6 +32,48 @@ const runtimeState: RuntimeState = {
   },
 }
 
+const nestedQueryRuntimeState: RuntimeState = {
+  ...runtimeState,
+  queries: {
+    ...runtimeState.queries,
+    searchUsers: {
+      status: 'success',
+      data: {
+        user: {
+          profile: {
+            name: 'Ada',
+          },
+        },
+        results: [
+          {
+            id: 'user-1',
+            name: 'Ada',
+          },
+          {
+            id: 'user-2',
+            name: 'Grace',
+          },
+        ],
+        sections: [
+          {
+            items: [{ label: 'Alpha' }, { label: 'Beta' }, { label: 'Gamma' }],
+          },
+        ],
+        years: {
+          '2024': {
+            label: 'Q1',
+          },
+        },
+        total: 3,
+      },
+      error: {
+        code: 'network',
+        message: 'Recovered error',
+      },
+    },
+  },
+}
+
 describe('Runtime reference resolution', () => {
   describe('T0007-01 parser contract', () => {
     it('classifies supported forms and queries paths as dynamic references', () => {
@@ -106,7 +148,7 @@ describe('Runtime reference resolution', () => {
         namespace: 'queries',
       })
 
-      expect(parseRuntimeReference('queries.searchUsers.data.extra')).toMatchObject({
+      expect(parseRuntimeReference('queries.searchUsers.error.message')).toMatchObject({
         kind: 'reference',
         status: 'invalid',
         namespace: 'queries',
@@ -122,6 +164,101 @@ describe('Runtime reference resolution', () => {
         kind: 'reference',
         status: 'invalid',
         namespace: 'queries',
+      })
+    })
+  })
+
+  describe('T0008-01 nested query reference parser contract', () => {
+    it('classifies nested query data paths as supported references', () => {
+      expect(parseRuntimeReference('queries.searchUsers.data.results.0.name')).toMatchObject({
+        kind: 'reference',
+        status: 'supported',
+        namespace: 'queries',
+        path: ['searchUsers', 'data', 'results', '0', 'name'],
+      })
+
+      expect(parseRuntimeReference('queries.searchUsers.data.user.profile.name')).toMatchObject({
+        kind: 'reference',
+        status: 'supported',
+        namespace: 'queries',
+        path: ['searchUsers', 'data', 'user', 'profile', 'name'],
+      })
+    })
+
+    it('keeps the current base query routes classified exactly as before', () => {
+      expect(parseRuntimeReference('queries.searchUsers')).toMatchObject({
+        kind: 'reference',
+        status: 'supported',
+        namespace: 'queries',
+        path: ['searchUsers'],
+      })
+
+      expect(parseRuntimeReference('queries.searchUsers.data')).toMatchObject({
+        kind: 'reference',
+        status: 'supported',
+        namespace: 'queries',
+        path: ['searchUsers', 'data'],
+      })
+
+      expect(parseRuntimeReference('queries.searchUsers.status')).toMatchObject({
+        kind: 'reference',
+        status: 'supported',
+        namespace: 'queries',
+        path: ['searchUsers', 'status'],
+      })
+
+      expect(parseRuntimeReference('queries.searchUsers.error')).toMatchObject({
+        kind: 'reference',
+        status: 'supported',
+        namespace: 'queries',
+        path: ['searchUsers', 'error'],
+      })
+    })
+
+    it('keeps status and error branches closed to additional navigation', () => {
+      expect(parseRuntimeReference('queries.searchUsers.error.message')).toMatchObject({
+        kind: 'reference',
+        status: 'invalid',
+        namespace: 'queries',
+      })
+
+      expect(parseRuntimeReference('queries.searchUsers.status.label')).toMatchObject({
+        kind: 'reference',
+        status: 'invalid',
+        namespace: 'queries',
+      })
+    })
+
+    it('classifies malformed nested query routes as invalid', () => {
+      expect(parseRuntimeReference('queries')).toMatchObject({
+        kind: 'reference',
+        status: 'invalid',
+        namespace: 'queries',
+      })
+
+      expect(parseRuntimeReference('queries.searchUsers.data.')).toMatchObject({
+        kind: 'reference',
+        status: 'invalid',
+        namespace: 'queries',
+      })
+
+      expect(parseRuntimeReference('queries.searchUsers.data..results')).toMatchObject({
+        kind: 'reference',
+        status: 'invalid',
+        namespace: 'queries',
+      })
+
+      expect(parseRuntimeReference('queries.searchUsers.data.results.')).toMatchObject({
+        kind: 'reference',
+        status: 'invalid',
+        namespace: 'queries',
+      })
+    })
+
+    it('keeps escaped nested query references as visible literal text', () => {
+      expect(parseRuntimeReference('\\queries.searchUsers.data.results.0.name')).toEqual({
+        kind: 'literal',
+        value: 'queries.searchUsers.data.results.0.name',
       })
     })
   })
@@ -237,6 +374,131 @@ describe('Runtime reference resolution', () => {
       expect(resolveRuntimeReference('forms.userSearch.name.error', runtimeState)).toEqual({
         status: 'invalid',
         reference: parseRuntimeReference('forms.userSearch.name.error'),
+      })
+    })
+  })
+
+  describe('T0008-02 nested query data resolution', () => {
+    it('resolves nested query data paths through objects and arrays', () => {
+      expect(resolveRuntimeReference('queries.searchUsers.data.user.profile.name', nestedQueryRuntimeState)).toEqual({
+        status: 'resolved',
+        value: 'Ada',
+        reference: parseRuntimeReference('queries.searchUsers.data.user.profile.name'),
+      })
+
+      expect(resolveRuntimeReference('queries.searchUsers.data.results.0.id', nestedQueryRuntimeState)).toEqual({
+        status: 'resolved',
+        value: 'user-1',
+        reference: parseRuntimeReference('queries.searchUsers.data.results.0.id'),
+      })
+    })
+
+    it('resolves mixed object and array paths from left to right', () => {
+      expect(
+        resolveRuntimeReference('queries.searchUsers.data.sections.0.items.2.label', nestedQueryRuntimeState),
+      ).toEqual({
+        status: 'resolved',
+        value: 'Gamma',
+        reference: parseRuntimeReference('queries.searchUsers.data.sections.0.items.2.label'),
+      })
+    })
+
+    it('treats numeric segments as indexes only for arrays and as literal keys for objects', () => {
+      expect(resolveRuntimeReference('queries.searchUsers.data.results.1.name', nestedQueryRuntimeState)).toEqual({
+        status: 'resolved',
+        value: 'Grace',
+        reference: parseRuntimeReference('queries.searchUsers.data.results.1.name'),
+      })
+
+      expect(resolveRuntimeReference('queries.searchUsers.data.years.2024.label', nestedQueryRuntimeState)).toEqual({
+        status: 'resolved',
+        value: 'Q1',
+        reference: parseRuntimeReference('queries.searchUsers.data.years.2024.label'),
+      })
+    })
+
+    it('returns missing for absent nested data or attempts to go deeper into primitives', () => {
+      const runtimeStateWithUndefinedData: RuntimeState = {
+        ...nestedQueryRuntimeState,
+        queries: {
+          ...nestedQueryRuntimeState.queries,
+          searchUsers: {
+            ...nestedQueryRuntimeState.queries.searchUsers,
+            data: undefined,
+          },
+        },
+      }
+
+      expect(resolveRuntimeReference('queries.pendingUsers.data.results.0.id', nestedQueryRuntimeState)).toEqual({
+        status: 'missing',
+        reference: parseRuntimeReference('queries.pendingUsers.data.results.0.id'),
+      })
+
+      expect(resolveRuntimeReference('queries.searchUsers.data.user.address.city', nestedQueryRuntimeState)).toEqual({
+        status: 'missing',
+        reference: parseRuntimeReference('queries.searchUsers.data.user.address.city'),
+      })
+
+      expect(resolveRuntimeReference('queries.searchUsers.data.results.9.id', nestedQueryRuntimeState)).toEqual({
+        status: 'missing',
+        reference: parseRuntimeReference('queries.searchUsers.data.results.9.id'),
+      })
+
+      expect(resolveRuntimeReference('queries.searchUsers.data.total.value', nestedQueryRuntimeState)).toEqual({
+        status: 'missing',
+        reference: parseRuntimeReference('queries.searchUsers.data.total.value'),
+      })
+
+      expect(resolveRuntimeReference('queries.searchUsers.data.user.profile.name.first', nestedQueryRuntimeState)).toEqual({
+        status: 'missing',
+        reference: parseRuntimeReference('queries.searchUsers.data.user.profile.name.first'),
+      })
+
+      expect(
+        resolveRuntimeReference('queries.searchUsers.data.results.0.id.value', nestedQueryRuntimeState),
+      ).toEqual({
+        status: 'missing',
+        reference: parseRuntimeReference('queries.searchUsers.data.results.0.id.value'),
+      })
+
+      expect(
+        resolveRuntimeReference('queries.searchUsers.data.user.profile.name.first', runtimeStateWithUndefinedData),
+      ).toEqual({
+        status: 'missing',
+        reference: parseRuntimeReference('queries.searchUsers.data.user.profile.name.first'),
+      })
+
+      expect(
+        resolveRuntimeReference('queries.searchUsers.data.user.constructor.name', nestedQueryRuntimeState),
+      ).toEqual({
+        status: 'missing',
+        reference: parseRuntimeReference('queries.searchUsers.data.user.constructor.name'),
+      })
+    })
+
+    it('keeps the current base query routes resolved with their existing meaning', () => {
+      expect(resolveRuntimeReference('queries.searchUsers', nestedQueryRuntimeState)).toEqual({
+        status: 'resolved',
+        value: nestedQueryRuntimeState.queries.searchUsers,
+        reference: parseRuntimeReference('queries.searchUsers'),
+      })
+
+      expect(resolveRuntimeReference('queries.searchUsers.data', nestedQueryRuntimeState)).toEqual({
+        status: 'resolved',
+        value: nestedQueryRuntimeState.queries.searchUsers.data,
+        reference: parseRuntimeReference('queries.searchUsers.data'),
+      })
+
+      expect(resolveRuntimeReference('queries.searchUsers.status', nestedQueryRuntimeState)).toEqual({
+        status: 'resolved',
+        value: 'success',
+        reference: parseRuntimeReference('queries.searchUsers.status'),
+      })
+
+      expect(resolveRuntimeReference('queries.searchUsers.error', nestedQueryRuntimeState)).toEqual({
+        status: 'resolved',
+        value: nestedQueryRuntimeState.queries.searchUsers.error,
+        reference: parseRuntimeReference('queries.searchUsers.error'),
       })
     })
   })

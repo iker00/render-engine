@@ -83,7 +83,7 @@ function hasValidReferenceShape(namespace: RuntimeReferenceNamespace, path: stri
     case 'forms':
       return path.length === 2
     case 'queries':
-      return path.length === 1 || (path.length === 2 && isSupportedQueryProperty(path[1]))
+      return hasValidQueryReferencePath(path)
     case 'navigation':
     case 'routeParams':
     case 'params':
@@ -93,6 +93,18 @@ function hasValidReferenceShape(namespace: RuntimeReferenceNamespace, path: stri
 
 function isSupportedQueryProperty(segment: string) {
   return segment === 'data' || segment === 'status' || segment === 'error'
+}
+
+function hasValidQueryReferencePath(path: string[]) {
+  if (path.length === 1) {
+    return true
+  }
+
+  if (path.length === 2) {
+    return isSupportedQueryProperty(path[1])
+  }
+
+  return path[1] === 'data'
 }
 
 function createInvalidReference(

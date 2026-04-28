@@ -10,6 +10,7 @@ import {
 import { RuntimePage } from '../runtime/runtime-page'
 import {
   selectFormFieldValue,
+  selectNestedQueryDataValue,
   selectQueryReferenceValue,
 } from '../runtime/runtime-state/runtime-state-selectors'
 
@@ -297,6 +298,62 @@ describe('Runtime shared state store', () => {
     expect(screen.getByTestId('runtime-state')).toHaveTextContent(
       '"forms":{"userSearch":{"name":{"value":"Grace","error":"Required","touched":true,"dirty":true,"defaultValue":"Ada"}}',
     )
+  })
+
+  it('navigates nested query data paths with array indexes and object keys without mutating their meaning', () => {
+    const state: RuntimeState = {
+      navigation: {
+        currentPageId: 'home',
+        history: ['home'],
+        lastError: null,
+      },
+      forms: {},
+      queries: {
+        searchUsers: {
+          status: 'success',
+          data: {
+            results: [
+              { id: 'user-1', name: 'Ada' },
+              { id: 'user-2', name: 'Grace' },
+            ],
+            years: {
+              '2024': {
+                label: 'Q1',
+              },
+            },
+            total: 3,
+          },
+          error: null,
+        },
+      },
+    }
+
+    expect(selectQueryReferenceValue(state, 'searchUsers', 'data')).toEqual({
+      results: [
+        { id: 'user-1', name: 'Ada' },
+        { id: 'user-2', name: 'Grace' },
+      ],
+      years: {
+        '2024': {
+          label: 'Q1',
+        },
+      },
+      total: 3,
+    })
+    expect(selectNestedQueryDataValue(state, 'searchUsers', ['results', '1', 'name'])).toEqual({
+      found: true,
+      value: 'Grace',
+    })
+    expect(selectNestedQueryDataValue(state, 'searchUsers', ['years', '2024', 'label'])).toEqual({
+      found: true,
+      value: 'Q1',
+    })
+    expect(selectNestedQueryDataValue(state, 'searchUsers', ['results', '9', 'name'])).toEqual({
+      found: false,
+    })
+    expect(selectNestedQueryDataValue(state, 'searchUsers', ['total', 'value'])).toEqual({
+      found: false,
+    })
   })
 
   it('resets one form to its initial effective state without affecting other forms', () => {

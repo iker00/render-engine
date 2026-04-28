@@ -24,6 +24,11 @@ src/
     layout-node-renderer.tsx
     runtime-node-styling.ts
     runtime-page.tsx
+    runtime-references/
+      runtime-reference-diagnostics.ts
+      runtime-reference-parser.ts
+      runtime-reference-resolver.ts
+      runtime-reference-types.ts
     runtime-state/
       runtime-state-context.ts
       runtime-state-provider.tsx
@@ -44,6 +49,7 @@ Lectura operativa de esa estructura:
 - `layout-renderer.tsx` conserva la responsabilidad de renderizar colecciones ordenadas de nodos.
 - `layout-node-renderer.tsx` es el punto central de resolución `type -> pieza de render`.
 - `runtime-node-styling.ts` concentra la convención visual base del runtime y la compatibilidad acotada para `gap` arbitrarios.
+- `runtime-references/` fija la semántica central de referencias string, distingue `literal | supported | unsupported | invalid` y evita lógica dispersa en nodos visuales.
 - `runtime-state/` concentra un store por instancia basado en `useReducer` + `Context`, con dominios separados para navegación, formularios y queries.
 - `runtime/nodes/` materializa solo nodos con uso real inmediato, sin introducir subsistemas vacíos para capacidades futuras.
 - `runtime-page.tsx` ya no decide la página visible por selección ad hoc; la resuelve desde el estado compartido del runtime.
@@ -73,4 +79,6 @@ Lectura operativa de esa estructura:
 - La presentación base de los nodos visibles del runtime se expresa con utilidades de `Tailwind`, con una excepción acotada basada en variable CSS para `container.props.gap` cuando llega un valor arbitrario.
 - El runtime crea un store compartido aislado por instancia, con `useReducer` + `Context`, para sostener navegación, formularios y queries sin depender todavía de subsistemas visuales separados.
 - La navegación visible ya se resuelve desde `navigation.currentPageId`; la URL del navegador queda fuera del contrato de esta primera capa interactiva.
+- La resolución de referencias declarativas vive en `src/runtime/runtime-references/` y hoy solo abre navegación anidada adicional bajo `queries.{queryName}.data.*`.
+- La navegación de subrutas de query usa una semántica iterativa única: índices solo sobre arrays, claves literales sobre objetos y resultado `missing` para rutas bien formadas cuyo dato no está disponible.
 - Los errores de bootstrap y validación deben ser diagnósticos en desarrollo; en producción, los errores marcados como solo de desarrollo degradan sin mensaje visible genérico.

@@ -70,7 +70,27 @@ function RuntimeStateSeed({ children }: { children: ReactNode }) {
     })
     setFormFieldValue('userSearch', 'name', 'Grace')
     initializeQuery('searchUsers')
-    setQuerySuccess('searchUsers', ['Ada', 'Grace'])
+    setQuerySuccess('searchUsers', {
+      user: {
+        profile: {
+          name: 'Ada',
+          active: true,
+        },
+      },
+      results: [
+        {
+          id: 'user-1',
+          name: 'Ada',
+        },
+        {
+          id: 'user-2',
+          name: 'Grace',
+        },
+      ],
+      stats: {
+        total: 2,
+      },
+    })
     setQueryError('searchUsers', {
       code: 'network',
       message: 'Could not load users.',
@@ -292,6 +312,37 @@ describe('RuntimePage', () => {
     expect(screen.getByText('error')).toBeInTheDocument()
   })
 
+  it('renders nested query data values inside heading and paragraph text when they resolve to text-compatible scalars', () => {
+    renderRuntimePageWithSeed({
+      id: 'nested-dynamic-text',
+      layout: [
+        {
+          type: 'heading',
+          props: {
+            text: 'queries.searchUsers.data.results.1.name',
+            level: 2,
+          },
+        },
+        {
+          type: 'paragraph',
+          props: {
+            text: 'queries.searchUsers.data.stats.total',
+          },
+        },
+        {
+          type: 'paragraph',
+          props: {
+            text: 'queries.searchUsers.data.user.profile.active',
+          },
+        },
+      ],
+    })
+
+    expect(screen.getByRole('heading', { name: 'Grace', level: 2 })).toBeInTheDocument()
+    expect(screen.getByText('2')).toBeInTheDocument()
+    expect(screen.getByText('true')).toBeInTheDocument()
+  })
+
   it('keeps static and partially interpolated text literal', () => {
     renderRuntimePageWithSeed({
       id: 'literal-text',
@@ -346,6 +397,36 @@ describe('RuntimePage', () => {
     expect(screen.getAllByText('', { selector: '[data-layout-node="paragraph"]' })).toHaveLength(2)
   })
 
+  it('degrades unresolved or non-text nested query references to an empty string in visible text nodes', () => {
+    renderRuntimePageWithSeed({
+      id: 'nested-empty-dynamic-text',
+      layout: [
+        {
+          type: 'heading',
+          props: {
+            text: 'queries.searchUsers.data.results.3.name',
+            level: 2,
+          },
+        },
+        {
+          type: 'paragraph',
+          props: {
+            text: 'queries.searchUsers.data.results',
+          },
+        },
+        {
+          type: 'paragraph',
+          props: {
+            text: 'queries.searchUsers.data.user',
+          },
+        },
+      ],
+    })
+
+    expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent('')
+    expect(screen.getAllByText('', { selector: '[data-layout-node="paragraph"]' })).toHaveLength(2)
+  })
+
   it('renders escaped references as visible literal text without the escape character', () => {
     renderRuntimePageWithSeed({
       id: 'escaped-literal',
@@ -361,6 +442,25 @@ describe('RuntimePage', () => {
     })
 
     expect(screen.getByRole('heading', { name: 'forms.userSearch.name', level: 3 })).toBeInTheDocument()
+  })
+
+  it('renders escaped nested query references as visible literal text without the escape character', () => {
+    renderRuntimePageWithSeed({
+      id: 'escaped-nested-literal',
+      layout: [
+        {
+          type: 'heading',
+          props: {
+            text: '\\queries.searchUsers.data.results.0.name',
+            level: 3,
+          },
+        },
+      ],
+    })
+
+    expect(
+      screen.getByRole('heading', { name: 'queries.searchUsers.data.results.0.name', level: 3 }),
+    ).toBeInTheDocument()
   })
 
   it('reports unresolved visible references in development with the source path and surface name', () => {
@@ -379,7 +479,7 @@ describe('RuntimePage', () => {
         {
           type: 'paragraph',
           props: {
-            text: 'queries.searchUsers.foo',
+            text: 'queries.searchUsers.data.results.3.name',
           },
         },
       ],
@@ -389,7 +489,7 @@ describe('RuntimePage', () => {
       '[runtime-references] Could not resolve "forms.userSearch.email" for heading.props.text (missing).',
     )
     expect(consoleWarnSpy).toHaveBeenCalledWith(
-      '[runtime-references] Could not resolve "queries.searchUsers.foo" for paragraph.props.text (invalid).',
+      '[runtime-references] Could not resolve "queries.searchUsers.data.results.3.name" for paragraph.props.text (missing).',
     )
 
     consoleWarnSpy.mockRestore()
