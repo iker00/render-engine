@@ -8,6 +8,10 @@ import {
   useRuntimeStateActions,
 } from '../runtime/runtime-state/runtime-state-provider'
 import { RuntimePage } from '../runtime/runtime-page'
+import {
+  selectFormFieldValue,
+  selectQueryReferenceValue,
+} from '../runtime/runtime-state/runtime-state-selectors'
 
 const runtimeConfig: RuntimeConfig = {
   api: {},
@@ -377,6 +381,41 @@ describe('Runtime shared state store', () => {
     expect(screen.getByTestId('runtime-state')).toHaveTextContent(
       '"queries":{"searchUsers":{"status":"error","data":null,"error":{"code":"network","message":"Could not load users."}}}',
     )
+  })
+
+  it('exposes selector helpers for forms and query reference paths without mutating runtime state', () => {
+    const snapshot = {
+      navigation: {
+        currentPageId: 'home',
+        history: ['home'],
+        lastError: null,
+      },
+      forms: {
+        userSearch: {
+          name: {
+            value: 'Grace',
+            error: null,
+            touched: true,
+            dirty: true,
+            defaultValue: 'Ada',
+          },
+        },
+      },
+      queries: {
+        searchUsers: {
+          status: 'success' as const,
+          data: ['Ada', 'Grace'],
+          error: null,
+        },
+      },
+    }
+
+    expect(selectFormFieldValue(snapshot, 'userSearch', 'name')).toBe('Grace')
+    expect(selectFormFieldValue(snapshot, 'userSearch', 'email')).toBeUndefined()
+    expect(selectQueryReferenceValue(snapshot, 'searchUsers')).toBe(snapshot.queries.searchUsers)
+    expect(selectQueryReferenceValue(snapshot, 'searchUsers', 'data')).toEqual(['Ada', 'Grace'])
+    expect(selectQueryReferenceValue(snapshot, 'searchUsers', 'status')).toBe('success')
+    expect(selectQueryReferenceValue(snapshot, 'searchUsers', 'error')).toBeNull()
   })
 
   it('keeps query state across page changes inside the same runtime instance', () => {

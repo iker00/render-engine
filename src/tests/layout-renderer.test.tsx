@@ -1,8 +1,13 @@
 import { render, screen, within } from '@testing-library/react'
+import { useEffect, useState } from 'react'
+import type { ReactNode } from 'react'
 import { describe, expect, it } from 'vitest'
 import type { RuntimeConfig, RuntimePageConfig } from '../config/runtime-config'
 import { RuntimePage } from '../runtime/runtime-page'
-import { RuntimeStateProvider } from '../runtime/runtime-state/runtime-state-provider'
+import {
+  RuntimeStateProvider,
+  useRuntimeStateActions,
+} from '../runtime/runtime-state/runtime-state-provider'
 
 const page: RuntimePageConfig = {
   id: 'home',
@@ -48,6 +53,46 @@ function renderRuntimePage(activePage: RuntimePageConfig) {
   return render(
     <RuntimeStateProvider config={config}>
       <RuntimePage />
+    </RuntimeStateProvider>,
+  )
+}
+
+function RuntimeStateSeed({ children }: { children: ReactNode }) {
+  const { initializeForm, initializeQuery, setFormFieldValue, setQueryError, setQuerySuccess } =
+    useRuntimeStateActions()
+  const [isReady, setIsReady] = useState(false)
+
+  useEffect(() => {
+    initializeForm('userSearch', {
+      name: {
+        defaultValue: 'Ada',
+      },
+    })
+    setFormFieldValue('userSearch', 'name', 'Grace')
+    initializeQuery('searchUsers')
+    setQuerySuccess('searchUsers', ['Ada', 'Grace'])
+    setQueryError('searchUsers', {
+      code: 'network',
+      message: 'Could not load users.',
+    })
+    setIsReady(true)
+  }, [initializeForm, initializeQuery, setFormFieldValue, setQueryError, setQuerySuccess])
+
+  return isReady ? <>{children}</> : null
+}
+
+function renderRuntimePageWithSeed(activePage: RuntimePageConfig) {
+  const config: RuntimeConfig = {
+    api: {},
+    initialPage: activePage.id,
+    pages: [activePage],
+  }
+
+  return render(
+    <RuntimeStateProvider config={config}>
+      <RuntimeStateSeed>
+        <RuntimePage />
+      </RuntimeStateSeed>
     </RuntimeStateProvider>,
   )
 }
@@ -221,5 +266,132 @@ describe('RuntimePage', () => {
     )
     expect(screen.getByText('Build forms from configuration.')).toHaveClass('m-0', 'text-base', 'leading-7', 'text-slate-300')
     expect(screen.getByRole('list')).toHaveClass('m-0', 'grid', 'list-disc', 'gap-2', 'pl-5', 'text-slate-200')
+  })
+
+  it('renders current forms and queries references inside heading and paragraph text', () => {
+    renderRuntimePageWithSeed({
+      id: 'dynamic-text',
+      layout: [
+        {
+          type: 'heading',
+          props: {
+            text: 'forms.userSearch.name',
+            level: 2,
+          },
+        },
+        {
+          type: 'paragraph',
+          props: {
+            text: 'queries.searchUsers.status',
+          },
+        },
+      ],
+    })
+
+    expect(screen.getByRole('heading', { name: 'Grace', level: 2 })).toBeInTheDocument()
+    expect(screen.getByText('error')).toBeInTheDocument()
+  })
+
+  it('keeps static and partially interpolated text literal', () => {
+    renderRuntimePageWithSeed({
+      id: 'literal-text',
+      layout: [
+        {
+          type: 'heading',
+          props: {
+            text: 'Welcome back',
+            level: 2,
+          },
+        },
+        {
+          type: 'paragraph',
+          props: {
+            text: 'User: forms.userSearch.name',
+          },
+        },
+      ],
+    })
+
+    expect(screen.getByRole('heading', { name: 'Welcome back', level: 2 })).toBeInTheDocument()
+    expect(screen.getByText('User: forms.userSearch.name')).toBeInTheDocument()
+  })
+
+  it('degrades missing, unsupported and invalid references to an empty string in visible text nodes', () => {
+    renderRuntimePageWithSeed({
+      id: 'empty-dynamic-text',
+      layout: [
+        {
+          type: 'heading',
+          props: {
+            text: 'forms.userSearch.email',
+            level: 2,
+          },
+        },
+        {
+          type: 'paragraph',
+          props: {
+            text: 'navigation.currentPageId',
+          },
+        },
+        {
+          type: 'paragraph',
+          props: {
+            text: 'queries.searchUsers.foo',
+          },
+        },
+      ],
+    })
+
+    expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent('')
+    expect(screen.getAllByText('', { selector: '[data-layout-node="paragraph"]' })).toHaveLength(2)
+  })
+
+  it('renders escaped references as visible literal text without the escape character', () => {
+    renderRuntimePageWithSeed({
+      id: 'escaped-literal',
+      layout: [
+        {
+          type: 'heading',
+          props: {
+            text: '\\forms.userSearch.name',
+            level: 3,
+          },
+        },
+      ],
+    })
+
+    expect(screen.getByRole('heading', { name: 'forms.userSearch.name', level: 3 })).toBeInTheDocument()
+  })
+
+  it('reports unresolved visible references in development with the source path and surface name', () => {
+    const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+    renderRuntimePageWithSeed({
+      id: 'diagnostics',
+      layout: [
+        {
+          type: 'heading',
+          props: {
+            text: 'forms.userSearch.email',
+            level: 2,
+          },
+        },
+        {
+          type: 'paragraph',
+          props: {
+            text: 'queries.searchUsers.foo',
+          },
+        },
+      ],
+    })
+
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      '[runtime-references] Could not resolve "forms.userSearch.email" for heading.props.text (missing).',
+    )
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      '[runtime-references] Could not resolve "queries.searchUsers.foo" for paragraph.props.text (invalid).',
+    )
+
+    consoleWarnSpy.mockRestore()
   })
 })

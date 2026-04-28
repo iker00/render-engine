@@ -29,6 +29,28 @@ export function selectFormFieldState(state: RuntimeState, formId: string, fieldI
   return state.forms[formId]?.[fieldId] ?? null
 }
 
+export function selectFormFieldValue(state: RuntimeState, formId: string, fieldId: string) {
+  return selectFormFieldState(state, formId, fieldId)?.value
+}
+
 export function selectQueryState(state: RuntimeState, queryName: string) {
   return state.queries[queryName] ?? null
+}
+
+export function selectQueryReferenceValue(
+  state: RuntimeState,
+  queryName: string,
+  property?: 'data' | 'status' | 'error',
+) {
+  const queryState = selectQueryState(state, queryName)
+
+  if (queryState === null) {
+    return undefined
+  }
+
+  if (!property) {
+    return queryState
+  }
+
+  return queryState[property]
 }
