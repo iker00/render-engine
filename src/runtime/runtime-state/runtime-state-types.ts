@@ -57,6 +57,7 @@ export interface RuntimeState {
 export type RuntimeStateAction =
   | { type: 'runtime/reset'; payload: { state: RuntimeState } }
   | { type: 'navigation/navigate'; payload: { pageId: string } }
+  | { type: 'navigation/go-back' }
   | { type: 'navigation/set-error'; payload: { error: RuntimeNavigationError } }
   | { type: 'page-entry/set-idle'; payload: { entryId: number; pageId: string; preloadNames: string[] } }
   | { type: 'page-entry/set-loading'; payload: { entryId: number; pageId: string; preloadNames: string[] } }

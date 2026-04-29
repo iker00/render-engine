@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import type { LayoutNode } from '../config/runtime-config'
 import { ContainerNode } from './nodes/container-layout-node'
+import { ButtonNode } from './nodes/button-layout-node'
 import { HeadingNode } from './nodes/heading-layout-node'
 import { ListNode } from './nodes/list-layout-node'
 import { ParagraphNode } from './nodes/paragraph-layout-node'
@@ -20,5 +21,7 @@ export function LayoutNodeRenderer({ node, renderedChildren }: LayoutNodeRendere
       return <ParagraphNode node={node} />
     case 'list':
       return <ListNode node={node} />
+    case 'button':
+      return <ButtonNode node={node} />
   }
 }

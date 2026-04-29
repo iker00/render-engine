@@ -1,4 +1,6 @@
 export type {
+  ButtonAction,
+  ButtonLayoutNode,
   RuntimeApiBodyValue,
   RuntimeApiConfig,
   RuntimeApiMethod,
@@ -11,6 +13,8 @@ export type {
   LayoutNodeCollection,
   LayoutNodeType,
   ListLayoutNode,
+  GoBackButtonAction,
+  NavigateToButtonAction,
   ParagraphLayoutNode,
   RuntimeConfig,
   RuntimeConfigError,

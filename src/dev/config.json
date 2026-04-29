@@ -52,6 +52,124 @@
           "props": {
             "text": "queries.searchUsers.data.0.title"
           }
+        },
+        {
+          "type": "container",
+          "props": {
+            "gap": "sm"
+          },
+          "children": [
+            {
+              "type": "button",
+              "props": {
+                "label": "Ir a detalles",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "details-page"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Ir a ayuda",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "help-page"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "details-page",
+      "layout": [
+        {
+          "type": "heading",
+          "props": {
+            "text": "Details Page",
+            "level": 2
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "Esta página sirve para probar la navegación declarativa desde el config."
+          }
+        },
+        {
+          "type": "container",
+          "props": {
+            "gap": "sm"
+          },
+          "children": [
+            {
+              "type": "button",
+              "props": {
+                "label": "Volver",
+                "action": {
+                  "type": "goBack"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Ir a ayuda",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "help-page"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "help-page",
+      "layout": [
+        {
+          "type": "heading",
+          "props": {
+            "text": "Help Page",
+            "level": 2
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "Puedes usar estos botones para moverte entre páginas sin cambiar la URL."
+          }
+        },
+        {
+          "type": "container",
+          "props": {
+            "gap": "sm"
+          },
+          "children": [
+            {
+              "type": "button",
+              "props": {
+                "label": "Volver",
+                "action": {
+                  "type": "goBack"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Ir al inicio",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "bootstrap-home"
+                }
+              }
+            }
+          ]
         }
       ]
     }

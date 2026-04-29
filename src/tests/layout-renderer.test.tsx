@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { describe, expect, it } from 'vitest'
@@ -286,6 +286,113 @@ describe('RuntimePage', () => {
     )
     expect(screen.getByText('Build forms from configuration.')).toHaveClass('m-0', 'text-base', 'leading-7', 'text-slate-300')
     expect(screen.getByRole('list')).toHaveClass('m-0', 'grid', 'list-disc', 'gap-2', 'pl-5', 'text-slate-200')
+  })
+
+  it('renders button nodes as accessible button elements with stable base classes', () => {
+    renderRuntimePage({
+      id: 'button-page',
+      layout: [
+        {
+          type: 'button',
+          props: {
+            label: 'Open details',
+            action: {
+              type: 'navigateTo',
+              pageId: 'details',
+            },
+          },
+        },
+      ],
+    })
+
+    expect(screen.getByRole('button', { name: 'Open details' })).toHaveAttribute('type', 'button')
+    expect(screen.getByRole('button', { name: 'Open details' })).toHaveClass(
+      'inline-flex',
+      'items-center',
+      'justify-center',
+      'rounded-md',
+      'bg-slate-200',
+      'px-4',
+      'py-2',
+      'text-sm',
+      'font-medium',
+      'text-slate-950',
+    )
+  })
+
+  it('treats button as a leaf node even when it receives children', () => {
+    renderRuntimePage({
+      id: 'button-leaf',
+      layout: [
+        {
+          type: 'button',
+          props: {
+            label: 'Back',
+            action: {
+              type: 'goBack',
+            },
+          },
+          children: [
+            {
+              type: 'paragraph',
+              props: {
+                text: 'Unexpected child',
+              },
+            },
+          ],
+        },
+      ],
+    })
+
+    expect(screen.getByRole('button', { name: 'Back' })).toBeInTheDocument()
+    expect(screen.queryByText('Unexpected child')).not.toBeInTheDocument()
+  })
+
+  it('lets a rendered button navigate declaratively to another page', () => {
+    const config: RuntimeConfig = {
+      api: {},
+      initialPage: 'home',
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'button',
+              props: {
+                label: 'Open details',
+                action: {
+                  type: 'navigateTo',
+                  pageId: 'details',
+                },
+              },
+            },
+          ],
+        },
+        {
+          id: 'details',
+          layout: [
+            {
+              type: 'heading',
+              props: {
+                text: 'Details page',
+                level: 1,
+              },
+            },
+          ],
+        },
+      ],
+    }
+
+    render(
+      <RuntimeStateProvider config={config}>
+        <RuntimePage />
+      </RuntimeStateProvider>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open details' }))
+
+    expect(screen.getByTestId('runtime-page')).toHaveAttribute('data-runtime-page-id', 'details')
+    expect(screen.getByRole('heading', { name: 'Details page', level: 1 })).toBeInTheDocument()
   })
 
   it('renders current forms and queries references inside heading and paragraph text', () => {

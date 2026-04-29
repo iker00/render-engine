@@ -72,15 +72,21 @@ function ResetOnMount() {
 }
 
 function NavigationControls() {
-  const { navigateToPage } = useRuntimeStateActions()
+  const { goBackPage, navigateToPage } = useRuntimeStateActions()
 
   return (
     <>
       <button type="button" onClick={() => navigateToPage('details')}>
         Navigate to details
       </button>
+      <button type="button" onClick={() => navigateToPage('home')}>
+        Navigate to home
+      </button>
       <button type="button" onClick={() => navigateToPage('missing-page')}>
         Navigate to missing page
+      </button>
+      <button type="button" onClick={() => goBackPage()}>
+        Go back
       </button>
     </>
   )
@@ -322,7 +328,6 @@ describe('Runtime shared state store', () => {
   })
 
   it('keeps the previous page and stores a recoverable navigation error when the target page does not exist', () => {
-
     render(
       <RuntimeStateProvider config={runtimeConfig}>
         <NavigationControls />
@@ -336,6 +341,60 @@ describe('Runtime shared state store', () => {
     expect(screen.getByTestId('runtime-page')).toHaveAttribute('data-runtime-page-id', 'home')
     expect(screen.getByTestId('runtime-state')).toHaveTextContent(
       '"lastError":{"code":"page-not-found","message":"The runtime page \\"missing-page\\" does not exist.","pageId":"missing-page"}',
+    )
+  })
+
+  it('goes back to the previous valid history entry and prunes the current one', () => {
+    render(
+      <RuntimeStateProvider config={runtimeConfig}>
+        <NavigationControls />
+        <RuntimeStateSnapshot testId="runtime-state" />
+        <RuntimePage />
+      </RuntimeStateProvider>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Navigate to details' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Go back' }))
+
+    expect(screen.getByTestId('runtime-page')).toHaveAttribute('data-runtime-page-id', 'home')
+    expect(screen.getByTestId('runtime-state')).toHaveTextContent(
+      '"navigation":{"currentPageId":"home","history":["home"],"lastError":null}',
+    )
+  })
+
+  it('supports goBack after revisiting a page and returns to the previous entry in history order', () => {
+    render(
+      <RuntimeStateProvider config={runtimeConfig}>
+        <NavigationControls />
+        <RuntimeStateSnapshot testId="runtime-state" />
+        <RuntimePage />
+      </RuntimeStateProvider>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Navigate to details' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Navigate to home' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Go back' }))
+
+    expect(screen.getByTestId('runtime-page')).toHaveAttribute('data-runtime-page-id', 'details')
+    expect(screen.getByTestId('runtime-state')).toHaveTextContent(
+      '"navigation":{"currentPageId":"details","history":["home","details"],"lastError":null}',
+    )
+  })
+
+  it('keeps the current page and does not create a recoverable error when goBack has no previous entry', () => {
+    render(
+      <RuntimeStateProvider config={runtimeConfig}>
+        <NavigationControls />
+        <RuntimeStateSnapshot testId="runtime-state" />
+        <RuntimePage />
+      </RuntimeStateProvider>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Go back' }))
+
+    expect(screen.getByTestId('runtime-page')).toHaveAttribute('data-runtime-page-id', 'home')
+    expect(screen.getByTestId('runtime-state')).toHaveTextContent(
+      '"navigation":{"currentPageId":"home","history":["home"],"lastError":null}',
     )
   })
 

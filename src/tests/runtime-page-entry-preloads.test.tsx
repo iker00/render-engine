@@ -115,7 +115,7 @@ function RuntimeStateSnapshot() {
 }
 
 function NavigationFixture() {
-  const { navigateToPage } = useRuntimeStateActions()
+  const { goBackPage, navigateToPage } = useRuntimeStateActions()
 
   return (
     <>
@@ -139,6 +139,9 @@ function NavigationFixture() {
       </button>
       <button type="button" onClick={() => navigateToPage('landing')}>
         Go landing
+      </button>
+      <button type="button" onClick={() => goBackPage()}>
+        Go back
       </button>
     </>
   )
@@ -403,6 +406,33 @@ describe('Runtime page entry preloads integration', () => {
     await waitFor(() => expect(readRuntimeState().pageEntry.pageId).toBe('home'))
     await waitFor(() => expect(readRuntimeState().queries.searchUsers.data).toEqual({ results: ['Grace'] }))
 
+    expect(fetchMock).toHaveBeenNthCalledWith(1, '/api/users', { method: 'GET' })
+    expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/teams', { method: 'GET' })
+    expect(fetchMock).toHaveBeenNthCalledWith(3, '/api/users', { method: 'GET' })
+  })
+
+  it('relaunches preloads when going back to a previously visited page entry', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(createJsonResponse({ results: ['Ada'] }))
+      .mockResolvedValueOnce(createJsonResponse({ teams: ['Runtime'] }))
+      .mockResolvedValueOnce(createJsonResponse({ results: ['Grace'] }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    renderPreloadHarness()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Go home' }))
+    await waitFor(() => expect(readRuntimeState().pageEntry.status).toBe('success'))
+
+    fireEvent.click(screen.getByRole('button', { name: 'Go details' }))
+    await waitFor(() => expect(readRuntimeState().pageEntry.pageId).toBe('details'))
+    await waitFor(() => expect(readRuntimeState().pageEntry.status).toBe('success'))
+
+    fireEvent.click(screen.getByRole('button', { name: 'Go back' }))
+    await waitFor(() => expect(readRuntimeState().pageEntry.pageId).toBe('home'))
+    await waitFor(() => expect(readRuntimeState().pageEntry.status).toBe('success'))
+
+    expect(readRuntimeState().queries.searchUsers.data).toEqual({ results: ['Grace'] })
     expect(fetchMock).toHaveBeenNthCalledWith(1, '/api/users', { method: 'GET' })
     expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/teams', { method: 'GET' })
     expect(fetchMock).toHaveBeenNthCalledWith(3, '/api/users', { method: 'GET' })

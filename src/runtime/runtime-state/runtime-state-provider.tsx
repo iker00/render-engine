@@ -185,6 +185,12 @@ export function useRuntimeStateActions() {
     [config.pages, dispatch],
   )
 
+  const goBackPage = useCallback(() => {
+    dispatch({
+      type: 'navigation/go-back',
+    })
+  }, [dispatch])
+
   const initializeForm = useCallback(
     (formId: string, fields: Record<string, RuntimeFormFieldDefinition>) => {
       dispatch({
@@ -316,6 +322,7 @@ export function useRuntimeStateActions() {
   return useMemo(
     () => ({
       executeQueryOperation,
+      goBackPage,
       initializeForm,
       initializeQuery,
       navigateToPage,
@@ -338,6 +345,7 @@ export function useRuntimeStateActions() {
     [
       dispatch,
       initialState,
+      goBackPage,
       initializeForm,
       initializeQuery,
       navigateToPage,

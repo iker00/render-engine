@@ -100,3 +100,27 @@ export function getListNodeClassName() {
 export function getListItemClassName() {
   return 'leading-6'
 }
+
+export function getButtonNodeClassName() {
+  return [
+    'inline-flex',
+    'items-center',
+    'justify-center',
+    'self-start',
+    'rounded-md',
+    'border',
+    'border-slate-300/20',
+    'bg-slate-200',
+    'px-4',
+    'py-2',
+    'text-sm',
+    'font-medium',
+    'text-slate-950',
+    'transition-colors',
+    'hover:bg-white',
+    'focus-visible:outline',
+    'focus-visible:outline-2',
+    'focus-visible:outline-offset-2',
+    'focus-visible:outline-slate-200',
+  ].join(' ')
+}

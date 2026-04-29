@@ -1,4 +1,4 @@
-export type LayoutNodeType = 'container' | 'heading' | 'paragraph' | 'list'
+export type LayoutNodeType = 'container' | 'heading' | 'paragraph' | 'list' | 'button'
 export type RuntimeApiMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
 export type RuntimeApiQueryValue = string | number | boolean
 export type RuntimeApiQuery = Record<string, RuntimeApiQueryValue>
@@ -57,11 +57,33 @@ export interface ListLayoutNode {
   children?: unknown
 }
 
+export interface NavigateToButtonAction {
+  type: 'navigateTo'
+  pageId: string
+}
+
+export interface GoBackButtonAction {
+  type: 'goBack'
+}
+
+export type ButtonAction = NavigateToButtonAction | GoBackButtonAction
+
+export interface ButtonLayoutNode {
+  type: 'button'
+  id?: string
+  props: {
+    label: string
+    action: ButtonAction
+  }
+  children?: unknown
+}
+
 export type LayoutNode =
   | ContainerLayoutNode
   | HeadingLayoutNode
   | ParagraphLayoutNode
   | ListLayoutNode
+  | ButtonLayoutNode
 
 export type LayoutNodeCollection = LayoutNode[]
 

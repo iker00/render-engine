@@ -14,6 +14,14 @@ function createConfigWithApi(api: Record<string, unknown>) {
   }
 }
 
+function createConfigWithPages(pages: Array<Record<string, unknown>>, initialPage = 'home') {
+  return {
+    api: {},
+    pages,
+    initialPage,
+  }
+}
+
 describe('validateRuntimeConfig', () => {
   it('accepts a page with multiple root layout nodes in order', () => {
     const result = validateRuntimeConfig({
@@ -233,6 +241,288 @@ describe('validateRuntimeConfig', () => {
     })
   })
 
+  it('accepts a button node with a navigateTo action to an existing page', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithPages([
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'button',
+              props: {
+                label: 'Go to details',
+                action: {
+                  type: 'navigateTo',
+                  pageId: 'details',
+                },
+              },
+            },
+          ],
+        },
+        {
+          id: 'details',
+          layout: [],
+        },
+      ]),
+    )
+
+    expect(result).toEqual({
+      status: 'ready',
+      config: {
+        api: {},
+        pages: [
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'button',
+                props: {
+                  label: 'Go to details',
+                  action: {
+                    type: 'navigateTo',
+                    pageId: 'details',
+                  },
+                },
+              },
+            ],
+          },
+          {
+            id: 'details',
+            layout: [],
+          },
+        ],
+        initialPage: 'home',
+      },
+      page: {
+        id: 'home',
+        layout: [
+          {
+            type: 'button',
+            props: {
+              label: 'Go to details',
+              action: {
+                type: 'navigateTo',
+                pageId: 'details',
+              },
+            },
+          },
+        ],
+      },
+    })
+  })
+
+  it('accepts a button node with a goBack action', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithPages([
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'button',
+              props: {
+                label: 'Back',
+                action: {
+                  type: 'goBack',
+                },
+              },
+            },
+          ],
+        },
+      ]),
+    )
+
+    expect(result).toEqual({
+      status: 'ready',
+      config: {
+        api: {},
+        pages: [
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'button',
+                props: {
+                  label: 'Back',
+                  action: {
+                    type: 'goBack',
+                  },
+                },
+              },
+            ],
+          },
+        ],
+        initialPage: 'home',
+      },
+      page: {
+        id: 'home',
+        layout: [
+          {
+            type: 'button',
+            props: {
+              label: 'Back',
+              action: {
+                type: 'goBack',
+              },
+            },
+          },
+        ],
+      },
+    })
+  })
+
+  it('accepts multiple buttons in the same layout in declared order', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithPages([
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'button',
+              props: {
+                label: 'Open details',
+                action: {
+                  type: 'navigateTo',
+                  pageId: 'details',
+                },
+              },
+            },
+            {
+              type: 'button',
+              props: {
+                label: 'Back',
+                action: {
+                  type: 'goBack',
+                },
+              },
+            },
+          ],
+        },
+        {
+          id: 'details',
+          layout: [],
+        },
+      ]),
+    )
+
+    expect(result.status).toBe('ready')
+
+    if (result.status !== 'ready') {
+      throw new Error('Expected ready result')
+    }
+
+    expect(result.config.pages[0].layout).toEqual([
+      {
+        type: 'button',
+        props: {
+          label: 'Open details',
+          action: {
+            type: 'navigateTo',
+            pageId: 'details',
+          },
+        },
+      },
+      {
+        type: 'button',
+        props: {
+          label: 'Back',
+          action: {
+            type: 'goBack',
+          },
+        },
+      },
+    ])
+  })
+
+  it('drops unsupported extra keys from button props and action', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithPages([
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'button',
+              props: {
+                label: 'Go to details',
+                tone: 'primary',
+                action: {
+                  type: 'navigateTo',
+                  pageId: 'details',
+                  replace: true,
+                },
+              },
+            },
+          ],
+        },
+        {
+          id: 'details',
+          layout: [],
+        },
+      ]),
+    )
+
+    expect(result.status).toBe('ready')
+
+    if (result.status !== 'ready') {
+      throw new Error('Expected ready result')
+    }
+
+    expect(result.config.pages[0].layout[0]).toEqual({
+      type: 'button',
+      props: {
+        label: 'Go to details',
+        action: {
+          type: 'navigateTo',
+          pageId: 'details',
+        },
+      },
+    })
+  })
+
+  it('ignores button children and keeps the node as a leaf shape', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithPages([
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'button',
+              props: {
+                label: 'Back',
+                action: {
+                  type: 'goBack',
+                },
+              },
+              children: [
+                {
+                  type: 'paragraph',
+                  props: {
+                    text: 'Ignored child',
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      ]),
+    )
+
+    expect(result.status).toBe('ready')
+
+    if (result.status !== 'ready') {
+      throw new Error('Expected ready result')
+    }
+
+    expect(result.config.pages[0].layout[0]).toEqual({
+      type: 'button',
+      props: {
+        label: 'Back',
+        action: {
+          type: 'goBack',
+        },
+      },
+    })
+  })
+
   it('rejects preloads when it is not an array', () => {
     const result = validateRuntimeConfig({
       api: {},
@@ -317,6 +607,241 @@ describe('validateRuntimeConfig', () => {
         code: 'invalid-layout',
         displayMode: 'development-only',
         message: 'The page at "pages[0].preloads[1]" must be a non-empty string.',
+      },
+    })
+  })
+
+  it('rejects button nodes without props, without label, or with a non-string label', () => {
+    expect(
+      validateRuntimeConfig(
+        createConfigWithPages([
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'button',
+              },
+            ],
+          },
+        ]),
+      ),
+    ).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message: 'Page "home" has an invalid layout at "layout[0].props".',
+      },
+    })
+
+    expect(
+      validateRuntimeConfig(
+        createConfigWithPages([
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'button',
+                props: {
+                  action: {
+                    type: 'goBack',
+                  },
+                },
+              },
+            ],
+          },
+        ]),
+      ),
+    ).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message: 'Page "home" has an invalid layout at "layout[0].props.label".',
+      },
+    })
+
+    expect(
+      validateRuntimeConfig(
+        createConfigWithPages([
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'button',
+                props: {
+                  label: 42,
+                  action: {
+                    type: 'goBack',
+                  },
+                },
+              },
+            ],
+          },
+        ]),
+      ),
+    ).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message: 'Page "home" has an invalid layout at "layout[0].props.label".',
+      },
+    })
+  })
+
+  it('rejects button actions without a supported type', () => {
+    expect(
+      validateRuntimeConfig(
+        createConfigWithPages([
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'button',
+                props: {
+                  label: 'Broken',
+                  action: {},
+                },
+              },
+            ],
+          },
+        ]),
+      ),
+    ).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message: 'Page "home" has an invalid layout at "layout[0].props.action.type".',
+      },
+    })
+
+    expect(
+      validateRuntimeConfig(
+        createConfigWithPages([
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'button',
+                props: {
+                  label: 'Broken',
+                  action: {
+                    type: 'openModal',
+                  },
+                },
+              },
+            ],
+          },
+        ]),
+      ),
+    ).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message: 'Page "home" has an invalid layout at "layout[0].props.action.type".',
+      },
+    })
+  })
+
+  it('rejects navigateTo actions without a valid existing pageId', () => {
+    expect(
+      validateRuntimeConfig(
+        createConfigWithPages([
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'button',
+                props: {
+                  label: 'Missing page',
+                  action: {
+                    type: 'navigateTo',
+                  },
+                },
+              },
+            ],
+          },
+          {
+            id: 'details',
+            layout: [],
+          },
+        ]),
+      ),
+    ).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message: 'Page "home" has an invalid layout at "layout[0].props.action.pageId".',
+      },
+    })
+
+    expect(
+      validateRuntimeConfig(
+        createConfigWithPages([
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'button',
+                props: {
+                  label: 'Empty page',
+                  action: {
+                    type: 'navigateTo',
+                    pageId: '   ',
+                  },
+                },
+              },
+            ],
+          },
+          {
+            id: 'details',
+            layout: [],
+          },
+        ]),
+      ),
+    ).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message: 'Page "home" has an invalid layout at "layout[0].props.action.pageId".',
+      },
+    })
+
+    expect(
+      validateRuntimeConfig(
+        createConfigWithPages([
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'button',
+                props: {
+                  label: 'Unknown page',
+                  action: {
+                    type: 'navigateTo',
+                    pageId: 'missing-page',
+                  },
+                },
+              },
+            ],
+          },
+          {
+            id: 'details',
+            layout: [],
+          },
+        ]),
+      ),
+    ).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message: 'Page "home" has an invalid layout at "layout[0].props.action.pageId": unknown page "missing-page".',
       },
     })
   })

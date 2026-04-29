@@ -52,6 +52,29 @@ export function runtimeStateReducer(state: RuntimeState, action: RuntimeStateAct
           lastError: null,
         },
       }
+    case 'navigation/go-back': {
+      if (state.navigation.history.length < 2) {
+        return {
+          ...state,
+          navigation: {
+            ...state.navigation,
+            lastError: null,
+          },
+        }
+      }
+
+      const nextHistory = state.navigation.history.slice(0, -1)
+      const previousPageId = nextHistory[nextHistory.length - 1]
+
+      return {
+        ...state,
+        navigation: {
+          currentPageId: previousPageId,
+          history: nextHistory,
+          lastError: null,
+        },
+      }
+    }
     case 'navigation/set-error':
       return {
         ...state,
