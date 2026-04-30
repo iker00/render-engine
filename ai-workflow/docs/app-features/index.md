@@ -11,14 +11,14 @@ Orden recomendado de lectura:
 
 ## Features documentadas
 - [`./config-driven-ui-runtime.md`](./config-driven-ui-runtime.md): visión general del runtime declarativo ya implementado, su renderer visible actual, el store compartido por instancia, la capa remota `src/queries/` y la convención visual base con `Tailwind`.
-- [`./config-contract.md`](./config-contract.md): contrato funcional del JSON soportado hoy, incluida la raíz `layout` basada en colección, el catálogo declarativo `api` y las reglas de validación del arranque.
+- [`./config-contract.md`](./config-contract.md): contrato funcional del JSON soportado hoy, incluida la raíz `layout` basada en colección, el catálogo declarativo `api`, el nodo `button` y las reglas de validación del arranque apoyadas en `Zod`.
 - [`./pages-and-navigation.md`](./pages-and-navigation.md): modelo de páginas, `layout` por colección ordenada, resolución de la página activa desde estado compartido y límites de la navegación interna actual.
 - [`./queries-and-feedback.md`](./queries-and-feedback.md): estado compartido de queries, ejecución real por nombre de operaciones `api`, precargas automáticas al entrar en página y límites actuales del feedback declarativo final.
 - [`./forms-and-validation.md`](./forms-and-validation.md): estado compartido de formularios, shape base de campos, valores por defecto y validación todavía pendiente a nivel de UX declarativa.
 - [`./development-workflow.md`](./development-workflow.md): bootstrap de desarrollo local con `src/dev/config.json`, prioridad de `data-config` y límites del modo sin backend.
 
 ## Guía rápida de selección
-- Si la petición afecta al shape del JSON o a referencias dinámicas, leer `config-contract.md`.
+- Si la petición afecta al shape del JSON, sus errores de validación o a referencias dinámicas, leer `config-contract.md`.
 - Si la petición afecta a flujo multipágina o navegación, leer `pages-and-navigation.md`.
 - Si la petición afecta a llamadas API, preloads, loading, error o empty state, leer `queries-and-feedback.md`.
 - Si la petición afecta a formularios, campos, valores por defecto o validación, leer `forms-and-validation.md`.

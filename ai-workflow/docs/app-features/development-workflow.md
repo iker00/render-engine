@@ -11,6 +11,7 @@ Permitir iterar sobre la configuración JSON sin depender del backend real.
 - cargar una configuración inicial desde `src/dev/config.json` en desarrollo
 - priorizar `data-config` cuando exista en el elemento root
 - detectar errores de bootstrap con mensajes comprensibles cuando el JSON sea inválido o falte la fuente esperada
+- mantener la misma frontera pública de errores aunque la validación interna del runtime ya se apoye en `Zod`
 - facilitar el arranque y la validación inicial del runtime antes de implementar capacidades funcionales
 - permitir ejemplos locales que ya ejerciten `api` y `preloads` sin depender de un backend real, por ejemplo mediante recursos estáticos servidos por Vite desde `public/`
 
@@ -22,4 +23,4 @@ Permitir iterar sobre la configuración JSON sin depender del backend real.
 ## Límites de v1
 - no sustituye la integración real con backend
 - no incluye todavía panel editable en vivo
-- no incluye todavía validación estructural completa del JSON ni herramientas avanzadas de inspección o exportación
+- no incluye todavía herramientas avanzadas de inspección, edición en vivo o exportación del config

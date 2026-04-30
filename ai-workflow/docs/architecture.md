@@ -19,6 +19,8 @@ src/
   config/
     runtime-config.ts
     runtime-config-types.ts
+    runtime-config-validation-errors.ts
+    runtime-config-zod.ts
     validate-runtime-config.ts
   queries/
     runtime-api-types.ts
@@ -50,7 +52,9 @@ src/
 
 Lectura operativa de esa estructura:
 - `runtime-config.ts` mantiene una superficie pública austera para no acoplar consumidores a la organización interna.
-- `validate-runtime-config.ts` concentra la validación previa al render y fija también el contrato estable de `config.api`.
+- `runtime-config-zod.ts` concentra el contrato estructural interno con esquemas `Zod` y política de descarte de claves extra.
+- `runtime-config-validation-errors.ts` adapta fallos estructurales y semánticos al shape público de `RuntimeConfigError`.
+- `validate-runtime-config.ts` concentra la validación previa al render, fija el contrato estable de `config.api` y reintroduce las validaciones cruzadas que dependen del conjunto completo ya parseado.
 - `queries/` encapsula la frontera HTTP del runtime: resolución de payloads, construcción de `RequestInit`, ejecución contra `fetch` y errores normalizados.
 - `layout-renderer.tsx` conserva la responsabilidad de renderizar colecciones ordenadas de nodos.
 - `layout-node-renderer.tsx` es el punto central de resolución `type -> pieza de render`.
@@ -80,6 +84,7 @@ Lectura operativa de esa estructura:
 - La entrada de producción será `data-config` en el elemento root HTML.
 - En desarrollo existe una fuente local versionada en `src/dev/config.json` para iterar sin backend.
 - La configuración se valida antes de renderizar y falla con errores semánticos explícitos cuando `initialPage` o `layout` no cumplen el contrato soportado.
+- La validación estructural interna del runtime config se apoya en `Zod`, pero bootstrap y tests siguen consumiendo una única fachada pública estable con códigos de error semánticos.
 - La primera UI estable del runtime es un renderer estático para `container`, `heading`, `paragraph` y `list`.
 - La organización interna del runtime separa contrato, validación, render de colecciones y render concreto por nodo sin cambiar el comportamiento observable.
 - La presentación base de los nodos visibles del runtime se expresa con utilidades de `Tailwind`, con una excepción acotada basada en variable CSS para `container.props.gap` cuando llega un valor arbitrario.

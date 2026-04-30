@@ -6,6 +6,7 @@ Renderizar el runtime a partir de una configuración JSON validada, apoyado ya e
 ## Qué resuelve
 - Permite que la configuración declare varias páginas aunque, por ahora, solo se resuelva la indicada por `initialPage`.
 - Valida el contrato mínimo del runtime antes de renderizar.
+- Apoya esa validación previa al render en una base `Zod`, sin exponer `Zod` en la API pública de bootstrap.
 - Interpreta un layout raíz basado en colección ordenada y un catálogo inicial y acotado de nodos.
 - Sustituye el shell provisional por una página visible renderizada desde configuración.
 - Mantiene una estructura interna separada entre validación de configuración, render de colecciones y piezas concretas por nodo soportado.
@@ -40,6 +41,7 @@ El renderer estático soporta estos nodos:
 - `heading`
 - `paragraph`
 - `list`
+- `button`
 
 Reglas funcionales vigentes:
 - La raíz de página se renderiza como colección; el runtime no inventa un `container` de layout para envolver hermanos.
@@ -51,12 +53,16 @@ Reglas funcionales vigentes:
 - `heading.props` soporta `text` y `level`.
 - `paragraph.props` soporta `text`.
 - `list.props` soporta `items` como array de strings.
+- `button.props` soporta `label` y `action`, con `navigateTo` y `goBack` como acciones declarativas vigentes.
 - `heading`, `paragraph` y `list` usan clases base estables de `Tailwind` para mantener jerarquía y legibilidad mínimas.
+- `button` se renderiza como control accesible y mantiene la navegación declarativa dentro del estado compartido del runtime.
 
 ## Organización estable del runtime
 - `src/config/runtime-config.ts` actúa como fachada pública mínima del contrato del runtime.
 - `src/config/runtime-config-types.ts` concentra los tipos del contrato y los shapes de resultado/error de validación.
-- `src/config/validate-runtime-config.ts` contiene la validación estructural previa al render.
+- `src/config/runtime-config-zod.ts` concentra los esquemas `Zod` internos del contrato estructural.
+- `src/config/runtime-config-validation-errors.ts` adapta los fallos internos a la taxonomía pública estable de errores.
+- `src/config/validate-runtime-config.ts` contiene la validación estructural previa al render y las validaciones cruzadas posteriores al parseo.
 - `src/runtime/layout-renderer.tsx` renderiza colecciones ordenadas y conserva el soporte de varios hermanos raíz.
 - `src/runtime/layout-node-renderer.tsx` centraliza la resolución `type -> pieza de render`.
 - `src/runtime/runtime-node-styling.ts` centraliza la convención visual base y la compatibilidad acotada de `gap`.
@@ -87,7 +93,9 @@ Límites funcionales de esa capa:
 
 ## Comportamiento de errores
 - Si `initialPage` no coincide con ninguna página declarada, el runtime muestra un error visible.
+- Si un botón `navigateTo` apunta a una página inexistente, el runtime rechaza el config antes del render con una ruta diagnóstica del árbol afectado.
 - Si el `layout` es inválido, usa el shape raíz antiguo basado en objeto o aparece un nodo no soportado, en desarrollo se muestra un error diagnóstico.
+- Los errores estructurales mantienen los códigos públicos actuales y mejoran la trazabilidad con rutas canónicas del JSON cuando el fallo depende de una rama concreta.
 - En producción, los errores marcados como `development-only` degradan a una superficie vacía en lugar de mostrar un mensaje genérico o inventar contenido.
 
 ## Límites actuales

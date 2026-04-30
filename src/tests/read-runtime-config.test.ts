@@ -153,4 +153,43 @@ describe('readRuntimeConfig', () => {
       },
     })
   })
+
+  it('returns config validation errors from data-config with the canonical runtime path', () => {
+    const rootElement = document.createElement('div')
+    rootElement.dataset.config = JSON.stringify({
+      api: {
+        searchUsers: {
+          method: 'GET',
+          endpoint: '/api/users',
+          query: {
+            filters: {
+              active: true,
+            },
+          },
+        },
+      },
+      pages: [
+        {
+          id: 'html-home',
+          layout: [],
+        },
+      ],
+      initialPage: 'html-home',
+    })
+
+    const result = readRuntimeConfig({
+      devConfig,
+      isDevelopment: false,
+      rootElement,
+    })
+
+    expect(result).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message: 'The api operation "searchUsers.query.filters" must resolve to a string, number, or boolean.',
+      },
+    })
+  })
 })

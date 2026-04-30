@@ -4,149 +4,149 @@ import type {
   ContainerLayoutNode,
   GoBackButtonAction,
   HeadingLayoutNode,
-  RuntimeApiBodyValue,
-  RuntimeApiConfig,
-  RuntimeApiMethod,
-  RuntimeApiOperation,
   LayoutNode,
   LayoutNodeCollection,
   LayoutNodeType,
   ListLayoutNode,
   NavigateToButtonAction,
   ParagraphLayoutNode,
+  RuntimeApiBodyValue,
+  RuntimeApiConfig,
+  RuntimeApiMethod,
+  RuntimeApiOperation,
   RuntimeConfig,
   RuntimeConfigError,
   RuntimeConfigValidationResult,
   RuntimePageConfig,
 } from './runtime-config-types'
-
-const supportedNodeTypes: LayoutNodeType[] = ['container', 'heading', 'paragraph', 'list', 'button']
-const supportedApiMethods: RuntimeApiMethod[] = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']
+import {
+  buttonNodeSchema,
+  containerNodeSchema,
+  goBackButtonActionSchema,
+  headingNodeSchema,
+  listNodeSchema,
+  navigateToButtonActionSchema,
+  paragraphNodeSchema,
+  runtimeApiOperationShellSchema,
+  runtimeApiQuerySchema,
+  runtimeConfigShellSchema,
+  runtimePageShellSchema,
+  supportedNodeTypes,
+} from './runtime-config-zod'
+import { initialPageNotFound, invalidLayout, unsupportedNodeType } from './runtime-config-validation-errors'
 
 export function validateRuntimeConfig(rawConfig: unknown): RuntimeConfigValidationResult {
-  if (!isRecord(rawConfig)) {
+  const configShellResult = runtimeConfigShellSchema.safeParse(rawConfig)
+
+  if (!configShellResult.success) {
+    const issue = configShellResult.error.issues[0]
+
+    if (!issue || issue.path.length === 0) {
+      return invalidLayout('The runtime config must be an object.')
+    }
+
+    if (issue.path[0] === 'api') {
+      return invalidLayout('The runtime config field "api" must be an object.')
+    }
+
+    if (issue.path[0] === 'pages') {
+      return invalidLayout('The runtime config field "pages" must be an array.')
+    }
+
+    if (issue.path[0] === 'initialPage') {
+      return invalidLayout('The runtime config field "initialPage" must be a non-empty string.')
+    }
+
     return invalidLayout('The runtime config must be an object.')
   }
 
-  if (!isRecord(rawConfig.api)) {
-    return invalidLayout('The runtime config field "api" must be an object.')
-  }
-
-  const apiResult = validateApiConfig(rawConfig.api)
+  const apiResult = validateApiConfig(configShellResult.data.api)
 
   if (apiResult.status === 'error') {
     return apiResult
   }
 
-  if (!Array.isArray(rawConfig.pages)) {
-    return invalidLayout('The runtime config field "pages" must be an array.')
-  }
+  const pageShellResults: RuntimePageConfig[] = []
 
-  if (typeof rawConfig.initialPage !== 'string' || rawConfig.initialPage.length === 0) {
-    return invalidLayout('The runtime config field "initialPage" must be a non-empty string.')
-  }
+  for (let index = 0; index < configShellResult.data.pages.length; index += 1) {
+    const pageShellResult = runtimePageShellSchema.safeParse(configShellResult.data.pages[index])
 
-  for (let index = 0; index < rawConfig.pages.length; index += 1) {
-    const page = rawConfig.pages[index]
+    if (!pageShellResult.success) {
+      const issue = pageShellResult.error.issues[0]
+      const pagePath = issue?.path[0]
 
-    if (!isRecord(page)) {
+      if (pagePath === 'id') {
+        return invalidLayout(`The page at "pages[${index}].id" must be a non-empty string.`)
+      }
+
+      if (pagePath === 'preloads' && issue.path.length === 1) {
+        return invalidLayout(`The page at "pages[${index}].preloads" must be an array of non-empty strings.`)
+      }
+
+      if (pagePath === 'preloads' && typeof issue.path[1] === 'number') {
+        return invalidLayout(`The page at "pages[${index}].preloads[${issue.path[1]}]" must be a non-empty string.`)
+      }
+
+      if (pagePath === 'layout') {
+        const rawPage = configShellResult.data.pages[index]
+        const pageId = isRecord(rawPage) && typeof rawPage.id === 'string' ? rawPage.id : `pages[${index}]`
+        return invalidLayout(`Page "${pageId}" has an invalid layout at "layout".`)
+      }
+
       return invalidLayout(`The page at "pages[${index}]" must be an object.`)
     }
 
-    if (typeof page.id !== 'string' || page.id.length === 0) {
-      return invalidLayout(`The page at "pages[${index}].id" must be a non-empty string.`)
-    }
+    pageShellResults.push({
+      id: pageShellResult.data.id,
+      preloads: pageShellResult.data.preloads,
+      layout: pageShellResult.data.layout as LayoutNodeCollection,
+    })
   }
 
-  const availablePageIds = new Set<string>(rawConfig.pages.map((page) => (isRecord(page) ? String(page.id) : '')))
   const pages: RuntimePageConfig[] = []
 
-  for (let index = 0; index < rawConfig.pages.length; index += 1) {
-    const page = rawConfig.pages[index] as Record<string, unknown>
-    const pageId = page.id as string
-
-    const layoutResult = validateLayoutCollection(page.layout, 'layout', pageId, availablePageIds)
+  for (let index = 0; index < pageShellResults.length; index += 1) {
+    const pageShell = pageShellResults[index]
+    const layoutResult = validateLayoutCollection(pageShell.layout, 'layout', pageShell.id)
 
     if (layoutResult.status === 'error') {
       return layoutResult
     }
 
-    const preloadResult = validatePagePreloads(page.preloads, index)
-
-    if (preloadResult.status === 'error') {
-      return preloadResult
-    }
-
-    const validatedPage: RuntimePageConfig = {
-      id: pageId,
+    const pageConfig: RuntimePageConfig = {
+      id: pageShell.id,
       layout: layoutResult.nodes,
     }
 
-    if (preloadResult.preloads !== undefined) {
-      validatedPage.preloads = preloadResult.preloads
+    if (pageShell.preloads !== undefined) {
+      pageConfig.preloads = pageShell.preloads
     }
 
-    pages.push(validatedPage)
+    pages.push(pageConfig)
   }
 
   const config: RuntimeConfig = {
     api: apiResult.api,
     pages,
-    initialPage: rawConfig.initialPage,
+    initialPage: configShellResult.data.initialPage,
   }
 
   const page = config.pages.find((entry) => entry.id === config.initialPage)
 
   if (!page) {
-    return {
-      status: 'error',
-      error: {
-        code: 'initial-page-not-found',
-        displayMode: 'always',
-        message: `The initialPage "${config.initialPage}" does not match any page id.`,
-      },
-    }
+    return initialPageNotFound(config.initialPage)
+  }
+
+  const navigationTargetError = validateNavigationTargets(config.pages)
+
+  if (navigationTargetError) {
+    return navigationTargetError
   }
 
   return {
     status: 'ready',
     config,
     page,
-  }
-}
-
-function validatePagePreloads(
-  rawPreloads: unknown,
-  pageIndex: number,
-):
-  | { status: 'ready'; preloads: string[] | undefined }
-  | { status: 'error'; error: RuntimeConfigError } {
-  if (rawPreloads === undefined) {
-    return {
-      status: 'ready',
-      preloads: undefined,
-    }
-  }
-
-  if (!Array.isArray(rawPreloads)) {
-    return invalidLayout(`The page at "pages[${pageIndex}].preloads" must be an array of non-empty strings.`)
-  }
-
-  const preloads: string[] = []
-
-  for (let preloadIndex = 0; preloadIndex < rawPreloads.length; preloadIndex += 1) {
-    const preloadName = rawPreloads[preloadIndex]
-
-    if (typeof preloadName !== 'string' || preloadName.trim().length === 0) {
-      return invalidLayout(`The page at "pages[${pageIndex}].preloads[${preloadIndex}]" must be a non-empty string.`)
-    }
-
-    preloads.push(preloadName)
-  }
-
-  return {
-    status: 'ready',
-    preloads,
   }
 }
 
@@ -179,38 +179,54 @@ function validateApiOperation(
   operationName: string,
   rawOperation: Record<string, unknown>,
 ): { status: 'ready'; operation: RuntimeApiOperation } | { status: 'error'; error: RuntimeConfigError } {
-  if (!supportedApiMethods.includes(rawOperation.method as RuntimeApiMethod)) {
-    return invalidLayout(`The api operation "${operationName}" uses unsupported method "${String(rawOperation.method)}".`)
+  const shellResult = runtimeApiOperationShellSchema.safeParse(rawOperation)
+
+  if (!shellResult.success) {
+    const issue = shellResult.error.issues[0]
+    const path = issue?.path[0]
+
+    if (path === 'method') {
+      return invalidLayout(`The api operation "${operationName}" uses unsupported method "${String(rawOperation.method)}".`)
+    }
+
+    if (path === 'endpoint') {
+      return invalidLayout(`The api operation "${operationName}" must declare a non-empty endpoint.`)
+    }
+
+    if (path === 'query') {
+      return mapApiQueryIssue(operationName, rawOperation.query, issue.path)
+    }
+
+    if (path === 'body') {
+      return mapApiBodyIssue(operationName, rawOperation.body, issue.path)
+    }
+
+    return invalidLayout(`The api operation "${operationName}" must be an object.`)
   }
 
-  if (typeof rawOperation.endpoint !== 'string' || rawOperation.endpoint.trim().length === 0) {
-    return invalidLayout(`The api operation "${operationName}" must declare a non-empty endpoint.`)
+  if (shellResult.data.query !== undefined) {
+    const queryIssue = validateApiQueryKeys(operationName, shellResult.data.query)
+
+    if (queryIssue) {
+      return queryIssue
+    }
   }
 
-  const method = rawOperation.method as RuntimeApiMethod
-  const queryResult = validateApiQuery(operationName, rawOperation.query)
-
-  if (queryResult.status === 'error') {
-    return queryResult
-  }
-
-  const bodyResult = validateApiBody(operationName, method, rawOperation.body)
-
-  if (bodyResult.status === 'error') {
-    return bodyResult
+  if (shellResult.data.body !== undefined && shellResult.data.method === 'GET') {
+    return invalidLayout(`The api operation "${operationName}" uses method "GET" but declares an unsupported body.`)
   }
 
   const operation: RuntimeApiOperation = {
-    method,
-    endpoint: rawOperation.endpoint,
+    method: shellResult.data.method as RuntimeApiMethod,
+    endpoint: shellResult.data.endpoint,
   }
 
-  if (queryResult.query !== undefined) {
-    operation.query = queryResult.query
+  if (shellResult.data.query !== undefined) {
+    operation.query = shellResult.data.query as RuntimeApiOperation['query']
   }
 
-  if (bodyResult.hasBody) {
-    operation.body = bodyResult.body
+  if (shellResult.data.body !== undefined) {
+    operation.body = shellResult.data.body as RuntimeApiBodyValue
   }
 
   return {
@@ -219,81 +235,66 @@ function validateApiOperation(
   }
 }
 
-function validateApiQuery(
+function mapApiQueryIssue(
   operationName: string,
   rawQuery: unknown,
-):
-  | { status: 'ready'; query: RuntimeApiOperation['query'] }
-  | { status: 'error'; error: RuntimeConfigError } {
-  if (rawQuery === undefined) {
-    return {
-      status: 'ready',
-      query: undefined,
-    }
-  }
-
+  path: PropertyKey[],
+): { status: 'error'; error: RuntimeConfigError } {
   if (!isRecord(rawQuery)) {
     return invalidLayout(`The api operation "${operationName}.query" must be an object with non-empty keys.`)
   }
 
-  const query: NonNullable<RuntimeApiOperation['query']> = {}
+  if (typeof path[1] === 'string') {
+    return invalidLayout(
+      `The api operation "${operationName}.query.${path[1]}" must resolve to a string, number, or boolean.`,
+    )
+  }
 
-  for (const [key, value] of Object.entries(rawQuery)) {
+  return invalidLayout(`The api operation "${operationName}.query" must be an object with non-empty keys.`)
+}
+
+function validateApiQueryKeys(
+  operationName: string,
+  query: RuntimeApiOperation['query'],
+): { status: 'error'; error: RuntimeConfigError } | null {
+  if (query === undefined) {
+    return null
+  }
+
+  const queryResult = runtimeApiQuerySchema.safeParse(query)
+
+  if (!queryResult.success) {
+    return mapApiQueryIssue(operationName, query, queryResult.error.issues[0]?.path ?? [])
+  }
+
+  for (const key of Object.keys(query)) {
     if (key.length === 0) {
       return invalidLayout(`The api operation "${operationName}.query" contains an empty key.`)
     }
-
-    if (!isRuntimeApiQueryValue(value)) {
-      return invalidLayout(
-        `The api operation "${operationName}.query.${key}" must resolve to a string, number, or boolean.`,
-      )
-    }
-
-    query[key] = value
   }
 
-  return {
-    status: 'ready',
-    query,
-  }
+  return null
 }
 
-function validateApiBody(
+function mapApiBodyIssue(
   operationName: string,
-  method: RuntimeApiMethod,
   rawBody: unknown,
-):
-  | { status: 'ready'; hasBody: boolean; body?: RuntimeApiBodyValue }
-  | { status: 'error'; error: RuntimeConfigError } {
-  if (rawBody === undefined) {
-    return {
-      status: 'ready',
-      hasBody: false,
-    }
+  path: PropertyKey[],
+): { status: 'error'; error: RuntimeConfigError } {
+  const bodyPath = findInvalidJsonBodyPath(rawBody, `${operationName}.body`)
+
+  if (bodyPath) {
+    return invalidLayout(`The api operation "${bodyPath}" must be valid JSON data.`)
   }
 
-  if (method === 'GET') {
-    return invalidLayout(`The api operation "${operationName}" uses method "${method}" but declares an unsupported body.`)
-  }
-
-  const bodyValidation = isRuntimeApiBodyValue(rawBody, `${operationName}.body`)
-
-  if (bodyValidation !== true) {
-    return invalidLayout(`The api operation "${bodyValidation}" must be valid JSON data.`)
-  }
-
-  return {
-    status: 'ready',
-    hasBody: true,
-    body: rawBody as RuntimeApiBodyValue,
-  }
+  const formattedPath = path.slice(1).map(formatPathSegment).join('')
+  return invalidLayout(`The api operation "${operationName}.body${formattedPath}" must be valid JSON data.`)
 }
 
 function validateLayoutCollection(
   rawNodes: unknown,
   path: string,
   pageId: string,
-  availablePageIds: ReadonlySet<string>,
 ): { status: 'ready'; nodes: LayoutNodeCollection } | { status: 'error'; error: RuntimeConfigError } {
   if (!Array.isArray(rawNodes)) {
     return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}".`)
@@ -302,7 +303,7 @@ function validateLayoutCollection(
   const nodes: LayoutNode[] = []
 
   for (let index = 0; index < rawNodes.length; index += 1) {
-    const nodeResult = validateLayoutNode(rawNodes[index], `${path}[${index}]`, pageId, availablePageIds)
+    const nodeResult = validateLayoutNode(rawNodes[index], `${path}[${index}]`, pageId)
 
     if (nodeResult.status === 'error') {
       return nodeResult
@@ -321,7 +322,6 @@ function validateLayoutNode(
   rawNode: unknown,
   path: string,
   pageId: string,
-  availablePageIds: ReadonlySet<string>,
 ): { status: 'ready'; node: LayoutNode } | { status: 'error'; error: RuntimeConfigError } {
   if (!isRecord(rawNode)) {
     return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}".`)
@@ -332,27 +332,12 @@ function validateLayoutNode(
   }
 
   if (!supportedNodeTypes.includes(rawNode.type as LayoutNodeType)) {
-    return {
-      status: 'error',
-      error: {
-        code: 'unsupported-node-type',
-        displayMode: 'development-only',
-        message: `Page "${pageId}" uses unsupported layout node type "${rawNode.type}" at "${path}".`,
-      },
-    }
-  }
-
-  if ('id' in rawNode && rawNode.id !== undefined && typeof rawNode.id !== 'string') {
-    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.id".`)
-  }
-
-  if ('props' in rawNode && rawNode.props !== undefined && !isRecord(rawNode.props)) {
-    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props".`)
+    return unsupportedNodeType(pageId, path, rawNode.type)
   }
 
   switch (rawNode.type) {
     case 'container':
-      return validateContainerNode(rawNode, path, pageId, availablePageIds)
+      return validateContainerNode(rawNode, path, pageId)
     case 'heading':
       return validateHeadingNode(rawNode, path, pageId)
     case 'paragraph':
@@ -360,72 +345,65 @@ function validateLayoutNode(
     case 'list':
       return validateListNode(rawNode, path, pageId)
     case 'button':
-      return validateButtonNode(rawNode, path, pageId, availablePageIds)
+      return validateButtonNode(rawNode, path, pageId)
   }
 
-  return invalidLayout(`Page "${pageId}" uses an invalid layout node at "${path}".`)
+  return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.type".`)
 }
 
 function validateContainerNode(
   rawNode: Record<string, unknown>,
   path: string,
   pageId: string,
-  availablePageIds: ReadonlySet<string>,
 ): { status: 'ready'; node: ContainerLayoutNode } | { status: 'error'; error: RuntimeConfigError } {
-  const props = getOptionalRecord(rawNode.props)
+  const parseResult = containerNodeSchema.safeParse(rawNode)
 
-  if (rawNode.props !== undefined && !props) {
-    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props".`)
-  }
+  if (!parseResult.success) {
+    const issue = parseResult.error.issues[0]
+    const issuePath = issue?.path[0]
 
-  if (props) {
-    if ('direction' in props && props.direction !== undefined && typeof props.direction !== 'string') {
+    if (issuePath === 'id') {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.id".`)
+    }
+
+    if (issuePath === 'props' && issue.path.length === 1) {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props".`)
+    }
+
+    if (issuePath === 'props' && issue.path[1] === 'direction') {
       return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.direction".`)
     }
 
-    if ('gap' in props && props.gap !== undefined && typeof props.gap !== 'string') {
+    if (issuePath === 'props' && issue.path[1] === 'gap') {
       return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.gap".`)
     }
-  }
 
-  if (rawNode.children === undefined) {
-    return {
-      status: 'ready',
-      node: {
-        type: 'container',
-        id: typeof rawNode.id === 'string' ? rawNode.id : undefined,
-        props: props
-          ? {
-              direction: typeof props.direction === 'string' ? props.direction : undefined,
-              gap: typeof props.gap === 'string' ? props.gap : undefined,
-            }
-          : undefined,
-      },
+    if (issuePath === 'children') {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.children".`)
     }
+
+    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}".`)
   }
 
-  if (!Array.isArray(rawNode.children)) {
-    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.children".`)
-  }
+  let children: LayoutNodeCollection | undefined
 
-  const childrenValidationResult = validateLayoutCollection(rawNode.children, `${path}.children`, pageId, availablePageIds)
+  if (parseResult.data.children !== undefined) {
+    const childrenResult = validateLayoutCollection(parseResult.data.children, `${path}.children`, pageId)
 
-  if (childrenValidationResult.status === 'error') {
-    return childrenValidationResult
+    if (childrenResult.status === 'error') {
+      return childrenResult
+    }
+
+    children = childrenResult.nodes
   }
 
   return {
     status: 'ready',
     node: {
       type: 'container',
-      id: typeof rawNode.id === 'string' ? rawNode.id : undefined,
-      props: props
-        ? {
-            direction: typeof props.direction === 'string' ? props.direction : undefined,
-            gap: typeof props.gap === 'string' ? props.gap : undefined,
-          }
-        : undefined,
-      children: childrenValidationResult.nodes,
+      id: parseResult.data.id,
+      props: parseResult.data.props,
+      children,
     },
   }
 }
@@ -435,29 +413,15 @@ function validateHeadingNode(
   path: string,
   pageId: string,
 ): { status: 'ready'; node: HeadingLayoutNode } | { status: 'error'; error: RuntimeConfigError } {
-  if (!isRecord(rawNode.props)) {
-    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props".`)
-  }
+  const parseResult = headingNodeSchema.safeParse(rawNode)
 
-  if (typeof rawNode.props.text !== 'string') {
-    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.text".`)
-  }
-
-  if (typeof rawNode.props.level !== 'number' || !Number.isInteger(rawNode.props.level)) {
-    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.level".`)
+  if (!parseResult.success) {
+    return mapLeafNodeIssue(pageId, path, parseResult.error.issues[0]?.path ?? [])
   }
 
   return {
     status: 'ready',
-    node: {
-      type: 'heading',
-      id: typeof rawNode.id === 'string' ? rawNode.id : undefined,
-      props: {
-        text: rawNode.props.text,
-        level: rawNode.props.level,
-      },
-      children: rawNode.children,
-    },
+    node: parseResult.data,
   }
 }
 
@@ -466,24 +430,15 @@ function validateParagraphNode(
   path: string,
   pageId: string,
 ): { status: 'ready'; node: ParagraphLayoutNode } | { status: 'error'; error: RuntimeConfigError } {
-  if (!isRecord(rawNode.props)) {
-    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props".`)
-  }
+  const parseResult = paragraphNodeSchema.safeParse(rawNode)
 
-  if (typeof rawNode.props.text !== 'string') {
-    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.text".`)
+  if (!parseResult.success) {
+    return mapLeafNodeIssue(pageId, path, parseResult.error.issues[0]?.path ?? [])
   }
 
   return {
     status: 'ready',
-    node: {
-      type: 'paragraph',
-      id: typeof rawNode.id === 'string' ? rawNode.id : undefined,
-      props: {
-        text: rawNode.props.text,
-      },
-      children: rawNode.children,
-    },
+    node: parseResult.data,
   }
 }
 
@@ -492,42 +447,66 @@ function validateListNode(
   path: string,
   pageId: string,
 ): { status: 'ready'; node: ListLayoutNode } | { status: 'error'; error: RuntimeConfigError } {
-  if (!isRecord(rawNode.props)) {
-    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props".`)
-  }
+  const parseResult = listNodeSchema.safeParse(rawNode)
 
-  if (!Array.isArray(rawNode.props.items) || rawNode.props.items.some((item) => typeof item !== 'string')) {
-    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.items".`)
+  if (!parseResult.success) {
+    return mapLeafNodeIssue(pageId, path, parseResult.error.issues[0]?.path ?? [])
   }
 
   return {
     status: 'ready',
-    node: {
-      type: 'list',
-      id: typeof rawNode.id === 'string' ? rawNode.id : undefined,
-      props: {
-        items: rawNode.props.items,
-      },
-      children: rawNode.children,
-    },
+    node: parseResult.data,
   }
+}
+
+function mapLeafNodeIssue(
+  pageId: string,
+  path: string,
+  issuePath: PropertyKey[],
+): { status: 'error'; error: RuntimeConfigError } {
+  if (issuePath[0] === 'id') {
+    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.id".`)
+  }
+
+  if (issuePath[0] === 'props' && issuePath.length === 1) {
+    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props".`)
+  }
+
+  const formattedIssuePath = issuePath.map(formatPathSegment).join('')
+  return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}${formattedIssuePath}".`)
 }
 
 function validateButtonNode(
   rawNode: Record<string, unknown>,
   path: string,
   pageId: string,
-  availablePageIds: ReadonlySet<string>,
 ): { status: 'ready'; node: ButtonLayoutNode } | { status: 'error'; error: RuntimeConfigError } {
-  if (!isRecord(rawNode.props)) {
+  const parseResult = buttonNodeSchema.safeParse(rawNode)
+
+  if (!parseResult.success) {
+    const issue = parseResult.error.issues[0]
+    const issuePath = issue?.path ?? []
+
+    if (issuePath[0] === 'id') {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.id".`)
+    }
+
+    if (issuePath[0] === 'props' && issuePath.length === 1) {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props".`)
+    }
+
+    if (issuePath[0] === 'props' && issuePath[1] === 'label') {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.label".`)
+    }
+
+    if (issuePath[0] === 'props' && issuePath[1] === 'action') {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.action".`)
+    }
+
     return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props".`)
   }
 
-  if (typeof rawNode.props.label !== 'string') {
-    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.label".`)
-  }
-
-  const actionResult = validateButtonAction(rawNode.props.action, `${path}.props.action`, pageId, availablePageIds)
+  const actionResult = validateButtonAction(parseResult.data.props.action, `${path}.props.action`, pageId)
 
   if (actionResult.status === 'error') {
     return actionResult
@@ -537,9 +516,9 @@ function validateButtonNode(
     status: 'ready',
     node: {
       type: 'button',
-      id: typeof rawNode.id === 'string' ? rawNode.id : undefined,
+      id: parseResult.data.id,
       props: {
-        label: rawNode.props.label,
+        label: parseResult.data.props.label,
         action: actionResult.action,
       },
     },
@@ -550,7 +529,6 @@ function validateButtonAction(
   rawAction: unknown,
   path: string,
   pageId: string,
-  availablePageIds: ReadonlySet<string>,
 ): { status: 'ready'; action: ButtonAction } | { status: 'error'; error: RuntimeConfigError } {
   if (!isRecord(rawAction)) {
     return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}".`)
@@ -561,9 +539,13 @@ function validateButtonAction(
   }
 
   if (rawAction.type === 'goBack') {
-    const action: GoBackButtonAction = {
-      type: 'goBack',
+    const parseResult = goBackButtonActionSchema.safeParse(rawAction)
+
+    if (!parseResult.success) {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.type".`)
     }
+
+    const action: GoBackButtonAction = parseResult.data
 
     return {
       status: 'ready',
@@ -571,18 +553,13 @@ function validateButtonAction(
     }
   }
 
-  if (typeof rawAction.pageId !== 'string' || rawAction.pageId.trim().length === 0) {
+  const parseResult = navigateToButtonActionSchema.safeParse(rawAction)
+
+  if (!parseResult.success) {
     return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.pageId".`)
   }
 
-  if (!availablePageIds.has(rawAction.pageId)) {
-    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.pageId": unknown page "${rawAction.pageId}".`)
-  }
-
-  const action: NavigateToButtonAction = {
-    type: 'navigateTo',
-    pageId: rawAction.pageId,
-  }
+  const action: NavigateToButtonAction = parseResult.data
 
   return {
     status: 'ready',
@@ -590,60 +567,82 @@ function validateButtonAction(
   }
 }
 
-function invalidLayout(message: string): { status: 'error'; error: RuntimeConfigError } {
-  return {
-    status: 'error',
-    error: {
-      code: 'invalid-layout',
-      displayMode: 'development-only',
-      message,
-    },
-  }
-}
+function validateNavigationTargets(
+  pages: RuntimePageConfig[],
+): { status: 'error'; error: RuntimeConfigError } | null {
+  const pageIds = new Set(pages.map((page) => page.id))
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return isPlainObject(value)
-}
+  for (const page of pages) {
+    const invalidTarget = findInvalidNavigationTarget(page.layout, 'layout', pageIds)
 
-function getOptionalRecord(value: unknown): Record<string, unknown> | undefined {
-  return isRecord(value) ? value : undefined
-}
-
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
-    return false
+    if (invalidTarget) {
+      return invalidLayout(
+        `Page "${page.id}" has an invalid layout at "${invalidTarget.path}.pageId": unknown page "${invalidTarget.pageId}".`,
+      )
+    }
   }
 
-  const prototype = Object.getPrototypeOf(value)
-  return prototype === Object.prototype || prototype === null
+  return null
 }
 
-function isRuntimeApiQueryValue(value: unknown): value is RuntimeApiOperation['query'][string] {
-  return typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean'
+function findInvalidNavigationTarget(
+  nodes: LayoutNodeCollection,
+  path: string,
+  pageIds: ReadonlySet<string>,
+): { path: string; pageId: string } | null {
+  for (let index = 0; index < nodes.length; index += 1) {
+    const node = nodes[index]
+    const nodePath = `${path}[${index}]`
+
+    if (node.type === 'button' && node.props.action.type === 'navigateTo' && !pageIds.has(node.props.action.pageId)) {
+      return {
+        path: `${nodePath}.props.action`,
+        pageId: node.props.action.pageId,
+      }
+    }
+
+    if (node.type === 'container' && node.children) {
+      const childResult = findInvalidNavigationTarget(node.children, `${nodePath}.children`, pageIds)
+
+      if (childResult) {
+        return childResult
+      }
+    }
+  }
+
+  return null
 }
 
-function isRuntimeApiBodyValue(value: unknown, path: string): true | string {
+function formatPathSegment(segment: PropertyKey): string {
+  if (typeof segment === 'number') {
+    return `[${segment}]`
+  }
+
+  return `.${String(segment)}`
+}
+
+function findInvalidJsonBodyPath(value: unknown, path: string): string | null {
   if (value === null) {
-    return true
+    return null
   }
 
   if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
-    return true
+    return null
   }
 
   if (Array.isArray(value)) {
     for (let index = 0; index < value.length; index += 1) {
-      const childValidation = isRuntimeApiBodyValue(value[index], `${path}[${index}]`)
+      const invalidChildPath = findInvalidJsonBodyPath(value[index], `${path}[${index}]`)
 
-      if (childValidation !== true) {
-        return childValidation
+      if (invalidChildPath) {
+        return invalidChildPath
       }
     }
 
-    return true
+    return null
   }
 
-  if (!isPlainObject(value)) {
+  if (!isRecord(value)) {
     return path
   }
 
@@ -652,12 +651,21 @@ function isRuntimeApiBodyValue(value: unknown, path: string): true | string {
       return `${path}.${key}`
     }
 
-    const childValidation = isRuntimeApiBodyValue(childValue, `${path}.${key}`)
+    const invalidChildPath = findInvalidJsonBodyPath(childValue, `${path}.${key}`)
 
-    if (childValidation !== true) {
-      return childValidation
+    if (invalidChildPath) {
+      return invalidChildPath
     }
   }
 
-  return true
+  return null
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return false
+  }
+
+  const prototype = Object.getPrototypeOf(value)
+  return prototype === Object.prototype || prototype === null
 }

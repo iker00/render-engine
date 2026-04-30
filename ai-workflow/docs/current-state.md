@@ -6,7 +6,7 @@
 - Bootstrap frontend de paquete único ya creado en la raíz del repositorio.
 - Scripts estables de `dev`, `build`, `lint` y `test` disponibles con `pnpm`.
 - Frontera de bootstrap para resolver configuración desde `data-config` o `src/dev/config.json`.
-- Validación estructural mínima del runtime config antes de renderizar, separada en tipos, fachada pública y validador dedicado dentro de `src/config/`.
+- Validación del runtime config antes de renderizar ya migrada a una base `Zod`, separada en fachada pública, esquemas internos, adaptación de errores y validaciones cruzadas dentro de `src/config/`.
 - Contrato de página estable con `pages[].layout` como colección ordenada de bloques y rechazo explícito del shape raíz antiguo basado en objeto.
 - Renderer estático inicial operativo para `container`, `heading`, `paragraph` y `list`, con soporte para varios hermanos en la raíz de página sin `container` sintético y con dispatcher central por `type` en `src/runtime/`.
 - Presentación base del runtime migrada a `Tailwind CSS` para `container`, `heading`, `paragraph` y `list`, con convención centralizada en `src/runtime/runtime-node-styling.ts`.
@@ -25,10 +25,10 @@
 - La tanda agregada de `preloads` ya usa semántica latest-only para no dejar que cierres tardíos de entradas antiguas sobrescriban la entrada activa más reciente.
 - Aislamiento validado entre varias instancias del runtime y limpieza completa del estado al desmontar y remontar.
 - Manejo explícito de errores de configuración con diagnóstico visible en desarrollo y degradación silenciosa en producción para errores marcados como `development-only`.
+- Diagnósticos de validación ya alineados con rutas canónicas del JSON para ramas como `layout[*]`, `preloads[*]`, `api.query.*` y `api.body.*`.
 - Tests automatizados del bootstrap, del validador y del renderer, con gate global de coverage activo sobre `src/`.
 
 ## Límites actuales
-- No existe todavía validación con `Zod`; el contrato actual se valida con lógica propia.
 - No existe todavía panel de desarrollo local para editar configuración en vivo.
 - No existe todavía una integración completa de producto con backend más allá de `data-config` como frontera de entrada y de las operaciones remotas declarativas ejecutadas por `fetch`.
 - No existe todavía una UI declarativa final para navegación, formularios o feedback de queries.
@@ -52,6 +52,7 @@
 - Octava feature del workflow cerrada para ampliar `queries.{queryName}.data` con navegación anidada por objetos y colecciones.
 - Novena feature del workflow cerrada para convertir `api` en una frontera declarativa operativa y conectar su ejecución con el dominio compartido `queries`.
 - Décima feature del workflow cerrada para soportar `preloads` por página y su orquestación automática con agregado de entrada latest-only.
+- Duodécima feature del workflow cerrada para migrar la validación del runtime config a una base `Zod` sin cambiar la frontera pública de bootstrap ni perder las validaciones cruzadas estables.
 
 ## Referencias
 

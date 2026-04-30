@@ -58,6 +58,14 @@ Nodos soportados hoy:
   - `props.text`: string obligatorio, literal o referencia dinámica completa soportada por el runtime
 - `list`
   - `props.items`: array obligatorio de strings
+- `button`
+  - `props.label`: string obligatorio
+  - `props.action.type`: `navigateTo | goBack`
+  - `props.action.pageId`: string obligatorio y no vacío cuando `type` es `navigateTo`
+
+Reglas estructurales adicionales del catálogo actual:
+- `heading`, `paragraph`, `list` y `button` siguen tratándose como nodos hoja; si reciben `children`, esos datos no pasan al resultado normalizado.
+- las claves extra no soportadas se descartan del objeto validado final sin convertir por sí solas la configuración en inválida.
 
 ## Resolución inicial
 - El runtime valida toda la configuración antes de renderizar.
@@ -94,21 +102,27 @@ Reglas funcionales vigentes:
 
 ## Validación
 - La configuración debe validarse antes de renderizarse.
-- La validación comprueba estructura general, página inicial, shape de la colección `layout` y shape de los nodos soportados.
+- La validación estructural del contrato se apoya ahora en esquemas `Zod`, manteniendo una única fachada pública estable en `validateRuntimeConfig`.
+- La validación comprueba estructura general, shape de `api`, `pages`, `preloads`, colección `layout` y shape de los nodos soportados.
 - Si `layout` no es un array válido, el arranque falla con un error explícito sobre la ruta afectada.
 - Si aparece un nodo no soportado en la raíz o dentro de `children`, el runtime lo trata como error de configuración y no lo reinterpreta.
+- Si `initialPage` no existe dentro de `pages`, el runtime sigue fallando antes del render con `initial-page-not-found`.
+- Si un `button.props.action.pageId` apunta a una página inexistente, el config completo se rechaza antes del render aunque el shape estructural sea válido.
+- Los errores estructurales conservan la semántica pública actual (`invalid-layout` o `unsupported-node-type`) y ahora incluyen rutas canónicas del JSON cuando aplica, por ejemplo `layout[0].props.items[1]` o `searchUsers.query.filters`.
 - En desarrollo, los errores de configuración deben ser diagnósticos y visibles.
 - En producción, los errores `development-only` degradan sin mostrar mensaje genérico visible.
 
 La frontera estable de esta validación queda organizada así:
 - `src/config/runtime-config.ts`: fachada pública para consumidores como bootstrap y tests.
 - `src/config/runtime-config-types.ts`: tipos del contrato y shape del resultado de validación.
-- `src/config/validate-runtime-config.ts`: validación estructural mínima del runtime.
+- `src/config/runtime-config-zod.ts`: esquemas `Zod` internos del contrato estructural y helpers de shape.
+- `src/config/runtime-config-validation-errors.ts`: adaptador interno para construir errores públicos coherentes.
+- `src/config/validate-runtime-config.ts`: orquestación de parseo estructural, adaptación diagnóstica y validaciones cruzadas previas al render.
 
 ## Límites de v1
 - `api` no tiene todavía disparadores declarativos visuales desde el árbol `layout`; la ejecución activa hoy ocurre mediante la fachada imperativa del provider y por `preloads` de página al entrar en ella.
 - `preloads` solo admite una lista plana de strings; no hay condiciones, prioridades, secuencialidad, dependencias ni políticas de caché.
 - No hay interpolación compleja dentro de strings.
 - No hay sistema de plugins para componentes externos.
-- No hay soporte para nodos distintos de `container`, `heading`, `paragraph` y `list`.
+- No hay soporte para nodos distintos de `container`, `heading`, `paragraph`, `list` y `button`.
 - No hay consumidores declarativos de referencias fuera de `heading.props.text` y `paragraph.props.text`.

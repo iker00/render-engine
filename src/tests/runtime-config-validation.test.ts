@@ -523,6 +523,46 @@ describe('validateRuntimeConfig', () => {
     })
   })
 
+  it('drops children from other leaf nodes instead of treating them as supported layout branches', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithPages([
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'paragraph',
+              props: {
+                text: 'Leaf node',
+              },
+              children: [
+                {
+                  type: 'heading',
+                  props: {
+                    text: 'Ignored',
+                    level: 2,
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      ]),
+    )
+
+    expect(result.status).toBe('ready')
+
+    if (result.status !== 'ready') {
+      throw new Error('Expected ready result')
+    }
+
+    expect(result.config.pages[0].layout[0]).toEqual({
+      type: 'paragraph',
+      props: {
+        text: 'Leaf node',
+      },
+    })
+  })
+
   it('rejects preloads when it is not an array', () => {
     const result = validateRuntimeConfig({
       api: {},
@@ -746,6 +786,33 @@ describe('validateRuntimeConfig', () => {
     })
   })
 
+  it('rejects button nodes when props.action is missing with the precise path', () => {
+    expect(
+      validateRuntimeConfig(
+        createConfigWithPages([
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'button',
+                props: {
+                  label: 'Broken',
+                },
+              },
+            ],
+          },
+        ]),
+      ),
+    ).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message: 'Page "home" has an invalid layout at "layout[0].props.action".',
+      },
+    })
+  })
+
   it('rejects navigateTo actions without a valid existing pageId', () => {
     expect(
       validateRuntimeConfig(
@@ -868,6 +935,48 @@ describe('validateRuntimeConfig', () => {
     })
   })
 
+  it('rejects whitespace-only page ids and initialPage values', () => {
+    expect(
+      validateRuntimeConfig({
+        api: {},
+        pages: [
+          {
+            id: '   ',
+            layout: [],
+          },
+        ],
+        initialPage: 'home',
+      }),
+    ).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message: 'The page at "pages[0].id" must be a non-empty string.',
+      },
+    })
+
+    expect(
+      validateRuntimeConfig({
+        api: {},
+        pages: [
+          {
+            id: 'home',
+            layout: [],
+          },
+        ],
+        initialPage: '   ',
+      }),
+    ).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message: 'The runtime config field "initialPage" must be a non-empty string.',
+      },
+    })
+  })
+
   it('rejects the old object root layout shape explicitly', () => {
     const result = validateRuntimeConfig({
       api: {},
@@ -889,6 +998,33 @@ describe('validateRuntimeConfig', () => {
         code: 'invalid-layout',
         displayMode: 'development-only',
         message: 'Page "home" has an invalid layout at "layout".',
+      },
+    })
+  })
+
+  it('reports list item failures with canonical array paths', () => {
+    expect(
+      validateRuntimeConfig(
+        createConfigWithPages([
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'list',
+                props: {
+                  items: ['One', 2],
+                },
+              },
+            ],
+          },
+        ]),
+      ),
+    ).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message: 'Page "home" has an invalid layout at "layout[0].props.items[1]".',
       },
     })
   })
@@ -1040,6 +1176,41 @@ describe('validateRuntimeConfig', () => {
       )
 
       expect(result.status).toBe('ready')
+    })
+
+    it('drops unsupported extra keys from api operations while preserving the supported contract', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithApi({
+          createUser: {
+            method: 'POST',
+            endpoint: '/api/users',
+            timeout: 5000,
+            query: {
+              active: true,
+            },
+            body: {
+              name: 'Ada',
+            },
+          },
+        }),
+      )
+
+      expect(result.status).toBe('ready')
+
+      if (result.status !== 'ready') {
+        throw new Error('Expected ready result')
+      }
+
+      expect(result.config.api.createUser).toEqual({
+        method: 'POST',
+        endpoint: '/api/users',
+        query: {
+          active: true,
+        },
+        body: {
+          name: 'Ada',
+        },
+      })
     })
 
     it('accepts body null only for methods that admit body', () => {
