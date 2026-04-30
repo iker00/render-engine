@@ -29,6 +29,7 @@ src/
   runtime/
     layout-renderer.tsx
     layout-node-renderer.tsx
+    runtime-query-state-feedback.ts
     runtime-node-styling.ts
     runtime-page.tsx
     runtime-references/
@@ -57,8 +58,9 @@ Lectura operativa de esa estructura:
 - `validate-runtime-config.ts` concentra la validación previa al render, fija el contrato estable de `config.api` y reintroduce las validaciones cruzadas que dependen del conjunto completo ya parseado.
 - `queries/` encapsula la frontera HTTP del runtime: resolución de payloads, construcción de `RequestInit`, ejecución contra `fetch` y errores normalizados.
 - `layout-renderer.tsx` conserva la responsabilidad de renderizar colecciones ordenadas de nodos.
-- `layout-node-renderer.tsx` es el punto central de resolución `type -> pieza de render`.
+- `layout-node-renderer.tsx` es el punto central de resolución `type -> pieza de render` y del borde transversal que decide si el nodo se muestra, se oculta o se sustituye por un fallback local.
 - `runtime-node-styling.ts` concentra la convención visual base del runtime y la compatibilidad acotada para `gap` arbitrarios.
+- `runtime-query-state-feedback.ts` concentra la derivación `loading | error | empty | success`, la heurística común de `empty` y la resolución de defaults efectivos de `queryStateFeedback`.
 - `runtime-references/` fija la semántica central de referencias string, distingue `literal | supported | unsupported | invalid` y evita lógica dispersa en nodos visuales.
 - `runtime-state/` concentra un store por instancia basado en `useReducer` + `Context`, con dominios separados para navegación, formularios, queries y `pageEntry`, y expone la fachada mínima `executeQueryOperation()` sin absorber la lógica de red.
 - `runtime/nodes/` materializa solo nodos con uso real inmediato, sin introducir subsistemas vacíos para capacidades futuras.
@@ -94,4 +96,5 @@ Lectura operativa de esa estructura:
 - La navegación de subrutas de query usa una semántica iterativa única: índices solo sobre arrays, claves literales sobre objetos y resultado `missing` para rutas bien formadas cuyo dato no está disponible.
 - La ejecución remota declarativa vive en `src/queries/`, reutiliza la convención central de referencias del runtime y deja sus resultados visibles solo a través de `queries.{operationName}`.
 - La orquestación automática de `preloads` vive en `runtime-state-provider.tsx`, reutiliza la frontera `src/queries/`, captura un snapshot común del estado por entrada y limita la semántica latest-only al agregado `pageEntry`, no a las queries individuales.
+- La semántica declarativa de feedback por query vive fuera de los nodos visuales concretos: el renderer central consulta `queries.{queryName}`, deriva un estado visible único y decide entre nodo original, ocultación o fallback local reutilizando `LayoutRenderer`.
 - Los errores de bootstrap y validación deben ser diagnósticos en desarrollo; en producción, los errores marcados como solo de desarrollo degradan sin mensaje visible genérico.

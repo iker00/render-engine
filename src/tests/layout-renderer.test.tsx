@@ -117,6 +117,57 @@ function renderRuntimePageWithSeed(activePage: RuntimePageConfig) {
   )
 }
 
+function QueryStateFeedbackFixture() {
+  const { initializeQuery, setQueryError, setQueryLoading, setQuerySuccess } = useRuntimeStateActions()
+
+  useEffect(() => {
+    initializeQuery('searchUsers')
+  }, [initializeQuery])
+
+  return (
+    <>
+      <button type="button" onClick={() => setQueryLoading('searchUsers')}>
+        Set loading
+      </button>
+      <button type="button" onClick={() => setQuerySuccess('searchUsers', ['Ada', 'Grace'])}>
+        Set success list
+      </button>
+      <button type="button" onClick={() => setQuerySuccess('searchUsers', [])}>
+        Set success empty list
+      </button>
+      <button type="button" onClick={() => setQuerySuccess('searchUsers', 0)}>
+        Set success zero
+      </button>
+      <button
+        type="button"
+        onClick={() =>
+          setQueryError('searchUsers', {
+            code: 'network',
+            message: 'Could not load users.',
+          })
+        }
+      >
+        Set error
+      </button>
+    </>
+  )
+}
+
+function renderRuntimePageWithQueryFeedback(activePage: RuntimePageConfig) {
+  const config: RuntimeConfig = {
+    api: {},
+    initialPage: activePage.id,
+    pages: [activePage],
+  }
+
+  return render(
+    <RuntimeStateProvider config={config}>
+      <QueryStateFeedbackFixture />
+      <RuntimePage />
+    </RuntimeStateProvider>,
+  )
+}
+
 describe('RuntimePage', () => {
   it('renders multiple root nodes in the declared order', () => {
     renderRuntimePage(page)
@@ -244,6 +295,270 @@ describe('RuntimePage', () => {
 
     expect(container).toHaveClass('flex', 'w-full', 'flex-row', 'gap-3')
     expect(container).not.toHaveAttribute('style')
+  })
+
+  it('keeps nodes without queryStateFeedback rendering exactly as before', () => {
+    renderRuntimePageWithQueryFeedback(page)
+
+    expect(screen.getByRole('heading', { name: 'Welcome', level: 1 })).toBeInTheDocument()
+    expect(screen.getByText('Build forms from configuration.')).toBeInTheDocument()
+    expect(screen.getByRole('list')).toBeInTheDocument()
+  })
+
+  it('hides a node on idle and loading when its loading rule resolves to hide', () => {
+    renderRuntimePageWithQueryFeedback({
+      id: 'home',
+      layout: [
+        {
+          type: 'paragraph',
+          queryStateFeedback: {
+            query: 'searchUsers',
+            states: {
+              loading: {
+                mode: 'hide',
+              },
+            },
+          },
+          props: {
+            text: 'Visible only after loading',
+          },
+        },
+      ],
+    })
+
+    expect(screen.queryByText('Visible only after loading')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Set loading' }))
+
+    expect(screen.queryByText('Visible only after loading')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Set success list' }))
+
+    expect(screen.getByText('Visible only after loading')).toBeInTheDocument()
+  })
+
+  it('renders a local fallback during loading and restores the original node on non-empty success', () => {
+    renderRuntimePageWithQueryFeedback({
+      id: 'home',
+      layout: [
+        {
+          type: 'paragraph',
+          queryStateFeedback: {
+            query: 'searchUsers',
+            states: {
+              loading: {
+                mode: 'fallback',
+                fallback: [
+                  {
+                    type: 'heading',
+                    props: {
+                      text: 'Loading users...',
+                      level: 2,
+                    },
+                  },
+                  {
+                    type: 'paragraph',
+                    props: {
+                      text: 'Please wait',
+                    },
+                  },
+                ],
+              },
+            },
+          },
+          props: {
+            text: 'Loaded users',
+          },
+        },
+      ],
+    })
+
+    const pageRoot = screen.getByTestId('runtime-page')
+
+    expect(screen.getByRole('heading', { name: 'Loading users...', level: 2 })).toBeInTheDocument()
+    expect(screen.getByText('Please wait')).toBeInTheDocument()
+    expect(screen.queryByText('Loaded users')).not.toBeInTheDocument()
+    expect(pageRoot.children[0]).toHaveAttribute('data-layout-node', 'heading')
+    expect(pageRoot.children[1]).toHaveAttribute('data-layout-node', 'paragraph')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Set success list' }))
+
+    expect(screen.queryByRole('heading', { name: 'Loading users...', level: 2 })).not.toBeInTheDocument()
+    expect(screen.queryByText('Please wait')).not.toBeInTheDocument()
+    expect(screen.getByText('Loaded users')).toBeInTheDocument()
+  })
+
+  it('renders the error fallback instead of the original node when the query fails', () => {
+    renderRuntimePageWithQueryFeedback({
+      id: 'home',
+      layout: [
+        {
+          type: 'heading',
+          queryStateFeedback: {
+            query: 'searchUsers',
+            states: {
+              error: {
+                mode: 'fallback',
+                fallback: [
+                  {
+                    type: 'paragraph',
+                    props: {
+                      text: 'Could not load users.',
+                    },
+                  },
+                ],
+              },
+            },
+          },
+          props: {
+            text: 'Users loaded',
+            level: 2,
+          },
+        },
+      ],
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Set error' }))
+
+    expect(screen.queryByRole('heading', { name: 'Users loaded', level: 2 })).not.toBeInTheDocument()
+    expect(screen.getByText('Could not load users.')).toBeInTheDocument()
+  })
+
+  it('treats empty results as empty but keeps zero in the success branch', () => {
+    renderRuntimePageWithQueryFeedback({
+      id: 'home',
+      layout: [
+        {
+          type: 'paragraph',
+          queryStateFeedback: {
+            query: 'searchUsers',
+            states: {
+              empty: {
+                mode: 'fallback',
+                fallback: [
+                  {
+                    type: 'paragraph',
+                    props: {
+                      text: 'No users found',
+                    },
+                  },
+                ],
+              },
+            },
+          },
+          props: {
+            text: 'Users available',
+          },
+        },
+      ],
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Set success empty list' }))
+
+    expect(screen.queryByText('Users available')).not.toBeInTheDocument()
+    expect(screen.getByText('No users found')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Set success zero' }))
+
+    expect(screen.queryByText('No users found')).not.toBeInTheDocument()
+    expect(screen.getByText('Users available')).toBeInTheDocument()
+  })
+
+  it('keeps a success-only node hidden in loading error and empty, and shows it on non-empty success', () => {
+    renderRuntimePageWithQueryFeedback({
+      id: 'home',
+      layout: [
+        {
+          type: 'paragraph',
+          queryStateFeedback: {
+            query: 'searchUsers',
+            states: {
+              success: {
+                mode: 'show',
+              },
+            },
+          },
+          props: {
+            text: 'Users available',
+          },
+        },
+      ],
+    })
+
+    expect(screen.queryByText('Users available')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Set error' }))
+    expect(screen.queryByText('Users available')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Set success empty list' }))
+    expect(screen.queryByText('Users available')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Set success list' }))
+    expect(screen.getByText('Users available')).toBeInTheDocument()
+  })
+
+  it('lets multiple nodes react differently to the same query and shows loading again during a reload with stale data', () => {
+    renderRuntimePageWithQueryFeedback({
+      id: 'home',
+      layout: [
+        {
+          type: 'paragraph',
+          queryStateFeedback: {
+            query: 'searchUsers',
+            states: {
+              loading: {
+                mode: 'fallback',
+                fallback: [
+                  {
+                    type: 'paragraph',
+                    props: {
+                      text: 'Loading list...',
+                    },
+                  },
+                ],
+              },
+            },
+          },
+          props: {
+            text: 'User list',
+          },
+        },
+        {
+          type: 'button',
+          queryStateFeedback: {
+            query: 'searchUsers',
+            states: {
+              loading: {
+                mode: 'hide',
+              },
+              error: {
+                mode: 'show',
+              },
+            },
+          },
+          props: {
+            label: 'Retry later',
+            action: {
+              type: 'goBack',
+            },
+          },
+        },
+      ],
+    })
+
+    expect(screen.getByText('Loading list...')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Retry later' })).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Set success list' }))
+
+    expect(screen.getByText('User list')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Retry later' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Set loading' }))
+
+    expect(screen.getByText('Loading list...')).toBeInTheDocument()
+    expect(screen.queryByText('User list')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Retry later' })).not.toBeInTheDocument()
   })
 
   it('keeps arbitrary container gap values through the scoped CSS variable fallback', () => {

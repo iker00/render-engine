@@ -23,6 +23,8 @@
 - Las páginas ya pueden declarar `preloads` como lista opcional de operaciones `api` y dispararlas automáticamente al entrar tanto en `initialPage` como en navegaciones posteriores.
 - Dominio agregado `pageEntry` ya disponible en el store compartido con `entryId`, `pageId`, `preloadNames` y `status: idle | loading | success | error`.
 - La tanda agregada de `preloads` ya usa semántica latest-only para no dejar que cierres tardíos de entradas antiguas sobrescriban la entrada activa más reciente.
+- Cualquier nodo soportado ya puede declarar `queryStateFeedback` para reaccionar al estado visible `loading | error | empty | success` de una query concreta con `show`, `hide` o un fallback local reutilizando el mismo catálogo declarativo de nodos.
+- La semántica visible de query ya está centralizada: `idle` y query ausente se proyectan como `loading`; `null`, `undefined`, `''`, `[]` y `{}` se tratan como `empty`; `0` y `false` siguen la rama `success`.
 - Aislamiento validado entre varias instancias del runtime y limpieza completa del estado al desmontar y remontar.
 - Manejo explícito de errores de configuración con diagnóstico visible en desarrollo y degradación silenciosa en producción para errores marcados como `development-only`.
 - Diagnósticos de validación ya alineados con rutas canónicas del JSON para ramas como `layout[*]`, `preloads[*]`, `api.query.*` y `api.body.*`.
@@ -31,10 +33,10 @@
 ## Límites actuales
 - No existe todavía panel de desarrollo local para editar configuración en vivo.
 - No existe todavía una integración completa de producto con backend más allá de `data-config` como frontera de entrada y de las operaciones remotas declarativas ejecutadas por `fetch`.
-- No existe todavía una UI declarativa final para navegación, formularios o feedback de queries.
+- No existe todavía una UI declarativa final para formularios.
 - No existen todavía acciones API declarativas activas desde el árbol `layout` ni consumidores declarativos finales del agregado `pageEntry`.
-- El catálogo visual sigue limitado a `container`, `heading`, `paragraph` y `list`.
-- No existen todavía consumidores de referencias fuera de `heading.props.text` y `paragraph.props.text`, ni interpolación parcial dentro de strings.
+- El catálogo visual sigue limitado a `container`, `heading`, `paragraph`, `list` y `button`.
+- No existen todavía consumidores de referencias fuera de `heading.props.text`, `paragraph.props.text` y `queryStateFeedback`, ni interpolación parcial dentro de strings.
 - `routeParams.*`, `params.*` y `navigation.*` siguen sin resolverse como referencias soportadas.
 - No existe todavía theming, tokens de diseño ni personalización visual declarativa desde JSON.
 
@@ -53,6 +55,7 @@
 - Novena feature del workflow cerrada para convertir `api` en una frontera declarativa operativa y conectar su ejecución con el dominio compartido `queries`.
 - Décima feature del workflow cerrada para soportar `preloads` por página y su orquestación automática con agregado de entrada latest-only.
 - Duodécima feature del workflow cerrada para migrar la validación del runtime config a una base `Zod` sin cambiar la frontera pública de bootstrap ni perder las validaciones cruzadas estables.
+- Decimotercera feature del workflow cerrada para añadir feedback visual declarativo por nodo ligado al estado visible de queries.
 
 ## Referencias
 

@@ -39,6 +39,7 @@ Cada elemento de layout usa un shape homogéneo basado en:
 - `type`: tipo de nodo soportado
 - `id`: opcional
 - `props`: opcional según el tipo
+- `queryStateFeedback`: opcional para condicionar la salida visible del nodo según el estado de una query
 - `children`: opcional, pero solo interpretado en `container`
 
 Reglas estructurales vigentes:
@@ -66,6 +67,24 @@ Nodos soportados hoy:
 Reglas estructurales adicionales del catálogo actual:
 - `heading`, `paragraph`, `list` y `button` siguen tratándose como nodos hoja; si reciben `children`, esos datos no pasan al resultado normalizado.
 - las claves extra no soportadas se descartan del objeto validado final sin convertir por sí solas la configuración en inválida.
+
+## `queryStateFeedback`
+Cualquier nodo soportado hoy puede declarar opcionalmente:
+- `query`: nombre no vacío de la query observada
+- `states`: mapa opcional con claves limitadas a `loading`, `error`, `empty` y `success`
+
+Cada regla de `states` admite exactamente uno de estos modos:
+- `mode: show`
+- `mode: hide`
+- `mode: fallback`, que exige `fallback` como colección ordenada de `LayoutNode[]`
+
+Reglas funcionales vigentes:
+- `queryStateFeedback` es transversal a `container`, `heading`, `paragraph`, `list` y `button`.
+- `fallback` reutiliza el mismo catálogo de nodos soportados por `layout`; no introduce un dialecto paralelo ni un wrapper sintético obligatorio.
+- un fallback puede contener varios nodos hermanos y conserva su orden declarado.
+- si un estado visible no tiene regla explícita, el runtime aplica `success -> show` y `loading/error/empty -> hide`.
+- `idle` se proyecta como `loading` para esta capacidad.
+- una query ausente del store también se interpreta como `loading`.
 
 ## Resolución inicial
 - El runtime valida toda la configuración antes de renderizar.
@@ -106,6 +125,9 @@ Reglas funcionales vigentes:
 - La validación comprueba estructura general, shape de `api`, `pages`, `preloads`, colección `layout` y shape de los nodos soportados.
 - Si `layout` no es un array válido, el arranque falla con un error explícito sobre la ruta afectada.
 - Si aparece un nodo no soportado en la raíz o dentro de `children`, el runtime lo trata como error de configuración y no lo reinterpreta.
+- Si `queryStateFeedback.states` contiene una clave fuera de `loading | error | empty | success`, el config completo se rechaza con error de layout sobre esa ruta exacta.
+- Si una regla usa `mode: fallback` sin `fallback`, el config completo se rechaza antes del render.
+- Si cualquier nodo dentro de `queryStateFeedback.states.{estado}.fallback` es inválido o usa un `type` no soportado, el config completo se rechaza antes del render sobre la ruta afectada.
 - Si `initialPage` no existe dentro de `pages`, el runtime sigue fallando antes del render con `initial-page-not-found`.
 - Si un `button.props.action.pageId` apunta a una página inexistente, el config completo se rechaza antes del render aunque el shape estructural sea válido.
 - Los errores estructurales conservan la semántica pública actual (`invalid-layout` o `unsupported-node-type`) y ahora incluyen rutas canónicas del JSON cuando aplica, por ejemplo `layout[0].props.items[1]` o `searchUsers.query.filters`.
@@ -125,4 +147,4 @@ La frontera estable de esta validación queda organizada así:
 - No hay interpolación compleja dentro de strings.
 - No hay sistema de plugins para componentes externos.
 - No hay soporte para nodos distintos de `container`, `heading`, `paragraph`, `list` y `button`.
-- No hay consumidores declarativos de referencias fuera de `heading.props.text` y `paragraph.props.text`.
+- No hay consumidores declarativos de referencias fuera de `heading.props.text`, `paragraph.props.text` y `queryStateFeedback`.

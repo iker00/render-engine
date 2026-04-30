@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { RuntimeConfig } from '../config/runtime-config'
+import { RuntimePage } from '../runtime/runtime-page'
 import { createRuntimeState, runtimeStateReducer } from '../runtime/runtime-state/runtime-state-reducer'
 import {
   selectCurrentPageId,
@@ -225,6 +226,15 @@ function renderPreloadHarness({
   return render(<RuntimeStateProvider config={config}>{runtimeChildren}</RuntimeStateProvider>)
 }
 
+function renderRuntimePageWithPreloads(config: RuntimeConfig) {
+  return render(
+    <RuntimeStateProvider config={config}>
+      <RuntimeStateSnapshot />
+      <RuntimePage />
+    </RuntimeStateProvider>,
+  )
+}
+
 function readRuntimeState() {
   return JSON.parse(screen.getByTestId('runtime-state').textContent ?? '') as RuntimeState
 }
@@ -383,6 +393,67 @@ describe('Runtime page entry preloads integration', () => {
       data: { results: ['Ada'] },
       error: null,
     })
+  })
+
+  it('applies the same visible query feedback semantics to preload-driven queries', async () => {
+    let resolveUsers: ((response: Response) => void) | null = null
+    const fetchMock = vi.fn(
+      () =>
+        new Promise<Response>((resolve) => {
+          resolveUsers = resolve
+        }),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+
+    renderRuntimePageWithPreloads({
+      api: {
+        searchUsers: {
+          method: 'GET',
+          endpoint: '/api/users',
+        },
+      },
+      initialPage: 'home',
+      pages: [
+        {
+          id: 'home',
+          preloads: ['searchUsers'],
+          layout: [
+            {
+              type: 'paragraph',
+              queryStateFeedback: {
+                query: 'searchUsers',
+                states: {
+                  loading: {
+                    mode: 'fallback',
+                    fallback: [
+                      {
+                        type: 'paragraph',
+                        props: {
+                          text: 'Loading users...',
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+              props: {
+                text: 'Users loaded',
+              },
+            },
+          ],
+        },
+      ],
+    })
+
+    expect(screen.getByText('Loading users...')).toBeInTheDocument()
+    expect(screen.queryByText('Users loaded')).not.toBeInTheDocument()
+    expect(readRuntimeState().pageEntry.status).toBe('loading')
+
+    resolveUsers?.(createJsonResponse({ results: ['Ada'] }))
+
+    await waitFor(() => expect(readRuntimeState().pageEntry.status).toBe('success'))
+    expect(screen.queryByText('Loading users...')).not.toBeInTheDocument()
+    expect(screen.getByText('Users loaded')).toBeInTheDocument()
   })
 
   it('triggers a new preload entry when navigating to a page and when revisiting it later', async () => {

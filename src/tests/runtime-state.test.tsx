@@ -3,6 +3,11 @@ import { useEffect } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import type { RuntimeConfig } from '../config/runtime-config'
 import {
+  deriveQueryVisibleState,
+  resolveQueryStateFeedback,
+  type RuntimeQueryVisibleState,
+} from '../runtime/runtime-query-state-feedback'
+import {
   RuntimeStateProvider,
   useRuntimeState,
   useRuntimeStateActions,
@@ -12,6 +17,7 @@ import {
   selectFormFieldValue,
   selectNestedQueryDataValue,
   selectPageEntryState,
+  selectQueryVisibleState,
   selectQueryReferenceValue,
 } from '../runtime/runtime-state/runtime-state-selectors'
 
@@ -616,7 +622,222 @@ describe('Runtime shared state store', () => {
     expect(selectQueryReferenceValue(snapshot, 'searchUsers', 'data')).toEqual(['Ada', 'Grace'])
     expect(selectQueryReferenceValue(snapshot, 'searchUsers', 'status')).toBe('success')
     expect(selectQueryReferenceValue(snapshot, 'searchUsers', 'error')).toBeNull()
+    expect(selectQueryVisibleState(snapshot, 'searchUsers')).toBe('success')
+    expect(selectQueryVisibleState(snapshot, 'missingQuery')).toBe('loading')
     expect(selectPageEntryState(snapshot)).toBe(snapshot.pageEntry)
+  })
+
+  it.each([
+    {
+      label: 'missing query state',
+      queryState: null,
+      expected: 'loading',
+    },
+    {
+      label: 'idle query state',
+      queryState: {
+        status: 'idle',
+        data: null,
+        error: null,
+      },
+      expected: 'loading',
+    },
+    {
+      label: 'loading query state with stale data',
+      queryState: {
+        status: 'loading',
+        data: ['Ada'],
+        error: null,
+      },
+      expected: 'loading',
+    },
+    {
+      label: 'error query state',
+      queryState: {
+        status: 'error',
+        data: ['Ada'],
+        error: {
+          code: 'network',
+          message: 'Could not load users.',
+        },
+      },
+      expected: 'error',
+    },
+    {
+      label: 'success with null data',
+      queryState: {
+        status: 'success',
+        data: null,
+        error: null,
+      },
+      expected: 'empty',
+    },
+    {
+      label: 'success with undefined data',
+      queryState: {
+        status: 'success',
+        data: undefined,
+        error: null,
+      },
+      expected: 'empty',
+    },
+    {
+      label: 'success with empty string data',
+      queryState: {
+        status: 'success',
+        data: '',
+        error: null,
+      },
+      expected: 'empty',
+    },
+    {
+      label: 'success with empty array data',
+      queryState: {
+        status: 'success',
+        data: [],
+        error: null,
+      },
+      expected: 'empty',
+    },
+    {
+      label: 'success with empty object data',
+      queryState: {
+        status: 'success',
+        data: {},
+        error: null,
+      },
+      expected: 'empty',
+    },
+    {
+      label: 'success with zero',
+      queryState: {
+        status: 'success',
+        data: 0,
+        error: null,
+      },
+      expected: 'success',
+    },
+    {
+      label: 'success with false',
+      queryState: {
+        status: 'success',
+        data: false,
+        error: null,
+      },
+      expected: 'success',
+    },
+    {
+      label: 'success with non-empty string',
+      queryState: {
+        status: 'success',
+        data: 'Ada',
+        error: null,
+      },
+      expected: 'success',
+    },
+    {
+      label: 'success with populated array',
+      queryState: {
+        status: 'success',
+        data: ['Ada'],
+        error: null,
+      },
+      expected: 'success',
+    },
+    {
+      label: 'success with populated object',
+      queryState: {
+        status: 'success',
+        data: {
+          total: 1,
+        },
+        error: null,
+      },
+      expected: 'success',
+    },
+  ] satisfies Array<{
+    label: string
+    queryState: Parameters<typeof deriveQueryVisibleState>[0]
+    expected: RuntimeQueryVisibleState
+  }>)('derives the visible query state for $label', ({ queryState, expected }) => {
+    expect(deriveQueryVisibleState(queryState)).toBe(expected)
+  })
+
+  it('applies query state feedback defaults and selective overrides without affecting other states', () => {
+    const feedback = {
+      query: 'searchUsers',
+      states: {
+        loading: {
+          mode: 'fallback',
+          fallback: [
+            {
+              type: 'paragraph',
+              props: {
+                text: 'Loading users...',
+              },
+            },
+          ],
+        },
+        error: {
+          mode: 'show',
+        },
+      },
+    } as const
+
+    expect(
+      resolveQueryStateFeedback(feedback, {
+        status: 'idle',
+        data: null,
+        error: null,
+      }),
+    ).toEqual({
+      visibleState: 'loading',
+      mode: 'fallback',
+      fallback: [
+        {
+          type: 'paragraph',
+          props: {
+            text: 'Loading users...',
+          },
+        },
+      ],
+    })
+
+    expect(
+      resolveQueryStateFeedback(feedback, {
+        status: 'error',
+        data: null,
+        error: {
+          code: 'network',
+          message: 'Could not load users.',
+        },
+      }),
+    ).toEqual({
+      visibleState: 'error',
+      mode: 'show',
+    })
+
+    expect(
+      resolveQueryStateFeedback(feedback, {
+        status: 'success',
+        data: [],
+        error: null,
+      }),
+    ).toEqual({
+      visibleState: 'empty',
+      mode: 'hide',
+    })
+
+    expect(
+      resolveQueryStateFeedback(feedback, {
+        status: 'success',
+        data: ['Ada'],
+        error: null,
+      }),
+    ).toEqual({
+      visibleState: 'success',
+      mode: 'show',
+    })
   })
 
   it('keeps query state across page changes inside the same runtime instance', () => {

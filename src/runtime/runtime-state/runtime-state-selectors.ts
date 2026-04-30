@@ -1,4 +1,5 @@
 import type { RuntimeConfig } from '../../config/runtime-config'
+import { deriveQueryVisibleState } from '../runtime-query-state-feedback'
 import type { RuntimeState } from './runtime-state-types'
 
 export function selectNavigationState(state: RuntimeState) {
@@ -43,6 +44,10 @@ export function selectFormFieldValue(state: RuntimeState, formId: string, fieldI
 
 export function selectQueryState(state: RuntimeState, queryName: string) {
   return state.queries[queryName] ?? null
+}
+
+export function selectQueryVisibleState(state: RuntimeState, queryName: string) {
+  return deriveQueryVisibleState(selectQueryState(state, queryName))
 }
 
 export function selectQueryReferenceValue(

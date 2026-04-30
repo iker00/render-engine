@@ -37,8 +37,49 @@
         },
         {
           "type": "paragraph",
+          "queryStateFeedback": {
+            "query": "searchUsers",
+            "states": {
+              "loading": {
+                "mode": "fallback",
+                "fallback": [
+                  {
+                    "type": "paragraph",
+                    "props": {
+                      "text": "Loading users..."
+                    }
+                  }
+                ]
+              },
+              "error": {
+                "mode": "fallback",
+                "fallback": [
+                  {
+                    "type": "paragraph",
+                    "props": {
+                      "text": "Could not load users."
+                    }
+                  }
+                ]
+              },
+              "empty": {
+                "mode": "fallback",
+                "fallback": [
+                  {
+                    "type": "paragraph",
+                    "props": {
+                      "text": "No users found."
+                    }
+                  }
+                ]
+              },
+              "success": {
+                "mode": "show"
+              }
+            }
+          },
           "props": {
-            "text": "queries.searchUsers.status"
+            "text": "Users loaded successfully."
           }
         },
         {

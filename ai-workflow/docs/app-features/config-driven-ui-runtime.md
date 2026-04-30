@@ -1,7 +1,7 @@
 # Runtime UI configurable
 
 ## Objetivo
-Renderizar el runtime a partir de una configuración JSON validada, apoyado ya en un estado compartido por instancia para navegación, formularios y queries, con una frontera declarativa real para ejecutar operaciones remotas y dispararlas automáticamente al entrar en página sin acoplar la UI a HTTP.
+Renderizar el runtime a partir de una configuración JSON validada, apoyado ya en un estado compartido por instancia para navegación, formularios y queries, con una frontera declarativa real para ejecutar operaciones remotas, dispararlas automáticamente al entrar en página y condicionar la salida visible de cada nodo según el estado de una query sin acoplar la UI a HTTP.
 
 ## Qué resuelve
 - Permite que la configuración declare varias páginas aunque, por ahora, solo se resuelva la indicada por `initialPage`.
@@ -14,6 +14,7 @@ Renderizar el runtime a partir de una configuración JSON validada, apoyado ya e
 - Resuelve referencias dinámicas desde una capa central del runtime para las superficies textuales ya soportadas.
 - Ejecuta operaciones remotas declaradas en `api` mediante una capa dedicada en `src/queries/` y refleja sus resultados en `queries.{operationName}`.
 - Permite que cada página declare `preloads` y los dispare automáticamente al entrar, con un estado agregado `pageEntry` latest-only para la tanda activa.
+- Permite que cualquier nodo soportado declare `queryStateFeedback` para mostrarse, ocultarse o sustituirse por un fallback local según `loading | error | empty | success`.
 - Implementa la presentación visible del runtime con utilidades de `Tailwind CSS`, sin abrir todavía una capa de theming definida.
 
 ## Áreas funcionales principales
@@ -64,12 +65,13 @@ Reglas funcionales vigentes:
 - `src/config/runtime-config-validation-errors.ts` adapta los fallos internos a la taxonomía pública estable de errores.
 - `src/config/validate-runtime-config.ts` contiene la validación estructural previa al render y las validaciones cruzadas posteriores al parseo.
 - `src/runtime/layout-renderer.tsx` renderiza colecciones ordenadas y conserva el soporte de varios hermanos raíz.
-- `src/runtime/layout-node-renderer.tsx` centraliza la resolución `type -> pieza de render`.
+- `src/runtime/layout-node-renderer.tsx` centraliza la resolución `type -> pieza de render` y aplica el borde transversal de `queryStateFeedback` antes de delegar al nodo concreto.
 - `src/runtime/runtime-node-styling.ts` centraliza la convención visual base y la compatibilidad acotada de `gap`.
 - `src/runtime/runtime-references/` centraliza parsing, resolución y diagnóstico de referencias string del runtime.
 - `src/queries/` concentra la construcción de requests, la ejecución contra `fetch` y la normalización de errores remotos.
 - `src/runtime/runtime-state/` concentra el provider, reducer, tipos, selectors y acciones del estado compartido del runtime.
-- `src/runtime/nodes/` contiene una pieza concreta por nodo soportado hoy: `container`, `heading`, `paragraph` y `list`.
+- `src/runtime/runtime-query-state-feedback.ts` concentra la derivación de estado visible de query, la heurística común de `empty` y la resolución de la respuesta efectiva `show | hide | fallback`.
+- `src/runtime/nodes/` contiene una pieza concreta por nodo soportado hoy: `container`, `heading`, `paragraph`, `list` y `button`.
 
 ## Referencias dinámicas ya activas
 El runtime resuelve hoy referencias completas en:
@@ -101,7 +103,7 @@ Límites funcionales de esa capa:
 ## Límites actuales
 - La navegación ya vive en estado compartido, pero todavía no existe una UI declarativa final para dispararla desde el árbol JSON.
 - No existen todavía disparadores declarativos finales desde layout para lanzar operaciones de `api` fuera de los `preloads` de entrada.
-- El estado compartido de formularios y queries ya existe, pero todavía no hay nodos visuales de formulario ni consumidores declarativos de datos remotos fuera de `heading.props.text` y `paragraph.props.text`.
+- El estado compartido de formularios y queries ya existe, pero todavía no hay nodos visuales de formulario ni consumidores declarativos de datos remotos fuera de `heading.props.text`, `paragraph.props.text` y `queryStateFeedback`.
 - El agregado `pageEntry` todavía no se expone como familia de referencias declarativas dentro del JSON.
 - `routeParams.*`, `params.*` y `navigation.*` siguen sin resolverse como referencias soportadas.
 - La presentación base del runtime sigue siendo intencionadamente mínima y no define todavía theming, tokens de diseño ni personalización visual declarativa.

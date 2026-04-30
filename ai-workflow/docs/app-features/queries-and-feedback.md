@@ -1,7 +1,7 @@
 # Queries y feedback
 
 ## Objetivo
-Coordinar llamadas API declaradas y exponer su estado para que la UI pueda reaccionar con carga, error, vacío o éxito.
+Coordinar llamadas API declaradas y exponer su estado para que la UI pueda reaccionar de forma textual y visual con carga, error, vacío o éxito.
 
 ## Modelo de estado
 Cada query expone en v1:
@@ -76,14 +76,38 @@ Reglas de payload vigentes:
 La base de estado y la red real ya están conectadas para ejecución por nombre y para precargas automáticas al entrar en página, pero siguen pendientes los disparadores declarativos finales desde layout y la orquestación automática de refetch.
 
 ## Feedback visual
-- El layout puede definir explícitamente qué mostrar en `loading`, `error` y estado vacío.
-- Si no lo define, el runtime debe ofrecer un fallback genérico razonable.
-- La UI no debe romperse por un error local recuperable.
+El layout ya puede declarar feedback visual local por nodo mediante `queryStateFeedback`, usando como fuente única de verdad el dominio compartido `queries.{queryName}`.
 
-Hoy está consolidado el almacenamiento del estado de feedback dentro del runtime y su lectura textual puntual mediante referencias; la representación visual declarativa completa de esos estados sigue pendiente.
+Contrato funcional estable:
+- estados visibles soportados: `loading`, `error`, `empty` y `success`
+- el runtime proyecta `idle` como `loading`
+- una query ausente del store también se trata como `loading`
+- las respuestas declarables por estado son `show`, `hide` y `fallback`
+- `fallback` reutiliza una colección local `LayoutNode[]`, con uno o varios nodos hermanos
 
-## Casos funcionales previstos
-- mostrar spinner o placeholder mientras carga una query
-- mostrar mensaje de error de servidor
-- mostrar mensaje de “sin resultados”
-- ocultar bloques hasta que exista un resultado o un estado concreto
+Semántica estable:
+- si un nodo no declara `queryStateFeedback`, conserva su render normal sin cambios observables
+- si declara el bloque pero omite un estado concreto, los defaults son `success -> show` y `loading/error/empty -> hide`
+- el renderer central decide si muestra el nodo original, lo oculta o lo sustituye por el fallback local
+- varios nodos pueden reaccionar de forma distinta a la misma query sin colisionar entre sí
+- una recarga que vuelve a `loading` con `data` previo conservado reactiva igualmente la rama `loading`
+
+Heurística común de `empty`:
+- `null` y `undefined`
+- string vacío
+- array vacío
+- objeto sin claves
+
+No se consideran `empty`:
+- `0`
+- `false`
+- strings no vacíos
+- arrays con elementos
+- objetos con claves
+
+## Casos funcionales soportados hoy
+- mostrar placeholder o contenido alternativo mientras carga una query
+- mostrar un fallback local cuando una query falla
+- mostrar un mensaje de “sin resultados” cuando la query resuelve vacía
+- ocultar bloques hasta que exista un resultado útil
+- hacer que varios nodos reaccionen de forma distinta al mismo `queryName`

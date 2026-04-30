@@ -2,6 +2,7 @@ import { z } from 'zod'
 
 export const supportedNodeTypes = ['container', 'heading', 'paragraph', 'list', 'button'] as const
 export const supportedApiMethods = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'] as const
+export const supportedQueryStateFeedbackStates = ['loading', 'error', 'empty', 'success'] as const
 
 const nonEmptyStringSchema = z.string().refine((value) => value.trim().length > 0)
 const nodeIdSchema = nonEmptyStringSchema
@@ -37,10 +38,52 @@ export const runtimeApiOperationShellSchema = z
   })
   .strip()
 
+const queryStateFeedbackShowRuleSchema = z
+  .object({
+    mode: z.literal('show'),
+  })
+  .strip()
+
+const queryStateFeedbackHideRuleSchema = z
+  .object({
+    mode: z.literal('hide'),
+  })
+  .strip()
+
+const queryStateFeedbackFallbackRuleSchema = z
+  .object({
+    mode: z.literal('fallback'),
+    fallback: z.array(z.unknown()),
+  })
+  .strip()
+
+const queryStateFeedbackRuleSchema = z.discriminatedUnion('mode', [
+  queryStateFeedbackShowRuleSchema,
+  queryStateFeedbackHideRuleSchema,
+  queryStateFeedbackFallbackRuleSchema,
+])
+
+const queryStateFeedbackStatesSchema = z
+  .object({
+    loading: queryStateFeedbackRuleSchema.optional(),
+    error: queryStateFeedbackRuleSchema.optional(),
+    empty: queryStateFeedbackRuleSchema.optional(),
+    success: queryStateFeedbackRuleSchema.optional(),
+  })
+  .strict()
+
+const queryStateFeedbackSchema = z
+  .object({
+    query: nonEmptyStringSchema,
+    states: queryStateFeedbackStatesSchema.optional(),
+  })
+  .strip()
+
 export const containerNodeSchema = z
   .object({
     type: z.literal('container'),
     id: nodeIdSchema.optional(),
+    queryStateFeedback: queryStateFeedbackSchema.optional(),
     props: z
       .object({
         direction: z.string().optional(),
@@ -56,6 +99,7 @@ export const headingNodeSchema = z
   .object({
     type: z.literal('heading'),
     id: nodeIdSchema.optional(),
+    queryStateFeedback: queryStateFeedbackSchema.optional(),
     props: z
       .object({
         text: z.string(),
@@ -69,6 +113,7 @@ export const paragraphNodeSchema = z
   .object({
     type: z.literal('paragraph'),
     id: nodeIdSchema.optional(),
+    queryStateFeedback: queryStateFeedbackSchema.optional(),
     props: z
       .object({
         text: z.string(),
@@ -81,6 +126,7 @@ export const listNodeSchema = z
   .object({
     type: z.literal('list'),
     id: nodeIdSchema.optional(),
+    queryStateFeedback: queryStateFeedbackSchema.optional(),
     props: z
       .object({
         items: z.array(z.string()),
@@ -106,6 +152,7 @@ export const buttonNodeSchema = z
   .object({
     type: z.literal('button'),
     id: nodeIdSchema.optional(),
+    queryStateFeedback: queryStateFeedbackSchema.optional(),
     props: z
       .object({
         label: z.string(),

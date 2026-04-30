@@ -19,7 +19,36 @@ export interface RuntimeApiOperation {
 
 export type RuntimeApiConfig = Record<string, RuntimeApiOperation>
 
-export interface ContainerLayoutNode {
+export type QueryStateFeedbackVisibleState = 'loading' | 'error' | 'empty' | 'success'
+
+export interface QueryStateFeedbackShowRule {
+  mode: 'show'
+}
+
+export interface QueryStateFeedbackHideRule {
+  mode: 'hide'
+}
+
+export interface QueryStateFeedbackFallbackRule {
+  mode: 'fallback'
+  fallback: LayoutNode[]
+}
+
+export type QueryStateFeedbackRule =
+  | QueryStateFeedbackShowRule
+  | QueryStateFeedbackHideRule
+  | QueryStateFeedbackFallbackRule
+
+export interface QueryStateFeedbackConfig {
+  query: string
+  states?: Partial<Record<QueryStateFeedbackVisibleState, QueryStateFeedbackRule>>
+}
+
+export interface LayoutNodeFeedbackFields {
+  queryStateFeedback?: QueryStateFeedbackConfig
+}
+
+export interface ContainerLayoutNode extends LayoutNodeFeedbackFields {
   type: 'container'
   id?: string
   props?: {
@@ -29,7 +58,7 @@ export interface ContainerLayoutNode {
   children?: LayoutNode[]
 }
 
-export interface HeadingLayoutNode {
+export interface HeadingLayoutNode extends LayoutNodeFeedbackFields {
   type: 'heading'
   id?: string
   props: {
@@ -39,7 +68,7 @@ export interface HeadingLayoutNode {
   children?: unknown
 }
 
-export interface ParagraphLayoutNode {
+export interface ParagraphLayoutNode extends LayoutNodeFeedbackFields {
   type: 'paragraph'
   id?: string
   props: {
@@ -48,7 +77,7 @@ export interface ParagraphLayoutNode {
   children?: unknown
 }
 
-export interface ListLayoutNode {
+export interface ListLayoutNode extends LayoutNodeFeedbackFields {
   type: 'list'
   id?: string
   props: {
@@ -68,7 +97,7 @@ export interface GoBackButtonAction {
 
 export type ButtonAction = NavigateToButtonAction | GoBackButtonAction
 
-export interface ButtonLayoutNode {
+export interface ButtonLayoutNode extends LayoutNodeFeedbackFields {
   type: 'button'
   id?: string
   props: {

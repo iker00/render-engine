@@ -6,10 +6,15 @@ import type {
   HeadingLayoutNode,
   LayoutNode,
   LayoutNodeCollection,
+  LayoutNodeFeedbackFields,
   LayoutNodeType,
   ListLayoutNode,
   NavigateToButtonAction,
   ParagraphLayoutNode,
+  QueryStateFeedbackConfig,
+  QueryStateFeedbackFallbackRule,
+  QueryStateFeedbackRule,
+  QueryStateFeedbackVisibleState,
   RuntimeApiBodyValue,
   RuntimeApiConfig,
   RuntimeApiMethod,
@@ -382,7 +387,19 @@ function validateContainerNode(
       return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.children".`)
     }
 
+    const feedbackIssue = mapQueryStateFeedbackIssue(pageId, path, issue)
+
+    if (feedbackIssue) {
+      return feedbackIssue
+    }
+
     return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}".`)
+  }
+
+  const feedbackResult = validateQueryStateFeedback(parseResult.data.queryStateFeedback, `${path}.queryStateFeedback`, pageId)
+
+  if (feedbackResult.status === 'error') {
+    return feedbackResult
   }
 
   let children: LayoutNodeCollection | undefined
@@ -402,6 +419,7 @@ function validateContainerNode(
     node: {
       type: 'container',
       id: parseResult.data.id,
+      queryStateFeedback: feedbackResult.queryStateFeedback,
       props: parseResult.data.props,
       children,
     },
@@ -416,12 +434,27 @@ function validateHeadingNode(
   const parseResult = headingNodeSchema.safeParse(rawNode)
 
   if (!parseResult.success) {
+    const feedbackIssue = mapQueryStateFeedbackIssue(pageId, path, parseResult.error.issues[0])
+
+    if (feedbackIssue) {
+      return feedbackIssue
+    }
+
     return mapLeafNodeIssue(pageId, path, parseResult.error.issues[0]?.path ?? [])
+  }
+
+  const feedbackResult = validateQueryStateFeedback(parseResult.data.queryStateFeedback, `${path}.queryStateFeedback`, pageId)
+
+  if (feedbackResult.status === 'error') {
+    return feedbackResult
   }
 
   return {
     status: 'ready',
-    node: parseResult.data,
+    node: {
+      ...parseResult.data,
+      queryStateFeedback: feedbackResult.queryStateFeedback,
+    },
   }
 }
 
@@ -433,12 +466,27 @@ function validateParagraphNode(
   const parseResult = paragraphNodeSchema.safeParse(rawNode)
 
   if (!parseResult.success) {
+    const feedbackIssue = mapQueryStateFeedbackIssue(pageId, path, parseResult.error.issues[0])
+
+    if (feedbackIssue) {
+      return feedbackIssue
+    }
+
     return mapLeafNodeIssue(pageId, path, parseResult.error.issues[0]?.path ?? [])
+  }
+
+  const feedbackResult = validateQueryStateFeedback(parseResult.data.queryStateFeedback, `${path}.queryStateFeedback`, pageId)
+
+  if (feedbackResult.status === 'error') {
+    return feedbackResult
   }
 
   return {
     status: 'ready',
-    node: parseResult.data,
+    node: {
+      ...parseResult.data,
+      queryStateFeedback: feedbackResult.queryStateFeedback,
+    },
   }
 }
 
@@ -450,12 +498,27 @@ function validateListNode(
   const parseResult = listNodeSchema.safeParse(rawNode)
 
   if (!parseResult.success) {
+    const feedbackIssue = mapQueryStateFeedbackIssue(pageId, path, parseResult.error.issues[0])
+
+    if (feedbackIssue) {
+      return feedbackIssue
+    }
+
     return mapLeafNodeIssue(pageId, path, parseResult.error.issues[0]?.path ?? [])
+  }
+
+  const feedbackResult = validateQueryStateFeedback(parseResult.data.queryStateFeedback, `${path}.queryStateFeedback`, pageId)
+
+  if (feedbackResult.status === 'error') {
+    return feedbackResult
   }
 
   return {
     status: 'ready',
-    node: parseResult.data,
+    node: {
+      ...parseResult.data,
+      queryStateFeedback: feedbackResult.queryStateFeedback,
+    },
   }
 }
 
@@ -487,6 +550,12 @@ function validateButtonNode(
     const issue = parseResult.error.issues[0]
     const issuePath = issue?.path ?? []
 
+    const feedbackIssue = mapQueryStateFeedbackIssue(pageId, path, issue)
+
+    if (feedbackIssue) {
+      return feedbackIssue
+    }
+
     if (issuePath[0] === 'id') {
       return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.id".`)
     }
@@ -506,6 +575,12 @@ function validateButtonNode(
     return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props".`)
   }
 
+  const feedbackResult = validateQueryStateFeedback(parseResult.data.queryStateFeedback, `${path}.queryStateFeedback`, pageId)
+
+  if (feedbackResult.status === 'error') {
+    return feedbackResult
+  }
+
   const actionResult = validateButtonAction(parseResult.data.props.action, `${path}.props.action`, pageId)
 
   if (actionResult.status === 'error') {
@@ -517,6 +592,7 @@ function validateButtonNode(
     node: {
       type: 'button',
       id: parseResult.data.id,
+      queryStateFeedback: feedbackResult.queryStateFeedback,
       props: {
         label: parseResult.data.props.label,
         action: actionResult.action,
@@ -565,6 +641,81 @@ function validateButtonAction(
     status: 'ready',
     action,
   }
+}
+
+function validateQueryStateFeedback(
+  rawQueryStateFeedback: LayoutNodeFeedbackFields['queryStateFeedback'],
+  path: string,
+  pageId: string,
+):
+  | { status: 'ready'; queryStateFeedback: QueryStateFeedbackConfig | undefined }
+  | { status: 'error'; error: RuntimeConfigError } {
+  if (rawQueryStateFeedback === undefined) {
+    return {
+      status: 'ready',
+      queryStateFeedback: undefined,
+    }
+  }
+
+  if (rawQueryStateFeedback.states === undefined) {
+    return {
+      status: 'ready',
+      queryStateFeedback: rawQueryStateFeedback,
+    }
+  }
+
+  const normalizedStates: Partial<Record<QueryStateFeedbackVisibleState, QueryStateFeedbackRule>> = {}
+
+  for (const state of Object.keys(rawQueryStateFeedback.states) as QueryStateFeedbackVisibleState[]) {
+    const rule = rawQueryStateFeedback.states[state]
+
+    if (rule === undefined) {
+      continue
+    }
+
+    if (rule.mode !== 'fallback') {
+      normalizedStates[state] = rule
+      continue
+    }
+
+    const fallbackResult = validateLayoutCollection(rule.fallback, `${path}.states.${state}.fallback`, pageId)
+
+    if (fallbackResult.status === 'error') {
+      return fallbackResult
+    }
+
+    normalizedStates[state] = {
+      mode: 'fallback',
+      fallback: fallbackResult.nodes,
+    } satisfies QueryStateFeedbackFallbackRule
+  }
+
+  return {
+    status: 'ready',
+    queryStateFeedback: {
+      query: rawQueryStateFeedback.query,
+      states: normalizedStates,
+    },
+  }
+}
+
+function mapQueryStateFeedbackIssue(
+  pageId: string,
+  path: string,
+  issue: { path?: PropertyKey[]; code?: string; keys?: string[] } | undefined,
+): { status: 'error'; error: RuntimeConfigError } | null {
+  const issuePath = issue?.path ?? []
+
+  if (issuePath[0] !== 'queryStateFeedback') {
+    return null
+  }
+
+  if (issue.code === 'unrecognized_keys' && issuePath[1] === 'states' && issue.keys && issue.keys.length > 0) {
+    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.queryStateFeedback.states.${issue.keys[0]}".`)
+  }
+
+  const formattedIssuePath = issuePath.map(formatPathSegment).join('')
+  return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}${formattedIssuePath}".`)
 }
 
 function validateNavigationTargets(
