@@ -77,6 +77,30 @@ export function resolveRuntimeTextReference(
   return normalizeRuntimeTextValue(result.value)
 }
 
+export function resolveRuntimeValue(value: unknown, state: RuntimeState) {
+  if (typeof value !== 'string') {
+    return {
+      status: 'resolved',
+      value,
+    } as const
+  }
+
+  const result = resolveRuntimeReference(value, state)
+
+  if (result.status === 'literal') {
+    return {
+      status: 'resolved',
+      value: result.value,
+    } as const
+  }
+
+  if (result.status === 'resolved') {
+    return result
+  }
+
+  return result
+}
+
 function resolveSupportedReferenceValue(reference: RuntimeSupportedReference, state: RuntimeState) {
   if (reference.namespace === 'forms') {
     const [formId, fieldId] = reference.path

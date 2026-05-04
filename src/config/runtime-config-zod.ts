@@ -1,11 +1,13 @@
 import { z } from 'zod'
 
-export const supportedNodeTypes = ['container', 'heading', 'paragraph', 'list', 'button'] as const
+export const supportedNodeTypes = ['container', 'heading', 'paragraph', 'list', 'button', 'form', 'input', 'textarea', 'select'] as const
 export const supportedApiMethods = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'] as const
 export const supportedQueryStateFeedbackStates = ['loading', 'error', 'empty', 'success'] as const
+export const supportedInputTypes = ['text', 'email', 'password', 'search', 'tel', 'url'] as const
 
 const nonEmptyStringSchema = z.string().refine((value) => value.trim().length > 0)
 const nodeIdSchema = nonEmptyStringSchema
+const runtimeConfigValueSchema = z.union([z.string(), z.number(), z.boolean(), z.null()])
 
 export const runtimeConfigShellSchema = z
   .object({
@@ -148,6 +150,20 @@ export const navigateToButtonActionSchema = z
   })
   .strip()
 
+export const executeOperationRuntimeUiActionSchema = z
+  .object({
+    type: z.literal('executeOperation'),
+    operationName: nonEmptyStringSchema,
+  })
+  .strip()
+
+export const resetFormRuntimeUiActionSchema = z
+  .object({
+    type: z.literal('resetForm'),
+    formId: nonEmptyStringSchema,
+  })
+  .strip()
+
 export const buttonNodeSchema = z
   .object({
     type: z.literal('button'),
@@ -156,7 +172,66 @@ export const buttonNodeSchema = z
     props: z
       .object({
         label: z.string(),
-        action: z.unknown(),
+        action: z.unknown().optional(),
+      })
+      .strip(),
+  })
+  .strip()
+
+export const formNodeSchema = z
+  .object({
+    type: z.literal('form'),
+    id: nodeIdSchema,
+    queryStateFeedback: queryStateFeedbackSchema.optional(),
+    submitAction: executeOperationRuntimeUiActionSchema.optional(),
+    resetOnSuccess: z.boolean().optional(),
+    children: z.array(z.unknown()).optional(),
+  })
+  .strip()
+
+const formFieldNodePropsSchema = z
+  .object({
+    fieldId: nonEmptyStringSchema,
+    label: z.string(),
+    required: z.boolean().optional(),
+    defaultValue: runtimeConfigValueSchema.optional(),
+  })
+  .strip()
+
+export const inputNodeSchema = z
+  .object({
+    type: z.literal('input'),
+    queryStateFeedback: queryStateFeedbackSchema.optional(),
+    props: formFieldNodePropsSchema
+      .extend({
+        inputType: z.enum(supportedInputTypes).optional(),
+      })
+      .strip(),
+  })
+  .strip()
+
+export const textareaNodeSchema = z
+  .object({
+    type: z.literal('textarea'),
+    queryStateFeedback: queryStateFeedbackSchema.optional(),
+    props: formFieldNodePropsSchema,
+  })
+  .strip()
+
+const selectItemSchema = z
+  .object({
+    label: z.string(),
+    value: z.union([z.string(), z.number()]),
+  })
+  .strip()
+
+export const selectNodeSchema = z
+  .object({
+    type: z.literal('select'),
+    queryStateFeedback: queryStateFeedbackSchema.optional(),
+    props: formFieldNodePropsSchema
+      .extend({
+        items: z.array(selectItemSchema),
       })
       .strip(),
   })

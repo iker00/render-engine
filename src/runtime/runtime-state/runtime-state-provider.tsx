@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useState } from 'react'
 import type { Dispatch, ReactNode } from 'react'
 import { useContext, useMemo, useReducer, useRef } from 'react'
 import type { RuntimeConfig } from '../../config/runtime-config'
@@ -64,22 +64,32 @@ async function executeQueryOperationWithSnapshot({
 }
 
 export function RuntimeStateProvider({ config, children }: RuntimeStateProviderProps) {
-  const initialStateRef = useRef(createRuntimeState(config))
-  const [state, dispatch] = useReducer(runtimeStateReducer, initialStateRef.current)
-  const pageEntryIdRef = useRef(initialStateRef.current.pageEntry.entryId)
+  const [initialState] = useState(() => createRuntimeState(config))
+  const [state, dispatch] = useReducer(runtimeStateReducer, initialState)
+  const pageEntryIdRef = useRef(initialState.pageEntry.entryId)
   const isFirstEntryRef = useRef(true)
   const latestStateRef = useRef(state)
 
-  latestStateRef.current = state
+  useLayoutEffect(() => {
+    latestStateRef.current = state
+  }, [state])
+
+  const dispatchAndSyncState = useCallback(
+    (action: RuntimeStateAction) => {
+      latestStateRef.current = runtimeStateReducer(latestStateRef.current, action)
+      dispatch(action)
+    },
+    [dispatch],
+  )
 
   const contextValue = useMemo(
     () => ({
       config,
-      initialState: initialStateRef.current,
+      initialState,
       state,
       dispatch,
     }),
-    [config, state],
+    [config, dispatch, initialState, state],
   )
 
   useEffect(() => {
@@ -103,7 +113,7 @@ export function RuntimeStateProvider({ config, children }: RuntimeStateProviderP
     const entryId = pageEntryIdRef.current
 
     if (preloadNames.length === 0) {
-      dispatch({
+      dispatchAndSyncState({
         type: 'page-entry/set-idle',
         payload: {
           entryId,
@@ -115,7 +125,7 @@ export function RuntimeStateProvider({ config, children }: RuntimeStateProviderP
       return
     }
 
-    dispatch({
+    dispatchAndSyncState({
       type: 'page-entry/set-loading',
       payload: {
         entryId,
@@ -130,13 +140,13 @@ export function RuntimeStateProvider({ config, children }: RuntimeStateProviderP
       preloadNames.map((operationName) =>
         executeQueryOperationWithSnapshot({
           config,
-          dispatch,
+          dispatch: dispatchAndSyncState,
           operationName,
           snapshotState,
         }),
       ),
     ).then((results) => {
-      dispatch({
+      dispatchAndSyncState({
         type: 'page-entry/set-settled',
         payload: {
           entryId,
@@ -144,7 +154,7 @@ export function RuntimeStateProvider({ config, children }: RuntimeStateProviderP
         },
       })
     })
-  }, [config, dispatch, state.navigation.currentPageId])
+  }, [config, dispatchAndSyncState, state.navigation.currentPageId])
 
   return <RuntimeStateContext.Provider value={contextValue}>{children}</RuntimeStateContext.Provider>
 }
@@ -155,13 +165,26 @@ export function useRuntimeState() {
 
 export function useRuntimeStateActions() {
   const { config, dispatch, initialState, state } = useRuntimeStateContext()
+  const latestStateRef = useRef(state)
+
+  useLayoutEffect(() => {
+    latestStateRef.current = state
+  }, [state])
+
+  const dispatchAndSyncState = useCallback(
+    (action: RuntimeStateAction) => {
+      latestStateRef.current = runtimeStateReducer(latestStateRef.current, action)
+      dispatch(action)
+    },
+    [dispatch],
+  )
 
   const navigateToPage = useCallback(
     (pageId: string) => {
       const page = config.pages.find((entry) => entry.id === pageId)
 
       if (!page) {
-        dispatch({
+        dispatchAndSyncState({
           type: 'navigation/set-error',
           payload: {
             error: {
@@ -175,25 +198,25 @@ export function useRuntimeStateActions() {
         return
       }
 
-      dispatch({
+      dispatchAndSyncState({
         type: 'navigation/navigate',
         payload: {
           pageId: page.id,
         },
       })
     },
-    [config.pages, dispatch],
+    [config.pages, dispatchAndSyncState],
   )
 
   const goBackPage = useCallback(() => {
-    dispatch({
+    dispatchAndSyncState({
       type: 'navigation/go-back',
     })
-  }, [dispatch])
+  }, [dispatchAndSyncState])
 
   const initializeForm = useCallback(
     (formId: string, fields: Record<string, RuntimeFormFieldDefinition>) => {
-      dispatch({
+      dispatchAndSyncState({
         type: 'forms/initialize',
         payload: {
           formId,
@@ -201,12 +224,12 @@ export function useRuntimeStateActions() {
         },
       })
     },
-    [dispatch],
+    [dispatchAndSyncState],
   )
 
   const setFormFieldValue = useCallback(
     (formId: string, fieldId: string, value: unknown) => {
-      dispatch({
+      dispatchAndSyncState({
         type: 'forms/set-value',
         payload: {
           formId,
@@ -215,62 +238,63 @@ export function useRuntimeStateActions() {
         },
       })
     },
-    [dispatch],
+    [dispatchAndSyncState],
   )
 
   const setFormFieldError = useCallback(
-    (formId: string, fieldId: string, error: string | null) => {
-      dispatch({
+    (formId: string, fieldId: string, error: string | null, options?: { defaultValue?: unknown }) => {
+      dispatchAndSyncState({
         type: 'forms/set-error',
         payload: {
           formId,
           fieldId,
           error,
+          defaultValue: options?.defaultValue,
         },
       })
     },
-    [dispatch],
+    [dispatchAndSyncState],
   )
 
   const resetForm = useCallback(
     (formId: string) => {
-      dispatch({
+      dispatchAndSyncState({
         type: 'forms/reset',
         payload: {
           formId,
         },
       })
     },
-    [dispatch],
+    [dispatchAndSyncState],
   )
 
   const initializeQuery = useCallback(
     (queryName: string) => {
-      dispatch({
+      dispatchAndSyncState({
         type: 'queries/initialize',
         payload: {
           queryName,
         },
       })
     },
-    [dispatch],
+    [dispatchAndSyncState],
   )
 
   const setQueryLoading = useCallback(
     (queryName: string) => {
-      dispatch({
+      dispatchAndSyncState({
         type: 'queries/set-loading',
         payload: {
           queryName,
         },
       })
     },
-    [dispatch],
+    [dispatchAndSyncState],
   )
 
   const setQuerySuccess = useCallback(
     (queryName: string, data: unknown) => {
-      dispatch({
+      dispatchAndSyncState({
         type: 'queries/set-success',
         payload: {
           queryName,
@@ -278,12 +302,12 @@ export function useRuntimeStateActions() {
         },
       })
     },
-    [dispatch],
+    [dispatchAndSyncState],
   )
 
   const setQueryError = useCallback(
     (queryName: string, error: RuntimeQueryError) => {
-      dispatch({
+      dispatchAndSyncState({
         type: 'queries/set-error',
         payload: {
           queryName,
@@ -291,32 +315,32 @@ export function useRuntimeStateActions() {
         },
       })
     },
-    [dispatch],
+    [dispatchAndSyncState],
   )
 
   const resetQuery = useCallback(
     (queryName: string) => {
-      dispatch({
+      dispatchAndSyncState({
         type: 'queries/reset',
         payload: {
           queryName,
         },
       })
     },
-    [dispatch],
+    [dispatchAndSyncState],
   )
 
   const executeQueryOperation = useCallback(
-    async (operationName: string, options?: { fetch?: typeof fetch }) => {
-      await executeQueryOperationWithSnapshot({
+    async (operationName: string, options?: { fetch?: typeof fetch; snapshotState?: RuntimeState }) => {
+      return executeQueryOperationWithSnapshot({
         config,
-        dispatch,
+        dispatch: dispatchAndSyncState,
         operationName,
-        snapshotState: state,
+        snapshotState: options?.snapshotState ?? latestStateRef.current,
         fetchImplementation: options?.fetch,
       })
     },
-    [config, dispatch, state],
+    [config, dispatchAndSyncState],
   )
 
   return useMemo(
@@ -328,7 +352,11 @@ export function useRuntimeStateActions() {
       navigateToPage,
       resetQuery,
       resetForm,
+      readRuntimeState() {
+        return latestStateRef.current
+      },
       resetRuntimeState() {
+        latestStateRef.current = initialState
         dispatch({
           type: 'runtime/reset',
           payload: {
@@ -345,11 +373,11 @@ export function useRuntimeStateActions() {
     [
       dispatch,
       initialState,
+      executeQueryOperation,
       goBackPage,
       initializeForm,
       initializeQuery,
       navigateToPage,
-      executeQueryOperation,
       resetForm,
       resetQuery,
       setFormFieldError,
@@ -364,7 +392,7 @@ export function useRuntimeStateActions() {
 export function useRuntimeCurrentPage() {
   const { config, state } = useRuntimeStateContext()
 
-  return useMemo(() => selectCurrentPage(config, state), [config, state])
+  return selectCurrentPage(config, state)
 }
 
 function useRuntimeStateContext() {

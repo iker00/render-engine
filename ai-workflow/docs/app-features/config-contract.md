@@ -40,7 +40,7 @@ Cada elemento de layout usa un shape homogéneo basado en:
 - `id`: opcional
 - `props`: opcional según el tipo
 - `queryStateFeedback`: opcional para condicionar la salida visible del nodo según el estado de una query
-- `children`: opcional, pero solo interpretado en `container`
+- `children`: opcional, pero solo interpretado en `container` y `form`
 
 Reglas estructurales vigentes:
 - `layout` debe ser siempre un array.
@@ -61,11 +61,39 @@ Nodos soportados hoy:
   - `props.items`: array obligatorio de strings
 - `button`
   - `props.label`: string obligatorio
-  - `props.action.type`: `navigateTo | goBack`
+  - `props.action`: opcional; sin `action` solo es válido dentro del subárbol de un `form` y actúa como submit implícito
+  - `props.action.type`: `navigateTo | goBack | executeOperation | resetForm`
   - `props.action.pageId`: string obligatorio y no vacío cuando `type` es `navigateTo`
+  - `props.action.operationName`: string obligatorio y no vacío cuando `type` es `executeOperation`
+  - `props.action.formId`: string obligatorio y no vacío cuando `type` es `resetForm`
+- `form`
+  - `id`: string obligatorio, estable y único dentro de toda la configuración
+  - `submitAction.type`: solo `executeOperation`
+  - `submitAction.operationName`: string obligatorio y no vacío cuando existe `submitAction`
+  - `resetOnSuccess`: boolean opcional, válido solo cuando existe `submitAction`
+  - `children`: colección ordenada con soporte para `input`, `textarea`, `select`, `button`, `heading`, `paragraph` y `container`
+- `input`
+  - `props.fieldId`: string obligatorio y único dentro del `form` contenedor
+  - `props.label`: string obligatorio
+  - `props.required`: boolean opcional
+  - `props.defaultValue`: literal JSON simple o referencia dinámica completa soportada por el runtime
+  - `props.inputType`: `text | email | password | search | tel | url`
+- `textarea`
+  - `props.fieldId`: string obligatorio y único dentro del `form` contenedor
+  - `props.label`: string obligatorio
+  - `props.required`: boolean opcional
+  - `props.defaultValue`: literal JSON simple o referencia dinámica completa soportada por el runtime
+- `select`
+  - `props.fieldId`: string obligatorio y único dentro del `form` contenedor
+  - `props.label`: string obligatorio
+  - `props.required`: boolean opcional
+  - `props.defaultValue`: literal JSON simple o referencia dinámica completa soportada por el runtime
+  - `props.items`: array obligatorio de `{ label, value }`, con `value` homogéneo `string` o `number` dentro del mismo campo
 
 Reglas estructurales adicionales del catálogo actual:
 - `heading`, `paragraph`, `list` y `button` siguen tratándose como nodos hoja; si reciben `children`, esos datos no pasan al resultado normalizado.
+- `input`, `textarea` y `select` solo son válidos como descendientes de un `form`.
+- `button` sin `action` solo es válido como descendiente de un `form`.
 - las claves extra no soportadas se descartan del objeto validado final sin convertir por sí solas la configuración en inválida.
 
 ## `queryStateFeedback`
@@ -79,7 +107,7 @@ Cada regla de `states` admite exactamente uno de estos modos:
 - `mode: fallback`, que exige `fallback` como colección ordenada de `LayoutNode[]`
 
 Reglas funcionales vigentes:
-- `queryStateFeedback` es transversal a `container`, `heading`, `paragraph`, `list` y `button`.
+- `queryStateFeedback` es transversal a `container`, `heading`, `paragraph`, `list`, `button`, `form`, `input`, `textarea` y `select`.
 - `fallback` reutiliza el mismo catálogo de nodos soportados por `layout`; no introduce un dialecto paralelo ni un wrapper sintético obligatorio.
 - un fallback puede contener varios nodos hermanos y conserva su orden declarado.
 - si un estado visible no tiene regla explícita, el runtime aplica `success -> show` y `loading/error/empty -> hide`.
@@ -97,7 +125,7 @@ Las referencias dinámicas ya forman parte del contrato visible actual, pero con
 - el escape literal con `\` permite mostrar una referencia tal cual, por ejemplo `\queries.searchUsers.data.results.0.name`
 - no existe interpolación parcial dentro de strings
 
-Además, la misma convención de referencias completas se reutiliza dentro de `api.query` y en cualquier hoja string de `api.body`:
+Además, la misma convención de referencias completas se reutiliza dentro de `api.query`, en cualquier hoja string de `api.body` y en `defaultValue` de `input`, `textarea` y `select`:
 - un string literal se conserva como literal
 - un string escapado con `\` se conserva sin el prefijo de escape
 - una referencia soportada se resuelve contra el estado actual del runtime en el momento de invocación
@@ -130,6 +158,16 @@ Reglas funcionales vigentes:
 - Si cualquier nodo dentro de `queryStateFeedback.states.{estado}.fallback` es inválido o usa un `type` no soportado, el config completo se rechaza antes del render sobre la ruta afectada.
 - Si `initialPage` no existe dentro de `pages`, el runtime sigue fallando antes del render con `initial-page-not-found`.
 - Si un `button.props.action.pageId` apunta a una página inexistente, el config completo se rechaza antes del render aunque el shape estructural sea válido.
+- Si un `button.props.action.operationName` apunta a una operación inexistente en `api`, el config completo se rechaza antes del render aunque el shape estructural sea válido.
+- `resetForm` valida shape y `formId` no vacío, pero no intenta cerrar en bootstrap un catálogo semántico adicional de formularios.
+- Si `form.id` se repite en cualquier página, el config completo se rechaza antes del render.
+- Si un `fieldId` se repite dentro del mismo `form`, el config completo se rechaza antes del render.
+- Si un `form.children` contiene nodos fuera de `input`, `textarea`, `select`, `button`, `heading`, `paragraph` y `container`, el config completo se rechaza antes del render.
+- Si `input`, `textarea` o `select` aparecen fuera de un subárbol `form`, el config completo se rechaza antes del render.
+- Si un `button` sin `action` aparece fuera de un subárbol `form`, el config completo se rechaza antes del render.
+- Si `form.submitAction.operationName` apunta a una operación inexistente en `api`, el config completo se rechaza antes del render.
+- Si `form.resetOnSuccess: true` aparece sin `submitAction`, el config completo se rechaza antes del render.
+- Si `select.props.items` mezcla `value` string y number dentro del mismo campo, el config completo se rechaza antes del render.
 - Los errores estructurales conservan la semántica pública actual (`invalid-layout` o `unsupported-node-type`) y ahora incluyen rutas canónicas del JSON cuando aplica, por ejemplo `layout[0].props.items[1]` o `searchUsers.query.filters`.
 - En desarrollo, los errores de configuración deben ser diagnósticos y visibles.
 - En producción, los errores `development-only` degradan sin mostrar mensaje genérico visible.
@@ -142,9 +180,14 @@ La frontera estable de esta validación queda organizada así:
 - `src/config/validate-runtime-config.ts`: orquestación de parseo estructural, adaptación diagnóstica y validaciones cruzadas previas al render.
 
 ## Límites de v1
-- `api` no tiene todavía disparadores declarativos visuales desde el árbol `layout`; la ejecución activa hoy ocurre mediante la fachada imperativa del provider y por `preloads` de página al entrar en ella.
+- `api` ya puede dispararse declarativamente desde `button.props.action` usando `executeOperation`, además de por la fachada imperativa del provider y por `preloads` de página al entrar en ella.
+- `action` sigue siendo una sola operación por trigger; no hay arrays, secuencias ni callbacks declarativos.
+- El trigger sigue siendo implícito por tipo de nodo; el contrato no abre todavía un bloque general de `events`.
+- Los formularios declarativos ya soportan solo el catálogo mínimo `form`, `input`, `textarea` y `select`, con validación limitada a `required`.
+- `select` solo admite items estáticos; no hay catálogos dinámicos de opciones.
+- No hay todavía validaciones declarativas avanzadas (`min`, `max`, patrones o validaciones cruzadas).
 - `preloads` solo admite una lista plana de strings; no hay condiciones, prioridades, secuencialidad, dependencias ni políticas de caché.
 - No hay interpolación compleja dentro de strings.
 - No hay sistema de plugins para componentes externos.
-- No hay soporte para nodos distintos de `container`, `heading`, `paragraph`, `list` y `button`.
-- No hay consumidores declarativos de referencias fuera de `heading.props.text`, `paragraph.props.text` y `queryStateFeedback`.
+- No hay soporte para nodos distintos de `container`, `heading`, `paragraph`, `list`, `button`, `form`, `input`, `textarea` y `select`.
+- No hay consumidores declarativos de referencias fuera de `heading.props.text`, `paragraph.props.text`, `queryStateFeedback`, `api.query`, `api.body` y `defaultValue` de campos de formulario.

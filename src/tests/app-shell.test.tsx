@@ -1,8 +1,11 @@
 import { render, screen } from '@testing-library/react'
+import { vi } from 'vitest'
 import { App } from '../app/App'
 
 describe('App shell', () => {
   it('renders the default development runtime page instead of the bootstrap shell copy', () => {
+    const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
     render(<App />)
 
     expect(screen.getByRole('heading', { name: 'Bootstrap Home', level: 1 })).toBeInTheDocument()
@@ -15,5 +18,7 @@ describe('App shell', () => {
         name: /frontend bootstrap ready for the first runtime features/i,
       }),
     ).not.toBeInTheDocument()
+
+    consoleWarnSpy.mockRestore()
   })
 })

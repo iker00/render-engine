@@ -23,8 +23,14 @@
 - Las páginas ya pueden declarar `preloads` como lista opcional de operaciones `api` y dispararlas automáticamente al entrar tanto en `initialPage` como en navegaciones posteriores.
 - Dominio agregado `pageEntry` ya disponible en el store compartido con `entryId`, `pageId`, `preloadNames` y `status: idle | loading | success | error`.
 - La tanda agregada de `preloads` ya usa semántica latest-only para no dejar que cierres tardíos de entradas antiguas sobrescriban la entrada activa más reciente.
+- `button.props.action` ya reutiliza un contrato común de acciones UI con `navigateTo`, `goBack`, `executeOperation` y `resetForm`.
+- La interpretación de acciones UI ya está concentrada en una capa transversal del runtime y no en ramas imperativas dispersas dentro del nodo visual `button`.
 - Cualquier nodo soportado ya puede declarar `queryStateFeedback` para reaccionar al estado visible `loading | error | empty | success` de una query concreta con `show`, `hide` o un fallback local reutilizando el mismo catálogo declarativo de nodos.
 - La semántica visible de query ya está centralizada: `idle` y query ausente se proyectan como `loading`; `null`, `undefined`, `''`, `[]` y `{}` se tratan como `empty`; `0` y `false` siguen la rama `success`.
+- Catálogo declarativo de formularios ya operativo con `form`, `input`, `textarea` y `select`, incluyendo herencia de `formId` por descendencia y render de `<form>` real.
+- La inicialización de campos declarativos ya es lazy y reutiliza exclusivamente `forms.{formId}.{fieldId}`, con soporte para `defaultValue` literal o dinámico sin sobrescribir estado ya existente del usuario.
+- La validación declarativa `required` ya funciona a nivel de formulario, escribe errores solo en `forms.*` y excluye del bloqueo de submit a campos ocultos por `queryStateFeedback`.
+- El submit declarativo de formularios ya soporta `submitAction.type: executeOperation`, reusa `queries.{operationName}` como única superficie visible de loading/success/error y puede resetear por `resetOnSuccess`.
 - Aislamiento validado entre varias instancias del runtime y limpieza completa del estado al desmontar y remontar.
 - Manejo explícito de errores de configuración con diagnóstico visible en desarrollo y degradación silenciosa en producción para errores marcados como `development-only`.
 - Diagnósticos de validación ya alineados con rutas canónicas del JSON para ramas como `layout[*]`, `preloads[*]`, `api.query.*` y `api.body.*`.
@@ -33,10 +39,10 @@
 ## Límites actuales
 - No existe todavía panel de desarrollo local para editar configuración en vivo.
 - No existe todavía una integración completa de producto con backend más allá de `data-config` como frontera de entrada y de las operaciones remotas declarativas ejecutadas por `fetch`.
-- No existe todavía una UI declarativa final para formularios.
-- No existen todavía acciones API declarativas activas desde el árbol `layout` ni consumidores declarativos finales del agregado `pageEntry`.
-- El catálogo visual sigue limitado a `container`, `heading`, `paragraph`, `list` y `button`.
-- No existen todavía consumidores de referencias fuera de `heading.props.text`, `paragraph.props.text` y `queryStateFeedback`, ni interpolación parcial dentro de strings.
+- No existen todavía consumidores declarativos finales del agregado `pageEntry`.
+- El catálogo visual sigue limitado a `container`, `heading`, `paragraph`, `list`, `button`, `form`, `input`, `textarea` y `select`.
+- No existen todavía consumidores de referencias fuera de `heading.props.text`, `paragraph.props.text`, `queryStateFeedback`, `api.query`, `api.body` y `defaultValue` de campos de formulario, ni interpolación parcial dentro de strings.
+- No existen todavía validaciones declarativas avanzadas de formularios, items dinámicos en `select` ni tipos de campo fuera del catálogo mínimo actual.
 - `routeParams.*`, `params.*` y `navigation.*` siguen sin resolverse como referencias soportadas.
 - No existe todavía theming, tokens de diseño ni personalización visual declarativa desde JSON.
 
@@ -56,6 +62,8 @@
 - Décima feature del workflow cerrada para soportar `preloads` por página y su orquestación automática con agregado de entrada latest-only.
 - Duodécima feature del workflow cerrada para migrar la validación del runtime config a una base `Zod` sin cambiar la frontera pública de bootstrap ni perder las validaciones cruzadas estables.
 - Decimotercera feature del workflow cerrada para añadir feedback visual declarativo por nodo ligado al estado visible de queries.
+- Decimocuarta feature del workflow cerrada para introducir una base común de acciones UI reutilizable desde `button.props.action`, conectando navegación, ejecución remota y reset de formularios sin abrir todavía un sistema general de eventos.
+- Decimoquinta feature del workflow cerrada para introducir formularios declarativos reales con catálogo mínimo de campos, validación `required` y submit vía `executeOperation`.
 
 ## Referencias
 

@@ -64,7 +64,10 @@ export type RuntimeStateAction =
   | { type: 'page-entry/set-settled'; payload: { entryId: number; status: 'success' | 'error' } }
   | { type: 'forms/initialize'; payload: { formId: string; fields: Record<string, RuntimeFormFieldDefinition> } }
   | { type: 'forms/set-value'; payload: { formId: string; fieldId: string; value: unknown } }
-  | { type: 'forms/set-error'; payload: { formId: string; fieldId: string; error: string | null } }
+  | {
+      type: 'forms/set-error'
+      payload: { formId: string; fieldId: string; error: string | null; defaultValue?: unknown }
+    }
   | { type: 'forms/reset'; payload: { formId: string } }
   | { type: 'queries/initialize'; payload: { queryName: string } }
   | { type: 'queries/set-loading'; payload: { queryName: string } }

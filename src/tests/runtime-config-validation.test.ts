@@ -22,6 +22,83 @@ function createConfigWithPages(pages: Array<Record<string, unknown>>, initialPag
   }
 }
 
+function createFormNode(overrides: Record<string, unknown> = {}) {
+  return {
+    type: 'form',
+    id: 'user-form',
+    submitAction: {
+      type: 'executeOperation',
+      operationName: 'submitUserForm',
+    },
+    resetOnSuccess: true,
+    children: [
+      {
+        type: 'input',
+        props: {
+          fieldId: 'name',
+          label: 'Name',
+          defaultValue: 'Ada',
+        },
+      },
+      {
+        type: 'container',
+        children: [
+          {
+            type: 'textarea',
+            props: {
+              fieldId: 'bio',
+              label: 'Bio',
+              defaultValue: 'Runtime builder',
+            },
+          },
+          {
+            type: 'select',
+            props: {
+              fieldId: 'role',
+              label: 'Role',
+              defaultValue: 'admin',
+              items: [
+                { label: 'Admin', value: 'admin' },
+                { label: 'Editor', value: 'editor' },
+              ],
+            },
+          },
+          {
+            type: 'button',
+            props: {
+              label: 'Submit',
+            },
+          },
+        ],
+      },
+    ],
+    ...overrides,
+  }
+}
+
+function createConfigWithFormLayout(
+  formOverrides: Record<string, unknown> = {},
+  options: { api?: Record<string, unknown>; extraPages?: Array<Record<string, unknown>> } = {},
+) {
+  return {
+    api: {
+      submitUserForm: {
+        method: 'POST',
+        endpoint: '/api/forms',
+      },
+      ...options.api,
+    },
+    pages: [
+      {
+        id: 'home',
+        layout: [createFormNode(formOverrides)],
+      },
+      ...(options.extraPages ?? []),
+    ],
+    initialPage: 'home',
+  }
+}
+
 describe('validateRuntimeConfig', () => {
   it('accepts a page with multiple root layout nodes in order', () => {
     const result = validateRuntimeConfig({
@@ -362,6 +439,142 @@ describe('validateRuntimeConfig', () => {
               label: 'Back',
               action: {
                 type: 'goBack',
+              },
+            },
+          },
+        ],
+      },
+    })
+  })
+
+  it('accepts a button node with an executeOperation action', () => {
+    const result = validateRuntimeConfig({
+      api: {
+        searchUsers: {
+          method: 'GET',
+          endpoint: '/api/users',
+        },
+      },
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'button',
+              props: {
+                label: 'Load users',
+                action: {
+                  type: 'executeOperation',
+                  operationName: 'searchUsers',
+                },
+              },
+            },
+          ],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(result).toEqual({
+      status: 'ready',
+      config: {
+        api: {
+          searchUsers: {
+            method: 'GET',
+            endpoint: '/api/users',
+          },
+        },
+        pages: [
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'button',
+                props: {
+                  label: 'Load users',
+                  action: {
+                    type: 'executeOperation',
+                    operationName: 'searchUsers',
+                  },
+                },
+              },
+            ],
+          },
+        ],
+        initialPage: 'home',
+      },
+      page: {
+        id: 'home',
+        layout: [
+          {
+            type: 'button',
+            props: {
+              label: 'Load users',
+              action: {
+                type: 'executeOperation',
+                operationName: 'searchUsers',
+              },
+            },
+          },
+        ],
+      },
+    })
+  })
+
+  it('accepts a button node with a resetForm action', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithPages([
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'button',
+              props: {
+                label: 'Clear form',
+                action: {
+                  type: 'resetForm',
+                  formId: 'search-form',
+                },
+              },
+            },
+          ],
+        },
+      ]),
+    )
+
+    expect(result).toEqual({
+      status: 'ready',
+      config: {
+        api: {},
+        pages: [
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'button',
+                props: {
+                  label: 'Clear form',
+                  action: {
+                    type: 'resetForm',
+                    formId: 'search-form',
+                  },
+                },
+              },
+            ],
+          },
+        ],
+        initialPage: 'home',
+      },
+      page: {
+        id: 'home',
+        layout: [
+          {
+            type: 'button',
+            props: {
+              label: 'Clear form',
+              action: {
+                type: 'resetForm',
+                formId: 'search-form',
               },
             },
           },
@@ -1085,7 +1298,7 @@ describe('validateRuntimeConfig', () => {
     })
   })
 
-  it('rejects button nodes when props.action is missing with the precise path', () => {
+  it('rejects button nodes without action when they are outside a form subtree', () => {
     expect(
       validateRuntimeConfig(
         createConfigWithPages([
@@ -1107,7 +1320,7 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].props.action".',
+        message: 'Page "home" has an invalid layout at "layout[0]": button nodes without an action must be descendants of a form node.',
       },
     })
   })
@@ -1208,6 +1421,1055 @@ describe('validateRuntimeConfig', () => {
         code: 'invalid-layout',
         displayMode: 'development-only',
         message: 'Page "home" has an invalid layout at "layout[0].props.action.pageId": unknown page "missing-page".',
+      },
+    })
+  })
+
+  it('rejects executeOperation actions without a valid existing operationName', () => {
+    expect(
+      validateRuntimeConfig({
+        api: {
+          searchUsers: {
+            method: 'GET',
+            endpoint: '/api/users',
+          },
+        },
+        pages: [
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'button',
+                props: {
+                  label: 'Broken',
+                  action: {
+                    type: 'executeOperation',
+                  },
+                },
+              },
+            ],
+          },
+        ],
+        initialPage: 'home',
+      }),
+    ).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message: 'Page "home" has an invalid layout at "layout[0].props.action.operationName".',
+      },
+    })
+
+    expect(
+      validateRuntimeConfig({
+        api: {
+          searchUsers: {
+            method: 'GET',
+            endpoint: '/api/users',
+          },
+        },
+        pages: [
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'button',
+                props: {
+                  label: 'Broken',
+                  action: {
+                    type: 'executeOperation',
+                    operationName: '   ',
+                  },
+                },
+              },
+            ],
+          },
+        ],
+        initialPage: 'home',
+      }),
+    ).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message: 'Page "home" has an invalid layout at "layout[0].props.action.operationName".',
+      },
+    })
+
+    expect(
+      validateRuntimeConfig({
+        api: {
+          searchUsers: {
+            method: 'GET',
+            endpoint: '/api/users',
+          },
+        },
+        pages: [
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'button',
+                props: {
+                  label: 'Broken',
+                  action: {
+                    type: 'executeOperation',
+                    operationName: 'missingOperation',
+                  },
+                },
+              },
+            ],
+          },
+        ],
+        initialPage: 'home',
+      }),
+    ).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message:
+          'Page "home" has an invalid layout at "layout[0].props.action.operationName": unknown operation "missingOperation".',
+      },
+    })
+  })
+
+  it('rejects resetForm actions without a valid non-empty formId but does not require a form catalog', () => {
+    expect(
+      validateRuntimeConfig(
+        createConfigWithPages([
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'button',
+                props: {
+                  label: 'Broken',
+                  action: {
+                    type: 'resetForm',
+                  },
+                },
+              },
+            ],
+          },
+        ]),
+      ),
+    ).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message: 'Page "home" has an invalid layout at "layout[0].props.action.formId".',
+      },
+    })
+
+    expect(
+      validateRuntimeConfig(
+        createConfigWithPages([
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'button',
+                props: {
+                  label: 'Broken',
+                  action: {
+                    type: 'resetForm',
+                    formId: '   ',
+                  },
+                },
+              },
+            ],
+          },
+        ]),
+      ),
+    ).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message: 'Page "home" has an invalid layout at "layout[0].props.action.formId".',
+      },
+    })
+
+    expect(
+      validateRuntimeConfig(
+        createConfigWithPages([
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'button',
+                props: {
+                  label: 'Reset unknown form',
+                  action: {
+                    type: 'resetForm',
+                    formId: 'form-not-in-config',
+                    ignored: 'extra',
+                  },
+                },
+              },
+            ],
+          },
+        ]),
+      ),
+    ).toEqual({
+      status: 'ready',
+      config: {
+        api: {},
+        pages: [
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'button',
+                props: {
+                  label: 'Reset unknown form',
+                  action: {
+                    type: 'resetForm',
+                    formId: 'form-not-in-config',
+                  },
+                },
+              },
+            ],
+          },
+        ],
+        initialPage: 'home',
+      },
+      page: {
+        id: 'home',
+        layout: [
+          {
+            type: 'button',
+            props: {
+              label: 'Reset unknown form',
+              action: {
+                type: 'resetForm',
+                formId: 'form-not-in-config',
+              },
+            },
+          },
+        ],
+      },
+    })
+  })
+
+  it('accepts the form catalog with nested fields, implicit submit button and queryStateFeedback', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithFormLayout({
+        queryStateFeedback: {
+          query: 'submitUserForm',
+          states: {
+            loading: {
+              mode: 'hide',
+            },
+          },
+        },
+        children: [
+          {
+            type: 'heading',
+            props: {
+              text: 'Profile',
+              level: 2,
+            },
+          },
+          {
+            type: 'container',
+            children: [
+              {
+                type: 'input',
+                queryStateFeedback: {
+                  query: 'submitUserForm',
+                },
+                props: {
+                  fieldId: 'name',
+                  label: 'Name',
+                  required: true,
+                  defaultValue: 'Ada',
+                },
+              },
+              {
+                type: 'textarea',
+                queryStateFeedback: {
+                  query: 'submitUserForm',
+                },
+                props: {
+                  fieldId: 'bio',
+                  label: 'Bio',
+                  defaultValue: 'queries.profile.data.summary',
+                },
+              },
+              {
+                type: 'select',
+                queryStateFeedback: {
+                  query: 'submitUserForm',
+                },
+                props: {
+                  fieldId: 'role',
+                  label: 'Role',
+                  defaultValue: 2,
+                  items: [
+                    { label: '', value: '' },
+                    { label: 'Editor', value: 2 },
+                    { label: 'Admin', value: 3 },
+                  ],
+                },
+              },
+              {
+                type: 'button',
+                props: {
+                  label: 'Submit',
+                },
+              },
+            ],
+          },
+        ],
+      }),
+    )
+
+    expect(result).toEqual({
+      status: 'ready',
+      config: {
+        api: {
+          submitUserForm: {
+            method: 'POST',
+            endpoint: '/api/forms',
+          },
+        },
+        pages: [
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'form',
+                id: 'user-form',
+                queryStateFeedback: {
+                  query: 'submitUserForm',
+                  states: {
+                    loading: {
+                      mode: 'hide',
+                    },
+                  },
+                },
+                submitAction: {
+                  type: 'executeOperation',
+                  operationName: 'submitUserForm',
+                },
+                resetOnSuccess: true,
+                children: [
+                  {
+                    type: 'heading',
+                    props: {
+                      text: 'Profile',
+                      level: 2,
+                    },
+                  },
+                  {
+                    type: 'container',
+                    children: [
+                      {
+                        type: 'input',
+                        queryStateFeedback: {
+                          query: 'submitUserForm',
+                        },
+                        props: {
+                          fieldId: 'name',
+                          label: 'Name',
+                          required: true,
+                          defaultValue: 'Ada',
+                        },
+                      },
+                      {
+                        type: 'textarea',
+                        queryStateFeedback: {
+                          query: 'submitUserForm',
+                        },
+                        props: {
+                          fieldId: 'bio',
+                          label: 'Bio',
+                          defaultValue: 'queries.profile.data.summary',
+                        },
+                      },
+                      {
+                        type: 'select',
+                        queryStateFeedback: {
+                          query: 'submitUserForm',
+                        },
+                        props: {
+                          fieldId: 'role',
+                          label: 'Role',
+                          defaultValue: 2,
+                          items: [
+                            { label: '', value: '' },
+                            { label: 'Editor', value: 2 },
+                            { label: 'Admin', value: 3 },
+                          ],
+                        },
+                      },
+                      {
+                        type: 'button',
+                        props: {
+                          label: 'Submit',
+                        },
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+        initialPage: 'home',
+      },
+      page: {
+        id: 'home',
+        layout: [
+          {
+            type: 'form',
+            id: 'user-form',
+            queryStateFeedback: {
+              query: 'submitUserForm',
+              states: {
+                loading: {
+                  mode: 'hide',
+                },
+              },
+            },
+            submitAction: {
+              type: 'executeOperation',
+              operationName: 'submitUserForm',
+            },
+            resetOnSuccess: true,
+            children: [
+              {
+                type: 'heading',
+                props: {
+                  text: 'Profile',
+                  level: 2,
+                },
+              },
+              {
+                type: 'container',
+                children: [
+                  {
+                    type: 'input',
+                    queryStateFeedback: {
+                      query: 'submitUserForm',
+                    },
+                    props: {
+                      fieldId: 'name',
+                      label: 'Name',
+                      required: true,
+                      defaultValue: 'Ada',
+                    },
+                  },
+                  {
+                    type: 'textarea',
+                    queryStateFeedback: {
+                      query: 'submitUserForm',
+                    },
+                    props: {
+                      fieldId: 'bio',
+                      label: 'Bio',
+                      defaultValue: 'queries.profile.data.summary',
+                    },
+                  },
+                  {
+                    type: 'select',
+                    queryStateFeedback: {
+                      query: 'submitUserForm',
+                    },
+                    props: {
+                      fieldId: 'role',
+                      label: 'Role',
+                      defaultValue: 2,
+                      items: [
+                        { label: '', value: '' },
+                        { label: 'Editor', value: 2 },
+                        { label: 'Admin', value: 3 },
+                      ],
+                    },
+                  },
+                  {
+                    type: 'button',
+                    props: {
+                      label: 'Submit',
+                    },
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    })
+  })
+
+  it('keeps configs without forms valid and unchanged', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithPages([
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'heading',
+              props: {
+                text: 'Existing runtime',
+                level: 1,
+              },
+            },
+            {
+              type: 'button',
+              props: {
+                label: 'Open details',
+                action: {
+                  type: 'goBack',
+                },
+              },
+            },
+          ],
+        },
+      ]),
+    )
+
+    expect(result.status).toBe('ready')
+    if (result.status !== 'ready') {
+      throw new Error('Expected runtime config validation to succeed.')
+    }
+
+    expect(result.page.layout).toEqual([
+      {
+        type: 'heading',
+        props: {
+          text: 'Existing runtime',
+          level: 1,
+        },
+      },
+      {
+        type: 'button',
+        props: {
+          label: 'Open details',
+          action: {
+            type: 'goBack',
+          },
+        },
+      },
+    ])
+  })
+
+  it('rejects form fields outside a form subtree and accepts them under containers inside a form', () => {
+    expect(
+      validateRuntimeConfig(
+        createConfigWithPages([
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'container',
+                children: [
+                  {
+                    type: 'input',
+                    props: {
+                      fieldId: 'name',
+                      label: 'Name',
+                    },
+                  },
+                ],
+              },
+            ],
+          },
+        ]),
+      ),
+    ).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message: 'Page "home" has an invalid layout at "layout[0].children[0]": input nodes must be descendants of a form node.',
+      },
+    })
+
+    expect(
+      validateRuntimeConfig(
+        createConfigWithPages([
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'textarea',
+                props: {
+                  fieldId: 'bio',
+                  label: 'Bio',
+                },
+              },
+            ],
+          },
+        ]),
+      ),
+    ).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message: 'Page "home" has an invalid layout at "layout[0]": textarea nodes must be descendants of a form node.',
+      },
+    })
+
+    expect(
+      validateRuntimeConfig(
+        createConfigWithPages([
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'select',
+                props: {
+                  fieldId: 'role',
+                  label: 'Role',
+                  items: [{ label: 'Admin', value: 'admin' }],
+                },
+              },
+            ],
+          },
+        ]),
+      ),
+    ).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message: 'Page "home" has an invalid layout at "layout[0]": select nodes must be descendants of a form node.',
+      },
+    })
+
+    expect(validateRuntimeConfig(createConfigWithFormLayout()).status).toBe('ready')
+  })
+
+  it('rejects implicit submit buttons outside a form subtree and keeps explicit button actions valid', () => {
+    expect(
+      validateRuntimeConfig(
+        createConfigWithPages([
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'button',
+                props: {
+                  label: 'Broken submit',
+                },
+              },
+            ],
+          },
+        ]),
+      ),
+    ).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message: 'Page "home" has an invalid layout at "layout[0]": button nodes without an action must be descendants of a form node.',
+      },
+    })
+
+    expect(
+      validateRuntimeConfig(
+        createConfigWithPages([
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'container',
+                children: [
+                  {
+                    type: 'button',
+                    props: {
+                      label: 'Still broken',
+                    },
+                  },
+                ],
+              },
+            ],
+          },
+        ]),
+      ),
+    ).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message:
+          'Page "home" has an invalid layout at "layout[0].children[0]": button nodes without an action must be descendants of a form node.',
+      },
+    })
+
+    expect(
+      validateRuntimeConfig(
+        createConfigWithPages([
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'button',
+                props: {
+                  label: 'Go back',
+                  action: {
+                    type: 'goBack',
+                  },
+                },
+              },
+            ],
+          },
+        ]),
+      ).status,
+    ).toBe('ready')
+  })
+
+  it('rejects duplicate form ids and duplicate field ids within the same form', () => {
+    expect(
+      validateRuntimeConfig({
+        api: {
+          submitUserForm: {
+            method: 'POST',
+            endpoint: '/api/forms',
+          },
+        },
+        pages: [
+          {
+            id: 'home',
+            layout: [createFormNode()],
+          },
+          {
+            id: 'details',
+            layout: [createFormNode()],
+          },
+        ],
+        initialPage: 'home',
+      }),
+    ).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message: 'Page "details" has an invalid layout at "layout[0].id": duplicate form id "user-form".',
+      },
+    })
+
+    expect(
+      validateRuntimeConfig(
+        createConfigWithFormLayout({
+          children: [
+            {
+              type: 'input',
+              props: {
+                fieldId: 'email',
+                label: 'Email',
+              },
+            },
+            {
+              type: 'container',
+              children: [
+                {
+                  type: 'textarea',
+                  props: {
+                    fieldId: 'email',
+                    label: 'Email duplicate',
+                  },
+                },
+              ],
+            },
+          ],
+        }),
+      ),
+    ).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message: 'Page "home" has an invalid layout at "layout[0].children[1].children[0].props.fieldId": duplicate fieldId "email" in form "user-form".',
+      },
+    })
+  })
+
+  it('rejects unsupported form children and invalid submitAction or resetOnSuccess semantics', () => {
+    expect(
+      validateRuntimeConfig(
+        createConfigWithFormLayout({
+          children: [
+            {
+              type: 'list',
+              props: {
+                items: ['broken'],
+              },
+            },
+          ],
+        }),
+      ),
+    ).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message:
+          'Page "home" has an invalid layout at "layout[0].children[0]": form nodes only accept input, textarea, select, button, heading, paragraph and container descendants.',
+      },
+    })
+
+    expect(
+      validateRuntimeConfig({
+        api: {
+          submitUserForm: {
+            method: 'POST',
+            endpoint: '/api/forms',
+          },
+        },
+        pages: [
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'form',
+                id: 'user-form',
+                submitAction: {
+                  type: 'goBack',
+                },
+                children: [],
+              },
+            ],
+          },
+        ],
+        initialPage: 'home',
+      }),
+    ).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message: 'Page "home" has an invalid layout at "layout[0].submitAction.type".',
+      },
+    })
+
+    expect(
+      validateRuntimeConfig(
+        createConfigWithFormLayout({
+          submitAction: {
+            type: 'executeOperation',
+            operationName: 'missingOperation',
+          },
+        }),
+      ),
+    ).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message: 'Page "home" has an invalid layout at "layout[0].submitAction.operationName": unknown operation "missingOperation".',
+      },
+    })
+
+    expect(
+      validateRuntimeConfig(
+        createConfigWithFormLayout({
+          children: [
+            {
+              type: 'button',
+              props: {
+                label: 'Broken auxiliary navigation',
+                action: {
+                  type: 'navigateTo',
+                  pageId: 'missingPage',
+                },
+              },
+            },
+          ],
+        }),
+      ),
+    ).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message: 'Page "home" has an invalid layout at "layout[0].children[0].props.action.pageId": unknown page "missingPage".',
+      },
+    })
+
+    expect(
+      validateRuntimeConfig(
+        createConfigWithFormLayout({
+          children: [
+            {
+              type: 'container',
+              children: [
+                {
+                  type: 'button',
+                  props: {
+                    label: 'Broken nested auxiliary submit',
+                    action: {
+                      type: 'executeOperation',
+                      operationName: 'missingNestedOperation',
+                    },
+                  },
+                },
+              ],
+            },
+          ],
+        }),
+      ),
+    ).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message:
+          'Page "home" has an invalid layout at "layout[0].children[0].children[0].props.action.operationName": unknown operation "missingNestedOperation".',
+      },
+    })
+
+    expect(
+      validateRuntimeConfig({
+        api: {},
+        pages: [
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'form',
+                id: 'user-form',
+                resetOnSuccess: true,
+                children: [],
+              },
+            ],
+          },
+        ],
+        initialPage: 'home',
+      }),
+    ).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message: 'Page "home" has an invalid layout at "layout[0].resetOnSuccess": resetOnSuccess requires submitAction.',
+      },
+    })
+  })
+
+  it('rejects select items with heterogeneous value types', () => {
+    expect(
+      validateRuntimeConfig(
+        createConfigWithFormLayout({
+          children: [
+            {
+              type: 'select',
+              props: {
+                fieldId: 'role',
+                label: 'Role',
+                items: [
+                  { label: 'Admin', value: 'admin' },
+                  { label: 'Editor', value: 2 },
+                ],
+              },
+            },
+          ],
+        }),
+      ),
+    ).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message:
+          'Page "home" has an invalid layout at "layout[0].children[0].props.items": select item values must all be strings or all be numbers.',
+      },
+    })
+  })
+
+  it('validates fallback trees with the same form semantics and action targets as the main layout tree', () => {
+    expect(
+      validateRuntimeConfig({
+        api: {},
+        pages: [
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'heading',
+                props: {
+                  text: 'Title',
+                  level: 1,
+                },
+                queryStateFeedback: {
+                  query: 'users',
+                  states: {
+                    loading: {
+                      mode: 'fallback',
+                      fallback: [
+                        {
+                          type: 'input',
+                          props: {
+                            fieldId: 'name',
+                            label: 'Name',
+                          },
+                        },
+                      ],
+                    },
+                  },
+                },
+              },
+            ],
+          },
+        ],
+        initialPage: 'home',
+      }),
+    ).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message:
+          'Page "home" has an invalid layout at "layout[0].queryStateFeedback.states.loading.fallback[0]": input nodes must be descendants of a form node.',
+      },
+    })
+
+    expect(
+      validateRuntimeConfig(
+        createConfigWithFormLayout({
+          children: [
+            {
+              type: 'paragraph',
+              props: {
+                text: 'Profile',
+              },
+              queryStateFeedback: {
+                query: 'submitUserForm',
+                states: {
+                  loading: {
+                    mode: 'fallback',
+                    fallback: [
+                      {
+                        type: 'button',
+                        props: {
+                          label: 'Broken fallback navigation',
+                          action: {
+                            type: 'navigateTo',
+                            pageId: 'missingPage',
+                          },
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+          ],
+        }),
+      ),
+    ).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message:
+          'Page "home" has an invalid layout at "layout[0].children[0].queryStateFeedback.states.loading.fallback[0].props.action.pageId": unknown page "missingPage".',
       },
     })
   })

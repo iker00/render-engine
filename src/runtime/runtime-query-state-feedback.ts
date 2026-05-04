@@ -1,9 +1,12 @@
 import type {
+  LayoutNodeFeedbackFields,
+  LayoutNode,
   QueryStateFeedbackConfig,
   QueryStateFeedbackRule,
   QueryStateFeedbackVisibleState,
 } from '../config/runtime-config'
-import type { RuntimeQueryState } from './runtime-state/runtime-state-types'
+import type { RuntimeQueryState, RuntimeState } from './runtime-state/runtime-state-types'
+import { selectQueryState } from './runtime-state/runtime-state-selectors'
 
 export type RuntimeQueryVisibleState = QueryStateFeedbackVisibleState
 
@@ -15,7 +18,7 @@ export type ResolvedQueryStateFeedback =
   | {
       visibleState: RuntimeQueryVisibleState
       mode: 'fallback'
-      fallback: QueryStateFeedbackRule extends { mode: 'fallback'; fallback: infer T } ? T : never
+      fallback: readonly LayoutNode[]
     }
 
 export function deriveQueryVisibleState(queryState: RuntimeQueryState | null): RuntimeQueryVisibleState {
@@ -52,16 +55,40 @@ export function resolveQueryStateFeedback(
   }
 }
 
-function getDefaultQueryStateFeedbackRule(visibleState: RuntimeQueryVisibleState): QueryStateFeedbackRule {
+export function resolveLayoutNodeFeedback(
+  feedback: LayoutNodeFeedbackFields['queryStateFeedback'],
+  state: RuntimeState,
+): ResolvedQueryStateFeedback | null {
+  if (!feedback) {
+    return null
+  }
+
+  return resolveQueryStateFeedback(feedback, selectQueryState(state, feedback.query))
+}
+
+export function isLayoutNodeVisible(
+  feedback: LayoutNodeFeedbackFields['queryStateFeedback'],
+  state: RuntimeState,
+) {
+  const resolvedFeedback = resolveLayoutNodeFeedback(feedback, state)
+
+  if (!resolvedFeedback) {
+    return true
+  }
+
+  return resolvedFeedback.mode === 'show'
+}
+
+function getDefaultQueryStateFeedbackRule(visibleState: RuntimeQueryVisibleState): Exclude<QueryStateFeedbackRule, { mode: 'fallback' }> {
   if (visibleState === 'success') {
     return {
       mode: 'show',
-    }
+    } as const
   }
 
   return {
     mode: 'hide',
-  }
+  } as const
 }
 
 function isEmptyQueryData(value: unknown): boolean {

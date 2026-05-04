@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { useEffect } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import type { RuntimeConfig } from '../config/runtime-config'
+import type { RuntimeState } from '../runtime/runtime-state/runtime-state-types'
 import {
   deriveQueryVisibleState,
   resolveQueryStateFeedback,
@@ -59,6 +60,38 @@ const runtimeApiConfig: RuntimeConfig = {
   },
   initialPage: 'home',
   pages: runtimeConfig.pages,
+}
+
+const resetFormButtonConfig: RuntimeConfig = {
+  api: {},
+  initialPage: 'home',
+  pages: [
+    {
+      id: 'home',
+      layout: [
+        {
+          type: 'button',
+          props: {
+            label: 'Reset user search form from layout',
+            action: {
+              type: 'resetForm',
+              formId: 'userSearch',
+            },
+          },
+        },
+        {
+          type: 'button',
+          props: {
+            label: 'Reset missing form from layout',
+            action: {
+              type: 'resetForm',
+              formId: 'missingForm',
+            },
+          },
+        },
+      ],
+    },
+  ],
 }
 
 function RuntimeStateSnapshot({ testId }: { testId: string }) {
@@ -224,6 +257,67 @@ function QueryOperationFixture({
         Execute operation
       </button>
       <RuntimeStateSnapshot testId="runtime-state" />
+    </>
+  )
+}
+
+function FormRuntimeFixture() {
+  const { initializeQuery, setQueryLoading, setQuerySuccess } = useRuntimeStateActions()
+
+  useEffect(() => {
+    initializeQuery('visibilityQuery')
+  }, [initializeQuery])
+
+  return (
+    <>
+      <button type="button" onClick={() => setQueryLoading('visibilityQuery')}>
+        Set visibility loading
+      </button>
+      <button
+        type="button"
+        onClick={() =>
+          setQuerySuccess('visibilityQuery', {
+            ok: true,
+          })
+        }
+      >
+        Set visibility success
+      </button>
+      <RuntimePage />
+      <RuntimeStateSnapshot testId="runtime-state" />
+    </>
+  )
+}
+
+function RuntimeButtonResetSeed() {
+  const { initializeForm, setFormFieldError, setFormFieldValue } = useRuntimeStateActions()
+
+  useEffect(() => {
+    initializeForm('userSearch', {
+      name: {
+        defaultValue: 'Ada',
+      },
+    })
+    initializeForm('newsletter', {
+      email: {
+        defaultValue: 'news@example.com',
+      },
+    })
+  }, [initializeForm])
+
+  return (
+    <>
+      <button type="button" onClick={() => setFormFieldValue('userSearch', 'name', 'Grace')}>
+        Seed reset target value
+      </button>
+      <button type="button" onClick={() => setFormFieldError('userSearch', 'name', 'Required')}>
+        Seed reset target error
+      </button>
+      <button type="button" onClick={() => setFormFieldValue('newsletter', 'email', 'updated@example.com')}>
+        Seed other form value
+      </button>
+      <RuntimeStateSnapshot testId="runtime-state" />
+      <RuntimePage />
     </>
   )
 }
@@ -514,6 +608,41 @@ describe('Runtime shared state store', () => {
     expect(screen.getByTestId('runtime-state')).toHaveTextContent(
       '"userSearch":{"name":{"value":"Ada","error":null,"touched":false,"dirty":false,"defaultValue":"Ada"}}',
     )
+    expect(screen.getByTestId('runtime-state')).toHaveTextContent(
+      '"newsletter":{"email":{"value":"news@example.com","error":null,"touched":false,"dirty":false,"defaultValue":"news@example.com"}}',
+    )
+  })
+
+  it('resets the target form from a rendered button without affecting other runtime forms', () => {
+    render(
+      <RuntimeStateProvider config={resetFormButtonConfig}>
+        <RuntimeButtonResetSeed />
+      </RuntimeStateProvider>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Seed reset target value' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Seed reset target error' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Seed other form value' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Reset user search form from layout' }))
+
+    expect(screen.getByTestId('runtime-state')).toHaveTextContent(
+      '"userSearch":{"name":{"value":"Ada","error":null,"touched":false,"dirty":false,"defaultValue":"Ada"}}',
+    )
+    expect(screen.getByTestId('runtime-state')).toHaveTextContent(
+      '"newsletter":{"email":{"value":"updated@example.com","error":null,"touched":true,"dirty":true,"defaultValue":"news@example.com"}}',
+    )
+  })
+
+  it('keeps the screen stable when a rendered resetForm button targets an uninitialized form', () => {
+    render(
+      <RuntimeStateProvider config={resetFormButtonConfig}>
+        <RuntimeButtonResetSeed />
+      </RuntimeStateProvider>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Reset missing form from layout' }))
+
+    expect(screen.getByTestId('runtime-page')).toHaveAttribute('data-runtime-page-id', 'home')
     expect(screen.getByTestId('runtime-state')).toHaveTextContent(
       '"newsletter":{"email":{"value":"news@example.com","error":null,"touched":false,"dirty":false,"defaultValue":"news@example.com"}}',
     )
@@ -906,14 +1035,16 @@ describe('Runtime shared state store', () => {
       '"queries":{"searchUsers":{"status":"loading","data":["Ada"],"error":null}}',
     )
 
-    resolveFetch?.(
-      new Response(JSON.stringify({ results: ['Ada', 'Grace'] }), {
-        status: 200,
-        headers: {
-          'content-type': 'application/json',
-        },
-      }),
-    )
+    if (resolveFetch) {
+      resolveFetch(
+        new Response(JSON.stringify({ results: ['Ada', 'Grace'] }), {
+          status: 200,
+          headers: {
+            'content-type': 'application/json',
+          },
+        }),
+      )
+    }
 
     await waitFor(() =>
       expect(screen.getByTestId('runtime-state')).toHaveTextContent(
@@ -1068,5 +1199,305 @@ describe('Runtime shared state store', () => {
     expect(screen.getByTestId('single-remount-state')).toHaveTextContent('"currentPageId":"home"')
     expect(screen.getByTestId('single-remount-state')).toHaveTextContent('"value":"home"')
     expect(screen.getByTestId('single-remount-state')).toHaveTextContent('"status":"idle","data":null,"error":null')
+  })
+
+  it('initializes declarative form fields once and preserves user values across navigation', () => {
+    const config: RuntimeConfig = {
+      api: {},
+      initialPage: 'home',
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'form',
+              id: 'profile-form',
+              children: [
+                {
+                  type: 'input',
+                  props: {
+                    fieldId: 'name',
+                    label: 'Name',
+                    defaultValue: 'Ada',
+                  },
+                },
+                {
+                  type: 'textarea',
+                  props: {
+                    fieldId: 'bio',
+                    label: 'Bio',
+                    defaultValue: 'Builder',
+                  },
+                },
+              ],
+            },
+            {
+              type: 'button',
+              props: {
+                label: 'Go to details',
+                action: {
+                  type: 'navigateTo',
+                  pageId: 'details',
+                },
+              },
+            },
+          ],
+        },
+        {
+          id: 'details',
+          layout: [
+            {
+              type: 'button',
+              props: {
+                label: 'Go home',
+                action: {
+                  type: 'navigateTo',
+                  pageId: 'home',
+                },
+              },
+            },
+          ],
+        },
+      ],
+    }
+
+    render(
+      <RuntimeStateProvider config={config}>
+        <RuntimePage />
+        <RuntimeStateSnapshot testId="runtime-state" />
+      </RuntimeStateProvider>,
+    )
+
+    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Grace' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Go to details' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Go home' }))
+
+    expect(screen.getByLabelText('Name')).toHaveValue('Grace')
+    expect(screen.getByLabelText('Bio')).toHaveValue('Builder')
+    expect(screen.getByTestId('runtime-state')).toHaveTextContent('"name":{"value":"Grace"')
+  })
+
+  it('keeps declarative forms isolated and normalizes select state to strings', () => {
+    const config: RuntimeConfig = {
+      api: {},
+      initialPage: 'home',
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'form',
+              id: 'profile-form',
+              children: [
+                {
+                  type: 'select',
+                  props: {
+                    fieldId: 'role',
+                    label: 'Role',
+                    defaultValue: 2,
+                    items: [
+                      { label: '', value: '' },
+                      { label: 'Editor', value: 2 },
+                    ],
+                  },
+                },
+              ],
+            },
+            {
+              type: 'form',
+              id: 'preferences-form',
+              children: [
+                {
+                  type: 'select',
+                  props: {
+                    fieldId: 'theme',
+                    label: 'Theme',
+                    defaultValue: 'missing',
+                    items: [{ label: 'Light', value: 'light' }],
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    }
+
+    render(
+      <RuntimeStateProvider config={config}>
+        <RuntimePage />
+        <RuntimeStateSnapshot testId="runtime-state" />
+      </RuntimeStateProvider>,
+    )
+
+    expect(screen.getByRole('combobox', { name: 'Role' })).toHaveValue('2')
+    expect(screen.getByRole('combobox', { name: 'Theme' })).toHaveValue('')
+    expect(screen.getByTestId('runtime-state')).toHaveTextContent('"role":{"value":"2"')
+    expect(screen.getByTestId('runtime-state')).toHaveTextContent('"theme":{"value":""')
+  })
+
+  it('blocks submit for visible required fields, clears errors on valid change and ignores hidden required fields', async () => {
+    const config: RuntimeConfig = {
+      api: {},
+      initialPage: 'home',
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'form',
+              id: 'profile-form',
+              children: [
+                {
+                  type: 'input',
+                  props: {
+                    fieldId: 'name',
+                    label: 'Name',
+                    required: true,
+                    defaultValue: '',
+                  },
+                },
+                {
+                  type: 'select',
+                  queryStateFeedback: {
+                    query: 'visibilityQuery',
+                    states: {
+                      loading: {
+                        mode: 'hide',
+                      },
+                      success: {
+                        mode: 'show',
+                      },
+                    },
+                  },
+                  props: {
+                    fieldId: 'role',
+                    label: 'Role',
+                    required: true,
+                    defaultValue: '',
+                    items: [
+                      { label: '', value: '' },
+                      { label: 'Editor', value: 'editor' },
+                    ],
+                  },
+                },
+                {
+                  type: 'button',
+                  props: {
+                    label: 'Submit profile',
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    }
+
+    render(
+      <RuntimeStateProvider config={config}>
+        <FormRuntimeFixture />
+      </RuntimeStateProvider>,
+    )
+
+    const form = screen.getByTestId('runtime-page').querySelector('form')
+    expect(form).not.toBeNull()
+
+    fireEvent.submit(form!)
+
+    expect(screen.getAllByText('Required')).toHaveLength(1)
+    expect(screen.getByTestId('runtime-state')).toHaveTextContent('"name":{"value":"","error":"Required"')
+
+    fireEvent.change(screen.getByRole('textbox', { name: /Name/ }), { target: { value: 'Ada' } })
+
+    await waitFor(() => expect(screen.queryByText('Required')).not.toBeInTheDocument())
+
+    fireEvent.click(screen.getByRole('button', { name: 'Set visibility success' }))
+    fireEvent.submit(form!)
+
+    expect(screen.getByTestId('runtime-state')).toHaveTextContent('"role":{"value":"","error":"Required"')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Set visibility loading' }))
+    fireEvent.submit(form!)
+
+    expect(screen.queryByRole('combobox', { name: 'Role' })).not.toBeInTheDocument()
+    expect(screen.getByTestId('runtime-state')).toHaveTextContent('"role":{"value":"","error":"Required"')
+  })
+
+  it('submits declarative forms with the latest field values and resets them after a successful submit', async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: {
+          'content-type': 'application/json',
+        },
+      }),
+    )
+
+    const config: RuntimeConfig = {
+      api: {
+        submitProfile: {
+          method: 'POST',
+          endpoint: '/api/profile',
+          body: {
+            name: 'forms.profileForm.name',
+          },
+        },
+      },
+      initialPage: 'home',
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'form',
+              id: 'profileForm',
+              submitAction: {
+                type: 'executeOperation',
+                operationName: 'submitProfile',
+              },
+              resetOnSuccess: true,
+              children: [
+                {
+                  type: 'input',
+                  props: {
+                    fieldId: 'name',
+                    label: 'Name',
+                    defaultValue: 'Ada',
+                  },
+                },
+                {
+                  type: 'button',
+                  props: {
+                    label: 'Submit profile',
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    }
+
+    globalThis.fetch = fetchMock
+
+    render(
+      <RuntimeStateProvider config={config}>
+        <RuntimePage />
+        <RuntimeStateSnapshot testId="runtime-state" />
+      </RuntimeStateProvider>,
+    )
+
+    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Grace' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Submit profile' }))
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+    expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({
+      body: JSON.stringify({
+        name: 'Grace',
+      }),
+    })
+    await waitFor(() => expect(screen.getByLabelText('Name')).toHaveValue('Ada'))
+    expect(screen.getByTestId('runtime-state')).toHaveTextContent('"submitProfile":{"status":"success"')
   })
 })

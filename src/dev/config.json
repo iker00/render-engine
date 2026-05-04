@@ -2,14 +2,26 @@
   "api": {
     "searchUsers": {
       "method": "GET",
+      "endpoint": "https://jsonplaceholder.typicode.com/users"
+    },
+    "searchPosts": {
+      "method": "GET",
       "endpoint": "https://jsonplaceholder.typicode.com/posts"
+    },
+    "createUser": {
+      "method": "POST",
+      "endpoint": "https://jsonplaceholder.typicode.com/users",
+      "body": {
+        "name": "forms.userForm.name",
+        "email": "forms.userForm.email"
+      }
     }
   },
   "pages": [
     {
       "id": "bootstrap-home",
       "preloads": [
-        "searchUsers"
+        "searchPosts"
       ],
       "layout": [
         {
@@ -33,6 +45,48 @@
               "Initial page resolved from the active config source.",
               "Page entry preloads can hydrate shared query state on mount."
             ]
+          }
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Posts",
+            "level": 2
+          }
+        },
+        {
+          "type": "paragraph",
+          "queryStateFeedback": {
+            "query": "searchPosts",
+            "states": {
+              "loading": {
+                "mode": "fallback",
+                "fallback": [
+                  {
+                    "type": "paragraph",
+                    "props": {
+                      "text": "Loading posts..."
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "props": {
+            "text": "Primer post:"
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "queries.searchPosts.data.0.title"
+          }
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Users",
+            "level": 2
           }
         },
         {
@@ -85,13 +139,17 @@
         {
           "type": "paragraph",
           "props": {
-            "text": "Primer post:"
+            "text": "queries.searchUsers.data.0.name"
           }
         },
         {
-          "type": "paragraph",
+          "type": "button",
           "props": {
-            "text": "queries.searchUsers.data.0.title"
+            "label": "Search users",
+            "action": {
+              "type": "executeOperation",
+              "operationName": "searchUsers"
+            }
           }
         },
         {
@@ -117,6 +175,16 @@
                 "action": {
                   "type": "navigateTo",
                   "pageId": "help-page"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Ir a formulario",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "bootstrap-form"
                 }
               }
             }
@@ -207,6 +275,104 @@
                 "action": {
                   "type": "navigateTo",
                   "pageId": "bootstrap-home"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "bootstrap-form",
+      "layout": [
+        {
+          "type": "heading",
+          "props": {
+            "text": "Bootstrap Form",
+            "level": 2
+          }
+        },
+        {
+          "type": "paragraph",
+          "queryStateFeedback": {
+            "query": "createUser",
+            "states": {
+              "loading": {
+                "mode": "fallback",
+                "fallback": [
+                  {
+                    "type": "paragraph",
+                    "props": {
+                      "text": "Enviando formulario..."
+                    }
+                  }
+                ]
+              },
+              "success": {
+                "mode": "show"
+              },
+              "error": {
+                "mode": "fallback",
+                "fallback": [
+                  {
+                    "type": "paragraph",
+                    "props": {
+                      "text": "Error al enviar el formulario."
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "props": {
+            "text": "¡Formulario enviado correctametne!"
+          }
+        },
+        {
+          "type": "form",
+          "id": "userForm",
+          "submitAction": {
+            "type": "executeOperation",
+            "operationName": "createUser"
+          },
+          "resetOnSuccess": true,
+          "children": [
+            {
+              "type": "input",
+              "props": {
+                "fieldId": "name",
+                "label": "Name",
+                "defaultValue": "John Doe"
+              }
+            },
+            {
+              "type": "input",
+              "props": {
+                "fieldId": "email",
+                "label": "Email",
+                "defaultValue": "john.doe@example.com",
+                "required": true
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Submit"
+              },
+              "queryStateFeedback": {
+                "query": "createUser",
+                "states": {
+                  "loading": {
+                    "mode": "fallback",
+                    "fallback": [
+                      {
+                        "type": "button",
+                        "props": {
+                          "label": "Enviando formulario..."
+                        }
+                      }
+                    ]
+                  }
                 }
               }
             }

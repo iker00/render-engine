@@ -148,7 +148,10 @@ export function runtimeStateReducer(state: RuntimeState, action: RuntimeStateAct
           [action.payload.formId]: {
             ...state.forms[action.payload.formId],
             [action.payload.fieldId]: {
-              ...getRuntimeFormFieldState(state.forms[action.payload.formId]?.[action.payload.fieldId]),
+              ...getRuntimeFormFieldState(
+                state.forms[action.payload.formId]?.[action.payload.fieldId],
+                action.payload.defaultValue,
+              ),
               error: action.payload.error,
             },
           },
@@ -226,6 +229,7 @@ function initializeRuntimeForm(
 ): RuntimeFormState {
   return Object.entries(fields).reduce<RuntimeFormState>((nextFormState, [fieldId, fieldDefinition]) => {
     if (nextFormState[fieldId]) {
+      nextFormState[fieldId] = hydrateRuntimeFormFieldState(nextFormState[fieldId], fieldDefinition.defaultValue)
       return nextFormState
     }
 
@@ -258,8 +262,28 @@ function resetRuntimeForm(formState: RuntimeFormState | undefined): RuntimeFormS
   }, {})
 }
 
-function getRuntimeFormFieldState(fieldState: RuntimeFormFieldState | undefined): RuntimeFormFieldState {
-  return fieldState ?? createRuntimeFormFieldState(undefined)
+function getRuntimeFormFieldState(fieldState: RuntimeFormFieldState | undefined, defaultValue?: unknown): RuntimeFormFieldState {
+  return fieldState ?? createRuntimeFormFieldState(defaultValue)
+}
+
+function hydrateRuntimeFormFieldState(
+  fieldState: RuntimeFormFieldState,
+  defaultValue: unknown,
+): RuntimeFormFieldState {
+  if (
+    typeof fieldState.value !== 'undefined' ||
+    typeof fieldState.defaultValue !== 'undefined' ||
+    fieldState.touched ||
+    fieldState.dirty
+  ) {
+    return fieldState
+  }
+
+  return {
+    ...fieldState,
+    value: defaultValue,
+    defaultValue,
+  }
 }
 
 function createRuntimeFormFieldState(defaultValue: unknown): RuntimeFormFieldState {

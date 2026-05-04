@@ -40,6 +40,8 @@ Semántica estable:
 - `GET` usa query string cuando la operación la declara.
 - `POST`, `PUT`, `PATCH` y `DELETE` pueden enviar body JSON.
 - La fachada pública actual del runtime expone `executeQueryOperation(operationName)` para ejecutar una operación declarada y escribir su resultado en `queries.{operationName}`.
+- `button.props.action.type: executeOperation` reutiliza esa misma fachada compartida desde el árbol `layout`.
+- `form.submitAction.type: executeOperation` reutiliza la misma fachada compartida desde el submit nativo del formulario.
 - La UI no construye manualmente URLs, query strings ni payloads JSON.
 
 Semántica estable de ejecución:
@@ -73,7 +75,7 @@ Reglas de payload vigentes:
 - Caso típico: borrar un item y recargar el listado.
 - La intención funcional es soportar este patrón sin exigir lógica imperativa dispersa.
 
-La base de estado y la red real ya están conectadas para ejecución por nombre y para precargas automáticas al entrar en página, pero siguen pendientes los disparadores declarativos finales desde layout y la orquestación automática de refetch.
+La base de estado y la red real ya están conectadas para ejecución por nombre, precargas automáticas al entrar en página, disparo declarativo desde `button.props.action` y submit declarativo desde `form.submitAction`. Siguen pendientes la orquestación automática de refetch y otros triggers más generales fuera de estas superficies actuales.
 
 ## Feedback visual
 El layout ya puede declarar feedback visual local por nodo mediante `queryStateFeedback`, usando como fuente única de verdad el dominio compartido `queries.{queryName}`.
@@ -89,6 +91,7 @@ Semántica estable:
 - si un nodo no declara `queryStateFeedback`, conserva su render normal sin cambios observables
 - si declara el bloque pero omite un estado concreto, los defaults son `success -> show` y `loading/error/empty -> hide`
 - el renderer central decide si muestra el nodo original, lo oculta o lo sustituye por el fallback local
+- la misma semántica visible se reutiliza también dentro del submit de formularios para decidir qué campos `required` cuentan como visibles
 - varios nodos pueden reaccionar de forma distinta a la misma query sin colisionar entre sí
 - una recarga que vuelve a `loading` con `data` previo conservado reactiva igualmente la rama `loading`
 

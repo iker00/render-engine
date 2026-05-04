@@ -1,5 +1,6 @@
 import type { ButtonLayoutNode } from '../../config/runtime-config'
-import { executeRuntimeNavigationAction } from '../runtime-actions/runtime-navigation-action-executor'
+import { useOptionalFormContext } from '../form-context'
+import { executeRuntimeUiAction } from '../runtime-actions/runtime-ui-action-executor'
 import { getButtonNodeClassName } from '../runtime-node-styling'
 import { useRuntimeStateActions } from '../runtime-state/runtime-state-provider'
 
@@ -8,18 +9,26 @@ interface ButtonNodeProps {
 }
 
 export function ButtonNode({ node }: ButtonNodeProps) {
-  const { goBackPage, navigateToPage } = useRuntimeStateActions()
+  const { executeQueryOperation, goBackPage, navigateToPage, resetForm } = useRuntimeStateActions()
+  const formContext = useOptionalFormContext()
+  const action = node.props.action
+  const isImplicitSubmit = action === undefined && formContext !== null
 
   return (
     <button
       data-layout-node="button"
-      type="button"
+      type={isImplicitSubmit ? 'submit' : 'button'}
       className={getButtonNodeClassName()}
-      onClick={() =>
-        executeRuntimeNavigationAction(node.props.action, {
-          goBackPage,
-          navigateToPage,
-        })
+      onClick={
+        action
+          ? () =>
+              executeRuntimeUiAction(action, {
+                executeQueryOperation,
+                goBackPage,
+                navigateToPage,
+                resetForm,
+              })
+          : undefined
       }
     >
       {node.props.label}

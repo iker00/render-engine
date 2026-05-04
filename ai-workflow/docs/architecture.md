@@ -29,9 +29,13 @@ src/
   runtime/
     layout-renderer.tsx
     layout-node-renderer.tsx
+    form-context.tsx
     runtime-query-state-feedback.ts
     runtime-node-styling.ts
     runtime-page.tsx
+    runtime-actions/
+      runtime-navigation-action-executor.ts
+      runtime-ui-action-executor.ts
     runtime-references/
       runtime-reference-diagnostics.ts
       runtime-reference-parser.ts
@@ -44,10 +48,15 @@ src/
       runtime-state-selectors.ts
       runtime-state-types.ts
     nodes/
+      button-layout-node.tsx
       container-layout-node.tsx
+      form-layout-node.tsx
       heading-layout-node.tsx
+      input-layout-node.tsx
       list-layout-node.tsx
       paragraph-layout-node.tsx
+      select-layout-node.tsx
+      textarea-layout-node.tsx
   tests/
 ```
 
@@ -59,16 +68,17 @@ Lectura operativa de esa estructura:
 - `queries/` encapsula la frontera HTTP del runtime: resolución de payloads, construcción de `RequestInit`, ejecución contra `fetch` y errores normalizados.
 - `layout-renderer.tsx` conserva la responsabilidad de renderizar colecciones ordenadas de nodos.
 - `layout-node-renderer.tsx` es el punto central de resolución `type -> pieza de render` y del borde transversal que decide si el nodo se muestra, se oculta o se sustituye por un fallback local.
+- `form-context.tsx` propaga el `formId` efectivo a cualquier descendiente del árbol del formulario sin exigir props manuales repetidas.
+- `runtime-actions/` concentra la traducción `action.type -> handler del provider`, de modo que el nodo visual solo dispara el contrato común y no reimplementa navegación, queries ni formularios.
 - `runtime-node-styling.ts` concentra la convención visual base del runtime y la compatibilidad acotada para `gap` arbitrarios.
 - `runtime-query-state-feedback.ts` concentra la derivación `loading | error | empty | success`, la heurística común de `empty` y la resolución de defaults efectivos de `queryStateFeedback`.
 - `runtime-references/` fija la semántica central de referencias string, distingue `literal | supported | unsupported | invalid` y evita lógica dispersa en nodos visuales.
-- `runtime-state/` concentra un store por instancia basado en `useReducer` + `Context`, con dominios separados para navegación, formularios, queries y `pageEntry`, y expone la fachada mínima `executeQueryOperation()` sin absorber la lógica de red.
-- `runtime/nodes/` materializa solo nodos con uso real inmediato, sin introducir subsistemas vacíos para capacidades futuras.
+- `runtime-state/` concentra un store por instancia basado en `useReducer` + `Context`, con dominios separados para navegación, formularios, queries y `pageEntry`, y expone la fachada mínima para navegación, formularios, queries y lectura consistente del último snapshot sin absorber la lógica de red.
+- `runtime/nodes/` materializa solo nodos con uso real inmediato, incluido el catálogo mínimo de formularios declarativos.
 - `runtime-page.tsx` ya no decide la página visible por selección ad hoc; la resuelve desde el estado compartido del runtime.
 
 ## Módulos previstos para próximas features
 - `components/`: componentes visuales soportados por futuras ampliaciones del renderer declarativo.
-- `forms/`: piezas visuales, validación declarativa y submit apoyados en el dominio `forms` ya existente en `runtime-state/`.
 - `queries/`: ampliaciones futuras para refetch declarativo y consumidores visuales apoyados en la frontera remota ya existente.
 - `devtools/`: soporte de desarrollo local para cargar y editar configuración sin backend.
 - `shared/`: utilidades, adaptadores y piezas reutilizables entre módulos.
@@ -96,5 +106,8 @@ Lectura operativa de esa estructura:
 - La navegación de subrutas de query usa una semántica iterativa única: índices solo sobre arrays, claves literales sobre objetos y resultado `missing` para rutas bien formadas cuyo dato no está disponible.
 - La ejecución remota declarativa vive en `src/queries/`, reutiliza la convención central de referencias del runtime y deja sus resultados visibles solo a través de `queries.{operationName}`.
 - La orquestación automática de `preloads` vive en `runtime-state-provider.tsx`, reutiliza la frontera `src/queries/`, captura un snapshot común del estado por entrada y limita la semántica latest-only al agregado `pageEntry`, no a las queries individuales.
+- La interpretación de `button.props.action` ya no vive en el propio nodo visual: un ejecutor común en `src/runtime/runtime-actions/` delega en los handlers del provider para `navigateTo`, `goBack`, `executeOperation` y `resetForm`.
 - La semántica declarativa de feedback por query vive fuera de los nodos visuales concretos: el renderer central consulta `queries.{queryName}`, deriva un estado visible único y decide entre nodo original, ocultación o fallback local reutilizando `LayoutRenderer`.
+- Los formularios declarativos viven íntegramente dentro de `runtime/`: `form` actúa como frontera de inicialización, validación `required` y submit, mientras los campos leen y escriben solo en `forms.{formId}.{fieldId}`.
+- La decisión de visibilidad efectiva de un nodo se reutiliza tanto en render como en validación de submit para evitar divergencias entre `queryStateFeedback` y reglas `required`.
 - Los errores de bootstrap y validación deben ser diagnósticos en desarrollo; en producción, los errores marcados como solo de desarrollo degradan sin mensaje visible genérico.

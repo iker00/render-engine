@@ -1,4 +1,5 @@
 import type { ButtonAction } from '../../config/runtime-config'
+import { executeRuntimeUiAction } from './runtime-ui-action-executor'
 
 export interface RuntimeNavigationActionHandler {
   goBackPage: () => void
@@ -9,10 +10,10 @@ export function executeRuntimeNavigationAction(
   action: ButtonAction,
   handlers: RuntimeNavigationActionHandler,
 ) {
-  if (action.type === 'goBack') {
-    handlers.goBackPage()
-    return
-  }
-
-  handlers.navigateToPage(action.pageId)
+  executeRuntimeUiAction(action, {
+    executeQueryOperation: async () => undefined,
+    goBackPage: handlers.goBackPage,
+    navigateToPage: handlers.navigateToPage,
+    resetForm: () => undefined,
+  })
 }

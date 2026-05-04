@@ -1,12 +1,10 @@
-export type LayoutNodeType = 'container' | 'heading' | 'paragraph' | 'list' | 'button'
+export type LayoutNodeType = 'container' | 'heading' | 'paragraph' | 'list' | 'button' | 'form' | 'input' | 'textarea' | 'select'
 export type RuntimeApiMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
 export type RuntimeApiQueryValue = string | number | boolean
 export type RuntimeApiQuery = Record<string, RuntimeApiQueryValue>
+export type RuntimeConfigValue = string | number | boolean | null
 export type RuntimeApiBodyValue =
-  | string
-  | number
-  | boolean
-  | null
+  | RuntimeConfigValue
   | RuntimeApiBodyValue[]
   | { [key: string]: RuntimeApiBodyValue }
 
@@ -31,7 +29,7 @@ export interface QueryStateFeedbackHideRule {
 
 export interface QueryStateFeedbackFallbackRule {
   mode: 'fallback'
-  fallback: LayoutNode[]
+  fallback: readonly LayoutNode[]
 }
 
 export type QueryStateFeedbackRule =
@@ -86,23 +84,86 @@ export interface ListLayoutNode extends LayoutNodeFeedbackFields {
   children?: unknown
 }
 
-export interface NavigateToButtonAction {
+export interface FormLayoutNode extends LayoutNodeFeedbackFields {
+  type: 'form'
+  id: string
+  submitAction?: ExecuteOperationRuntimeUiAction
+  resetOnSuccess?: boolean
+  children?: LayoutNode[]
+}
+
+export interface FormFieldLayoutNodeProps {
+  fieldId: string
+  label: string
+  required?: boolean
+  defaultValue?: RuntimeConfigValue
+}
+
+export interface InputLayoutNode extends LayoutNodeFeedbackFields {
+  type: 'input'
+  id?: string
+  props: FormFieldLayoutNodeProps & {
+    inputType?: 'text' | 'email' | 'password' | 'search' | 'tel' | 'url'
+  }
+  children?: unknown
+}
+
+export interface TextareaLayoutNode extends LayoutNodeFeedbackFields {
+  type: 'textarea'
+  id?: string
+  props: FormFieldLayoutNodeProps
+  children?: unknown
+}
+
+export interface SelectLayoutNodeItem {
+  label: string
+  value: string | number
+}
+
+export interface SelectLayoutNode extends LayoutNodeFeedbackFields {
+  type: 'select'
+  id?: string
+  props: FormFieldLayoutNodeProps & {
+    items: SelectLayoutNodeItem[]
+  }
+  children?: unknown
+}
+
+export interface NavigateToRuntimeUiAction {
   type: 'navigateTo'
   pageId: string
 }
 
-export interface GoBackButtonAction {
+export interface GoBackRuntimeUiAction {
   type: 'goBack'
 }
 
-export type ButtonAction = NavigateToButtonAction | GoBackButtonAction
+export interface ExecuteOperationRuntimeUiAction {
+  type: 'executeOperation'
+  operationName: string
+}
+
+export interface ResetFormRuntimeUiAction {
+  type: 'resetForm'
+  formId: string
+}
+
+export type RuntimeUiAction =
+  | NavigateToRuntimeUiAction
+  | GoBackRuntimeUiAction
+  | ExecuteOperationRuntimeUiAction
+  | ResetFormRuntimeUiAction
+
+export type NavigateToButtonAction = NavigateToRuntimeUiAction
+export type GoBackButtonAction = GoBackRuntimeUiAction
+export type ButtonAction = RuntimeUiAction
 
 export interface ButtonLayoutNode extends LayoutNodeFeedbackFields {
   type: 'button'
   id?: string
   props: {
     label: string
-    action: ButtonAction
+    action?: RuntimeUiAction
   }
   children?: unknown
 }
@@ -113,6 +174,10 @@ export type LayoutNode =
   | ParagraphLayoutNode
   | ListLayoutNode
   | ButtonLayoutNode
+  | FormLayoutNode
+  | InputLayoutNode
+  | TextareaLayoutNode
+  | SelectLayoutNode
 
 export type LayoutNodeCollection = LayoutNode[]
 

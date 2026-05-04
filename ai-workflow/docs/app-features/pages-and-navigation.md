@@ -19,12 +19,13 @@ Definir cómo se organiza el catálogo de páginas del runtime y cuál es el alc
 ## Estado actual de navegación
 - La página activa vive en `navigation.currentPageId` dentro del store compartido del runtime.
 - Existe una acción interna `navigateToPage(pageId)` para cambiar de página sin tocar la URL del navegador.
-- El estado base conserva `history` como preparación para historial interno, aunque todavía no existe una UI declarativa final de `goBack`.
+- `button.props.action` ya puede disparar `navigateTo` y `goBack` reutilizando ese mismo estado compartido.
+- El historial interno ya sostiene `goBack` como acción declarativa estable cuando existe una página previa válida.
 - Si se intenta navegar a una página inexistente, el runtime conserva la página anterior y guarda un error recuperable `page-not-found`.
 - Cada entrada a una página con `preloads` dispara una nueva tanda automática de operaciones, también al volver a una página ya visitada.
 - La misma entrada de página no relanza sus `preloads` por rerenders del provider ni por cambios internos de estado mientras `navigation.currentPageId` no cambie.
 - La URL del navegador no cambia.
-- Declarar varias páginas ya permite navegación interna controlada desde el runtime, aunque la configuración JSON todavía no expone acciones declarativas finales para ello.
+- Declarar varias páginas ya permite navegación interna controlada desde el runtime tanto por acciones imperativas internas como por `button.props.action`.
 
 ## Route params
 - `routeParams` siguen fuera de alcance en la implementación actual.

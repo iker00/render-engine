@@ -1,9 +1,11 @@
-import { fireEvent, render, screen, within } from '@testing-library/react'
-import { useEffect, useState } from 'react'
-import type { ReactNode } from 'react'
-import { describe, expect, it } from 'vitest'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { useEffect } from 'react'
+import { describe, expect, it, vi } from 'vitest'
 import type { RuntimeConfig, RuntimePageConfig } from '../config/runtime-config'
 import { RuntimePage } from '../runtime/runtime-page'
+import { RuntimeStateContext } from '../runtime/runtime-state/runtime-state-context'
+import { createRuntimeState, runtimeStateReducer } from '../runtime/runtime-state/runtime-state-reducer'
+import type { RuntimeState, RuntimeStateAction } from '../runtime/runtime-state/runtime-state-types'
 import {
   RuntimeStateProvider,
   useRuntimeStateActions,
@@ -57,64 +59,95 @@ function renderRuntimePage(activePage: RuntimePageConfig) {
   )
 }
 
-function RuntimeStateSeed({ children }: { children: ReactNode }) {
-  const { initializeForm, initializeQuery, setFormFieldValue, setQueryError, setQuerySuccess } =
-    useRuntimeStateActions()
-  const [isReady, setIsReady] = useState(false)
-
-  useEffect(() => {
-    initializeForm('userSearch', {
-      name: {
-        defaultValue: 'Ada',
-      },
-    })
-    setFormFieldValue('userSearch', 'name', 'Grace')
-    initializeQuery('searchUsers')
-    setQuerySuccess('searchUsers', {
-      user: {
-        profile: {
-          name: 'Ada',
-          active: true,
-        },
-      },
-      results: [
-        {
-          id: 'user-1',
-          name: 'Ada',
-        },
-        {
-          id: 'user-2',
-          name: 'Grace',
-        },
-      ],
-      stats: {
-        total: 2,
-      },
-    })
-    setQueryError('searchUsers', {
-      code: 'network',
-      message: 'Could not load users.',
-    })
-    setIsReady(true)
-  }, [initializeForm, initializeQuery, setFormFieldValue, setQueryError, setQuerySuccess])
-
-  return isReady ? <>{children}</> : null
-}
-
 function renderRuntimePageWithSeed(activePage: RuntimePageConfig) {
   const config: RuntimeConfig = {
     api: {},
     initialPage: activePage.id,
     pages: [activePage],
   }
+  const initialState = createRuntimeState(config)
+  const seededState = seedRuntimeState(initialState)
+  const dispatch = vi.fn<(action: RuntimeStateAction) => void>()
 
   return render(
-    <RuntimeStateProvider config={config}>
-      <RuntimeStateSeed>
+    <RuntimeStateContext.Provider
+      value={{
+        config,
+        initialState: seededState,
+        state: seededState,
+        dispatch,
+      }}
+    >
         <RuntimePage />
-      </RuntimeStateSeed>
-    </RuntimeStateProvider>,
+    </RuntimeStateContext.Provider>,
   )
+}
+
+function seedRuntimeState(state: RuntimeState) {
+  return [
+    {
+      type: 'forms/initialize',
+      payload: {
+        formId: 'userSearch',
+        fields: {
+          name: {
+            defaultValue: 'Ada',
+          },
+        },
+      },
+    },
+    {
+      type: 'forms/set-value',
+      payload: {
+        formId: 'userSearch',
+        fieldId: 'name',
+        value: 'Grace',
+      },
+    },
+    {
+      type: 'queries/initialize',
+      payload: {
+        queryName: 'searchUsers',
+      },
+    },
+    {
+      type: 'queries/set-success',
+      payload: {
+        queryName: 'searchUsers',
+        data: {
+          user: {
+            profile: {
+              name: 'Ada',
+              active: true,
+            },
+          },
+          results: [
+            {
+              id: 'user-1',
+              name: 'Ada',
+            },
+            {
+              id: 'user-2',
+              name: 'Grace',
+            },
+          ],
+          stats: {
+            total: 2,
+          },
+        },
+      },
+    },
+    {
+      type: 'queries/set-error',
+      payload: {
+        queryName: 'searchUsers',
+        error: {
+          code: 'network',
+          message: 'Could not load users.',
+        },
+      },
+    },
+  ].reduce(runtimeStateReducer, state)
 }
 
 function QueryStateFeedbackFixture() {
@@ -163,6 +196,62 @@ function renderRuntimePageWithQueryFeedback(activePage: RuntimePageConfig) {
   return render(
     <RuntimeStateProvider config={config}>
       <QueryStateFeedbackFixture />
+      <RuntimePage />
+    </RuntimeStateProvider>,
+  )
+}
+
+function RuntimeFormQueryControls() {
+  const { initializeQuery, setQuerySuccess } = useRuntimeStateActions()
+
+  useEffect(() => {
+    initializeQuery('selectedUser')
+    initializeQuery('submitProfile')
+  }, [initializeQuery])
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() =>
+          setQuerySuccess('selectedUser', {
+            profile: {
+              nickname: 'Countess',
+            },
+          })
+        }
+      >
+        Seed selected user
+      </button>
+      <button
+        type="button"
+        onClick={() =>
+          setQuerySuccess('submitProfile', {
+            ok: true,
+          })
+        }
+      >
+        Seed submit success
+      </button>
+    </>
+  )
+}
+
+function renderRuntimeFormPage(activePage: RuntimePageConfig) {
+  const config: RuntimeConfig = {
+    api: {
+      submitProfile: {
+        method: 'POST',
+        endpoint: '/api/profile',
+      },
+    },
+    initialPage: activePage.id,
+    pages: [activePage],
+  }
+
+  return render(
+    <RuntimeStateProvider config={config}>
+      <RuntimeFormQueryControls />
       <RuntimePage />
     </RuntimeStateProvider>,
   )
@@ -790,6 +879,8 @@ describe('RuntimePage', () => {
   })
 
   it('degrades missing, unsupported and invalid references to an empty string in visible text nodes', () => {
+    const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
     renderRuntimePageWithSeed({
       id: 'empty-dynamic-text',
       layout: [
@@ -817,9 +908,13 @@ describe('RuntimePage', () => {
 
     expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent('')
     expect(screen.getAllByText('', { selector: '[data-layout-node="paragraph"]' })).toHaveLength(2)
+
+    consoleWarnSpy.mockRestore()
   })
 
   it('degrades unresolved or non-text nested query references to an empty string in visible text nodes', () => {
+    const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
     renderRuntimePageWithSeed({
       id: 'nested-empty-dynamic-text',
       layout: [
@@ -847,6 +942,8 @@ describe('RuntimePage', () => {
 
     expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent('')
     expect(screen.getAllByText('', { selector: '[data-layout-node="paragraph"]' })).toHaveLength(2)
+
+    consoleWarnSpy.mockRestore()
   })
 
   it('renders escaped references as visible literal text without the escape character', () => {
@@ -883,6 +980,188 @@ describe('RuntimePage', () => {
     expect(
       screen.getByRole('heading', { name: 'queries.searchUsers.data.results.0.name', level: 3 }),
     ).toBeInTheDocument()
+  })
+
+  it('renders declarative forms and nested fields in order with initialized values', () => {
+    renderRuntimeFormPage({
+      id: 'profile',
+      layout: [
+        {
+          type: 'form',
+          id: 'profile-form',
+          children: [
+            {
+              type: 'heading',
+              props: {
+                text: 'Profile form',
+                level: 2,
+              },
+            },
+            {
+              type: 'input',
+              props: {
+                fieldId: 'name',
+                label: 'Name',
+                defaultValue: 'Ada',
+              },
+            },
+            {
+              type: 'container',
+              children: [
+                {
+                  type: 'textarea',
+                  props: {
+                    fieldId: 'bio',
+                    label: 'Bio',
+                    defaultValue: 'Runtime builder',
+                  },
+                },
+                {
+                  type: 'select',
+                  props: {
+                    fieldId: 'role',
+                    label: 'Role',
+                    defaultValue: 2,
+                    items: [
+                      { label: '', value: '' },
+                      { label: 'Editor', value: 2 },
+                      { label: 'Admin', value: 3 },
+                    ],
+                  },
+                },
+                {
+                  type: 'button',
+                  props: {
+                    label: 'Aux reset',
+                    action: {
+                      type: 'resetForm',
+                      formId: 'profile-form',
+                    },
+                  },
+                },
+                {
+                  type: 'button',
+                  props: {
+                    label: 'Submit profile',
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    })
+
+    const form = screen.getByTestId('runtime-page').querySelector('form')
+    expect(form).not.toBeNull()
+    const buttons = within(form!).getAllByRole('button')
+
+    expect(screen.getByRole('heading', { name: 'Profile form', level: 2 })).toBeInTheDocument()
+    expect(screen.getByLabelText('Name')).toHaveValue('Ada')
+    expect(screen.getByLabelText('Bio')).toHaveValue('Runtime builder')
+    expect(screen.getByLabelText('Role')).toHaveValue('2')
+    expect(buttons[0]).toHaveTextContent('Aux reset')
+    expect(buttons[1]).toHaveTextContent('Submit profile')
+  })
+
+  it('resolves dynamic default values only during the first field initialization', () => {
+    renderRuntimeFormPage({
+      id: 'profile',
+      layout: [
+        {
+          type: 'form',
+          id: 'profile-form',
+          children: [
+            {
+              type: 'input',
+              props: {
+                fieldId: 'nickname',
+                label: 'Nickname',
+                defaultValue: 'queries.selectedUser.data.profile.nickname',
+              },
+            },
+          ],
+        },
+      ],
+    })
+
+    const nicknameInput = screen.getByLabelText('Nickname')
+    expect(nicknameInput).toHaveValue('')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Seed selected user' }))
+
+    expect(nicknameInput).toHaveValue('')
+  })
+
+  it('applies a dynamic default value when a hidden field becomes visible for the first time', async () => {
+    renderRuntimeFormPage({
+      id: 'profile',
+      layout: [
+        {
+          type: 'form',
+          id: 'profile-form',
+          children: [
+            {
+              type: 'input',
+              queryStateFeedback: {
+                query: 'submitProfile',
+                states: {
+                  success: {
+                    mode: 'show',
+                  },
+                },
+              },
+              props: {
+                fieldId: 'nickname',
+                label: 'Nickname',
+                defaultValue: 'queries.selectedUser.data.profile.nickname',
+              },
+            },
+          ],
+        },
+      ],
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Seed selected user' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Seed submit success' }))
+
+    await waitFor(() => expect(screen.getByLabelText('Nickname')).toHaveValue('Countess'))
+  })
+
+  it('keeps form fields hidden by queryStateFeedback from rendering until their query becomes visible', () => {
+    renderRuntimeFormPage({
+      id: 'profile',
+      layout: [
+        {
+          type: 'form',
+          id: 'profile-form',
+          children: [
+            {
+              type: 'input',
+              queryStateFeedback: {
+                query: 'submitProfile',
+                states: {
+                  success: {
+                    mode: 'show',
+                  },
+                },
+              },
+              props: {
+                fieldId: 'nickname',
+                label: 'Nickname',
+                defaultValue: 'Ada',
+              },
+            },
+          ],
+        },
+      ],
+    })
+
+    expect(screen.queryByLabelText('Nickname')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Seed submit success' }))
+
+    expect(screen.getByLabelText('Nickname')).toHaveValue('Ada')
   })
 
   it('reports unresolved visible references in development with the source path and surface name', () => {

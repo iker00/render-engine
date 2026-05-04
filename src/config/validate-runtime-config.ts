@@ -1,9 +1,11 @@
 import type {
-  ButtonAction,
   ButtonLayoutNode,
   ContainerLayoutNode,
+  ExecuteOperationRuntimeUiAction,
+  FormLayoutNode,
   GoBackButtonAction,
   HeadingLayoutNode,
+  InputLayoutNode,
   LayoutNode,
   LayoutNodeCollection,
   LayoutNodeFeedbackFields,
@@ -15,28 +17,38 @@ import type {
   QueryStateFeedbackFallbackRule,
   QueryStateFeedbackRule,
   QueryStateFeedbackVisibleState,
+  ResetFormRuntimeUiAction,
   RuntimeApiBodyValue,
   RuntimeApiConfig,
   RuntimeApiMethod,
   RuntimeApiOperation,
   RuntimeConfig,
   RuntimeConfigError,
+  RuntimeUiAction,
   RuntimeConfigValidationResult,
   RuntimePageConfig,
+  SelectLayoutNode,
+  TextareaLayoutNode,
 } from './runtime-config-types'
 import {
   buttonNodeSchema,
   containerNodeSchema,
+  executeOperationRuntimeUiActionSchema,
+  formNodeSchema,
   goBackButtonActionSchema,
   headingNodeSchema,
+  inputNodeSchema,
   listNodeSchema,
   navigateToButtonActionSchema,
   paragraphNodeSchema,
+  resetFormRuntimeUiActionSchema,
   runtimeApiOperationShellSchema,
   runtimeApiQuerySchema,
   runtimeConfigShellSchema,
   runtimePageShellSchema,
+  selectNodeSchema,
   supportedNodeTypes,
+  textareaNodeSchema,
 } from './runtime-config-zod'
 import { initialPageNotFound, invalidLayout, unsupportedNodeType } from './runtime-config-validation-errors'
 
@@ -142,10 +154,16 @@ export function validateRuntimeConfig(rawConfig: unknown): RuntimeConfigValidati
     return initialPageNotFound(config.initialPage)
   }
 
-  const navigationTargetError = validateNavigationTargets(config.pages)
+  const actionTargetError = validateActionTargets(config)
 
-  if (navigationTargetError) {
-    return navigationTargetError
+  if (actionTargetError) {
+    return actionTargetError
+  }
+
+  const formSemanticError = validateFormSemantics(config)
+
+  if (formSemanticError) {
+    return formSemanticError
   }
 
   return {
@@ -351,6 +369,14 @@ function validateLayoutNode(
       return validateListNode(rawNode, path, pageId)
     case 'button':
       return validateButtonNode(rawNode, path, pageId)
+    case 'form':
+      return validateFormNode(rawNode, path, pageId)
+    case 'input':
+      return validateInputNode(rawNode, path, pageId)
+    case 'textarea':
+      return validateTextareaNode(rawNode, path, pageId)
+    case 'select':
+      return validateSelectNode(rawNode, path, pageId)
   }
 
   return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.type".`)
@@ -396,7 +422,11 @@ function validateContainerNode(
     return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}".`)
   }
 
-  const feedbackResult = validateQueryStateFeedback(parseResult.data.queryStateFeedback, `${path}.queryStateFeedback`, pageId)
+  const feedbackResult = validateQueryStateFeedback(
+    parseResult.data.queryStateFeedback as LayoutNodeFeedbackFields['queryStateFeedback'],
+    `${path}.queryStateFeedback`,
+    pageId,
+  )
 
   if (feedbackResult.status === 'error') {
     return feedbackResult
@@ -443,7 +473,11 @@ function validateHeadingNode(
     return mapLeafNodeIssue(pageId, path, parseResult.error.issues[0]?.path ?? [])
   }
 
-  const feedbackResult = validateQueryStateFeedback(parseResult.data.queryStateFeedback, `${path}.queryStateFeedback`, pageId)
+  const feedbackResult = validateQueryStateFeedback(
+    parseResult.data.queryStateFeedback as LayoutNodeFeedbackFields['queryStateFeedback'],
+    `${path}.queryStateFeedback`,
+    pageId,
+  )
 
   if (feedbackResult.status === 'error') {
     return feedbackResult
@@ -475,7 +509,11 @@ function validateParagraphNode(
     return mapLeafNodeIssue(pageId, path, parseResult.error.issues[0]?.path ?? [])
   }
 
-  const feedbackResult = validateQueryStateFeedback(parseResult.data.queryStateFeedback, `${path}.queryStateFeedback`, pageId)
+  const feedbackResult = validateQueryStateFeedback(
+    parseResult.data.queryStateFeedback as LayoutNodeFeedbackFields['queryStateFeedback'],
+    `${path}.queryStateFeedback`,
+    pageId,
+  )
 
   if (feedbackResult.status === 'error') {
     return feedbackResult
@@ -507,7 +545,11 @@ function validateListNode(
     return mapLeafNodeIssue(pageId, path, parseResult.error.issues[0]?.path ?? [])
   }
 
-  const feedbackResult = validateQueryStateFeedback(parseResult.data.queryStateFeedback, `${path}.queryStateFeedback`, pageId)
+  const feedbackResult = validateQueryStateFeedback(
+    parseResult.data.queryStateFeedback as LayoutNodeFeedbackFields['queryStateFeedback'],
+    `${path}.queryStateFeedback`,
+    pageId,
+  )
 
   if (feedbackResult.status === 'error') {
     return feedbackResult
@@ -575,16 +617,26 @@ function validateButtonNode(
     return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props".`)
   }
 
-  const feedbackResult = validateQueryStateFeedback(parseResult.data.queryStateFeedback, `${path}.queryStateFeedback`, pageId)
+  const feedbackResult = validateQueryStateFeedback(
+    parseResult.data.queryStateFeedback as LayoutNodeFeedbackFields['queryStateFeedback'],
+    `${path}.queryStateFeedback`,
+    pageId,
+  )
 
   if (feedbackResult.status === 'error') {
     return feedbackResult
   }
 
-  const actionResult = validateButtonAction(parseResult.data.props.action, `${path}.props.action`, pageId)
+  let action: RuntimeUiAction | undefined
 
-  if (actionResult.status === 'error') {
-    return actionResult
+  if (parseResult.data.props.action !== undefined) {
+    const actionResult = validateRuntimeUiAction(parseResult.data.props.action, `${path}.props.action`, pageId)
+
+    if (actionResult.status === 'error') {
+      return actionResult
+    }
+
+    action = actionResult.action
   }
 
   return {
@@ -595,22 +647,27 @@ function validateButtonNode(
       queryStateFeedback: feedbackResult.queryStateFeedback,
       props: {
         label: parseResult.data.props.label,
-        action: actionResult.action,
+        action,
       },
     },
   }
 }
 
-function validateButtonAction(
+function validateRuntimeUiAction(
   rawAction: unknown,
   path: string,
   pageId: string,
-): { status: 'ready'; action: ButtonAction } | { status: 'error'; error: RuntimeConfigError } {
+): { status: 'ready'; action: RuntimeUiAction } | { status: 'error'; error: RuntimeConfigError } {
   if (!isRecord(rawAction)) {
     return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}".`)
   }
 
-  if (rawAction.type !== 'navigateTo' && rawAction.type !== 'goBack') {
+  if (
+    rawAction.type !== 'navigateTo' &&
+    rawAction.type !== 'goBack' &&
+    rawAction.type !== 'executeOperation' &&
+    rawAction.type !== 'resetForm'
+  ) {
     return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.type".`)
   }
 
@@ -629,13 +686,43 @@ function validateButtonAction(
     }
   }
 
-  const parseResult = navigateToButtonActionSchema.safeParse(rawAction)
+  if (rawAction.type === 'navigateTo') {
+    const parseResult = navigateToButtonActionSchema.safeParse(rawAction)
 
-  if (!parseResult.success) {
-    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.pageId".`)
+    if (!parseResult.success) {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.pageId".`)
+    }
+
+    const action: NavigateToButtonAction = parseResult.data
+
+    return {
+      status: 'ready',
+      action,
+    }
   }
 
-  const action: NavigateToButtonAction = parseResult.data
+  if (rawAction.type === 'executeOperation') {
+    const executeOperationParseResult = executeOperationRuntimeUiActionSchema.safeParse(rawAction)
+
+    if (!executeOperationParseResult.success) {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.operationName".`)
+    }
+
+    const action: ExecuteOperationRuntimeUiAction = executeOperationParseResult.data
+
+    return {
+      status: 'ready',
+      action,
+    }
+  }
+
+  const resetFormParseResult = resetFormRuntimeUiActionSchema.safeParse(rawAction)
+
+  if (!resetFormParseResult.success) {
+    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.formId".`)
+  }
+
+  const action: ResetFormRuntimeUiAction = resetFormParseResult.data
 
   return {
     status: 'ready',
@@ -699,6 +786,186 @@ function validateQueryStateFeedback(
   }
 }
 
+function validateFormNode(
+  rawNode: Record<string, unknown>,
+  path: string,
+  pageId: string,
+): { status: 'ready'; node: FormLayoutNode } | { status: 'error'; error: RuntimeConfigError } {
+  const parseResult = formNodeSchema.safeParse(rawNode)
+
+  if (!parseResult.success) {
+    const issue = parseResult.error.issues[0]
+    const feedbackIssue = mapQueryStateFeedbackIssue(pageId, path, issue)
+
+    if (feedbackIssue) {
+      return feedbackIssue
+    }
+
+    const issuePath = issue?.path ?? []
+
+    if (issuePath[0] === 'id') {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.id".`)
+    }
+
+    if (issuePath[0] === 'submitAction') {
+      const field = issuePath[1]
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.submitAction${field ? `.${String(field)}` : ''}".`)
+    }
+
+    if (issuePath[0] === 'resetOnSuccess') {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.resetOnSuccess".`)
+    }
+
+    if (issuePath[0] === 'children') {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.children".`)
+    }
+
+    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}".`)
+  }
+
+  const feedbackResult = validateQueryStateFeedback(
+    parseResult.data.queryStateFeedback as LayoutNodeFeedbackFields['queryStateFeedback'],
+    `${path}.queryStateFeedback`,
+    pageId,
+  )
+
+  if (feedbackResult.status === 'error') {
+    return feedbackResult
+  }
+
+  let children: LayoutNodeCollection | undefined
+
+  if (parseResult.data.children !== undefined) {
+    const childrenResult = validateLayoutCollection(parseResult.data.children, `${path}.children`, pageId)
+
+    if (childrenResult.status === 'error') {
+      return childrenResult
+    }
+
+    children = childrenResult.nodes
+  }
+
+  return {
+    status: 'ready',
+    node: {
+      type: 'form',
+      id: parseResult.data.id,
+      queryStateFeedback: feedbackResult.queryStateFeedback,
+      submitAction: parseResult.data.submitAction,
+      resetOnSuccess: parseResult.data.resetOnSuccess,
+      children,
+    },
+  }
+}
+
+function validateInputNode(
+  rawNode: Record<string, unknown>,
+  path: string,
+  pageId: string,
+): { status: 'ready'; node: InputLayoutNode } | { status: 'error'; error: RuntimeConfigError } {
+  const parseResult = inputNodeSchema.safeParse(rawNode)
+
+  if (!parseResult.success) {
+    const feedbackIssue = mapQueryStateFeedbackIssue(pageId, path, parseResult.error.issues[0])
+
+    if (feedbackIssue) {
+      return feedbackIssue
+    }
+
+    return mapLeafNodeIssue(pageId, path, parseResult.error.issues[0]?.path ?? [])
+  }
+
+  const feedbackResult = validateQueryStateFeedback(
+    parseResult.data.queryStateFeedback as LayoutNodeFeedbackFields['queryStateFeedback'],
+    `${path}.queryStateFeedback`,
+    pageId,
+  )
+
+  if (feedbackResult.status === 'error') {
+    return feedbackResult
+  }
+
+  return {
+    status: 'ready',
+    node: {
+      ...parseResult.data,
+      queryStateFeedback: feedbackResult.queryStateFeedback,
+    },
+  }
+}
+
+function validateTextareaNode(
+  rawNode: Record<string, unknown>,
+  path: string,
+  pageId: string,
+): { status: 'ready'; node: TextareaLayoutNode } | { status: 'error'; error: RuntimeConfigError } {
+  const parseResult = textareaNodeSchema.safeParse(rawNode)
+
+  if (!parseResult.success) {
+    const feedbackIssue = mapQueryStateFeedbackIssue(pageId, path, parseResult.error.issues[0])
+
+    if (feedbackIssue) {
+      return feedbackIssue
+    }
+
+    return mapLeafNodeIssue(pageId, path, parseResult.error.issues[0]?.path ?? [])
+  }
+
+  const feedbackResult = validateQueryStateFeedback(
+    parseResult.data.queryStateFeedback as LayoutNodeFeedbackFields['queryStateFeedback'],
+    `${path}.queryStateFeedback`,
+    pageId,
+  )
+
+  if (feedbackResult.status === 'error') {
+    return feedbackResult
+  }
+
+  return {
+    status: 'ready',
+    node: {
+      ...parseResult.data,
+      queryStateFeedback: feedbackResult.queryStateFeedback,
+    },
+  }
+}
+
+function validateSelectNode(
+  rawNode: Record<string, unknown>,
+  path: string,
+  pageId: string,
+): { status: 'ready'; node: SelectLayoutNode } | { status: 'error'; error: RuntimeConfigError } {
+  const parseResult = selectNodeSchema.safeParse(rawNode)
+
+  if (!parseResult.success) {
+    const feedbackIssue = mapQueryStateFeedbackIssue(pageId, path, parseResult.error.issues[0])
+
+    if (feedbackIssue) {
+      return feedbackIssue
+    }
+
+    return mapLeafNodeIssue(pageId, path, parseResult.error.issues[0]?.path ?? [])
+  }
+
+  const feedbackResult = validateQueryStateFeedback(
+    parseResult.data.queryStateFeedback as LayoutNodeFeedbackFields['queryStateFeedback'],
+    `${path}.queryStateFeedback`,
+    pageId,
+  )
+
+  if (feedbackResult.status === 'error') {
+    return feedbackResult
+  }
+
+  return {
+    status: 'ready',
+    node: {
+      ...parseResult.data,
+      queryStateFeedback: feedbackResult.queryStateFeedback,
+    },
+  }
+}
+
 function mapQueryStateFeedbackIssue(
   pageId: string,
   path: string,
@@ -710,7 +977,7 @@ function mapQueryStateFeedbackIssue(
     return null
   }
 
-  if (issue.code === 'unrecognized_keys' && issuePath[1] === 'states' && issue.keys && issue.keys.length > 0) {
+  if (issue?.code === 'unrecognized_keys' && issuePath[1] === 'states' && issue?.keys && issue.keys.length > 0) {
     return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.queryStateFeedback.states.${issue.keys[0]}".`)
   }
 
@@ -718,17 +985,151 @@ function mapQueryStateFeedbackIssue(
   return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}${formattedIssuePath}".`)
 }
 
-function validateNavigationTargets(
-  pages: RuntimePageConfig[],
+function validateActionTargets(
+  config: RuntimeConfig,
 ): { status: 'error'; error: RuntimeConfigError } | null {
-  const pageIds = new Set(pages.map((page) => page.id))
+  const pageIds = new Set(config.pages.map((page) => page.id))
+  const operationNames = new Set(Object.keys(config.api))
 
-  for (const page of pages) {
-    const invalidTarget = findInvalidNavigationTarget(page.layout, 'layout', pageIds)
+  for (const page of config.pages) {
+    const invalidTarget = findInvalidActionTarget(page.layout, 'layout', pageIds, operationNames)
 
-    if (invalidTarget) {
+    if (!invalidTarget) {
+      continue
+    }
+
+    if (invalidTarget.type === 'navigateTo') {
       return invalidLayout(
-        `Page "${page.id}" has an invalid layout at "${invalidTarget.path}.pageId": unknown page "${invalidTarget.pageId}".`,
+        `Page "${page.id}" has an invalid layout at "${invalidTarget.path}.pageId": unknown page "${invalidTarget.target}".`,
+      )
+    }
+
+    return invalidLayout(
+      `Page "${page.id}" has an invalid layout at "${invalidTarget.path}.operationName": unknown operation "${invalidTarget.target}".`,
+    )
+  }
+
+  return null
+}
+
+function validateFormSemantics(
+  config: RuntimeConfig,
+): { status: 'error'; error: RuntimeConfigError } | null {
+  const formIds = new Set<string>()
+  const operationNames = new Set(Object.keys(config.api))
+
+  for (const page of config.pages) {
+    const error = validateFormNodesInCollection(page.layout, 'layout', page.id, {
+      inForm: false,
+      pageId: page.id,
+      formIds,
+      currentFormId: null,
+      fieldIds: null,
+      operationNames,
+    })
+
+    if (error) {
+      return error
+    }
+  }
+
+  return null
+}
+
+interface FormValidationContext {
+  inForm: boolean
+  pageId: string
+  formIds: Set<string>
+  currentFormId: string | null
+  fieldIds: Set<string> | null
+  operationNames: ReadonlySet<string>
+}
+
+function validateFormNodesInCollection(
+  nodes: LayoutNodeCollection,
+  path: string,
+  pageId: string,
+  context: FormValidationContext,
+): { status: 'error'; error: RuntimeConfigError } | null {
+  for (let index = 0; index < nodes.length; index += 1) {
+    const node = nodes[index]
+    const nodePath = `${path}[${index}]`
+    const fallbackError = validateFallbackCollections(node, nodePath, (fallbackNodes, fallbackPath) =>
+      validateFormNodesInCollection(fallbackNodes, fallbackPath, pageId, context),
+    )
+
+    if (fallbackError) {
+      return fallbackError
+    }
+
+    if (node.type === 'form') {
+      if (context.formIds.has(node.id)) {
+        return invalidLayout(`Page "${pageId}" has an invalid layout at "${nodePath}.id": duplicate form id "${node.id}".`)
+      }
+
+      context.formIds.add(node.id)
+
+      if (node.resetOnSuccess === true && node.submitAction === undefined) {
+        return invalidLayout(`Page "${pageId}" has an invalid layout at "${nodePath}.resetOnSuccess": resetOnSuccess requires submitAction.`)
+      }
+
+      if (node.submitAction && !context.operationNames.has(node.submitAction.operationName)) {
+        return invalidLayout(
+          `Page "${pageId}" has an invalid layout at "${nodePath}.submitAction.operationName": unknown operation "${node.submitAction.operationName}".`,
+        )
+      }
+
+      const childrenError = validateFormChildren(node.children ?? [], `${nodePath}.children`, pageId, {
+        ...context,
+        inForm: true,
+        currentFormId: node.id,
+        fieldIds: new Set<string>(),
+      })
+
+      if (childrenError) {
+        return childrenError
+      }
+
+      continue
+    }
+
+    if (node.type === 'container' && node.children) {
+      const childrenError = validateFormNodesInCollection(node.children, `${nodePath}.children`, pageId, context)
+
+      if (childrenError) {
+        return childrenError
+      }
+
+      continue
+    }
+
+    if (node.type === 'input' || node.type === 'textarea' || node.type === 'select') {
+      if (!context.inForm || !context.currentFormId || !context.fieldIds) {
+        return invalidLayout(`Page "${pageId}" has an invalid layout at "${nodePath}": ${node.type} nodes must be descendants of a form node.`)
+      }
+
+      if (context.fieldIds.has(node.props.fieldId)) {
+        return invalidLayout(
+          `Page "${pageId}" has an invalid layout at "${nodePath}.props.fieldId": duplicate fieldId "${node.props.fieldId}" in form "${context.currentFormId}".`,
+        )
+      }
+
+      context.fieldIds.add(node.props.fieldId)
+
+      if (node.type === 'select') {
+        const selectItemsIssue = validateSelectItems(node.props.items, `${nodePath}.props.items`, pageId)
+
+        if (selectItemsIssue) {
+          return selectItemsIssue
+        }
+      }
+
+      continue
+    }
+
+    if (node.type === 'button' && node.props.action === undefined && !context.inForm) {
+      return invalidLayout(
+        `Page "${pageId}" has an invalid layout at "${nodePath}": button nodes without an action must be descendants of a form node.`,
       )
     }
   }
@@ -736,28 +1137,200 @@ function validateNavigationTargets(
   return null
 }
 
-function findInvalidNavigationTarget(
+function validateFormChildren(
   nodes: LayoutNodeCollection,
   path: string,
-  pageIds: ReadonlySet<string>,
-): { path: string; pageId: string } | null {
+  pageId: string,
+  context: FormValidationContext,
+): { status: 'error'; error: RuntimeConfigError } | null {
   for (let index = 0; index < nodes.length; index += 1) {
     const node = nodes[index]
     const nodePath = `${path}[${index}]`
+    const fallbackError = validateFallbackCollections(node, nodePath, (fallbackNodes, fallbackPath) =>
+      validateFormChildren(fallbackNodes, fallbackPath, pageId, context),
+    )
 
-    if (node.type === 'button' && node.props.action.type === 'navigateTo' && !pageIds.has(node.props.action.pageId)) {
-      return {
-        path: `${nodePath}.props.action`,
-        pageId: node.props.action.pageId,
-      }
+    if (fallbackError) {
+      return fallbackError
+    }
+
+    if (
+      node.type !== 'input' &&
+      node.type !== 'textarea' &&
+      node.type !== 'select' &&
+      node.type !== 'button' &&
+      node.type !== 'heading' &&
+      node.type !== 'paragraph' &&
+      node.type !== 'container'
+    ) {
+      return invalidLayout(
+        `Page "${pageId}" has an invalid layout at "${nodePath}": form nodes only accept input, textarea, select, button, heading, paragraph and container descendants.`,
+      )
     }
 
     if (node.type === 'container' && node.children) {
-      const childResult = findInvalidNavigationTarget(node.children, `${nodePath}.children`, pageIds)
+      const childrenError = validateFormChildren(node.children, `${nodePath}.children`, pageId, context)
+
+      if (childrenError) {
+        return childrenError
+      }
+
+      continue
+    }
+
+    if (node.type === 'input' || node.type === 'textarea' || node.type === 'select') {
+      if (!context.currentFormId || !context.fieldIds) {
+        return invalidLayout(`Page "${pageId}" has an invalid layout at "${nodePath}": ${node.type} nodes must be descendants of a form node.`)
+      }
+
+      if (context.fieldIds.has(node.props.fieldId)) {
+        return invalidLayout(
+          `Page "${pageId}" has an invalid layout at "${nodePath}.props.fieldId": duplicate fieldId "${node.props.fieldId}" in form "${context.currentFormId}".`,
+        )
+      }
+
+      context.fieldIds.add(node.props.fieldId)
+
+      if (node.type === 'select') {
+        const selectItemsIssue = validateSelectItems(node.props.items, `${nodePath}.props.items`, pageId)
+
+        if (selectItemsIssue) {
+          return selectItemsIssue
+        }
+      }
+    }
+  }
+
+  return null
+}
+
+function validateSelectItems(
+  items: Array<{ value: string | number }>,
+  path: string,
+  pageId: string,
+): { status: 'error'; error: RuntimeConfigError } | null {
+  let valueType: 'string' | 'number' | null = null
+
+  for (const item of items) {
+    if (item.value === '') {
+      continue
+    }
+
+    const currentType = typeof item.value as 'string' | 'number'
+
+    if (valueType === null) {
+      valueType = currentType
+      continue
+    }
+
+    if (valueType !== currentType) {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}": select item values must all be strings or all be numbers.`)
+    }
+  }
+
+  return null
+}
+
+function findInvalidActionTarget(
+  nodes: LayoutNodeCollection,
+  path: string,
+  pageIds: ReadonlySet<string>,
+  operationNames: ReadonlySet<string>,
+): { path: string; type: 'navigateTo' | 'executeOperation'; target: string } | null {
+  for (let index = 0; index < nodes.length; index += 1) {
+    const node = nodes[index]
+    const nodePath = `${path}[${index}]`
+    const fallbackTarget = findInvalidTargetInFallbackCollections(node, nodePath, pageIds, operationNames)
+
+    if (fallbackTarget) {
+      return fallbackTarget
+    }
+
+    if (
+      node.type === 'button' &&
+      node.props.action?.type === 'navigateTo' &&
+      !pageIds.has(node.props.action.pageId)
+    ) {
+      return {
+        path: `${nodePath}.props.action`,
+        type: 'navigateTo',
+        target: node.props.action.pageId,
+      }
+    }
+
+    if (
+      node.type === 'button' &&
+      node.props.action?.type === 'executeOperation' &&
+      !operationNames.has(node.props.action.operationName)
+    ) {
+      return {
+        path: `${nodePath}.props.action`,
+        type: 'executeOperation',
+        target: node.props.action.operationName,
+      }
+    }
+
+    if ((node.type === 'container' || node.type === 'form') && node.children) {
+      const childResult = findInvalidActionTarget(node.children, `${nodePath}.children`, pageIds, operationNames)
 
       if (childResult) {
         return childResult
       }
+    }
+  }
+
+  return null
+}
+
+function validateFallbackCollections<TError>(
+  node: LayoutNode,
+  nodePath: string,
+  validateCollection: (nodes: LayoutNodeCollection, path: string) => TError | null,
+) {
+  if (!node.queryStateFeedback) {
+    return null
+  }
+
+  for (const [stateName, rule] of Object.entries(node.queryStateFeedback.states ?? {})) {
+    if (!rule || rule.mode !== 'fallback') {
+      continue
+    }
+
+    const fallbackPath = `${nodePath}.queryStateFeedback.states.${stateName}.fallback`
+    const error = validateCollection([...rule.fallback], fallbackPath)
+
+    if (error) {
+      return error
+    }
+  }
+
+  return null
+}
+
+function findInvalidTargetInFallbackCollections(
+  node: LayoutNode,
+  nodePath: string,
+  pageIds: ReadonlySet<string>,
+  operationNames: ReadonlySet<string>,
+) {
+  if (!node.queryStateFeedback) {
+    return null
+  }
+
+  for (const [stateName, rule] of Object.entries(node.queryStateFeedback.states ?? {})) {
+    if (!rule || rule.mode !== 'fallback') {
+      continue
+    }
+
+    const childResult = findInvalidActionTarget(
+      [...rule.fallback],
+      `${nodePath}.queryStateFeedback.states.${stateName}.fallback`,
+      pageIds,
+      operationNames,
+    )
+
+    if (childResult) {
+      return childResult
     }
   }
 
