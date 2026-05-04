@@ -99,7 +99,7 @@ Reglas estructurales adicionales del catálogo actual:
 ## `queryStateFeedback`
 Cualquier nodo soportado hoy puede declarar opcionalmente:
 - `query`: nombre no vacío de la query observada
-- `states`: mapa opcional con claves limitadas a `loading`, `error`, `empty` y `success`
+- `states`: mapa opcional con claves limitadas a `idle`, `loading`, `error`, `empty` y `success`
 
 Cada regla de `states` admite exactamente uno de estos modos:
 - `mode: show`
@@ -110,9 +110,10 @@ Reglas funcionales vigentes:
 - `queryStateFeedback` es transversal a `container`, `heading`, `paragraph`, `list`, `button`, `form`, `input`, `textarea` y `select`.
 - `fallback` reutiliza el mismo catálogo de nodos soportados por `layout`; no introduce un dialecto paralelo ni un wrapper sintético obligatorio.
 - un fallback puede contener varios nodos hermanos y conserva su orden declarado.
-- si un estado visible no tiene regla explícita, el runtime aplica `success -> show` y `loading/error/empty -> hide`.
-- `idle` se proyecta como `loading` para esta capacidad.
-- una query ausente del store también se interpreta como `loading`.
+- si un estado visible no tiene regla explícita, el runtime aplica `success -> show` y `idle/loading/error/empty -> hide`.
+- `idle` es un estado visible soportado de primera clase para esta capacidad.
+- una query ausente del store también se interpreta como `idle`.
+- `loading` representa solo una ejecución real en curso; no cubre el estado previo a la primera ejecución.
 
 ## Resolución inicial
 - El runtime valida toda la configuración antes de renderizar.
@@ -153,7 +154,7 @@ Reglas funcionales vigentes:
 - La validación comprueba estructura general, shape de `api`, `pages`, `preloads`, colección `layout` y shape de los nodos soportados.
 - Si `layout` no es un array válido, el arranque falla con un error explícito sobre la ruta afectada.
 - Si aparece un nodo no soportado en la raíz o dentro de `children`, el runtime lo trata como error de configuración y no lo reinterpreta.
-- Si `queryStateFeedback.states` contiene una clave fuera de `loading | error | empty | success`, el config completo se rechaza con error de layout sobre esa ruta exacta.
+- Si `queryStateFeedback.states` contiene una clave fuera de `idle | loading | error | empty | success`, el config completo se rechaza con error de layout sobre esa ruta exacta.
 - Si una regla usa `mode: fallback` sin `fallback`, el config completo se rechaza antes del render.
 - Si cualquier nodo dentro de `queryStateFeedback.states.{estado}.fallback` es inválido o usa un `type` no soportado, el config completo se rechaza antes del render sobre la ruta afectada.
 - Si `initialPage` no existe dentro de `pages`, el runtime sigue fallando antes del render con `initial-page-not-found`.

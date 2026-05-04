@@ -1,5 +1,7 @@
 # Test Plan: Declarative query state feedback
 
+> Nota histórica: este plan de tests corresponde a la semántica original de `0013`. Tras `0016-query-state-feedback-idle-state`, `idle` dejó de reutilizar la rama `loading` y pasó a validarse como estado visible propio.
+
 ## Objetivo
 Validar que el runtime puede declarar feedback visual por nodo ligado al estado de una query concreta, derivar uniformemente `loading | error | empty | success`, renderizar fallbacks locales sin lógica imperativa externa y mantener el gate global de cobertura sin romper configuraciones previas.
 

@@ -15,7 +15,7 @@ Renderizar el runtime a partir de una configuración JSON validada, apoyado ya e
 - Ejecuta operaciones remotas declaradas en `api` mediante una capa dedicada en `src/queries/` y refleja sus resultados en `queries.{operationName}`.
 - Permite que cada página declare `preloads` y los dispare automáticamente al entrar, con un estado agregado `pageEntry` latest-only para la tanda activa.
 - Expone una capa común de acciones UI del runtime para que los nodos interactivos deleguen navegación, ejecución remota y reset de formularios sin lógica imperativa específica en el propio nodo visual.
-- Permite que cualquier nodo soportado declare `queryStateFeedback` para mostrarse, ocultarse o sustituirse por un fallback local según `loading | error | empty | success`.
+- Permite que cualquier nodo soportado declare `queryStateFeedback` para mostrarse, ocultarse o sustituirse por un fallback local según `idle | loading | error | empty | success`.
 - Renderiza formularios declarativos reales con `form`, `input`, `textarea` y `select`, inicializa su estado lazy en `forms.{formId}.{fieldId}`, valida `required` solo sobre campos visibles y soporta submit con `executeOperation`.
 - Implementa la presentación visible del runtime con utilidades de `Tailwind CSS`, sin abrir todavía una capa de theming definida.
 
@@ -82,7 +82,7 @@ Reglas funcionales vigentes:
 - `src/runtime/runtime-references/` centraliza parsing, resolución y diagnóstico de referencias string del runtime.
 - `src/queries/` concentra la construcción de requests, la ejecución contra `fetch` y la normalización de errores remotos.
 - `src/runtime/runtime-state/` concentra el provider, reducer, tipos, selectors y acciones del estado compartido del runtime.
-- `src/runtime/runtime-query-state-feedback.ts` concentra la derivación de estado visible de query, la heurística común de `empty` y la resolución de la respuesta efectiva `show | hide | fallback`.
+- `src/runtime/runtime-query-state-feedback.ts` concentra la derivación de estado visible de query, incluida la distinción explícita entre `idle` y `loading`, la heurística común de `empty` y la resolución de la respuesta efectiva `show | hide | fallback`.
 - `src/runtime/nodes/` contiene una pieza concreta por nodo soportado hoy: `container`, `heading`, `paragraph`, `list`, `button`, `form`, `input`, `textarea` y `select`.
 
 ## Referencias dinámicas ya activas

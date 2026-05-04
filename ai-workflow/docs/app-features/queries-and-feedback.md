@@ -1,7 +1,7 @@
 # Queries y feedback
 
 ## Objetivo
-Coordinar llamadas API declaradas y exponer su estado para que la UI pueda reaccionar de forma textual y visual con carga, error, vacío o éxito.
+Coordinar llamadas API declaradas y exponer su estado para que la UI pueda reaccionar de forma textual y visual antes de la primera ejecución, durante la carga real, ante error, vacío o éxito.
 
 ## Modelo de estado
 Cada query expone en v1:
@@ -81,19 +81,21 @@ La base de estado y la red real ya están conectadas para ejecución por nombre,
 El layout ya puede declarar feedback visual local por nodo mediante `queryStateFeedback`, usando como fuente única de verdad el dominio compartido `queries.{queryName}`.
 
 Contrato funcional estable:
-- estados visibles soportados: `loading`, `error`, `empty` y `success`
-- el runtime proyecta `idle` como `loading`
-- una query ausente del store también se trata como `loading`
+- estados visibles soportados: `idle`, `loading`, `error`, `empty` y `success`
+- `idle` representa una query no lanzada todavía
+- una query ausente del store también se trata como `idle`
 - las respuestas declarables por estado son `show`, `hide` y `fallback`
 - `fallback` reutiliza una colección local `LayoutNode[]`, con uno o varios nodos hermanos
 
 Semántica estable:
 - si un nodo no declara `queryStateFeedback`, conserva su render normal sin cambios observables
-- si declara el bloque pero omite un estado concreto, los defaults son `success -> show` y `loading/error/empty -> hide`
+- si declara el bloque pero omite un estado concreto, los defaults son `success -> show` y `idle/loading/error/empty -> hide`
 - el renderer central decide si muestra el nodo original, lo oculta o lo sustituye por el fallback local
 - la misma semántica visible se reutiliza también dentro del submit de formularios para decidir qué campos `required` cuentan como visibles
 - varios nodos pueden reaccionar de forma distinta a la misma query sin colisionar entre sí
+- `loading` representa solo una ejecución real en curso, incluso cuando existe `data` previo conservado
 - una recarga que vuelve a `loading` con `data` previo conservado reactiva igualmente la rama `loading`
+- tras una respuesta `success` vacía, el runtime entra en `empty` y no vuelve a tratar ese caso como `idle`
 
 Heurística común de `empty`:
 - `null` y `undefined`
@@ -109,6 +111,7 @@ No se consideran `empty`:
 - objetos con claves
 
 ## Casos funcionales soportados hoy
+- mostrar un mensaje tipo “haz una búsqueda” antes de la primera ejecución de una query
 - mostrar placeholder o contenido alternativo mientras carga una query
 - mostrar un fallback local cuando una query falla
 - mostrar un mensaje de “sin resultados” cuando la query resuelve vacía

@@ -1,5 +1,7 @@
 # Tasks: Declarative query state feedback
 
+> Nota histórica: estas tareas reflejan el contrato de implementación original de `0013`. La semántica vigente fue reemplazada por `0016-query-state-feedback-idle-state`, que separa `idle` de `loading`.
+
 ## T0013-01
 
 ### Estado

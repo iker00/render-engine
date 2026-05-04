@@ -49,6 +49,8 @@ Semántica estable vigente:
 - Los errores viven solo en `forms.{formId}.{fieldId}.error`.
 - Cuando un campo con error vuelve a un valor válido, el error se limpia al cambiar sin exigir un nuevo submit.
 - Un campo oculto por `queryStateFeedback` conserva su valor y su error, pero no bloquea el submit mientras siga oculto.
+- La visibilidad efectiva de esos campos reutiliza exactamente la misma derivación `idle | loading | error | empty | success` que usa el renderer central.
+- Un campo oculto por `queryStateFeedback.states.idle` no bloquea el submit antes de la primera ejecución de la query observada y vuelve a validarse cuando la query abandona `idle`.
 
 ## Submit y reseteo
 - `form` renderiza un `<form>` real y maneja submit nativo.

@@ -25,11 +25,12 @@
 - La tanda agregada de `preloads` ya usa semántica latest-only para no dejar que cierres tardíos de entradas antiguas sobrescriban la entrada activa más reciente.
 - `button.props.action` ya reutiliza un contrato común de acciones UI con `navigateTo`, `goBack`, `executeOperation` y `resetForm`.
 - La interpretación de acciones UI ya está concentrada en una capa transversal del runtime y no en ramas imperativas dispersas dentro del nodo visual `button`.
-- Cualquier nodo soportado ya puede declarar `queryStateFeedback` para reaccionar al estado visible `loading | error | empty | success` de una query concreta con `show`, `hide` o un fallback local reutilizando el mismo catálogo declarativo de nodos.
-- La semántica visible de query ya está centralizada: `idle` y query ausente se proyectan como `loading`; `null`, `undefined`, `''`, `[]` y `{}` se tratan como `empty`; `0` y `false` siguen la rama `success`.
+- Cualquier nodo soportado ya puede declarar `queryStateFeedback` para reaccionar al estado visible `idle | loading | error | empty | success` de una query concreta con `show`, `hide` o un fallback local reutilizando el mismo catálogo declarativo de nodos.
+- La semántica visible de query ya está centralizada: `idle` representa una query no lanzada todavía y también cubre la query ausente del store; `loading` representa solo una ejecución real en curso; `null`, `undefined`, `''`, `[]` y `{}` se tratan como `empty`; `0` y `false` siguen la rama `success`.
 - Catálogo declarativo de formularios ya operativo con `form`, `input`, `textarea` y `select`, incluyendo herencia de `formId` por descendencia y render de `<form>` real.
 - La inicialización de campos declarativos ya es lazy y reutiliza exclusivamente `forms.{formId}.{fieldId}`, con soporte para `defaultValue` literal o dinámico sin sobrescribir estado ya existente del usuario.
 - La validación declarativa `required` ya funciona a nivel de formulario, escribe errores solo en `forms.*` y excluye del bloqueo de submit a campos ocultos por `queryStateFeedback`.
+- Esa exclusión de campos ocultos reutiliza la misma semántica visible `idle | loading | error | empty | success` que usa el renderer del runtime.
 - El submit declarativo de formularios ya soporta `submitAction.type: executeOperation`, reusa `queries.{operationName}` como única superficie visible de loading/success/error y puede resetear por `resetOnSuccess`.
 - Aislamiento validado entre varias instancias del runtime y limpieza completa del estado al desmontar y remontar.
 - Manejo explícito de errores de configuración con diagnóstico visible en desarrollo y degradación silenciosa en producción para errores marcados como `development-only`.
@@ -64,6 +65,7 @@
 - Decimotercera feature del workflow cerrada para añadir feedback visual declarativo por nodo ligado al estado visible de queries.
 - Decimocuarta feature del workflow cerrada para introducir una base común de acciones UI reutilizable desde `button.props.action`, conectando navegación, ejecución remota y reset de formularios sin abrir todavía un sistema general de eventos.
 - Decimoquinta feature del workflow cerrada para introducir formularios declarativos reales con catálogo mínimo de campos, validación `required` y submit vía `executeOperation`.
+- Decimosexta feature del workflow cerrada para distinguir `idle` de `loading` en `queryStateFeedback`, tratar queries ausentes como `idle` y reutilizar esa misma semántica visible en renderer y formularios.
 
 ## Referencias
 

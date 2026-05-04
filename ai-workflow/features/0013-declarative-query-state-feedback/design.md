@@ -1,5 +1,7 @@
 # Design: Declarative query state feedback
 
+> Nota histórica: este diseño documenta la primera versión de `queryStateFeedback`. La semántica actual quedó actualizada en `0016-query-state-feedback-idle-state`: `idle` ya no se alinea visualmente con `loading`, sino que se trata como estado visible independiente.
+
 ## Contexto
 La feature `0010` ya dejó operativo el dominio compartido `queries.{queryName}` y la orquestación automática de `preloads`, mientras que `0012` consolidó la validación previa al render del contrato JSON con base `Zod`. El runtime actual ya puede:
 - ejecutar operaciones remotas declaradas por nombre
