@@ -1,6 +1,7 @@
 import type { SelectLayoutNode } from '../../config/runtime-config'
 import { useOptionalFormContext } from '../form-context'
 import { resolveFieldDefaultValue } from './form-layout-node'
+import { normalizeSelectFieldValue, resolveSelectCollectionItems } from '../runtime-collection-sources'
 import {
   getFieldControlClassName,
   getFieldErrorClassName,
@@ -25,17 +26,18 @@ export function SelectNode({ node }: SelectNodeProps) {
 
   const fieldState = selectFormFieldState(state, formContext.formId, node.props.fieldId)
   const defaultValue = resolveFieldDefaultValue(node, state)
+  const resolvedItems = resolveSelectCollectionItems(node.props.items, state)
   const value =
-    typeof fieldState?.value === 'string'
-      ? fieldState.value
+    typeof fieldState?.value === 'string' || typeof fieldState?.value === 'number'
+      ? normalizeSelectFieldValue(node.props.items, state, fieldState.value)
       : typeof defaultValue === 'string'
         ? defaultValue
         : ''
   const error = fieldState?.error ?? null
   const items =
-    value === '' && !node.props.items.some((item) => String(item.value) === '')
-      ? [{ label: '', value: '' }, ...node.props.items]
-      : node.props.items
+    value === '' && !resolvedItems.some((item) => item.value === '')
+      ? [{ label: '', value: '' }, ...resolvedItems]
+      : resolvedItems
 
   return (
     <label className={getFieldWrapperClassName()} data-layout-node="select">

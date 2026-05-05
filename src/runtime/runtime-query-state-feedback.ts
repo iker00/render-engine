@@ -22,7 +22,11 @@ export type ResolvedQueryStateFeedback =
     }
 
 export function deriveQueryVisibleState(queryState: RuntimeQueryState | null): RuntimeQueryVisibleState {
-  if (queryState === null || queryState.status === 'idle' || queryState.status === 'loading') {
+  if (queryState === null || queryState.status === 'idle') {
+    return 'idle'
+  }
+
+  if (queryState.status === 'loading') {
     return 'loading'
   }
 

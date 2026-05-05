@@ -289,6 +289,64 @@ function FormRuntimeFixture() {
   )
 }
 
+function DynamicSelectQueryFixture() {
+  const { initializeQuery, setQuerySuccess } = useRuntimeStateActions()
+
+  useEffect(() => {
+    initializeQuery('roleCatalog')
+    initializeQuery('visibilityQuery')
+  }, [initializeQuery])
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() =>
+          setQuerySuccess('roleCatalog', {
+            results: [
+              {
+                id: 'admin',
+                label: 'Admin',
+              },
+              {
+                id: 'editor',
+                label: 'Editor',
+              },
+            ],
+          })
+        }
+      >
+        Seed role catalog
+      </button>
+      <button
+        type="button"
+        onClick={() =>
+          setQuerySuccess('roleCatalog', {
+            results: [
+              {
+                id: 'viewer',
+                label: 'Viewer',
+              },
+            ],
+          })
+        }
+      >
+        Seed replacement role catalog
+      </button>
+      <button
+        type="button"
+        onClick={() =>
+          setQuerySuccess('visibilityQuery', {
+            ok: true,
+          })
+        }
+      >
+        Seed dynamic visibility success
+      </button>
+    </>
+  )
+}
+
 function RuntimeButtonResetSeed() {
   const { initializeForm, setFormFieldError, setFormFieldValue } = useRuntimeStateActions()
 
@@ -752,7 +810,7 @@ describe('Runtime shared state store', () => {
     expect(selectQueryReferenceValue(snapshot, 'searchUsers', 'status')).toBe('success')
     expect(selectQueryReferenceValue(snapshot, 'searchUsers', 'error')).toBeNull()
     expect(selectQueryVisibleState(snapshot, 'searchUsers')).toBe('success')
-    expect(selectQueryVisibleState(snapshot, 'missingQuery')).toBe('loading')
+    expect(selectQueryVisibleState(snapshot, 'missingQuery')).toBe('idle')
     expect(selectPageEntryState(snapshot)).toBe(snapshot.pageEntry)
   })
 
@@ -760,7 +818,7 @@ describe('Runtime shared state store', () => {
     {
       label: 'missing query state',
       queryState: null,
-      expected: 'loading',
+      expected: 'idle',
     },
     {
       label: 'idle query state',
@@ -769,7 +827,7 @@ describe('Runtime shared state store', () => {
         data: null,
         error: null,
       },
-      expected: 'loading',
+      expected: 'idle',
     },
     {
       label: 'loading query state with stale data',
@@ -896,13 +954,13 @@ describe('Runtime shared state store', () => {
     const feedback = {
       query: 'searchUsers',
       states: {
-        loading: {
+        idle: {
           mode: 'fallback',
           fallback: [
             {
               type: 'paragraph',
               props: {
-                text: 'Loading users...',
+                text: 'Run a search first',
               },
             },
           ],
@@ -920,16 +978,27 @@ describe('Runtime shared state store', () => {
         error: null,
       }),
     ).toEqual({
-      visibleState: 'loading',
+      visibleState: 'idle',
       mode: 'fallback',
       fallback: [
         {
           type: 'paragraph',
           props: {
-            text: 'Loading users...',
+            text: 'Run a search first',
           },
         },
       ],
+    })
+
+    expect(
+      resolveQueryStateFeedback(feedback, {
+        status: 'loading',
+        data: ['Ada'],
+        error: null,
+      }),
+    ).toEqual({
+      visibleState: 'loading',
+      mode: 'hide',
     })
 
     expect(
@@ -1336,6 +1405,84 @@ describe('Runtime shared state store', () => {
     expect(screen.getByTestId('runtime-state')).toHaveTextContent('"theme":{"value":""')
   })
 
+  it('applies dynamic select defaults only on first effective initialization and does not reinitialize when options arrive later', async () => {
+    const config: RuntimeConfig = {
+      api: {},
+      initialPage: 'home',
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'form',
+              id: 'profile-form',
+              children: [
+                {
+                  type: 'select',
+                  props: {
+                    fieldId: 'lateRole',
+                    label: 'Late role',
+                    defaultValue: 'editor',
+                    items: {
+                      source: 'queries.roleCatalog.data.results',
+                      label: 'label',
+                      value: 'id',
+                    },
+                  },
+                },
+                {
+                  type: 'select',
+                  queryStateFeedback: {
+                    query: 'visibilityQuery',
+                    states: {
+                      idle: {
+                        mode: 'hide',
+                      },
+                      success: {
+                        mode: 'show',
+                      },
+                    },
+                  },
+                  props: {
+                    fieldId: 'visibleRole',
+                    label: 'Visible role',
+                    defaultValue: 'editor',
+                    items: {
+                      source: 'queries.roleCatalog.data.results',
+                      label: 'label',
+                      value: 'id',
+                    },
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    }
+
+    render(
+      <RuntimeStateProvider config={config}>
+        <DynamicSelectQueryFixture />
+        <RuntimePage />
+        <RuntimeStateSnapshot testId="runtime-state" />
+      </RuntimeStateProvider>,
+    )
+
+    expect(screen.getByRole('combobox', { name: 'Late role' })).toHaveValue('')
+    expect(screen.queryByRole('combobox', { name: 'Visible role' })).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Seed role catalog' }))
+
+    expect(screen.getByRole('combobox', { name: 'Late role' })).toHaveValue('')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Seed dynamic visibility success' }))
+
+    await waitFor(() => expect(screen.getByRole('combobox', { name: 'Visible role' })).toHaveValue('editor'))
+    expect(screen.getByTestId('runtime-state')).toHaveTextContent('"lateRole":{"value":"","error":null')
+    expect(screen.getByTestId('runtime-state')).toHaveTextContent('"visibleRole":{"value":"editor","error":null')
+  })
+
   it('blocks submit for visible required fields, clears errors on valid change and ignores hidden required fields', async () => {
     const config: RuntimeConfig = {
       api: {},
@@ -1362,8 +1509,11 @@ describe('Runtime shared state store', () => {
                   queryStateFeedback: {
                     query: 'visibilityQuery',
                     states: {
-                      loading: {
+                      idle: {
                         mode: 'hide',
+                      },
+                      loading: {
+                        mode: 'show',
                       },
                       success: {
                         mode: 'show',
@@ -1412,16 +1562,188 @@ describe('Runtime shared state store', () => {
 
     await waitFor(() => expect(screen.queryByText('Required')).not.toBeInTheDocument())
 
+    fireEvent.click(screen.getByRole('button', { name: 'Set visibility loading' }))
+    fireEvent.submit(form!)
+
+    expect(screen.getByTestId('runtime-state')).toHaveTextContent('"role":{"value":"","error":"Required"')
+
     fireEvent.click(screen.getByRole('button', { name: 'Set visibility success' }))
     fireEvent.submit(form!)
 
     expect(screen.getByTestId('runtime-state')).toHaveTextContent('"role":{"value":"","error":"Required"')
+  })
 
-    fireEvent.click(screen.getByRole('button', { name: 'Set visibility loading' }))
-    fireEvent.submit(form!)
+  it('cleans a dynamic select value when its option disappears and submits the empty value', async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: {
+          'content-type': 'application/json',
+        },
+      }),
+    )
 
-    expect(screen.queryByRole('combobox', { name: 'Role' })).not.toBeInTheDocument()
-    expect(screen.getByTestId('runtime-state')).toHaveTextContent('"role":{"value":"","error":"Required"')
+    const config: RuntimeConfig = {
+      api: {
+        submitProfile: {
+          method: 'POST',
+          endpoint: '/api/profile',
+          body: {
+            role: 'forms.profileForm.role',
+          },
+        },
+      },
+      initialPage: 'home',
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'form',
+              id: 'profileForm',
+              submitAction: {
+                type: 'executeOperation',
+                operationName: 'submitProfile',
+              },
+              children: [
+                {
+                  type: 'select',
+                  props: {
+                    fieldId: 'role',
+                    label: 'Role',
+                    required: true,
+                    defaultValue: 'editor',
+                    items: {
+                      source: 'queries.roleCatalog.data.results',
+                      label: 'label',
+                      value: 'id',
+                    },
+                  },
+                },
+                {
+                  type: 'button',
+                  props: {
+                    label: 'Submit dynamic profile',
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    }
+
+    globalThis.fetch = fetchMock
+
+    render(
+      <RuntimeStateProvider config={config}>
+        <DynamicSelectQueryFixture />
+        <RuntimePage />
+        <RuntimeStateSnapshot testId="runtime-state" />
+      </RuntimeStateProvider>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Seed role catalog' }))
+
+    await waitFor(() => expect(screen.getByRole('combobox', { name: 'Role' })).toHaveValue(''))
+
+    fireEvent.change(screen.getByRole('combobox', { name: 'Role' }), { target: { value: 'editor' } })
+    expect(screen.getByTestId('runtime-state')).toHaveTextContent('"role":{"value":"editor"')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Seed replacement role catalog' }))
+
+    await waitFor(() => expect(screen.getByRole('combobox', { name: 'Role' })).toHaveValue(''))
+    expect(screen.getByTestId('runtime-state')).toHaveTextContent('"role":{"value":"","error":null')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Submit dynamic profile' }))
+
+    await waitFor(() => expect(screen.getByText('Required')).toBeInTheDocument())
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('submits the cleaned empty string after a dynamic select loses its selected option', async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: {
+          'content-type': 'application/json',
+        },
+      }),
+    )
+
+    const config: RuntimeConfig = {
+      api: {
+        submitProfile: {
+          method: 'POST',
+          endpoint: '/api/profile',
+          body: {
+            role: 'forms.profileForm.role',
+          },
+        },
+      },
+      initialPage: 'home',
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'form',
+              id: 'profileForm',
+              submitAction: {
+                type: 'executeOperation',
+                operationName: 'submitProfile',
+              },
+              children: [
+                {
+                  type: 'select',
+                  props: {
+                    fieldId: 'role',
+                    label: 'Role',
+                    defaultValue: 'editor',
+                    items: {
+                      source: 'queries.roleCatalog.data.results',
+                      label: 'label',
+                      value: 'id',
+                    },
+                  },
+                },
+                {
+                  type: 'button',
+                  props: {
+                    label: 'Submit cleaned dynamic profile',
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    }
+
+    globalThis.fetch = fetchMock
+
+    render(
+      <RuntimeStateProvider config={config}>
+        <DynamicSelectQueryFixture />
+        <RuntimePage />
+        <RuntimeStateSnapshot testId="runtime-state" />
+      </RuntimeStateProvider>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Seed role catalog' }))
+    fireEvent.change(screen.getByRole('combobox', { name: 'Role' }), { target: { value: 'editor' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Seed replacement role catalog' }))
+
+    await waitFor(() => expect(screen.getByRole('combobox', { name: 'Role' })).toHaveValue(''))
+
+    fireEvent.click(screen.getByRole('button', { name: 'Submit cleaned dynamic profile' }))
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+    expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({
+      body: JSON.stringify({
+        role: '',
+      }),
+    })
   })
 
   it('submits declarative forms with the latest field values and resets them after a successful submit', async () => {

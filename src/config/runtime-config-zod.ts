@@ -2,7 +2,7 @@ import { z } from 'zod'
 
 export const supportedNodeTypes = ['container', 'heading', 'paragraph', 'list', 'button', 'form', 'input', 'textarea', 'select'] as const
 export const supportedApiMethods = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'] as const
-export const supportedQueryStateFeedbackStates = ['loading', 'error', 'empty', 'success'] as const
+export const supportedQueryStateFeedbackStates = ['idle', 'loading', 'error', 'empty', 'success'] as const
 export const supportedInputTypes = ['text', 'email', 'password', 'search', 'tel', 'url'] as const
 
 const nonEmptyStringSchema = z.string().refine((value) => value.trim().length > 0)
@@ -67,6 +67,7 @@ const queryStateFeedbackRuleSchema = z.discriminatedUnion('mode', [
 
 const queryStateFeedbackStatesSchema = z
   .object({
+    idle: queryStateFeedbackRuleSchema.optional(),
     loading: queryStateFeedbackRuleSchema.optional(),
     error: queryStateFeedbackRuleSchema.optional(),
     empty: queryStateFeedbackRuleSchema.optional(),
@@ -131,7 +132,7 @@ export const listNodeSchema = z
     queryStateFeedback: queryStateFeedbackSchema.optional(),
     props: z
       .object({
-        items: z.array(z.string()),
+        items: z.unknown(),
       })
       .strip(),
   })
@@ -218,7 +219,7 @@ export const textareaNodeSchema = z
   })
   .strip()
 
-const selectItemSchema = z
+export const selectItemSchema = z
   .object({
     label: z.string(),
     value: z.union([z.string(), z.number()]),
@@ -231,7 +232,7 @@ export const selectNodeSchema = z
     queryStateFeedback: queryStateFeedbackSchema.optional(),
     props: formFieldNodePropsSchema
       .extend({
-        items: z.array(selectItemSchema),
+        items: z.unknown(),
       })
       .strip(),
   })

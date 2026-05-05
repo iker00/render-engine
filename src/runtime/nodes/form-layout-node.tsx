@@ -12,6 +12,7 @@ import { FormContextProvider } from '../form-context'
 import { isLayoutNodeVisible } from '../runtime-query-state-feedback'
 import { resolveRuntimeValue } from '../runtime-references/runtime-reference-resolver'
 import { getFormNodeClassName } from '../runtime-node-styling'
+import { normalizeSelectFieldValue } from '../runtime-collection-sources'
 import { useRuntimeState, useRuntimeStateActions } from '../runtime-state/runtime-state-provider'
 import { selectFormFieldState } from '../runtime-state/runtime-state-selectors'
 
@@ -31,7 +32,7 @@ interface ResolvedFormFieldDefinition {
 
 export function FormNode({ node, children }: FormNodeProps) {
   const state = useRuntimeState()
-  const { executeQueryOperation, initializeForm, readRuntimeState, resetForm, setFormFieldError } =
+  const { executeQueryOperation, initializeForm, readRuntimeState, resetForm, setFormFieldError, setFormFieldValue } =
     useRuntimeStateActions()
 
   const fieldDefinitions = useMemo(
@@ -65,6 +66,26 @@ export function FormNode({ node, children }: FormNodeProps) {
       ),
     )
   }, [initializeForm, missingFieldDefinitions, node.id])
+
+  useEffect(() => {
+    for (const fieldDefinition of fieldDefinitions) {
+      if (fieldDefinition.type !== 'select' || fieldDefinition.items === undefined) {
+        continue
+      }
+
+      const fieldState = selectFormFieldState(state, node.id, fieldDefinition.fieldId)
+
+      if (fieldState === null) {
+        continue
+      }
+
+      const normalizedValue = normalizeSelectFieldValue(fieldDefinition.items, state, fieldState.value)
+
+      if (!Object.is(fieldState.value, normalizedValue)) {
+        setFormFieldValue(node.id, fieldDefinition.fieldId, normalizedValue)
+      }
+    }
+  }, [fieldDefinitions, node.id, setFormFieldValue, state])
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -167,7 +188,10 @@ export function validateFormFields({
 
   for (const fieldDefinition of fieldDefinitions) {
     const fieldState = selectFormFieldState(state, formId, fieldDefinition.fieldId)
-    const currentValue = fieldState?.value ?? fieldDefinition.defaultValue
+    const currentValue =
+      fieldDefinition.type === 'select' && fieldDefinition.items !== undefined
+        ? normalizeSelectFieldValue(fieldDefinition.items, state, fieldState?.value ?? fieldDefinition.defaultValue)
+        : fieldState?.value ?? fieldDefinition.defaultValue
     const isVisible = isLayoutNodeVisible(fieldDefinition.queryStateFeedback, state)
 
     if (!isVisible) {
@@ -207,24 +231,10 @@ export function resolveFieldDefaultValue(
   }
 
   if (node.type === 'select') {
-    return normalizeSelectValue(node.props.items, resolvedValue.value)
+    return normalizeSelectFieldValue(node.props.items, state, resolvedValue.value)
   }
 
   return typeof resolvedValue.value === 'string' ? resolvedValue.value : fallbackValue
-}
-
-function normalizeSelectValue(items: SelectLayoutNode['props']['items'], value: unknown) {
-  const normalizedValue =
-    typeof value === 'string' || typeof value === 'number'
-      ? String(value)
-      : ''
-
-  if (normalizedValue.length === 0) {
-    return ''
-  }
-
-  const availableValues = new Set(items.map((item) => String(item.value)))
-  return availableValues.has(normalizedValue) ? normalizedValue : ''
 }
 
 function isFieldValueValid(fieldDefinition: ResolvedFormFieldDefinition, value: unknown) {

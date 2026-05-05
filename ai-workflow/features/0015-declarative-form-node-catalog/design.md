@@ -1,3 +1,5 @@
+> Nota histórica: este diseño se apoya en la semántica compartida de `queryStateFeedback`. Desde `0016-query-state-feedback-idle-state`, esa semántica visible ya no es `loading | error | empty | success`, sino `idle | loading | error | empty | success`.
+
 # Design: Declarative form node catalog
 
 ## Contexto
@@ -112,7 +114,7 @@ Razonamiento:
 ### 6. La visibilidad efectiva del campo debe reutilizar la misma semántica de `queryStateFeedback`
 La spec exige que un campo oculto por `queryStateFeedback` no bloquee el submit aunque conserve error previo. Para no duplicar reglas, la implementación debe introducir una utilidad compartida que:
 - derive si un nodo está visible o no a partir de `queryStateFeedback`
-- reutilice exactamente la semántica ya estable de `loading | error | empty | success`
+- reutilice exactamente la semántica ya estable de `idle | loading | error | empty | success`
 - pueda usarse tanto desde el renderer central como desde la validación del submit del formulario
 
 Razonamiento:

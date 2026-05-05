@@ -32,6 +32,9 @@
 - La validación declarativa `required` ya funciona a nivel de formulario, escribe errores solo en `forms.*` y excluye del bloqueo de submit a campos ocultos por `queryStateFeedback`.
 - Esa exclusión de campos ocultos reutiliza la misma semántica visible `idle | loading | error | empty | success` que usa el renderer del runtime.
 - El submit declarativo de formularios ya soporta `submitAction.type: executeOperation`, reusa `queries.{operationName}` como única superficie visible de loading/success/error y puede resetear por `resetOnSuccess`.
+- `list` y `select` ya pueden consumir colecciones manuales históricas o colecciones resueltas desde `queries.{queryName}.data` o `queries.{queryName}.data.*`, con una capa compartida de resolución y proyección por consumidor.
+- `list` ya soporta colecciones escalares y de objetos mediante `itemType: 'scalar'` o `itemText`, degradando a vacío cuando la referencia aún no ofrece una colección utilizable y degradando por item en desarrollo cuando faltan datos mínimos.
+- `select` ya soporta catálogos manuales o dinámicos de escalares y objetos, mantiene una semántica única del valor vigente entre render, `defaultValue`, validación `required` y submit, y limpia automáticamente el valor cuando desaparece su opción efectiva.
 - Aislamiento validado entre varias instancias del runtime y limpieza completa del estado al desmontar y remontar.
 - Manejo explícito de errores de configuración con diagnóstico visible en desarrollo y degradación silenciosa en producción para errores marcados como `development-only`.
 - Diagnósticos de validación ya alineados con rutas canónicas del JSON para ramas como `layout[*]`, `preloads[*]`, `api.query.*` y `api.body.*`.
@@ -42,8 +45,8 @@
 - No existe todavía una integración completa de producto con backend más allá de `data-config` como frontera de entrada y de las operaciones remotas declarativas ejecutadas por `fetch`.
 - No existen todavía consumidores declarativos finales del agregado `pageEntry`.
 - El catálogo visual sigue limitado a `container`, `heading`, `paragraph`, `list`, `button`, `form`, `input`, `textarea` y `select`.
-- No existen todavía consumidores de referencias fuera de `heading.props.text`, `paragraph.props.text`, `queryStateFeedback`, `api.query`, `api.body` y `defaultValue` de campos de formulario, ni interpolación parcial dentro de strings.
-- No existen todavía validaciones declarativas avanzadas de formularios, items dinámicos en `select` ni tipos de campo fuera del catálogo mínimo actual.
+- No existen todavía consumidores de referencias fuera de `heading.props.text`, `paragraph.props.text`, `queryStateFeedback`, `api.query`, `api.body`, `defaultValue` de campos de formulario y `source` de colecciones para `list` y `select`, ni interpolación parcial dentro de strings.
+- No existen todavía validaciones declarativas avanzadas de formularios, multiselect, búsqueda remota de opciones ni tipos de campo fuera del catálogo mínimo actual.
 - `routeParams.*`, `params.*` y `navigation.*` siguen sin resolverse como referencias soportadas.
 - No existe todavía theming, tokens de diseño ni personalización visual declarativa desde JSON.
 
@@ -66,6 +69,7 @@
 - Decimocuarta feature del workflow cerrada para introducir una base común de acciones UI reutilizable desde `button.props.action`, conectando navegación, ejecución remota y reset de formularios sin abrir todavía un sistema general de eventos.
 - Decimoquinta feature del workflow cerrada para introducir formularios declarativos reales con catálogo mínimo de campos, validación `required` y submit vía `executeOperation`.
 - Decimosexta feature del workflow cerrada para distinguir `idle` de `loading` en `queryStateFeedback`, tratar queries ausentes como `idle` y reutilizar esa misma semántica visible en renderer y formularios.
+- Decimoséptima feature del workflow cerrada para permitir colecciones multi-origen en `list` y `select`, reutilizando datos de `queries.*` con mapeos declarativos por consumidor y manteniendo coherencia entre render, formularios y validación.
 
 ## Referencias
 

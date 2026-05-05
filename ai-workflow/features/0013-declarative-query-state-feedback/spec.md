@@ -1,6 +1,6 @@
 # Spec: Declarative query state feedback
 
-> Nota histórica: esta spec describe la semántica original de `0013`. Quedó sustituida por `0016-query-state-feedback-idle-state`, donde `idle` deja de proyectarse como `loading` y pasa a ser un estado visible propio.
+> Nota histórica: esta spec describe la semántica original de `0013`. Quedó sustituida por `0016-query-state-feedback-idle-state`, donde `idle` deja de proyectarse como `loading`, la query ausente del store también se evalúa como `idle`, y `loading` queda reservado solo para ejecuciones reales en curso.
 
 ## Objetivo
 Permitir que un nodo del layout declare de forma explícita cómo debe comportarse mientras la query de la que depende está en `loading`, `error`, `empty` o `success`, para que la UI configurable pueda ocultar bloques, mostrarlos solo en estados concretos o renderizar un fallback propio sin lógica imperativa externa.

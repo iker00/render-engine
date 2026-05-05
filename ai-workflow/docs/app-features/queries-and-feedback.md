@@ -19,6 +19,8 @@ En el estado implementado hoy:
 El runtime ya permite leer estado de queries desde superficies textuales concretas:
 - `heading.props.text`
 - `paragraph.props.text`
+- `list.props.items.source`
+- `select.props.items.source`
 
 Referencias soportadas hoy:
 - `queries.{queryName}`
@@ -34,6 +36,8 @@ Semántica estable:
 - si la query no existe, `data` todavía no está disponible, falta una clave, el índice queda fuera de rango o se intenta profundizar dentro de un primitivo, la referencia se trata como dato ausente
 - `status` y `error` no admiten navegación adicional; rutas como `queries.searchUsers.error.message` siguen siendo inválidas
 - en `heading` y `paragraph`, solo los resultados escalares compatibles con texto (`string`, `number`, `boolean`) se muestran de forma visible; objetos, arrays, `null`, `undefined` y referencias no resolubles degradan a string vacío
+- en `list` y `select`, una referencia válida cuyo valor runtime actual no es una colección utilizable degrada a colección vacía en vez de romper render, validación o submit
+- cuando la colección contiene objetos y algún item no resuelve los datos mínimos requeridos por el consumidor, el runtime degrada solo ese item y conserva el resto de la colección
 
 ## Ejecución de endpoints
 - Los endpoints se declaran en `api` y se invocan por nombre.
@@ -117,3 +121,4 @@ No se consideran `empty`:
 - mostrar un mensaje de “sin resultados” cuando la query resuelve vacía
 - ocultar bloques hasta que exista un resultado útil
 - hacer que varios nodos reaccionen de forma distinta al mismo `queryName`
+- reutilizar una misma query para alimentar a la vez varios `list` o `select` con proyecciones distintas por item

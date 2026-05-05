@@ -16,8 +16,13 @@ export interface RuntimeApiOperation {
 }
 
 export type RuntimeApiConfig = Record<string, RuntimeApiOperation>
+export type RuntimeCollectionObjectValue =
+  | RuntimeConfigValue
+  | RuntimeCollectionObjectValue[]
+  | { [key: string]: RuntimeCollectionObjectValue }
+export type RuntimeCollectionObjectItem = Record<string, RuntimeCollectionObjectValue>
 
-export type QueryStateFeedbackVisibleState = 'loading' | 'error' | 'empty' | 'success'
+export type QueryStateFeedbackVisibleState = 'idle' | 'loading' | 'error' | 'empty' | 'success'
 
 export interface QueryStateFeedbackShowRule {
   mode: 'show'
@@ -79,7 +84,7 @@ export interface ListLayoutNode extends LayoutNodeFeedbackFields {
   type: 'list'
   id?: string
   props: {
-    items: string[]
+    items: ListLayoutNodeItems
   }
   children?: unknown
 }
@@ -120,11 +125,55 @@ export interface SelectLayoutNodeItem {
   value: string | number
 }
 
+export interface ListDynamicItemsSource {
+  source: string
+  itemType?: 'scalar'
+  itemText?: string
+}
+
+export interface ListManualScalarItemsSource {
+  values: string[]
+}
+
+export interface ListManualObjectItemsSource {
+  values: RuntimeCollectionObjectItem[]
+  itemText: string
+}
+
+export type ListLayoutNodeItems =
+  | string[]
+  | ListDynamicItemsSource
+  | ListManualScalarItemsSource
+  | ListManualObjectItemsSource
+
+export interface SelectDynamicItemsSource {
+  source: string
+  itemType?: 'scalar'
+  label?: string
+  value?: string
+}
+
+export interface SelectManualScalarItemsSource {
+  values: Array<string | number>
+}
+
+export interface SelectManualObjectItemsSource {
+  values: RuntimeCollectionObjectItem[]
+  label: string
+  value: string
+}
+
+export type SelectLayoutNodeItems =
+  | SelectLayoutNodeItem[]
+  | SelectDynamicItemsSource
+  | SelectManualScalarItemsSource
+  | SelectManualObjectItemsSource
+
 export interface SelectLayoutNode extends LayoutNodeFeedbackFields {
   type: 'select'
   id?: string
   props: FormFieldLayoutNodeProps & {
-    items: SelectLayoutNodeItem[]
+    items: SelectLayoutNodeItems
   }
   children?: unknown
 }

@@ -60,11 +60,11 @@ Reglas funcionales vigentes:
 - Un valor arbitrario de `container.props.gap` sigue siendo válido mediante una excepción acotada: clase `Tailwind` con variable CSS local, sin volver a estilos inline completos.
 - `heading.props` soporta `text` y `level`.
 - `paragraph.props` soporta `text`.
-- `list.props` soporta `items` como array de strings.
+- `list.props` soporta `items` como array histórico de strings o como origen declarativo manual/dinámico de colecciones escalares u objeto.
 - `button.props` soporta `label` y `action`, con `navigateTo`, `goBack`, `executeOperation` y `resetForm` como acciones declarativas vigentes; dentro de un `form`, un botón sin `action` actúa como submit implícito.
 - `form` renderiza un `<form>` real, hereda un contexto estable de `formId` a sus descendientes, inicializa solo los campos todavía ausentes en el store y puede ejecutar `submitAction.type: executeOperation`.
 - `input`, `textarea` y `select` leen y escriben exclusivamente en `forms.{formId}.{fieldId}` y comparten una base visual accesible con estado de error.
-- `select` normaliza a string los valores numéricos y deja el valor inicial vacío cuando el `defaultValue` efectivo no coincide con ninguna opción declarada.
+- `select` soporta items históricos estáticos y también orígenes declarativos manuales o dinámicos de escalares u objetos; normaliza internamente a string los valores efectivos y deja el valor vigente vacío cuando ya no coincide con ninguna opción disponible.
 - `heading`, `paragraph` y `list` usan clases base estables de `Tailwind` para mantener jerarquía y legibilidad mínimas.
 - `button` se renderiza como control accesible y delega sus acciones al ejecutor común del runtime, manteniendo los efectos visibles dentro de los dominios compartidos de navegación, queries y formularios.
 
@@ -80,6 +80,7 @@ Reglas funcionales vigentes:
 - `src/runtime/runtime-actions/` concentra el ejecutor común `action.type -> handler del provider`, reutilizable por futuros triggers más allá de `button`.
 - `src/runtime/runtime-node-styling.ts` centraliza la convención visual base y la compatibilidad acotada de `gap`.
 - `src/runtime/runtime-references/` centraliza parsing, resolución y diagnóstico de referencias string del runtime.
+- `src/runtime/runtime-collection-sources.ts` concentra la resolución compartida de colecciones efectivas para `list` y `select`, incluyendo degradación a vacío y proyección declarativa por item.
 - `src/queries/` concentra la construcción de requests, la ejecución contra `fetch` y la normalización de errores remotos.
 - `src/runtime/runtime-state/` concentra el provider, reducer, tipos, selectors y acciones del estado compartido del runtime.
 - `src/runtime/runtime-query-state-feedback.ts` concentra la derivación de estado visible de query, incluida la distinción explícita entre `idle` y `loading`, la heurística común de `empty` y la resolución de la respuesta efectiva `show | hide | fallback`.
@@ -109,6 +110,7 @@ Además, el runtime reutiliza la misma convención de referencias completas en:
 - `api.query`
 - hojas string de `api.body`
 - `defaultValue` de `input`, `textarea` y `select`
+- `list.props.items.source` y `select.props.items.source`
 
 ## Comportamiento de errores
 - Si `initialPage` no coincide con ninguna página declarada, el runtime muestra un error visible.
@@ -120,7 +122,7 @@ Además, el runtime reutiliza la misma convención de referencias completas en:
 ## Límites actuales
 - El catálogo común de acciones UI sigue intencionadamente corto: no existen todavía secuencias, branching, callbacks por éxito o error, condiciones declarativas ni varias acciones por trigger.
 - El trigger sigue siendo implícito por tipo de nodo; todavía no existe un sistema general de `events`, `onClick` u `onSubmit` compartido entre superficies interactivas.
-- El catálogo de formularios sigue acotado a `form`, `input`, `textarea` y `select`; no existen todavía `radioGroup`, `checkboxGroup`, subida de archivos ni options dinámicas.
+- El catálogo de formularios sigue acotado a `form`, `input`, `textarea` y `select`; no existen todavía `radioGroup`, `checkboxGroup`, subida de archivos, multiselect ni búsqueda remota.
 - La validación declarativa de formularios sigue limitada a `required`; no existen todavía reglas como `min`, `max`, patrones ni validaciones cruzadas.
 - El agregado `pageEntry` todavía no se expone como familia de referencias declarativas dentro del JSON.
 - `routeParams.*`, `params.*` y `navigation.*` siguen sin resolverse como referencias soportadas.

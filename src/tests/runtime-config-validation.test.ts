@@ -646,7 +646,7 @@ describe('validateRuntimeConfig', () => {
     ])
   })
 
-  it('accepts queryStateFeedback with supported states and fallback collections', () => {
+  it('accepts queryStateFeedback with supported states including idle and fallback collections', () => {
     const result = validateRuntimeConfig(
       createConfigWithPages([
         {
@@ -657,6 +657,9 @@ describe('validateRuntimeConfig', () => {
               queryStateFeedback: {
                 query: 'searchUsers',
                 states: {
+                  idle: {
+                    mode: 'hide',
+                  },
                   loading: {
                     mode: 'fallback',
                     fallback: [
@@ -705,6 +708,9 @@ describe('validateRuntimeConfig', () => {
                 queryStateFeedback: {
                   query: 'searchUsers',
                   states: {
+                    idle: {
+                      mode: 'hide',
+                    },
                     loading: {
                       mode: 'fallback',
                       fallback: [
@@ -748,6 +754,9 @@ describe('validateRuntimeConfig', () => {
             queryStateFeedback: {
               query: 'searchUsers',
               states: {
+                idle: {
+                  mode: 'hide',
+                },
                 loading: {
                   mode: 'fallback',
                   fallback: [
@@ -780,6 +789,141 @@ describe('validateRuntimeConfig', () => {
           },
         ],
       },
+    })
+  })
+
+  it('accepts idle queryStateFeedback rules with show hide and fallback modes', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithPages([
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'container',
+              props: {
+                direction: 'column',
+              },
+              children: [
+                {
+                  type: 'paragraph',
+                  queryStateFeedback: {
+                    query: 'searchUsers',
+                    states: {
+                      idle: {
+                        mode: 'show',
+                      },
+                    },
+                  },
+                  props: {
+                    text: 'Visible while idle',
+                  },
+                },
+                {
+                  type: 'paragraph',
+                  queryStateFeedback: {
+                    query: 'searchUsers',
+                    states: {
+                      idle: {
+                        mode: 'hide',
+                      },
+                    },
+                  },
+                  props: {
+                    text: 'Hidden while idle',
+                  },
+                },
+                {
+                  type: 'paragraph',
+                  queryStateFeedback: {
+                    query: 'searchUsers',
+                    states: {
+                      idle: {
+                        mode: 'fallback',
+                        fallback: [
+                          {
+                            type: 'paragraph',
+                            props: {
+                              text: 'Run a search first',
+                            },
+                          },
+                        ],
+                      },
+                    },
+                  },
+                  props: {
+                    text: 'Users loaded',
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      ]),
+    )
+
+    expect(result.status).toBe('ready')
+
+    if (result.status !== 'ready') {
+      throw new Error('Expected ready result')
+    }
+
+    expect(result.config.pages[0].layout[0]).toEqual({
+      type: 'container',
+      props: {
+        direction: 'column',
+      },
+      children: [
+        {
+          type: 'paragraph',
+          queryStateFeedback: {
+            query: 'searchUsers',
+            states: {
+              idle: {
+                mode: 'show',
+              },
+            },
+          },
+          props: {
+            text: 'Visible while idle',
+          },
+        },
+        {
+          type: 'paragraph',
+          queryStateFeedback: {
+            query: 'searchUsers',
+            states: {
+              idle: {
+                mode: 'hide',
+              },
+            },
+          },
+          props: {
+            text: 'Hidden while idle',
+          },
+        },
+        {
+          type: 'paragraph',
+          queryStateFeedback: {
+            query: 'searchUsers',
+            states: {
+              idle: {
+                mode: 'fallback',
+                fallback: [
+                  {
+                    type: 'paragraph',
+                    props: {
+                      text: 'Run a search first',
+                    },
+                  },
+                ],
+              },
+            },
+          },
+          props: {
+            text: 'Users loaded',
+          },
+        },
+      ],
     })
   })
 
@@ -832,7 +976,7 @@ describe('validateRuntimeConfig', () => {
     })
   })
 
-  it('rejects queryStateFeedback states outside the supported loading error empty success set', () => {
+  it('rejects queryStateFeedback states outside the supported idle loading error empty success set', () => {
     expect(
       validateRuntimeConfig(
         createConfigWithPages([
@@ -863,6 +1007,41 @@ describe('validateRuntimeConfig', () => {
         code: 'invalid-layout',
         displayMode: 'development-only',
         message: 'Page "home" has an invalid layout at "layout[0].queryStateFeedback.states.pending".',
+      },
+    })
+  })
+
+  it('rejects queryStateFeedback idle fallback mode when fallback is missing', () => {
+    expect(
+      validateRuntimeConfig(
+        createConfigWithPages([
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'paragraph',
+                queryStateFeedback: {
+                  query: 'searchUsers',
+                  states: {
+                    idle: {
+                      mode: 'fallback',
+                    },
+                  },
+                },
+                props: {
+                  text: 'Users loaded',
+                },
+              },
+            ],
+          },
+        ]),
+      ),
+    ).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message: 'Page "home" has an invalid layout at "layout[0].queryStateFeedback.states.idle.fallback".',
       },
     })
   })
@@ -2380,6 +2559,666 @@ describe('validateRuntimeConfig', () => {
         message:
           'Page "home" has an invalid layout at "layout[0].children[0].props.items": select item values must all be strings or all be numbers.',
       },
+    })
+  })
+
+  describe('multi-value collection sources contract', () => {
+    it('keeps historical manual list and select items valid and unchanged', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithFormLayout({
+          children: [
+            {
+              type: 'select',
+              props: {
+                fieldId: 'role',
+                label: 'Role',
+                defaultValue: 'admin',
+                items: [
+                  { label: 'Admin', value: 'admin' },
+                  { label: 'Editor', value: 'editor' },
+                ],
+              },
+            },
+          ],
+        }, {
+          extraPages: [
+            {
+              id: 'catalog',
+              layout: [
+                {
+                  type: 'list',
+                  props: {
+                    items: ['One', 'Two'],
+                  },
+                },
+              ],
+            },
+          ],
+        }),
+      )
+
+      expect(result.status).toBe('ready')
+
+      if (result.status !== 'ready') {
+        throw new Error('Expected ready result')
+      }
+
+      expect(result.page.layout).toEqual([
+        {
+          type: 'form',
+          id: 'user-form',
+          submitAction: {
+            type: 'executeOperation',
+            operationName: 'submitUserForm',
+          },
+          resetOnSuccess: true,
+          children: [
+            {
+              type: 'select',
+              props: {
+                fieldId: 'role',
+                label: 'Role',
+                defaultValue: 'admin',
+                items: [
+                  { label: 'Admin', value: 'admin' },
+                  { label: 'Editor', value: 'editor' },
+                ],
+              },
+            },
+          ],
+        },
+      ])
+
+      expect(result.config.pages[1].layout).toEqual([
+        {
+          type: 'list',
+          props: {
+            items: ['One', 'Two'],
+          },
+        },
+      ])
+    })
+
+    it('accepts dynamic list and select sources under queries.*.data and queries.*.data.*', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithFormLayout({
+          children: [
+            {
+              type: 'select',
+              props: {
+                fieldId: 'role',
+                label: 'Role',
+                items: {
+                  source: 'queries.searchUsers.data',
+                  itemType: 'scalar',
+                },
+              },
+            },
+          ],
+        }, {
+          extraPages: [
+            {
+              id: 'catalog',
+              layout: [
+                {
+                  type: 'list',
+                  props: {
+                    items: {
+                      source: 'queries.searchUsers.data.results',
+                      itemType: 'scalar',
+                    },
+                  },
+                },
+              ],
+            },
+          ],
+        }),
+      )
+
+      expect(result.status).toBe('ready')
+
+      if (result.status !== 'ready') {
+        throw new Error('Expected ready result')
+      }
+
+      expect(result.config.pages).toEqual([
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'form',
+              id: 'user-form',
+              submitAction: {
+                type: 'executeOperation',
+                operationName: 'submitUserForm',
+              },
+              resetOnSuccess: true,
+              children: [
+                {
+                  type: 'select',
+                  props: {
+                    fieldId: 'role',
+                    label: 'Role',
+                    items: {
+                      source: 'queries.searchUsers.data',
+                      itemType: 'scalar',
+                    },
+                  },
+                },
+              ],
+            },
+          ],
+        },
+        {
+          id: 'catalog',
+          layout: [
+            {
+              type: 'list',
+              props: {
+                items: {
+                  source: 'queries.searchUsers.data.results',
+                  itemType: 'scalar',
+                },
+              },
+            },
+          ],
+        },
+      ])
+    })
+
+    it('accepts object collection shapes when they declare the required consumer mappings', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithFormLayout({
+          children: [
+            {
+              type: 'select',
+              props: {
+                fieldId: 'role',
+                label: 'Role',
+                items: {
+                  values: [
+                    { id: 'admin', name: 'Admin', ignored: true },
+                    { id: 'editor', name: 'Editor' },
+                  ],
+                  label: 'name',
+                  value: 'id',
+                  extra: 'drop-me',
+                },
+              },
+            },
+          ],
+        }, {
+          extraPages: [
+            {
+              id: 'catalog',
+              layout: [
+                {
+                  type: 'list',
+                  props: {
+                    items: {
+                      values: [
+                        { name: 'Ada', ignored: true },
+                        { name: 'Grace' },
+                      ],
+                      itemText: 'name',
+                      extra: 'drop-me',
+                    },
+                  },
+                },
+              ],
+            },
+          ],
+        }),
+      )
+
+      expect(result.status).toBe('ready')
+
+      if (result.status !== 'ready') {
+        throw new Error('Expected ready result')
+      }
+
+      expect(result.config.pages[0].layout[0]).toEqual({
+        type: 'form',
+        id: 'user-form',
+        submitAction: {
+          type: 'executeOperation',
+          operationName: 'submitUserForm',
+        },
+        resetOnSuccess: true,
+        children: [
+          {
+            type: 'select',
+            props: {
+              fieldId: 'role',
+              label: 'Role',
+              items: {
+                values: [
+                  { id: 'admin', name: 'Admin', ignored: true },
+                  { id: 'editor', name: 'Editor' },
+                ],
+                label: 'name',
+                value: 'id',
+              },
+            },
+          },
+        ],
+      })
+
+      expect(result.config.pages[1].layout[0]).toEqual({
+        type: 'list',
+        props: {
+          items: {
+            values: [
+              { name: 'Ada', ignored: true },
+              { name: 'Grace' },
+            ],
+            itemText: 'name',
+          },
+        },
+      })
+    })
+
+    it('rejects manual object collections when required mappings are missing', () => {
+      expect(
+        validateRuntimeConfig(
+          createConfigWithPages([
+            {
+              id: 'home',
+              layout: [
+                {
+                  type: 'list',
+                  props: {
+                    items: {
+                      values: [{ name: 'Ada' }],
+                    },
+                  },
+                },
+              ],
+            },
+          ]),
+        ),
+      ).toEqual({
+        status: 'error',
+        error: {
+          code: 'invalid-layout',
+          displayMode: 'development-only',
+          message: 'Page "home" has an invalid layout at "layout[0].props.items.itemText".',
+        },
+      })
+
+      expect(
+        validateRuntimeConfig(
+          createConfigWithFormLayout({
+            children: [
+              {
+                type: 'select',
+                props: {
+                  fieldId: 'role',
+                  label: 'Role',
+                  items: {
+                    values: [{ id: 'admin', name: 'Admin' }],
+                    label: 'name',
+                  },
+                },
+              },
+            ],
+          }),
+        ),
+      ).toEqual({
+        status: 'error',
+        error: {
+          code: 'invalid-layout',
+          displayMode: 'development-only',
+          message: 'Page "home" has an invalid layout at "layout[0].children[0].props.items.value".',
+        },
+      })
+    })
+
+    it('rejects ambiguous list and select collection source shapes', () => {
+      expect(
+        validateRuntimeConfig(
+          createConfigWithPages([
+            {
+              id: 'home',
+              layout: [
+                {
+                  type: 'list',
+                  props: {
+                    items: {
+                      source: 'queries.searchUsers.data.results',
+                      values: ['Ada'],
+                    },
+                  },
+                },
+              ],
+            },
+          ]),
+        ),
+      ).toEqual({
+        status: 'error',
+        error: {
+          code: 'invalid-layout',
+          displayMode: 'development-only',
+          message: 'Page "home" has an invalid layout at "layout[0].props.items".',
+        },
+      })
+
+      expect(
+        validateRuntimeConfig(
+          createConfigWithFormLayout({
+            children: [
+              {
+                type: 'select',
+                props: {
+                  fieldId: 'role',
+                  label: 'Role',
+                  items: {
+                    source: 'queries.searchUsers.data.results',
+                    values: ['admin'],
+                  },
+                },
+              },
+            ],
+          }),
+        ),
+      ).toEqual({
+        status: 'error',
+        error: {
+          code: 'invalid-layout',
+          displayMode: 'development-only',
+          message: 'Page "home" has an invalid layout at "layout[0].children[0].props.items".',
+        },
+      })
+    })
+
+    it('rejects dynamic sources outside queries.*.data.* with canonical paths', () => {
+      expect(
+        validateRuntimeConfig(
+          createConfigWithPages([
+            {
+              id: 'home',
+              layout: [
+                {
+                  type: 'list',
+                  props: {
+                    items: {
+                      source: 'forms.user.role',
+                    },
+                  },
+                },
+              ],
+            },
+          ]),
+        ),
+      ).toEqual({
+        status: 'error',
+        error: {
+          code: 'invalid-layout',
+          displayMode: 'development-only',
+          message: 'Page "home" has an invalid layout at "layout[0].props.items.source": collection sources must use queries.{queryName}.data or queries.{queryName}.data.*.',
+        },
+      })
+
+      expect(
+        validateRuntimeConfig(
+          createConfigWithFormLayout({
+            children: [
+              {
+                type: 'select',
+                props: {
+                  fieldId: 'role',
+                  label: 'Role',
+                  items: {
+                    source: 'queries.searchUsers',
+                  },
+                },
+              },
+            ],
+          }),
+        ),
+      ).toEqual({
+        status: 'error',
+        error: {
+          code: 'invalid-layout',
+          displayMode: 'development-only',
+          message: 'Page "home" has an invalid layout at "layout[0].children[0].props.items.source": collection sources must use queries.{queryName}.data or queries.{queryName}.data.*.',
+        },
+      })
+    })
+
+    it('rejects malformed dynamic collection sources even when they start with queries.*.data', () => {
+      expect(
+        validateRuntimeConfig(
+          createConfigWithPages([
+            {
+              id: 'home',
+              layout: [
+                {
+                  type: 'list',
+                  props: {
+                    items: {
+                      source: 'queries.searchUsers.data..results',
+                      itemType: 'scalar',
+                    },
+                  },
+                },
+              ],
+            },
+          ]),
+        ),
+      ).toEqual({
+        status: 'error',
+        error: {
+          code: 'invalid-layout',
+          displayMode: 'development-only',
+          message: 'Page "home" has an invalid layout at "layout[0].props.items.source": collection sources must use queries.{queryName}.data or queries.{queryName}.data.*.',
+        },
+      })
+
+      expect(
+        validateRuntimeConfig(
+          createConfigWithFormLayout({
+            children: [
+              {
+                type: 'select',
+                props: {
+                  fieldId: 'role',
+                  label: 'Role',
+                  items: {
+                    source: 'queries.searchUsers.data.results[0]',
+                    itemType: 'scalar',
+                  },
+                },
+              },
+            ],
+          }),
+        ),
+      ).toEqual({
+        status: 'error',
+        error: {
+          code: 'invalid-layout',
+          displayMode: 'development-only',
+          message: 'Page "home" has an invalid layout at "layout[0].children[0].props.items.source": collection sources must use queries.{queryName}.data or queries.{queryName}.data.*.',
+        },
+      })
+    })
+
+    it('rejects malformed relative mapping paths for collection objects', () => {
+      expect(
+        validateRuntimeConfig(
+          createConfigWithPages([
+            {
+              id: 'home',
+              layout: [
+                {
+                  type: 'list',
+                  props: {
+                    items: {
+                      values: [{ profile: { name: 'Ada' } }],
+                      itemText: 'profile..name',
+                    },
+                  },
+                },
+              ],
+            },
+          ]),
+        ),
+      ).toEqual({
+        status: 'error',
+        error: {
+          code: 'invalid-layout',
+          displayMode: 'development-only',
+          message: 'Page "home" has an invalid layout at "layout[0].props.items.itemText".',
+        },
+      })
+
+      expect(
+        validateRuntimeConfig(
+          createConfigWithFormLayout({
+            children: [
+              {
+                type: 'select',
+                props: {
+                  fieldId: 'role',
+                  label: 'Role',
+                  items: {
+                    values: [{ id: 'admin', profile: { name: 'Admin' } }],
+                    label: 'profile.name',
+                    value: 'profile[id]',
+                  },
+                },
+              },
+            ],
+          }),
+        ),
+      ).toEqual({
+        status: 'error',
+        error: {
+          code: 'invalid-layout',
+          displayMode: 'development-only',
+          message: 'Page "home" has an invalid layout at "layout[0].children[0].props.items.value".',
+        },
+      })
+    })
+
+    it('rejects dynamic collection sources that omit both the scalar discriminator and object mappings', () => {
+      expect(
+        validateRuntimeConfig(
+          createConfigWithPages([
+            {
+              id: 'home',
+              layout: [
+                {
+                  type: 'list',
+                  props: {
+                    items: {
+                      source: 'queries.searchUsers.data.results',
+                    },
+                  },
+                },
+              ],
+            },
+          ]),
+        ),
+      ).toEqual({
+        status: 'error',
+        error: {
+          code: 'invalid-layout',
+          displayMode: 'development-only',
+          message:
+            'Page "home" has an invalid layout at "layout[0].props.items": dynamic scalar collections must declare itemType: "scalar", and dynamic object collections must declare itemText.',
+        },
+      })
+
+      expect(
+        validateRuntimeConfig(
+          createConfigWithFormLayout({
+            children: [
+              {
+                type: 'select',
+                props: {
+                  fieldId: 'role',
+                  label: 'Role',
+                  items: {
+                    source: 'queries.searchUsers.data.results',
+                  },
+                },
+              },
+            ],
+          }),
+        ),
+      ).toEqual({
+        status: 'error',
+        error: {
+          code: 'invalid-layout',
+          displayMode: 'development-only',
+          message:
+            'Page "home" has an invalid layout at "layout[0].children[0].props.items": dynamic scalar collections must declare itemType: "scalar", and dynamic object collections must declare label and value.',
+        },
+      })
+    })
+
+    it('rejects manual select values with heterogeneous scalar types in the new collection shape', () => {
+      expect(
+        validateRuntimeConfig(
+          createConfigWithFormLayout({
+            children: [
+              {
+                type: 'select',
+                props: {
+                  fieldId: 'role',
+                  label: 'Role',
+                  items: {
+                    values: ['admin', 2],
+                  },
+                },
+              },
+            ],
+          }),
+        ),
+      ).toEqual({
+        status: 'error',
+        error: {
+          code: 'invalid-layout',
+          displayMode: 'development-only',
+          message:
+            'Page "home" has an invalid layout at "layout[0].children[0].props.items.values": select item values must all be strings or all be numbers.',
+        },
+      })
+    })
+
+    it('rejects manual object select collections with heterogeneous projected value types', () => {
+      expect(
+        validateRuntimeConfig(
+          createConfigWithFormLayout({
+            children: [
+              {
+                type: 'select',
+                props: {
+                  fieldId: 'role',
+                  label: 'Role',
+                  items: {
+                    values: [
+                      { id: 'admin', name: 'Admin' },
+                      { id: 2, name: 'Editor' },
+                    ],
+                    label: 'name',
+                    value: 'id',
+                  },
+                },
+              },
+            ],
+          }),
+        ),
+      ).toEqual({
+        status: 'error',
+        error: {
+          code: 'invalid-layout',
+          displayMode: 'development-only',
+          message:
+            'Page "home" has an invalid layout at "layout[0].children[0].props.items.values": select item values must all be strings or all be numbers.',
+        },
+      })
     })
   })
 

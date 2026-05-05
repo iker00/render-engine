@@ -30,6 +30,7 @@ src/
     layout-renderer.tsx
     layout-node-renderer.tsx
     form-context.tsx
+    runtime-collection-sources.ts
     runtime-query-state-feedback.ts
     runtime-node-styling.ts
     runtime-page.tsx
@@ -70,6 +71,7 @@ Lectura operativa de esa estructura:
 - `layout-node-renderer.tsx` es el punto central de resolución `type -> pieza de render` y del borde transversal que decide si el nodo se muestra, se oculta o se sustituye por un fallback local.
 - `form-context.tsx` propaga el `formId` efectivo a cualquier descendiente del árbol del formulario sin exigir props manuales repetidas.
 - `runtime-actions/` concentra la traducción `action.type -> handler del provider`, de modo que el nodo visual solo dispara el contrato común y no reimplementa navegación, queries ni formularios.
+- `runtime-collection-sources.ts` centraliza la resolución de colecciones efectivas para consumidores multi-valor, separando origen (`values` manuales o `queries.*`) de la proyección final que necesita cada nodo.
 - `runtime-node-styling.ts` concentra la convención visual base del runtime y la compatibilidad acotada para `gap` arbitrarios.
 - `runtime-query-state-feedback.ts` concentra la derivación `idle | loading | error | empty | success`, la heurística común de `empty` y la resolución de defaults efectivos de `queryStateFeedback`.
 - `runtime-references/` fija la semántica central de referencias string, distingue `literal | supported | unsupported | invalid` y evita lógica dispersa en nodos visuales.
@@ -110,4 +112,5 @@ Lectura operativa de esa estructura:
 - La semántica declarativa de feedback por query vive fuera de los nodos visuales concretos: el renderer central consulta `queries.{queryName}`, deriva un estado visible único y decide entre nodo original, ocultación o fallback local reutilizando `LayoutRenderer`.
 - Los formularios declarativos viven íntegramente dentro de `runtime/`: `form` actúa como frontera de inicialización, validación `required` y submit, mientras los campos leen y escriben solo en `forms.{formId}.{fieldId}`.
 - La decisión de visibilidad efectiva de un nodo se reutiliza tanto en render como en validación de submit para evitar divergencias entre `queryStateFeedback` y reglas `required`.
+- `list` y `select` reutilizan una misma capa de resolución de colecciones para evitar semánticas divergentes entre catálogo visual, formularios y estado compartido.
 - Los errores de bootstrap y validación deben ser diagnósticos en desarrollo; en producción, los errores marcados como solo de desarrollo degradan sin mensaje visible genérico.

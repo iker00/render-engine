@@ -17,6 +17,7 @@ import type {
   QueryStateFeedbackFallbackRule,
   QueryStateFeedbackRule,
   QueryStateFeedbackVisibleState,
+  RuntimeCollectionObjectItem,
   ResetFormRuntimeUiAction,
   RuntimeApiBodyValue,
   RuntimeApiConfig,
@@ -46,11 +47,14 @@ import {
   runtimeApiQuerySchema,
   runtimeConfigShellSchema,
   runtimePageShellSchema,
+  selectItemSchema,
   selectNodeSchema,
   supportedNodeTypes,
   textareaNodeSchema,
 } from './runtime-config-zod'
 import { initialPageNotFound, invalidLayout, unsupportedNodeType } from './runtime-config-validation-errors'
+
+const collectionPathSegmentPattern = /^[A-Za-z0-9_-]+$/
 
 export function validateRuntimeConfig(rawConfig: unknown): RuntimeConfigValidationResult {
   const configShellResult = runtimeConfigShellSchema.safeParse(rawConfig)
@@ -555,13 +559,126 @@ function validateListNode(
     return feedbackResult
   }
 
+  const itemsResult = validateListItems(parseResult.data.props.items, `${path}.props.items`, pageId)
+
+  if (itemsResult.status === 'error') {
+    return itemsResult
+  }
+
   return {
     status: 'ready',
     node: {
-      ...parseResult.data,
+      type: 'list',
+      id: parseResult.data.id,
       queryStateFeedback: feedbackResult.queryStateFeedback,
+      props: {
+        items: itemsResult.items,
+      },
     },
   }
+}
+
+function validateListItems(
+  rawItems: unknown,
+  path: string,
+  pageId: string,
+): { status: 'ready'; items: ListLayoutNode['props']['items'] } | { status: 'error'; error: RuntimeConfigError } {
+  if (Array.isArray(rawItems)) {
+    const items: string[] = []
+
+    for (let index = 0; index < rawItems.length; index += 1) {
+      if (typeof rawItems[index] !== 'string') {
+        return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}[${index}]".`)
+      }
+
+      items.push(rawItems[index])
+    }
+
+    return {
+      status: 'ready',
+      items,
+    }
+  }
+
+  if (!isRecord(rawItems)) {
+    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}".`)
+  }
+
+  const hasSource = 'source' in rawItems
+  const hasValues = 'values' in rawItems
+
+  if (hasSource && hasValues) {
+    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}".`)
+  }
+
+  if (hasSource) {
+    const sourceResult = validateCollectionSource(rawItems.source, `${path}.source`, pageId)
+
+    if (sourceResult.status === 'error') {
+      return sourceResult
+    }
+
+    if (rawItems.itemType !== undefined && rawItems.itemType !== 'scalar') {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.itemType".`)
+    }
+
+    if (rawItems.itemText !== undefined && !isValidCollectionItemPath(rawItems.itemText)) {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.itemText".`)
+    }
+
+    if (rawItems.itemText !== undefined && rawItems.itemType !== undefined) {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}".`)
+    }
+
+    if (rawItems.itemText === undefined && rawItems.itemType !== 'scalar') {
+      return invalidLayout(
+        `Page "${pageId}" has an invalid layout at "${path}": dynamic scalar collections must declare itemType: "scalar", and dynamic object collections must declare itemText.`,
+      )
+    }
+
+    return {
+      status: 'ready',
+      items: rawItems.itemText === undefined
+        ? { source: sourceResult.source, itemType: 'scalar' }
+        : { source: sourceResult.source, itemText: rawItems.itemText },
+    }
+  }
+
+  if (!hasValues) {
+    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}".`)
+  }
+
+  if (!Array.isArray(rawItems.values)) {
+    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.values".`)
+  }
+
+  const values = rawItems.values
+
+  if (values.every((value) => typeof value === 'string')) {
+    return {
+      status: 'ready',
+      items: {
+        values,
+      },
+    }
+  }
+
+  if (values.every((value) => isRecord(value))) {
+    if (!isValidCollectionItemPath(rawItems.itemText)) {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.itemText".`)
+    }
+
+    return {
+      status: 'ready',
+      items: {
+        values: values as RuntimeCollectionObjectItem[],
+        itemText: rawItems.itemText,
+      },
+    }
+  }
+
+  const invalidIndex = values.findIndex((value) => typeof value !== 'string' && !isRecord(value))
+  return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.values[${Math.max(invalidIndex, 0)}]".`)
 }
 
 function mapLeafNodeIssue(
@@ -957,12 +1074,197 @@ function validateSelectNode(
     return feedbackResult
   }
 
+  const itemsResult = validateSelectItemsContract(parseResult.data.props.items, `${path}.props.items`, pageId)
+
+  if (itemsResult.status === 'error') {
+    return itemsResult
+  }
+
   return {
     status: 'ready',
     node: {
-      ...parseResult.data,
+      type: 'select',
       queryStateFeedback: feedbackResult.queryStateFeedback,
+      props: {
+        ...parseResult.data.props,
+        items: itemsResult.items,
+      },
     },
+  }
+}
+
+function validateSelectItemsContract(
+  rawItems: unknown,
+  path: string,
+  pageId: string,
+): { status: 'ready'; items: SelectLayoutNode['props']['items'] } | { status: 'error'; error: RuntimeConfigError } {
+  if (Array.isArray(rawItems)) {
+    const items: SelectLayoutNode['props']['items'] = []
+
+    for (let index = 0; index < rawItems.length; index += 1) {
+      const itemResult = selectItemSchema.safeParse(rawItems[index])
+
+      if (!itemResult.success) {
+        const issuePath = itemResult.error.issues[0]?.path ?? []
+        const formattedPath = issuePath.map(formatPathSegment).join('')
+        return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}[${index}]${formattedPath}".`)
+      }
+
+      items.push(itemResult.data)
+    }
+
+    const scalarValuesIssue = validateSelectScalarValues(
+      items.map((item) => item.value),
+      path,
+      pageId,
+    )
+
+    if (scalarValuesIssue) {
+      return scalarValuesIssue
+    }
+
+    return {
+      status: 'ready',
+      items,
+    }
+  }
+
+  if (!isRecord(rawItems)) {
+    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}".`)
+  }
+
+  const hasSource = 'source' in rawItems
+  const hasValues = 'values' in rawItems
+
+  if (hasSource && hasValues) {
+    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}".`)
+  }
+
+  if (hasSource) {
+    const sourceResult = validateCollectionSource(rawItems.source, `${path}.source`, pageId)
+
+    if (sourceResult.status === 'error') {
+      return sourceResult
+    }
+
+    if (rawItems.itemType !== undefined && rawItems.itemType !== 'scalar') {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.itemType".`)
+    }
+
+    if ((rawItems.label === undefined) !== (rawItems.value === undefined)) {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}".`)
+    }
+
+    if (rawItems.label === undefined && rawItems.value === undefined) {
+      if (rawItems.itemType !== 'scalar') {
+        return invalidLayout(
+          `Page "${pageId}" has an invalid layout at "${path}": dynamic scalar collections must declare itemType: "scalar", and dynamic object collections must declare label and value.`,
+        )
+      }
+
+      return {
+        status: 'ready',
+        items: {
+          source: sourceResult.source,
+          itemType: 'scalar',
+        },
+      }
+    }
+
+    if (!isValidCollectionItemPath(rawItems.label)) {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.label".`)
+    }
+
+    if (!isValidCollectionItemPath(rawItems.value)) {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.value".`)
+    }
+
+    if (rawItems.itemType !== undefined) {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}".`)
+    }
+
+    return {
+      status: 'ready',
+      items: {
+        source: sourceResult.source,
+        label: rawItems.label,
+        value: rawItems.value,
+      },
+    }
+  }
+
+  if (!hasValues) {
+    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}".`)
+  }
+
+  if (!Array.isArray(rawItems.values)) {
+    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.values".`)
+  }
+
+  const values = rawItems.values
+
+  if (values.every((value) => typeof value === 'string' || typeof value === 'number')) {
+    const scalarValuesIssue = validateSelectScalarValues(values, `${path}.values`, pageId)
+
+    if (scalarValuesIssue) {
+      return scalarValuesIssue
+    }
+
+    return {
+      status: 'ready',
+      items: {
+        values,
+      },
+    }
+  }
+
+  if (values.every((value) => isRecord(value))) {
+    if (!isValidCollectionItemPath(rawItems.label)) {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.label".`)
+    }
+
+    if (!isValidCollectionItemPath(rawItems.value)) {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.value".`)
+    }
+
+    const projectedValueTypeIssue = validateManualSelectObjectValueTypes(values as RuntimeCollectionObjectItem[], rawItems.value, `${path}.values`, pageId)
+
+    if (projectedValueTypeIssue) {
+      return projectedValueTypeIssue
+    }
+
+    return {
+      status: 'ready',
+      items: {
+        values: values as RuntimeCollectionObjectItem[],
+        label: rawItems.label,
+        value: rawItems.value,
+      },
+    }
+  }
+
+  const invalidIndex = values.findIndex((value) => !isRecord(value) && typeof value !== 'string' && typeof value !== 'number')
+  return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.values[${Math.max(invalidIndex, 0)}]".`)
+}
+
+function validateCollectionSource(
+  rawSource: unknown,
+  path: string,
+  pageId: string,
+): { status: 'ready'; source: string } | { status: 'error'; error: RuntimeConfigError } {
+  if (!isNonEmptyString(rawSource)) {
+    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}".`)
+  }
+
+  if (!isValidQueryCollectionSource(rawSource)) {
+    return invalidLayout(
+      `Page "${pageId}" has an invalid layout at "${path}": collection sources must use queries.{queryName}.data or queries.{queryName}.data.*.`,
+    )
+  }
+
+  return {
+    status: 'ready',
+    source: rawSource,
   }
 }
 
@@ -1116,14 +1418,6 @@ function validateFormNodesInCollection(
 
       context.fieldIds.add(node.props.fieldId)
 
-      if (node.type === 'select') {
-        const selectItemsIssue = validateSelectItems(node.props.items, `${nodePath}.props.items`, pageId)
-
-        if (selectItemsIssue) {
-          return selectItemsIssue
-        }
-      }
-
       continue
     }
 
@@ -1190,33 +1484,59 @@ function validateFormChildren(
       }
 
       context.fieldIds.add(node.props.fieldId)
-
-      if (node.type === 'select') {
-        const selectItemsIssue = validateSelectItems(node.props.items, `${nodePath}.props.items`, pageId)
-
-        if (selectItemsIssue) {
-          return selectItemsIssue
-        }
-      }
     }
   }
 
   return null
 }
 
-function validateSelectItems(
-  items: Array<{ value: string | number }>,
+function validateSelectScalarValues(
+  items: Array<string | number>,
   path: string,
   pageId: string,
 ): { status: 'error'; error: RuntimeConfigError } | null {
   let valueType: 'string' | 'number' | null = null
 
   for (const item of items) {
-    if (item.value === '') {
+    if (item === '') {
       continue
     }
 
-    const currentType = typeof item.value as 'string' | 'number'
+    const currentType = typeof item as 'string' | 'number'
+
+    if (valueType === null) {
+      valueType = currentType
+      continue
+    }
+
+    if (valueType !== currentType) {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}": select item values must all be strings or all be numbers.`)
+    }
+  }
+
+  return null
+}
+
+function validateManualSelectObjectValueTypes(
+  items: RuntimeCollectionObjectItem[],
+  valuePath: string,
+  path: string,
+  pageId: string,
+): { status: 'error'; error: RuntimeConfigError } | null {
+  let valueType: 'string' | 'number' | null = null
+
+  for (const item of items) {
+    const resolvedValue = resolveCollectionItemPathValue(item, valuePath)
+
+    if (!resolvedValue.found || (typeof resolvedValue.value !== 'string' && typeof resolvedValue.value !== 'number')) {
+      continue
+    }
+
+    if (resolvedValue.value === '') {
+      continue
+    }
+
+    const currentType = typeof resolvedValue.value as 'string' | 'number'
 
     if (valueType === null) {
       valueType = currentType
@@ -1392,4 +1712,74 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
   const prototype = Object.getPrototypeOf(value)
   return prototype === Object.prototype || prototype === null
+}
+
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === 'string' && value.trim().length > 0
+}
+
+function isValidQueryCollectionSource(value: string) {
+  const parts = value.split('.')
+
+  if (parts.length < 3) {
+    return false
+  }
+
+  const [namespace, queryName, property, ...nestedPath] = parts
+
+  if (namespace !== 'queries' || property !== 'data' || !isValidCollectionPathSegment(queryName)) {
+    return false
+  }
+
+  return nestedPath.every(isValidCollectionPathSegment)
+}
+
+function isValidCollectionItemPath(value: unknown): value is string {
+  if (!isNonEmptyString(value)) {
+    return false
+  }
+
+  return value.split('.').every(isValidCollectionPathSegment)
+}
+
+function isValidCollectionPathSegment(segment: string) {
+  return segment.length > 0 && collectionPathSegmentPattern.test(segment)
+}
+
+function resolveCollectionItemPathValue(item: unknown, path: string) {
+  const pathSegments = path.split('.')
+  let currentValue: unknown = item
+
+  for (const segment of pathSegments) {
+    if (Array.isArray(currentValue)) {
+      if (!/^(0|[1-9]\d*)$/.test(segment)) {
+        return {
+          found: false,
+        } as const
+      }
+
+      currentValue = currentValue[Number(segment)]
+
+      if (typeof currentValue === 'undefined') {
+        return {
+          found: false,
+        } as const
+      }
+
+      continue
+    }
+
+    if (!isRecord(currentValue) || !Object.hasOwn(currentValue, segment)) {
+      return {
+        found: false,
+      } as const
+    }
+
+    currentValue = currentValue[segment]
+  }
+
+  return {
+    found: true,
+    value: currentValue,
+  } as const
 }

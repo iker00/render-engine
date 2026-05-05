@@ -58,7 +58,12 @@ Nodos soportados hoy:
 - `paragraph`
   - `props.text`: string obligatorio, literal o referencia dinámica completa soportada por el runtime
 - `list`
-  - `props.items`: array obligatorio de strings
+  - `props.items`: obligatorio
+  - shape histórico: array de strings
+  - shape manual escalar: `{ values: Array<string> }`
+  - shape manual objeto: `{ values: Array<object>, itemText: string }`
+  - shape dinámico escalar: `{ source: 'queries.{queryName}.data' | 'queries.{queryName}.data.*', itemType: 'scalar' }`
+  - shape dinámico objeto: `{ source: 'queries.{queryName}.data' | 'queries.{queryName}.data.*', itemText: string }`
 - `button`
   - `props.label`: string obligatorio
   - `props.action`: opcional; sin `action` solo es válido dentro del subárbol de un `form` y actúa como submit implícito
@@ -88,7 +93,12 @@ Nodos soportados hoy:
   - `props.label`: string obligatorio
   - `props.required`: boolean opcional
   - `props.defaultValue`: literal JSON simple o referencia dinámica completa soportada por el runtime
-  - `props.items`: array obligatorio de `{ label, value }`, con `value` homogéneo `string` o `number` dentro del mismo campo
+  - `props.items`: obligatorio
+  - shape histórico: array de `{ label, value }`, con `value` homogéneo `string` o `number` dentro del mismo campo
+  - shape manual escalar: `{ values: Array<string | number> }`
+  - shape manual objeto: `{ values: Array<object>, label: string, value: string }`
+  - shape dinámico escalar: `{ source: 'queries.{queryName}.data' | 'queries.{queryName}.data.*', itemType: 'scalar' }`
+  - shape dinámico objeto: `{ source: 'queries.{queryName}.data' | 'queries.{queryName}.data.*', label: string, value: string }`
 
 Reglas estructurales adicionales del catálogo actual:
 - `heading`, `paragraph`, `list` y `button` siguen tratándose como nodos hoja; si reciben `children`, esos datos no pasan al resultado normalizado.
@@ -140,6 +150,10 @@ Referencias soportadas hoy:
 - `queries.{queryName}.error`
 - `queries.{queryName}.data.{segmentosAnidados}`
 
+Consumidores adicionales ya soportados con esa misma frontera:
+- `list.props.items.source`
+- `select.props.items.source`
+
 Reglas funcionales vigentes:
 - la navegación anidada adicional solo se admite bajo `queries.{queryName}.data`
 - los segmentos anidados pueden recorrer objetos y arrays
@@ -169,6 +183,10 @@ Reglas funcionales vigentes:
 - Si `form.submitAction.operationName` apunta a una operación inexistente en `api`, el config completo se rechaza antes del render.
 - Si `form.resetOnSuccess: true` aparece sin `submitAction`, el config completo se rechaza antes del render.
 - Si `select.props.items` mezcla `value` string y number dentro del mismo campo, el config completo se rechaza antes del render.
+- Si `list.props.items` o `select.props.items` declaran un `source`, este debe apuntar exactamente a `queries.{queryName}.data` o a una ruta anidada bajo `queries.{queryName}.data.*`.
+- Si `list.props.items` o `select.props.items` mezclan familias incompatibles de origen histórico, manual declarativo y dinámico, el config completo se rechaza antes del render.
+- Si un origen dinámico de escalares omite `itemType: 'scalar'`, el config completo se rechaza antes del render.
+- Si un origen dinámico u objeto manual omite los mapeos mínimos del consumidor (`itemText` para `list`; `label` y `value` para `select`), el config completo se rechaza antes del render.
 - Los errores estructurales conservan la semántica pública actual (`invalid-layout` o `unsupported-node-type`) y ahora incluyen rutas canónicas del JSON cuando aplica, por ejemplo `layout[0].props.items[1]` o `searchUsers.query.filters`.
 - En desarrollo, los errores de configuración deben ser diagnósticos y visibles.
 - En producción, los errores `development-only` degradan sin mostrar mensaje genérico visible.
@@ -185,10 +203,10 @@ La frontera estable de esta validación queda organizada así:
 - `action` sigue siendo una sola operación por trigger; no hay arrays, secuencias ni callbacks declarativos.
 - El trigger sigue siendo implícito por tipo de nodo; el contrato no abre todavía un bloque general de `events`.
 - Los formularios declarativos ya soportan solo el catálogo mínimo `form`, `input`, `textarea` y `select`, con validación limitada a `required`.
-- `select` solo admite items estáticos; no hay catálogos dinámicos de opciones.
+- `list` y `select` ya pueden reutilizar datos de `queries.*` como colecciones, pero siguen fuera de alcance filtros cliente, ordenación declarativa, transformaciones arbitrarias, búsqueda remota y carga incremental.
 - No hay todavía validaciones declarativas avanzadas (`min`, `max`, patrones o validaciones cruzadas).
 - `preloads` solo admite una lista plana de strings; no hay condiciones, prioridades, secuencialidad, dependencias ni políticas de caché.
 - No hay interpolación compleja dentro de strings.
 - No hay sistema de plugins para componentes externos.
 - No hay soporte para nodos distintos de `container`, `heading`, `paragraph`, `list`, `button`, `form`, `input`, `textarea` y `select`.
-- No hay consumidores declarativos de referencias fuera de `heading.props.text`, `paragraph.props.text`, `queryStateFeedback`, `api.query`, `api.body` y `defaultValue` de campos de formulario.
+- No hay consumidores declarativos de referencias fuera de `heading.props.text`, `paragraph.props.text`, `queryStateFeedback`, `api.query`, `api.body`, `defaultValue` de campos de formulario y `source` de colecciones para `list` y `select`.

@@ -6,23 +6,12 @@
     },
     "searchPosts": {
       "method": "GET",
-      "endpoint": "https://jsonplaceholder.typicode.com/posts"
-    },
-    "createUser": {
-      "method": "POST",
-      "endpoint": "https://jsonplaceholder.typicode.com/users",
-      "body": {
-        "name": "forms.userForm.name",
-        "email": "forms.userForm.email"
-      }
+      "endpoint": "https://jsonplaceholder.typicode.com/posts?id=200"
     }
   },
   "pages": [
     {
       "id": "bootstrap-home",
-      "preloads": [
-        "searchPosts"
-      ],
       "layout": [
         {
           "type": "heading",
@@ -45,111 +34,6 @@
               "Initial page resolved from the active config source.",
               "Page entry preloads can hydrate shared query state on mount."
             ]
-          }
-        },
-        {
-          "type": "heading",
-          "props": {
-            "text": "Posts",
-            "level": 2
-          }
-        },
-        {
-          "type": "paragraph",
-          "queryStateFeedback": {
-            "query": "searchPosts",
-            "states": {
-              "loading": {
-                "mode": "fallback",
-                "fallback": [
-                  {
-                    "type": "paragraph",
-                    "props": {
-                      "text": "Loading posts..."
-                    }
-                  }
-                ]
-              }
-            }
-          },
-          "props": {
-            "text": "Primer post:"
-          }
-        },
-        {
-          "type": "paragraph",
-          "props": {
-            "text": "queries.searchPosts.data.0.title"
-          }
-        },
-        {
-          "type": "heading",
-          "props": {
-            "text": "Users",
-            "level": 2
-          }
-        },
-        {
-          "type": "paragraph",
-          "queryStateFeedback": {
-            "query": "searchUsers",
-            "states": {
-              "loading": {
-                "mode": "fallback",
-                "fallback": [
-                  {
-                    "type": "paragraph",
-                    "props": {
-                      "text": "Loading users..."
-                    }
-                  }
-                ]
-              },
-              "error": {
-                "mode": "fallback",
-                "fallback": [
-                  {
-                    "type": "paragraph",
-                    "props": {
-                      "text": "Could not load users."
-                    }
-                  }
-                ]
-              },
-              "empty": {
-                "mode": "fallback",
-                "fallback": [
-                  {
-                    "type": "paragraph",
-                    "props": {
-                      "text": "No users found."
-                    }
-                  }
-                ]
-              },
-              "success": {
-                "mode": "show"
-              }
-            }
-          },
-          "props": {
-            "text": "Users loaded successfully."
-          }
-        },
-        {
-          "type": "paragraph",
-          "props": {
-            "text": "queries.searchUsers.data.0.name"
-          }
-        },
-        {
-          "type": "button",
-          "props": {
-            "label": "Search users",
-            "action": {
-              "type": "executeOperation",
-              "operationName": "searchUsers"
-            }
           }
         },
         {
@@ -181,10 +65,10 @@
             {
               "type": "button",
               "props": {
-                "label": "Ir a formulario",
+                "label": "Buscar posts",
                 "action": {
                   "type": "navigateTo",
-                  "pageId": "bootstrap-form"
+                  "pageId": "search-posts"
                 }
               }
             }
@@ -283,85 +167,69 @@
       ]
     },
     {
-      "id": "bootstrap-form",
+      "id": "search-posts",
+
       "layout": [
+        {
+          "type": "button",
+          "props": {
+            "label": "Volver",
+            "action": {
+              "type": "goBack"
+            }
+          }
+        },
         {
           "type": "heading",
           "props": {
-            "text": "Bootstrap Form",
+            "text": "Search Posts",
             "level": 2
           }
         },
         {
-          "type": "paragraph",
-          "queryStateFeedback": {
-            "query": "createUser",
-            "states": {
-              "loading": {
-                "mode": "fallback",
-                "fallback": [
-                  {
-                    "type": "paragraph",
-                    "props": {
-                      "text": "Enviando formulario..."
-                    }
-                  }
-                ]
-              },
-              "success": {
-                "mode": "show"
-              },
-              "error": {
-                "mode": "fallback",
-                "fallback": [
-                  {
-                    "type": "paragraph",
-                    "props": {
-                      "text": "Error al enviar el formulario."
-                    }
-                  }
-                ]
-              }
-            }
-          },
-          "props": {
-            "text": "¡Formulario enviado correctametne!"
-          }
-        },
-        {
           "type": "form",
-          "id": "userForm",
+          "id": "postForm",
           "submitAction": {
             "type": "executeOperation",
-            "operationName": "createUser"
+            "operationName": "searchPosts",
+            "query": {
+              "id": "forms.postForm.id"
+            }
           },
           "resetOnSuccess": true,
           "children": [
             {
               "type": "input",
               "props": {
-                "fieldId": "name",
-                "label": "Name",
-                "defaultValue": "John Doe"
-              }
-            },
-            {
-              "type": "input",
-              "props": {
-                "fieldId": "email",
-                "label": "Email",
-                "defaultValue": "john.doe@example.com",
+                "fieldId": "id",
+                "label": "Post ID",
                 "required": true
               }
             },
             {
               "type": "button",
               "props": {
-                "label": "Submit"
+                "label": "Limpiar",
+                "action": {
+                  "type": "resetForm",
+                  "formId": "postForm"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Enviar"
               },
               "queryStateFeedback": {
-                "query": "createUser",
+                "query": "searchPosts",
                 "states": {
+                  "idle": {
+                    "mode": "show"
+                  },
+                  "empty": {
+                    "mode": "show"
+                  },
                   "loading": {
                     "mode": "fallback",
                     "fallback": [
@@ -377,6 +245,70 @@
               }
             }
           ]
+        },
+        {
+          "type": "paragraph",
+          "queryStateFeedback": {
+            "query": "searchPosts",
+            "states": {
+              "idle": {
+                "mode": "fallback",
+                "fallback": [
+                  {
+                    "type": "paragraph",
+                    "props": {
+                      "text": "No se ha llamado a la API,"
+                    }
+                  }
+                ]
+              },
+              "loading": {
+                "mode": "fallback",
+                "fallback": [
+                  {
+                    "type": "paragraph",
+                    "props": {
+                      "text": "Buscando posts..."
+                    }
+                  }
+                ]
+              },
+              "error": {
+                "mode": "fallback",
+                "fallback": [
+                  {
+                    "type": "paragraph",
+                    "props": {
+                      "text": "Error al buscar posts"
+                    }
+                  }
+                ]
+              },
+              "empty": {
+                "mode": "fallback",
+                "fallback": [
+                  {
+                    "type": "paragraph",
+                    "props": {
+                      "text": "No se han encontrado posts"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "props": {
+            "text": "Posts encontrados:"
+          }
+        },
+        {
+          "type": "list",
+          "props": {
+            "items": {
+              "source": "queries.searchPosts.data",
+              "itemText": "title"
+            }
+          }
         }
       ]
     }

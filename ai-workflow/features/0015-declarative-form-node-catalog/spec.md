@@ -1,3 +1,5 @@
+> Nota histórica: esta spec depende de la semántica compartida de `queryStateFeedback`. Desde `0016-query-state-feedback-idle-state`, el estado visible previo a la primera ejecución de una query es `idle`, no `loading`.
+
 # Spec: Declarative form node catalog
 
 ## Objetivo

@@ -27,16 +27,16 @@ Soportar formularios declarativos con estado interno, campos reutilizables y val
 Reglas estables del catálogo:
 - `input` cubre entrada textual de una sola línea con `inputType` acotado.
 - `textarea` cubre entrada multilínea.
-- `select` acepta solo items estáticos `{ label, value }`.
-- Dentro de un mismo `select`, todos los `value` deben ser `string` o todos `number`.
-- Los valores numéricos de `select` se normalizan a string en runtime para compararse, almacenarse y renderizarse.
+- `select` acepta tanto items históricos estáticos `{ label, value }` como colecciones manuales o dinámicas declaradas desde `queries.*`.
+- Dentro de un mismo `select`, todos los `value` efectivos deben ser homogéneos en origen (`string` o `number`) aunque en runtime se normalicen a string.
+- Los valores numéricos de `select` se normalizan a string en runtime para compararse, almacenarse, renderizarse y enviarse.
 
 ## Valores por defecto
 - Los campos pueden declarar `defaultValue`.
 - Ese valor puede ser literal o dinámico.
 - Si `defaultValue` es una referencia dinámica, se resuelve una sola vez en el momento de la primera inicialización efectiva del campo.
 - Si el dato dinámico aparece más tarde, el runtime no rehidrata automáticamente el campo.
-- En `select`, si el valor efectivo no coincide con ninguna opción declarada, el campo queda vacío.
+- En `select`, si el valor efectivo no coincide con ninguna opción disponible en la colección resuelta, el campo queda vacío.
 - El reset por formulario restaura el estado inicial efectivo de cada campo usando ese `defaultValue` cuando exista.
 
 ## Validación básica de v1
@@ -46,6 +46,7 @@ Reglas estables del catálogo:
 Semántica estable vigente:
 - `input` y `textarea` `required` consideran inválidos `''` y strings compuestos solo por espacios.
 - `select` `required` considera inválido `''` aunque exista una opción placeholder visible.
+- Si un `select` pierde la opción correspondiente a su valor almacenado tras cambiar la colección efectiva, el runtime limpia ese valor a `''` y reutiliza ese mismo estado vacío para render, `required` y submit.
 - Los errores viven solo en `forms.{formId}.{fieldId}.error`.
 - Cuando un campo con error vuelve a un valor válido, el error se limpia al cambiar sin exigir un nuevo submit.
 - Un campo oculto por `queryStateFeedback` conserva su valor y su error, pero no bloquea el submit mientras siga oculto.
@@ -72,9 +73,10 @@ Semántica estable vigente del reset:
 - formulario de edición con datos iniciales
 - formulario simple de alta o edición con submit declarativo vía `api`
 - campos condicionales ocultables por `queryStateFeedback` sin perder su estado local
+- `select` dependiente de catálogos remotos ya cargados en `queries.*`, sin lógica React específica por pantalla
 
 ## Límites actuales
 - No existen todavía `radioGroup`, `checkboxGroup`, subida de archivos ni otros tipos de campo.
-- `select` no soporta items dinámicos.
+- `select` no soporta todavía multiselect, búsqueda remota, paginación ni carga incremental de opciones.
 - No existen todavía validaciones declarativas avanzadas, mensajes personalizados complejos ni validaciones cruzadas.
 - No existe todavía una política nueva de limpieza global de formularios al cambiar de página.

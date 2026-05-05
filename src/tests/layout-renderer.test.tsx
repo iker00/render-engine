@@ -237,6 +237,91 @@ function RuntimeFormQueryControls() {
   )
 }
 
+function CollectionSourceControls() {
+  const { initializeQuery, setQuerySuccess } = useRuntimeStateActions()
+
+  useEffect(() => {
+    initializeQuery('searchUsers')
+  }, [initializeQuery])
+
+  return (
+    <>
+      <button type="button" onClick={() => setQuerySuccess('searchUsers', ['Ada', 'Grace'])}>
+        Seed scalar results
+      </button>
+      <button
+        type="button"
+        onClick={() =>
+          setQuerySuccess('searchUsers', {
+            results: [
+              {
+                id: 'user-1',
+                profile: {
+                  name: 'Ada',
+                },
+                meta: {
+                  role: 'Admin',
+                },
+              },
+              {
+                id: 'user-2',
+                profile: {
+                  name: 'Grace',
+                },
+                meta: {
+                  role: 'Editor',
+                },
+              },
+            ],
+          })
+        }
+      >
+        Seed object results
+      </button>
+      <button
+        type="button"
+        onClick={() =>
+          setQuerySuccess('searchUsers', {
+            results: [
+              {
+                id: 'user-1',
+                profile: {
+                  name: 'Ada',
+                },
+              },
+              {
+                id: 'broken-user',
+              },
+              {
+                id: 'user-2',
+                profile: {
+                  name: 'Grace',
+                },
+              },
+            ],
+          })
+        }
+      >
+        Seed partial object results
+      </button>
+      <button
+        type="button"
+        onClick={() =>
+          setQuerySuccess('searchUsers', {
+            results: {
+              profile: {
+                name: 'Not a collection',
+              },
+            },
+          })
+        }
+      >
+        Seed non-collection results
+      </button>
+    </>
+  )
+}
+
 function renderRuntimeFormPage(activePage: RuntimePageConfig) {
   const config: RuntimeConfig = {
     api: {
@@ -252,6 +337,21 @@ function renderRuntimeFormPage(activePage: RuntimePageConfig) {
   return render(
     <RuntimeStateProvider config={config}>
       <RuntimeFormQueryControls />
+      <RuntimePage />
+    </RuntimeStateProvider>,
+  )
+}
+
+function renderRuntimePageWithCollectionControls(activePage: RuntimePageConfig) {
+  const config: RuntimeConfig = {
+    api: {},
+    initialPage: activePage.id,
+    pages: [activePage],
+  }
+
+  return render(
+    <RuntimeStateProvider config={config}>
+      <CollectionSourceControls />
       <RuntimePage />
     </RuntimeStateProvider>,
   )
@@ -311,6 +411,178 @@ describe('RuntimePage', () => {
 
     const list = screen.getByRole('list')
     expect(within(list).queryAllByRole('listitem')).toHaveLength(0)
+  })
+
+  it('renders dynamic scalar list items from query data', () => {
+    renderRuntimePageWithCollectionControls({
+      id: 'dynamic-scalar-list',
+      layout: [
+        {
+          type: 'list',
+          props: {
+            items: {
+              source: 'queries.searchUsers.data',
+              itemType: 'scalar',
+            },
+          },
+        },
+      ],
+    })
+
+    expect(within(screen.getByRole('list')).queryAllByRole('listitem')).toHaveLength(0)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Seed scalar results' }))
+
+    const items = within(screen.getByRole('list')).getAllByRole('listitem')
+    expect(items).toHaveLength(2)
+    expect(items[0]).toHaveTextContent('Ada')
+    expect(items[1]).toHaveTextContent('Grace')
+  })
+
+  it('renders object-based lists from manual values and dynamic query values using itemText mappings', () => {
+    renderRuntimePageWithCollectionControls({
+      id: 'object-lists',
+      layout: [
+        {
+          type: 'list',
+          props: {
+            items: {
+              values: [
+                {
+                  profile: {
+                    name: 'Manual Ada',
+                  },
+                },
+                {
+                  profile: {
+                    name: 'Manual Grace',
+                  },
+                },
+              ],
+              itemText: 'profile.name',
+            },
+          },
+        },
+        {
+          type: 'list',
+          props: {
+            items: {
+              source: 'queries.searchUsers.data.results',
+              itemText: 'profile.name',
+            },
+          },
+        },
+      ],
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Seed object results' }))
+
+    const lists = screen.getAllByRole('list')
+    expect(within(lists[0]).getAllByRole('listitem').map((item) => item.textContent)).toEqual([
+      'Manual Ada',
+      'Manual Grace',
+    ])
+    expect(within(lists[1]).getAllByRole('listitem').map((item) => item.textContent)).toEqual(['Ada', 'Grace'])
+  })
+
+  it('degrades a valid dynamic source to an empty list when the query is absent or the resolved value is not a collection', () => {
+    renderRuntimePage({
+      id: 'missing-query-list',
+      layout: [
+        {
+          type: 'list',
+          props: {
+            items: {
+              source: 'queries.searchUsers.data.results',
+            },
+          },
+        },
+      ],
+    })
+
+    expect(within(screen.getByRole('list')).queryAllByRole('listitem')).toHaveLength(0)
+
+    renderRuntimePageWithCollectionControls({
+      id: 'non-collection-query-list',
+      layout: [
+        {
+          type: 'list',
+          props: {
+            items: {
+              source: 'queries.searchUsers.data.results',
+            },
+          },
+        },
+      ],
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Seed non-collection results' }))
+
+    const lists = screen.getAllByRole('list')
+    expect(within(lists[1]).queryAllByRole('listitem')).toHaveLength(0)
+  })
+
+  it('degrades only invalid object items and reports a development diagnostic for each skipped list item', () => {
+    const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+    renderRuntimePageWithCollectionControls({
+      id: 'partial-object-list',
+      layout: [
+        {
+          type: 'list',
+          props: {
+            items: {
+              source: 'queries.searchUsers.data.results',
+              itemText: 'profile.name',
+            },
+          },
+        },
+      ],
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Seed partial object results' }))
+
+    const listItems = within(screen.getByRole('list')).getAllByRole('listitem')
+    expect(listItems).toHaveLength(2)
+    expect(listItems[0]).toHaveTextContent('Ada')
+    expect(listItems[1]).toHaveTextContent('Grace')
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      '[runtime-collections] Skipped item at "queries.searchUsers.data.results[1]" for list.props.items because "profile.name" could not be resolved.',
+    )
+
+    consoleWarnSpy.mockRestore()
+  })
+
+  it('lets multiple lists reuse the same query with different object mappings', () => {
+    renderRuntimePageWithCollectionControls({
+      id: 'reused-query-lists',
+      layout: [
+        {
+          type: 'list',
+          props: {
+            items: {
+              source: 'queries.searchUsers.data.results',
+              itemText: 'profile.name',
+            },
+          },
+        },
+        {
+          type: 'list',
+          props: {
+            items: {
+              source: 'queries.searchUsers.data.results',
+              itemText: 'meta.role',
+            },
+          },
+        },
+      ],
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Seed object results' }))
+
+    const lists = screen.getAllByRole('list')
+    expect(within(lists[0]).getAllByRole('listitem').map((item) => item.textContent)).toEqual(['Ada', 'Grace'])
+    expect(within(lists[1]).getAllByRole('listitem').map((item) => item.textContent)).toEqual(['Admin', 'Editor'])
   })
 
   it('treats heading, paragraph and list as leaf nodes even when they receive children', () => {
@@ -394,7 +666,7 @@ describe('RuntimePage', () => {
     expect(screen.getByRole('list')).toBeInTheDocument()
   })
 
-  it('hides a node on idle and loading when its loading rule resolves to hide', () => {
+  it('keeps a node hidden while idle when its idle rule resolves to hide and shows it after success', () => {
     renderRuntimePageWithQueryFeedback({
       id: 'home',
       layout: [
@@ -403,7 +675,7 @@ describe('RuntimePage', () => {
           queryStateFeedback: {
             query: 'searchUsers',
             states: {
-              loading: {
+              idle: {
                 mode: 'hide',
               },
             },
@@ -417,16 +689,12 @@ describe('RuntimePage', () => {
 
     expect(screen.queryByText('Visible only after loading')).not.toBeInTheDocument()
 
-    fireEvent.click(screen.getByRole('button', { name: 'Set loading' }))
-
-    expect(screen.queryByText('Visible only after loading')).not.toBeInTheDocument()
-
     fireEvent.click(screen.getByRole('button', { name: 'Set success list' }))
 
     expect(screen.getByText('Visible only after loading')).toBeInTheDocument()
   })
 
-  it('renders a local fallback during loading and restores the original node on non-empty success', () => {
+  it('renders an idle fallback before the first execution and restores the original node on non-empty success', () => {
     renderRuntimePageWithQueryFeedback({
       id: 'home',
       layout: [
@@ -435,20 +703,20 @@ describe('RuntimePage', () => {
           queryStateFeedback: {
             query: 'searchUsers',
             states: {
-              loading: {
+              idle: {
                 mode: 'fallback',
                 fallback: [
                   {
                     type: 'heading',
                     props: {
-                      text: 'Loading users...',
+                      text: 'Run a search first',
                       level: 2,
                     },
                   },
                   {
                     type: 'paragraph',
                     props: {
-                      text: 'Please wait',
+                      text: 'Choose a filter and search',
                     },
                   },
                 ],
@@ -464,16 +732,59 @@ describe('RuntimePage', () => {
 
     const pageRoot = screen.getByTestId('runtime-page')
 
-    expect(screen.getByRole('heading', { name: 'Loading users...', level: 2 })).toBeInTheDocument()
-    expect(screen.getByText('Please wait')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Run a search first', level: 2 })).toBeInTheDocument()
+    expect(screen.getByText('Choose a filter and search')).toBeInTheDocument()
     expect(screen.queryByText('Loaded users')).not.toBeInTheDocument()
     expect(pageRoot.children[0]).toHaveAttribute('data-layout-node', 'heading')
     expect(pageRoot.children[1]).toHaveAttribute('data-layout-node', 'paragraph')
 
     fireEvent.click(screen.getByRole('button', { name: 'Set success list' }))
 
-    expect(screen.queryByRole('heading', { name: 'Loading users...', level: 2 })).not.toBeInTheDocument()
-    expect(screen.queryByText('Please wait')).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Run a search first', level: 2 })).not.toBeInTheDocument()
+    expect(screen.queryByText('Choose a filter and search')).not.toBeInTheDocument()
+    expect(screen.getByText('Loaded users')).toBeInTheDocument()
+  })
+
+  it('renders a loading fallback only during an actual loading execution', () => {
+    renderRuntimePageWithQueryFeedback({
+      id: 'home',
+      layout: [
+        {
+          type: 'paragraph',
+          queryStateFeedback: {
+            query: 'searchUsers',
+            states: {
+              loading: {
+                mode: 'fallback',
+                fallback: [
+                  {
+                    type: 'paragraph',
+                    props: {
+                      text: 'Loading users...',
+                    },
+                  },
+                ],
+              },
+            },
+          },
+          props: {
+            text: 'Loaded users',
+          },
+        },
+      ],
+    })
+
+    expect(screen.queryByText('Loading users...')).not.toBeInTheDocument()
+    expect(screen.queryByText('Loaded users')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Set loading' }))
+
+    expect(screen.getByText('Loading users...')).toBeInTheDocument()
+    expect(screen.queryByText('Loaded users')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Set success list' }))
+
+    expect(screen.queryByText('Loading users...')).not.toBeInTheDocument()
     expect(screen.getByText('Loaded users')).toBeInTheDocument()
   })
 
@@ -635,7 +946,8 @@ describe('RuntimePage', () => {
       ],
     })
 
-    expect(screen.getByText('Loading list...')).toBeInTheDocument()
+    expect(screen.queryByText('Loading list...')).not.toBeInTheDocument()
+    expect(screen.queryByText('User list')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Retry later' })).not.toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: 'Set success list' }))
@@ -1062,6 +1374,139 @@ describe('RuntimePage', () => {
     expect(screen.getByLabelText('Role')).toHaveValue('2')
     expect(buttons[0]).toHaveTextContent('Aux reset')
     expect(buttons[1]).toHaveTextContent('Submit profile')
+  })
+
+  it('renders dynamic scalar and object select options from query-backed collections', () => {
+    renderRuntimePageWithCollectionControls({
+      id: 'dynamic-selects',
+      layout: [
+        {
+          type: 'form',
+          id: 'catalog-form',
+          children: [
+            {
+              type: 'select',
+              props: {
+                fieldId: 'scalarRole',
+                label: 'Scalar role',
+                items: {
+                  source: 'queries.searchUsers.data',
+                  itemType: 'scalar',
+                },
+              },
+            },
+            {
+              type: 'select',
+              props: {
+                fieldId: 'objectRole',
+                label: 'Object role',
+                items: {
+                  source: 'queries.searchUsers.data.results',
+                  label: 'profile.name',
+                  value: 'id',
+                },
+              },
+            },
+          ],
+        },
+      ],
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Seed scalar results' }))
+
+    expect(
+      within(screen.getByRole('combobox', { name: 'Scalar role' })).getAllByRole('option').map((option) => option.textContent),
+    ).toEqual(['', 'Ada', 'Grace'])
+
+    fireEvent.click(screen.getByRole('button', { name: 'Seed object results' }))
+
+    expect(
+      within(screen.getByRole('combobox', { name: 'Object role' })).getAllByRole('option').map((option) => option.textContent),
+    ).toEqual(['', 'Ada', 'Grace'])
+  })
+
+  it('degrades only invalid dynamic object options and reports a development diagnostic for each skipped select item', () => {
+    const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+    renderRuntimePageWithCollectionControls({
+      id: 'dynamic-object-select-diagnostics',
+      layout: [
+        {
+          type: 'form',
+          id: 'diagnostic-form',
+          children: [
+            {
+              type: 'select',
+              props: {
+                fieldId: 'userId',
+                label: 'User',
+                items: {
+                  source: 'queries.searchUsers.data.results',
+                  label: 'profile.name',
+                  value: 'id',
+                },
+              },
+            },
+          ],
+        },
+      ],
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Seed partial object results' }))
+
+    expect(
+      within(screen.getByRole('combobox', { name: 'User' })).getAllByRole('option').map((option) => option.textContent),
+    ).toEqual(['', 'Ada', 'Grace'])
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      '[runtime-collections] Skipped item at "queries.searchUsers.data.results[1]" for select.props.items because "profile.name|id" could not be resolved.',
+    )
+
+    consoleWarnSpy.mockRestore()
+  })
+
+  it('lets a list and a select reuse the same query with different projections', () => {
+    renderRuntimePageWithCollectionControls({
+      id: 'shared-query-consumers',
+      layout: [
+        {
+          type: 'list',
+          props: {
+            items: {
+              source: 'queries.searchUsers.data.results',
+              itemText: 'meta.role',
+            },
+          },
+        },
+        {
+          type: 'form',
+          id: 'shared-query-form',
+          children: [
+            {
+              type: 'select',
+              props: {
+                fieldId: 'userId',
+                label: 'User',
+                items: {
+                  source: 'queries.searchUsers.data.results',
+                  label: 'profile.name',
+                  value: 'id',
+                },
+              },
+            },
+          ],
+        },
+      ],
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Seed object results' }))
+
+    expect(within(screen.getByRole('list')).getAllByRole('listitem').map((item) => item.textContent)).toEqual([
+      'Admin',
+      'Editor',
+    ])
+    expect(
+      within(screen.getByRole('combobox', { name: 'User' })).getAllByRole('option').map((option) => option.textContent),
+    ).toEqual(['', 'Ada', 'Grace'])
   })
 
   it('resolves dynamic default values only during the first field initialization', () => {

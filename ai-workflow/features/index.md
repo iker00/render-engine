@@ -15,6 +15,7 @@ Cada feature nueva debería usar, cuando aplique:
 La política completa está en [`../docs/workflow.md`](../docs/workflow.md).
 
 ## Planificadas
+- Ninguna ahora mismo.
 
 ## Completadas
 - `0001-bootstrap-project-dependencies`: bootstrap técnico reproducible con frontend de paquete único, scripts base de desarrollo/validación y carga inicial de configuración desde `data-config` o `src/dev/config.json`.
@@ -28,7 +29,8 @@ La política completa está en [`../docs/workflow.md`](../docs/workflow.md).
 - `0009-declarative-api-boundary`: `api` ya actúa como catálogo declarativo tipado y validado, con construcción de requests, ejecución real por nombre y proyección del resultado en `queries.{operationName}` sin acoplar la UI a detalles HTTP.
 - `0010-page-entry-query-preloads`: las páginas ya pueden declarar `preloads` para disparar operaciones `api` al entrar, con agregado `pageEntry` latest-only y compatibilidad hacia atrás para configuraciones sin precargas.
 - `0012-zod-runtime-config-validation`: la validación del runtime config ya se apoya en esquemas `Zod`, conserva la frontera pública de bootstrap y mantiene las validaciones cruzadas estables con diagnósticos de ruta más trazables.
-- `0013-declarative-query-state-feedback`: feedback visual declarativo por nodo ligado al estado `loading | error | empty | success` de una query concreta, con soporte para ocultar, mostrar o sustituir el nodo por un fallback propio.
+- `0013-declarative-query-state-feedback`: feedback visual declarativo por nodo ligado originalmente al estado `loading | error | empty | success` de una query concreta. Su semántica vigente quedó ampliada y corregida por `0016-query-state-feedback-idle-state`, que separa `idle` de `loading`.
 - `0014-shared-runtime-ui-actions-foundation`: base común de acciones UI reutilizable desde `button.props.action`, con soporte estable para `navigateTo`, `goBack`, `executeOperation` y `resetForm` sin abrir todavía un sistema general de eventos.
 - `0015-declarative-form-node-catalog`: catálogo declarativo mínimo de formularios con `form`, `input`, `textarea` y `select`, inicialización lazy en `forms.*`, validación `required` y submit vía `executeOperation`.
 - `0016-query-state-feedback-idle-state`: `queryStateFeedback` ya distingue `idle` de `loading`, trata la query ausente como `idle`, permite reglas declarativas específicas antes de la primera ejecución y reutiliza la misma semántica visible en renderer y validación de formularios.
+- `0017-multi-value-data-sources`: `list` y `select` ya pueden consumir colecciones manuales o datos de `queries.*`, con mapeos declarativos por consumidor, degradación a vacío para datos no coleccionables y coherencia entre render, formularios y validación.

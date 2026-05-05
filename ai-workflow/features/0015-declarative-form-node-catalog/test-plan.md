@@ -1,3 +1,5 @@
+> Nota histórica: este plan de pruebas se redactó antes de `0016-query-state-feedback-idle-state`. La semántica visible vigente de `queryStateFeedback` incluye `idle` como estado diferenciado de `loading`.
+
 # Test Plan: Declarative form node catalog
 
 ## Objetivo
