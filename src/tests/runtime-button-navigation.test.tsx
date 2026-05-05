@@ -113,10 +113,16 @@ const navigationConfig: RuntimeConfig = {
 const executeOperationButtonConfig: RuntimeConfig = {
   api: {
     searchUsers: {
-      method: 'GET',
+      method: 'POST',
       endpoint: '/api/users',
       query: {
         search: 'forms.userSearch.name',
+      },
+      headers: {
+        accept: 'application/json',
+      },
+      body: {
+        source: 'button',
       },
     },
   },
@@ -139,6 +145,17 @@ const executeOperationButtonConfig: RuntimeConfig = {
             action: {
               type: 'executeOperation',
               operationName: 'searchUsers',
+              query: {
+                page: 2,
+              },
+              headers: {
+                authorization: 'queries.searchUsers.data.0',
+              },
+              body: {
+                profile: {
+                  nickname: 'forms.userSearch.name',
+                },
+              },
             },
           },
         },
@@ -281,7 +298,25 @@ describe('Runtime button navigation', () => {
 
     renderRuntimeWithStateSeed(executeOperationButtonConfig)
 
+    fireEvent.click(screen.getByRole('button', { name: 'Seed prior query success' }))
     fireEvent.click(screen.getByRole('button', { name: 'Search users' }))
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+    expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({
+      method: 'POST',
+      headers: {
+        accept: 'application/json',
+        authorization: 'Ada',
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        source: 'button',
+        profile: {
+          nickname: 'Ada',
+        },
+      }),
+    })
+    expect(fetchMock.mock.calls[0]?.[0]).toBe('/api/users?search=Ada&page=2')
 
     await waitFor(() =>
       expect(readRuntimeState()).toMatchObject({
@@ -359,8 +394,14 @@ describe('Runtime button navigation', () => {
         submitProfile: {
           method: 'POST',
           endpoint: '/api/profile',
+          query: {
+            mode: 'save',
+          },
+          headers: {
+            accept: 'application/json',
+          },
           body: {
-            name: 'forms.profileForm.name',
+            source: 'form',
           },
         },
       },
@@ -375,6 +416,15 @@ describe('Runtime button navigation', () => {
               submitAction: {
                 type: 'executeOperation',
                 operationName: 'submitProfile',
+                query: {
+                  name: 'forms.profileForm.name',
+                },
+                headers: {
+                  authorization: 'forms.profileForm.name',
+                },
+                body: {
+                  name: 'forms.profileForm.name',
+                },
               },
               children: [
                 {
@@ -407,10 +457,18 @@ describe('Runtime button navigation', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Submit profile' }))
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+    expect(fetchMock.mock.calls[0]?.[0]).toBe('/api/profile?mode=save&name=Grace')
     expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({
-      body: JSON.stringify({
-        name: 'Grace',
-      }),
+      method: 'POST',
+      headers: {
+        accept: 'application/json',
+        authorization: 'Grace',
+        'content-type': 'application/json',
+      },
+    })
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toEqual({
+      name: 'Grace',
+      source: 'form',
     })
     await waitFor(() =>
       expect(readRuntimeState()).toMatchObject({

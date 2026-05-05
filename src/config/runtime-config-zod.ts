@@ -26,10 +26,19 @@ export const runtimePageShellSchema = z
   .strip()
 
 export const runtimeApiQuerySchema = z.record(z.string(), z.union([z.string(), z.number(), z.boolean()]))
+export const runtimeApiHeadersSchema = z.record(z.string(), z.string())
 
 const runtimeApiBodySchema: z.ZodType<unknown> = z.lazy(() =>
   z.union([z.string(), z.number(), z.boolean(), z.null(), z.array(runtimeApiBodySchema), z.record(z.string(), runtimeApiBodySchema)]),
 )
+
+export const runtimeApiRequestParamsSchema = z
+  .object({
+    query: runtimeApiQuerySchema.optional(),
+    body: runtimeApiBodySchema.optional(),
+    headers: runtimeApiHeadersSchema.optional(),
+  })
+  .strip()
 
 export const runtimeApiOperationShellSchema = z
   .object({
@@ -37,6 +46,7 @@ export const runtimeApiOperationShellSchema = z
     endpoint: nonEmptyStringSchema,
     query: runtimeApiQuerySchema.optional(),
     body: runtimeApiBodySchema.optional(),
+    headers: runtimeApiHeadersSchema.optional(),
   })
   .strip()
 
@@ -155,6 +165,9 @@ export const executeOperationRuntimeUiActionSchema = z
   .object({
     type: z.literal('executeOperation'),
     operationName: nonEmptyStringSchema,
+    query: runtimeApiQuerySchema.optional(),
+    body: runtimeApiBodySchema.optional(),
+    headers: runtimeApiHeadersSchema.optional(),
   })
   .strip()
 
@@ -184,7 +197,7 @@ export const formNodeSchema = z
     type: z.literal('form'),
     id: nodeIdSchema,
     queryStateFeedback: queryStateFeedbackSchema.optional(),
-    submitAction: executeOperationRuntimeUiActionSchema.optional(),
+    submitAction: z.unknown().optional(),
     resetOnSuccess: z.boolean().optional(),
     children: z.array(z.unknown()).optional(),
   })

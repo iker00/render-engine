@@ -398,6 +398,368 @@ describe('Runtime api execution', () => {
     })
   })
 
+  it('merges requestParams with the base api operation across query headers and body', () => {
+    const result = buildRuntimeApiRequest({
+      config: {
+        ...runtimeConfig,
+        api: {
+          mergeRequest: {
+            method: 'POST',
+            endpoint: '/api/users/search',
+            query: {
+              page: 1,
+              search: 'forms.userSearch.term',
+            },
+            headers: {
+              accept: 'application/json',
+              authorization: 'base-token',
+            },
+            body: {
+              page: 1,
+              filters: {
+                active: false,
+              },
+            },
+          },
+        },
+      },
+      operationName: 'mergeRequest',
+      state: runtimeState,
+      requestParams: {
+        query: {
+          page: 'forms.userSearch.page',
+          active: 'forms.userSearch.active',
+        },
+        headers: {
+          authorization: 'override-token',
+          'x-trace-id': 'queries.selectedUser.data.id',
+        },
+        body: {
+          filters: {
+            active: 'forms.userSearch.active',
+          },
+          profile: {
+            nickname: 'queries.selectedUser.data.profile.nickname',
+          },
+        },
+      },
+    })
+
+    expect(result).toEqual({
+      status: 'ready',
+      request: {
+        operationName: 'mergeRequest',
+        operation: {
+          method: 'POST',
+          endpoint: '/api/users/search',
+          query: {
+            page: 1,
+            search: 'forms.userSearch.term',
+          },
+          headers: {
+            accept: 'application/json',
+            authorization: 'base-token',
+          },
+          body: {
+            page: 1,
+            filters: {
+              active: false,
+            },
+          },
+        },
+        url: '/api/users/search?page=2&search=Ada&active=true',
+        init: {
+          method: 'POST',
+          headers: {
+            accept: 'application/json',
+            authorization: 'override-token',
+            'x-trace-id': 'user-1',
+            'content-type': 'application/json',
+          },
+          body: JSON.stringify({
+            page: 1,
+            filters: {
+              active: true,
+            },
+            profile: {
+              nickname: 'Countess',
+            },
+          }),
+        },
+      },
+    })
+  })
+
+  it('replaces the whole body when either layer uses a non-object root value', () => {
+    expect(
+      buildRuntimeApiRequest({
+        config: {
+          ...runtimeConfig,
+          api: {
+            replaceBody: {
+              method: 'POST',
+              endpoint: '/api/replace',
+              body: {
+                name: 'Ada',
+              },
+            },
+          },
+        },
+        operationName: 'replaceBody',
+        state: runtimeState,
+        requestParams: {
+          body: 'queries.selectedUser.data.id',
+        },
+      }),
+    ).toEqual({
+      status: 'ready',
+      request: {
+        operationName: 'replaceBody',
+        operation: {
+          method: 'POST',
+          endpoint: '/api/replace',
+          body: {
+            name: 'Ada',
+          },
+        },
+        url: '/api/replace',
+        init: {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+          },
+          body: JSON.stringify('user-1'),
+        },
+      },
+    })
+
+    expect(
+      buildRuntimeApiRequest({
+        config: {
+          ...runtimeConfig,
+          api: {
+            replaceBody: {
+              method: 'POST',
+              endpoint: '/api/replace',
+              body: 'queries.selectedUser.data.id',
+            },
+          },
+        },
+        operationName: 'replaceBody',
+        state: runtimeState,
+        requestParams: {
+          body: {
+            active: 'forms.userSearch.active',
+          },
+        },
+      }),
+    ).toEqual({
+      status: 'ready',
+      request: {
+        operationName: 'replaceBody',
+        operation: {
+          method: 'POST',
+          endpoint: '/api/replace',
+          body: 'queries.selectedUser.data.id',
+        },
+        url: '/api/replace',
+        init: {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+          },
+          body: JSON.stringify({
+            active: true,
+          }),
+        },
+      },
+    })
+  })
+
+  it('only injects content-type when needed and preserves explicit casing from base or override headers', () => {
+    expect(
+      buildRuntimeApiRequest({
+        config: {
+          ...runtimeConfig,
+          api: {
+            explicitBaseContentType: {
+              method: 'POST',
+              endpoint: '/api/users',
+              headers: {
+                'Content-Type': 'application/merge-patch+json',
+              },
+              body: {
+                active: true,
+              },
+            },
+          },
+        },
+        operationName: 'explicitBaseContentType',
+        state: runtimeState,
+      }),
+    ).toEqual({
+      status: 'ready',
+      request: {
+        operationName: 'explicitBaseContentType',
+        operation: {
+          method: 'POST',
+          endpoint: '/api/users',
+          headers: {
+            'Content-Type': 'application/merge-patch+json',
+          },
+          body: {
+            active: true,
+          },
+        },
+        url: '/api/users',
+        init: {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/merge-patch+json',
+          },
+          body: JSON.stringify({
+            active: true,
+          }),
+        },
+      },
+    })
+
+    expect(
+      buildRuntimeApiRequest({
+        config: {
+          ...runtimeConfig,
+          api: {
+            explicitOverrideContentType: {
+              method: 'POST',
+              endpoint: '/api/users',
+              body: {
+                active: true,
+              },
+            },
+          },
+        },
+        operationName: 'explicitOverrideContentType',
+        state: runtimeState,
+        requestParams: {
+          headers: {
+            'content-type': 'application/vnd.api+json',
+          },
+        },
+      }),
+    ).toEqual({
+      status: 'ready',
+      request: {
+        operationName: 'explicitOverrideContentType',
+        operation: {
+          method: 'POST',
+          endpoint: '/api/users',
+          body: {
+            active: true,
+          },
+        },
+        url: '/api/users',
+        init: {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/vnd.api+json',
+          },
+          body: JSON.stringify({
+            active: true,
+          }),
+        },
+      },
+    })
+  })
+
+  it('fails request building for unresolved or non-string effective headers before any network call', async () => {
+    expect(
+      buildRuntimeApiRequest({
+        config: {
+          ...runtimeConfig,
+          api: {
+            invalidHeaderReference: {
+              method: 'GET',
+              endpoint: '/api/users',
+            },
+          },
+        },
+        operationName: 'invalidHeaderReference',
+        state: runtimeState,
+        requestParams: {
+          headers: {
+            authorization: 'forms.userSearch.missingField',
+          },
+        },
+      }),
+    ).toEqual({
+      status: 'error',
+      error: {
+        code: 'request-build-failed',
+        message:
+          'The api operation "invalidHeaderReference" could not resolve "forms.userSearch.missingField" for "headers.authorization".',
+      },
+    })
+
+    expect(
+      buildRuntimeApiRequest({
+        config: {
+          ...runtimeConfig,
+          api: {
+            invalidHeaderType: {
+              method: 'GET',
+              endpoint: '/api/users',
+            },
+          },
+        },
+        operationName: 'invalidHeaderType',
+        state: runtimeState,
+        requestParams: {
+          headers: {
+            authorization: 'forms.userSearch.page',
+          },
+        },
+      }),
+    ).toEqual({
+      status: 'error',
+      error: {
+        code: 'request-build-failed',
+        message: 'The api operation "invalidHeaderType" resolved "headers.authorization" to an unsupported header value.',
+      },
+    })
+
+    const fetchMock = vi.fn()
+
+    await expect(
+      executeRuntimeApiOperation({
+        config: {
+          ...runtimeConfig,
+          api: {
+            invalidHeaderType: {
+              method: 'GET',
+              endpoint: '/api/users',
+            },
+          },
+        },
+        operationName: 'invalidHeaderType',
+        state: runtimeState,
+        requestParams: {
+          headers: {
+            authorization: 'forms.userSearch.page',
+          },
+        },
+        fetch: fetchMock,
+      }),
+    ).resolves.toEqual({
+      status: 'error',
+      error: {
+        code: 'request-build-failed',
+        message: 'The api operation "invalidHeaderType" resolved "headers.authorization" to an unsupported header value.',
+      },
+    })
+
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
   it('fails fast when the requested operation does not exist', async () => {
     const fetchMock = vi.fn()
 

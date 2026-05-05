@@ -17,12 +17,14 @@ export async function executeRuntimeApiOperation({
   config,
   operationName,
   state,
+  requestParams,
   fetch: fetchImplementation = fetch,
 }: ExecuteRuntimeApiOperationOptions): Promise<RuntimeApiExecutionResult> {
   const requestResult = buildRuntimeApiRequest({
     config,
     operationName,
     state,
+    requestParams,
   })
 
   if (requestResult.status === 'error') {

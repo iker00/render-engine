@@ -21,8 +21,11 @@ import type {
   ResetFormRuntimeUiAction,
   RuntimeApiBodyValue,
   RuntimeApiConfig,
+  RuntimeApiHeaders,
   RuntimeApiMethod,
   RuntimeApiOperation,
+  RuntimeApiQuery,
+  RuntimeApiRequestParams,
   RuntimeConfig,
   RuntimeConfigError,
   RuntimeUiAction,
@@ -44,6 +47,7 @@ import {
   paragraphNodeSchema,
   resetFormRuntimeUiActionSchema,
   runtimeApiOperationShellSchema,
+  runtimeApiHeadersSchema,
   runtimeApiQuerySchema,
   runtimeConfigShellSchema,
   runtimePageShellSchema,
@@ -170,6 +174,12 @@ export function validateRuntimeConfig(rawConfig: unknown): RuntimeConfigValidati
     return formSemanticError
   }
 
+  const requestParamsError = validateExecutionRequestParams(config)
+
+  if (requestParamsError) {
+    return requestParamsError
+  }
+
   return {
     status: 'ready',
     config,
@@ -228,6 +238,10 @@ function validateApiOperation(
       return mapApiBodyIssue(operationName, rawOperation.body, issue.path)
     }
 
+    if (path === 'headers') {
+      return mapApiHeadersIssue(operationName, rawOperation.headers, issue.path)
+    }
+
     return invalidLayout(`The api operation "${operationName}" must be an object.`)
   }
 
@@ -243,6 +257,14 @@ function validateApiOperation(
     return invalidLayout(`The api operation "${operationName}" uses method "GET" but declares an unsupported body.`)
   }
 
+  if (shellResult.data.headers !== undefined) {
+    const headersIssue = validateApiHeadersKeys(operationName, shellResult.data.headers)
+
+    if (headersIssue) {
+      return headersIssue
+    }
+  }
+
   const operation: RuntimeApiOperation = {
     method: shellResult.data.method as RuntimeApiMethod,
     endpoint: shellResult.data.endpoint,
@@ -254,6 +276,10 @@ function validateApiOperation(
 
   if (shellResult.data.body !== undefined) {
     operation.body = shellResult.data.body as RuntimeApiBodyValue
+  }
+
+  if (shellResult.data.headers !== undefined) {
+    operation.headers = shellResult.data.headers as RuntimeApiHeaders
   }
 
   return {
@@ -297,6 +323,45 @@ function validateApiQueryKeys(
   for (const key of Object.keys(query)) {
     if (key.length === 0) {
       return invalidLayout(`The api operation "${operationName}.query" contains an empty key.`)
+    }
+  }
+
+  return null
+}
+
+function mapApiHeadersIssue(
+  operationName: string,
+  rawHeaders: unknown,
+  path: PropertyKey[],
+): { status: 'error'; error: RuntimeConfigError } {
+  if (!isRecord(rawHeaders)) {
+    return invalidLayout(`The api operation "${operationName}.headers" must be an object with non-empty keys.`)
+  }
+
+  if (typeof path[1] === 'string') {
+    return invalidLayout(`The api operation "${operationName}.headers.${path[1]}" must resolve to a string.`)
+  }
+
+  return invalidLayout(`The api operation "${operationName}.headers" must be an object with non-empty keys.`)
+}
+
+function validateApiHeadersKeys(
+  operationName: string,
+  headers: RuntimeApiHeaders | undefined,
+): { status: 'error'; error: RuntimeConfigError } | null {
+  if (headers === undefined) {
+    return null
+  }
+
+  const headersResult = runtimeApiHeadersSchema.safeParse(headers)
+
+  if (!headersResult.success) {
+    return mapApiHeadersIssue(operationName, headers, headersResult.error.issues[0]?.path ?? [])
+  }
+
+  for (const key of Object.keys(headers)) {
+    if (key.length === 0) {
+      return invalidLayout(`The api operation "${operationName}.headers" contains an empty key.`)
     }
   }
 
@@ -822,10 +887,16 @@ function validateRuntimeUiAction(
     const executeOperationParseResult = executeOperationRuntimeUiActionSchema.safeParse(rawAction)
 
     if (!executeOperationParseResult.success) {
-      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.operationName".`)
+      return mapExecuteOperationActionIssue(pageId, path, rawAction, executeOperationParseResult.error.issues[0]?.path ?? [])
     }
 
     const action: ExecuteOperationRuntimeUiAction = executeOperationParseResult.data
+
+    const requestParamsIssue = validateRuntimeApiRequestParams(action, path, pageId)
+
+    if (requestParamsIssue) {
+      return requestParamsIssue
+    }
 
     return {
       status: 'ready',
@@ -951,6 +1022,17 @@ function validateFormNode(
   }
 
   let children: LayoutNodeCollection | undefined
+  let submitAction: ExecuteOperationRuntimeUiAction | undefined
+
+  if (parseResult.data.submitAction !== undefined) {
+    const submitActionResult = validateFormSubmitAction(parseResult.data.submitAction, `${path}.submitAction`, pageId)
+
+    if (submitActionResult.status === 'error') {
+      return submitActionResult
+    }
+
+    submitAction = submitActionResult.action
+  }
 
   if (parseResult.data.children !== undefined) {
     const childrenResult = validateLayoutCollection(parseResult.data.children, `${path}.children`, pageId)
@@ -968,7 +1050,7 @@ function validateFormNode(
       type: 'form',
       id: parseResult.data.id,
       queryStateFeedback: feedbackResult.queryStateFeedback,
-      submitAction: parseResult.data.submitAction,
+      submitAction,
       resetOnSuccess: parseResult.data.resetOnSuccess,
       children,
     },
@@ -1338,6 +1420,20 @@ function validateFormSemantics(
   return null
 }
 
+function validateExecutionRequestParams(
+  config: RuntimeConfig,
+): { status: 'error'; error: RuntimeConfigError } | null {
+  for (const page of config.pages) {
+    const error = validateExecutionRequestParamsInCollection(page.layout, 'layout', page.id, config.api)
+
+    if (error) {
+      return error
+    }
+  }
+
+  return null
+}
+
 interface FormValidationContext {
   inForm: boolean
   pageId: string
@@ -1602,6 +1698,44 @@ function findInvalidActionTarget(
   return null
 }
 
+function validateExecutionRequestParamsInCollection(
+  nodes: LayoutNodeCollection,
+  path: string,
+  pageId: string,
+  api: RuntimeApiConfig,
+): { status: 'error'; error: RuntimeConfigError } | null {
+  for (let index = 0; index < nodes.length; index += 1) {
+    const node = nodes[index]
+    const nodePath = `${path}[${index}]`
+
+    if (node.type === 'button' && node.props.action?.type === 'executeOperation') {
+      const operation = api[node.props.action.operationName]
+
+      if (operation?.method === 'GET' && node.props.action.body !== undefined) {
+        return invalidLayout(`Page "${pageId}" has an invalid layout at "${nodePath}.props.action.body": GET operations do not support body.`)
+      }
+    }
+
+    if (node.type === 'form' && node.submitAction) {
+      const operation = api[node.submitAction.operationName]
+
+      if (operation?.method === 'GET' && node.submitAction.body !== undefined) {
+        return invalidLayout(`Page "${pageId}" has an invalid layout at "${nodePath}.submitAction.body": GET operations do not support body.`)
+      }
+    }
+
+    if ((node.type === 'container' || node.type === 'form') && node.children) {
+      const childError = validateExecutionRequestParamsInCollection(node.children, `${nodePath}.children`, pageId, api)
+
+      if (childError) {
+        return childError
+      }
+    }
+  }
+
+  return null
+}
+
 function validateFallbackCollections<TError>(
   node: LayoutNode,
   nodePath: string,
@@ -1703,6 +1837,181 @@ function findInvalidJsonBodyPath(value: unknown, path: string): string | null {
   }
 
   return null
+}
+
+function validateFormSubmitAction(
+  rawAction: unknown,
+  path: string,
+  pageId: string,
+): { status: 'ready'; action: ExecuteOperationRuntimeUiAction } | { status: 'error'; error: RuntimeConfigError } {
+  if (!isRecord(rawAction)) {
+    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}".`)
+  }
+
+  if (rawAction.type !== 'executeOperation') {
+    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.type".`)
+  }
+
+  const parseResult = executeOperationRuntimeUiActionSchema.safeParse(rawAction)
+
+  if (!parseResult.success) {
+    return mapExecuteOperationActionIssue(pageId, path, rawAction, parseResult.error.issues[0]?.path ?? [])
+  }
+
+  const action = parseResult.data
+  const requestParamsIssue = validateRuntimeApiRequestParams(action, path, pageId)
+
+  if (requestParamsIssue) {
+    return requestParamsIssue
+  }
+
+  return {
+    status: 'ready',
+    action,
+  }
+}
+
+function mapExecuteOperationActionIssue(
+  pageId: string,
+  path: string,
+  rawAction: Record<string, unknown>,
+  issuePath: PropertyKey[],
+): { status: 'error'; error: RuntimeConfigError } {
+  if (issuePath[0] === 'operationName' || issuePath.length === 0) {
+    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.operationName".`)
+  }
+
+  if (issuePath[0] === 'query') {
+    return mapRequestQueryIssue(pageId, path, rawAction.query, issuePath.slice(1))
+  }
+
+  if (issuePath[0] === 'headers') {
+    return mapRequestHeadersIssue(pageId, path, rawAction.headers, issuePath.slice(1))
+  }
+
+  if (issuePath[0] === 'body') {
+    return mapRequestBodyIssue(pageId, path, rawAction.body, issuePath.slice(1))
+  }
+
+  return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.${String(issuePath[0])}".`)
+}
+
+function validateRuntimeApiRequestParams(
+  requestParams: RuntimeApiRequestParams,
+  path: string,
+  pageId: string,
+): { status: 'error'; error: RuntimeConfigError } | null {
+  const queryIssue = validateRequestQueryKeys(pageId, path, requestParams.query)
+
+  if (queryIssue) {
+    return queryIssue
+  }
+
+  const headersIssue = validateRequestHeadersKeys(pageId, path, requestParams.headers)
+
+  if (headersIssue) {
+    return headersIssue
+  }
+
+  return null
+}
+
+function mapRequestQueryIssue(
+  pageId: string,
+  path: string,
+  rawQuery: unknown,
+  issuePath: PropertyKey[],
+): { status: 'error'; error: RuntimeConfigError } {
+  if (!isRecord(rawQuery)) {
+    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.query".`)
+  }
+
+  if (typeof issuePath[0] === 'string') {
+    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.query.${issuePath[0]}".`)
+  }
+
+  return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.query".`)
+}
+
+function validateRequestQueryKeys(
+  pageId: string,
+  path: string,
+  query: RuntimeApiQuery | undefined,
+): { status: 'error'; error: RuntimeConfigError } | null {
+  if (query === undefined) {
+    return null
+  }
+
+  const queryResult = runtimeApiQuerySchema.safeParse(query)
+
+  if (!queryResult.success) {
+    return mapRequestQueryIssue(pageId, path, query, queryResult.error.issues[0]?.path ?? [])
+  }
+
+  for (const key of Object.keys(query)) {
+    if (key.length === 0) {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.query": contains an empty key.`)
+    }
+  }
+
+  return null
+}
+
+function mapRequestHeadersIssue(
+  pageId: string,
+  path: string,
+  rawHeaders: unknown,
+  issuePath: PropertyKey[],
+): { status: 'error'; error: RuntimeConfigError } {
+  if (!isRecord(rawHeaders)) {
+    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.headers".`)
+  }
+
+  if (typeof issuePath[0] === 'string') {
+    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.headers.${issuePath[0]}".`)
+  }
+
+  return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.headers".`)
+}
+
+function validateRequestHeadersKeys(
+  pageId: string,
+  path: string,
+  headers: RuntimeApiHeaders | undefined,
+): { status: 'error'; error: RuntimeConfigError } | null {
+  if (headers === undefined) {
+    return null
+  }
+
+  const headersResult = runtimeApiHeadersSchema.safeParse(headers)
+
+  if (!headersResult.success) {
+    return mapRequestHeadersIssue(pageId, path, headers, headersResult.error.issues[0]?.path ?? [])
+  }
+
+  for (const key of Object.keys(headers)) {
+    if (key.length === 0) {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.headers": contains an empty key.`)
+    }
+  }
+
+  return null
+}
+
+function mapRequestBodyIssue(
+  pageId: string,
+  path: string,
+  rawBody: unknown,
+  issuePath: PropertyKey[],
+): { status: 'error'; error: RuntimeConfigError } {
+  const bodyPath = findInvalidJsonBodyPath(rawBody, `${path}.body`)
+
+  if (bodyPath) {
+    return invalidLayout(`Page "${pageId}" has an invalid layout at "${bodyPath}".`)
+  }
+
+  const formattedPath = issuePath.map(formatPathSegment).join('')
+  return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.body${formattedPath}".`)
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

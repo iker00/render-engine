@@ -131,9 +131,13 @@ export function FormNode({ node, children }: FormNodeProps) {
       return
     }
 
-
     const result = await executeQueryOperation(node.submitAction.operationName, {
       snapshotState: readRuntimeState(),
+      requestParams: {
+        query: node.submitAction.query,
+        body: node.submitAction.body,
+        headers: node.submitAction.headers,
+      },
     })
 
     if (result.status === 'success' && node.resetOnSuccess) {

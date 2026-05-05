@@ -6,7 +6,7 @@
     },
     "searchPosts": {
       "method": "GET",
-      "endpoint": "https://jsonplaceholder.typicode.com/posts?id=200"
+      "endpoint": "https://jsonplaceholder.typicode.com/posts"
     }
   },
   "pages": [
@@ -168,7 +168,9 @@
     },
     {
       "id": "search-posts",
-
+      "preloads": [
+        "searchUsers"
+      ],
       "layout": [
         {
           "type": "button",
@@ -193,7 +195,7 @@
             "type": "executeOperation",
             "operationName": "searchPosts",
             "query": {
-              "id": "forms.postForm.id"
+              "userId": "forms.postForm.authorId"
             }
           },
           "resetOnSuccess": true,
@@ -202,8 +204,19 @@
               "type": "input",
               "props": {
                 "fieldId": "id",
-                "label": "Post ID",
-                "required": true
+                "label": "Post ID"
+              }
+            },
+            {
+              "type": "select",
+              "props": {
+                "fieldId": "authorId",
+                "label": "Autor",
+                "items": {
+                  "source": "queries.searchUsers.data",
+                  "label": "name",
+                  "value": "id"
+                }
               }
             },
             {
@@ -247,7 +260,10 @@
           ]
         },
         {
-          "type": "paragraph",
+          "type": "container",
+          "props": {
+            "gap": "sm"
+          },
           "queryStateFeedback": {
             "query": "searchPosts",
             "states": {
@@ -297,18 +313,23 @@
               }
             }
           },
-          "props": {
-            "text": "Posts encontrados:"
-          }
-        },
-        {
-          "type": "list",
-          "props": {
-            "items": {
-              "source": "queries.searchPosts.data",
-              "itemText": "title"
+          "children": [
+            {
+              "type": "paragraph",
+              "props": {
+                "text": "Posts encontrados:"
+              }
+            },
+            {
+              "type": "list",
+              "props": {
+                "items": {
+                  "source": "queries.searchPosts.data",
+                  "itemText": "title"
+                }
+              }
             }
-          }
+          ]
         }
       ]
     }

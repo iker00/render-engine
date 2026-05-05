@@ -1,7 +1,7 @@
-import type { RuntimeUiAction } from '../../config/runtime-config'
+import type { RuntimeApiRequestParams, RuntimeUiAction } from '../../config/runtime-config'
 
 export interface RuntimeUiActionHandlers {
-  executeQueryOperation: (operationName: string) => Promise<unknown>
+  executeQueryOperation: (operationName: string, options?: { requestParams?: RuntimeApiRequestParams }) => Promise<unknown>
   goBackPage: () => void
   navigateToPage: (pageId: string) => void
   resetForm: (formId: string) => void
@@ -16,7 +16,13 @@ export function executeRuntimeUiAction(action: RuntimeUiAction, handlers: Runtim
       handlers.goBackPage()
       return
     case 'executeOperation':
-      void handlers.executeQueryOperation(action.operationName)
+      void handlers.executeQueryOperation(action.operationName, {
+        requestParams: {
+          query: action.query,
+          body: action.body,
+          headers: action.headers,
+        },
+      })
       return
     case 'resetForm':
       handlers.resetForm(action.formId)

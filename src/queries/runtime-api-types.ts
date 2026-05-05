@@ -1,10 +1,11 @@
-import type { RuntimeApiOperation, RuntimeConfig } from '../config/runtime-config'
+import type { RuntimeApiOperation, RuntimeApiRequestParams, RuntimeConfig } from '../config/runtime-config'
 import type { RuntimeState } from '../runtime/runtime-state/runtime-state-types'
 
 export interface BuildRuntimeApiRequestOptions {
   config: RuntimeConfig
   operationName: string
   state: RuntimeState
+  requestParams?: RuntimeApiRequestParams
 }
 
 export interface RuntimeApiRequest {

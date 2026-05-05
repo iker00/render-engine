@@ -1,4 +1,10 @@
-import type { RuntimeApiBodyValue, RuntimeApiOperation } from '../config/runtime-config'
+import type {
+  RuntimeApiBodyValue,
+  RuntimeApiHeaders,
+  RuntimeApiOperation,
+  RuntimeApiQuery,
+  RuntimeApiRequestParams,
+} from '../config/runtime-config'
 import { resolveRuntimeReference } from '../runtime/runtime-references/runtime-reference-resolver'
 import type {
   BuildRuntimeApiRequestOptions,
@@ -10,6 +16,7 @@ export function buildRuntimeApiRequest({
   config,
   operationName,
   state,
+  requestParams,
 }: BuildRuntimeApiRequestOptions): RuntimeApiRequestBuildResult {
   const operation = config.api[operationName]
 
@@ -23,16 +30,24 @@ export function buildRuntimeApiRequest({
     }
   }
 
-  const queryResult = resolveQuery(operationName, operation, state)
+  const effectiveRequestParams = mergeRuntimeApiRequestParams(operation, requestParams)
+
+  const queryResult = resolveQuery(operationName, effectiveRequestParams.query, state)
 
   if (queryResult.status === 'error') {
     return queryResult
   }
 
-  const bodyResult = resolveBody(operationName, operation, state)
+  const bodyResult = resolveBody(operationName, effectiveRequestParams.body, state)
 
   if (bodyResult.status === 'error') {
     return bodyResult
+  }
+
+  const headersResult = resolveHeaders(operationName, effectiveRequestParams.headers, state)
+
+  if (headersResult.status === 'error') {
+    return headersResult
   }
 
   return {
@@ -41,17 +56,17 @@ export function buildRuntimeApiRequest({
       operationName,
       operation,
       url: appendQueryString(operation.endpoint, queryResult.query),
-      init: buildRequestInit(operation, bodyResult.body),
+      init: buildRequestInit(operation.method, headersResult.headers, bodyResult.body),
     } satisfies RuntimeApiRequest,
   }
 }
 
 function resolveQuery(
   operationName: string,
-  operation: RuntimeApiOperation,
+  queryDefinition: RuntimeApiQuery | undefined,
   state: BuildRuntimeApiRequestOptions['state'],
 ) {
-  if (!operation.query) {
+  if (!queryDefinition) {
     return {
       status: 'ready',
       query: undefined,
@@ -60,7 +75,7 @@ function resolveQuery(
 
   const query = new URLSearchParams()
 
-  for (const [key, rawValue] of Object.entries(operation.query)) {
+  for (const [key, rawValue] of Object.entries(queryDefinition)) {
     const resolvedValue = resolvePayloadValue(rawValue, state)
 
     if (resolvedValue.status === 'error') {
@@ -98,24 +113,24 @@ function resolveQuery(
 
 function resolveBody(
   operationName: string,
-  operation: RuntimeApiOperation,
+  bodyDefinition: RuntimeApiBodyValue | undefined,
   state: BuildRuntimeApiRequestOptions['state'],
 ) {
-  if (!Object.hasOwn(operation, 'body')) {
+  if (bodyDefinition === undefined) {
     return {
       status: 'ready',
       body: undefined,
     } as const
   }
 
-  if (operation.body === null) {
+  if (bodyDefinition === null) {
     return {
       status: 'ready',
       body: null,
     } as const
   }
 
-  const resolvedBody = resolveJsonPayloadValue(operation.body, state)
+  const resolvedBody = resolveJsonPayloadValue(bodyDefinition, state)
 
   if (resolvedBody.status === 'error') {
     return {
@@ -130,6 +145,52 @@ function resolveBody(
   return {
     status: 'ready',
     body: resolvedBody.value,
+  } as const
+}
+
+function resolveHeaders(
+  operationName: string,
+  headersDefinition: RuntimeApiHeaders | undefined,
+  state: BuildRuntimeApiRequestOptions['state'],
+) {
+  if (!headersDefinition) {
+    return {
+      status: 'ready',
+      headers: undefined,
+    } as const
+  }
+
+  const headers: RuntimeApiHeaders = {}
+
+  for (const [key, rawValue] of Object.entries(headersDefinition)) {
+    const resolvedValue = resolvePayloadValue(rawValue, state)
+
+    if (resolvedValue.status === 'error') {
+      return {
+        status: 'error',
+        error: {
+          code: 'request-build-failed',
+          message: `The api operation "${operationName}" could not resolve "${rawValue}" for "headers.${key}".`,
+        },
+      } as const
+    }
+
+    if (typeof resolvedValue.value !== 'string') {
+      return {
+        status: 'error',
+        error: {
+          code: 'request-build-failed',
+          message: `The api operation "${operationName}" resolved "headers.${key}" to an unsupported header value.`,
+        },
+      } as const
+    }
+
+    headers[key] = resolvedValue.value
+  }
+
+  return {
+    status: 'ready',
+    headers,
   } as const
 }
 
@@ -265,18 +326,88 @@ function appendQueryString(endpoint: string, query: URLSearchParams | undefined)
   return `${endpoint}${endpoint.includes('?') ? '&' : '?'}${serializedQuery}`
 }
 
-function buildRequestInit(operation: RuntimeApiOperation, body: RuntimeApiBodyValue | null | undefined): RequestInit {
+function buildRequestInit(
+  method: RuntimeApiOperation['method'],
+  headers: RuntimeApiHeaders | undefined,
+  body: RuntimeApiBodyValue | null | undefined,
+): RequestInit {
   if (body === undefined || body === null) {
+    if (!headers) {
+      return {
+        method,
+      }
+    }
+
     return {
-      method: operation.method,
+      method,
+      headers,
     }
   }
 
+  const effectiveHeaders = {
+    ...(headers ?? {}),
+  }
+
+  const hasExplicitContentType = Object.keys(effectiveHeaders).some((headerName) => headerName.toLowerCase() === 'content-type')
+
+  if (!hasExplicitContentType) {
+    effectiveHeaders['content-type'] = 'application/json'
+  }
+
   return {
-    method: operation.method,
-    headers: {
-      'content-type': 'application/json',
-    },
+    method,
+    headers: effectiveHeaders,
     body: JSON.stringify(body),
   }
+}
+
+function mergeRuntimeApiRequestParams(
+  operation: RuntimeApiOperation,
+  requestParams: RuntimeApiRequestParams | undefined,
+): RuntimeApiRequestParams {
+  return {
+    query: mergeFlatRecord(operation.query, requestParams?.query),
+    headers: mergeFlatRecord(operation.headers, requestParams?.headers),
+    body: mergeRuntimeApiBody(operation.body, requestParams?.body),
+  }
+}
+
+function mergeFlatRecord<TValue extends string | number | boolean>(
+  baseRecord: Record<string, TValue> | undefined,
+  overrideRecord: Record<string, TValue> | undefined,
+) {
+  if (!baseRecord) {
+    return overrideRecord
+  }
+
+  if (!overrideRecord) {
+    return baseRecord
+  }
+
+  return {
+    ...baseRecord,
+    ...overrideRecord,
+  }
+}
+
+function mergeRuntimeApiBody(
+  baseBody: RuntimeApiBodyValue | undefined,
+  overrideBody: RuntimeApiBodyValue | undefined,
+): RuntimeApiBodyValue | undefined {
+  if (overrideBody === undefined) {
+    return baseBody
+  }
+
+  if (baseBody === undefined) {
+    return overrideBody
+  }
+
+  if (isPlainObject(baseBody) && isPlainObject(overrideBody)) {
+    return {
+      ...baseBody,
+      ...overrideBody,
+    }
+  }
+
+  return overrideBody
 }

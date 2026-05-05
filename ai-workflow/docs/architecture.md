@@ -6,7 +6,7 @@ Describir la arquitectura estable de la aplicación para que las features nuevas
 ## Módulos principales
 - `app/`: arranque, composición raíz, lectura de configuración desde `src/dev/config.json` o `data-config` y surface de errores visibles.
 - `config/`: fachada pública del contrato, tipos del runtime config y validación estructural del árbol `layout` y del catálogo declarativo `api`.
-- `queries/`: construcción de requests, ejecución de operaciones remotas por nombre y normalización de errores de red o respuesta.
+- `queries/`: construcción de requests, composición entre operación base y request params por ejecución, ejecución de operaciones remotas por nombre y normalización de errores de red o respuesta.
 - `runtime/`: renderer de layout, estado compartido por instancia del runtime, dispatcher central por tipo de nodo, piezas concretas por nodo soportado, resolución de referencias y composición de la página resuelta desde navegación interna.
 - `tests/`: tests del bootstrap, validación de configuración, renderer visible y estado compartido del runtime.
 
@@ -66,7 +66,7 @@ Lectura operativa de esa estructura:
 - `runtime-config-zod.ts` concentra el contrato estructural interno con esquemas `Zod` y política de descarte de claves extra.
 - `runtime-config-validation-errors.ts` adapta fallos estructurales y semánticos al shape público de `RuntimeConfigError`.
 - `validate-runtime-config.ts` concentra la validación previa al render, fija el contrato estable de `config.api` y reintroduce las validaciones cruzadas que dependen del conjunto completo ya parseado.
-- `queries/` encapsula la frontera HTTP del runtime: resolución de payloads, construcción de `RequestInit`, ejecución contra `fetch` y errores normalizados.
+- `queries/` encapsula la frontera HTTP del runtime: resolución de payloads, merge estable entre request base y overrides por ejecución, construcción de `RequestInit`, ejecución contra `fetch` y errores normalizados.
 - `layout-renderer.tsx` conserva la responsabilidad de renderizar colecciones ordenadas de nodos.
 - `layout-node-renderer.tsx` es el punto central de resolución `type -> pieza de render` y del borde transversal que decide si el nodo se muestra, se oculta o se sustituye por un fallback local.
 - `form-context.tsx` propaga el `formId` efectivo a cualquier descendiente del árbol del formulario sin exigir props manuales repetidas.
@@ -106,7 +106,7 @@ Lectura operativa de esa estructura:
 - La navegación visible ya se resuelve desde `navigation.currentPageId`; la URL del navegador queda fuera del contrato de esta primera capa interactiva.
 - La resolución de referencias declarativas vive en `src/runtime/runtime-references/` y hoy solo abre navegación anidada adicional bajo `queries.{queryName}.data.*`.
 - La navegación de subrutas de query usa una semántica iterativa única: índices solo sobre arrays, claves literales sobre objetos y resultado `missing` para rutas bien formadas cuyo dato no está disponible.
-- La ejecución remota declarativa vive en `src/queries/`, reutiliza la convención central de referencias del runtime y deja sus resultados visibles solo a través de `queries.{operationName}`.
+- La ejecución remota declarativa vive en `src/queries/`, reutiliza la convención central de referencias del runtime, compone allí mismo la operación `api` base con `requestParams` por ejecución y deja sus resultados visibles solo a través de `queries.{operationName}`.
 - La orquestación automática de `preloads` vive en `runtime-state-provider.tsx`, reutiliza la frontera `src/queries/`, captura un snapshot común del estado por entrada y limita la semántica latest-only al agregado `pageEntry`, no a las queries individuales.
 - La interpretación de `button.props.action` ya no vive en el propio nodo visual: un ejecutor común en `src/runtime/runtime-actions/` delega en los handlers del provider para `navigateTo`, `goBack`, `executeOperation` y `resetForm`.
 - La semántica declarativa de feedback por query vive fuera de los nodos visuales concretos: el renderer central consulta `queries.{queryName}`, deriva un estado visible único y decide entre nodo original, ocultación o fallback local reutilizando `LayoutRenderer`.

@@ -17,9 +17,10 @@
 - Dominio base de queries disponible con almacenamiento por nombre, `status/data/error`, conservación del último dato válido durante recargas y reset por query.
 - Capa central de referencias del runtime ya operativa para `forms.*`, `queries.{queryName}`, `queries.{queryName}.data`, `queries.{queryName}.status` y `queries.{queryName}.error`.
 - Navegación anidada de datos de query ya soportada bajo `queries.{queryName}.data.*`, con recorrido uniforme por objetos y arrays y consumo visible actual en `heading.props.text` y `paragraph.props.text`.
-- `config.api` ya funciona como catálogo declarativo tipado y validado de operaciones remotas con `method`, `endpoint`, `query` y `body`.
+- `config.api` ya funciona como catálogo declarativo tipado y validado de operaciones remotas con `method`, `endpoint`, `query`, `body` y `headers`.
 - Capa `src/queries/` ya integrada para construir requests desde referencias del runtime, ejecutar operaciones por nombre y normalizar errores remotos con códigos estables orientados a UI.
-- Fachada `executeQueryOperation(operationName)` ya expuesta desde el provider para hidratar `queries.{operationName}` con transiciones `loading | success | error`.
+- La composición efectiva del request ya permite mezclar una operación `api` base con `requestParams` por ejecución, con merge superficial estable en `query`, `headers` y `body` raíz-objeto, y sustitución del body cuando la raíz no es objeto.
+- Fachada `executeQueryOperation(operationName, { requestParams? })` ya expuesta desde el provider para hidratar `queries.{operationName}` con transiciones `loading | success | error`.
 - Las páginas ya pueden declarar `preloads` como lista opcional de operaciones `api` y dispararlas automáticamente al entrar tanto en `initialPage` como en navegaciones posteriores.
 - Dominio agregado `pageEntry` ya disponible en el store compartido con `entryId`, `pageId`, `preloadNames` y `status: idle | loading | success | error`.
 - La tanda agregada de `preloads` ya usa semántica latest-only para no dejar que cierres tardíos de entradas antiguas sobrescriban la entrada activa más reciente.
@@ -31,7 +32,8 @@
 - La inicialización de campos declarativos ya es lazy y reutiliza exclusivamente `forms.{formId}.{fieldId}`, con soporte para `defaultValue` literal o dinámico sin sobrescribir estado ya existente del usuario.
 - La validación declarativa `required` ya funciona a nivel de formulario, escribe errores solo en `forms.*` y excluye del bloqueo de submit a campos ocultos por `queryStateFeedback`.
 - Esa exclusión de campos ocultos reutiliza la misma semántica visible `idle | loading | error | empty | success` que usa el renderer del runtime.
-- El submit declarativo de formularios ya soporta `submitAction.type: executeOperation`, reusa `queries.{operationName}` como única superficie visible de loading/success/error y puede resetear por `resetOnSuccess`.
+- El submit declarativo de formularios ya soporta `submitAction.type: executeOperation`, reusa `queries.{operationName}` como única superficie visible de loading/success/error, puede añadir `query`, `body` y `headers` por envío y puede resetear por `resetOnSuccess`.
+- `button.props.action.type: executeOperation` ya puede añadir también `query`, `body` y `headers` por ejecución sin duplicar operaciones `api`.
 - `list` y `select` ya pueden consumir colecciones manuales históricas o colecciones resueltas desde `queries.{queryName}.data` o `queries.{queryName}.data.*`, con una capa compartida de resolución y proyección por consumidor.
 - `list` ya soporta colecciones escalares y de objetos mediante `itemType: 'scalar'` o `itemText`, degradando a vacío cuando la referencia aún no ofrece una colección utilizable y degradando por item en desarrollo cuando faltan datos mínimos.
 - `select` ya soporta catálogos manuales o dinámicos de escalares y objetos, mantiene una semántica única del valor vigente entre render, `defaultValue`, validación `required` y submit, y limpia automáticamente el valor cuando desaparece su opción efectiva.
@@ -70,6 +72,7 @@
 - Decimoquinta feature del workflow cerrada para introducir formularios declarativos reales con catálogo mínimo de campos, validación `required` y submit vía `executeOperation`.
 - Decimosexta feature del workflow cerrada para distinguir `idle` de `loading` en `queryStateFeedback`, tratar queries ausentes como `idle` y reutilizar esa misma semántica visible en renderer y formularios.
 - Decimoséptima feature del workflow cerrada para permitir colecciones multi-origen en `list` y `select`, reutilizando datos de `queries.*` con mapeos declarativos por consumidor y manteniendo coherencia entre render, formularios y validación.
+- Decimoctava feature del workflow cerrada para formalizar `api.headers` y permitir `query`, `body` y `headers` por ejecución desde `button.props.action` y `form.submitAction`, centralizando la composición final del request en `src/queries/`.
 
 ## Referencias
 

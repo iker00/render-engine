@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useState } from 'react'
 import type { Dispatch, ReactNode } from 'react'
 import { useContext, useMemo, useReducer, useRef } from 'react'
-import type { RuntimeConfig } from '../../config/runtime-config'
+import type { RuntimeApiRequestParams, RuntimeConfig } from '../../config/runtime-config'
 import { executeRuntimeApiOperation } from '../../queries/runtime-api-executor'
 import { RuntimeStateContext } from './runtime-state-context'
 import { createRuntimeState, runtimeStateReducer } from './runtime-state-reducer'
@@ -18,12 +18,14 @@ async function executeQueryOperationWithSnapshot({
   dispatch,
   operationName,
   snapshotState,
+  requestParams,
   fetchImplementation,
 }: {
   config: RuntimeConfig
   dispatch: Dispatch<RuntimeStateAction>
   operationName: string
   snapshotState: RuntimeState
+  requestParams?: RuntimeApiRequestParams
   fetchImplementation?: typeof fetch
 }) {
   dispatch({
@@ -37,6 +39,7 @@ async function executeQueryOperationWithSnapshot({
     config,
     operationName,
     state: snapshotState,
+    requestParams,
     fetch: fetchImplementation,
   })
 
@@ -331,12 +334,16 @@ export function useRuntimeStateActions() {
   )
 
   const executeQueryOperation = useCallback(
-    async (operationName: string, options?: { fetch?: typeof fetch; snapshotState?: RuntimeState }) => {
+    async (
+      operationName: string,
+      options?: { fetch?: typeof fetch; snapshotState?: RuntimeState; requestParams?: RuntimeApiRequestParams },
+    ) => {
       return executeQueryOperationWithSnapshot({
         config,
         dispatch: dispatchAndSyncState,
         operationName,
         snapshotState: options?.snapshotState ?? latestStateRef.current,
+        requestParams: options?.requestParams,
         fetchImplementation: options?.fetch,
       })
     },

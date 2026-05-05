@@ -2,17 +2,23 @@ export type LayoutNodeType = 'container' | 'heading' | 'paragraph' | 'list' | 'b
 export type RuntimeApiMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
 export type RuntimeApiQueryValue = string | number | boolean
 export type RuntimeApiQuery = Record<string, RuntimeApiQueryValue>
+export type RuntimeApiHeaderValue = string
+export type RuntimeApiHeaders = Record<string, RuntimeApiHeaderValue>
 export type RuntimeConfigValue = string | number | boolean | null
 export type RuntimeApiBodyValue =
   | RuntimeConfigValue
   | RuntimeApiBodyValue[]
   | { [key: string]: RuntimeApiBodyValue }
 
-export interface RuntimeApiOperation {
-  method: RuntimeApiMethod
-  endpoint: string
+export interface RuntimeApiRequestParams {
   query?: RuntimeApiQuery
   body?: RuntimeApiBodyValue
+  headers?: RuntimeApiHeaders
+}
+
+export interface RuntimeApiOperation extends RuntimeApiRequestParams {
+  method: RuntimeApiMethod
+  endpoint: string
 }
 
 export type RuntimeApiConfig = Record<string, RuntimeApiOperation>
@@ -187,7 +193,7 @@ export interface GoBackRuntimeUiAction {
   type: 'goBack'
 }
 
-export interface ExecuteOperationRuntimeUiAction {
+export interface ExecuteOperationRuntimeUiAction extends RuntimeApiRequestParams {
   type: 'executeOperation'
   operationName: string
 }

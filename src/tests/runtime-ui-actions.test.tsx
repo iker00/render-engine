@@ -66,12 +66,33 @@ describe('executeRuntimeUiAction', () => {
       {
         type: 'executeOperation',
         operationName: 'searchUsers',
+        query: {
+          page: 2,
+        },
+        body: {
+          search: 'forms.userSearch.name',
+        },
+        headers: {
+          authorization: 'queries.session.data.token',
+        },
       },
       handlers,
     )
 
     expect(result).toBeUndefined()
-    expect(handlers.executeQueryOperation).toHaveBeenCalledWith('searchUsers')
+    expect(handlers.executeQueryOperation).toHaveBeenCalledWith('searchUsers', {
+      requestParams: {
+        query: {
+          page: 2,
+        },
+        body: {
+          search: 'forms.userSearch.name',
+        },
+        headers: {
+          authorization: 'queries.session.data.token',
+        },
+      },
+    })
     expect(handlers.navigateToPage).not.toHaveBeenCalled()
     expect(handlers.goBackPage).not.toHaveBeenCalled()
     expect(handlers.resetForm).not.toHaveBeenCalled()
@@ -122,6 +143,9 @@ describe('ButtonNode', () => {
         node={createButtonNode({
           type: 'executeOperation',
           operationName: 'searchUsers',
+          query: {
+            page: 2,
+          },
         })}
       />,
     )
@@ -132,6 +156,9 @@ describe('ButtonNode', () => {
       {
         type: 'executeOperation',
         operationName: 'searchUsers',
+        query: {
+          page: 2,
+        },
       },
       runtimeHandlers,
     )

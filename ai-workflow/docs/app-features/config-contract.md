@@ -15,6 +15,7 @@ Cada operación declarada dentro de `api` debe incluir:
 - `endpoint`: string no vacío
 - `query`: objeto plano opcional con valores finales `string | number | boolean`
 - `body`: payload JSON opcional para métodos distintos de `GET`
+- `headers`: objeto plano opcional con claves no vacías y valores string
 
 Reglas funcionales vigentes:
 - `GET` no admite `body`.
@@ -22,6 +23,7 @@ Reglas funcionales vigentes:
 - `query` se mantiene plano; no existe soporte estable para nested params, claves repetidas ni arrays serializados en query string.
 - `body` puede contener objetos, arrays, strings, números, booleanos y `null` siempre que el árbol completo siga siendo JSON serializable.
 - `body: null` en la raíz es válido para métodos con body y significa petición explícita sin body JSON serializado.
+- `headers` se mantiene plano y solo admite valores string finales.
 - varias operaciones pueden reutilizar el mismo `endpoint` con distinto nombre o método sin colisionar.
 
 ## Modelo de página
@@ -70,11 +72,17 @@ Nodos soportados hoy:
   - `props.action.type`: `navigateTo | goBack | executeOperation | resetForm`
   - `props.action.pageId`: string obligatorio y no vacío cuando `type` es `navigateTo`
   - `props.action.operationName`: string obligatorio y no vacío cuando `type` es `executeOperation`
+  - `props.action.query`: objeto plano opcional con valores `string | number | boolean` cuando `type` es `executeOperation`
+  - `props.action.body`: payload JSON opcional cuando `type` es `executeOperation`
+  - `props.action.headers`: objeto plano opcional con valores string cuando `type` es `executeOperation`
   - `props.action.formId`: string obligatorio y no vacío cuando `type` es `resetForm`
 - `form`
   - `id`: string obligatorio, estable y único dentro de toda la configuración
   - `submitAction.type`: solo `executeOperation`
   - `submitAction.operationName`: string obligatorio y no vacío cuando existe `submitAction`
+  - `submitAction.query`: objeto plano opcional con valores `string | number | boolean`
+  - `submitAction.body`: payload JSON opcional
+  - `submitAction.headers`: objeto plano opcional con valores string
   - `resetOnSuccess`: boolean opcional, válido solo cuando existe `submitAction`
   - `children`: colección ordenada con soporte para `input`, `textarea`, `select`, `button`, `heading`, `paragraph` y `container`
 - `input`
@@ -142,6 +150,15 @@ Además, la misma convención de referencias completas se reutiliza dentro de `a
 - una referencia soportada se resuelve contra el estado actual del runtime en el momento de invocación
 - una referencia soportada pero sin valor disponible no invalida el config en bootstrap; produce un error de construcción del request al ejecutar la operación
 
+Esa misma convención se reutiliza también en:
+- `api.headers`
+- `button.props.action.query`
+- `button.props.action.body`
+- `button.props.action.headers`
+- `form.submitAction.query`
+- `form.submitAction.body`
+- `form.submitAction.headers`
+
 Referencias soportadas hoy:
 - `forms.{formId}.{fieldId}`
 - `queries.{queryName}`
@@ -181,6 +198,10 @@ Reglas funcionales vigentes:
 - Si `input`, `textarea` o `select` aparecen fuera de un subárbol `form`, el config completo se rechaza antes del render.
 - Si un `button` sin `action` aparece fuera de un subárbol `form`, el config completo se rechaza antes del render.
 - Si `form.submitAction.operationName` apunta a una operación inexistente en `api`, el config completo se rechaza antes del render.
+- Si una operación `GET` declara `body`, el config completo se rechaza antes del render.
+- Si `button.props.action.type: executeOperation` o `form.submitAction` declaran `body` sobre una operación `GET`, el config completo se rechaza antes del render.
+- Si `api.headers`, `button.props.action.headers` o `form.submitAction.headers` usan valores no string, el config completo se rechaza antes del render.
+- Si `api.query`, `api.headers`, `button.props.action.query`, `button.props.action.headers`, `form.submitAction.query` o `form.submitAction.headers` contienen claves vacías, el config completo se rechaza antes del render.
 - Si `form.resetOnSuccess: true` aparece sin `submitAction`, el config completo se rechaza antes del render.
 - Si `select.props.items` mezcla `value` string y number dentro del mismo campo, el config completo se rechaza antes del render.
 - Si `list.props.items` o `select.props.items` declaran un `source`, este debe apuntar exactamente a `queries.{queryName}.data` o a una ruta anidada bajo `queries.{queryName}.data.*`.
@@ -200,6 +221,7 @@ La frontera estable de esta validación queda organizada así:
 
 ## Límites de v1
 - `api` ya puede dispararse declarativamente desde `button.props.action` usando `executeOperation`, además de por la fachada imperativa del provider y por `preloads` de página al entrar en ella.
+- `executeOperation` y `submitAction` ya pueden añadir `query`, `body` y `headers` por ejecución, pero siguen dependiendo de `operationName` como vínculo obligatorio con una operación existente de `api`.
 - `action` sigue siendo una sola operación por trigger; no hay arrays, secuencias ni callbacks declarativos.
 - El trigger sigue siendo implícito por tipo de nodo; el contrato no abre todavía un bloque general de `events`.
 - Los formularios declarativos ya soportan solo el catálogo mínimo `form`, `input`, `textarea` y `select`, con validación limitada a `required`.
