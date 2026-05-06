@@ -50,8 +50,11 @@ Semántica estable vigente:
 - Los errores viven solo en `forms.{formId}.{fieldId}.error`.
 - Cuando un campo con error vuelve a un valor válido, el error se limpia al cambiar sin exigir un nuevo submit.
 - Un campo oculto por `queryStateFeedback` conserva su valor y su error, pero no bloquea el submit mientras siga oculto.
-- La visibilidad efectiva de esos campos reutiliza exactamente la misma derivación `idle | loading | error | empty | success` que usa el renderer central.
+- Un campo oculto por `visibility` también conserva `value`, `error`, `dirty`, `touched` y `defaultValue`, pero no bloquea el submit mientras siga oculto.
+- La visibilidad efectiva de esos campos reutiliza exactamente la misma utilidad compartida que usa el renderer central para combinar `queryStateFeedback` y `visibility`.
 - Un campo oculto por `queryStateFeedback.states.idle` no bloquea el submit antes de la primera ejecución de la query observada y vuelve a validarse cuando la query abandona `idle`.
+- Si un campo vuelve a hacerse visible tras una regla `visibility`, el runtime reutiliza su estado local existente y vuelve a incluirlo en la validación normal.
+- Un campo controlado por `visibility` puede inicializarse lazy la primera vez que llegue a mostrarse, aunque el resto del formulario ya exista en store.
 
 ## Submit y reseteo
 - `form` renderiza un `<form>` real y maneja submit nativo.
@@ -76,6 +79,7 @@ Semántica estable vigente del reset:
 - formulario de edición con datos iniciales
 - formulario simple de alta o edición con submit declarativo vía `api`
 - campos condicionales ocultables por `queryStateFeedback` sin perder su estado local
+- campos condicionales ocultables por `visibility` según `forms.*` o `queries.*`, sin perder su estado local ni bloquear el submit mientras siguen ocultos
 - `select` dependiente de catálogos remotos ya cargados en `queries.*`, sin lógica React específica por pantalla
 
 ## Límites actuales

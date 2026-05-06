@@ -347,6 +347,59 @@ function DynamicSelectQueryFixture() {
   )
 }
 
+function VisibilityRuleQueryFixture() {
+  const { initializeQuery, setQuerySuccess } = useRuntimeStateActions()
+
+  useEffect(() => {
+    initializeQuery('selectedUser')
+    initializeQuery('visibilityQuery')
+    initializeQuery('thresholdQuery')
+  }, [initializeQuery])
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() =>
+          setQuerySuccess('selectedUser', {
+            profile: {
+              nickname: 'Countess',
+            },
+          })
+        }
+      >
+        Seed conditional selected user
+      </button>
+      <button
+        type="button"
+        onClick={() =>
+          setQuerySuccess('visibilityQuery', {
+            ok: true,
+          })
+        }
+      >
+        Set conditional visibility success
+      </button>
+      <button
+        type="button"
+        onClick={() =>
+          setQuerySuccess('thresholdQuery', [
+            { id: 'user-1' },
+            { id: 'user-2' },
+          ])
+        }
+      >
+        Seed threshold list
+      </button>
+      <button type="button" onClick={() => setQuerySuccess('thresholdQuery', [])}>
+        Seed threshold empty list
+      </button>
+      <RuntimePage />
+      <RuntimeStateSnapshot testId="runtime-state" />
+    </>
+  )
+}
+
 function RuntimeButtonResetSeed() {
   const { initializeForm, setFormFieldError, setFormFieldValue } = useRuntimeStateActions()
 
@@ -1571,6 +1624,240 @@ describe('Runtime shared state store', () => {
     fireEvent.submit(form!)
 
     expect(screen.getByTestId('runtime-state')).toHaveTextContent('"role":{"value":"","error":"Required"')
+  })
+
+  it('preserves hidden field state and allows submit while a visibility-hidden required field stays out of validation', async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: {
+          'content-type': 'application/json',
+        },
+      }),
+    )
+
+    const config: RuntimeConfig = {
+      api: {
+        submitProfile: {
+          method: 'POST',
+          endpoint: '/api/profile',
+          body: {
+            name: 'forms.profileForm.name',
+            nickname: 'forms.profileForm.nickname',
+          },
+        },
+      },
+      initialPage: 'home',
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'form',
+              id: 'profileForm',
+              submitAction: {
+                type: 'executeOperation',
+                operationName: 'submitProfile',
+              },
+              children: [
+                {
+                  type: 'input',
+                  props: {
+                    fieldId: 'name',
+                    label: 'Name',
+                    required: true,
+                    defaultValue: 'Ada',
+                  },
+                },
+                {
+                  type: 'select',
+                  props: {
+                    fieldId: 'role',
+                    label: 'Role',
+                    defaultValue: 'admin',
+                    items: [
+                      { label: 'Admin', value: 'admin' },
+                      { label: 'Editor', value: 'editor' },
+                    ],
+                  },
+                },
+                {
+                  type: 'input',
+                  visibility: {
+                    reference: 'forms.profileForm.role',
+                    operator: 'equals',
+                    value: 'admin',
+                  },
+                  props: {
+                    fieldId: 'nickname',
+                    label: 'Nickname',
+                    required: true,
+                    defaultValue: 'Ada',
+                  },
+                },
+                {
+                  type: 'button',
+                  props: {
+                    label: 'Submit profile',
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    }
+
+    globalThis.fetch = fetchMock
+
+    render(
+      <RuntimeStateProvider config={config}>
+        <RuntimePage />
+        <RuntimeStateSnapshot testId="runtime-state" />
+      </RuntimeStateProvider>,
+    )
+
+    fireEvent.change(screen.getByRole('textbox', { name: 'Nickname' }), { target: { value: '' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Submit profile' }))
+
+    await waitFor(() => expect(screen.getByText('Required')).toBeInTheDocument())
+    expect(fetchMock).not.toHaveBeenCalled()
+
+    fireEvent.change(screen.getByRole('combobox', { name: 'Role' }), { target: { value: 'editor' } })
+
+    await waitFor(() => expect(screen.queryByLabelText('Nickname')).not.toBeInTheDocument())
+    expect(screen.getByTestId('runtime-state')).toHaveTextContent(
+      '"nickname":{"value":"","error":"Required","touched":true,"dirty":true,"defaultValue":"Ada"}',
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Submit profile' }))
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+
+    fireEvent.change(screen.getByRole('combobox', { name: 'Role' }), { target: { value: 'admin' } })
+
+    await waitFor(() => {
+      const nicknameInput = screen.getByText('Nickname').closest('label')?.querySelector('input')
+      expect(nicknameInput).not.toBeNull()
+      expect(nicknameInput).toHaveValue('')
+    })
+    expect(screen.getByText('Required')).toBeInTheDocument()
+  })
+
+  it('initializes visibility-controlled fields lazily, keeps queryStateFeedback precedence, and supports length-based rules for input textarea and select', async () => {
+    const config: RuntimeConfig = {
+      api: {},
+      initialPage: 'home',
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'form',
+              id: 'profileForm',
+              children: [
+                {
+                  type: 'select',
+                  props: {
+                    fieldId: 'role',
+                    label: 'Role',
+                    defaultValue: '',
+                    items: [
+                      { label: '', value: '' },
+                      { label: 'Admin', value: 'admin' },
+                    ],
+                  },
+                },
+                {
+                  type: 'input',
+                  queryStateFeedback: {
+                    query: 'visibilityQuery',
+                    states: {
+                      idle: {
+                        mode: 'hide',
+                      },
+                      success: {
+                        mode: 'show',
+                      },
+                    },
+                  },
+                  visibility: {
+                    reference: 'forms.profileForm.role',
+                    operator: 'equals',
+                    value: 'admin',
+                  },
+                  props: {
+                    fieldId: 'secretCode',
+                    label: 'Secret code',
+                    defaultValue: 'queries.selectedUser.data.profile.nickname',
+                  },
+                },
+                {
+                  type: 'textarea',
+                  visibility: {
+                    reference: 'queries.thresholdQuery.data',
+                    operator: 'greaterThan',
+                    value: 1,
+                  },
+                  props: {
+                    fieldId: 'notes',
+                    label: 'Notes',
+                    defaultValue: '',
+                  },
+                },
+                {
+                  type: 'select',
+                  visibility: {
+                    reference: 'queries.thresholdQuery.data',
+                    operator: 'lessThan',
+                    value: 1,
+                  },
+                  props: {
+                    fieldId: 'reviewer',
+                    label: 'Reviewer',
+                    defaultValue: '',
+                    items: [
+                      { label: '', value: '' },
+                      { label: 'Lead', value: 'lead' },
+                    ],
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    }
+
+    render(
+      <RuntimeStateProvider config={config}>
+        <VisibilityRuleQueryFixture />
+      </RuntimeStateProvider>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Seed conditional selected user' }))
+    fireEvent.change(screen.getByRole('combobox', { name: 'Role' }), { target: { value: 'admin' } })
+
+    expect(screen.queryByRole('textbox', { name: 'Secret code' })).not.toBeInTheDocument()
+    expect(screen.getByTestId('runtime-state')).not.toHaveTextContent('"secretCode"')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Set conditional visibility success' }))
+
+    await waitFor(() => expect(screen.getByRole('textbox', { name: 'Secret code' })).toHaveValue('Countess'))
+    expect(screen.getByTestId('runtime-state')).toHaveTextContent('"secretCode":{"value":"Countess"')
+
+    expect(screen.queryByRole('textbox', { name: 'Notes' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('combobox', { name: 'Reviewer' })).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Seed threshold list' }))
+
+    await waitFor(() => expect(screen.getByRole('textbox', { name: 'Notes' })).toBeInTheDocument())
+    expect(screen.queryByRole('combobox', { name: 'Reviewer' })).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Seed threshold empty list' }))
+
+    await waitFor(() => expect(screen.getByRole('combobox', { name: 'Reviewer' })).toBeInTheDocument())
+    expect(screen.queryByRole('textbox', { name: 'Notes' })).not.toBeInTheDocument()
   })
 
   it('cleans a dynamic select value when its option disappears and submits the empty value', async () => {

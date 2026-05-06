@@ -39,6 +39,8 @@ export type {
   QueryStateFeedbackRule,
   QueryStateFeedbackShowRule,
   QueryStateFeedbackVisibleState,
+  RuntimeVisibilityConfig,
+  RuntimeVisibilityOperator,
   RuntimeConfig,
   RuntimeConfigError,
   RuntimeConfigValidationResult,

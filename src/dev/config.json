@@ -23,7 +23,7 @@
         {
           "type": "paragraph",
           "props": {
-            "text": "Development config loaded from the repository."
+            "text": "forms.postForm.authorId"
           }
         },
         {
@@ -198,13 +198,24 @@
               "userId": "forms.postForm.authorId"
             }
           },
-          "resetOnSuccess": true,
+          "resetOnSuccess": false,
           "children": [
             {
               "type": "input",
               "props": {
                 "fieldId": "id",
                 "label": "Post ID"
+              }
+            },
+            {
+              "type": "paragraph",
+              "visibility": {
+                "reference": "forms.postForm.id",
+                "operator": "notEquals",
+                "value": "10"
+              },
+              "props": {
+                "text": "El número no es 10"
               }
             },
             {

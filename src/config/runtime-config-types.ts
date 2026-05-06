@@ -29,6 +29,13 @@ export type RuntimeCollectionObjectValue =
 export type RuntimeCollectionObjectItem = Record<string, RuntimeCollectionObjectValue>
 
 export type QueryStateFeedbackVisibleState = 'idle' | 'loading' | 'error' | 'empty' | 'success'
+export type RuntimeVisibilityOperator = 'equals' | 'notEquals' | 'isTruthy' | 'isFalsy' | 'greaterThan' | 'lessThan'
+
+export interface RuntimeVisibilityConfig {
+  reference: string
+  operator: RuntimeVisibilityOperator
+  value?: RuntimeConfigValue
+}
 
 export interface QueryStateFeedbackShowRule {
   mode: 'show'
@@ -55,6 +62,7 @@ export interface QueryStateFeedbackConfig {
 
 export interface LayoutNodeFeedbackFields {
   queryStateFeedback?: QueryStateFeedbackConfig
+  visibility?: RuntimeVisibilityConfig
 }
 
 export interface ContainerLayoutNode extends LayoutNodeFeedbackFields {

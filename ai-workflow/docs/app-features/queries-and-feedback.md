@@ -21,6 +21,7 @@ El runtime ya permite leer estado de queries desde superficies textuales concret
 - `paragraph.props.text`
 - `list.props.items.source`
 - `select.props.items.source`
+- `visibility.reference`
 
 Referencias soportadas hoy:
 - `queries.{queryName}`
@@ -38,6 +39,7 @@ Semántica estable:
 - en `heading` y `paragraph`, solo los resultados escalares compatibles con texto (`string`, `number`, `boolean`) se muestran de forma visible; objetos, arrays, `null`, `undefined` y referencias no resolubles degradan a string vacío
 - en `list` y `select`, una referencia válida cuyo valor runtime actual no es una colección utilizable degrada a colección vacía en vez de romper render, validación o submit
 - cuando la colección contiene objetos y algún item no resuelve los datos mínimos requeridos por el consumidor, el runtime degrada solo ese item y conserva el resto de la colección
+- en `visibility`, `queries.{queryName}` y `queries.{queryName}.error` pueden evaluarse con `isTruthy` e `isFalsy`; `queries.{queryName}.status` y las rutas anidadas bajo `data` también pueden usarse con comparaciones literales o numéricas según el operador
 
 ## Ejecución de endpoints
 - Los endpoints se declaran en `api` y se invocan por nombre.
@@ -102,6 +104,7 @@ Semántica estable:
 - si declara el bloque pero omite un estado concreto, los defaults son `success -> show` y `idle/loading/error/empty -> hide`
 - el renderer central decide si muestra el nodo original, lo oculta o lo sustituye por el fallback local
 - la misma semántica visible se reutiliza también dentro del submit de formularios para decidir qué campos `required` cuentan como visibles
+- si un nodo también declara `visibility`, `queryStateFeedback` mantiene prioridad y puede dejar resuelto `hide` o `fallback` antes de que `visibility` se evalúe
 - varios nodos pueden reaccionar de forma distinta a la misma query sin colisionar entre sí
 - `loading` representa solo una ejecución real en curso, incluso cuando existe `data` previo conservado
 - una recarga que vuelve a `loading` con `data` previo conservado reactiva igualmente la rama `loading`
@@ -128,3 +131,4 @@ No se consideran `empty`:
 - ocultar bloques hasta que exista un resultado útil
 - hacer que varios nodos reaccionen de forma distinta al mismo `queryName`
 - reutilizar una misma query para alimentar a la vez varios `list` o `select` con proyecciones distintas por item
+- mostrar u ocultar nodos o campos según `queries.{queryName}.status`, `queries.{queryName}.error` o una ruta anidada de `queries.{queryName}.data.*` sin lógica imperativa por pantalla

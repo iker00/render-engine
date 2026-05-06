@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import type { LayoutNode } from '../config/runtime-config'
-import { resolveLayoutNodeFeedback } from './runtime-query-state-feedback'
+import { resolveLayoutNodeVisibility } from './runtime-layout-visibility'
 import { useRuntimeState } from './runtime-state/runtime-state-provider'
 import { LayoutRenderer } from './layout-renderer'
 import { ButtonNode } from './nodes/button-layout-node'
@@ -20,17 +20,14 @@ export interface LayoutNodeRendererProps {
 
 export function LayoutNodeRenderer({ node, renderedChildren }: LayoutNodeRendererProps) {
   const state = useRuntimeState()
+  const resolvedVisibility = resolveLayoutNodeVisibility(node, state)
 
-  if (node.queryStateFeedback) {
-    const resolvedFeedback = resolveLayoutNodeFeedback(node.queryStateFeedback, state)
+  if (resolvedVisibility.mode === 'hide') {
+    return null
+  }
 
-    if (resolvedFeedback && resolvedFeedback.mode === 'hide') {
-      return null
-    }
-
-    if (resolvedFeedback && resolvedFeedback.mode === 'fallback') {
-      return <LayoutRenderer nodes={resolvedFeedback.fallback} />
-    }
+  if (resolvedVisibility.mode === 'fallback') {
+    return <LayoutRenderer nodes={resolvedVisibility.fallback} />
   }
 
   switch (node.type) {

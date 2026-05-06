@@ -42,6 +42,7 @@ Cada elemento de layout usa un shape homogéneo basado en:
 - `id`: opcional
 - `props`: opcional según el tipo
 - `queryStateFeedback`: opcional para condicionar la salida visible del nodo según el estado de una query
+- `visibility`: opcional para mostrar u ocultar el nodo según un valor ya disponible en `forms.*` o `queries.*`
 - `children`: opcional, pero solo interpretado en `container` y `form`
 
 Reglas estructurales vigentes:
@@ -133,6 +134,33 @@ Reglas funcionales vigentes:
 - una query ausente del store también se interpreta como `idle`.
 - `loading` representa solo una ejecución real en curso; no cubre el estado previo a la primera ejecución.
 
+## `visibility`
+Cualquier nodo soportado hoy puede declarar opcionalmente:
+- `reference`: referencia runtime completa no vacía
+- `operator`: `equals | notEquals | isTruthy | isFalsy | greaterThan | lessThan`
+- `value`: obligatorio solo para `equals`, `notEquals`, `greaterThan` y `lessThan`
+
+Referencias admitidas en `visibility`:
+- `forms.{formId}.{fieldId}`
+- `queries.{queryName}`
+- `queries.{queryName}.data`
+- `queries.{queryName}.data.{segmentosAnidados}`
+- `queries.{queryName}.status`
+- `queries.{queryName}.error`
+
+Reglas funcionales vigentes:
+- `visibility` es transversal a `container`, `heading`, `paragraph`, `list`, `button`, `form`, `input`, `textarea` y `select`.
+- si un nodo no declara `visibility`, conserva su comportamiento visible previo.
+- `equals` y `notEquals` comparan contra un literal declarado ya validado, sin reinterpretar strings con forma de referencia runtime.
+- `equals` y `notEquals` solo aceptan `string`, `number`, `boolean` o `null` como `value`.
+- `isTruthy` e `isFalsy` no aceptan `value`.
+- `greaterThan` y `lessThan` solo aceptan umbrales numéricos.
+- `greaterThan` y `lessThan` comparan directamente números; si el valor observado es un array, usan `length`.
+- strings, objetos, `null` y otros valores no comparables para `greaterThan` y `lessThan` degradan a no match en vez de abrir coerciones implícitas.
+- una referencia válida pero ausente se trata como valor ausente: `isFalsy` la considera falsa, `isTruthy` no hace match y el resto de operadores no hace match.
+- si un nodo declara a la vez `queryStateFeedback` y `visibility`, primero se resuelve `queryStateFeedback`; `visibility` solo se evalúa cuando el resultado visible restante sigue siendo el nodo original.
+- `visibility` no introduce `fallback`, condiciones múltiples ni composición booleana en esta versión.
+
 ## Resolución inicial
 - El runtime valida toda la configuración antes de renderizar.
 - Tras validar `pages`, resuelve la página cuyo `id` coincide con `initialPage`.
@@ -158,6 +186,7 @@ Esa misma convención se reutiliza también en:
 - `form.submitAction.query`
 - `form.submitAction.body`
 - `form.submitAction.headers`
+- `visibility.reference`
 
 Referencias soportadas hoy:
 - `forms.{formId}.{fieldId}`
@@ -170,6 +199,7 @@ Referencias soportadas hoy:
 Consumidores adicionales ya soportados con esa misma frontera:
 - `list.props.items.source`
 - `select.props.items.source`
+- `visibility`
 
 Reglas funcionales vigentes:
 - la navegación anidada adicional solo se admite bajo `queries.{queryName}.data`
@@ -188,6 +218,12 @@ Reglas funcionales vigentes:
 - Si `queryStateFeedback.states` contiene una clave fuera de `idle | loading | error | empty | success`, el config completo se rechaza con error de layout sobre esa ruta exacta.
 - Si una regla usa `mode: fallback` sin `fallback`, el config completo se rechaza antes del render.
 - Si cualquier nodo dentro de `queryStateFeedback.states.{estado}.fallback` es inválido o usa un `type` no soportado, el config completo se rechaza antes del render sobre la ruta afectada.
+- Si `visibility.reference` sale del alcance `forms.*` o `queries.*` soportado, el config completo se rechaza antes del render sobre la ruta exacta.
+- Si `visibility.operator` usa un valor fuera del catálogo soportado, el config completo se rechaza antes del render.
+- Si `visibility.operator` es `isTruthy` o `isFalsy` y declara `value`, el config completo se rechaza antes del render.
+- Si `visibility.operator` es `equals`, `notEquals`, `greaterThan` o `lessThan` y omite `value`, el config completo se rechaza antes del render.
+- Si `visibility.operator` es `equals` o `notEquals` y `value` no es un literal escalar (`string | number | boolean | null`), el config completo se rechaza antes del render.
+- Si `visibility.operator` es `greaterThan` o `lessThan` y `value` no es numérico, el config completo se rechaza antes del render.
 - Si `initialPage` no existe dentro de `pages`, el runtime sigue fallando antes del render con `initial-page-not-found`.
 - Si un `button.props.action.pageId` apunta a una página inexistente, el config completo se rechaza antes del render aunque el shape estructural sea válido.
 - Si un `button.props.action.operationName` apunta a una operación inexistente en `api`, el config completo se rechaza antes del render aunque el shape estructural sea válido.
@@ -225,10 +261,11 @@ La frontera estable de esta validación queda organizada así:
 - `action` sigue siendo una sola operación por trigger; no hay arrays, secuencias ni callbacks declarativos.
 - El trigger sigue siendo implícito por tipo de nodo; el contrato no abre todavía un bloque general de `events`.
 - Los formularios declarativos ya soportan solo el catálogo mínimo `form`, `input`, `textarea` y `select`, con validación limitada a `required`.
+- `visibility` ya cubre show/hide simple por valor runtime, pero no abre branching, `fallback`, arrays de reglas ni expresiones compuestas.
 - `list` y `select` ya pueden reutilizar datos de `queries.*` como colecciones, pero siguen fuera de alcance filtros cliente, ordenación declarativa, transformaciones arbitrarias, búsqueda remota y carga incremental.
 - No hay todavía validaciones declarativas avanzadas (`min`, `max`, patrones o validaciones cruzadas).
 - `preloads` solo admite una lista plana de strings; no hay condiciones, prioridades, secuencialidad, dependencias ni políticas de caché.
 - No hay interpolación compleja dentro de strings.
 - No hay sistema de plugins para componentes externos.
 - No hay soporte para nodos distintos de `container`, `heading`, `paragraph`, `list`, `button`, `form`, `input`, `textarea` y `select`.
-- No hay consumidores declarativos de referencias fuera de `heading.props.text`, `paragraph.props.text`, `queryStateFeedback`, `api.query`, `api.body`, `defaultValue` de campos de formulario y `source` de colecciones para `list` y `select`.
+- No hay consumidores declarativos de referencias fuera de `heading.props.text`, `paragraph.props.text`, `queryStateFeedback`, `visibility`, `api.query`, `api.body`, `defaultValue` de campos de formulario y `source` de colecciones para `list` y `select`.

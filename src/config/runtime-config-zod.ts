@@ -3,6 +3,7 @@ import { z } from 'zod'
 export const supportedNodeTypes = ['container', 'heading', 'paragraph', 'list', 'button', 'form', 'input', 'textarea', 'select'] as const
 export const supportedApiMethods = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'] as const
 export const supportedQueryStateFeedbackStates = ['idle', 'loading', 'error', 'empty', 'success'] as const
+export const supportedVisibilityOperators = ['equals', 'notEquals', 'isTruthy', 'isFalsy', 'greaterThan', 'lessThan'] as const
 export const supportedInputTypes = ['text', 'email', 'password', 'search', 'tel', 'url'] as const
 
 const nonEmptyStringSchema = z.string().refine((value) => value.trim().length > 0)
@@ -92,11 +93,20 @@ const queryStateFeedbackSchema = z
   })
   .strip()
 
+const visibilitySchema = z
+  .object({
+    reference: nonEmptyStringSchema,
+    operator: z.enum(supportedVisibilityOperators),
+    value: z.unknown().optional(),
+  })
+  .strip()
+
 export const containerNodeSchema = z
   .object({
     type: z.literal('container'),
     id: nodeIdSchema.optional(),
     queryStateFeedback: queryStateFeedbackSchema.optional(),
+    visibility: visibilitySchema.optional(),
     props: z
       .object({
         direction: z.string().optional(),
@@ -113,6 +123,7 @@ export const headingNodeSchema = z
     type: z.literal('heading'),
     id: nodeIdSchema.optional(),
     queryStateFeedback: queryStateFeedbackSchema.optional(),
+    visibility: visibilitySchema.optional(),
     props: z
       .object({
         text: z.string(),
@@ -127,6 +138,7 @@ export const paragraphNodeSchema = z
     type: z.literal('paragraph'),
     id: nodeIdSchema.optional(),
     queryStateFeedback: queryStateFeedbackSchema.optional(),
+    visibility: visibilitySchema.optional(),
     props: z
       .object({
         text: z.string(),
@@ -140,6 +152,7 @@ export const listNodeSchema = z
     type: z.literal('list'),
     id: nodeIdSchema.optional(),
     queryStateFeedback: queryStateFeedbackSchema.optional(),
+    visibility: visibilitySchema.optional(),
     props: z
       .object({
         items: z.unknown(),
@@ -183,6 +196,7 @@ export const buttonNodeSchema = z
     type: z.literal('button'),
     id: nodeIdSchema.optional(),
     queryStateFeedback: queryStateFeedbackSchema.optional(),
+    visibility: visibilitySchema.optional(),
     props: z
       .object({
         label: z.string(),
@@ -197,6 +211,7 @@ export const formNodeSchema = z
     type: z.literal('form'),
     id: nodeIdSchema,
     queryStateFeedback: queryStateFeedbackSchema.optional(),
+    visibility: visibilitySchema.optional(),
     submitAction: z.unknown().optional(),
     resetOnSuccess: z.boolean().optional(),
     children: z.array(z.unknown()).optional(),
@@ -216,6 +231,7 @@ export const inputNodeSchema = z
   .object({
     type: z.literal('input'),
     queryStateFeedback: queryStateFeedbackSchema.optional(),
+    visibility: visibilitySchema.optional(),
     props: formFieldNodePropsSchema
       .extend({
         inputType: z.enum(supportedInputTypes).optional(),
@@ -228,6 +244,7 @@ export const textareaNodeSchema = z
   .object({
     type: z.literal('textarea'),
     queryStateFeedback: queryStateFeedbackSchema.optional(),
+    visibility: visibilitySchema.optional(),
     props: formFieldNodePropsSchema,
   })
   .strip()
@@ -243,6 +260,7 @@ export const selectNodeSchema = z
   .object({
     type: z.literal('select'),
     queryStateFeedback: queryStateFeedbackSchema.optional(),
+    visibility: visibilitySchema.optional(),
     props: formFieldNodePropsSchema
       .extend({
         items: z.unknown(),

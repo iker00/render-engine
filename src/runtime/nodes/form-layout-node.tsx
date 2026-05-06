@@ -9,7 +9,7 @@ import type {
   TextareaLayoutNode,
 } from '../../config/runtime-config'
 import { FormContextProvider } from '../form-context'
-import { isLayoutNodeVisible } from '../runtime-query-state-feedback'
+import { isLayoutNodeVisible } from '../runtime-layout-visibility'
 import { resolveRuntimeValue } from '../runtime-references/runtime-reference-resolver'
 import { getFormNodeClassName } from '../runtime-node-styling'
 import { normalizeSelectFieldValue } from '../runtime-collection-sources'
@@ -26,6 +26,7 @@ interface ResolvedFormFieldDefinition {
   type: 'input' | 'textarea' | 'select'
   required: boolean
   queryStateFeedback?: LayoutNode['queryStateFeedback']
+  visibility?: LayoutNode['visibility']
   items?: SelectLayoutNode['props']['items']
   defaultValue: unknown
 }
@@ -43,7 +44,7 @@ export function FormNode({ node, children }: FormNodeProps) {
     () =>
       fieldDefinitions.filter(
         (fieldDefinition) =>
-          isLayoutNodeVisible(fieldDefinition.queryStateFeedback, state) &&
+          isLayoutNodeVisible(fieldDefinition, state) &&
           selectFormFieldState(state, node.id, fieldDefinition.fieldId) === null,
       ),
     [fieldDefinitions, node.id, state],
@@ -94,7 +95,7 @@ export function FormNode({ node, children }: FormNodeProps) {
     const latestFieldDefinitions = collectResolvedFormFieldDefinitions(node.children ?? [], snapshotState)
     const visibleMissingFieldDefinitions = latestFieldDefinitions.filter(
       (fieldDefinition) =>
-        isLayoutNodeVisible(fieldDefinition.queryStateFeedback, snapshotState) &&
+        isLayoutNodeVisible(fieldDefinition, snapshotState) &&
         selectFormFieldState(snapshotState, node.id, fieldDefinition.fieldId) === null,
     )
 
@@ -169,6 +170,7 @@ export function collectResolvedFormFieldDefinitions(nodes: LayoutNodeCollection,
         type: node.type,
         required: node.props.required ?? false,
         queryStateFeedback: node.queryStateFeedback,
+        visibility: node.visibility,
         items: node.type === 'select' ? node.props.items : undefined,
         defaultValue: resolveFieldDefaultValue(node, state),
       })
@@ -196,7 +198,7 @@ export function validateFormFields({
       fieldDefinition.type === 'select' && fieldDefinition.items !== undefined
         ? normalizeSelectFieldValue(fieldDefinition.items, state, fieldState?.value ?? fieldDefinition.defaultValue)
         : fieldState?.value ?? fieldDefinition.defaultValue
-    const isVisible = isLayoutNodeVisible(fieldDefinition.queryStateFeedback, state)
+    const isVisible = isLayoutNodeVisible(fieldDefinition, state)
 
     if (!isVisible) {
       errorsByFieldId[fieldDefinition.fieldId] = fieldState?.error ?? null

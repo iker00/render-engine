@@ -17,6 +17,8 @@ import type {
   QueryStateFeedbackFallbackRule,
   QueryStateFeedbackRule,
   QueryStateFeedbackVisibleState,
+  RuntimeVisibilityConfig,
+  RuntimeVisibilityOperator,
   RuntimeCollectionObjectItem,
   ResetFormRuntimeUiAction,
   RuntimeApiBodyValue,
@@ -59,6 +61,9 @@ import {
 import { initialPageNotFound, invalidLayout, unsupportedNodeType } from './runtime-config-validation-errors'
 
 const collectionPathSegmentPattern = /^[A-Za-z0-9_-]+$/
+const visibilityComparisonOperators = new Set<RuntimeVisibilityOperator>(['equals', 'notEquals', 'greaterThan', 'lessThan'])
+const visibilityScalarOperators = new Set<RuntimeVisibilityOperator>(['equals', 'notEquals'])
+const visibilityTruthinessOperators = new Set<RuntimeVisibilityOperator>(['isTruthy', 'isFalsy'])
 
 export function validateRuntimeConfig(rawConfig: unknown): RuntimeConfigValidationResult {
   const configShellResult = runtimeConfigShellSchema.safeParse(rawConfig)
@@ -488,6 +493,12 @@ function validateContainerNode(
       return feedbackIssue
     }
 
+    const visibilityIssue = mapVisibilityIssue(pageId, path, issue)
+
+    if (visibilityIssue) {
+      return visibilityIssue
+    }
+
     return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}".`)
   }
 
@@ -499,6 +510,16 @@ function validateContainerNode(
 
   if (feedbackResult.status === 'error') {
     return feedbackResult
+  }
+
+  const visibilityResult = validateVisibility(
+    parseResult.data.visibility as LayoutNodeFeedbackFields['visibility'],
+    `${path}.visibility`,
+    pageId,
+  )
+
+  if (visibilityResult.status === 'error') {
+    return visibilityResult
   }
 
   let children: LayoutNodeCollection | undefined
@@ -519,6 +540,7 @@ function validateContainerNode(
       type: 'container',
       id: parseResult.data.id,
       queryStateFeedback: feedbackResult.queryStateFeedback,
+      visibility: visibilityResult.visibility,
       props: parseResult.data.props,
       children,
     },
@@ -539,6 +561,12 @@ function validateHeadingNode(
       return feedbackIssue
     }
 
+    const visibilityIssue = mapVisibilityIssue(pageId, path, parseResult.error.issues[0])
+
+    if (visibilityIssue) {
+      return visibilityIssue
+    }
+
     return mapLeafNodeIssue(pageId, path, parseResult.error.issues[0]?.path ?? [])
   }
 
@@ -552,11 +580,22 @@ function validateHeadingNode(
     return feedbackResult
   }
 
+  const visibilityResult = validateVisibility(
+    parseResult.data.visibility as LayoutNodeFeedbackFields['visibility'],
+    `${path}.visibility`,
+    pageId,
+  )
+
+  if (visibilityResult.status === 'error') {
+    return visibilityResult
+  }
+
   return {
     status: 'ready',
     node: {
       ...parseResult.data,
       queryStateFeedback: feedbackResult.queryStateFeedback,
+      visibility: visibilityResult.visibility,
     },
   }
 }
@@ -575,6 +614,12 @@ function validateParagraphNode(
       return feedbackIssue
     }
 
+    const visibilityIssue = mapVisibilityIssue(pageId, path, parseResult.error.issues[0])
+
+    if (visibilityIssue) {
+      return visibilityIssue
+    }
+
     return mapLeafNodeIssue(pageId, path, parseResult.error.issues[0]?.path ?? [])
   }
 
@@ -588,11 +633,22 @@ function validateParagraphNode(
     return feedbackResult
   }
 
+  const visibilityResult = validateVisibility(
+    parseResult.data.visibility as LayoutNodeFeedbackFields['visibility'],
+    `${path}.visibility`,
+    pageId,
+  )
+
+  if (visibilityResult.status === 'error') {
+    return visibilityResult
+  }
+
   return {
     status: 'ready',
     node: {
       ...parseResult.data,
       queryStateFeedback: feedbackResult.queryStateFeedback,
+      visibility: visibilityResult.visibility,
     },
   }
 }
@@ -611,6 +667,12 @@ function validateListNode(
       return feedbackIssue
     }
 
+    const visibilityIssue = mapVisibilityIssue(pageId, path, parseResult.error.issues[0])
+
+    if (visibilityIssue) {
+      return visibilityIssue
+    }
+
     return mapLeafNodeIssue(pageId, path, parseResult.error.issues[0]?.path ?? [])
   }
 
@@ -622,6 +684,16 @@ function validateListNode(
 
   if (feedbackResult.status === 'error') {
     return feedbackResult
+  }
+
+  const visibilityResult = validateVisibility(
+    parseResult.data.visibility as LayoutNodeFeedbackFields['visibility'],
+    `${path}.visibility`,
+    pageId,
+  )
+
+  if (visibilityResult.status === 'error') {
+    return visibilityResult
   }
 
   const itemsResult = validateListItems(parseResult.data.props.items, `${path}.props.items`, pageId)
@@ -636,6 +708,7 @@ function validateListNode(
       type: 'list',
       id: parseResult.data.id,
       queryStateFeedback: feedbackResult.queryStateFeedback,
+      visibility: visibilityResult.visibility,
       props: {
         items: itemsResult.items,
       },
@@ -780,6 +853,12 @@ function validateButtonNode(
       return feedbackIssue
     }
 
+    const visibilityIssue = mapVisibilityIssue(pageId, path, issue)
+
+    if (visibilityIssue) {
+      return visibilityIssue
+    }
+
     if (issuePath[0] === 'id') {
       return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.id".`)
     }
@@ -809,6 +888,16 @@ function validateButtonNode(
     return feedbackResult
   }
 
+  const visibilityResult = validateVisibility(
+    parseResult.data.visibility as LayoutNodeFeedbackFields['visibility'],
+    `${path}.visibility`,
+    pageId,
+  )
+
+  if (visibilityResult.status === 'error') {
+    return visibilityResult
+  }
+
   let action: RuntimeUiAction | undefined
 
   if (parseResult.data.props.action !== undefined) {
@@ -827,6 +916,7 @@ function validateButtonNode(
       type: 'button',
       id: parseResult.data.id,
       queryStateFeedback: feedbackResult.queryStateFeedback,
+      visibility: visibilityResult.visibility,
       props: {
         label: parseResult.data.props.label,
         action,
@@ -974,6 +1064,74 @@ function validateQueryStateFeedback(
   }
 }
 
+function validateVisibility(
+  rawVisibility: LayoutNodeFeedbackFields['visibility'],
+  path: string,
+  pageId: string,
+): { status: 'ready'; visibility: RuntimeVisibilityConfig | undefined } | { status: 'error'; error: RuntimeConfigError } {
+  if (rawVisibility === undefined) {
+    return {
+      status: 'ready',
+      visibility: undefined,
+    }
+  }
+
+  if (!isValidVisibilityReference(rawVisibility.reference)) {
+    return invalidLayout(
+      `Page "${pageId}" has an invalid layout at "${path}.reference": visibility references must use forms.{formId}.{fieldId}, queries.{queryName}, queries.{queryName}.data, queries.{queryName}.data.*, queries.{queryName}.status or queries.{queryName}.error.`,
+    )
+  }
+
+  const hasValue = Object.prototype.hasOwnProperty.call(rawVisibility, 'value')
+
+  if (visibilityTruthinessOperators.has(rawVisibility.operator) && hasValue) {
+    return invalidLayout(
+      `Page "${pageId}" has an invalid layout at "${path}.value": operator "${rawVisibility.operator}" does not accept value.`,
+    )
+  }
+
+  if (visibilityComparisonOperators.has(rawVisibility.operator) && !hasValue) {
+    return invalidLayout(
+      `Page "${pageId}" has an invalid layout at "${path}.value": operator "${rawVisibility.operator}" requires value.`,
+    )
+  }
+
+  if (!hasValue) {
+    return {
+      status: 'ready',
+      visibility: rawVisibility,
+    }
+  }
+
+  if (visibilityScalarOperators.has(rawVisibility.operator)) {
+    if (!isRuntimeConfigValue(rawVisibility.value)) {
+      return invalidLayout(
+        `Page "${pageId}" has an invalid layout at "${path}.value": operator "${rawVisibility.operator}" only accepts string, number, boolean or null.`,
+      )
+    }
+
+    return {
+      status: 'ready',
+      visibility: rawVisibility,
+    }
+  }
+
+  if (rawVisibility.operator === 'greaterThan' || rawVisibility.operator === 'lessThan') {
+    if (typeof rawVisibility.value !== 'number') {
+      return invalidLayout(
+        `Page "${pageId}" has an invalid layout at "${path}.value": operator "${rawVisibility.operator}" only accepts numeric thresholds.`,
+      )
+    }
+
+    return {
+      status: 'ready',
+      visibility: rawVisibility,
+    }
+  }
+
+  return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.operator".`)
+}
+
 function validateFormNode(
   rawNode: Record<string, unknown>,
   path: string,
@@ -987,6 +1145,12 @@ function validateFormNode(
 
     if (feedbackIssue) {
       return feedbackIssue
+    }
+
+    const visibilityIssue = mapVisibilityIssue(pageId, path, issue)
+
+    if (visibilityIssue) {
+      return visibilityIssue
     }
 
     const issuePath = issue?.path ?? []
@@ -1021,6 +1185,16 @@ function validateFormNode(
     return feedbackResult
   }
 
+  const visibilityResult = validateVisibility(
+    parseResult.data.visibility as LayoutNodeFeedbackFields['visibility'],
+    `${path}.visibility`,
+    pageId,
+  )
+
+  if (visibilityResult.status === 'error') {
+    return visibilityResult
+  }
+
   let children: LayoutNodeCollection | undefined
   let submitAction: ExecuteOperationRuntimeUiAction | undefined
 
@@ -1050,6 +1224,7 @@ function validateFormNode(
       type: 'form',
       id: parseResult.data.id,
       queryStateFeedback: feedbackResult.queryStateFeedback,
+      visibility: visibilityResult.visibility,
       submitAction,
       resetOnSuccess: parseResult.data.resetOnSuccess,
       children,
@@ -1071,6 +1246,12 @@ function validateInputNode(
       return feedbackIssue
     }
 
+    const visibilityIssue = mapVisibilityIssue(pageId, path, parseResult.error.issues[0])
+
+    if (visibilityIssue) {
+      return visibilityIssue
+    }
+
     return mapLeafNodeIssue(pageId, path, parseResult.error.issues[0]?.path ?? [])
   }
 
@@ -1084,11 +1265,22 @@ function validateInputNode(
     return feedbackResult
   }
 
+  const visibilityResult = validateVisibility(
+    parseResult.data.visibility as LayoutNodeFeedbackFields['visibility'],
+    `${path}.visibility`,
+    pageId,
+  )
+
+  if (visibilityResult.status === 'error') {
+    return visibilityResult
+  }
+
   return {
     status: 'ready',
     node: {
       ...parseResult.data,
       queryStateFeedback: feedbackResult.queryStateFeedback,
+      visibility: visibilityResult.visibility,
     },
   }
 }
@@ -1107,6 +1299,12 @@ function validateTextareaNode(
       return feedbackIssue
     }
 
+    const visibilityIssue = mapVisibilityIssue(pageId, path, parseResult.error.issues[0])
+
+    if (visibilityIssue) {
+      return visibilityIssue
+    }
+
     return mapLeafNodeIssue(pageId, path, parseResult.error.issues[0]?.path ?? [])
   }
 
@@ -1120,11 +1318,22 @@ function validateTextareaNode(
     return feedbackResult
   }
 
+  const visibilityResult = validateVisibility(
+    parseResult.data.visibility as LayoutNodeFeedbackFields['visibility'],
+    `${path}.visibility`,
+    pageId,
+  )
+
+  if (visibilityResult.status === 'error') {
+    return visibilityResult
+  }
+
   return {
     status: 'ready',
     node: {
       ...parseResult.data,
       queryStateFeedback: feedbackResult.queryStateFeedback,
+      visibility: visibilityResult.visibility,
     },
   }
 }
@@ -1143,6 +1352,12 @@ function validateSelectNode(
       return feedbackIssue
     }
 
+    const visibilityIssue = mapVisibilityIssue(pageId, path, parseResult.error.issues[0])
+
+    if (visibilityIssue) {
+      return visibilityIssue
+    }
+
     return mapLeafNodeIssue(pageId, path, parseResult.error.issues[0]?.path ?? [])
   }
 
@@ -1156,6 +1371,16 @@ function validateSelectNode(
     return feedbackResult
   }
 
+  const visibilityResult = validateVisibility(
+    parseResult.data.visibility as LayoutNodeFeedbackFields['visibility'],
+    `${path}.visibility`,
+    pageId,
+  )
+
+  if (visibilityResult.status === 'error') {
+    return visibilityResult
+  }
+
   const itemsResult = validateSelectItemsContract(parseResult.data.props.items, `${path}.props.items`, pageId)
 
   if (itemsResult.status === 'error') {
@@ -1167,6 +1392,7 @@ function validateSelectNode(
     node: {
       type: 'select',
       queryStateFeedback: feedbackResult.queryStateFeedback,
+      visibility: visibilityResult.visibility,
       props: {
         ...parseResult.data.props,
         items: itemsResult.items,
@@ -1363,6 +1589,21 @@ function mapQueryStateFeedbackIssue(
 
   if (issue?.code === 'unrecognized_keys' && issuePath[1] === 'states' && issue?.keys && issue.keys.length > 0) {
     return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.queryStateFeedback.states.${issue.keys[0]}".`)
+  }
+
+  const formattedIssuePath = issuePath.map(formatPathSegment).join('')
+  return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}${formattedIssuePath}".`)
+}
+
+function mapVisibilityIssue(
+  pageId: string,
+  path: string,
+  issue: { path?: PropertyKey[] } | undefined,
+): { status: 'error'; error: RuntimeConfigError } | null {
+  const issuePath = issue?.path ?? []
+
+  if (issuePath[0] !== 'visibility') {
+    return null
   }
 
   const formattedIssuePath = issuePath.map(formatPathSegment).join('')
@@ -2012,6 +2253,36 @@ function mapRequestBodyIssue(
 
   const formattedPath = issuePath.map(formatPathSegment).join('')
   return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.body${formattedPath}".`)
+}
+
+function isRuntimeConfigValue(value: unknown): value is RuntimeVisibilityConfig['value'] {
+  return value === null || typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean'
+}
+
+function isValidVisibilityReference(reference: string): boolean {
+  const segments = reference.split('.')
+
+  if (segments[0] === 'forms') {
+    return segments.length === 3 && segments.slice(1).every((segment) => collectionPathSegmentPattern.test(segment))
+  }
+
+  if (segments[0] !== 'queries' || segments.length < 2 || !collectionPathSegmentPattern.test(segments[1])) {
+    return false
+  }
+
+  if (segments.length === 2) {
+    return true
+  }
+
+  if (segments[2] === 'status' || segments[2] === 'error') {
+    return segments.length === 3
+  }
+
+  if (segments[2] !== 'data') {
+    return false
+  }
+
+  return segments.length === 3 || segments.slice(3).every((segment) => collectionPathSegmentPattern.test(segment))
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

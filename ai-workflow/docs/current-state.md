@@ -28,10 +28,12 @@
 - La interpretación de acciones UI ya está concentrada en una capa transversal del runtime y no en ramas imperativas dispersas dentro del nodo visual `button`.
 - Cualquier nodo soportado ya puede declarar `queryStateFeedback` para reaccionar al estado visible `idle | loading | error | empty | success` de una query concreta con `show`, `hide` o un fallback local reutilizando el mismo catálogo declarativo de nodos.
 - La semántica visible de query ya está centralizada: `idle` representa una query no lanzada todavía y también cubre la query ausente del store; `loading` representa solo una ejecución real en curso; `null`, `undefined`, `''`, `[]` y `{}` se tratan como `empty`; `0` y `false` siguen la rama `success`.
+- Cualquier nodo soportado ya puede declarar también `visibility` para mostrarse u ocultarse según una única condición simple basada en `forms.*` o `queries.*`, con operadores `equals`, `notEquals`, `isTruthy`, `isFalsy`, `greaterThan` y `lessThan`.
+- La visibilidad efectiva del runtime ya está centralizada con precedencia estable: `queryStateFeedback` decide primero `show | hide | fallback`, y `visibility` solo se evalúa sobre la rama principal cuando esta sigue visible.
 - Catálogo declarativo de formularios ya operativo con `form`, `input`, `textarea` y `select`, incluyendo herencia de `formId` por descendencia y render de `<form>` real.
 - La inicialización de campos declarativos ya es lazy y reutiliza exclusivamente `forms.{formId}.{fieldId}`, con soporte para `defaultValue` literal o dinámico sin sobrescribir estado ya existente del usuario.
 - La validación declarativa `required` ya funciona a nivel de formulario, escribe errores solo en `forms.*` y excluye del bloqueo de submit a campos ocultos por `queryStateFeedback`.
-- Esa exclusión de campos ocultos reutiliza la misma semántica visible `idle | loading | error | empty | success` que usa el renderer del runtime.
+- Esa exclusión de campos ocultos ya cubre tanto `queryStateFeedback` como `visibility`, reutilizando la misma decisión visible que usa el renderer del runtime.
 - El submit declarativo de formularios ya soporta `submitAction.type: executeOperation`, reusa `queries.{operationName}` como única superficie visible de loading/success/error, puede añadir `query`, `body` y `headers` por envío y puede resetear por `resetOnSuccess`.
 - `button.props.action.type: executeOperation` ya puede añadir también `query`, `body` y `headers` por ejecución sin duplicar operaciones `api`.
 - `list` y `select` ya pueden consumir colecciones manuales históricas o colecciones resueltas desde `queries.{queryName}.data` o `queries.{queryName}.data.*`, con una capa compartida de resolución y proyección por consumidor.
@@ -50,6 +52,7 @@
 - No existen todavía consumidores de referencias fuera de `heading.props.text`, `paragraph.props.text`, `queryStateFeedback`, `api.query`, `api.body`, `defaultValue` de campos de formulario y `source` de colecciones para `list` y `select`, ni interpolación parcial dentro de strings.
 - No existen todavía validaciones declarativas avanzadas de formularios, multiselect, búsqueda remota de opciones ni tipos de campo fuera del catálogo mínimo actual.
 - `routeParams.*`, `params.*` y `navigation.*` siguen sin resolverse como referencias soportadas.
+- `visibility` sigue intencionadamente acotado a una sola condición por nodo, sin `fallback`, sin composición booleana y sin expresiones arbitrarias.
 - No existe todavía theming, tokens de diseño ni personalización visual declarativa desde JSON.
 
 ## Infraestructura vigente
@@ -73,6 +76,7 @@
 - Decimosexta feature del workflow cerrada para distinguir `idle` de `loading` en `queryStateFeedback`, tratar queries ausentes como `idle` y reutilizar esa misma semántica visible en renderer y formularios.
 - Decimoséptima feature del workflow cerrada para permitir colecciones multi-origen en `list` y `select`, reutilizando datos de `queries.*` con mapeos declarativos por consumidor y manteniendo coherencia entre render, formularios y validación.
 - Decimoctava feature del workflow cerrada para formalizar `api.headers` y permitir `query`, `body` y `headers` por ejecución desde `button.props.action` y `form.submitAction`, centralizando la composición final del request en `src/queries/`.
+- Decimonovena feature del workflow cerrada para añadir reglas declarativas `visibility` reutilizables por renderer y formularios, con precedencia estable sobre `queryStateFeedback` y exclusión coherente de campos ocultos durante la validación.
 
 ## Referencias
 

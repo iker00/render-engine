@@ -962,6 +962,238 @@ describe('RuntimePage', () => {
     expect(screen.queryByRole('button', { name: 'Retry later' })).not.toBeInTheDocument()
   })
 
+  it('shows and hides supported layout nodes through visibility rules based on forms and queries values', async () => {
+    renderRuntimePageWithQueryFeedback({
+      id: 'home',
+      layout: [
+        {
+          type: 'form',
+          id: 'profile-form',
+          children: [
+            {
+              type: 'select',
+              props: {
+                fieldId: 'role',
+                label: 'Role',
+                defaultValue: '',
+                items: [
+                  { label: '', value: '' },
+                  { label: 'Admin', value: 'admin' },
+                ],
+              },
+            },
+            {
+              type: 'input',
+              visibility: {
+                reference: 'forms.profile-form.role',
+                operator: 'equals',
+                value: 'admin',
+              },
+              props: {
+                fieldId: 'notes',
+                label: 'Notes',
+                defaultValue: '',
+              },
+            },
+          ],
+        },
+        {
+          type: 'heading',
+          visibility: {
+            reference: 'forms.profile-form.role',
+            operator: 'equals',
+            value: 'admin',
+          },
+          props: {
+            text: 'Admin heading',
+            level: 2,
+          },
+        },
+        {
+          type: 'paragraph',
+          visibility: {
+            reference: 'queries.searchUsers.status',
+            operator: 'equals',
+            value: 'success',
+          },
+          props: {
+            text: 'Success status paragraph',
+          },
+        },
+        {
+          type: 'paragraph',
+          visibility: {
+            reference: 'queries.searchUsers.data.0',
+            operator: 'isTruthy',
+          },
+          props: {
+            text: 'First result paragraph',
+          },
+        },
+        {
+          type: 'list',
+          visibility: {
+            reference: 'queries.searchUsers.data',
+            operator: 'greaterThan',
+            value: 1,
+          },
+          props: {
+            items: ['Visible list item'],
+          },
+        },
+        {
+          type: 'button',
+          visibility: {
+            reference: 'queries.searchUsers.status',
+            operator: 'equals',
+            value: 'success',
+          },
+          props: {
+            label: 'Visible runtime button',
+            action: {
+              type: 'goBack',
+            },
+          },
+        },
+        {
+          type: 'container',
+          visibility: {
+            reference: 'queries.searchUsers.error',
+            operator: 'isTruthy',
+          },
+          children: [
+            {
+              type: 'paragraph',
+              props: {
+                text: 'Error container content',
+              },
+            },
+          ],
+        },
+        {
+          type: 'form',
+          id: 'error-form',
+          visibility: {
+            reference: 'queries.searchUsers.error',
+            operator: 'isTruthy',
+          },
+          children: [
+            {
+              type: 'input',
+              props: {
+                fieldId: 'reason',
+                label: 'Reason',
+                defaultValue: '',
+              },
+            },
+          ],
+        },
+      ],
+    })
+
+    expect(screen.queryByRole('heading', { name: 'Admin heading', level: 2 })).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Notes')).not.toBeInTheDocument()
+    expect(screen.queryByText('Success status paragraph')).not.toBeInTheDocument()
+    expect(screen.queryByText('First result paragraph')).not.toBeInTheDocument()
+    expect(screen.queryByText('Visible list item')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Visible runtime button' })).not.toBeInTheDocument()
+    expect(screen.queryByText('Error container content')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Reason')).not.toBeInTheDocument()
+
+    fireEvent.change(screen.getByRole('combobox', { name: 'Role' }), { target: { value: 'admin' } })
+
+    expect(screen.getByRole('heading', { name: 'Admin heading', level: 2 })).toBeInTheDocument()
+    expect(screen.getByLabelText('Notes')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Set success list' }))
+
+    await waitFor(() => expect(screen.getByText('Success status paragraph')).toBeInTheDocument())
+    expect(screen.getByText('First result paragraph')).toBeInTheDocument()
+    expect(screen.getByText('Visible list item')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Visible runtime button' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Set error' }))
+
+    await waitFor(() => expect(screen.getByText('Error container content')).toBeInTheDocument())
+    expect(screen.getByLabelText('Reason')).toBeInTheDocument()
+    expect(screen.queryByText('Success status paragraph')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Visible runtime button' })).not.toBeInTheDocument()
+  })
+
+  it('applies visibility rules inside queryStateFeedback fallback nodes without reopening the original node', async () => {
+    renderRuntimePageWithQueryFeedback({
+      id: 'home',
+      layout: [
+        {
+          type: 'form',
+          id: 'profile-form',
+          children: [
+            {
+              type: 'select',
+              props: {
+                fieldId: 'role',
+                label: 'Role',
+                defaultValue: '',
+                items: [
+                  { label: '', value: '' },
+                  { label: 'Admin', value: 'admin' },
+                ],
+              },
+            },
+          ],
+        },
+        {
+          type: 'paragraph',
+          queryStateFeedback: {
+            query: 'searchUsers',
+            states: {
+              idle: {
+                mode: 'fallback',
+                fallback: [
+                  {
+                    type: 'paragraph',
+                    visibility: {
+                      reference: 'forms.profile-form.role',
+                      operator: 'equals',
+                      value: 'admin',
+                    },
+                    props: {
+                      text: 'Admin-only idle fallback',
+                    },
+                  },
+                  {
+                    type: 'paragraph',
+                    props: {
+                      text: 'Always idle fallback',
+                    },
+                  },
+                ],
+              },
+            },
+          },
+          props: {
+            text: 'Original query node',
+          },
+        },
+      ],
+    })
+
+    expect(screen.getByText('Always idle fallback')).toBeInTheDocument()
+    expect(screen.queryByText('Admin-only idle fallback')).not.toBeInTheDocument()
+    expect(screen.queryByText('Original query node')).not.toBeInTheDocument()
+
+    fireEvent.change(screen.getByRole('combobox', { name: 'Role' }), { target: { value: 'admin' } })
+
+    expect(screen.getByText('Admin-only idle fallback')).toBeInTheDocument()
+    expect(screen.queryByText('Original query node')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Set success list' }))
+
+    await waitFor(() => expect(screen.getByText('Original query node')).toBeInTheDocument())
+    expect(screen.queryByText('Always idle fallback')).not.toBeInTheDocument()
+    expect(screen.queryByText('Admin-only idle fallback')).not.toBeInTheDocument()
+  })
+
   it('keeps arbitrary container gap values through the scoped CSS variable fallback', () => {
     renderRuntimePage({
       id: 'arbitrary-gap',
