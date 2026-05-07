@@ -1,14 +1,27 @@
 import { z } from 'zod'
 
-export const supportedNodeTypes = ['container', 'heading', 'paragraph', 'list', 'button', 'form', 'input', 'textarea', 'select'] as const
+export const supportedNodeTypes = [
+  'container',
+  'heading',
+  'paragraph',
+  'list',
+  'button',
+  'form',
+  'input',
+  'textarea',
+  'select',
+  'radioGroup',
+  'checkboxGroup',
+] as const
 export const supportedApiMethods = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'] as const
 export const supportedQueryStateFeedbackStates = ['idle', 'loading', 'error', 'empty', 'success'] as const
 export const supportedVisibilityOperators = ['equals', 'notEquals', 'isTruthy', 'isFalsy', 'greaterThan', 'lessThan'] as const
-export const supportedInputTypes = ['text', 'email', 'password', 'search', 'tel', 'url'] as const
+export const supportedInputTypes = ['text', 'email', 'password', 'search', 'tel', 'url', 'number', 'date', 'datetime-local'] as const
 
 const nonEmptyStringSchema = z.string().refine((value) => value.trim().length > 0)
 const nodeIdSchema = nonEmptyStringSchema
 const runtimeConfigValueSchema = z.union([z.string(), z.number(), z.boolean(), z.null()])
+const formFieldDefaultValueSchema = z.union([runtimeConfigValueSchema, z.array(z.unknown())])
 
 export const runtimeConfigShellSchema = z
   .object({
@@ -224,7 +237,7 @@ const formFieldNodePropsSchema = z
     fieldId: nonEmptyStringSchema,
     label: z.string(),
     required: z.boolean().optional(),
-    defaultValue: runtimeConfigValueSchema.optional(),
+    defaultValue: formFieldDefaultValueSchema.optional(),
   })
   .strip()
 
@@ -260,6 +273,33 @@ export const selectItemSchema = z
 export const selectNodeSchema = z
   .object({
     type: z.literal('select'),
+    queryStateFeedback: queryStateFeedbackSchema.optional(),
+    visibility: visibilitySchema.optional(),
+    props: formFieldNodePropsSchema
+      .extend({
+        items: z.unknown(),
+        multiple: z.boolean().optional(),
+      })
+      .strip(),
+  })
+  .strip()
+
+export const radioGroupNodeSchema = z
+  .object({
+    type: z.literal('radioGroup'),
+    queryStateFeedback: queryStateFeedbackSchema.optional(),
+    visibility: visibilitySchema.optional(),
+    props: formFieldNodePropsSchema
+      .extend({
+        items: z.unknown(),
+      })
+      .strip(),
+  })
+  .strip()
+
+export const checkboxGroupNodeSchema = z
+  .object({
+    type: z.literal('checkboxGroup'),
     queryStateFeedback: queryStateFeedbackSchema.optional(),
     visibility: visibilitySchema.optional(),
     props: formFieldNodePropsSchema

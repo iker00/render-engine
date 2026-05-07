@@ -33,6 +33,7 @@ export type {
   ResetFormRuntimeUiAction,
   RuntimeUiAction,
   ParagraphLayoutNode,
+  RadioGroupLayoutNode,
   QueryStateFeedbackConfig,
   QueryStateFeedbackFallbackRule,
   QueryStateFeedbackHideRule,
@@ -54,5 +55,6 @@ export type {
   RuntimeCollectionObjectItem,
   RuntimeCollectionObjectValue,
   TextareaLayoutNode,
+  CheckboxGroupLayoutNode,
 } from './runtime-config-types'
 export { validateRuntimeConfig } from './validate-runtime-config'

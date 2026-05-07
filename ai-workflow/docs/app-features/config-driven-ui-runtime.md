@@ -1,7 +1,7 @@
 # Runtime UI configurable
 
 ## Objetivo
-Renderizar el runtime a partir de una configuración JSON validada, apoyado ya en un estado compartido por instancia para navegación, formularios y queries, con una frontera declarativa real para ejecutar operaciones remotas, dispararlas automáticamente al entrar en página, activarlas desde botones o desde submit de formularios, permitir request params por ejecución sobre una operación `api` base, transportar params de navegación interna por entrada y condicionar la salida visible de cada nodo tanto por estado de query como por valores ya presentes en el propio runtime sin acoplar la UI a HTTP.
+Renderizar el runtime a partir de una configuración JSON validada, apoyado ya en un estado compartido por instancia para navegación, formularios y queries, con una frontera declarativa real para ejecutar operaciones remotas, dispararlas automáticamente al entrar en página, activarlas desde botones o desde submit de formularios, permitir request params por ejecución sobre una operación `api` base, transportar params de navegación interna por entrada y condicionar la salida visible de cada nodo tanto por estado de query como por valores ya presentes en el propio runtime sin acoplar la UI a HTTP. El catálogo estable de formularios ya cubre selección simple y múltiple sobre una semántica compartida de opciones.
 
 ## Qué resuelve
 - Permite que la configuración declare varias páginas aunque, por ahora, solo se resuelva la indicada por `initialPage`.
@@ -19,7 +19,7 @@ Renderizar el runtime a partir de una configuración JSON validada, apoyado ya e
 - Permite que `navigateTo` transporte params escalares por entrada, que `goBack` restaure esa entrada completa y que `preloads` dependan de la reentrada observable real, no solo del `pageId`.
 - Permite que cualquier nodo soportado declare `queryStateFeedback` para mostrarse, ocultarse o sustituirse por un fallback local según `idle | loading | error | empty | success`.
 - Permite que cualquier nodo soportado declare `visibility` para mostrarse u ocultarse según valores de `forms.*` y `queries.*`, con una semántica compartida entre renderer y formularios.
-- Renderiza formularios declarativos reales con `form`, `input`, `textarea` y `select`, inicializa su estado lazy en `forms.{formId}.{fieldId}`, valida `required` solo sobre campos visibles y soporta submit con `executeOperation`.
+- Renderiza formularios declarativos reales con `form`, `input`, `textarea`, `select`, `radioGroup` y `checkboxGroup`, inicializa su estado lazy en `forms.{formId}.{fieldId}`, valida `required` solo sobre campos visibles y soporta submit con `executeOperation`.
 - Implementa la presentación visible del runtime con utilidades de `Tailwind CSS`, sin abrir todavía una capa de theming definida.
 
 ## Áreas funcionales principales
@@ -53,6 +53,8 @@ El renderer estático soporta estos nodos:
 - `input`
 - `textarea`
 - `select`
+- `radioGroup`
+- `checkboxGroup`
 
 Reglas funcionales vigentes:
 - La raíz de página se renderiza como colección; el runtime no inventa un `container` de layout para envolver hermanos.
@@ -66,8 +68,12 @@ Reglas funcionales vigentes:
 - `list.props` soporta `items` como array histórico de strings o como origen declarativo manual/dinámico de colecciones escalares u objeto.
 - `button.props` soporta `label` y `action`, con `navigateTo`, `goBack`, `executeOperation` y `resetForm` como acciones declarativas vigentes; `navigateTo` puede añadir `params` escalares por entrada; `executeOperation` puede aportar `query`, `body` y `headers` por ejecución; dentro de un `form`, un botón sin `action` actúa como submit implícito.
 - `form` renderiza un `<form>` real, hereda un contexto estable de `formId` a sus descendientes, inicializa solo los campos todavía ausentes en el store y puede ejecutar `submitAction.type: executeOperation` con `query`, `body` y `headers` por envío.
-- `input`, `textarea` y `select` leen y escriben exclusivamente en `forms.{formId}.{fieldId}` y comparten una base visual accesible con estado de error.
+- `input`, `textarea`, `select`, `radioGroup` y `checkboxGroup` leen y escriben exclusivamente en `forms.{formId}.{fieldId}` y comparten una base visual accesible con estado de error.
+- `input` ya soporta también `number`, `date` y `datetime-local` además del catálogo textual inicial.
 - `select` soporta items históricos estáticos y también orígenes declarativos manuales o dinámicos de escalares u objetos; normaliza internamente a string los valores efectivos y deja el valor vigente vacío cuando ya no coincide con ninguna opción disponible.
+- `select.props.multiple` activa una semántica de selección múltiple basada en `string[]`, con el mismo orden estable del catálogo efectivo visible y la misma limpieza automática de valores ya inválidos.
+- `radioGroup` reutiliza exactamente la misma semántica de opciones y selección simple que `select` simple.
+- `checkboxGroup` reutiliza exactamente la misma semántica de opciones y selección múltiple que `select.multiple`.
 - cualquier nodo soportado puede combinar `queryStateFeedback` y `visibility`; si ambos existen, el runtime resuelve primero `queryStateFeedback` y solo evalúa `visibility` cuando la rama principal sigue visible.
 - `heading`, `paragraph` y `list` usan clases base estables de `Tailwind` para mantener jerarquía y legibilidad mínimas.
 - `button` se renderiza como control accesible y delega sus acciones al ejecutor común del runtime, manteniendo los efectos visibles dentro de los dominios compartidos de navegación, queries y formularios.
@@ -85,12 +91,12 @@ Reglas funcionales vigentes:
 - `src/queries/` concentra también la composición final entre la operación `api` base y los request params por ejecución, incluida la semántica estable de merge para `query`, `body` y `headers`.
 - `src/runtime/runtime-node-styling.ts` centraliza la convención visual base y la compatibilidad acotada de `gap`.
 - `src/runtime/runtime-references/` centraliza parsing, resolución y diagnóstico de referencias string del runtime.
-- `src/runtime/runtime-collection-sources.ts` concentra la resolución compartida de colecciones efectivas para `list` y `select`, incluyendo degradación a vacío y proyección declarativa por item.
+- `src/runtime/runtime-collection-sources.ts` concentra la resolución compartida de colecciones efectivas para `list`, `select`, `radioGroup` y `checkboxGroup`, incluyendo degradación a vacío, proyección declarativa por item y normalización común de selección simple o múltiple.
 - `src/queries/` concentra la construcción de requests, la ejecución contra `fetch` y la normalización de errores remotos.
 - `src/runtime/runtime-state/` concentra el provider, reducer, tipos, selectors y acciones del estado compartido del runtime.
 - `src/runtime/runtime-query-state-feedback.ts` concentra la derivación de estado visible de query, incluida la distinción explícita entre `idle` y `loading`, la heurística común de `empty` y la resolución de la respuesta efectiva `show | hide | fallback`.
 - `src/runtime/runtime-layout-visibility.ts` compone `queryStateFeedback` y `visibility` en una única decisión reutilizable por renderer y formularios.
-- `src/runtime/nodes/` contiene una pieza concreta por nodo soportado hoy: `container`, `heading`, `paragraph`, `list`, `button`, `form`, `input`, `textarea` y `select`.
+- `src/runtime/nodes/` contiene una pieza concreta por nodo soportado hoy: `container`, `heading`, `paragraph`, `list`, `button`, `form`, `input`, `textarea`, `select`, `radioGroup` y `checkboxGroup`.
 
 ## Referencias dinámicas ya activas
 El runtime resuelve hoy referencias completas en:
@@ -125,8 +131,8 @@ Además, el runtime reutiliza la misma convención de referencias completas en:
 - `form.submitAction.body`
 - `form.submitAction.headers`
 - `navigateTo.params`
-- `defaultValue` de `input`, `textarea` y `select`
-- `list.props.items.source` y `select.props.items.source`
+- `defaultValue` de `input`, `textarea`, `select`, `radioGroup` y `checkboxGroup`
+- `list.props.items.source`, `select.props.items.source`, `radioGroup.props.items.source` y `checkboxGroup.props.items.source`
 - `visibility.reference`
 
 ## Comportamiento de errores
@@ -140,7 +146,7 @@ Además, el runtime reutiliza la misma convención de referencias completas en:
 - El catálogo común de acciones UI sigue intencionadamente corto: no existen todavía secuencias, branching, callbacks por éxito o error, condiciones declarativas ni varias acciones por trigger.
 - `visibility` cubre solo una condición simple por nodo y no introduce `fallback`, composición booleana ni expresiones arbitrarias.
 - El trigger sigue siendo implícito por tipo de nodo; todavía no existe un sistema general de `events`, `onClick` u `onSubmit` compartido entre superficies interactivas.
-- El catálogo de formularios sigue acotado a `form`, `input`, `textarea` y `select`; no existen todavía `radioGroup`, `checkboxGroup`, subida de archivos, multiselect ni búsqueda remota.
+- El catálogo de formularios sigue intencionadamente acotado a `form`, `input`, `textarea`, `select`, `radioGroup` y `checkboxGroup`; no existen todavía subida de archivos, autocompletado, búsqueda remota, paginación ni carga incremental de opciones.
 - La validación declarativa de formularios sigue limitada a `required`; no existen todavía reglas como `min`, `max`, patrones ni validaciones cruzadas.
 - El agregado `pageEntry` todavía no se expone como familia de referencias declarativas dentro del JSON.
 - `routeParams.*` y `navigation.*` siguen sin resolverse como referencias soportadas.

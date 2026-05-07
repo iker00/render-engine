@@ -31,16 +31,19 @@
 - La semántica visible de query ya está centralizada: `idle` representa una query no lanzada todavía y también cubre la query ausente del store; `loading` representa solo una ejecución real en curso; `null`, `undefined`, `''`, `[]` y `{}` se tratan como `empty`; `0` y `false` siguen la rama `success`.
 - Cualquier nodo soportado ya puede declarar también `visibility` para mostrarse u ocultarse según una única condición simple basada en `forms.*` o `queries.*`, con operadores `equals`, `notEquals`, `isTruthy`, `isFalsy`, `greaterThan` y `lessThan`.
 - La visibilidad efectiva del runtime ya está centralizada con precedencia estable: `queryStateFeedback` decide primero `show | hide | fallback`, y `visibility` solo se evalúa sobre la rama principal cuando esta sigue visible.
-- Catálogo declarativo de formularios ya operativo con `form`, `input`, `textarea` y `select`, incluyendo herencia de `formId` por descendencia y render de `<form>` real.
+- Catálogo declarativo de formularios ya operativo con `form`, `input`, `textarea`, `select`, `radioGroup` y `checkboxGroup`, incluyendo herencia de `formId` por descendencia y render de `<form>` real.
 - La inicialización de campos declarativos ya es lazy y reutiliza exclusivamente `forms.{formId}.{fieldId}`, con soporte para `defaultValue` literal o dinámico sin sobrescribir estado ya existente del usuario.
+- `input` ya soporta además `number`, `date` y `datetime-local` sin abrir una familia separada de componentes de campo.
 - La capa central de referencias del runtime ya soporta también `params.{paramName}` para texto visible, requests declarativos, `defaultValue` de formularios y nuevas navegaciones originadas desde páginas ya parametrizadas.
 - La validación declarativa `required` ya funciona a nivel de formulario, escribe errores solo en `forms.*` y excluye del bloqueo de submit a campos ocultos por `queryStateFeedback`.
 - Esa exclusión de campos ocultos ya cubre tanto `queryStateFeedback` como `visibility`, reutilizando la misma decisión visible que usa el renderer del runtime.
 - El submit declarativo de formularios ya soporta `submitAction.type: executeOperation`, reusa `queries.{operationName}` como única superficie visible de loading/success/error, puede añadir `query`, `body` y `headers` por envío y puede resetear por `resetOnSuccess`.
 - `button.props.action.type: executeOperation` ya puede añadir también `query`, `body` y `headers` por ejecución sin duplicar operaciones `api`.
-- `list` y `select` ya pueden consumir colecciones manuales históricas o colecciones resueltas desde `queries.{queryName}.data` o `queries.{queryName}.data.*`, con una capa compartida de resolución y proyección por consumidor.
+- `list`, `select`, `radioGroup` y `checkboxGroup` ya pueden consumir colecciones manuales históricas o colecciones resueltas desde `queries.{queryName}.data` o `queries.{queryName}.data.*`, con una capa compartida de resolución y proyección por consumidor.
 - `list` ya soporta colecciones escalares y de objetos mediante `itemType: 'scalar'` o `itemText`, degradando a vacío cuando la referencia aún no ofrece una colección utilizable y degradando por item en desarrollo cuando faltan datos mínimos.
-- `select` ya soporta catálogos manuales o dinámicos de escalares y objetos, mantiene una semántica única del valor vigente entre render, `defaultValue`, validación `required` y submit, y limpia automáticamente el valor cuando desaparece su opción efectiva.
+- `select` ya soporta catálogos manuales o dinámicos de escalares y objetos, puede operar en selección simple o múltiple mediante `props.multiple`, mantiene una semántica única del valor vigente entre render, `defaultValue`, validación `required` y submit, y limpia automáticamente solo los valores que dejan de existir en su catálogo efectivo.
+- `radioGroup` ya reutiliza la misma semántica de opciones y selección simple que `select` simple.
+- `checkboxGroup` ya reutiliza la misma semántica de opciones y selección múltiple que `select.multiple`.
 - Aislamiento validado entre varias instancias del runtime y limpieza completa del estado al desmontar y remontar.
 - Manejo explícito de errores de configuración con diagnóstico visible en desarrollo y degradación silenciosa en producción para errores marcados como `development-only`.
 - Diagnósticos de validación ya alineados con rutas canónicas del JSON para ramas como `layout[*]`, `preloads[*]`, `api.query.*` y `api.body.*`.
@@ -50,9 +53,9 @@
 - No existe todavía panel de desarrollo local para editar configuración en vivo.
 - No existe todavía una integración completa de producto con backend más allá de `data-config` como frontera de entrada y de las operaciones remotas declarativas ejecutadas por `fetch`.
 - No existen todavía consumidores declarativos finales del agregado `pageEntry`.
-- El catálogo visual sigue limitado a `container`, `heading`, `paragraph`, `list`, `button`, `form`, `input`, `textarea` y `select`.
-- No existen todavía consumidores de referencias fuera de `heading.props.text`, `paragraph.props.text`, `queryStateFeedback`, `api.query`, `api.body`, `defaultValue` de campos de formulario, `navigateTo.params` y `source` de colecciones para `list` y `select`, ni interpolación parcial dentro de strings.
-- No existen todavía validaciones declarativas avanzadas de formularios, multiselect, búsqueda remota de opciones ni tipos de campo fuera del catálogo mínimo actual.
+- El catálogo visual sigue limitado a `container`, `heading`, `paragraph`, `list`, `button`, `form`, `input`, `textarea`, `select`, `radioGroup` y `checkboxGroup`.
+- No existen todavía consumidores de referencias fuera de `heading.props.text`, `paragraph.props.text`, `queryStateFeedback`, `api.query`, `api.body`, `defaultValue` de campos de formulario, `navigateTo.params` y `source` de colecciones para `list`, `select`, `radioGroup` y `checkboxGroup`, ni interpolación parcial dentro de strings.
+- No existen todavía validaciones declarativas avanzadas de formularios, búsqueda remota de opciones ni tipos de campo fuera del catálogo actual.
 - `routeParams.*` y `navigation.*` siguen sin resolverse como referencias soportadas.
 - `params.*` sigue sin abrirse en `visibility` ni en las fuentes dinámicas de colección para `list` y `select`.
 - `visibility` sigue intencionadamente acotado a una sola condición por nodo, sin `fallback`, sin composición booleana y sin expresiones arbitrarias.
@@ -81,6 +84,7 @@
 - Decimoctava feature del workflow cerrada para formalizar `api.headers` y permitir `query`, `body` y `headers` por ejecución desde `button.props.action` y `form.submitAction`, centralizando la composición final del request en `src/queries/`.
 - Decimonovena feature del workflow cerrada para añadir reglas declarativas `visibility` reutilizables por renderer y formularios, con precedencia estable sobre `queryStateFeedback` y exclusión coherente de campos ocultos durante la validación.
 - Vigésima feature del workflow cerrada para permitir params de navegación interna por entrada, con historial parametrizado, `params.*` en superficies acotadas y `preloads` reactivados por reentrada observable.
+- Vigésima primera feature del workflow cerrada para ampliar el catálogo reutilizable de formularios con `inputType` nativos adicionales, `select.multiple`, `radioGroup` y `checkboxGroup`, compartiendo una misma semántica de opciones, limpieza y submit sobre `forms.*`.
 
 ## Referencias
 

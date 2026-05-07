@@ -1,4 +1,15 @@
-export type LayoutNodeType = 'container' | 'heading' | 'paragraph' | 'list' | 'button' | 'form' | 'input' | 'textarea' | 'select'
+export type LayoutNodeType =
+  | 'container'
+  | 'heading'
+  | 'paragraph'
+  | 'list'
+  | 'button'
+  | 'form'
+  | 'input'
+  | 'textarea'
+  | 'select'
+  | 'radioGroup'
+  | 'checkboxGroup'
 export type RuntimeApiMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
 export type RuntimeApiQueryValue = string | number | boolean
 export type RuntimeApiQuery = Record<string, RuntimeApiQueryValue>
@@ -115,14 +126,14 @@ export interface FormFieldLayoutNodeProps {
   fieldId: string
   label: string
   required?: boolean
-  defaultValue?: RuntimeConfigValue
+  defaultValue?: RuntimeConfigValue | unknown[]
 }
 
 export interface InputLayoutNode extends LayoutNodeFeedbackFields {
   type: 'input'
   id?: string
   props: FormFieldLayoutNodeProps & {
-    inputType?: 'text' | 'email' | 'password' | 'search' | 'tel' | 'url'
+    inputType?: 'text' | 'email' | 'password' | 'search' | 'tel' | 'url' | 'number' | 'date' | 'datetime-local'
   }
   children?: unknown
 }
@@ -188,6 +199,25 @@ export interface SelectLayoutNode extends LayoutNodeFeedbackFields {
   id?: string
   props: FormFieldLayoutNodeProps & {
     items: SelectLayoutNodeItems
+    multiple?: boolean
+  }
+  children?: unknown
+}
+
+export interface RadioGroupLayoutNode extends LayoutNodeFeedbackFields {
+  type: 'radioGroup'
+  id?: string
+  props: FormFieldLayoutNodeProps & {
+    items: SelectLayoutNodeItems
+  }
+  children?: unknown
+}
+
+export interface CheckboxGroupLayoutNode extends LayoutNodeFeedbackFields {
+  type: 'checkboxGroup'
+  id?: string
+  props: FormFieldLayoutNodeProps & {
+    items: SelectLayoutNodeItems
   }
   children?: unknown
 }
@@ -242,6 +272,8 @@ export type LayoutNode =
   | InputLayoutNode
   | TextareaLayoutNode
   | SelectLayoutNode
+  | RadioGroupLayoutNode
+  | CheckboxGroupLayoutNode
 
 export type LayoutNodeCollection = LayoutNode[]
 

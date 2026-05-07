@@ -23,7 +23,7 @@
         {
           "type": "heading",
           "props": {
-            "text": "Bootstrap Home",
+            "text": "Home",
             "level": 1
           }
         },
@@ -87,8 +87,18 @@
                   "type": "navigateTo",
                   "pageId": "post-form",
                   "params": {
-                    "postId": "56"
+                    "postId": "forms.postForm.id"
                   }
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Formulario dinámico",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "dynamic-form"
                 }
               }
             }
@@ -372,6 +382,15 @@
       ],
       "layout": [
         {
+          "type": "button",
+          "props": {
+            "label": "Volver",
+            "action": {
+              "type": "goBack"
+            }
+          }
+        },
+        {
           "type": "heading",
           "props": {
             "text": "Edit",
@@ -457,6 +476,144 @@
                   }
                 }
               ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dynamic-form",
+      "layout": [
+        {
+          "type": "heading",
+          "props": {
+            "text": "Dynamic form example",
+            "level": 1
+          }
+        },
+        {
+          "type": "form",
+          "id": "dynamicForm",
+          "children": [
+            {
+              "type": "input",
+              "props": {
+                "fieldId": "name",
+                "label": "Name"
+              }
+            },
+            {
+              "type": "input",
+              "props": {
+                "inputType": "email",
+                "fieldId": "email",
+                "label": "Email"
+              }
+            },
+            {
+              "type": "radioGroup",
+              "props": {
+                "fieldId": "clientType",
+                "label": "Tipo de cliente",
+                "items": [
+                  {
+                    "label": "Particular",
+                    "value": "particular"
+                  },
+                  {
+                    "label": "Empresa",
+                    "value": "empresa"
+                  }
+                ],
+                "defaultValue": "particular"
+              }
+            },
+            {
+              "type": "heading",
+              "props": {
+                "text": "Datos personales",
+                "level": 2
+              },
+              "visibility": {
+                "reference": "forms.dynamicForm.clientType",
+                "operator": "equals",
+                "value": "particular"
+              }
+            },
+            {
+              "type": "input",
+              "props": {
+                "fieldId": "personal.dni",
+                "label": "DNI"
+              },
+              "visibility": {
+                "reference": "forms.dynamicForm.clientType",
+                "operator": "equals",
+                "value": "particular"
+              }
+            },
+            {
+              "type": "input",
+              "props": {
+                "inputType": "date",
+                "fieldId": "personal.nacimiento",
+                "label": "Fecha de nacimiento"
+              },
+              "visibility": {
+                "reference": "forms.dynamicForm.clientType",
+                "operator": "equals",
+                "value": "particular"
+              }
+            },
+            {
+              "type": "select",
+              "props": {
+                "fieldId": "personal.estadoCivil",
+                "label": "Estado civil",
+                "items": [
+                  {
+                    "label": "Soltero",
+                    "value": "soltero"
+                  },
+                  {
+                    "label": "Casado",
+                    "value": "casado"
+                  },
+                  {
+                    "label": "Divorciado",
+                    "value": "divorciado"
+                  }
+                ]
+              },
+              "visibility": {
+                "reference": "forms.dynamicForm.clientType",
+                "operator": "equals",
+                "value": "particular"
+              }
+            },
+            {
+              "type": "heading",
+              "props": {
+                "text": "Datos de la empresa",
+                "level": 2
+              },
+              "visibility": {
+                "reference": "forms.dynamicForm.clientType",
+                "operator": "equals",
+                "value": "empresa"
+              }
+            },
+            {
+              "type": "input",
+              "props": {
+                "fieldId": "company.cif",
+                "label": "CIF"
+              },
+              "visibility": {
+                "reference": "forms.dynamicForm.clientType",
+                "operator": "equals",
+                "value": "empresa"
+              }
             }
           ]
         }

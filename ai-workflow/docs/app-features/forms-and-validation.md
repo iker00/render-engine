@@ -1,12 +1,12 @@
 # Formularios y validación
 
 ## Objetivo
-Soportar formularios declarativos con estado interno, campos reutilizables y validación básica.
+Soportar formularios declarativos con estado interno, campos reutilizables y validación básica, cubriendo ya selección simple y múltiple sobre una semántica compartida de opciones.
 
 ## Encaje actual en el contrato de páginas
 - El runtime ya implementa `form` como nodo contenedor real dentro de `pages[].layout`.
 - La raíz de `pages[].layout` sigue siendo una colección ordenada, así que un formulario puede convivir con otros bloques hermanos sin wrapper sintético.
-- `form.children` reutiliza el árbol declarativo existente y admite `input`, `textarea`, `select`, `button`, `heading`, `paragraph` y `container`.
+- `form.children` reutiliza el árbol declarativo existente y admite `input`, `textarea`, `select`, `radioGroup`, `checkboxGroup`, `button`, `heading`, `paragraph` y `container`.
 - El dominio compartido `forms` del store sigue siendo la única fuente de verdad para valores y errores de formulario.
 
 ## Modelo de formulario
@@ -23,13 +23,21 @@ Soportar formularios declarativos con estado interno, campos reutilizables y val
 - `input`
 - `textarea`
 - `select`
+- `radioGroup`
+- `checkboxGroup`
 
 Reglas estables del catálogo:
-- `input` cubre entrada textual de una sola línea con `inputType` acotado.
+- `input` cubre entrada de una sola línea con `inputType` acotado y ya soporta `text`, `email`, `password`, `search`, `tel`, `url`, `number`, `date` y `datetime-local`.
 - `textarea` cubre entrada multilínea.
 - `select` acepta tanto items históricos estáticos `{ label, value }` como colecciones manuales o dinámicas declaradas desde `queries.*`.
+- `select.props.multiple` convierte el campo en selección múltiple y hace que su valor efectivo sea `string[]`.
+- `radioGroup` acepta exactamente los mismos shapes de `items` que `select` y conserva una única selección efectiva como `string`.
+- `checkboxGroup` acepta exactamente los mismos shapes de `items` que `select` y conserva una selección múltiple efectiva como `string[]`.
 - Dentro de un mismo `select`, todos los `value` efectivos deben ser homogéneos en origen (`string` o `number`) aunque en runtime se normalicen a string.
-- Los valores numéricos de `select` se normalizan a string en runtime para compararse, almacenarse, renderizarse y enviarse.
+- Dentro de un mismo `radioGroup` o `checkboxGroup`, todos los `value` efectivos también deben ser homogéneos en origen (`string` o `number`).
+- Los valores numéricos de `select`, `radioGroup` y `checkboxGroup` se normalizan a string en runtime para compararse, almacenarse, renderizarse y enviarse.
+- `select` simple y `radioGroup` comparten la misma semántica de valor vacío `''`.
+- `select.multiple` y `checkboxGroup` comparten la misma semántica de valor vacío `[]` y el mismo orden estable según el catálogo efectivo visible.
 
 ## Valores por defecto
 - Los campos pueden declarar `defaultValue`.
@@ -37,7 +45,8 @@ Reglas estables del catálogo:
 - La familia `params.*` ya forma parte de las referencias dinámicas soportadas para `defaultValue`.
 - Si `defaultValue` es una referencia dinámica, se resuelve una sola vez en el momento de la primera inicialización efectiva del campo.
 - Si el dato dinámico aparece más tarde, el runtime no rehidrata automáticamente el campo.
-- En `select`, si el valor efectivo no coincide con ninguna opción disponible en la colección resuelta, el campo queda vacío.
+- En `select` simple y en `radioGroup`, si el valor efectivo no coincide con ninguna opción disponible en la colección resuelta, el campo queda vacío.
+- En `select.multiple` y en `checkboxGroup`, solo se conservan seleccionados los valores que sigan existiendo en la colección efectiva disponible.
 - El reset por formulario restaura el estado inicial efectivo de cada campo usando ese `defaultValue` cuando exista.
 
 ## Validación básica de v1
@@ -46,8 +55,10 @@ Reglas estables del catálogo:
 
 Semántica estable vigente:
 - `input` y `textarea` `required` consideran inválidos `''` y strings compuestos solo por espacios.
-- `select` `required` considera inválido `''` aunque exista una opción placeholder visible.
-- Si un `select` pierde la opción correspondiente a su valor almacenado tras cambiar la colección efectiva, el runtime limpia ese valor a `''` y reutiliza ese mismo estado vacío para render, `required` y submit.
+- `select` simple y `radioGroup` `required` consideran inválido `''` aunque exista una opción placeholder visible en el caso de `select`.
+- `select.multiple` y `checkboxGroup` `required` consideran inválido `[]`.
+- Si un `select` simple o un `radioGroup` pierde la opción correspondiente a su valor almacenado tras cambiar la colección efectiva, el runtime limpia ese valor a `''` y reutiliza ese mismo estado vacío para render, `required` y submit.
+- Si un `select.multiple` o un `checkboxGroup` pierde parte de sus opciones seleccionadas al cambiar la colección efectiva, el runtime elimina solo los valores ya inválidos y reutiliza la colección restante en render, `required` y submit.
 - Los errores viven solo en `forms.{formId}.{fieldId}.error`.
 - Cuando un campo con error vuelve a un valor válido, el error se limpia al cambiar sin exigir un nuevo submit.
 - Un campo oculto por `queryStateFeedback` conserva su valor y su error, pero no bloquea el submit mientras siga oculto.
@@ -81,10 +92,11 @@ Semántica estable vigente del reset:
 - formulario simple de alta o edición con submit declarativo vía `api`
 - campos condicionales ocultables por `queryStateFeedback` sin perder su estado local
 - campos condicionales ocultables por `visibility` según `forms.*` o `queries.*`, sin perder su estado local ni bloquear el submit mientras siguen ocultos
-- `select` dependiente de catálogos remotos ya cargados en `queries.*`, sin lógica React específica por pantalla
+- `select` simple o múltiple dependiente de catálogos remotos ya cargados en `queries.*`, sin lógica React específica por pantalla
+- grupos `radioGroup` y `checkboxGroup` alimentados por colecciones manuales o por `queries.*`, compartiendo la misma semántica de opciones que `select`
 
 ## Límites actuales
-- No existen todavía `radioGroup`, `checkboxGroup`, subida de archivos ni otros tipos de campo.
-- `select` no soporta todavía multiselect, búsqueda remota, paginación ni carga incremental de opciones.
+- No existen todavía subida de archivos ni otros tipos de campo fuera de `input`, `textarea`, `select`, `radioGroup` y `checkboxGroup`.
+- No existen todavía búsqueda remota, paginación ni carga incremental de opciones para los campos de selección.
 - No existen todavía validaciones declarativas avanzadas, mensajes personalizados complejos ni validaciones cruzadas.
 - No existe todavía una política nueva de limpieza global de formularios al cambiar de página.

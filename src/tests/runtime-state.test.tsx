@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { useEffect } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import type { RuntimeConfig } from '../config/runtime-config'
@@ -1649,6 +1649,241 @@ describe('Runtime shared state store', () => {
     await waitFor(() => expect(screen.getByRole('combobox', { name: 'Visible role' })).toHaveValue('editor'))
     expect(screen.getByTestId('runtime-state')).toHaveTextContent('"lateRole":{"value":"","error":null')
     expect(screen.getByTestId('runtime-state')).toHaveTextContent('"visibleRole":{"value":"editor","error":null')
+  })
+
+  it('stores select.multiple as an ordered string array and resets it through the shared form state', () => {
+    const config: RuntimeConfig = {
+      api: {},
+      initialPage: 'home',
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'form',
+              id: 'profile-form',
+              children: [
+                {
+                  type: 'select',
+                  props: {
+                    fieldId: 'scopes',
+                    label: 'Scopes',
+                    multiple: true,
+                    defaultValue: ['publish', 'read'],
+                    items: {
+                      values: ['read', 'write', 'publish'],
+                    },
+                  },
+                },
+                {
+                  type: 'button',
+                  props: {
+                    label: 'Reset scopes',
+                    action: {
+                      type: 'resetForm',
+                      formId: 'profile-form',
+                    },
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    }
+
+    render(
+      <RuntimeStateProvider config={config}>
+        <RuntimePage />
+        <RuntimeStateSnapshot testId="runtime-state" />
+      </RuntimeStateProvider>,
+    )
+
+    const scopes = screen.getByRole('listbox', { name: 'Scopes' }) as HTMLSelectElement
+
+    expect(Array.from(scopes.selectedOptions, (option) => option.value)).toEqual(['read', 'publish'])
+    expect(screen.getByTestId('runtime-state')).toHaveTextContent('"scopes":{"value":["read","publish"]')
+
+    const options = within(scopes).getAllByRole('option')
+    ;(options[0] as HTMLOptionElement).selected = true
+    ;(options[1] as HTMLOptionElement).selected = true
+    ;(options[2] as HTMLOptionElement).selected = false
+    fireEvent.change(scopes)
+
+    expect(screen.getByTestId('runtime-state')).toHaveTextContent('"scopes":{"value":["read","write"]')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Reset scopes' }))
+
+    expect(screen.getByTestId('runtime-state')).toHaveTextContent('"scopes":{"value":["read","publish"]')
+  })
+
+  it('keeps radioGroup as a single string value and cleans it when the dynamic option disappears', async () => {
+    const config: RuntimeConfig = {
+      api: {},
+      initialPage: 'home',
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'form',
+              id: 'profile-form',
+              children: [
+                {
+                  type: 'radioGroup',
+                  props: {
+                    fieldId: 'role',
+                    label: 'Role',
+                    defaultValue: 'editor',
+                    items: {
+                      source: 'queries.roleCatalog.data.results',
+                      label: 'label',
+                      value: 'id',
+                    },
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    }
+
+    render(
+      <RuntimeStateProvider config={config}>
+        <DynamicSelectQueryFixture />
+        <RuntimePage />
+        <RuntimeStateSnapshot testId="runtime-state" />
+      </RuntimeStateProvider>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Seed role catalog' }))
+
+    await waitFor(() => expect(screen.getByRole('radio', { name: 'Editor' })).toBeInTheDocument())
+    expect(screen.getByRole('radio', { name: 'Editor' })).not.toBeChecked()
+    fireEvent.click(screen.getByRole('radio', { name: 'Editor' }))
+    expect(screen.getByTestId('runtime-state')).toHaveTextContent('"role":{"value":"editor"')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Seed replacement role catalog' }))
+
+    await waitFor(() => expect(screen.queryByRole('radio', { name: 'Editor' })).not.toBeInTheDocument())
+    expect(screen.getByTestId('runtime-state')).toHaveTextContent('"role":{"value":"","error":null')
+  })
+
+  it('shares multiple-selection semantics between checkboxGroup and select.multiple for cleanup and submit payloads', async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: {
+          'content-type': 'application/json',
+        },
+      }),
+    )
+
+    const config: RuntimeConfig = {
+      api: {
+        submitProfile: {
+          method: 'POST',
+          endpoint: '/api/profile',
+          body: {
+            scopes: 'forms.profileForm.scopes',
+            teams: 'forms.profileForm.teams',
+          },
+        },
+      },
+      initialPage: 'home',
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'form',
+              id: 'profileForm',
+              submitAction: {
+                type: 'executeOperation',
+                operationName: 'submitProfile',
+              },
+              children: [
+                {
+                  type: 'select',
+                  props: {
+                    fieldId: 'scopes',
+                    label: 'Scopes',
+                    multiple: true,
+                    defaultValue: ['editor', 'admin'],
+                    items: {
+                      source: 'queries.roleCatalog.data.results',
+                      label: 'label',
+                      value: 'id',
+                    },
+                  },
+                },
+                {
+                  type: 'checkboxGroup',
+                  props: {
+                    fieldId: 'teams',
+                    label: 'Teams',
+                    defaultValue: ['editor', 'admin'],
+                    items: {
+                      source: 'queries.roleCatalog.data.results',
+                      label: 'label',
+                      value: 'id',
+                    },
+                  },
+                },
+                {
+                  type: 'button',
+                  props: {
+                    label: 'Submit dynamic groups',
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    }
+
+    globalThis.fetch = fetchMock
+
+    render(
+      <RuntimeStateProvider config={config}>
+        <DynamicSelectQueryFixture />
+        <RuntimePage />
+        <RuntimeStateSnapshot testId="runtime-state" />
+      </RuntimeStateProvider>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Seed role catalog' }))
+
+    await waitFor(() => expect(screen.getByRole('listbox', { name: 'Scopes' })).toBeInTheDocument())
+
+    const scopes = screen.getByRole('listbox', { name: 'Scopes' }) as HTMLSelectElement
+    const scopeOptions = within(scopes).getAllByRole('option')
+    ;(scopeOptions[0] as HTMLOptionElement).selected = true
+    ;(scopeOptions[1] as HTMLOptionElement).selected = true
+    fireEvent.change(scopes)
+
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Admin' }))
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Editor' }))
+
+    expect(screen.getByTestId('runtime-state')).toHaveTextContent('"scopes":{"value":["admin","editor"]')
+    expect(screen.getByTestId('runtime-state')).toHaveTextContent('"teams":{"value":["admin","editor"]')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Seed replacement role catalog' }))
+
+    await waitFor(() => expect(screen.getByTestId('runtime-state')).toHaveTextContent('"scopes":{"value":[],"error":null'))
+    expect(screen.getByTestId('runtime-state')).toHaveTextContent('"teams":{"value":[],"error":null')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Submit dynamic groups' }))
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+    expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({
+      body: JSON.stringify({
+        scopes: [],
+        teams: [],
+      }),
+    })
   })
 
   it('blocks submit for visible required fields, clears errors on valid change and ignores hidden required fields', async () => {

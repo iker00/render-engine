@@ -1630,6 +1630,94 @@ describe('RuntimePage', () => {
     expect(buttons[1]).toHaveTextContent('Submit profile')
   })
 
+  it('renders expanded form fields including native input types, select.multiple, radioGroup and checkboxGroup', () => {
+    renderRuntimeFormPage({
+      id: 'expanded-form',
+      layout: [
+        {
+          type: 'form',
+          id: 'profile-form',
+          children: [
+            {
+              type: 'input',
+              props: {
+                fieldId: 'age',
+                label: 'Age',
+                inputType: 'number',
+                defaultValue: 42,
+              },
+            },
+            {
+              type: 'input',
+              props: {
+                fieldId: 'birthday',
+                label: 'Birthday',
+                inputType: 'date',
+                defaultValue: '2026-05-07',
+              },
+            },
+            {
+              type: 'input',
+              props: {
+                fieldId: 'appointmentAt',
+                label: 'Appointment',
+                inputType: 'datetime-local',
+                defaultValue: '2026-05-07T12:30',
+              },
+            },
+            {
+              type: 'select',
+              props: {
+                fieldId: 'scopes',
+                label: 'Scopes',
+                multiple: true,
+                defaultValue: ['write', 'read'],
+                items: {
+                  values: ['read', 'write', 'publish'],
+                },
+              },
+            },
+            {
+              type: 'radioGroup',
+              props: {
+                fieldId: 'role',
+                label: 'Role',
+                defaultValue: 'editor',
+                items: [
+                  { label: 'Admin', value: 'admin' },
+                  { label: 'Editor', value: 'editor' },
+                ],
+              },
+            },
+            {
+              type: 'checkboxGroup',
+              props: {
+                fieldId: 'teams',
+                label: 'Teams',
+                defaultValue: ['beta', 'alpha'],
+                items: {
+                  values: ['alpha', 'beta', 'gamma'],
+                },
+              },
+            },
+          ],
+        },
+      ],
+    })
+
+    expect(screen.getByLabelText('Age')).toHaveValue(42)
+    expect(screen.getByLabelText('Birthday')).toHaveValue('2026-05-07')
+    expect(screen.getByLabelText('Appointment')).toHaveValue('2026-05-07T12:30')
+    expect(screen.getByRole('listbox', { name: 'Scopes' })).toBeInTheDocument()
+    expect(within(screen.getByRole('listbox', { name: 'Scopes' })).getAllByRole('option', { selected: true }).map((option) => option.textContent)).toEqual([
+      'read',
+      'write',
+    ])
+    expect(screen.getByRole('radio', { name: 'Editor' })).toBeChecked()
+    expect(screen.getByRole('checkbox', { name: 'alpha' })).toBeChecked()
+    expect(screen.getByRole('checkbox', { name: 'beta' })).toBeChecked()
+  })
+
   it('renders dynamic scalar and object select options from query-backed collections', () => {
     renderRuntimePageWithCollectionControls({
       id: 'dynamic-selects',
@@ -1677,6 +1765,50 @@ describe('RuntimePage', () => {
     expect(
       within(screen.getByRole('combobox', { name: 'Object role' })).getAllByRole('option').map((option) => option.textContent),
     ).toEqual(['', 'Ada', 'Grace'])
+  })
+
+  it('renders radioGroup and checkboxGroup options from query-backed collections with the shared projection contract', () => {
+    renderRuntimePageWithCollectionControls({
+      id: 'dynamic-choice-fields',
+      layout: [
+        {
+          type: 'form',
+          id: 'catalog-form',
+          children: [
+            {
+              type: 'radioGroup',
+              props: {
+                fieldId: 'userId',
+                label: 'User',
+                items: {
+                  source: 'queries.searchUsers.data.results',
+                  label: 'profile.name',
+                  value: 'id',
+                },
+              },
+            },
+            {
+              type: 'checkboxGroup',
+              props: {
+                fieldId: 'roles',
+                label: 'Roles',
+                items: {
+                  source: 'queries.searchUsers.data.results',
+                  label: 'meta.role',
+                  value: 'id',
+                },
+              },
+            },
+          ],
+        },
+      ],
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Seed object results' }))
+
+    expect(screen.getAllByRole('radio').map((radio) => radio.getAttribute('value'))).toEqual(['user-1', 'user-2'])
+    expect(screen.getAllByRole('radio').map((radio) => radio.parentElement?.textContent)).toEqual(['Ada', 'Grace'])
+    expect(screen.getAllByRole('checkbox').map((checkbox) => checkbox.parentElement?.textContent)).toEqual(['Admin', 'Editor'])
   })
 
   it('degrades only invalid dynamic object options and reports a development diagnostic for each skipped select item', () => {

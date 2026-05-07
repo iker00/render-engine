@@ -1,5 +1,6 @@
 import type {
   ButtonLayoutNode,
+  CheckboxGroupLayoutNode,
   ContainerLayoutNode,
   ExecuteOperationRuntimeUiAction,
   FormLayoutNode,
@@ -17,6 +18,7 @@ import type {
   QueryStateFeedbackFallbackRule,
   QueryStateFeedbackRule,
   QueryStateFeedbackVisibleState,
+  RadioGroupLayoutNode,
   RuntimeVisibilityConfig,
   RuntimeVisibilityOperator,
   RuntimeCollectionObjectItem,
@@ -47,6 +49,7 @@ import {
   listNodeSchema,
   navigateToButtonActionSchema,
   paragraphNodeSchema,
+  radioGroupNodeSchema,
   resetFormRuntimeUiActionSchema,
   runtimeApiOperationShellSchema,
   runtimeApiHeadersSchema,
@@ -57,6 +60,7 @@ import {
   selectNodeSchema,
   supportedNodeTypes,
   textareaNodeSchema,
+  checkboxGroupNodeSchema,
 } from './runtime-config-zod'
 import { initialPageNotFound, invalidLayout, unsupportedNodeType } from './runtime-config-validation-errors'
 import { parseRuntimeReference } from '../runtime/runtime-references/runtime-reference-parser'
@@ -452,6 +456,10 @@ function validateLayoutNode(
       return validateTextareaNode(rawNode, path, pageId)
     case 'select':
       return validateSelectNode(rawNode, path, pageId)
+    case 'radioGroup':
+      return validateRadioGroupNode(rawNode, path, pageId)
+    case 'checkboxGroup':
+      return validateCheckboxGroupNode(rawNode, path, pageId)
   }
 
   return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.type".`)
@@ -1349,6 +1357,10 @@ function validateInputNode(
     return visibilityResult
   }
 
+  if (Array.isArray(parseResult.data.props.defaultValue)) {
+    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.defaultValue": input fields do not accept array literal defaultValue.`)
+  }
+
   return {
     status: 'ready',
     node: {
@@ -1400,6 +1412,10 @@ function validateTextareaNode(
 
   if (visibilityResult.status === 'error') {
     return visibilityResult
+  }
+
+  if (Array.isArray(parseResult.data.props.defaultValue)) {
+    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.defaultValue": textarea fields do not accept array literal defaultValue.`)
   }
 
   return {
@@ -1461,10 +1477,169 @@ function validateSelectNode(
     return itemsResult
   }
 
+  const defaultValueIssue = validateChoiceFieldDefaultValue(
+    parseResult.data.props.defaultValue,
+    `${path}.props.defaultValue`,
+    pageId,
+    parseResult.data.props.multiple === true,
+  )
+
+  if (defaultValueIssue) {
+    return defaultValueIssue
+  }
+
   return {
     status: 'ready',
     node: {
       type: 'select',
+      queryStateFeedback: feedbackResult.queryStateFeedback,
+      visibility: visibilityResult.visibility,
+      props: {
+        ...parseResult.data.props,
+        items: itemsResult.items,
+      },
+    },
+  }
+}
+
+function validateRadioGroupNode(
+  rawNode: Record<string, unknown>,
+  path: string,
+  pageId: string,
+): { status: 'ready'; node: RadioGroupLayoutNode } | { status: 'error'; error: RuntimeConfigError } {
+  const parseResult = radioGroupNodeSchema.safeParse(rawNode)
+
+  if (!parseResult.success) {
+    const feedbackIssue = mapQueryStateFeedbackIssue(pageId, path, parseResult.error.issues[0])
+
+    if (feedbackIssue) {
+      return feedbackIssue
+    }
+
+    const visibilityIssue = mapVisibilityIssue(pageId, path, parseResult.error.issues[0])
+
+    if (visibilityIssue) {
+      return visibilityIssue
+    }
+
+    return mapLeafNodeIssue(pageId, path, parseResult.error.issues[0]?.path ?? [])
+  }
+
+  const feedbackResult = validateQueryStateFeedback(
+    parseResult.data.queryStateFeedback as LayoutNodeFeedbackFields['queryStateFeedback'],
+    `${path}.queryStateFeedback`,
+    pageId,
+  )
+
+  if (feedbackResult.status === 'error') {
+    return feedbackResult
+  }
+
+  const visibilityResult = validateVisibility(
+    parseResult.data.visibility as LayoutNodeFeedbackFields['visibility'],
+    `${path}.visibility`,
+    pageId,
+  )
+
+  if (visibilityResult.status === 'error') {
+    return visibilityResult
+  }
+
+  const itemsResult = validateSelectItemsContract(parseResult.data.props.items, `${path}.props.items`, pageId)
+
+  if (itemsResult.status === 'error') {
+    return itemsResult
+  }
+
+  const defaultValueIssue = validateChoiceFieldDefaultValue(
+    parseResult.data.props.defaultValue,
+    `${path}.props.defaultValue`,
+    pageId,
+    false,
+  )
+
+  if (defaultValueIssue) {
+    return defaultValueIssue
+  }
+
+  return {
+    status: 'ready',
+    node: {
+      type: 'radioGroup',
+      queryStateFeedback: feedbackResult.queryStateFeedback,
+      visibility: visibilityResult.visibility,
+      props: {
+        ...parseResult.data.props,
+        items: itemsResult.items,
+      },
+    },
+  }
+}
+
+function validateCheckboxGroupNode(
+  rawNode: Record<string, unknown>,
+  path: string,
+  pageId: string,
+): { status: 'ready'; node: CheckboxGroupLayoutNode } | { status: 'error'; error: RuntimeConfigError } {
+  const parseResult = checkboxGroupNodeSchema.safeParse(rawNode)
+
+  if (!parseResult.success) {
+    const feedbackIssue = mapQueryStateFeedbackIssue(pageId, path, parseResult.error.issues[0])
+
+    if (feedbackIssue) {
+      return feedbackIssue
+    }
+
+    const visibilityIssue = mapVisibilityIssue(pageId, path, parseResult.error.issues[0])
+
+    if (visibilityIssue) {
+      return visibilityIssue
+    }
+
+    return mapLeafNodeIssue(pageId, path, parseResult.error.issues[0]?.path ?? [])
+  }
+
+  const feedbackResult = validateQueryStateFeedback(
+    parseResult.data.queryStateFeedback as LayoutNodeFeedbackFields['queryStateFeedback'],
+    `${path}.queryStateFeedback`,
+    pageId,
+  )
+
+  if (feedbackResult.status === 'error') {
+    return feedbackResult
+  }
+
+  const visibilityResult = validateVisibility(
+    parseResult.data.visibility as LayoutNodeFeedbackFields['visibility'],
+    `${path}.visibility`,
+    pageId,
+  )
+
+  if (visibilityResult.status === 'error') {
+    return visibilityResult
+  }
+
+  const itemsResult = validateSelectItemsContract(parseResult.data.props.items, `${path}.props.items`, pageId)
+
+  if (itemsResult.status === 'error') {
+    return itemsResult
+  }
+
+  const defaultValueIssue = validateChoiceFieldDefaultValue(
+    parseResult.data.props.defaultValue,
+    `${path}.props.defaultValue`,
+    pageId,
+    true,
+  )
+
+  if (defaultValueIssue) {
+    return defaultValueIssue
+  }
+
+  return {
+    status: 'ready',
+    node: {
+      type: 'checkboxGroup',
       queryStateFeedback: feedbackResult.queryStateFeedback,
       visibility: visibilityResult.visibility,
       props: {
@@ -1650,6 +1825,74 @@ function validateCollectionSource(
   }
 }
 
+function validateChoiceFieldDefaultValue(
+  defaultValue: unknown,
+  path: string,
+  pageId: string,
+  isMultiple: boolean,
+): { status: 'error'; error: RuntimeConfigError } | null {
+  if (typeof defaultValue === 'undefined') {
+    return null
+  }
+
+  if (Array.isArray(defaultValue)) {
+    if (!isMultiple) {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}": single choice fields do not accept array literal defaultValue.`)
+    }
+
+    return validateMultipleChoiceDefaultValue(defaultValue, path, pageId)
+  }
+
+  if (!isMultiple) {
+    return null
+  }
+
+  if (typeof defaultValue === 'string') {
+    const parsedReference = parseRuntimeReference(defaultValue)
+
+    if (parsedReference.kind === 'reference' && parsedReference.status === 'supported') {
+      return null
+    }
+  }
+
+  return invalidLayout(
+    `Page "${pageId}" has an invalid layout at "${path}": multiple choice fields only accept array literals or supported runtime references.`,
+  )
+}
+
+function validateMultipleChoiceDefaultValue(
+  defaultValue: unknown[],
+  path: string,
+  pageId: string,
+): { status: 'error'; error: RuntimeConfigError } | null {
+  let valueType: 'string' | 'number' | null = null
+
+  for (let index = 0; index < defaultValue.length; index += 1) {
+    const item = defaultValue[index]
+
+    if (typeof item !== 'string' && typeof item !== 'number') {
+      return invalidLayout(
+        `Page "${pageId}" has an invalid layout at "${path}[${index}]": multiple choice defaultValue arrays only accept string or number members.`,
+      )
+    }
+
+    const currentType = typeof item as 'string' | 'number'
+
+    if (valueType === null) {
+      valueType = currentType
+      continue
+    }
+
+    if (valueType !== currentType) {
+      return invalidLayout(
+        `Page "${pageId}" has an invalid layout at "${path}": multiple choice defaultValue arrays must contain only strings or only numbers.`,
+      )
+    }
+  }
+
+  return null
+}
+
 function mapQueryStateFeedbackIssue(
   pageId: string,
   path: string,
@@ -1816,7 +2059,13 @@ function validateFormNodesInCollection(
       continue
     }
 
-    if (node.type === 'input' || node.type === 'textarea' || node.type === 'select') {
+    if (
+      node.type === 'input' ||
+      node.type === 'textarea' ||
+      node.type === 'select' ||
+      node.type === 'radioGroup' ||
+      node.type === 'checkboxGroup'
+    ) {
       if (!context.inForm || !context.currentFormId || !context.fieldIds) {
         return invalidLayout(`Page "${pageId}" has an invalid layout at "${nodePath}": ${node.type} nodes must be descendants of a form node.`)
       }
@@ -1863,13 +2112,15 @@ function validateFormChildren(
       node.type !== 'input' &&
       node.type !== 'textarea' &&
       node.type !== 'select' &&
+      node.type !== 'radioGroup' &&
+      node.type !== 'checkboxGroup' &&
       node.type !== 'button' &&
       node.type !== 'heading' &&
       node.type !== 'paragraph' &&
       node.type !== 'container'
     ) {
       return invalidLayout(
-        `Page "${pageId}" has an invalid layout at "${nodePath}": form nodes only accept input, textarea, select, button, heading, paragraph and container descendants.`,
+        `Page "${pageId}" has an invalid layout at "${nodePath}": form nodes only accept input, textarea, select, radioGroup, checkboxGroup, button, heading, paragraph and container descendants.`,
       )
     }
 
@@ -1883,7 +2134,13 @@ function validateFormChildren(
       continue
     }
 
-    if (node.type === 'input' || node.type === 'textarea' || node.type === 'select') {
+    if (
+      node.type === 'input' ||
+      node.type === 'textarea' ||
+      node.type === 'select' ||
+      node.type === 'radioGroup' ||
+      node.type === 'checkboxGroup'
+    ) {
       if (!context.currentFormId || !context.fieldIds) {
         return invalidLayout(`Page "${pageId}" has an invalid layout at "${nodePath}": ${node.type} nodes must be descendants of a form node.`)
       }

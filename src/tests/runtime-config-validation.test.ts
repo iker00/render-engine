@@ -2483,7 +2483,7 @@ describe('validateRuntimeConfig', () => {
         code: 'invalid-layout',
         displayMode: 'development-only',
         message:
-          'Page "home" has an invalid layout at "layout[0].children[0]": form nodes only accept input, textarea, select, button, heading, paragraph and container descendants.',
+          'Page "home" has an invalid layout at "layout[0].children[0]": form nodes only accept input, textarea, select, radioGroup, checkboxGroup, button, heading, paragraph and container descendants.',
       },
     })
 
@@ -3304,6 +3304,682 @@ describe('validateRuntimeConfig', () => {
           displayMode: 'development-only',
           message:
             'Page "home" has an invalid layout at "layout[0].children[0].props.items.values": select item values must all be strings or all be numbers.',
+        },
+      })
+    })
+  })
+
+  describe('reusable form field expansion contract', () => {
+    it('accepts the expanded inputType catalog', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithFormLayout({
+          children: [
+            {
+              type: 'input',
+              props: {
+                fieldId: 'age',
+                label: 'Age',
+                inputType: 'number',
+              },
+            },
+            {
+              type: 'input',
+              props: {
+                fieldId: 'birthDate',
+                label: 'Birth date',
+                inputType: 'date',
+              },
+            },
+            {
+              type: 'input',
+              props: {
+                fieldId: 'appointmentAt',
+                label: 'Appointment',
+                inputType: 'datetime-local',
+              },
+            },
+          ],
+        }),
+      )
+
+      expect(result.status).toBe('ready')
+    })
+
+    it('accepts radioGroup and checkboxGroup as form descendants, including nested containers', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithFormLayout({
+          children: [
+            {
+              type: 'container',
+              children: [
+                {
+                  type: 'radioGroup',
+                  props: {
+                    fieldId: 'role',
+                    label: 'Role',
+                    items: [
+                      { label: 'Admin', value: 'admin' },
+                      { label: 'Editor', value: 'editor' },
+                    ],
+                  },
+                },
+                {
+                  type: 'checkboxGroup',
+                  props: {
+                    fieldId: 'scopes',
+                    label: 'Scopes',
+                    defaultValue: ['read', 'write'],
+                    items: {
+                      values: ['read', 'write', 'publish'],
+                    },
+                  },
+                },
+              ],
+            },
+          ],
+        }),
+      )
+
+      expect(result).toEqual({
+        status: 'ready',
+        config: {
+          api: {
+            submitUserForm: {
+              method: 'POST',
+              endpoint: '/api/forms',
+            },
+          },
+          pages: [
+            {
+              id: 'home',
+              layout: [
+                {
+                  type: 'form',
+                  id: 'user-form',
+                  submitAction: {
+                    type: 'executeOperation',
+                    operationName: 'submitUserForm',
+                  },
+                  resetOnSuccess: true,
+                  children: [
+                    {
+                      type: 'container',
+                      children: [
+                        {
+                          type: 'radioGroup',
+                          props: {
+                            fieldId: 'role',
+                            label: 'Role',
+                            items: [
+                              { label: 'Admin', value: 'admin' },
+                              { label: 'Editor', value: 'editor' },
+                            ],
+                          },
+                        },
+                        {
+                          type: 'checkboxGroup',
+                          props: {
+                            fieldId: 'scopes',
+                            label: 'Scopes',
+                            defaultValue: ['read', 'write'],
+                            items: {
+                              values: ['read', 'write', 'publish'],
+                            },
+                          },
+                        },
+                      ],
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+          initialPage: 'home',
+        },
+        page: {
+          id: 'home',
+          layout: [
+            {
+              type: 'form',
+              id: 'user-form',
+              submitAction: {
+                type: 'executeOperation',
+                operationName: 'submitUserForm',
+              },
+              resetOnSuccess: true,
+              children: [
+                {
+                  type: 'container',
+                  children: [
+                    {
+                      type: 'radioGroup',
+                      props: {
+                        fieldId: 'role',
+                        label: 'Role',
+                        items: [
+                          { label: 'Admin', value: 'admin' },
+                          { label: 'Editor', value: 'editor' },
+                        ],
+                      },
+                    },
+                    {
+                      type: 'checkboxGroup',
+                      props: {
+                        fieldId: 'scopes',
+                        label: 'Scopes',
+                        defaultValue: ['read', 'write'],
+                        items: {
+                          values: ['read', 'write', 'publish'],
+                        },
+                      },
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      })
+    })
+
+    it('rejects radioGroup and checkboxGroup outside forms', () => {
+      expect(
+        validateRuntimeConfig(
+          createConfigWithLayout([
+            {
+              type: 'radioGroup',
+              props: {
+                fieldId: 'role',
+                label: 'Role',
+                items: [{ label: 'Admin', value: 'admin' }],
+              },
+            },
+          ]),
+        ),
+      ).toEqual({
+        status: 'error',
+        error: {
+          code: 'invalid-layout',
+          displayMode: 'development-only',
+          message: 'Page "home" has an invalid layout at "layout[0]": radioGroup nodes must be descendants of a form node.',
+        },
+      })
+
+      expect(
+        validateRuntimeConfig(
+          createConfigWithLayout([
+            {
+              type: 'checkboxGroup',
+              props: {
+                fieldId: 'scopes',
+                label: 'Scopes',
+                items: {
+                  values: ['read', 'write'],
+                },
+              },
+            },
+          ]),
+        ),
+      ).toEqual({
+        status: 'error',
+        error: {
+          code: 'invalid-layout',
+          displayMode: 'development-only',
+          message: 'Page "home" has an invalid layout at "layout[0]": checkboxGroup nodes must be descendants of a form node.',
+        },
+      })
+    })
+
+    it('rejects unsupported form descendants after adding radioGroup and checkboxGroup', () => {
+      expect(
+        validateRuntimeConfig(
+          createConfigWithFormLayout({
+            children: [
+              {
+                type: 'list',
+                props: {
+                  items: ['broken'],
+                },
+              },
+            ],
+          }),
+        ),
+      ).toEqual({
+        status: 'error',
+        error: {
+          code: 'invalid-layout',
+          displayMode: 'development-only',
+          message:
+            'Page "home" has an invalid layout at "layout[0].children[0]": form nodes only accept input, textarea, select, radioGroup, checkboxGroup, button, heading, paragraph and container descendants.',
+        },
+      })
+    })
+
+    it('accepts select.multiple as an optional boolean', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithFormLayout({
+          children: [
+            {
+              type: 'select',
+              props: {
+                fieldId: 'scopes',
+                label: 'Scopes',
+                multiple: true,
+                defaultValue: ['write', 'read'],
+                items: {
+                  values: ['read', 'write'],
+                },
+              },
+            },
+            {
+              type: 'select',
+              props: {
+                fieldId: 'role',
+                label: 'Role',
+                items: [{ label: 'Admin', value: 'admin' }],
+              },
+            },
+          ],
+        }),
+      )
+
+      expect(result.status).toBe('ready')
+    })
+
+    it('accepts the same item shapes for select, radioGroup and checkboxGroup', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithFormLayout({
+          children: [
+            {
+              type: 'select',
+              props: {
+                fieldId: 'role',
+                label: 'Role',
+                items: [
+                  { label: 'Admin', value: 'admin' },
+                  { label: 'Editor', value: 'editor' },
+                ],
+              },
+            },
+            {
+              type: 'radioGroup',
+              props: {
+                fieldId: 'team',
+                label: 'Team',
+                items: {
+                  values: ['alpha', 'beta'],
+                },
+              },
+            },
+            {
+              type: 'checkboxGroup',
+              props: {
+                fieldId: 'assignees',
+                label: 'Assignees',
+                items: {
+                  values: [
+                    { id: 1, name: 'Ada' },
+                    { id: 2, name: 'Grace' },
+                  ],
+                  label: 'name',
+                  value: 'id',
+                },
+              },
+            },
+          ],
+        }, {
+          extraPages: [
+            {
+              id: 'catalog',
+              layout: [
+                {
+                  type: 'form',
+                  id: 'secondary-form',
+                  children: [
+                    {
+                      type: 'radioGroup',
+                      props: {
+                        fieldId: 'dynamicRole',
+                        label: 'Dynamic role',
+                        items: {
+                          source: 'queries.searchUsers.data',
+                          itemType: 'scalar',
+                        },
+                      },
+                    },
+                    {
+                      type: 'checkboxGroup',
+                      props: {
+                        fieldId: 'dynamicUsers',
+                        label: 'Dynamic users',
+                        items: {
+                          source: 'queries.searchUsers.data.results',
+                          label: 'profile.name',
+                          value: 'id',
+                        },
+                      },
+                    },
+                    {
+                      type: 'select',
+                      props: {
+                        fieldId: 'dynamicSelect',
+                        label: 'Dynamic select',
+                        items: {
+                          source: 'queries.searchUsers.data.results',
+                          label: 'profile.name',
+                          value: 'id',
+                        },
+                      },
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        }),
+      )
+
+      expect(result.status).toBe('ready')
+    })
+
+    it('rejects heterogeneous manual item values for radioGroup and checkboxGroup', () => {
+      expect(
+        validateRuntimeConfig(
+          createConfigWithFormLayout({
+            children: [
+              {
+                type: 'radioGroup',
+                props: {
+                  fieldId: 'role',
+                  label: 'Role',
+                  items: {
+                    values: ['admin', 2],
+                  },
+                },
+              },
+            ],
+          }),
+        ),
+      ).toEqual({
+        status: 'error',
+        error: {
+          code: 'invalid-layout',
+          displayMode: 'development-only',
+          message:
+            'Page "home" has an invalid layout at "layout[0].children[0].props.items.values": select item values must all be strings or all be numbers.',
+        },
+      })
+
+      expect(
+        validateRuntimeConfig(
+          createConfigWithFormLayout({
+            children: [
+              {
+                type: 'checkboxGroup',
+                props: {
+                  fieldId: 'teamIds',
+                  label: 'Teams',
+                  items: [
+                    { label: 'Alpha', value: 'alpha' },
+                    { label: 'Beta', value: 2 },
+                  ],
+                },
+              },
+            ],
+          }),
+        ),
+      ).toEqual({
+        status: 'error',
+        error: {
+          code: 'invalid-layout',
+          displayMode: 'development-only',
+          message:
+            'Page "home" has an invalid layout at "layout[0].children[0].props.items": select item values must all be strings or all be numbers.',
+        },
+      })
+    })
+
+    it('rejects scalar literal defaultValue on multiple choice fields but keeps dynamic references valid', () => {
+      expect(
+        validateRuntimeConfig(
+          createConfigWithFormLayout({
+            children: [
+              {
+                type: 'select',
+                props: {
+                  fieldId: 'scopes',
+                  label: 'Scopes',
+                  multiple: true,
+                  defaultValue: 'read',
+                  items: {
+                    values: ['read', 'write'],
+                  },
+                },
+              },
+            ],
+          }),
+        ),
+      ).toEqual({
+        status: 'error',
+        error: {
+          code: 'invalid-layout',
+          displayMode: 'development-only',
+          message:
+            'Page "home" has an invalid layout at "layout[0].children[0].props.defaultValue": multiple choice fields only accept array literals or supported runtime references.',
+        },
+      })
+
+      expect(
+        validateRuntimeConfig(
+          createConfigWithFormLayout({
+            children: [
+              {
+                type: 'checkboxGroup',
+                props: {
+                  fieldId: 'scopes',
+                  label: 'Scopes',
+                  defaultValue: 2,
+                  items: {
+                    values: [1, 2],
+                  },
+                },
+              },
+            ],
+          }),
+        ),
+      ).toEqual({
+        status: 'error',
+        error: {
+          code: 'invalid-layout',
+          displayMode: 'development-only',
+          message:
+            'Page "home" has an invalid layout at "layout[0].children[0].props.defaultValue": multiple choice fields only accept array literals or supported runtime references.',
+        },
+      })
+
+      expect(
+        validateRuntimeConfig(
+          createConfigWithFormLayout({
+            children: [
+              {
+                type: 'select',
+                props: {
+                  fieldId: 'dynamicScopes',
+                  label: 'Dynamic scopes',
+                  multiple: true,
+                  defaultValue: 'queries.profile.data.scopes',
+                  items: {
+                    values: ['read', 'write'],
+                  },
+                },
+              },
+            ],
+          }),
+        ).status,
+      ).toBe('ready')
+    })
+
+    it('rejects array literal defaultValue on single choice fields', () => {
+      expect(
+        validateRuntimeConfig(
+          createConfigWithFormLayout({
+            children: [
+              {
+                type: 'radioGroup',
+                props: {
+                  fieldId: 'role',
+                  label: 'Role',
+                  defaultValue: ['admin'],
+                  items: [{ label: 'Admin', value: 'admin' }],
+                },
+              },
+            ],
+          }),
+        ),
+      ).toEqual({
+        status: 'error',
+        error: {
+          code: 'invalid-layout',
+          displayMode: 'development-only',
+          message:
+            'Page "home" has an invalid layout at "layout[0].children[0].props.defaultValue": single choice fields do not accept array literal defaultValue.',
+        },
+      })
+
+      expect(
+        validateRuntimeConfig(
+          createConfigWithFormLayout({
+            children: [
+              {
+                type: 'select',
+                props: {
+                  fieldId: 'role',
+                  label: 'Role',
+                  defaultValue: ['admin'],
+                  items: [{ label: 'Admin', value: 'admin' }],
+                },
+              },
+            ],
+          }),
+        ),
+      ).toEqual({
+        status: 'error',
+        error: {
+          code: 'invalid-layout',
+          displayMode: 'development-only',
+          message:
+            'Page "home" has an invalid layout at "layout[0].children[0].props.defaultValue": single choice fields do not accept array literal defaultValue.',
+        },
+      })
+    })
+
+    it('rejects array literal defaultValue on input and textarea fields', () => {
+      expect(
+        validateRuntimeConfig(
+          createConfigWithFormLayout({
+            children: [
+              {
+                type: 'input',
+                props: {
+                  fieldId: 'name',
+                  label: 'Name',
+                  defaultValue: ['Ada'],
+                },
+              },
+            ],
+          }),
+        ),
+      ).toEqual({
+        status: 'error',
+        error: {
+          code: 'invalid-layout',
+          displayMode: 'development-only',
+          message:
+            'Page "home" has an invalid layout at "layout[0].children[0].props.defaultValue": input fields do not accept array literal defaultValue.',
+        },
+      })
+
+      expect(
+        validateRuntimeConfig(
+          createConfigWithFormLayout({
+            children: [
+              {
+                type: 'textarea',
+                props: {
+                  fieldId: 'bio',
+                  label: 'Bio',
+                  defaultValue: ['first line'],
+                },
+              },
+            ],
+          }),
+        ),
+      ).toEqual({
+        status: 'error',
+        error: {
+          code: 'invalid-layout',
+          displayMode: 'development-only',
+          message:
+            'Page "home" has an invalid layout at "layout[0].children[0].props.defaultValue": textarea fields do not accept array literal defaultValue.',
+        },
+      })
+    })
+
+    it('rejects multiple literal defaultValue arrays with mixed scalar types or non-scalar members', () => {
+      expect(
+        validateRuntimeConfig(
+          createConfigWithFormLayout({
+            children: [
+              {
+                type: 'checkboxGroup',
+                props: {
+                  fieldId: 'teamIds',
+                  label: 'Teams',
+                  defaultValue: ['1', 2],
+                  items: {
+                    values: ['1', '2'],
+                  },
+                },
+              },
+            ],
+          }),
+        ),
+      ).toEqual({
+        status: 'error',
+        error: {
+          code: 'invalid-layout',
+          displayMode: 'development-only',
+          message:
+            'Page "home" has an invalid layout at "layout[0].children[0].props.defaultValue": multiple choice defaultValue arrays must contain only strings or only numbers.',
+        },
+      })
+
+      expect(
+        validateRuntimeConfig(
+          createConfigWithFormLayout({
+            children: [
+              {
+                type: 'select',
+                props: {
+                  fieldId: 'teamIds',
+                  label: 'Teams',
+                  multiple: true,
+                  defaultValue: [{ id: 'alpha' }],
+                  items: {
+                    values: ['alpha', 'beta'],
+                  },
+                },
+              },
+            ],
+          }),
+        ),
+      ).toEqual({
+        status: 'error',
+        error: {
+          code: 'invalid-layout',
+          displayMode: 'development-only',
+          message:
+            'Page "home" has an invalid layout at "layout[0].children[0].props.defaultValue[0]": multiple choice defaultValue arrays only accept string or number members.',
         },
       })
     })

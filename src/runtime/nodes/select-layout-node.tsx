@@ -1,7 +1,7 @@
 import type { SelectLayoutNode } from '../../config/runtime-config'
 import { useOptionalFormContext } from '../form-context'
 import { resolveFieldDefaultValue } from './form-layout-node'
-import { normalizeSelectFieldValue, resolveSelectCollectionItems } from '../runtime-collection-sources'
+import { normalizeChoiceFieldValue, resolveSelectCollectionItems } from '../runtime-collection-sources'
 import {
   getFieldControlClassName,
   getFieldErrorClassName,
@@ -27,15 +27,21 @@ export function SelectNode({ node }: SelectNodeProps) {
   const fieldState = selectFormFieldState(state, formContext.formId, node.props.fieldId)
   const defaultValue = resolveFieldDefaultValue(node, state)
   const resolvedItems = resolveSelectCollectionItems(node.props.items, state)
-  const value =
-    typeof fieldState?.value === 'string' || typeof fieldState?.value === 'number'
-      ? normalizeSelectFieldValue(node.props.items, state, fieldState.value)
-      : typeof defaultValue === 'string'
-        ? defaultValue
-        : ''
+  const isMultiple = node.props.multiple === true
+  const value = normalizeChoiceFieldValue(
+    node.props.items,
+    state,
+    fieldState?.value ?? defaultValue,
+    {
+      multiple: isMultiple,
+      surface: 'select.props.items',
+    },
+  )
   const error = fieldState?.error ?? null
   const items =
-    value === '' && !resolvedItems.some((item) => item.value === '')
+    !isMultiple &&
+    value === '' &&
+    !resolvedItems.some((item) => item.value === '')
       ? [{ label: '', value: '' }, ...resolvedItems]
       : resolvedItems
 
@@ -44,12 +50,15 @@ export function SelectNode({ node }: SelectNodeProps) {
       <span className={getFieldLabelClassName()}>{node.props.label}</span>
       <select
         className={getFieldControlClassName(error !== null)}
+        multiple={isMultiple}
         value={value}
         onChange={(event) => {
-          const nextValue = event.currentTarget.value
+          const nextValue = isMultiple
+            ? Array.from(event.currentTarget.selectedOptions, (option) => option.value)
+            : event.currentTarget.value
           setFormFieldValue(formContext.formId, node.props.fieldId, nextValue)
 
-          if (error && nextValue !== '') {
+          if (error && (Array.isArray(nextValue) ? nextValue.length > 0 : nextValue !== '')) {
             setFormFieldError(formContext.formId, node.props.fieldId, null)
           }
         }}

@@ -55,7 +55,9 @@ src/
       heading-layout-node.tsx
       input-layout-node.tsx
       list-layout-node.tsx
+      radio-group-layout-node.tsx
       paragraph-layout-node.tsx
+      checkbox-group-layout-node.tsx
       select-layout-node.tsx
       textarea-layout-node.tsx
   tests/
@@ -72,12 +74,12 @@ Lectura operativa de esa estructura:
 - `runtime-layout-visibility.ts` centraliza la visibilidad efectiva de cualquier nodo, combinando `queryStateFeedback` y `visibility` con una única precedencia reutilizable por renderer y formularios.
 - `form-context.tsx` propaga el `formId` efectivo a cualquier descendiente del árbol del formulario sin exigir props manuales repetidas.
 - `runtime-actions/` concentra la traducción `action.type -> handler del provider`, de modo que el nodo visual solo dispara el contrato común y no reimplementa navegación, queries ni formularios.
-- `runtime-collection-sources.ts` centraliza la resolución de colecciones efectivas para consumidores multi-valor, separando origen (`values` manuales o `queries.*`) de la proyección final que necesita cada nodo.
+- `runtime-collection-sources.ts` centraliza la resolución de colecciones efectivas para consumidores multi-valor, separando origen (`values` manuales o `queries.*`) de la proyección final que necesita cada nodo y de la normalización común de selección simple o múltiple para `select`, `radioGroup` y `checkboxGroup`.
 - `runtime-node-styling.ts` concentra la convención visual base del runtime y la compatibilidad acotada para `gap` arbitrarios.
 - `runtime-query-state-feedback.ts` concentra la derivación `idle | loading | error | empty | success`, la heurística común de `empty` y la resolución de defaults efectivos de `queryStateFeedback`.
 - `runtime-references/` fija la semántica central de referencias string, distingue `literal | supported | unsupported | invalid`, soporta `forms.*`, `queries.*` y `params.*` dentro de su frontera actual y evita lógica dispersa en nodos visuales.
 - `runtime-state/` concentra un store por instancia basado en `useReducer` + `Context`, con dominios separados para navegación, formularios, queries y `pageEntry`, historial parametrizado por entrada y fachada mínima para navegación, formularios, queries y lectura consistente del último snapshot sin absorber la lógica de red.
-- `runtime/nodes/` materializa solo nodos con uso real inmediato, incluido el catálogo mínimo de formularios declarativos.
+- `runtime/nodes/` materializa solo nodos con uso real inmediato, incluido el catálogo actual de formularios declarativos con selección simple y múltiple compartida.
 - `runtime-page.tsx` ya no decide la página visible por selección ad hoc; la resuelve desde el estado compartido del runtime.
 
 ## Módulos previstos para próximas features

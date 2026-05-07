@@ -1,5 +1,7 @@
 import type {
+  CheckboxGroupLayoutNode,
   ListLayoutNodeItems,
+  RadioGroupLayoutNode,
   RuntimeCollectionObjectItem,
   SelectLayoutNodeItems,
 } from '../config/runtime-config'
@@ -15,6 +17,12 @@ export interface ResolvedSelectCollectionItem {
   label: string
   value: string
 }
+
+type ChoiceCollectionSurface = 'select.props.items' | 'radioGroup.props.items' | 'checkboxGroup.props.items'
+type ChoiceCollectionItems =
+  | SelectLayoutNodeItems
+  | RadioGroupLayoutNode['props']['items']
+  | CheckboxGroupLayoutNode['props']['items']
 
 export function resolveListCollectionItems(items: ListLayoutNodeItems, state: RuntimeState) {
   if (Array.isArray(items)) {
@@ -35,6 +43,14 @@ export function resolveListCollectionItems(items: ListLayoutNodeItems, state: Ru
 }
 
 export function resolveSelectCollectionItems(items: SelectLayoutNodeItems, state: RuntimeState) {
+  return resolveChoiceCollectionItems(items, state, 'select.props.items')
+}
+
+export function resolveChoiceCollectionItems(
+  items: ChoiceCollectionItems,
+  state: RuntimeState,
+  surface: ChoiceCollectionSurface,
+) {
   if (Array.isArray(items)) {
     return items.map((item) => ({
       label: item.label,
@@ -42,17 +58,17 @@ export function resolveSelectCollectionItems(items: SelectLayoutNodeItems, state
     }))
   }
 
-  const collectionSource = resolveCollectionSource(items, state, 'select.props.items')
+  const collectionSource = resolveCollectionSource(items, state, surface)
 
   if (collectionSource === null) {
     return []
   }
 
   if ('label' in items && 'value' in items && typeof items.label === 'string' && typeof items.value === 'string') {
-    return projectObjectCollectionToSelectItems(collectionSource, items.label, items.value, 'select.props.items')
+    return projectObjectCollectionToSelectItems(collectionSource, items.label, items.value, surface)
   }
 
-  return projectScalarCollectionToSelectItems(collectionSource, 'select.props.items')
+  return projectScalarCollectionToSelectItems(collectionSource, surface)
 }
 
 export function normalizeSelectFieldValue(
@@ -60,23 +76,28 @@ export function normalizeSelectFieldValue(
   state: RuntimeState,
   value: unknown,
 ) {
-  const normalizedValue =
-    typeof value === 'string' || typeof value === 'number'
-      ? String(value)
-      : ''
+  return normalizeChoiceFieldValue(items, state, value, { multiple: false, surface: 'select.props.items' })
+}
 
-  if (normalizedValue.length === 0) {
-    return ''
+export function normalizeChoiceFieldValue(
+  items: ChoiceCollectionItems,
+  state: RuntimeState,
+  value: unknown,
+  options: { multiple: boolean; surface: ChoiceCollectionSurface },
+) {
+  const resolvedItems = resolveChoiceCollectionItems(items, state, options.surface)
+
+  if (options.multiple) {
+    return normalizeMultipleChoiceFieldValue(resolvedItems, value)
   }
 
-  const availableValues = new Set(resolveSelectCollectionItems(items, state).map((item) => item.value))
-  return availableValues.has(normalizedValue) ? normalizedValue : ''
+  return normalizeSingleChoiceFieldValue(resolvedItems, value)
 }
 
 function resolveCollectionSource(
-  items: Exclude<ListLayoutNodeItems, string[]> | Exclude<SelectLayoutNodeItems, Array<{ label: string; value: string | number }>>,
+  items: Exclude<ListLayoutNodeItems, string[]> | Exclude<ChoiceCollectionItems, Array<{ label: string; value: string | number }>>,
   state: RuntimeState,
-  surface: 'list.props.items' | 'select.props.items',
+  surface: 'list.props.items' | ChoiceCollectionSurface,
 ): ResolvedCollectionSource | null {
   if ('values' in items) {
     return {
@@ -140,7 +161,7 @@ function projectObjectCollectionToTextItems(
 
 function projectScalarCollectionToSelectItems(
   collectionSource: ResolvedCollectionSource,
-  surface: 'select.props.items',
+  surface: ChoiceCollectionSurface,
 ) {
   const items: ResolvedSelectCollectionItem[] = []
   let valueType: 'string' | 'number' | null = null
@@ -178,7 +199,7 @@ function projectObjectCollectionToSelectItems(
   collectionSource: ResolvedCollectionSource,
   labelPath: string,
   valuePath: string,
-  surface: 'select.props.items',
+  surface: ChoiceCollectionSurface,
 ) {
   const items: ResolvedSelectCollectionItem[] = []
   let valueType: 'string' | 'number' | null = null
@@ -274,7 +295,7 @@ function reportCollectionItemDiagnostic({
   projectionPath,
 }: {
   itemPath: string
-  surface: 'list.props.items' | 'select.props.items'
+  surface: 'list.props.items' | ChoiceCollectionSurface
   projectionPath: string
 }) {
   if (!import.meta.env.DEV) {
@@ -296,6 +317,40 @@ function normalizeTextValue(value: unknown) {
   }
 
   return null
+}
+
+function normalizeSingleChoiceFieldValue(items: ResolvedSelectCollectionItem[], value: unknown) {
+  const normalizedValue =
+    typeof value === 'string' || typeof value === 'number'
+      ? String(value)
+      : ''
+
+  if (normalizedValue.length === 0) {
+    return ''
+  }
+
+  const availableValues = new Set(items.map((item) => item.value))
+  return availableValues.has(normalizedValue) ? normalizedValue : ''
+}
+
+function normalizeMultipleChoiceFieldValue(items: ResolvedSelectCollectionItem[], value: unknown) {
+  const normalizedCandidates = new Set<string>()
+
+  if (Array.isArray(value)) {
+    for (const entry of value) {
+      if (typeof entry === 'string' || typeof entry === 'number') {
+        normalizedCandidates.add(String(entry))
+      }
+    }
+  }
+
+  return items.reduce<string[]>((selectedValues, item) => {
+    if (normalizedCandidates.has(item.value)) {
+      selectedValues.push(item.value)
+    }
+
+    return selectedValues
+  }, [])
 }
 
 function isRecord(value: unknown): value is RuntimeCollectionObjectItem {

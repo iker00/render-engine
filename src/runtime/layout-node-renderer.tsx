@@ -4,12 +4,14 @@ import { resolveLayoutNodeVisibility } from './runtime-layout-visibility'
 import { useRuntimeState } from './runtime-state/runtime-state-provider'
 import { LayoutRenderer } from './layout-renderer'
 import { ButtonNode } from './nodes/button-layout-node'
+import { CheckboxGroupNode } from './nodes/checkbox-group-layout-node'
 import { ContainerNode } from './nodes/container-layout-node'
 import { FormNode } from './nodes/form-layout-node'
 import { HeadingNode } from './nodes/heading-layout-node'
 import { InputNode } from './nodes/input-layout-node'
 import { ListNode } from './nodes/list-layout-node'
 import { ParagraphNode } from './nodes/paragraph-layout-node'
+import { RadioGroupNode } from './nodes/radio-group-layout-node'
 import { SelectNode } from './nodes/select-layout-node'
 import { TextareaNode } from './nodes/textarea-layout-node'
 
@@ -49,5 +51,9 @@ export function LayoutNodeRenderer({ node, renderedChildren }: LayoutNodeRendere
       return <TextareaNode node={node} />
     case 'select':
       return <SelectNode node={node} />
+    case 'radioGroup':
+      return <RadioGroupNode node={node} />
+    case 'checkboxGroup':
+      return <CheckboxGroupNode node={node} />
   }
 }

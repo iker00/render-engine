@@ -49,6 +49,13 @@ const runtimeState: RuntimeState = {
         dirty: true,
         defaultValue: null,
       },
+      scopes: {
+        value: ['editor', 'admin'],
+        error: null,
+        touched: true,
+        dirty: true,
+        defaultValue: [],
+      },
     },
   },
   queries: {
@@ -158,6 +165,13 @@ const runtimeConfig: RuntimeConfig = {
         callback: 'forms.userSearch.callback',
       },
     },
+    submitScopes: {
+      method: 'POST',
+      endpoint: '/api/scopes',
+      body: {
+        scopes: 'forms.userSearch.scopes',
+      },
+    },
   },
   initialPage: 'home',
   pages: [
@@ -212,6 +226,30 @@ describe('Runtime api execution', () => {
             profile: {
               nickname: 'Countess',
             },
+          }),
+        },
+      },
+    })
+
+    expect(
+      buildRuntimeApiRequest({
+        config: runtimeConfig,
+        operationName: 'submitScopes',
+        state: runtimeState,
+      }),
+    ).toEqual({
+      status: 'ready',
+      request: {
+        operationName: 'submitScopes',
+        operation: runtimeConfig.api.submitScopes,
+        url: '/api/scopes',
+        init: {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+          },
+          body: JSON.stringify({
+            scopes: ['editor', 'admin'],
           }),
         },
       },

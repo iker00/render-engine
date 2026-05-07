@@ -1,10 +1,12 @@
 import { useEffect, useMemo } from 'react'
 import type { FormEvent, ReactNode } from 'react'
 import type {
+  CheckboxGroupLayoutNode,
   FormLayoutNode,
   InputLayoutNode,
   LayoutNode,
   LayoutNodeCollection,
+  RadioGroupLayoutNode,
   SelectLayoutNode,
   TextareaLayoutNode,
 } from '../../config/runtime-config'
@@ -12,7 +14,7 @@ import { FormContextProvider } from '../form-context'
 import { isLayoutNodeVisible } from '../runtime-layout-visibility'
 import { resolveRuntimeValue } from '../runtime-references/runtime-reference-resolver'
 import { getFormNodeClassName } from '../runtime-node-styling'
-import { normalizeSelectFieldValue } from '../runtime-collection-sources'
+import { normalizeChoiceFieldValue } from '../runtime-collection-sources'
 import { useRuntimeState, useRuntimeStateActions } from '../runtime-state/runtime-state-provider'
 import { selectFormFieldState } from '../runtime-state/runtime-state-selectors'
 
@@ -23,11 +25,12 @@ interface FormNodeProps {
 
 interface ResolvedFormFieldDefinition {
   fieldId: string
-  type: 'input' | 'textarea' | 'select'
+  type: 'input' | 'textarea' | 'select' | 'radioGroup' | 'checkboxGroup'
   required: boolean
   queryStateFeedback?: LayoutNode['queryStateFeedback']
   visibility?: LayoutNode['visibility']
-  items?: SelectLayoutNode['props']['items']
+  items?: SelectLayoutNode['props']['items'] | RadioGroupLayoutNode['props']['items'] | CheckboxGroupLayoutNode['props']['items']
+  multiple: boolean
   defaultValue: unknown
 }
 
@@ -70,7 +73,7 @@ export function FormNode({ node, children }: FormNodeProps) {
 
   useEffect(() => {
     for (const fieldDefinition of fieldDefinitions) {
-      if (fieldDefinition.type !== 'select' || fieldDefinition.items === undefined) {
+      if (fieldDefinition.items === undefined) {
         continue
       }
 
@@ -80,9 +83,12 @@ export function FormNode({ node, children }: FormNodeProps) {
         continue
       }
 
-      const normalizedValue = normalizeSelectFieldValue(fieldDefinition.items, state, fieldState.value)
+      const normalizedValue = normalizeChoiceFieldValue(fieldDefinition.items, state, fieldState.value, {
+        multiple: fieldDefinition.multiple,
+        surface: getChoiceFieldSurface(fieldDefinition.type),
+      })
 
-      if (!Object.is(fieldState.value, normalizedValue)) {
+      if (!areFieldValuesEqual(fieldState.value, normalizedValue)) {
         setFormFieldValue(node.id, fieldDefinition.fieldId, normalizedValue)
       }
     }
@@ -164,14 +170,21 @@ export function collectResolvedFormFieldDefinitions(nodes: LayoutNodeCollection,
       continue
     }
 
-    if (node.type === 'input' || node.type === 'textarea' || node.type === 'select') {
+    if (
+      node.type === 'input' ||
+      node.type === 'textarea' ||
+      node.type === 'select' ||
+      node.type === 'radioGroup' ||
+      node.type === 'checkboxGroup'
+    ) {
       fields.push({
         fieldId: node.props.fieldId,
         type: node.type,
         required: node.props.required ?? false,
         queryStateFeedback: node.queryStateFeedback,
         visibility: node.visibility,
-        items: node.type === 'select' ? node.props.items : undefined,
+        items: isChoiceFieldNode(node) ? node.props.items : undefined,
+        multiple: isMultipleChoiceFieldNode(node),
         defaultValue: resolveFieldDefaultValue(node, state),
       })
     }
@@ -195,8 +208,11 @@ export function validateFormFields({
   for (const fieldDefinition of fieldDefinitions) {
     const fieldState = selectFormFieldState(state, formId, fieldDefinition.fieldId)
     const currentValue =
-      fieldDefinition.type === 'select' && fieldDefinition.items !== undefined
-        ? normalizeSelectFieldValue(fieldDefinition.items, state, fieldState?.value ?? fieldDefinition.defaultValue)
+      fieldDefinition.items !== undefined
+        ? normalizeChoiceFieldValue(fieldDefinition.items, state, fieldState?.value ?? fieldDefinition.defaultValue, {
+            multiple: fieldDefinition.multiple,
+            surface: getChoiceFieldSurface(fieldDefinition.type),
+          })
         : fieldState?.value ?? fieldDefinition.defaultValue
     const isVisible = isLayoutNodeVisible(fieldDefinition, state)
 
@@ -226,27 +242,82 @@ export function validateFormFields({
 }
 
 export function resolveFieldDefaultValue(
-  node: InputLayoutNode | TextareaLayoutNode | SelectLayoutNode,
+  node: InputLayoutNode | TextareaLayoutNode | SelectLayoutNode | RadioGroupLayoutNode | CheckboxGroupLayoutNode,
   state: ReturnType<typeof useRuntimeState>,
 ) {
   const resolvedValue = resolveRuntimeValue(node.props.defaultValue, state)
-  const fallbackValue = node.type === 'select' ? '' : ''
+  const fallbackValue = isMultipleChoiceFieldNode(node) ? [] : ''
 
   if (resolvedValue.status !== 'resolved') {
     return fallbackValue
   }
 
-  if (node.type === 'select') {
-    return normalizeSelectFieldValue(node.props.items, state, resolvedValue.value)
+  if (isChoiceFieldNode(node)) {
+    return normalizeChoiceFieldValue(node.props.items, state, resolvedValue.value, {
+      multiple: isMultipleChoiceFieldNode(node),
+      surface: getChoiceFieldSurface(node.type),
+    })
   }
 
-  return typeof resolvedValue.value === 'string' ? resolvedValue.value : fallbackValue
+  if (typeof resolvedValue.value === 'string') {
+    return resolvedValue.value
+  }
+
+  if (node.type === 'input' && typeof resolvedValue.value === 'number') {
+    return String(resolvedValue.value)
+  }
+
+  return fallbackValue
 }
 
 function isFieldValueValid(fieldDefinition: ResolvedFormFieldDefinition, value: unknown) {
-  if (fieldDefinition.type === 'select') {
+  if (fieldDefinition.multiple) {
+    return Array.isArray(value) && value.length > 0
+  }
+
+  if (fieldDefinition.items !== undefined) {
     return value !== ''
   }
 
   return typeof value === 'string' && value.trim().length > 0
+}
+
+function isChoiceFieldNode(
+  node: LayoutNode,
+): node is SelectLayoutNode | RadioGroupLayoutNode | CheckboxGroupLayoutNode {
+  return node.type === 'select' || node.type === 'radioGroup' || node.type === 'checkboxGroup'
+}
+
+function isMultipleChoiceFieldNode(
+  node: Pick<ResolvedFormFieldDefinition, 'type' | 'multiple'> | SelectLayoutNode | CheckboxGroupLayoutNode | RadioGroupLayoutNode,
+) {
+  if ('multiple' in node && typeof node.multiple === 'boolean') {
+    return node.multiple
+  }
+
+  return node.type === 'checkboxGroup' || (node.type === 'select' && node.props.multiple === true)
+}
+
+function getChoiceFieldSurface(type: ResolvedFormFieldDefinition['type']) {
+  if (type === 'radioGroup') {
+    return 'radioGroup.props.items' as const
+  }
+
+  if (type === 'checkboxGroup') {
+    return 'checkboxGroup.props.items' as const
+  }
+
+  return 'select.props.items' as const
+}
+
+function areFieldValuesEqual(left: unknown, right: unknown) {
+  if (Array.isArray(left) && Array.isArray(right)) {
+    if (left.length !== right.length) {
+      return false
+    }
+
+    return left.every((item, index) => Object.is(item, right[index]))
+  }
+
+  return Object.is(left, right)
 }
