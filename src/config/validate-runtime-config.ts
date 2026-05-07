@@ -59,6 +59,7 @@ import {
   textareaNodeSchema,
 } from './runtime-config-zod'
 import { initialPageNotFound, invalidLayout, unsupportedNodeType } from './runtime-config-validation-errors'
+import { parseRuntimeReference } from '../runtime/runtime-references/runtime-reference-parser'
 
 const collectionPathSegmentPattern = /^[A-Za-z0-9_-]+$/
 const visibilityComparisonOperators = new Set<RuntimeVisibilityOperator>(['equals', 'notEquals', 'greaterThan', 'lessThan'])
@@ -962,10 +963,33 @@ function validateRuntimeUiAction(
     const parseResult = navigateToButtonActionSchema.safeParse(rawAction)
 
     if (!parseResult.success) {
-      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.pageId".`)
+      const issuePath = parseResult.error.issues[0]?.path ?? []
+
+      if (issuePath[0] === 'pageId' || issuePath.length === 0) {
+        return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.pageId".`)
+      }
+
+      if (issuePath[0] === 'params') {
+        return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.params".`)
+      }
+
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.${String(issuePath[0])}".`)
     }
 
-    const action: NavigateToButtonAction = parseResult.data
+    const paramsResult = validateNavigateToParams(parseResult.data.params, `${path}.params`, pageId)
+
+    if (paramsResult.status === 'error') {
+      return paramsResult
+    }
+
+    const action: NavigateToButtonAction = {
+      type: 'navigateTo',
+      pageId: parseResult.data.pageId,
+    }
+
+    if (paramsResult.params !== undefined) {
+      action.params = paramsResult.params
+    }
 
     return {
       status: 'ready',
@@ -1061,6 +1085,56 @@ function validateQueryStateFeedback(
       query: rawQueryStateFeedback.query,
       states: normalizedStates,
     },
+  }
+}
+
+function validateNavigateToParams(
+  rawParams: unknown,
+  path: string,
+  pageId: string,
+): { status: 'ready'; params: NavigateToButtonAction['params'] } | { status: 'error'; error: RuntimeConfigError } {
+  if (rawParams === undefined) {
+    return {
+      status: 'ready',
+      params: undefined,
+    }
+  }
+
+  if (!isRecord(rawParams) || Array.isArray(rawParams)) {
+    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}": navigateTo params must be a flat object with non-empty keys.`)
+  }
+
+  const params: NonNullable<NavigateToButtonAction['params']> = {}
+
+  for (const [key, value] of Object.entries(rawParams)) {
+    if (key.length === 0) {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}": navigateTo params contain an empty key.`)
+    }
+
+    if (!isRuntimeConfigValue(value)) {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.${key}": navigateTo params only accept string, number, boolean or null.`)
+    }
+
+    if (typeof value === 'string') {
+      const parsedReference = parseRuntimeReference(value)
+
+      if (
+        parsedReference.kind === 'reference' &&
+        parsedReference.namespace === 'params' &&
+        parsedReference.status === 'invalid'
+      ) {
+        return invalidLayout(
+          `Page "${pageId}" has an invalid layout at "${path}.${key}": navigateTo params must use params.{paramName} when referencing page params.`,
+        )
+      }
+    }
+
+    params[key] = value
+  }
+
+  return {
+    status: 'ready',
+    params,
   }
 }
 

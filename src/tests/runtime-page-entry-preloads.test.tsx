@@ -57,6 +57,13 @@ const preloadConfig: RuntimeConfig = {
         id: 'queries.selectedUser.data.id',
       },
     },
+    loadEditor: {
+      method: 'GET',
+      endpoint: '/api/editor',
+      query: {
+        id: 'params.userId',
+      },
+    },
     invalidSearch: {
       method: 'GET',
       endpoint: '/api/users',
@@ -97,6 +104,11 @@ const preloadConfig: RuntimeConfig = {
       layout: [],
     },
     {
+      id: 'editor',
+      preloads: ['loadEditor'],
+      layout: [],
+    },
+    {
       id: 'empty',
       preloads: [],
       layout: [],
@@ -134,6 +146,15 @@ function NavigationFixture() {
       </button>
       <button type="button" onClick={() => navigateToPage('profile')}>
         Go profile
+      </button>
+      <button type="button" onClick={() => navigateToPage('home', { userId: '1' })}>
+        Go home user 1
+      </button>
+      <button type="button" onClick={() => navigateToPage('home', { userId: '2' })}>
+        Go home user 2
+      </button>
+      <button type="button" onClick={() => navigateToPage('editor', { userId: 'user-7' })}>
+        Go editor user 7
       </button>
       <button type="button" onClick={() => navigateToPage('empty')}>
         Go empty
@@ -253,6 +274,7 @@ describe('Runtime page entry shared state', () => {
     expect(createRuntimeState(baseConfig).pageEntry).toEqual({
       entryId: 0,
       pageId: 'home',
+      params: {},
       preloadNames: [],
       status: 'idle',
     })
@@ -264,6 +286,7 @@ describe('Runtime page entry shared state', () => {
       payload: {
         entryId: 1,
         pageId: 'details',
+        params: {},
         preloadNames: ['searchUsers', 'loadTeams'],
       },
     })
@@ -271,6 +294,7 @@ describe('Runtime page entry shared state', () => {
     expect(loadingState.pageEntry).toEqual({
       entryId: 1,
       pageId: 'details',
+      params: {},
       preloadNames: ['searchUsers', 'loadTeams'],
       status: 'loading',
     })
@@ -302,6 +326,7 @@ describe('Runtime page entry shared state', () => {
       payload: {
         entryId: 1,
         pageId: 'details',
+        params: {},
         preloadNames: ['searchUsers'],
       },
     })
@@ -311,6 +336,7 @@ describe('Runtime page entry shared state', () => {
       payload: {
         entryId: 2,
         pageId: 'home',
+        params: {},
         preloadNames: [],
       },
     })
@@ -326,6 +352,7 @@ describe('Runtime page entry shared state', () => {
     expect(staleSettledState.pageEntry).toEqual({
       entryId: 2,
       pageId: 'home',
+      params: {},
       preloadNames: [],
       status: 'loading',
     })
@@ -335,7 +362,10 @@ describe('Runtime page entry shared state', () => {
     const state: RuntimeState = {
       navigation: {
         currentPageId: 'details',
-        history: ['home', 'details'],
+        history: [
+          { entryId: 0, pageId: 'home', params: {} },
+          { entryId: 1, pageId: 'details', params: {} },
+        ],
         lastError: null,
       },
       forms: {
@@ -359,6 +389,7 @@ describe('Runtime page entry shared state', () => {
       pageEntry: {
         entryId: 4,
         pageId: 'details',
+        params: {},
         preloadNames: ['searchUsers'],
         status: 'error',
       },
@@ -541,6 +572,7 @@ describe('Runtime page entry preloads integration', () => {
       expect(readRuntimeState().pageEntry).toEqual({
         entryId: 1,
         pageId: 'empty',
+        params: {},
         preloadNames: [],
         status: 'idle',
       }),
@@ -668,6 +700,7 @@ describe('Runtime page entry preloads integration', () => {
     expect(readRuntimeState().pageEntry).toEqual({
       entryId: 2,
       pageId: 'details',
+      params: {},
       preloadNames: ['loadTeams'],
       status: 'loading',
     })
@@ -696,5 +729,54 @@ describe('Runtime page entry preloads integration', () => {
 
     expect(fetchMock).toHaveBeenNthCalledWith(1, '/api/users/current', { method: 'GET' })
     expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/profile?id=user-1', { method: 'GET' })
+  })
+
+  it('relaunches preloads when navigating to the same page with different params', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(createJsonResponse({ results: ['Ada'] }))
+      .mockResolvedValueOnce(createJsonResponse({ results: ['Grace'] }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    renderPreloadHarness({
+      config: {
+        ...preloadConfig,
+        initialPage: 'landing',
+      },
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Go home user 1' }))
+    await waitFor(() => expect(readRuntimeState().pageEntry.status).toBe('success'))
+
+    fireEvent.click(screen.getByRole('button', { name: 'Go home user 2' }))
+    await waitFor(() => expect(readRuntimeState().pageEntry.status).toBe('success'))
+
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(readRuntimeState().navigation.history).toEqual([
+      { entryId: 0, pageId: 'landing', params: {} },
+      { entryId: 1, pageId: 'home', params: { userId: '1' } },
+      { entryId: 2, pageId: 'home', params: { userId: '2' } },
+    ])
+  })
+
+  it('resolves preload requests from the params snapshot of the active entry', async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(createJsonResponse({ ok: true }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    renderPreloadHarness()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Go editor user 7' }))
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(readRuntimeState().pageEntry.status).toBe('success'))
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/editor?id=user-7', { method: 'GET' })
+    expect(readRuntimeState().pageEntry).toEqual({
+      entryId: 1,
+      pageId: 'editor',
+      params: { userId: 'user-7' },
+      preloadNames: ['loadEditor'],
+      status: 'success',
+    })
   })
 })

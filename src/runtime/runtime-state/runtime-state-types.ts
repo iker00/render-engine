@@ -1,5 +1,5 @@
 import type { Dispatch } from 'react'
-import type { RuntimeConfig } from '../../config/runtime-config'
+import type { RuntimeConfig, RuntimeConfigValue } from '../../config/runtime-config'
 
 export interface RuntimeNavigationError {
   code: 'page-not-found'
@@ -7,9 +7,17 @@ export interface RuntimeNavigationError {
   pageId: string
 }
 
+export type RuntimePageParams = Record<string, RuntimeConfigValue>
+
+export interface RuntimeNavigationHistoryEntry {
+  entryId: number
+  pageId: string
+  params: RuntimePageParams
+}
+
 export interface RuntimeNavigationState {
   currentPageId: string
-  history: string[]
+  history: RuntimeNavigationHistoryEntry[]
   lastError: RuntimeNavigationError | null
 }
 
@@ -43,6 +51,7 @@ export type RuntimePageEntryStatus = 'idle' | 'loading' | 'success' | 'error'
 export interface RuntimePageEntryState {
   entryId: number
   pageId: string
+  params: RuntimePageParams
   preloadNames: string[]
   status: RuntimePageEntryStatus
 }
@@ -56,11 +65,11 @@ export interface RuntimeState {
 
 export type RuntimeStateAction =
   | { type: 'runtime/reset'; payload: { state: RuntimeState } }
-  | { type: 'navigation/navigate'; payload: { pageId: string } }
+  | { type: 'navigation/navigate'; payload: { pageId: string; params?: RuntimePageParams } }
   | { type: 'navigation/go-back' }
   | { type: 'navigation/set-error'; payload: { error: RuntimeNavigationError } }
-  | { type: 'page-entry/set-idle'; payload: { entryId: number; pageId: string; preloadNames: string[] } }
-  | { type: 'page-entry/set-loading'; payload: { entryId: number; pageId: string; preloadNames: string[] } }
+  | { type: 'page-entry/set-idle'; payload: { entryId: number; pageId: string; params: RuntimePageParams; preloadNames: string[] } }
+  | { type: 'page-entry/set-loading'; payload: { entryId: number; pageId: string; params: RuntimePageParams; preloadNames: string[] } }
   | { type: 'page-entry/set-settled'; payload: { entryId: number; status: 'success' | 'error' } }
   | { type: 'forms/initialize'; payload: { formId: string; fields: Record<string, RuntimeFormFieldDefinition> } }
   | { type: 'forms/set-value'; payload: { formId: string; fieldId: string; value: unknown } }

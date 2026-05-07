@@ -10,7 +10,7 @@ import type { RuntimeState } from '../runtime/runtime-state/runtime-state-types'
 const runtimeState: RuntimeState = {
   navigation: {
     currentPageId: 'home',
-    history: ['home'],
+    history: [{ entryId: 0, pageId: 'home', params: {} }],
     lastError: null,
   },
   forms: {
@@ -68,6 +68,7 @@ const runtimeState: RuntimeState = {
   pageEntry: {
     entryId: 0,
     pageId: 'home',
+    params: {},
     preloadNames: [],
     status: 'idle',
   },

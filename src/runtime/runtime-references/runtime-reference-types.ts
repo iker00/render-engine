@@ -19,7 +19,7 @@ export interface RuntimeLiteralReference {
 export interface RuntimeSupportedReference {
   kind: 'reference'
   status: 'supported'
-  namespace: 'forms' | 'queries'
+  namespace: 'forms' | 'queries' | 'params'
   path: string[]
   source: string
 }
@@ -27,7 +27,7 @@ export interface RuntimeSupportedReference {
 export interface RuntimeUnsupportedReference {
   kind: 'reference'
   status: 'unsupported'
-  namespace: 'navigation' | 'routeParams' | 'params'
+  namespace: 'navigation' | 'routeParams'
   path: string[]
   source: string
 }

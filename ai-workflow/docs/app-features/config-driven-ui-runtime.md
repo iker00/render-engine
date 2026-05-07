@@ -1,7 +1,7 @@
 # Runtime UI configurable
 
 ## Objetivo
-Renderizar el runtime a partir de una configuración JSON validada, apoyado ya en un estado compartido por instancia para navegación, formularios y queries, con una frontera declarativa real para ejecutar operaciones remotas, dispararlas automáticamente al entrar en página, activarlas desde botones o desde submit de formularios, permitir request params por ejecución sobre una operación `api` base y condicionar la salida visible de cada nodo tanto por estado de query como por valores ya presentes en el propio runtime sin acoplar la UI a HTTP.
+Renderizar el runtime a partir de una configuración JSON validada, apoyado ya en un estado compartido por instancia para navegación, formularios y queries, con una frontera declarativa real para ejecutar operaciones remotas, dispararlas automáticamente al entrar en página, activarlas desde botones o desde submit de formularios, permitir request params por ejecución sobre una operación `api` base, transportar params de navegación interna por entrada y condicionar la salida visible de cada nodo tanto por estado de query como por valores ya presentes en el propio runtime sin acoplar la UI a HTTP.
 
 ## Qué resuelve
 - Permite que la configuración declare varias páginas aunque, por ahora, solo se resuelva la indicada por `initialPage`.
@@ -16,6 +16,7 @@ Renderizar el runtime a partir de una configuración JSON validada, apoyado ya e
 - Formaliza `api.headers` como parte estable del contrato declarativo y permite que cada ejecución añada `query`, `body` y `headers` sin redefinir otra operación `api`.
 - Permite que cada página declare `preloads` y los dispare automáticamente al entrar, con un estado agregado `pageEntry` latest-only para la tanda activa.
 - Expone una capa común de acciones UI del runtime para que los nodos interactivos deleguen navegación, ejecución remota y reset de formularios sin lógica imperativa específica en el propio nodo visual.
+- Permite que `navigateTo` transporte params escalares por entrada, que `goBack` restaure esa entrada completa y que `preloads` dependan de la reentrada observable real, no solo del `pageId`.
 - Permite que cualquier nodo soportado declare `queryStateFeedback` para mostrarse, ocultarse o sustituirse por un fallback local según `idle | loading | error | empty | success`.
 - Permite que cualquier nodo soportado declare `visibility` para mostrarse u ocultarse según valores de `forms.*` y `queries.*`, con una semántica compartida entre renderer y formularios.
 - Renderiza formularios declarativos reales con `form`, `input`, `textarea` y `select`, inicializa su estado lazy en `forms.{formId}.{fieldId}`, valida `required` solo sobre campos visibles y soporta submit con `executeOperation`.
@@ -63,7 +64,7 @@ Reglas funcionales vigentes:
 - `heading.props` soporta `text` y `level`.
 - `paragraph.props` soporta `text`.
 - `list.props` soporta `items` como array histórico de strings o como origen declarativo manual/dinámico de colecciones escalares u objeto.
-- `button.props` soporta `label` y `action`, con `navigateTo`, `goBack`, `executeOperation` y `resetForm` como acciones declarativas vigentes; `executeOperation` puede aportar `query`, `body` y `headers` por ejecución; dentro de un `form`, un botón sin `action` actúa como submit implícito.
+- `button.props` soporta `label` y `action`, con `navigateTo`, `goBack`, `executeOperation` y `resetForm` como acciones declarativas vigentes; `navigateTo` puede añadir `params` escalares por entrada; `executeOperation` puede aportar `query`, `body` y `headers` por ejecución; dentro de un `form`, un botón sin `action` actúa como submit implícito.
 - `form` renderiza un `<form>` real, hereda un contexto estable de `formId` a sus descendientes, inicializa solo los campos todavía ausentes en el store y puede ejecutar `submitAction.type: executeOperation` con `query`, `body` y `headers` por envío.
 - `input`, `textarea` y `select` leen y escriben exclusivamente en `forms.{formId}.{fieldId}` y comparten una base visual accesible con estado de error.
 - `select` soporta items históricos estáticos y también orígenes declarativos manuales o dinámicos de escalares u objetos; normaliza internamente a string los valores efectivos y deja el valor vigente vacío cuando ya no coincide con ninguna opción disponible.
@@ -98,6 +99,7 @@ El runtime resuelve hoy referencias completas en:
 
 Contrato visible vigente:
 - `forms.{formId}.{fieldId}`
+- `params.{paramName}`
 - `queries.{queryName}`
 - `queries.{queryName}.data`
 - `queries.{queryName}.status`
@@ -108,7 +110,8 @@ Límites funcionales de esa capa:
 - no existe interpolación parcial dentro de strings
 - la navegación anidada solo se permite bajo `queries.{queryName}.data`
 - objetos y arrays pueden recorrerse de izquierda a derecha con una única semántica central
-- `status`, `error`, `navigation.*`, `routeParams.*` y `params.*` no se abren como navegación dinámica soportada
+- `params.*` solo admite `params.{paramName}` y no abre navegación anidada adicional
+- `status`, `error`, `navigation.*` y `routeParams.*` no se abren como navegación dinámica soportada
 - las referencias textuales no resolubles degradan a string vacío y mantienen diagnóstico de desarrollo coherente con la referencia original
 
 Además, el runtime reutiliza la misma convención de referencias completas en:
@@ -121,6 +124,7 @@ Además, el runtime reutiliza la misma convención de referencias completas en:
 - `form.submitAction.query`
 - `form.submitAction.body`
 - `form.submitAction.headers`
+- `navigateTo.params`
 - `defaultValue` de `input`, `textarea` y `select`
 - `list.props.items.source` y `select.props.items.source`
 - `visibility.reference`
@@ -139,7 +143,8 @@ Además, el runtime reutiliza la misma convención de referencias completas en:
 - El catálogo de formularios sigue acotado a `form`, `input`, `textarea` y `select`; no existen todavía `radioGroup`, `checkboxGroup`, subida de archivos, multiselect ni búsqueda remota.
 - La validación declarativa de formularios sigue limitada a `required`; no existen todavía reglas como `min`, `max`, patrones ni validaciones cruzadas.
 - El agregado `pageEntry` todavía no se expone como familia de referencias declarativas dentro del JSON.
-- `routeParams.*`, `params.*` y `navigation.*` siguen sin resolverse como referencias soportadas.
+- `routeParams.*` y `navigation.*` siguen sin resolverse como referencias soportadas.
+- `params.*` sigue intencionadamente fuera de `visibility` y de las fuentes dinámicas de colección para `list` y `select`.
 - La presentación base del runtime sigue siendo intencionadamente mínima y no define todavía theming, tokens de diseño ni personalización visual declarativa.
 
 ## Referencias relacionadas

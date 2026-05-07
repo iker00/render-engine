@@ -1,16 +1,16 @@
-import type { RuntimeApiRequestParams, RuntimeUiAction } from '../../config/runtime-config'
+import type { NavigateToRuntimeUiAction, RuntimeApiRequestParams, RuntimeUiAction } from '../../config/runtime-config'
 
 export interface RuntimeUiActionHandlers {
   executeQueryOperation: (operationName: string, options?: { requestParams?: RuntimeApiRequestParams }) => Promise<unknown>
   goBackPage: () => void
-  navigateToPage: (pageId: string) => void
+  navigateToPage: (pageId: string, params?: NavigateToRuntimeUiAction['params']) => void
   resetForm: (formId: string) => void
 }
 
 export function executeRuntimeUiAction(action: RuntimeUiAction, handlers: RuntimeUiActionHandlers) {
   switch (action.type) {
     case 'navigateTo':
-      handlers.navigateToPage(action.pageId)
+      handlers.navigateToPage(action.pageId, action.params)
       return
     case 'goBack':
       handlers.goBackPage()

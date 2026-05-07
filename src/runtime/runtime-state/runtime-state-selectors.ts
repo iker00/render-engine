@@ -18,8 +18,16 @@ export function selectPageEntryState(state: RuntimeState) {
   return state.pageEntry
 }
 
+export function selectCurrentNavigationEntry(state: RuntimeState) {
+  return state.navigation.history[state.navigation.history.length - 1] ?? null
+}
+
 export function selectCurrentPageId(state: RuntimeState) {
   return state.navigation.currentPageId
+}
+
+export function selectCurrentPageParams(state: RuntimeState) {
+  return selectCurrentNavigationEntry(state)?.params ?? {}
 }
 
 export function selectPageEntryStatus(state: RuntimeState) {

@@ -2,7 +2,9 @@ import type { RuntimeConfig } from '../../config/runtime-config'
 import type {
   RuntimeFormFieldDefinition,
   RuntimeFormFieldState,
+  RuntimeNavigationHistoryEntry,
   RuntimePageEntryState,
+  RuntimePageParams,
   RuntimeFormState,
   RuntimeQueryState,
   RuntimeState,
@@ -15,7 +17,13 @@ export function createRuntimeState(config: RuntimeConfig): RuntimeState {
   return {
     navigation: {
       currentPageId: config.initialPage,
-      history: [config.initialPage],
+      history: [
+        {
+          entryId: 0,
+          pageId: config.initialPage,
+          params: {},
+        },
+      ],
       lastError: null,
     },
     forms: {},
@@ -23,6 +31,7 @@ export function createRuntimeState(config: RuntimeConfig): RuntimeState {
     pageEntry: createRuntimePageEntryState({
       entryId: 0,
       pageId: config.initialPage,
+      params: {},
       preloadNames: initialPage?.preloads ?? [],
       status: 'idle',
     }),
@@ -34,7 +43,7 @@ export function runtimeStateReducer(state: RuntimeState, action: RuntimeStateAct
     case 'runtime/reset':
       return action.payload.state
     case 'navigation/navigate':
-      if (state.navigation.currentPageId === action.payload.pageId) {
+      if (isSameNavigationEntry(state.navigation.history[state.navigation.history.length - 1], action.payload.pageId, action.payload.params)) {
         return {
           ...state,
           navigation: {
@@ -44,11 +53,17 @@ export function runtimeStateReducer(state: RuntimeState, action: RuntimeStateAct
         }
       }
 
+      const nextEntry = createNavigationHistoryEntry(
+        getNextNavigationEntryId(state.navigation.history),
+        action.payload.pageId,
+        action.payload.params,
+      )
+
       return {
         ...state,
         navigation: {
-          currentPageId: action.payload.pageId,
-          history: [...state.navigation.history, action.payload.pageId],
+          currentPageId: nextEntry.pageId,
+          history: [...state.navigation.history, nextEntry],
           lastError: null,
         },
       }
@@ -64,12 +79,12 @@ export function runtimeStateReducer(state: RuntimeState, action: RuntimeStateAct
       }
 
       const nextHistory = state.navigation.history.slice(0, -1)
-      const previousPageId = nextHistory[nextHistory.length - 1]
+      const previousEntry = nextHistory[nextHistory.length - 1]
 
       return {
         ...state,
         navigation: {
-          currentPageId: previousPageId,
+          currentPageId: previousEntry.pageId,
           history: nextHistory,
           lastError: null,
         },
@@ -89,6 +104,7 @@ export function runtimeStateReducer(state: RuntimeState, action: RuntimeStateAct
         pageEntry: createRuntimePageEntryState({
           entryId: action.payload.entryId,
           pageId: action.payload.pageId,
+          params: action.payload.params,
           preloadNames: action.payload.preloadNames,
           status: 'idle',
         }),
@@ -99,6 +115,7 @@ export function runtimeStateReducer(state: RuntimeState, action: RuntimeStateAct
         pageEntry: createRuntimePageEntryState({
           entryId: action.payload.entryId,
           pageId: action.payload.pageId,
+          params: action.payload.params,
           preloadNames: action.payload.preloadNames,
           status: 'loading',
         }),
@@ -312,7 +329,53 @@ function createRuntimePageEntryState(pageEntryState: RuntimePageEntryState): Run
   return {
     entryId: pageEntryState.entryId,
     pageId: pageEntryState.pageId,
+    params: { ...pageEntryState.params },
     preloadNames: [...pageEntryState.preloadNames],
     status: pageEntryState.status,
   }
+}
+
+function createNavigationHistoryEntry(
+  entryId: number,
+  pageId: string,
+  params: RuntimePageParams | undefined,
+): RuntimeNavigationHistoryEntry {
+  return {
+    entryId,
+    pageId,
+    params: { ...(params ?? {}) },
+  }
+}
+
+function getNextNavigationEntryId(history: RuntimeNavigationHistoryEntry[]) {
+  return (history[history.length - 1]?.entryId ?? -1) + 1
+}
+
+function isSameNavigationEntry(
+  currentEntry: RuntimeNavigationHistoryEntry | undefined,
+  pageId: string,
+  params: RuntimePageParams | undefined,
+) {
+  if (!currentEntry || currentEntry.pageId !== pageId) {
+    return false
+  }
+
+  return arePageParamsEqual(currentEntry.params, params ?? {})
+}
+
+function arePageParamsEqual(left: RuntimePageParams, right: RuntimePageParams) {
+  const leftKeys = Object.keys(left)
+  const rightKeys = Object.keys(right)
+
+  if (leftKeys.length !== rightKeys.length) {
+    return false
+  }
+
+  for (const key of leftKeys) {
+    if (!Object.is(left[key], right[key])) {
+      return false
+    }
+  }
+
+  return true
 }

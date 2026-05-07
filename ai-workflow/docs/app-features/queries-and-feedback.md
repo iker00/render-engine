@@ -69,18 +69,20 @@ Reglas de payload vigentes:
 - `body: null` en la raíz equivale a una petición deliberada sin body serializado
 - `headers` admite solo valores finales string
 - referencias completas y strings escapados siguen la misma convención central del runtime
+- esa convención ya permite `params.{paramName}` en `api.query`, `api.body`, `api.headers`, `button.props.action.*` y `form.submitAction.*`
 
 ## Precargas
 - Las precargas se declaran a nivel de página.
 - Se ejecutan al entrar en la página.
 - La página puede depender de esos datos para mostrar su layout o bloques concretos.
-- Cada entrada de página crea una tanda agregada con `entryId`, `pageId`, `preloadNames` y `status`.
+- Cada entrada de página crea una tanda agregada con `entryId`, `pageId`, `params`, `preloadNames` y `status`.
 - El agregado distingue `idle | loading | success | error`.
 - `idle` representa explícitamente la entrada actual sin precargas que ejecutar.
 - Las operaciones de una misma tanda se lanzan en paralelo.
 - Si al menos una precarga falla, el agregado final queda en `error`, pero las queries exitosas conservan sus datos.
 - El agregado es latest-only: una tanda antigua puede seguir cerrando sus queries individuales, pero no puede reescribir el resultado agregado de una entrada más reciente.
 - Todas las precargas de una misma tanda resuelven sus referencias contra un snapshot común del estado al inicio de la entrada.
+- Ese snapshot ya incluye los params efectivos de la entrada activa, por lo que una precarga puede reutilizar `params.*` sin lógica imperativa adicional.
 
 ## Refetch y acciones mutadoras
 - Algunas acciones pueden necesitar relanzar queries después de éxito.

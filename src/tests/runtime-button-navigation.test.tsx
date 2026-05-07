@@ -164,6 +164,77 @@ const executeOperationButtonConfig: RuntimeConfig = {
   ],
 }
 
+const navigateWithParamsConfig: RuntimeConfig = {
+  api: {},
+  initialPage: 'home',
+  pages: [
+    {
+      id: 'home',
+      layout: [
+        {
+          type: 'button',
+          props: {
+            label: 'Open details with params',
+            action: {
+              type: 'navigateTo',
+              pageId: 'details',
+              params: {
+                userId: 'forms.userSearch.name',
+                mode: 'edit',
+                missing: 'forms.userSearch.missingField',
+                tags: 'queries.searchUsers.data',
+              },
+            },
+          },
+        },
+      ],
+    },
+    {
+      id: 'details',
+      layout: [
+        {
+          type: 'heading',
+          props: {
+            text: 'params.userId',
+            level: 1,
+          },
+        },
+        {
+          type: 'paragraph',
+          props: {
+            text: 'params.mode',
+          },
+        },
+        {
+          type: 'button',
+          props: {
+            label: 'Open summary with inherited params',
+            action: {
+              type: 'navigateTo',
+              pageId: 'summary',
+              params: {
+                userId: 'params.userId',
+              },
+            },
+          },
+        },
+      ],
+    },
+    {
+      id: 'summary',
+      layout: [
+        {
+          type: 'heading',
+          props: {
+            text: 'params.userId',
+            level: 2,
+          },
+        },
+      ],
+    },
+  ],
+}
+
 function renderRuntime(config: RuntimeConfig = navigationConfig) {
   return render(
     <RuntimeStateProvider config={config}>
@@ -221,7 +292,10 @@ describe('Runtime button navigation', () => {
     await waitFor(() => expect(screen.getByTestId('runtime-page')).toHaveAttribute('data-runtime-page-id', 'details'))
     await waitFor(() => expect(readRuntimeState().pageEntry.status).toBe('success'))
 
-    expect(readRuntimeState().navigation.history).toEqual(['home', 'details'])
+    expect(readRuntimeState().navigation.history).toEqual([
+      { entryId: 0, pageId: 'home', params: {} },
+      { entryId: 1, pageId: 'details', params: {} },
+    ])
   })
 
   it('keeps the current page and does not duplicate history when navigateTo targets the visible page', async () => {
@@ -235,7 +309,7 @@ describe('Runtime button navigation', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Stay here' }))
 
     expect(screen.getByTestId('runtime-page')).toHaveAttribute('data-runtime-page-id', 'home')
-    expect(readRuntimeState().navigation.history).toEqual(['home'])
+    expect(readRuntimeState().navigation.history).toEqual([{ entryId: 0, pageId: 'home', params: {} }])
     expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 
@@ -260,7 +334,7 @@ describe('Runtime button navigation', () => {
     await waitFor(() => expect(screen.getByTestId('runtime-page')).toHaveAttribute('data-runtime-page-id', 'home'))
     await waitFor(() => expect(readRuntimeState().pageEntry.status).toBe('success'))
 
-    expect(readRuntimeState().navigation.history).toEqual(['home'])
+    expect(readRuntimeState().navigation.history).toEqual([{ entryId: 0, pageId: 'home', params: {} }])
     expect(fetchMock).toHaveBeenCalledTimes(3)
   })
 
@@ -285,7 +359,45 @@ describe('Runtime button navigation', () => {
     await waitFor(() => expect(screen.getByTestId('runtime-page')).toHaveAttribute('data-runtime-page-id', 'home'))
     await waitFor(() => expect(readRuntimeState().pageEntry.status).toBe('success'))
 
-    expect(readRuntimeState().navigation.history).toEqual(['home', 'details', 'home'])
+    expect(readRuntimeState().navigation.history).toEqual([
+      { entryId: 0, pageId: 'home', params: {} },
+      { entryId: 1, pageId: 'details', params: {} },
+      { entryId: 2, pageId: 'home', params: {} },
+    ])
+  })
+
+  it('resolves navigateTo params against the current snapshot, omits missing or non-scalar results, and renders params text on the destination page', async () => {
+    renderRuntimeWithStateSeed(navigateWithParamsConfig)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Seed prior query success' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Open details with params' }))
+
+    await waitFor(() => expect(screen.getByTestId('runtime-page')).toHaveAttribute('data-runtime-page-id', 'details'))
+
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Ada')
+    expect(screen.getByText('edit')).toBeInTheDocument()
+    expect(readRuntimeState().navigation.history).toEqual([
+      { entryId: 0, pageId: 'home', params: {} },
+      { entryId: 1, pageId: 'details', params: { userId: 'Ada', mode: 'edit' } },
+    ])
+  })
+
+  it('can use params as the source for a second navigateTo action', async () => {
+    renderRuntimeWithStateSeed(navigateWithParamsConfig)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Seed prior query success' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Open details with params' }))
+    await waitFor(() => expect(screen.getByTestId('runtime-page')).toHaveAttribute('data-runtime-page-id', 'details'))
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open summary with inherited params' }))
+
+    await waitFor(() => expect(screen.getByTestId('runtime-page')).toHaveAttribute('data-runtime-page-id', 'summary'))
+    expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent('Ada')
+    expect(readRuntimeState().navigation.history).toEqual([
+      { entryId: 0, pageId: 'home', params: {} },
+      { entryId: 1, pageId: 'details', params: { userId: 'Ada', mode: 'edit' } },
+      { entryId: 2, pageId: 'summary', params: { userId: 'Ada' } },
+    ])
   })
 
   it('executes a declared operation from a rendered button and stores the result in queries', async () => {

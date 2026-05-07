@@ -171,6 +171,7 @@ export const navigateToButtonActionSchema = z
   .object({
     type: z.literal('navigateTo'),
     pageId: nonEmptyStringSchema,
+    params: z.unknown().optional(),
   })
   .strip()
 

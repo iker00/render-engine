@@ -83,6 +83,28 @@ function renderRuntimePageWithSeed(activePage: RuntimePageConfig) {
   )
 }
 
+function renderRuntimePageWithState(activePage: RuntimePageConfig, state: RuntimeState) {
+  const config: RuntimeConfig = {
+    api: {},
+    initialPage: activePage.id,
+    pages: [activePage],
+  }
+  const dispatch = vi.fn<(action: RuntimeStateAction) => void>()
+
+  return render(
+    <RuntimeStateContext.Provider
+      value={{
+        config,
+        initialState: state,
+        state,
+        dispatch,
+      }}
+    >
+      <RuntimePage />
+    </RuntimeStateContext.Provider>,
+  )
+}
+
 function seedRuntimeState(state: RuntimeState) {
   return [
     {
@@ -1839,6 +1861,88 @@ describe('RuntimePage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Seed submit success' }))
 
     expect(screen.getByLabelText('Nickname')).toHaveValue('Ada')
+  })
+
+  it('renders params in visible text and uses them as lazy defaultValue for form fields', () => {
+    const activePage: RuntimePageConfig = {
+      id: 'details',
+      layout: [
+        {
+          type: 'heading',
+          props: {
+            text: 'params.userId',
+            level: 1,
+          },
+        },
+        {
+          type: 'paragraph',
+          props: {
+            text: 'params.mode',
+          },
+        },
+        {
+          type: 'form',
+          id: 'profile-form',
+          children: [
+            {
+              type: 'input',
+              props: {
+                fieldId: 'nickname',
+                label: 'Nickname',
+                defaultValue: 'params.userId',
+              },
+            },
+            {
+              type: 'textarea',
+              props: {
+                fieldId: 'bio',
+                label: 'Bio',
+                defaultValue: 'params.mode',
+              },
+            },
+            {
+              type: 'select',
+              props: {
+                fieldId: 'role',
+                label: 'Role',
+                defaultValue: 'params.mode',
+                items: {
+                  values: ['edit', 'view'],
+                },
+              },
+            },
+          ],
+        },
+      ],
+    }
+    const config: RuntimeConfig = {
+      api: {},
+      initialPage: 'details',
+      pages: [activePage],
+    }
+    const state: RuntimeState = {
+      ...createRuntimeState(config),
+      navigation: {
+        currentPageId: 'details',
+        history: [{ entryId: 0, pageId: 'details', params: { userId: 'user-7', mode: 'edit' } }],
+        lastError: null,
+      },
+      pageEntry: {
+        entryId: 0,
+        pageId: 'details',
+        params: { userId: 'user-7', mode: 'edit' },
+        preloadNames: [],
+        status: 'idle',
+      },
+    }
+
+    renderRuntimePageWithState(activePage, state)
+
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('user-7')
+    expect(screen.getByText('edit', { selector: 'p' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Nickname')).toHaveValue('user-7')
+    expect(screen.getByLabelText('Bio')).toHaveValue('edit')
+    expect(screen.getByLabelText('Role')).toHaveValue('edit')
   })
 
   it('reports unresolved visible references in development with the source path and surface name', () => {

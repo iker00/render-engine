@@ -7,6 +7,13 @@
     "searchPosts": {
       "method": "GET",
       "endpoint": "https://jsonplaceholder.typicode.com/posts"
+    },
+    "getPost": {
+      "method": "GET",
+      "endpoint": "https://jsonplaceholder.typicode.com/posts",
+      "query": {
+        "id": "params.postId"
+      }
     }
   },
   "pages": [
@@ -23,7 +30,7 @@
         {
           "type": "paragraph",
           "props": {
-            "text": "forms.postForm.authorId"
+            "text": "Contenido del párrafo"
           }
         },
         {
@@ -69,6 +76,19 @@
                 "action": {
                   "type": "navigateTo",
                   "pageId": "search-posts"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Editar post",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "post-form",
+                  "params": {
+                    "postId": "56"
+                  }
                 }
               }
             }
@@ -339,6 +359,104 @@
                   "itemText": "title"
                 }
               }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "post-form",
+      "preloads": [
+        "getPost",
+        "searchUsers"
+      ],
+      "layout": [
+        {
+          "type": "heading",
+          "props": {
+            "text": "Edit",
+            "level": 1
+          }
+        },
+        {
+          "type": "container",
+          "props": {
+            "gap": "sm"
+          },
+          "queryStateFeedback": {
+            "query": "searchUsers",
+            "states": {
+              "loading": {
+                "mode": "fallback",
+                "fallback": [
+                  {
+                    "type": "paragraph",
+                    "props": {
+                      "text": "Loading author options..."
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "children": [
+            {
+              "type": "form",
+              "id": "editPost",
+              "resetOnSuccess": false,
+              "queryStateFeedback": {
+                "query": "getPost",
+                "states": {
+                  "loading": {
+                    "mode": "fallback",
+                    "fallback": [
+                      {
+                        "type": "paragraph",
+                        "props": {
+                          "text": "Loading post data..."
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              "children": [
+                {
+                  "type": "input",
+                  "props": {
+                    "fieldId": "title",
+                    "label": "Title",
+                    "defaultValue": "queries.getPost.data.0.title"
+                  }
+                },
+                {
+                  "type": "input",
+                  "props": {
+                    "fieldId": "body",
+                    "label": "Body",
+                    "defaultValue": "queries.getPost.data.0.body"
+                  }
+                },
+                {
+                  "type": "select",
+                  "props": {
+                    "fieldId": "userId",
+                    "label": "Author",
+                    "items": {
+                      "source": "queries.searchUsers.data",
+                      "label": "name",
+                      "value": "id"
+                    },
+                    "defaultValue": "queries.getPost.data.0.userId"
+                  }
+                },
+                {
+                  "type": "button",
+                  "props": {
+                    "label": "Submit"
+                  }
+                }
+              ]
             }
           ]
         }

@@ -36,10 +36,31 @@ describe('executeRuntimeUiAction', () => {
       handlers,
     )
 
-    expect(handlers.navigateToPage).toHaveBeenCalledWith('details')
+    expect(handlers.navigateToPage).toHaveBeenCalledWith('details', undefined)
     expect(handlers.goBackPage).not.toHaveBeenCalled()
     expect(handlers.executeQueryOperation).not.toHaveBeenCalled()
     expect(handlers.resetForm).not.toHaveBeenCalled()
+  })
+
+  it('maps navigateTo params to navigateToPage without resolving them in the executor', () => {
+    const handlers = createHandlers()
+
+    runtimeUiActionExecutor.executeRuntimeUiAction(
+      {
+        type: 'navigateTo',
+        pageId: 'details',
+        params: {
+          userId: 'queries.selectedUser.data.id',
+          isEditing: true,
+        },
+      },
+      handlers,
+    )
+
+    expect(handlers.navigateToPage).toHaveBeenCalledWith('details', {
+      userId: 'queries.selectedUser.data.id',
+      isEditing: true,
+    })
   })
 
   it('maps goBack to goBackPage only', () => {

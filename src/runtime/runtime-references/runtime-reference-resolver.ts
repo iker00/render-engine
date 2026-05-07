@@ -1,5 +1,6 @@
 import type { RuntimeState } from '../runtime-state/runtime-state-types'
 import {
+  selectCurrentPageParams,
   selectFormFieldState,
   selectFormFieldValue,
   selectNestedQueryDataValue,
@@ -115,6 +116,22 @@ function resolveSupportedReferenceValue(reference: RuntimeSupportedReference, st
     return {
       found: true,
       value: selectFormFieldValue(state, formId, fieldId),
+    } as const
+  }
+
+  if (reference.namespace === 'params') {
+    const [paramName] = reference.path
+    const params = selectCurrentPageParams(state)
+
+    if (!Object.hasOwn(params, paramName)) {
+      return {
+        found: false,
+      } as const
+    }
+
+    return {
+      found: true,
+      value: params[paramName],
     } as const
   }
 

@@ -12,7 +12,7 @@
 - Presentación base del runtime migrada a `Tailwind CSS` para `container`, `heading`, `paragraph` y `list`, con convención centralizada en `src/runtime/runtime-node-styling.ts`.
 - Resolución de `initialPage` con soporte para varias páginas declaradas y render exclusivo de la página seleccionada.
 - Núcleo de estado compartido por instancia ya integrado en `src/runtime/runtime-state/` para navegación, formularios y queries.
-- Navegación visible resuelta desde `navigation.currentPageId`, con historial interno mínimo y error recuperable al navegar a una página inexistente.
+- Navegación visible resuelta desde `navigation.currentPageId`, con historial interno por entradas completas `entryId/pageId/params`, no-op para reentradas idénticas y error recuperable al navegar a una página inexistente.
 - Dominio base de formularios disponible con almacenamiento por `forms.{formId}.{fieldId}`, `defaultValue`, `error`, `touched`, `dirty` y reset por formulario.
 - Dominio base de queries disponible con almacenamiento por nombre, `status/data/error`, conservación del último dato válido durante recargas y reset por query.
 - Capa central de referencias del runtime ya operativa para `forms.*`, `queries.{queryName}`, `queries.{queryName}.data`, `queries.{queryName}.status` y `queries.{queryName}.error`.
@@ -22,16 +22,18 @@
 - La composición efectiva del request ya permite mezclar una operación `api` base con `requestParams` por ejecución, con merge superficial estable en `query`, `headers` y `body` raíz-objeto, y sustitución del body cuando la raíz no es objeto.
 - Fachada `executeQueryOperation(operationName, { requestParams? })` ya expuesta desde el provider para hidratar `queries.{operationName}` con transiciones `loading | success | error`.
 - Las páginas ya pueden declarar `preloads` como lista opcional de operaciones `api` y dispararlas automáticamente al entrar tanto en `initialPage` como en navegaciones posteriores.
-- Dominio agregado `pageEntry` ya disponible en el store compartido con `entryId`, `pageId`, `preloadNames` y `status: idle | loading | success | error`.
+- Dominio agregado `pageEntry` ya disponible en el store compartido con `entryId`, `pageId`, `params`, `preloadNames` y `status: idle | loading | success | error`.
 - La tanda agregada de `preloads` ya usa semántica latest-only para no dejar que cierres tardíos de entradas antiguas sobrescriban la entrada activa más reciente.
 - `button.props.action` ya reutiliza un contrato común de acciones UI con `navigateTo`, `goBack`, `executeOperation` y `resetForm`.
 - La interpretación de acciones UI ya está concentrada en una capa transversal del runtime y no en ramas imperativas dispersas dentro del nodo visual `button`.
+- `button.props.action.type: navigateTo` ya puede transportar `params` escalares resueltos contra el snapshot actual del runtime y `goBack` restaura también esos params al recuperar una entrada previa.
 - Cualquier nodo soportado ya puede declarar `queryStateFeedback` para reaccionar al estado visible `idle | loading | error | empty | success` de una query concreta con `show`, `hide` o un fallback local reutilizando el mismo catálogo declarativo de nodos.
 - La semántica visible de query ya está centralizada: `idle` representa una query no lanzada todavía y también cubre la query ausente del store; `loading` representa solo una ejecución real en curso; `null`, `undefined`, `''`, `[]` y `{}` se tratan como `empty`; `0` y `false` siguen la rama `success`.
 - Cualquier nodo soportado ya puede declarar también `visibility` para mostrarse u ocultarse según una única condición simple basada en `forms.*` o `queries.*`, con operadores `equals`, `notEquals`, `isTruthy`, `isFalsy`, `greaterThan` y `lessThan`.
 - La visibilidad efectiva del runtime ya está centralizada con precedencia estable: `queryStateFeedback` decide primero `show | hide | fallback`, y `visibility` solo se evalúa sobre la rama principal cuando esta sigue visible.
 - Catálogo declarativo de formularios ya operativo con `form`, `input`, `textarea` y `select`, incluyendo herencia de `formId` por descendencia y render de `<form>` real.
 - La inicialización de campos declarativos ya es lazy y reutiliza exclusivamente `forms.{formId}.{fieldId}`, con soporte para `defaultValue` literal o dinámico sin sobrescribir estado ya existente del usuario.
+- La capa central de referencias del runtime ya soporta también `params.{paramName}` para texto visible, requests declarativos, `defaultValue` de formularios y nuevas navegaciones originadas desde páginas ya parametrizadas.
 - La validación declarativa `required` ya funciona a nivel de formulario, escribe errores solo en `forms.*` y excluye del bloqueo de submit a campos ocultos por `queryStateFeedback`.
 - Esa exclusión de campos ocultos ya cubre tanto `queryStateFeedback` como `visibility`, reutilizando la misma decisión visible que usa el renderer del runtime.
 - El submit declarativo de formularios ya soporta `submitAction.type: executeOperation`, reusa `queries.{operationName}` como única superficie visible de loading/success/error, puede añadir `query`, `body` y `headers` por envío y puede resetear por `resetOnSuccess`.
@@ -49,9 +51,10 @@
 - No existe todavía una integración completa de producto con backend más allá de `data-config` como frontera de entrada y de las operaciones remotas declarativas ejecutadas por `fetch`.
 - No existen todavía consumidores declarativos finales del agregado `pageEntry`.
 - El catálogo visual sigue limitado a `container`, `heading`, `paragraph`, `list`, `button`, `form`, `input`, `textarea` y `select`.
-- No existen todavía consumidores de referencias fuera de `heading.props.text`, `paragraph.props.text`, `queryStateFeedback`, `api.query`, `api.body`, `defaultValue` de campos de formulario y `source` de colecciones para `list` y `select`, ni interpolación parcial dentro de strings.
+- No existen todavía consumidores de referencias fuera de `heading.props.text`, `paragraph.props.text`, `queryStateFeedback`, `api.query`, `api.body`, `defaultValue` de campos de formulario, `navigateTo.params` y `source` de colecciones para `list` y `select`, ni interpolación parcial dentro de strings.
 - No existen todavía validaciones declarativas avanzadas de formularios, multiselect, búsqueda remota de opciones ni tipos de campo fuera del catálogo mínimo actual.
-- `routeParams.*`, `params.*` y `navigation.*` siguen sin resolverse como referencias soportadas.
+- `routeParams.*` y `navigation.*` siguen sin resolverse como referencias soportadas.
+- `params.*` sigue sin abrirse en `visibility` ni en las fuentes dinámicas de colección para `list` y `select`.
 - `visibility` sigue intencionadamente acotado a una sola condición por nodo, sin `fallback`, sin composición booleana y sin expresiones arbitrarias.
 - No existe todavía theming, tokens de diseño ni personalización visual declarativa desde JSON.
 
@@ -77,6 +80,7 @@
 - Decimoséptima feature del workflow cerrada para permitir colecciones multi-origen en `list` y `select`, reutilizando datos de `queries.*` con mapeos declarativos por consumidor y manteniendo coherencia entre render, formularios y validación.
 - Decimoctava feature del workflow cerrada para formalizar `api.headers` y permitir `query`, `body` y `headers` por ejecución desde `button.props.action` y `form.submitAction`, centralizando la composición final del request en `src/queries/`.
 - Decimonovena feature del workflow cerrada para añadir reglas declarativas `visibility` reutilizables por renderer y formularios, con precedencia estable sobre `queryStateFeedback` y exclusión coherente de campos ocultos durante la validación.
+- Vigésima feature del workflow cerrada para permitir params de navegación interna por entrada, con historial parametrizado, `params.*` en superficies acotadas y `preloads` reactivados por reentrada observable.
 
 ## Referencias
 

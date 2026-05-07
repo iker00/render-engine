@@ -195,6 +195,7 @@ export interface SelectLayoutNode extends LayoutNodeFeedbackFields {
 export interface NavigateToRuntimeUiAction {
   type: 'navigateTo'
   pageId: string
+  params?: Record<string, RuntimeConfigValue>
 }
 
 export interface GoBackRuntimeUiAction {

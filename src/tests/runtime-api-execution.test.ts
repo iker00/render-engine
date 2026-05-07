@@ -9,7 +9,7 @@ import type { RuntimeState } from '../runtime/runtime-state/runtime-state-types'
 const runtimeState: RuntimeState = {
   navigation: {
     currentPageId: 'home',
-    history: ['home'],
+    history: [{ entryId: 0, pageId: 'home', params: {} }],
     lastError: null,
   },
   forms: {
@@ -67,6 +67,7 @@ const runtimeState: RuntimeState = {
   pageEntry: {
     entryId: 0,
     pageId: 'home',
+    params: {},
     preloadNames: [],
     status: 'idle',
   },
@@ -298,6 +299,71 @@ describe('Runtime api execution', () => {
         url: '/api/users/user-1',
         init: {
           method: 'PATCH',
+        },
+      },
+    })
+  })
+
+  it('resolves params references in query, body, and headers from the active navigation entry', () => {
+    const stateWithParams: RuntimeState = {
+      ...runtimeState,
+      navigation: {
+        currentPageId: 'details',
+        history: [
+          { entryId: 0, pageId: 'home', params: {} },
+          { entryId: 1, pageId: 'details', params: { userId: 'user-7', mode: 'edit' } },
+        ],
+        lastError: null,
+      },
+      pageEntry: {
+        entryId: 1,
+        pageId: 'details',
+        params: { userId: 'user-7', mode: 'edit' },
+        preloadNames: [],
+        status: 'idle',
+      },
+    }
+    const configWithParams: RuntimeConfig = {
+      ...runtimeConfig,
+      api: {
+        ...runtimeConfig.api,
+        loadEditor: {
+          method: 'POST',
+          endpoint: '/api/editor',
+          query: {
+            id: 'params.userId',
+          },
+          headers: {
+            'x-mode': 'params.mode',
+          },
+          body: {
+            userId: 'params.userId',
+          },
+        },
+      },
+    }
+
+    expect(
+      buildRuntimeApiRequest({
+        config: configWithParams,
+        operationName: 'loadEditor',
+        state: stateWithParams,
+      }),
+    ).toEqual({
+      status: 'ready',
+      request: {
+        operationName: 'loadEditor',
+        operation: configWithParams.api.loadEditor,
+        url: '/api/editor?id=user-7',
+        init: {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+            'x-mode': 'edit',
+          },
+          body: JSON.stringify({
+            userId: 'user-7',
+          }),
         },
       },
     })

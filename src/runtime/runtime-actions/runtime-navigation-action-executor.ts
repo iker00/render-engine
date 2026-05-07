@@ -1,9 +1,9 @@
-import type { ButtonAction } from '../../config/runtime-config'
+import type { ButtonAction, NavigateToRuntimeUiAction } from '../../config/runtime-config'
 import { executeRuntimeUiAction } from './runtime-ui-action-executor'
 
 export interface RuntimeNavigationActionHandler {
   goBackPage: () => void
-  navigateToPage: (pageId: string) => void
+  navigateToPage: (pageId: string, params?: NavigateToRuntimeUiAction['params']) => void
 }
 
 export function executeRuntimeNavigationAction(

@@ -100,6 +100,10 @@ function RuntimeStateSnapshot({ testId }: { testId: string }) {
   return <pre data-testid={testId}>{JSON.stringify(state)}</pre>
 }
 
+function readRuntimeStateSnapshot(testId: string) {
+  return JSON.parse(screen.getByTestId(testId).textContent ?? '') as RuntimeState
+}
+
 function ResetOnMount() {
   const { resetRuntimeState } = useRuntimeStateActions()
 
@@ -120,6 +124,12 @@ function NavigationControls() {
       </button>
       <button type="button" onClick={() => navigateToPage('home')}>
         Navigate to home
+      </button>
+      <button type="button" onClick={() => navigateToPage('details', { userId: '42' })}>
+        Navigate to details with params
+      </button>
+      <button type="button" onClick={() => navigateToPage('details', { userId: '7' })}>
+        Navigate to details with other params
       </button>
       <button type="button" onClick={() => navigateToPage('missing-page')}>
         Navigate to missing page
@@ -457,14 +467,22 @@ describe('Runtime shared state store', () => {
 
     expect(screen.getByTestId('first-state')).toHaveTextContent('"currentPageId":"home"')
     expect(screen.getByTestId('second-state')).toHaveTextContent('"currentPageId":"details"')
-    expect(screen.getByTestId('first-state')).toHaveTextContent('"history":["home"]')
-    expect(screen.getByTestId('second-state')).toHaveTextContent('"history":["details"]')
-    expect(screen.getByTestId('first-state')).toHaveTextContent(
-      '"pageEntry":{"entryId":0,"pageId":"home","preloadNames":[],"status":"idle"}',
-    )
-    expect(screen.getByTestId('second-state')).toHaveTextContent(
-      '"pageEntry":{"entryId":0,"pageId":"details","preloadNames":[],"status":"idle"}',
-    )
+    expect(readRuntimeStateSnapshot('first-state').navigation.history).toEqual([{ entryId: 0, pageId: 'home', params: {} }])
+    expect(readRuntimeStateSnapshot('second-state').navigation.history).toEqual([{ entryId: 0, pageId: 'details', params: {} }])
+    expect(readRuntimeStateSnapshot('first-state').pageEntry).toEqual({
+      entryId: 0,
+      pageId: 'home',
+      params: {},
+      preloadNames: [],
+      status: 'idle',
+    })
+    expect(readRuntimeStateSnapshot('second-state').pageEntry).toEqual({
+      entryId: 0,
+      pageId: 'details',
+      params: {},
+      preloadNames: [],
+      status: 'idle',
+    })
   })
 
   it('initializes navigation, forms and queries in the base state', () => {
@@ -474,14 +492,22 @@ describe('Runtime shared state store', () => {
       </RuntimeStateProvider>,
     )
 
-    expect(screen.getByTestId('runtime-state')).toHaveTextContent(
-      '"navigation":{"currentPageId":"home","history":["home"],"lastError":null}',
-    )
-    expect(screen.getByTestId('runtime-state')).toHaveTextContent('"forms":{}')
-    expect(screen.getByTestId('runtime-state')).toHaveTextContent('"queries":{}')
-    expect(screen.getByTestId('runtime-state')).toHaveTextContent(
-      '"pageEntry":{"entryId":0,"pageId":"home","preloadNames":[],"status":"idle"}',
-    )
+    expect(readRuntimeStateSnapshot('runtime-state')).toMatchObject({
+      navigation: {
+        currentPageId: 'home',
+        history: [{ entryId: 0, pageId: 'home', params: {} }],
+        lastError: null,
+      },
+      forms: {},
+      queries: {},
+      pageEntry: {
+        entryId: 0,
+        pageId: 'home',
+        params: {},
+        preloadNames: [],
+        status: 'idle',
+      },
+    })
   })
 
   it('seeds navigation from initialPage with the minimal history shape', () => {
@@ -497,11 +523,20 @@ describe('Runtime shared state store', () => {
     )
 
     expect(screen.getByTestId('navigation-state')).toHaveTextContent('"currentPageId":"details"')
-    expect(screen.getByTestId('navigation-state')).toHaveTextContent('"history":["details"]')
-    expect(screen.getByTestId('navigation-state')).toHaveTextContent('"lastError":null')
-    expect(screen.getByTestId('navigation-state')).toHaveTextContent(
-      '"pageEntry":{"entryId":0,"pageId":"details","preloadNames":[],"status":"idle"}',
-    )
+    expect(readRuntimeStateSnapshot('navigation-state')).toMatchObject({
+      navigation: {
+        currentPageId: 'details',
+        history: [{ entryId: 0, pageId: 'details', params: {} }],
+        lastError: null,
+      },
+      pageEntry: {
+        entryId: 0,
+        pageId: 'details',
+        params: {},
+        preloadNames: [],
+        status: 'idle',
+      },
+    })
   })
 
   it('resets the full runtime state back to the initial instance snapshot', () => {
@@ -511,13 +546,22 @@ describe('Runtime shared state store', () => {
       </RuntimeStateProvider>,
     )
 
-    expect(screen.getByTestId('state-after-reset')).toHaveTextContent('"currentPageId":"home"')
-    expect(screen.getByTestId('state-after-reset')).toHaveTextContent('"history":["home"]')
-    expect(screen.getByTestId('state-after-reset')).toHaveTextContent('"forms":{}')
-    expect(screen.getByTestId('state-after-reset')).toHaveTextContent('"queries":{}')
-    expect(screen.getByTestId('state-after-reset')).toHaveTextContent(
-      '"pageEntry":{"entryId":0,"pageId":"home","preloadNames":[],"status":"idle"}',
-    )
+    expect(readRuntimeStateSnapshot('state-after-reset')).toMatchObject({
+      navigation: {
+        currentPageId: 'home',
+        history: [{ entryId: 0, pageId: 'home', params: {} }],
+        lastError: null,
+      },
+      forms: {},
+      queries: {},
+      pageEntry: {
+        entryId: 0,
+        pageId: 'home',
+        params: {},
+        preloadNames: [],
+        status: 'idle',
+      },
+    })
   })
 
   it('renders the visible page from navigation.currentPageId and changes it without touching the URL', () => {
@@ -568,9 +612,11 @@ describe('Runtime shared state store', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Go back' }))
 
     expect(screen.getByTestId('runtime-page')).toHaveAttribute('data-runtime-page-id', 'home')
-    expect(screen.getByTestId('runtime-state')).toHaveTextContent(
-      '"navigation":{"currentPageId":"home","history":["home"],"lastError":null}',
-    )
+    expect(readRuntimeStateSnapshot('runtime-state').navigation).toEqual({
+      currentPageId: 'home',
+      history: [{ entryId: 0, pageId: 'home', params: {} }],
+      lastError: null,
+    })
   })
 
   it('supports goBack after revisiting a page and returns to the previous entry in history order', () => {
@@ -587,9 +633,14 @@ describe('Runtime shared state store', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Go back' }))
 
     expect(screen.getByTestId('runtime-page')).toHaveAttribute('data-runtime-page-id', 'details')
-    expect(screen.getByTestId('runtime-state')).toHaveTextContent(
-      '"navigation":{"currentPageId":"details","history":["home","details"],"lastError":null}',
-    )
+    expect(readRuntimeStateSnapshot('runtime-state').navigation).toEqual({
+      currentPageId: 'details',
+      history: [
+        { entryId: 0, pageId: 'home', params: {} },
+        { entryId: 1, pageId: 'details', params: {} },
+      ],
+      lastError: null,
+    })
   })
 
   it('keeps the current page and does not create a recoverable error when goBack has no previous entry', () => {
@@ -604,9 +655,70 @@ describe('Runtime shared state store', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Go back' }))
 
     expect(screen.getByTestId('runtime-page')).toHaveAttribute('data-runtime-page-id', 'home')
-    expect(screen.getByTestId('runtime-state')).toHaveTextContent(
-      '"navigation":{"currentPageId":"home","history":["home"],"lastError":null}',
+    expect(readRuntimeStateSnapshot('runtime-state').navigation).toEqual({
+      currentPageId: 'home',
+      history: [{ entryId: 0, pageId: 'home', params: {} }],
+      lastError: null,
+    })
+  })
+
+  it('creates distinct same-page history entries when params differ and restores the previous params on goBack', () => {
+    render(
+      <RuntimeStateProvider config={runtimeConfig}>
+        <NavigationControls />
+        <RuntimeStateSnapshot testId="runtime-state" />
+        <RuntimePage />
+      </RuntimeStateProvider>,
     )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Navigate to details with params' }))
+
+    expect(readRuntimeStateSnapshot('runtime-state').navigation).toEqual({
+      currentPageId: 'details',
+      history: [
+        { entryId: 0, pageId: 'home', params: {} },
+        { entryId: 1, pageId: 'details', params: { userId: '42' } },
+      ],
+      lastError: null,
+    })
+    expect(readRuntimeStateSnapshot('runtime-state').pageEntry).toMatchObject({
+      entryId: 1,
+      pageId: 'details',
+      params: { userId: '42' },
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Navigate to details with other params' }))
+
+    expect(readRuntimeStateSnapshot('runtime-state').navigation).toEqual({
+      currentPageId: 'details',
+      history: [
+        { entryId: 0, pageId: 'home', params: {} },
+        { entryId: 1, pageId: 'details', params: { userId: '42' } },
+        { entryId: 2, pageId: 'details', params: { userId: '7' } },
+      ],
+      lastError: null,
+    })
+    expect(readRuntimeStateSnapshot('runtime-state').pageEntry).toMatchObject({
+      entryId: 2,
+      pageId: 'details',
+      params: { userId: '7' },
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Go back' }))
+
+    expect(readRuntimeStateSnapshot('runtime-state').navigation).toEqual({
+      currentPageId: 'details',
+      history: [
+        { entryId: 0, pageId: 'home', params: {} },
+        { entryId: 1, pageId: 'details', params: { userId: '42' } },
+      ],
+      lastError: null,
+    })
+    expect(readRuntimeStateSnapshot('runtime-state').pageEntry).toMatchObject({
+      entryId: 1,
+      pageId: 'details',
+      params: { userId: '42' },
+    })
   })
 
   it('stores forms by formId and fieldId with default values in the shared state', () => {
@@ -646,7 +758,7 @@ describe('Runtime shared state store', () => {
     const state: RuntimeState = {
       navigation: {
         currentPageId: 'home',
-        history: ['home'],
+        history: [{ entryId: 0, pageId: 'home', params: {} }],
         lastError: null,
       },
       forms: {},
@@ -671,6 +783,7 @@ describe('Runtime shared state store', () => {
       pageEntry: {
         entryId: 0,
         pageId: 'home',
+        params: {},
         preloadNames: [],
         status: 'idle',
       },
@@ -827,7 +940,7 @@ describe('Runtime shared state store', () => {
     const snapshot = {
       navigation: {
         currentPageId: 'home',
-        history: ['home'],
+        history: [{ entryId: 0, pageId: 'home', params: {} }],
         lastError: null,
       },
       forms: {
@@ -851,6 +964,7 @@ describe('Runtime shared state store', () => {
       pageEntry: {
         entryId: 2,
         pageId: 'home',
+        params: { userId: '42' },
         preloadNames: ['searchUsers'],
         status: 'success' as const,
       },
@@ -865,6 +979,7 @@ describe('Runtime shared state store', () => {
     expect(selectQueryVisibleState(snapshot, 'searchUsers')).toBe('success')
     expect(selectQueryVisibleState(snapshot, 'missingQuery')).toBe('idle')
     expect(selectPageEntryState(snapshot)).toBe(snapshot.pageEntry)
+    expect(snapshot.pageEntry.params).toEqual({ userId: '42' })
   })
 
   it.each([

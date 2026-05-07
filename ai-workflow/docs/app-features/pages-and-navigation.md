@@ -18,18 +18,26 @@ Definir cómo se organiza el catálogo de páginas del runtime y cuál es el alc
 
 ## Estado actual de navegación
 - La página activa vive en `navigation.currentPageId` dentro del store compartido del runtime.
-- Existe una acción interna `navigateToPage(pageId)` para cambiar de página sin tocar la URL del navegador.
+- El historial interno ya no guarda solo `pageId`: cada entrada persiste `entryId`, `pageId` y `params` efectivos.
+- Existe una acción interna `navigateToPage(pageId, params?)` para cambiar de página sin tocar la URL del navegador.
 - `button.props.action` ya puede disparar `navigateTo` y `goBack` reutilizando ese mismo estado compartido.
-- El historial interno ya sostiene `goBack` como acción declarativa estable cuando existe una página previa válida.
+- `navigateTo` puede declarar `params` como objeto plano y escalar; si un valor llega como referencia soportada, el runtime lo resuelve al hacer click y persiste el valor efectivo en la nueva entrada.
+- Navegar a la misma página con los mismos params efectivos sigue siendo un no-op observable: no duplica historial ni relanza `preloads`.
+- Navegar a la misma página con params efectivos distintos crea una entrada nueva del historial.
+- El historial interno ya sostiene `goBack` como acción declarativa estable cuando existe una página previa válida y restaura también los params asociados a la entrada anterior.
 - Si se intenta navegar a una página inexistente, el runtime conserva la página anterior y guarda un error recuperable `page-not-found`.
-- Cada entrada a una página con `preloads` dispara una nueva tanda automática de operaciones, también al volver a una página ya visitada.
-- La misma entrada de página no relanza sus `preloads` por rerenders del provider ni por cambios internos de estado mientras `navigation.currentPageId` no cambie.
+- Cada entrada a una página con `preloads` dispara una nueva tanda automática de operaciones, también al volver a una página ya visitada o al reentrar en la misma página con params distintos.
+- La unidad observable de reentrada es `pageEntry`, que refleja `entryId`, `pageId`, `params`, `preloadNames` y el estado agregado `idle | loading | success | error`.
+- La misma entrada de página no relanza sus `preloads` por rerenders del provider ni por cambios internos de estado mientras `pageEntry.entryId` no cambie.
 - La URL del navegador no cambia.
 - Declarar varias páginas ya permite navegación interna controlada desde el runtime tanto por acciones imperativas internas como por `button.props.action`.
 
-## Route params
+## Parámetros de navegación
 - `routeParams` siguen fuera de alcance en la implementación actual.
-- El runtime todavía no expone parámetros de navegación a las páginas.
+- El runtime sí expone parámetros de navegación interna mediante la familia `params.{paramName}`.
+- `params.*` representa datos de la entrada activa del historial interno, no segmentos de URL ni query string del navegador.
+- La familia `params.*` puede reutilizarse en texto visible, requests declarativos, `defaultValue` de campos y nuevas navegaciones originadas desde una página ya parametrizada.
+- `params.*` no forma parte todavía de `visibility` ni de las fuentes dinámicas de colección para `list` y `select`.
 
 ## Relación con futuras iteraciones
 - El modelo actual ya separa `pages` e `initialPage` y mueve la resolución visible al store compartido, de modo que futuras acciones declarativas podrán reutilizar ese mismo estado sin rehacer el contrato base.

@@ -6,7 +6,7 @@ import type { RuntimeState } from '../runtime/runtime-state/runtime-state-types'
 const runtimeState: RuntimeState = {
   navigation: {
     currentPageId: 'home',
-    history: ['home'],
+    history: [{ entryId: 0, pageId: 'home', params: {} }],
     lastError: null,
   },
   forms: {
@@ -33,6 +33,7 @@ const runtimeState: RuntimeState = {
   pageEntry: {
     entryId: 0,
     pageId: 'home',
+    params: {},
     preloadNames: [],
     status: 'idle',
   },
@@ -96,6 +97,13 @@ describe('Runtime reference resolution', () => {
         namespace: 'queries',
         path: ['searchUsers', 'data'],
       })
+
+      expect(parseRuntimeReference('params.userId')).toMatchObject({
+        kind: 'reference',
+        status: 'supported',
+        namespace: 'params',
+        path: ['userId'],
+      })
     })
 
     it('classifies reserved namespaces as unsupported', () => {
@@ -113,11 +121,10 @@ describe('Runtime reference resolution', () => {
         path: ['userId'],
       })
 
-      expect(parseRuntimeReference('params.id')).toMatchObject({
+      expect(parseRuntimeReference('params.user.id')).toMatchObject({
         kind: 'reference',
-        status: 'unsupported',
+        status: 'invalid',
         namespace: 'params',
-        path: ['id'],
       })
     })
 
@@ -170,6 +177,18 @@ describe('Runtime reference resolution', () => {
         kind: 'reference',
         status: 'invalid',
         namespace: 'queries',
+      })
+
+      expect(parseRuntimeReference('params')).toMatchObject({
+        kind: 'reference',
+        status: 'invalid',
+        namespace: 'params',
+      })
+
+      expect(parseRuntimeReference('params.user.id')).toMatchObject({
+        kind: 'reference',
+        status: 'invalid',
+        namespace: 'params',
       })
     })
   })
@@ -275,6 +294,38 @@ describe('Runtime reference resolution', () => {
         status: 'resolved',
         value: 'Grace',
         reference: parseRuntimeReference('forms.userSearch.name'),
+      })
+    })
+
+    it('reads current page params from the active navigation entry', () => {
+      const stateWithParams: RuntimeState = {
+        ...runtimeState,
+        navigation: {
+          currentPageId: 'details',
+          history: [
+            { entryId: 0, pageId: 'home', params: {} },
+            { entryId: 1, pageId: 'details', params: { userId: '42' } },
+          ],
+          lastError: null,
+        },
+        pageEntry: {
+          entryId: 1,
+          pageId: 'details',
+          params: { userId: '42' },
+          preloadNames: [],
+          status: 'idle',
+        },
+      }
+
+      expect(resolveRuntimeReference('params.userId', stateWithParams)).toEqual({
+        status: 'resolved',
+        value: '42',
+        reference: parseRuntimeReference('params.userId'),
+      })
+
+      expect(resolveRuntimeReference('params.missing', stateWithParams)).toEqual({
+        status: 'missing',
+        reference: parseRuntimeReference('params.missing'),
       })
     })
 

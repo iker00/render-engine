@@ -72,6 +72,7 @@ Nodos soportados hoy:
   - `props.action`: opcional; sin `action` solo es válido dentro del subárbol de un `form` y actúa como submit implícito
   - `props.action.type`: `navigateTo | goBack | executeOperation | resetForm`
   - `props.action.pageId`: string obligatorio y no vacío cuando `type` es `navigateTo`
+  - `props.action.params`: objeto plano opcional con claves no vacías y valores `string | number | boolean | null` cuando `type` es `navigateTo`
   - `props.action.operationName`: string obligatorio y no vacío cuando `type` es `executeOperation`
   - `props.action.query`: objeto plano opcional con valores `string | number | boolean` cuando `type` es `executeOperation`
   - `props.action.body`: payload JSON opcional cuando `type` es `executeOperation`
@@ -190,6 +191,7 @@ Esa misma convención se reutiliza también en:
 
 Referencias soportadas hoy:
 - `forms.{formId}.{fieldId}`
+- `params.{paramName}`
 - `queries.{queryName}`
 - `queries.{queryName}.data`
 - `queries.{queryName}.status`
@@ -201,12 +203,19 @@ Consumidores adicionales ya soportados con esa misma frontera:
 - `select.props.items.source`
 - `visibility`
 
+Frontera específica de `params.*`:
+- `params.{paramName}` solo admite un segmento dinámico después del namespace.
+- `params.userId` es válido; `params`, `params.user.id` y segmentos vacíos siguen siendo inválidos.
+- `params.*` puede usarse en `heading.props.text`, `paragraph.props.text`, `api.query`, `api.body`, `api.headers`, `button.props.action.query`, `button.props.action.body`, `button.props.action.headers`, `form.submitAction.query`, `form.submitAction.body`, `form.submitAction.headers` y `defaultValue` de `input`, `textarea` y `select`.
+- `params.*` también puede usarse como origen dentro de `navigateTo.params` para construir la siguiente navegación a partir de la entrada activa.
+- `params.*` sigue fuera de alcance en `visibility.reference`, `list.props.items.source` y `select.props.items.source`, aunque esas superficies reutilicen la misma familia general de referencias runtime.
+
 Reglas funcionales vigentes:
 - la navegación anidada adicional solo se admite bajo `queries.{queryName}.data`
 - los segmentos anidados pueden recorrer objetos y arrays
 - un segmento numérico se interpreta como índice solo cuando el valor actual es un array; sobre objetos se trata como clave literal
 - `queries.{queryName}.status.*` y `queries.{queryName}.error.*` siguen fuera del contrato y se consideran rutas inválidas
-- `routeParams.*`, `params.*` y `navigation.*` siguen reservadas pero no soportadas
+- `routeParams.*` y `navigation.*` siguen reservadas pero no soportadas
 - una referencia bien formada cuyo dato no existe todavía se degrada según la política visible del consumidor; en superficies textuales actuales eso significa string vacío
 
 ## Validación
@@ -226,6 +235,8 @@ Reglas funcionales vigentes:
 - Si `visibility.operator` es `greaterThan` o `lessThan` y `value` no es numérico, el config completo se rechaza antes del render.
 - Si `initialPage` no existe dentro de `pages`, el runtime sigue fallando antes del render con `initial-page-not-found`.
 - Si un `button.props.action.pageId` apunta a una página inexistente, el config completo se rechaza antes del render aunque el shape estructural sea válido.
+- Si `button.props.action.params` existe en `navigateTo`, debe ser un objeto plano con claves no vacías y valores escalares `string | number | boolean | null`.
+- Si `button.props.action.params` incluye arrays, objetos anidados o rutas `params.*` mal formadas, el config completo se rechaza antes del render sobre la ruta exacta.
 - Si un `button.props.action.operationName` apunta a una operación inexistente en `api`, el config completo se rechaza antes del render aunque el shape estructural sea válido.
 - `resetForm` valida shape y `formId` no vacío, pero no intenta cerrar en bootstrap un catálogo semántico adicional de formularios.
 - Si `form.id` se repite en cualquier página, el config completo se rechaza antes del render.
@@ -241,6 +252,7 @@ Reglas funcionales vigentes:
 - Si `form.resetOnSuccess: true` aparece sin `submitAction`, el config completo se rechaza antes del render.
 - Si `select.props.items` mezcla `value` string y number dentro del mismo campo, el config completo se rechaza antes del render.
 - Si `list.props.items` o `select.props.items` declaran un `source`, este debe apuntar exactamente a `queries.{queryName}.data` o a una ruta anidada bajo `queries.{queryName}.data.*`.
+- Si `visibility.reference`, `list.props.items.source` o `select.props.items.source` intentan usar `params.*`, el config completo se rechaza antes del render porque esa familia sigue fuera de alcance en esas superficies.
 - Si `list.props.items` o `select.props.items` mezclan familias incompatibles de origen histórico, manual declarativo y dinámico, el config completo se rechaza antes del render.
 - Si un origen dinámico de escalares omite `itemType: 'scalar'`, el config completo se rechaza antes del render.
 - Si un origen dinámico u objeto manual omite los mapeos mínimos del consumidor (`itemText` para `list`; `label` y `value` para `select`), el config completo se rechaza antes del render.
@@ -258,6 +270,7 @@ La frontera estable de esta validación queda organizada así:
 ## Límites de v1
 - `api` ya puede dispararse declarativamente desde `button.props.action` usando `executeOperation`, además de por la fachada imperativa del provider y por `preloads` de página al entrar en ella.
 - `executeOperation` y `submitAction` ya pueden añadir `query`, `body` y `headers` por ejecución, pero siguen dependiendo de `operationName` como vínculo obligatorio con una operación existente de `api`.
+- `navigateTo` ya puede transportar `params` efectivos entre páginas, pero esos params siguen siendo escalares, internos al historial del runtime y sin sincronización con la URL del navegador.
 - `action` sigue siendo una sola operación por trigger; no hay arrays, secuencias ni callbacks declarativos.
 - El trigger sigue siendo implícito por tipo de nodo; el contrato no abre todavía un bloque general de `events`.
 - Los formularios declarativos ya soportan solo el catálogo mínimo `form`, `input`, `textarea` y `select`, con validación limitada a `required`.
@@ -268,4 +281,4 @@ La frontera estable de esta validación queda organizada así:
 - No hay interpolación compleja dentro de strings.
 - No hay sistema de plugins para componentes externos.
 - No hay soporte para nodos distintos de `container`, `heading`, `paragraph`, `list`, `button`, `form`, `input`, `textarea` y `select`.
-- No hay consumidores declarativos de referencias fuera de `heading.props.text`, `paragraph.props.text`, `queryStateFeedback`, `visibility`, `api.query`, `api.body`, `defaultValue` de campos de formulario y `source` de colecciones para `list` y `select`.
+- No hay consumidores declarativos de referencias fuera de `heading.props.text`, `paragraph.props.text`, `queryStateFeedback`, `visibility`, `api.query`, `api.body`, `defaultValue` de campos de formulario y `source` de colecciones para `list` y `select`, salvo la ampliación acotada de `params.*` en texto, requests, `defaultValue` y `navigateTo.params`.

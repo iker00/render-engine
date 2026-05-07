@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useLayoutEffect, useState } from 'react'
 import type { Dispatch, ReactNode } from 'react'
 import { useContext, useMemo, useReducer, useRef } from 'react'
-import type { RuntimeApiRequestParams, RuntimeConfig } from '../../config/runtime-config'
+import type { NavigateToRuntimeUiAction, RuntimeApiRequestParams, RuntimeConfig, RuntimeConfigValue } from '../../config/runtime-config'
 import { executeRuntimeApiOperation } from '../../queries/runtime-api-executor'
+import { resolveRuntimeValue } from '../runtime-references/runtime-reference-resolver'
 import { RuntimeStateContext } from './runtime-state-context'
 import { createRuntimeState, runtimeStateReducer } from './runtime-state-reducer'
-import { selectCurrentPage } from './runtime-state-selectors'
-import type { RuntimeFormFieldDefinition, RuntimeQueryError, RuntimeState, RuntimeStateAction } from './runtime-state-types'
+import { selectCurrentNavigationEntry, selectCurrentPage } from './runtime-state-selectors'
+import type { RuntimeFormFieldDefinition, RuntimePageParams, RuntimeQueryError, RuntimeState, RuntimeStateAction } from './runtime-state-types'
 
 interface RuntimeStateProviderProps {
   config: RuntimeConfig
@@ -69,9 +70,9 @@ async function executeQueryOperationWithSnapshot({
 export function RuntimeStateProvider({ config, children }: RuntimeStateProviderProps) {
   const [initialState] = useState(() => createRuntimeState(config))
   const [state, dispatch] = useReducer(runtimeStateReducer, initialState)
-  const pageEntryIdRef = useRef(initialState.pageEntry.entryId)
   const isFirstEntryRef = useRef(true)
   const latestStateRef = useRef(state)
+  const activeNavigationEntry = selectCurrentNavigationEntry(state)
 
   useLayoutEffect(() => {
     latestStateRef.current = state
@@ -96,7 +97,46 @@ export function RuntimeStateProvider({ config, children }: RuntimeStateProviderP
   )
 
   useEffect(() => {
-    const activePage = config.pages.find((page) => page.id === state.navigation.currentPageId)
+    if (!activeNavigationEntry) {
+      return
+    }
+
+    const activePage = config.pages.find((page) => page.id === activeNavigationEntry.pageId)
+
+    if (!activePage) {
+      return
+    }
+
+    const preloadNames = activePage.preloads ?? []
+
+    if (
+      state.pageEntry.entryId === activeNavigationEntry.entryId &&
+      state.pageEntry.pageId === activeNavigationEntry.pageId &&
+      arePageParamsEqual(state.pageEntry.params, activeNavigationEntry.params) &&
+      state.pageEntry.preloadNames.length === preloadNames.length &&
+      state.pageEntry.preloadNames.every((name, index) => name === preloadNames[index])
+    ) {
+      return
+    }
+
+    dispatchAndSyncState({
+      type: 'page-entry/set-idle',
+      payload: {
+        entryId: activeNavigationEntry.entryId,
+        pageId: activeNavigationEntry.pageId,
+        params: activeNavigationEntry.params,
+        preloadNames,
+      },
+    })
+  }, [activeNavigationEntry, config.pages, dispatchAndSyncState, state.pageEntry])
+
+  useEffect(() => {
+    if (!activeNavigationEntry) {
+      isFirstEntryRef.current = false
+      return
+    }
+
+    const activePage = config.pages.find((page) => page.id === activeNavigationEntry.pageId)
 
     if (!activePage) {
       isFirstEntryRef.current = false
@@ -111,9 +151,8 @@ export function RuntimeStateProvider({ config, children }: RuntimeStateProviderP
     }
 
     isFirstEntryRef.current = false
-    pageEntryIdRef.current += 1
-
-    const entryId = pageEntryIdRef.current
+    const entryId = activeNavigationEntry.entryId
+    const params = activeNavigationEntry.params
 
     if (preloadNames.length === 0) {
       dispatchAndSyncState({
@@ -121,6 +160,7 @@ export function RuntimeStateProvider({ config, children }: RuntimeStateProviderP
         payload: {
           entryId,
           pageId: activePage.id,
+          params,
           preloadNames,
         },
       })
@@ -133,6 +173,7 @@ export function RuntimeStateProvider({ config, children }: RuntimeStateProviderP
       payload: {
         entryId,
         pageId: activePage.id,
+        params,
         preloadNames,
       },
     })
@@ -157,7 +198,7 @@ export function RuntimeStateProvider({ config, children }: RuntimeStateProviderP
         },
       })
     })
-  }, [config, dispatchAndSyncState, state.navigation.currentPageId])
+  }, [activeNavigationEntry, config, dispatchAndSyncState])
 
   return <RuntimeStateContext.Provider value={contextValue}>{children}</RuntimeStateContext.Provider>
 }
@@ -183,7 +224,7 @@ export function useRuntimeStateActions() {
   )
 
   const navigateToPage = useCallback(
-    (pageId: string) => {
+    (pageId: string, params: NavigateToRuntimeUiAction['params'] = {}) => {
       const page = config.pages.find((entry) => entry.id === pageId)
 
       if (!page) {
@@ -201,10 +242,13 @@ export function useRuntimeStateActions() {
         return
       }
 
+      const resolvedParams = resolveNavigationParams(params, latestStateRef.current)
+
       dispatchAndSyncState({
         type: 'navigation/navigate',
         payload: {
           pageId: page.id,
+          params: resolvedParams,
         },
       })
     },
@@ -410,4 +454,46 @@ function useRuntimeStateContext() {
   }
 
   return contextValue
+}
+
+function arePageParamsEqual(left: RuntimePageParams, right: RuntimePageParams) {
+  const leftKeys = Object.keys(left)
+  const rightKeys = Object.keys(right)
+
+  if (leftKeys.length !== rightKeys.length) {
+    return false
+  }
+
+  for (const key of leftKeys) {
+    if (!Object.is(left[key], right[key])) {
+      return false
+    }
+  }
+
+  return true
+}
+
+function resolveNavigationParams(
+  params: NavigateToRuntimeUiAction['params'],
+  state: RuntimeState,
+): RuntimePageParams {
+  const resolvedParams: RuntimePageParams = {}
+
+  for (const [key, value] of Object.entries(params ?? {})) {
+    const resolvedValue = typeof value === 'string' ? resolveRuntimeValue(value, state) : { status: 'resolved', value } as const
+
+    if (resolvedValue.status !== 'resolved') {
+      continue
+    }
+
+    if (isRuntimePageParamValue(resolvedValue.value)) {
+      resolvedParams[key] = resolvedValue.value
+    }
+  }
+
+  return resolvedParams
+}
+
+function isRuntimePageParamValue(value: unknown): value is RuntimeConfigValue {
+  return value === null || typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean'
 }

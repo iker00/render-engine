@@ -34,6 +34,7 @@ Reglas estables del catálogo:
 ## Valores por defecto
 - Los campos pueden declarar `defaultValue`.
 - Ese valor puede ser literal o dinámico.
+- La familia `params.*` ya forma parte de las referencias dinámicas soportadas para `defaultValue`.
 - Si `defaultValue` es una referencia dinámica, se resuelve una sola vez en el momento de la primera inicialización efectiva del campo.
 - Si el dato dinámico aparece más tarde, el runtime no rehidrata automáticamente el campo.
 - En `select`, si el valor efectivo no coincide con ninguna opción disponible en la colección resuelta, el campo queda vacío.
@@ -76,7 +77,7 @@ Semántica estable vigente del reset:
 
 ## Casos funcionales soportados hoy
 - formulario de búsqueda con resultados
-- formulario de edición con datos iniciales
+- formulario de edición con datos iniciales cargados por `preloads` o recibidos por `params.*`
 - formulario simple de alta o edición con submit declarativo vía `api`
 - campos condicionales ocultables por `queryStateFeedback` sin perder su estado local
 - campos condicionales ocultables por `visibility` según `forms.*` o `queries.*`, sin perder su estado local ni bloquear el submit mientras siguen ocultos
