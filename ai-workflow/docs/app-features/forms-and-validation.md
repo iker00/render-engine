@@ -16,8 +16,9 @@ Soportar formularios declarativos con estado interno, campos reutilizables y val
 - Los campos escriben en un estado interno por `forms.{formId}.{fieldId}`.
 - Cada campo mantiene como base `value`, `error`, `touched`, `dirty` y `defaultValue`.
 - La inicialización de campos es lazy: solo se crea estado para un campo cuando aparece visible por primera vez y todavía no existe en la instancia activa.
-- Si un campo ya tiene estado porque el usuario escribió o volvió a la página, el runtime conserva ese valor y no rehidrata el `defaultValue`.
-- El cambio de página dentro de la misma instancia conserva por defecto el estado de formularios.
+- Si un campo ya tiene estado mientras su `form` sigue montado, el runtime conserva ese valor y no rehidrata el `defaultValue`.
+- Al desmontarse realmente un `form`, el runtime elimina por defecto `forms.{formId}` completo; al volver a montarse, sus campos vuelven a inicializarse como un primer montaje efectivo.
+- `form.persistOnUnmount: true` recupera de forma explícita la persistencia histórica dentro de la misma instancia del runtime cuando un flujo necesita conservar valores entre desmontajes.
 
 ## Catálogo implementado en v1
 - `input`
@@ -44,7 +45,8 @@ Reglas estables del catálogo:
 - Ese valor puede ser literal o dinámico.
 - La familia `params.*` ya forma parte de las referencias dinámicas soportadas para `defaultValue`.
 - Si `defaultValue` es una referencia dinámica, se resuelve una sola vez en el momento de la primera inicialización efectiva del campo.
-- Si el dato dinámico aparece más tarde, el runtime no rehidrata automáticamente el campo.
+- Si el dato dinámico aparece más tarde mientras el formulario sigue montado, el runtime no rehidrata automáticamente el campo.
+- Si el formulario se desmonta y vuelve a montarse sin `persistOnUnmount`, el runtime recalcula el `defaultValue` contra el contexto vigente de ese nuevo montaje.
 - En `select` simple y en `radioGroup`, si el valor efectivo no coincide con ninguna opción disponible en la colección resuelta, el campo queda vacío.
 - En `select.multiple` y en `checkboxGroup`, solo se conservan seleccionados los valores que sigan existiendo en la colección efectiva disponible.
 - El reset por formulario restaura el estado inicial efectivo de cada campo usando ese `defaultValue` cuando exista.
@@ -53,13 +55,30 @@ Reglas estables del catálogo:
 - `required`
 - mensaje de error simple por campo (`Required`)
 
-Semántica estable vigente:
+Qué valida hoy realmente:
+- El runtime solo aplica validación declarativa local a nivel de formulario.
+- La única regla funcional disponible en v1 es `required`.
+- No existe todavía validación remota, validación cruzada entre campos ni catálogo declarativo de mensajes personalizados.
+
+Cuándo valida:
+- La validación se ejecuta al hacer submit del `form`.
+- Antes de validar, el runtime inicializa también cualquier campo visible del formulario que todavía no exista en store para que entre en la misma pasada de validación.
+- Mientras el usuario edita, el runtime no reejecuta una pasada completa de validación del formulario: solo limpia el error existente del campo cuando el nuevo valor ya deja de estar vacío según la semántica de ese control.
+
+Dónde vive el resultado:
+- Los errores viven solo en `forms.{formId}.{fieldId}.error`.
+- El estado de error forma parte del mismo store local del formulario junto con `value`, `touched`, `dirty` y `defaultValue`.
+- El runtime no crea un dominio paralelo de errores de formulario a nivel de página ni de submit.
+
+Semántica estable vigente por tipo de campo:
 - `input` y `textarea` `required` consideran inválidos `''` y strings compuestos solo por espacios.
 - `select` simple y `radioGroup` `required` consideran inválido `''` aunque exista una opción placeholder visible en el caso de `select`.
 - `select.multiple` y `checkboxGroup` `required` consideran inválido `[]`.
+
+Semántica estable vigente de errores y visibilidad:
+- Si un campo visible requerido falla, el runtime escribe `Required` en `forms.{formId}.{fieldId}.error` y bloquea el submit.
 - Si un `select` simple o un `radioGroup` pierde la opción correspondiente a su valor almacenado tras cambiar la colección efectiva, el runtime limpia ese valor a `''` y reutiliza ese mismo estado vacío para render, `required` y submit.
 - Si un `select.multiple` o un `checkboxGroup` pierde parte de sus opciones seleccionadas al cambiar la colección efectiva, el runtime elimina solo los valores ya inválidos y reutiliza la colección restante en render, `required` y submit.
-- Los errores viven solo en `forms.{formId}.{fieldId}.error`.
 - Cuando un campo con error vuelve a un valor válido, el error se limpia al cambiar sin exigir un nuevo submit.
 - Un campo oculto por `queryStateFeedback` conserva su valor y su error, pero no bloquea el submit mientras siga oculto.
 - Un campo oculto por `visibility` también conserva `value`, `error`, `dirty`, `touched` y `defaultValue`, pero no bloquea el submit mientras siga oculto.
@@ -67,6 +86,11 @@ Semántica estable vigente:
 - Un campo oculto por `queryStateFeedback.states.idle` no bloquea el submit antes de la primera ejecución de la query observada y vuelve a validarse cuando la query abandona `idle`.
 - Si un campo vuelve a hacerse visible tras una regla `visibility`, el runtime reutiliza su estado local existente y vuelve a incluirlo en la validación normal.
 - Un campo controlado por `visibility` puede inicializarse lazy la primera vez que llegue a mostrarse, aunque el resto del formulario ya exista en store.
+
+Qué no hace todavía esta validación:
+- No valida al cambiar de página ni por desmontaje del formulario.
+- No rehidrata campos ni recalcula errores solo porque cambien `params.*`, `queries.*` o el catálogo dinámico de opciones mientras el formulario sigue montado.
+- No expone un estado agregado de `isValid`, `isSubmitting` o `submitErrors` separado de `forms.*` y `queries.*`.
 
 ## Submit y reseteo
 - `form` renderiza un `<form>` real y maneja submit nativo.
@@ -81,6 +105,7 @@ Semántica estable vigente:
 
 Semántica estable vigente del reset:
 - `resetForm` restaura el estado inicial efectivo de cada campo del formulario objetivo.
+- `resetForm` no borra `forms.{formId}` ni sustituye la limpieza por desmontaje; solo restaura el estado inicial efectivo del formulario actualmente presente en store.
 - Si `form.resetOnSuccess` es `true`, un submit exitoso dispara ese mismo reset estable.
 - Si el submit falla, el runtime conserva los valores actuales del usuario y no resetea automáticamente.
 - El shape se valida en bootstrap, pero `formId` no se comprueba contra un catálogo semántico global inexistente.
@@ -92,6 +117,7 @@ Semántica estable vigente del reset:
 - formulario simple de alta o edición con submit declarativo vía `api`
 - campos condicionales ocultables por `queryStateFeedback` sin perder su estado local
 - campos condicionales ocultables por `visibility` según `forms.*` o `queries.*`, sin perder su estado local ni bloquear el submit mientras siguen ocultos
+- reentrada a una página con `defaultValue` dependiente de `params.*` o `queries.*` sin reutilizar por defecto valores escritos en una visita previa si hubo desmontaje real del formulario
 - `select` simple o múltiple dependiente de catálogos remotos ya cargados en `queries.*`, sin lógica React específica por pantalla
 - grupos `radioGroup` y `checkboxGroup` alimentados por colecciones manuales o por `queries.*`, compartiendo la misma semántica de opciones que `select`
 
@@ -100,3 +126,4 @@ Semántica estable vigente del reset:
 - No existen todavía búsqueda remota, paginación ni carga incremental de opciones para los campos de selección.
 - No existen todavía validaciones declarativas avanzadas, mensajes personalizados complejos ni validaciones cruzadas.
 - No existe todavía una política nueva de limpieza global de formularios al cambiar de página.
+- No existe rehidratación automática de campos ya montados cuando cambian `params.*`, `queries.*` u otros datos externos sin desmontaje real.

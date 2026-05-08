@@ -1250,6 +1250,10 @@ function validateFormNode(
       return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.resetOnSuccess".`)
     }
 
+    if (issuePath[0] === 'persistOnUnmount') {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.persistOnUnmount".`)
+    }
+
     if (issuePath[0] === 'children') {
       return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.children".`)
     }
@@ -1307,6 +1311,7 @@ function validateFormNode(
       id: parseResult.data.id,
       queryStateFeedback: feedbackResult.queryStateFeedback,
       visibility: visibilityResult.visibility,
+      persistOnUnmount: parseResult.data.persistOnUnmount,
       submitAction,
       resetOnSuccess: parseResult.data.resetOnSuccess,
       children,

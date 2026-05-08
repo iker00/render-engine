@@ -18,6 +18,7 @@ La política completa está en [`../docs/workflow.md`](../docs/workflow.md).
 - Ninguna ahora mismo.
 
 ## Completadas
+- `0022-form-runtime-state-reset-on-unmount`: `form` ya elimina por defecto su estado local al desmontarse, recalcula `defaultValue` al remontar tras una reentrada real y permite conservar la persistencia histórica solo con `persistOnUnmount`.
 - `0021-reusable-form-field-expansion`: ampliar el catálogo reutilizable de formularios con más tipos útiles de `input`, añadir `radioGroup` y `checkboxGroup`, y extender `select` con multiselección compartiendo la misma semántica declarativa de extracción de opciones desde colecciones manuales o `queries.*`.
 - `0020-navigate-to-page-params`: `navigateTo` ya puede transportar params declarativos escalares por entrada, el historial interno restaura esos params con `goBack`, `params.*` ya puede reutilizarse en texto, requests y `defaultValue`, y `preloads` se relanzan por reentradas observables de la misma página con params distintos.
 - `0001-bootstrap-project-dependencies`: bootstrap técnico reproducible con frontend de paquete único, scripts base de desarrollo/validación y carga inicial de configuración desde `data-config` o `src/dev/config.json`.

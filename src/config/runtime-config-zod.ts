@@ -226,6 +226,7 @@ export const formNodeSchema = z
     id: nodeIdSchema,
     queryStateFeedback: queryStateFeedbackSchema.optional(),
     visibility: visibilitySchema.optional(),
+    persistOnUnmount: z.boolean().optional(),
     submitAction: z.unknown().optional(),
     resetOnSuccess: z.boolean().optional(),
     children: z.array(z.unknown()).optional(),

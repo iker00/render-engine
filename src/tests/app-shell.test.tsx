@@ -8,7 +8,7 @@ describe('App shell', () => {
 
     render(<App />)
 
-    expect(screen.getByRole('heading', { name: 'Bootstrap Home', level: 1 })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Home', level: 1 })).toBeInTheDocument()
     expect(
       screen.getByText('Static runtime contract validated before rendering.'),
     ).toBeInTheDocument()

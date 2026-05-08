@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import type { FormEvent, ReactNode } from 'react'
 import type {
   CheckboxGroupLayoutNode,
@@ -36,8 +36,9 @@ interface ResolvedFormFieldDefinition {
 
 export function FormNode({ node, children }: FormNodeProps) {
   const state = useRuntimeState()
-  const { executeQueryOperation, initializeForm, readRuntimeState, resetForm, setFormFieldError, setFormFieldValue } =
+  const { executeQueryOperation, initializeForm, readRuntimeState, removeForm, resetForm, setFormFieldError, setFormFieldValue } =
     useRuntimeStateActions()
+  const mountedPageIdRef = useRef(state.navigation.currentPageId)
 
   const fieldDefinitions = useMemo(
     () => collectResolvedFormFieldDefinitions(node.children ?? [], state),
@@ -70,6 +71,18 @@ export function FormNode({ node, children }: FormNodeProps) {
       ),
     )
   }, [initializeForm, missingFieldDefinitions, node.id])
+
+  useEffect(() => {
+    if (node.persistOnUnmount) {
+      return
+    }
+
+    return () => {
+      if (readRuntimeState().navigation.currentPageId !== mountedPageIdRef.current) {
+        removeForm(node.id)
+      }
+    }
+  }, [node.id, node.persistOnUnmount, readRuntimeState, removeForm])
 
   useEffect(() => {
     for (const fieldDefinition of fieldDefinitions) {

@@ -400,6 +400,89 @@ describe('Runtime button navigation', () => {
     ])
   })
 
+  it('rebuilds params-based form defaults from the new navigation context after a real unmount', async () => {
+    renderRuntime({
+      api: {},
+      initialPage: 'home',
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'button',
+              props: {
+                label: 'Edit Ada',
+                action: {
+                  type: 'navigateTo',
+                  pageId: 'details',
+                  params: {
+                    userId: 'Ada',
+                  },
+                },
+              },
+            },
+            {
+              type: 'button',
+              props: {
+                label: 'Edit Grace',
+                action: {
+                  type: 'navigateTo',
+                  pageId: 'details',
+                  params: {
+                    userId: 'Grace',
+                  },
+                },
+              },
+            },
+          ],
+        },
+        {
+          id: 'details',
+          layout: [
+            {
+              type: 'form',
+              id: 'profileForm',
+              children: [
+                {
+                  type: 'input',
+                  props: {
+                    fieldId: 'name',
+                    label: 'Name',
+                    defaultValue: 'params.userId',
+                  },
+                },
+              ],
+            },
+            {
+              type: 'button',
+              props: {
+                label: 'Back home',
+                action: {
+                  type: 'navigateTo',
+                  pageId: 'home',
+                },
+              },
+            },
+          ],
+        },
+      ],
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit Ada' }))
+    await waitFor(() => expect(screen.getByTestId('runtime-page')).toHaveAttribute('data-runtime-page-id', 'details'))
+    expect(screen.getByLabelText('Name')).toHaveValue('Ada')
+
+    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Manual override' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Back home' }))
+    await waitFor(() => expect(screen.getByTestId('runtime-page')).toHaveAttribute('data-runtime-page-id', 'home'))
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit Grace' }))
+    await waitFor(() => expect(screen.getByTestId('runtime-page')).toHaveAttribute('data-runtime-page-id', 'details'))
+
+    expect(screen.getByLabelText('Name')).toHaveValue('Grace')
+    expect(readRuntimeState().forms.profileForm.name.value).toBe('Grace')
+  })
+
   it('executes a declared operation from a rendered button and stores the result in queries', async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       createJsonResponse({

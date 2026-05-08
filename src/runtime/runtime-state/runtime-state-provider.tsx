@@ -92,8 +92,12 @@ export function RuntimeStateProvider({ config, children }: RuntimeStateProviderP
       initialState,
       state,
       dispatch,
+      dispatchAndSyncState,
+      getLatestState() {
+        return latestStateRef.current
+      },
     }),
-    [config, dispatch, initialState, state],
+    [config, dispatch, dispatchAndSyncState, initialState, state],
   )
 
   useEffect(() => {
@@ -208,20 +212,7 @@ export function useRuntimeState() {
 }
 
 export function useRuntimeStateActions() {
-  const { config, dispatch, initialState, state } = useRuntimeStateContext()
-  const latestStateRef = useRef(state)
-
-  useLayoutEffect(() => {
-    latestStateRef.current = state
-  }, [state])
-
-  const dispatchAndSyncState = useCallback(
-    (action: RuntimeStateAction) => {
-      latestStateRef.current = runtimeStateReducer(latestStateRef.current, action)
-      dispatch(action)
-    },
-    [dispatch],
-  )
+  const { config, dispatch, dispatchAndSyncState, getLatestState, initialState } = useRuntimeStateContext()
 
   const navigateToPage = useCallback(
     (pageId: string, params: NavigateToRuntimeUiAction['params'] = {}) => {
@@ -242,7 +233,7 @@ export function useRuntimeStateActions() {
         return
       }
 
-      const resolvedParams = resolveNavigationParams(params, latestStateRef.current)
+      const resolvedParams = resolveNavigationParams(params, getLatestState())
 
       dispatchAndSyncState({
         type: 'navigation/navigate',
@@ -307,6 +298,18 @@ export function useRuntimeStateActions() {
     (formId: string) => {
       dispatchAndSyncState({
         type: 'forms/reset',
+        payload: {
+          formId,
+        },
+      })
+    },
+    [dispatchAndSyncState],
+  )
+
+  const removeForm = useCallback(
+    (formId: string) => {
+      dispatchAndSyncState({
+        type: 'forms/remove',
         payload: {
           formId,
         },
@@ -386,12 +389,12 @@ export function useRuntimeStateActions() {
         config,
         dispatch: dispatchAndSyncState,
         operationName,
-        snapshotState: options?.snapshotState ?? latestStateRef.current,
+        snapshotState: options?.snapshotState ?? getLatestState(),
         requestParams: options?.requestParams,
         fetchImplementation: options?.fetch,
       })
     },
-    [config, dispatchAndSyncState],
+    [config, dispatchAndSyncState, getLatestState],
   )
 
   return useMemo(
@@ -401,14 +404,14 @@ export function useRuntimeStateActions() {
       initializeForm,
       initializeQuery,
       navigateToPage,
+      removeForm,
       resetQuery,
       resetForm,
       readRuntimeState() {
-        return latestStateRef.current
+        return getLatestState()
       },
       resetRuntimeState() {
-        latestStateRef.current = initialState
-        dispatch({
+        dispatchAndSyncState({
           type: 'runtime/reset',
           payload: {
             state: initialState,
@@ -422,13 +425,14 @@ export function useRuntimeStateActions() {
       setQuerySuccess,
     }),
     [
-      dispatch,
+      dispatchAndSyncState,
       initialState,
       executeQueryOperation,
       goBackPage,
       initializeForm,
       initializeQuery,
       navigateToPage,
+      removeForm,
       resetForm,
       resetQuery,
       setFormFieldError,

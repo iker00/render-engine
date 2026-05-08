@@ -182,6 +182,11 @@ export function runtimeStateReducer(state: RuntimeState, action: RuntimeStateAct
           [action.payload.formId]: resetRuntimeForm(state.forms[action.payload.formId]),
         },
       }
+    case 'forms/remove':
+      return {
+        ...state,
+        forms: removeRuntimeForm(state.forms, action.payload.formId),
+      }
     case 'queries/initialize':
       return {
         ...state,
@@ -277,6 +282,16 @@ function resetRuntimeForm(formState: RuntimeFormState | undefined): RuntimeFormS
     nextFormState[fieldId] = createRuntimeFormFieldState(fieldState.defaultValue)
     return nextFormState
   }, {})
+}
+
+function removeRuntimeForm(formsState: RuntimeState['forms'], formId: string): RuntimeState['forms'] {
+  if (!Object.hasOwn(formsState, formId)) {
+    return formsState
+  }
+
+  const nextFormsState = { ...formsState }
+  delete nextFormsState[formId]
+  return nextFormsState
 }
 
 function getRuntimeFormFieldState(fieldState: RuntimeFormFieldState | undefined, defaultValue?: unknown): RuntimeFormFieldState {

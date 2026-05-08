@@ -13,7 +13,7 @@
 - Resolución de `initialPage` con soporte para varias páginas declaradas y render exclusivo de la página seleccionada.
 - Núcleo de estado compartido por instancia ya integrado en `src/runtime/runtime-state/` para navegación, formularios y queries.
 - Navegación visible resuelta desde `navigation.currentPageId`, con historial interno por entradas completas `entryId/pageId/params`, no-op para reentradas idénticas y error recuperable al navegar a una página inexistente.
-- Dominio base de formularios disponible con almacenamiento por `forms.{formId}.{fieldId}`, `defaultValue`, `error`, `touched`, `dirty` y reset por formulario.
+- Dominio base de formularios disponible con almacenamiento por `forms.{formId}.{fieldId}`, `defaultValue`, `error`, `touched`, `dirty`, reset por formulario y borrado completo por `formId`.
 - Dominio base de queries disponible con almacenamiento por nombre, `status/data/error`, conservación del último dato válido durante recargas y reset por query.
 - Capa central de referencias del runtime ya operativa para `forms.*`, `queries.{queryName}`, `queries.{queryName}.data`, `queries.{queryName}.status` y `queries.{queryName}.error`.
 - Navegación anidada de datos de query ya soportada bajo `queries.{queryName}.data.*`, con recorrido uniforme por objetos y arrays y consumo visible actual en `heading.props.text` y `paragraph.props.text`.
@@ -32,7 +32,8 @@
 - Cualquier nodo soportado ya puede declarar también `visibility` para mostrarse u ocultarse según una única condición simple basada en `forms.*` o `queries.*`, con operadores `equals`, `notEquals`, `isTruthy`, `isFalsy`, `greaterThan` y `lessThan`.
 - La visibilidad efectiva del runtime ya está centralizada con precedencia estable: `queryStateFeedback` decide primero `show | hide | fallback`, y `visibility` solo se evalúa sobre la rama principal cuando esta sigue visible.
 - Catálogo declarativo de formularios ya operativo con `form`, `input`, `textarea`, `select`, `radioGroup` y `checkboxGroup`, incluyendo herencia de `formId` por descendencia y render de `<form>` real.
-- La inicialización de campos declarativos ya es lazy y reutiliza exclusivamente `forms.{formId}.{fieldId}`, con soporte para `defaultValue` literal o dinámico sin sobrescribir estado ya existente del usuario.
+- La inicialización de campos declarativos ya es lazy y reutiliza exclusivamente `forms.{formId}.{fieldId}`, con soporte para `defaultValue` literal o dinámico sin sobrescribir estado ya existente del usuario mientras el formulario sigue montado.
+- Los nodos `form` ya eliminan por defecto su estado local al desmontarse realmente, vuelven a inicializar sus campos en el siguiente montaje y permiten recuperar la persistencia histórica solo con `persistOnUnmount: true`.
 - `input` ya soporta además `number`, `date` y `datetime-local` sin abrir una familia separada de componentes de campo.
 - La capa central de referencias del runtime ya soporta también `params.{paramName}` para texto visible, requests declarativos, `defaultValue` de formularios y nuevas navegaciones originadas desde páginas ya parametrizadas.
 - La validación declarativa `required` ya funciona a nivel de formulario, escribe errores solo en `forms.*` y excluye del bloqueo de submit a campos ocultos por `queryStateFeedback`.
@@ -85,6 +86,7 @@
 - Decimonovena feature del workflow cerrada para añadir reglas declarativas `visibility` reutilizables por renderer y formularios, con precedencia estable sobre `queryStateFeedback` y exclusión coherente de campos ocultos durante la validación.
 - Vigésima feature del workflow cerrada para permitir params de navegación interna por entrada, con historial parametrizado, `params.*` en superficies acotadas y `preloads` reactivados por reentrada observable.
 - Vigésima primera feature del workflow cerrada para ampliar el catálogo reutilizable de formularios con `inputType` nativos adicionales, `select.multiple`, `radioGroup` y `checkboxGroup`, compartiendo una misma semántica de opciones, limpieza y submit sobre `forms.*`.
+- Vigésima segunda feature del workflow cerrada para hacer que `form` limpie por defecto su estado local al desmontarse, recalculando `defaultValue` en remontajes reales y dejando la persistencia como excepción explícita con `persistOnUnmount`.
 
 ## Referencias
 

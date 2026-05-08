@@ -78,6 +78,7 @@ export type RuntimeStateAction =
       payload: { formId: string; fieldId: string; error: string | null; defaultValue?: unknown }
     }
   | { type: 'forms/reset'; payload: { formId: string } }
+  | { type: 'forms/remove'; payload: { formId: string } }
   | { type: 'queries/initialize'; payload: { queryName: string } }
   | { type: 'queries/set-loading'; payload: { queryName: string } }
   | { type: 'queries/set-success'; payload: { queryName: string; data: unknown } }
@@ -89,4 +90,6 @@ export interface RuntimeStateContextValue {
   initialState: RuntimeState
   state: RuntimeState
   dispatch: Dispatch<RuntimeStateAction>
+  dispatchAndSyncState: (action: RuntimeStateAction) => void
+  getLatestState: () => RuntimeState
 }

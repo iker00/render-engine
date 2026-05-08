@@ -80,6 +80,7 @@ Nodos soportados hoy:
   - `props.action.formId`: string obligatorio y no vacío cuando `type` es `resetForm`
 - `form`
   - `id`: string obligatorio, estable y único dentro de toda la configuración
+  - `persistOnUnmount`: boolean opcional; cuando vale `true`, el formulario conserva su estado local al desmontarse, y cuando no existe o vale `false` el runtime lo elimina por defecto
   - `submitAction.type`: solo `executeOperation`
   - `submitAction.operationName`: string obligatorio y no vacío cuando existe `submitAction`
   - `submitAction.query`: objeto plano opcional con valores `string | number | boolean`
@@ -254,6 +255,7 @@ Reglas funcionales vigentes:
 - Si `button.props.action.params` incluye arrays, objetos anidados o rutas `params.*` mal formadas, el config completo se rechaza antes del render sobre la ruta exacta.
 - Si un `button.props.action.operationName` apunta a una operación inexistente en `api`, el config completo se rechaza antes del render aunque el shape estructural sea válido.
 - `resetForm` valida shape y `formId` no vacío, pero no intenta cerrar en bootstrap un catálogo semántico adicional de formularios.
+- `form.persistOnUnmount` sigue siendo opcional; si aparece con un valor no booleano, el config completo se rechaza antes del render sobre la ruta exacta.
 - Si `form.id` se repite en cualquier página, el config completo se rechaza antes del render.
 - Si un `fieldId` se repite dentro del mismo `form`, el config completo se rechaza antes del render.
 - Si un `form.children` contiene nodos fuera de `input`, `textarea`, `select`, `radioGroup`, `checkboxGroup`, `button`, `heading`, `paragraph` y `container`, el config completo se rechaza antes del render.

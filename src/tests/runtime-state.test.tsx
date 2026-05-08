@@ -142,7 +142,7 @@ function NavigationControls() {
 }
 
 function FormsFixture() {
-  const { initializeForm, navigateToPage, resetForm, setFormFieldError, setFormFieldValue } =
+  const { initializeForm, navigateToPage, removeForm, resetForm, setFormFieldError, setFormFieldValue } =
     useRuntimeStateActions()
 
   useEffect(() => {
@@ -168,6 +168,12 @@ function FormsFixture() {
       </button>
       <button type="button" onClick={() => resetForm('userSearch')}>
         Reset user search form
+      </button>
+      <button type="button" onClick={() => removeForm('userSearch')}>
+        Remove user search form
+      </button>
+      <button type="button" onClick={() => removeForm('missingForm')}>
+        Remove missing form
       </button>
       <button type="button" onClick={() => navigateToPage('details')}>
         Go to details page
@@ -295,6 +301,72 @@ function FormRuntimeFixture() {
       </button>
       <RuntimePage />
       <RuntimeStateSnapshot testId="runtime-state" />
+    </>
+  )
+}
+
+function QueryDrivenFormLifecycleFixture() {
+  const { initializeQuery, navigateToPage, setQuerySuccess } = useRuntimeStateActions()
+
+  useEffect(() => {
+    initializeQuery('selectedUser')
+  }, [initializeQuery])
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() =>
+          setQuerySuccess('selectedUser', {
+            profile: {
+              nickname: 'Countess',
+            },
+          })
+        }
+      >
+        Seed Countess
+      </button>
+      <button
+        type="button"
+        onClick={() =>
+          setQuerySuccess('selectedUser', {
+            profile: {
+              nickname: 'Architect',
+            },
+          })
+        }
+      >
+        Seed Architect
+      </button>
+      <button type="button" onClick={() => navigateToPage('editor')}>
+        Open editor
+      </button>
+      <button type="button" onClick={() => navigateToPage('home')}>
+        Leave editor
+      </button>
+    </>
+  )
+}
+
+function FormVisibilityFixture() {
+  const { initializeForm, setFormFieldValue } = useRuntimeStateActions()
+
+  useEffect(() => {
+    initializeForm('visibilityControl', {
+      mode: {
+        defaultValue: 'show',
+      },
+    })
+  }, [initializeForm])
+
+  return (
+    <>
+      <button type="button" onClick={() => setFormFieldValue('visibilityControl', 'mode', 'hide')}>
+        Hide profile form
+      </button>
+      <button type="button" onClick={() => setFormFieldValue('visibilityControl', 'mode', 'show')}>
+        Show profile form
+      </button>
     </>
   )
 }
@@ -835,6 +907,58 @@ describe('Runtime shared state store', () => {
     expect(screen.getByTestId('runtime-state')).toHaveTextContent(
       '"newsletter":{"email":{"value":"news@example.com","error":null,"touched":false,"dirty":false,"defaultValue":"news@example.com"}}',
     )
+  })
+
+  it('removes one form completely without affecting other forms, navigation, or queries', () => {
+    render(
+      <RuntimeStateProvider config={runtimeConfig}>
+        <FormsFixture />
+        <QueriesFixture />
+        <RuntimeStateSnapshot testId="runtime-state" />
+      </RuntimeStateProvider>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Update user name' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Set user name error' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Store query success' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Go to details page' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Remove user search form' }))
+
+    const runtimeState = readRuntimeStateSnapshot('runtime-state')
+
+    expect(runtimeState.navigation.currentPageId).toBe('details')
+    expect(runtimeState.queries.searchUsers).toEqual({
+      status: 'success',
+      data: ['Ada', 'Grace'],
+      error: null,
+    })
+    expect(runtimeState.forms.userSearch).toBeUndefined()
+    expect(runtimeState.forms).toEqual({
+      newsletter: {
+        email: {
+          value: 'news@example.com',
+          error: null,
+          touched: false,
+          dirty: false,
+          defaultValue: 'news@example.com',
+        },
+      },
+    })
+  })
+
+  it('keeps the state stable when removing a form that does not exist', () => {
+    render(
+      <RuntimeStateProvider config={runtimeConfig}>
+        <FormsFixture />
+        <RuntimeStateSnapshot testId="runtime-state" />
+      </RuntimeStateProvider>,
+    )
+
+    const stateBeforeRemoval = readRuntimeStateSnapshot('runtime-state')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Remove missing form' }))
+
+    expect(readRuntimeStateSnapshot('runtime-state')).toEqual(stateBeforeRemoval)
   })
 
   it('resets the target form from a rendered button without affecting other runtime forms', () => {
@@ -1438,7 +1562,7 @@ describe('Runtime shared state store', () => {
     expect(screen.getByTestId('single-remount-state')).toHaveTextContent('"status":"idle","data":null,"error":null')
   })
 
-  it('initializes declarative form fields once and preserves user values across navigation', () => {
+  it('cleans declarative form state on unmount and reinitializes defaults on the next mount by default', () => {
     const config: RuntimeConfig = {
       api: {},
       initialPage: 'home',
@@ -1509,9 +1633,185 @@ describe('Runtime shared state store', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Go to details' }))
     fireEvent.click(screen.getByRole('button', { name: 'Go home' }))
 
-    expect(screen.getByLabelText('Name')).toHaveValue('Grace')
+    expect(screen.getByLabelText('Name')).toHaveValue('Ada')
     expect(screen.getByLabelText('Bio')).toHaveValue('Builder')
+    expect(screen.getByTestId('runtime-state')).toHaveTextContent('"name":{"value":"Ada"')
+  })
+
+  it('preserves declarative form values across unmount and remount when persistOnUnmount is enabled', () => {
+    const config: RuntimeConfig = {
+      api: {},
+      initialPage: 'home',
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'form',
+              id: 'profile-form',
+              persistOnUnmount: true,
+              children: [
+                {
+                  type: 'input',
+                  props: {
+                    fieldId: 'name',
+                    label: 'Name',
+                    defaultValue: 'Ada',
+                  },
+                },
+              ],
+            },
+            {
+              type: 'button',
+              props: {
+                label: 'Go to details',
+                action: {
+                  type: 'navigateTo',
+                  pageId: 'details',
+                },
+              },
+            },
+          ],
+        },
+        {
+          id: 'details',
+          layout: [
+            {
+              type: 'button',
+              props: {
+                label: 'Go home',
+                action: {
+                  type: 'navigateTo',
+                  pageId: 'home',
+                },
+              },
+            },
+          ],
+        },
+      ],
+    }
+
+    render(
+      <RuntimeStateProvider config={config}>
+        <RuntimePage />
+        <RuntimeStateSnapshot testId="runtime-state" />
+      </RuntimeStateProvider>,
+    )
+
+    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Grace' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Go to details' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Go home' }))
+
+    expect(screen.getByLabelText('Name')).toHaveValue('Grace')
     expect(screen.getByTestId('runtime-state')).toHaveTextContent('"name":{"value":"Grace"')
+  })
+
+  it('keeps form state when the form is hidden and shown again within the same page', async () => {
+    const config: RuntimeConfig = {
+      api: {},
+      initialPage: 'home',
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'form',
+              id: 'profile-form',
+              visibility: {
+                reference: 'forms.visibilityControl.mode',
+                operator: 'equals',
+                value: 'show',
+              },
+              children: [
+                {
+                  type: 'input',
+                  props: {
+                    fieldId: 'name',
+                    label: 'Name',
+                    defaultValue: 'Ada',
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    }
+
+    render(
+      <RuntimeStateProvider config={config}>
+        <FormVisibilityFixture />
+        <RuntimePage />
+        <RuntimeStateSnapshot testId="runtime-state" />
+      </RuntimeStateProvider>,
+    )
+
+    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Grace' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Hide profile form' }))
+
+    await waitFor(() => expect(screen.queryByLabelText('Name')).not.toBeInTheDocument())
+    expect(screen.getByTestId('runtime-state')).toHaveTextContent('"name":{"value":"Grace"')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Show profile form' }))
+
+    await waitFor(() => expect(screen.getByLabelText('Name')).toHaveValue('Grace'))
+    expect(readRuntimeStateSnapshot('runtime-state').forms['profile-form']?.name?.value).toBe('Grace')
+  })
+
+  it('keeps query-driven defaults stable while mounted and rebuilds them from the latest query data after remount', () => {
+    const config: RuntimeConfig = {
+      api: {},
+      initialPage: 'home',
+      pages: [
+        {
+          id: 'home',
+          layout: [],
+        },
+        {
+          id: 'editor',
+          layout: [
+            {
+              type: 'form',
+              id: 'profile-form',
+              children: [
+                {
+                  type: 'input',
+                  props: {
+                    fieldId: 'nickname',
+                    label: 'Nickname',
+                    defaultValue: 'queries.selectedUser.data.profile.nickname',
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    }
+
+    render(
+      <RuntimeStateProvider config={config}>
+        <QueryDrivenFormLifecycleFixture />
+        <RuntimePage />
+        <RuntimeStateSnapshot testId="runtime-state" />
+      </RuntimeStateProvider>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Seed Countess' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Open editor' }))
+
+    expect(screen.getByLabelText('Nickname')).toHaveValue('Countess')
+
+    fireEvent.change(screen.getByLabelText('Nickname'), { target: { value: 'Manual nickname' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Seed Architect' }))
+
+    expect(screen.getByLabelText('Nickname')).toHaveValue('Manual nickname')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Leave editor' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Open editor' }))
+
+    expect(screen.getByLabelText('Nickname')).toHaveValue('Architect')
+    expect(screen.getByTestId('runtime-state')).toHaveTextContent('"nickname":{"value":"Architect"')
   })
 
   it('keeps declarative forms isolated and normalizes select state to strings', () => {

@@ -2625,6 +2625,292 @@ describe('validateRuntimeConfig', () => {
     })
   })
 
+  it('accepts form.persistOnUnmount as an optional boolean without changing historical form semantics', () => {
+    expect(validateRuntimeConfig(createConfigWithFormLayout()).status).toBe('ready')
+
+    expect(
+      validateRuntimeConfig(createConfigWithFormLayout({
+        persistOnUnmount: true,
+      })),
+    ).toEqual({
+      status: 'ready',
+      config: {
+        api: {
+          submitUserForm: {
+            method: 'POST',
+            endpoint: '/api/forms',
+          },
+        },
+        pages: [
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'form',
+                id: 'user-form',
+                persistOnUnmount: true,
+                submitAction: {
+                  type: 'executeOperation',
+                  operationName: 'submitUserForm',
+                },
+                resetOnSuccess: true,
+                children: [
+                  {
+                    type: 'input',
+                    props: {
+                      fieldId: 'name',
+                      label: 'Name',
+                      defaultValue: 'Ada',
+                    },
+                  },
+                  {
+                    type: 'container',
+                    children: [
+                      {
+                        type: 'textarea',
+                        props: {
+                          fieldId: 'bio',
+                          label: 'Bio',
+                          defaultValue: 'Runtime builder',
+                        },
+                      },
+                      {
+                        type: 'select',
+                        props: {
+                          fieldId: 'role',
+                          label: 'Role',
+                          defaultValue: 'admin',
+                          items: [
+                            { label: 'Admin', value: 'admin' },
+                            { label: 'Editor', value: 'editor' },
+                          ],
+                        },
+                      },
+                      {
+                        type: 'button',
+                        props: {
+                          label: 'Submit',
+                        },
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+        initialPage: 'home',
+      },
+      page: {
+        id: 'home',
+        layout: [
+          {
+            type: 'form',
+            id: 'user-form',
+            persistOnUnmount: true,
+            submitAction: {
+              type: 'executeOperation',
+              operationName: 'submitUserForm',
+            },
+            resetOnSuccess: true,
+            children: [
+              {
+                type: 'input',
+                props: {
+                  fieldId: 'name',
+                  label: 'Name',
+                  defaultValue: 'Ada',
+                },
+              },
+              {
+                type: 'container',
+                children: [
+                  {
+                    type: 'textarea',
+                    props: {
+                      fieldId: 'bio',
+                      label: 'Bio',
+                      defaultValue: 'Runtime builder',
+                    },
+                  },
+                  {
+                    type: 'select',
+                    props: {
+                      fieldId: 'role',
+                      label: 'Role',
+                      defaultValue: 'admin',
+                      items: [
+                        { label: 'Admin', value: 'admin' },
+                        { label: 'Editor', value: 'editor' },
+                      ],
+                    },
+                  },
+                  {
+                    type: 'button',
+                    props: {
+                      label: 'Submit',
+                    },
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    })
+
+    expect(
+      validateRuntimeConfig(createConfigWithFormLayout({
+        persistOnUnmount: false,
+      })),
+    ).toEqual({
+      status: 'ready',
+      config: {
+        api: {
+          submitUserForm: {
+            method: 'POST',
+            endpoint: '/api/forms',
+          },
+        },
+        pages: [
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'form',
+                id: 'user-form',
+                persistOnUnmount: false,
+                submitAction: {
+                  type: 'executeOperation',
+                  operationName: 'submitUserForm',
+                },
+                resetOnSuccess: true,
+                children: [
+                  {
+                    type: 'input',
+                    props: {
+                      fieldId: 'name',
+                      label: 'Name',
+                      defaultValue: 'Ada',
+                    },
+                  },
+                  {
+                    type: 'container',
+                    children: [
+                      {
+                        type: 'textarea',
+                        props: {
+                          fieldId: 'bio',
+                          label: 'Bio',
+                          defaultValue: 'Runtime builder',
+                        },
+                      },
+                      {
+                        type: 'select',
+                        props: {
+                          fieldId: 'role',
+                          label: 'Role',
+                          defaultValue: 'admin',
+                          items: [
+                            { label: 'Admin', value: 'admin' },
+                            { label: 'Editor', value: 'editor' },
+                          ],
+                        },
+                      },
+                      {
+                        type: 'button',
+                        props: {
+                          label: 'Submit',
+                        },
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+        initialPage: 'home',
+      },
+      page: {
+        id: 'home',
+        layout: [
+          {
+            type: 'form',
+            id: 'user-form',
+            persistOnUnmount: false,
+            submitAction: {
+              type: 'executeOperation',
+              operationName: 'submitUserForm',
+            },
+            resetOnSuccess: true,
+            children: [
+              {
+                type: 'input',
+                props: {
+                  fieldId: 'name',
+                  label: 'Name',
+                  defaultValue: 'Ada',
+                },
+              },
+              {
+                type: 'container',
+                children: [
+                  {
+                    type: 'textarea',
+                    props: {
+                      fieldId: 'bio',
+                      label: 'Bio',
+                      defaultValue: 'Runtime builder',
+                    },
+                  },
+                  {
+                    type: 'select',
+                    props: {
+                      fieldId: 'role',
+                      label: 'Role',
+                      defaultValue: 'admin',
+                      items: [
+                        { label: 'Admin', value: 'admin' },
+                        { label: 'Editor', value: 'editor' },
+                      ],
+                    },
+                  },
+                  {
+                    type: 'button',
+                    props: {
+                      label: 'Submit',
+                    },
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    })
+  })
+
+  it.each([
+    ['persist', 'yes'],
+    ['persist', 1],
+    ['persist', ['yes']],
+    ['persist', { keep: true }],
+  ])('rejects non-boolean values for form.persistOnUnmount: %s=%j', (_label, persistOnUnmount) => {
+    expect(
+      validateRuntimeConfig(createConfigWithFormLayout({
+        persistOnUnmount,
+      })),
+    ).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message: 'Page "home" has an invalid layout at "layout[0].persistOnUnmount".',
+      },
+    })
+  })
+
   it('rejects select items with heterogeneous value types', () => {
     expect(
       validateRuntimeConfig(

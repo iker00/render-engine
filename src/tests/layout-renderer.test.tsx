@@ -68,6 +68,7 @@ function renderRuntimePageWithSeed(activePage: RuntimePageConfig) {
   const initialState = createRuntimeState(config)
   const seededState = seedRuntimeState(initialState)
   const dispatch = vi.fn<(action: RuntimeStateAction) => void>()
+  const dispatchAndSyncState = vi.fn<(action: RuntimeStateAction) => void>()
 
   return render(
     <RuntimeStateContext.Provider
@@ -76,6 +77,8 @@ function renderRuntimePageWithSeed(activePage: RuntimePageConfig) {
         initialState: seededState,
         state: seededState,
         dispatch,
+        dispatchAndSyncState,
+        getLatestState: () => seededState,
       }}
     >
         <RuntimePage />
@@ -90,6 +93,7 @@ function renderRuntimePageWithState(activePage: RuntimePageConfig, state: Runtim
     pages: [activePage],
   }
   const dispatch = vi.fn<(action: RuntimeStateAction) => void>()
+  const dispatchAndSyncState = vi.fn<(action: RuntimeStateAction) => void>()
 
   return render(
     <RuntimeStateContext.Provider
@@ -98,6 +102,8 @@ function renderRuntimePageWithState(activePage: RuntimePageConfig, state: Runtim
         initialState: state,
         state,
         dispatch,
+        dispatchAndSyncState,
+        getLatestState: () => state,
       }}
     >
       <RuntimePage />

@@ -117,6 +117,7 @@ export interface ListLayoutNode extends LayoutNodeFeedbackFields {
 export interface FormLayoutNode extends LayoutNodeFeedbackFields {
   type: 'form'
   id: string
+  persistOnUnmount?: boolean
   submitAction?: ExecuteOperationRuntimeUiAction
   resetOnSuccess?: boolean
   children?: LayoutNode[]

@@ -37,6 +37,7 @@ Definir cómo se organiza el catálogo de páginas del runtime y cuál es el alc
 - El runtime sí expone parámetros de navegación interna mediante la familia `params.{paramName}`.
 - `params.*` representa datos de la entrada activa del historial interno, no segmentos de URL ni query string del navegador.
 - La familia `params.*` puede reutilizarse en texto visible, requests declarativos, `defaultValue` de campos y nuevas navegaciones originadas desde una página ya parametrizada.
+- Si una navegación desmonta un `form` y luego lo vuelve a montar en otra entrada, los `defaultValue` basados en `params.*` se recalculan por defecto contra los params vigentes de esa nueva entrada.
 - `params.*` no forma parte todavía de `visibility` ni de las fuentes dinámicas de colección para `list` y `select`.
 
 ## Relación con futuras iteraciones

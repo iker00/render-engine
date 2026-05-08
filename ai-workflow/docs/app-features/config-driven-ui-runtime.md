@@ -67,7 +67,8 @@ Reglas funcionales vigentes:
 - `paragraph.props` soporta `text`.
 - `list.props` soporta `items` como array histórico de strings o como origen declarativo manual/dinámico de colecciones escalares u objeto.
 - `button.props` soporta `label` y `action`, con `navigateTo`, `goBack`, `executeOperation` y `resetForm` como acciones declarativas vigentes; `navigateTo` puede añadir `params` escalares por entrada; `executeOperation` puede aportar `query`, `body` y `headers` por ejecución; dentro de un `form`, un botón sin `action` actúa como submit implícito.
-- `form` renderiza un `<form>` real, hereda un contexto estable de `formId` a sus descendientes, inicializa solo los campos todavía ausentes en el store y puede ejecutar `submitAction.type: executeOperation` con `query`, `body` y `headers` por envío.
+- `form` renderiza un `<form>` real, hereda un contexto estable de `formId` a sus descendientes, inicializa solo los campos todavía ausentes en el store, elimina por defecto `forms.{formId}` al desmontarse realmente y puede ejecutar `submitAction.type: executeOperation` con `query`, `body` y `headers` por envío.
+- `form.persistOnUnmount: true` convierte esa limpieza por desmontaje en una excepción opt-in para conservar la persistencia histórica de un formulario concreto dentro de la misma instancia del runtime.
 - `input`, `textarea`, `select`, `radioGroup` y `checkboxGroup` leen y escriben exclusivamente en `forms.{formId}.{fieldId}` y comparten una base visual accesible con estado de error.
 - `input` ya soporta también `number`, `date` y `datetime-local` además del catálogo textual inicial.
 - `select` soporta items históricos estáticos y también orígenes declarativos manuales o dinámicos de escalares u objetos; normaliza internamente a string los valores efectivos y deja el valor vigente vacío cuando ya no coincide con ninguna opción disponible.
@@ -94,6 +95,7 @@ Reglas funcionales vigentes:
 - `src/runtime/runtime-collection-sources.ts` concentra la resolución compartida de colecciones efectivas para `list`, `select`, `radioGroup` y `checkboxGroup`, incluyendo degradación a vacío, proyección declarativa por item y normalización común de selección simple o múltiple.
 - `src/queries/` concentra la construcción de requests, la ejecución contra `fetch` y la normalización de errores remotos.
 - `src/runtime/runtime-state/` concentra el provider, reducer, tipos, selectors y acciones del estado compartido del runtime.
+- `src/runtime/nodes/form-layout-node.tsx` fija hoy la frontera visible entre rerender, ocultación y desmontaje real del formulario, y usa el store compartido para distinguir entre resetear un formulario existente y eliminarlo completo.
 - `src/runtime/runtime-query-state-feedback.ts` concentra la derivación de estado visible de query, incluida la distinción explícita entre `idle` y `loading`, la heurística común de `empty` y la resolución de la respuesta efectiva `show | hide | fallback`.
 - `src/runtime/runtime-layout-visibility.ts` compone `queryStateFeedback` y `visibility` en una única decisión reutilizable por renderer y formularios.
 - `src/runtime/nodes/` contiene una pieza concreta por nodo soportado hoy: `container`, `heading`, `paragraph`, `list`, `button`, `form`, `input`, `textarea`, `select`, `radioGroup` y `checkboxGroup`.

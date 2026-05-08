@@ -228,6 +228,7 @@
               "userId": "forms.postForm.authorId"
             }
           },
+          "persistOnUnmount": true,
           "resetOnSuccess": false,
           "children": [
             {
@@ -314,7 +315,7 @@
                   {
                     "type": "paragraph",
                     "props": {
-                      "text": "No se ha llamado a la API,"
+                      "text": "No se ha llamado a la API"
                     }
                   }
                 ]
@@ -485,6 +486,15 @@
       "id": "dynamic-form",
       "layout": [
         {
+          "type": "button",
+          "props": {
+            "label": "Volver",
+            "action": {
+              "type": "goBack"
+            }
+          }
+        },
+        {
           "type": "heading",
           "props": {
             "text": "Dynamic form example",
@@ -494,6 +504,11 @@
         {
           "type": "form",
           "id": "dynamicForm",
+          "visibility": {
+            "reference": "forms.postForm.id",
+            "operator": "equals",
+            "value": "1"
+          },
           "children": [
             {
               "type": "input",

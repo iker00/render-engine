@@ -79,6 +79,7 @@ Lectura operativa de esa estructura:
 - `runtime-query-state-feedback.ts` concentra la derivación `idle | loading | error | empty | success`, la heurística común de `empty` y la resolución de defaults efectivos de `queryStateFeedback`.
 - `runtime-references/` fija la semántica central de referencias string, distingue `literal | supported | unsupported | invalid`, soporta `forms.*`, `queries.*` y `params.*` dentro de su frontera actual y evita lógica dispersa en nodos visuales.
 - `runtime-state/` concentra un store por instancia basado en `useReducer` + `Context`, con dominios separados para navegación, formularios, queries y `pageEntry`, historial parametrizado por entrada y fachada mínima para navegación, formularios, queries y lectura consistente del último snapshot sin absorber la lógica de red.
+- El dominio `forms` distingue ya entre resetear un formulario existente y eliminar `forms.{formId}` completo; el nodo `form` usa esa diferencia para limpiar por defecto solo al desmontarse realmente y no durante rerenders u ocultaciones.
 - `runtime/nodes/` materializa solo nodos con uso real inmediato, incluido el catálogo actual de formularios declarativos con selección simple y múltiple compartida.
 - `runtime-page.tsx` ya no decide la página visible por selección ad hoc; la resuelve desde el estado compartido del runtime.
 
