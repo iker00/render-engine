@@ -123,10 +123,39 @@ export interface FormLayoutNode extends LayoutNodeFeedbackFields {
   children?: LayoutNode[]
 }
 
+export type RuntimeFormValidationRuleName =
+  | 'required'
+  | 'minLength'
+  | 'maxLength'
+  | 'min'
+  | 'max'
+  | 'minSelections'
+  | 'maxSelections'
+
+export interface RuntimeRequiredValidationRule {
+  value: true
+  message?: string
+}
+
+export interface RuntimeNumericValidationRule {
+  value: number
+  message?: string
+}
+
+export interface RuntimeFormFieldValidations {
+  required?: RuntimeRequiredValidationRule
+  minLength?: RuntimeNumericValidationRule
+  maxLength?: RuntimeNumericValidationRule
+  min?: RuntimeNumericValidationRule
+  max?: RuntimeNumericValidationRule
+  minSelections?: RuntimeNumericValidationRule
+  maxSelections?: RuntimeNumericValidationRule
+}
+
 export interface FormFieldLayoutNodeProps {
   fieldId: string
   label: string
-  required?: boolean
+  validations?: RuntimeFormFieldValidations
   defaultValue?: RuntimeConfigValue | unknown[]
 }
 

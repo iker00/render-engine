@@ -15,23 +15,13 @@ import { isLayoutNodeVisible } from '../runtime-layout-visibility'
 import { resolveRuntimeValue } from '../runtime-references/runtime-reference-resolver'
 import { getFormNodeClassName } from '../runtime-node-styling'
 import { normalizeChoiceFieldValue } from '../runtime-collection-sources'
+import { type ResolvedFormFieldDefinition, validateFormFields } from '../runtime-form-validations'
 import { useRuntimeState, useRuntimeStateActions } from '../runtime-state/runtime-state-provider'
 import { selectFormFieldState } from '../runtime-state/runtime-state-selectors'
 
 interface FormNodeProps {
   node: FormLayoutNode
   children?: ReactNode
-}
-
-interface ResolvedFormFieldDefinition {
-  fieldId: string
-  type: 'input' | 'textarea' | 'select' | 'radioGroup' | 'checkboxGroup'
-  required: boolean
-  queryStateFeedback?: LayoutNode['queryStateFeedback']
-  visibility?: LayoutNode['visibility']
-  items?: SelectLayoutNode['props']['items'] | RadioGroupLayoutNode['props']['items'] | CheckboxGroupLayoutNode['props']['items']
-  multiple: boolean
-  defaultValue: unknown
 }
 
 export function FormNode({ node, children }: FormNodeProps) {
@@ -190,70 +180,29 @@ export function collectResolvedFormFieldDefinitions(nodes: LayoutNodeCollection,
       node.type === 'radioGroup' ||
       node.type === 'checkboxGroup'
     ) {
-      fields.push({
-        fieldId: node.props.fieldId,
-        type: node.type,
-        required: node.props.required ?? false,
-        queryStateFeedback: node.queryStateFeedback,
-        visibility: node.visibility,
-        items: isChoiceFieldNode(node) ? node.props.items : undefined,
-        multiple: isMultipleChoiceFieldNode(node),
-        defaultValue: resolveFieldDefaultValue(node, state),
-      })
+      fields.push(resolveResolvedFormFieldDefinition(node, state))
     }
   }
 
   return fields
 }
 
-export function validateFormFields({
-  formId,
-  fieldDefinitions,
-  state,
-}: {
-  formId: string
-  fieldDefinitions: ResolvedFormFieldDefinition[]
-  state: ReturnType<typeof useRuntimeState>
-}) {
-  const errorsByFieldId: Record<string, string | null> = {}
-  let isValid = true
-
-  for (const fieldDefinition of fieldDefinitions) {
-    const fieldState = selectFormFieldState(state, formId, fieldDefinition.fieldId)
-    const currentValue =
-      fieldDefinition.items !== undefined
-        ? normalizeChoiceFieldValue(fieldDefinition.items, state, fieldState?.value ?? fieldDefinition.defaultValue, {
-            multiple: fieldDefinition.multiple,
-            surface: getChoiceFieldSurface(fieldDefinition.type),
-          })
-        : fieldState?.value ?? fieldDefinition.defaultValue
-    const isVisible = isLayoutNodeVisible(fieldDefinition, state)
-
-    if (!isVisible) {
-      errorsByFieldId[fieldDefinition.fieldId] = fieldState?.error ?? null
-      continue
-    }
-
-    if (!fieldDefinition.required) {
-      errorsByFieldId[fieldDefinition.fieldId] = null
-      continue
-    }
-
-    if (isFieldValueValid(fieldDefinition, currentValue)) {
-      errorsByFieldId[fieldDefinition.fieldId] = null
-      continue
-    }
-
-    isValid = false
-    errorsByFieldId[fieldDefinition.fieldId] = 'Required'
-  }
-
+export function resolveResolvedFormFieldDefinition(
+  node: InputLayoutNode | TextareaLayoutNode | SelectLayoutNode | RadioGroupLayoutNode | CheckboxGroupLayoutNode,
+  state: ReturnType<typeof useRuntimeState>,
+): ResolvedFormFieldDefinition {
   return {
-    isValid,
-    errorsByFieldId,
+    fieldId: node.props.fieldId,
+    type: node.type,
+    validations: node.props.validations,
+    queryStateFeedback: node.queryStateFeedback,
+    visibility: node.visibility,
+    items: isChoiceFieldNode(node) ? node.props.items : undefined,
+    multiple: isMultipleChoiceFieldNode(node),
+    defaultValue: resolveFieldDefaultValue(node, state),
+    inputType: node.type === 'input' ? node.props.inputType : undefined,
   }
 }
-
 export function resolveFieldDefaultValue(
   node: InputLayoutNode | TextareaLayoutNode | SelectLayoutNode | RadioGroupLayoutNode | CheckboxGroupLayoutNode,
   state: ReturnType<typeof useRuntimeState>,
@@ -281,18 +230,6 @@ export function resolveFieldDefaultValue(
   }
 
   return fallbackValue
-}
-
-function isFieldValueValid(fieldDefinition: ResolvedFormFieldDefinition, value: unknown) {
-  if (fieldDefinition.multiple) {
-    return Array.isArray(value) && value.length > 0
-  }
-
-  if (fieldDefinition.items !== undefined) {
-    return value !== ''
-  }
-
-  return typeof value === 'string' && value.trim().length > 0
 }
 
 function isChoiceFieldNode(

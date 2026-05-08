@@ -1,12 +1,13 @@
 import type { CheckboxGroupLayoutNode } from '../../config/runtime-config'
 import { useOptionalFormContext } from '../form-context'
-import { resolveFieldDefaultValue } from './form-layout-node'
+import { resolveResolvedFormFieldDefinition } from './form-layout-node'
 import { normalizeChoiceFieldValue, resolveChoiceCollectionItems } from '../runtime-collection-sources'
 import {
   getFieldErrorClassName,
   getFieldLabelClassName,
   getFieldWrapperClassName,
 } from '../runtime-node-styling'
+import { getValidationErrorForEditedField } from '../runtime-form-validations'
 import { useRuntimeState, useRuntimeStateActions } from '../runtime-state/runtime-state-provider'
 import { selectFormFieldState } from '../runtime-state/runtime-state-selectors'
 
@@ -24,7 +25,8 @@ export function CheckboxGroupNode({ node }: CheckboxGroupNodeProps) {
   }
 
   const fieldState = selectFormFieldState(state, formContext.formId, node.props.fieldId)
-  const defaultValue = resolveFieldDefaultValue(node, state)
+  const fieldDefinition = resolveResolvedFormFieldDefinition(node, state)
+  const defaultValue = fieldDefinition.defaultValue
   const items = resolveChoiceCollectionItems(node.props.items, state, 'checkboxGroup.props.items')
   const value = normalizeChoiceFieldValue(node.props.items, state, fieldState?.value ?? defaultValue, {
     multiple: true,
@@ -53,8 +55,17 @@ export function CheckboxGroupNode({ node }: CheckboxGroupNodeProps) {
 
               setFormFieldValue(formContext.formId, node.props.fieldId, nextValue)
 
-              if (error && nextValue.length > 0) {
-                setFormFieldError(formContext.formId, node.props.fieldId, null)
+              if (error) {
+                setFormFieldError(
+                  formContext.formId,
+                  node.props.fieldId,
+                  getValidationErrorForEditedField({
+                    fieldDefinition,
+                    formId: formContext.formId,
+                    state,
+                    nextValue,
+                  }),
+                )
               }
             }}
           />

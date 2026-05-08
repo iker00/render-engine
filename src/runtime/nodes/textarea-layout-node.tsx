@@ -1,12 +1,13 @@
 import type { TextareaLayoutNode } from '../../config/runtime-config'
 import { useOptionalFormContext } from '../form-context'
-import { resolveFieldDefaultValue } from './form-layout-node'
+import { resolveResolvedFormFieldDefinition } from './form-layout-node'
 import {
   getFieldControlClassName,
   getFieldErrorClassName,
   getFieldLabelClassName,
   getFieldWrapperClassName,
 } from '../runtime-node-styling'
+import { getValidationErrorForEditedField } from '../runtime-form-validations'
 import { useRuntimeState, useRuntimeStateActions } from '../runtime-state/runtime-state-provider'
 import { selectFormFieldState } from '../runtime-state/runtime-state-selectors'
 
@@ -24,7 +25,8 @@ export function TextareaNode({ node }: TextareaNodeProps) {
   }
 
   const fieldState = selectFormFieldState(state, formContext.formId, node.props.fieldId)
-  const defaultValue = resolveFieldDefaultValue(node, state)
+  const fieldDefinition = resolveResolvedFormFieldDefinition(node, state)
+  const defaultValue = fieldDefinition.defaultValue
   const value =
     typeof fieldState?.value === 'string'
       ? fieldState.value
@@ -43,8 +45,17 @@ export function TextareaNode({ node }: TextareaNodeProps) {
           const nextValue = event.currentTarget.value
           setFormFieldValue(formContext.formId, node.props.fieldId, nextValue)
 
-          if (error && nextValue.trim().length > 0) {
-            setFormFieldError(formContext.formId, node.props.fieldId, null)
+          if (error) {
+            setFormFieldError(
+              formContext.formId,
+              node.props.fieldId,
+              getValidationErrorForEditedField({
+                fieldDefinition,
+                formId: formContext.formId,
+                state,
+                nextValue,
+              }),
+            )
           }
         }}
       />

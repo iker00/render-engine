@@ -36,8 +36,9 @@
 - Los nodos `form` ya eliminan por defecto su estado local al desmontarse realmente, vuelven a inicializar sus campos en el siguiente montaje y permiten recuperar la persistencia histórica solo con `persistOnUnmount: true`.
 - `input` ya soporta además `number`, `date` y `datetime-local` sin abrir una familia separada de componentes de campo.
 - La capa central de referencias del runtime ya soporta también `params.{paramName}` para texto visible, requests declarativos, `defaultValue` de formularios y nuevas navegaciones originadas desde páginas ya parametrizadas.
-- La validación declarativa `required` ya funciona a nivel de formulario, escribe errores solo en `forms.*` y excluye del bloqueo de submit a campos ocultos por `queryStateFeedback`.
-- Esa exclusión de campos ocultos ya cubre tanto `queryStateFeedback` como `visibility`, reutilizando la misma decisión visible que usa el renderer del runtime.
+- La validación declarativa local de formularios ya funciona a nivel de formulario desde `props.validations`, con soporte para `required`, `minLength`, `maxLength`, `min`, `max`, `minSelections` y `maxSelections`.
+- El runtime ya conserva el orden declarado de `props.validations` como prioridad efectiva, escribe un único error visible por campo en `forms.*` y excluye del bloqueo de submit a campos ocultos por `queryStateFeedback` o `visibility`.
+- La edición de un campo con error ya no borra ese error a ciegas: el runtime reevalúa localmente sus reglas visibles y solo limpia el mensaje cuando el valor deja de incumplir la primera regla fallida.
 - El submit declarativo de formularios ya soporta `submitAction.type: executeOperation`, reusa `queries.{operationName}` como única superficie visible de loading/success/error, puede añadir `query`, `body` y `headers` por envío y puede resetear por `resetOnSuccess`.
 - `button.props.action.type: executeOperation` ya puede añadir también `query`, `body` y `headers` por ejecución sin duplicar operaciones `api`.
 - `list`, `select`, `radioGroup` y `checkboxGroup` ya pueden consumir colecciones manuales históricas o colecciones resueltas desde `queries.{queryName}.data` o `queries.{queryName}.data.*`, con una capa compartida de resolución y proyección por consumidor.
@@ -56,7 +57,7 @@
 - No existen todavía consumidores declarativos finales del agregado `pageEntry`.
 - El catálogo visual sigue limitado a `container`, `heading`, `paragraph`, `list`, `button`, `form`, `input`, `textarea`, `select`, `radioGroup` y `checkboxGroup`.
 - No existen todavía consumidores de referencias fuera de `heading.props.text`, `paragraph.props.text`, `queryStateFeedback`, `api.query`, `api.body`, `defaultValue` de campos de formulario, `navigateTo.params` y `source` de colecciones para `list`, `select`, `radioGroup` y `checkboxGroup`, ni interpolación parcial dentro de strings.
-- No existen todavía validaciones declarativas avanzadas de formularios, búsqueda remota de opciones ni tipos de campo fuera del catálogo actual.
+- No existen todavía validaciones remotas, cruzadas, `pattern`, mensajes personalizados efectivos por regla, búsqueda remota de opciones ni tipos de campo fuera del catálogo actual.
 - `routeParams.*` y `navigation.*` siguen sin resolverse como referencias soportadas.
 - `params.*` sigue sin abrirse en `visibility` ni en las fuentes dinámicas de colección para `list` y `select`.
 - `visibility` sigue intencionadamente acotado a una sola condición por nodo, sin `fallback`, sin composición booleana y sin expresiones arbitrarias.
@@ -87,6 +88,7 @@
 - Vigésima feature del workflow cerrada para permitir params de navegación interna por entrada, con historial parametrizado, `params.*` en superficies acotadas y `preloads` reactivados por reentrada observable.
 - Vigésima primera feature del workflow cerrada para ampliar el catálogo reutilizable de formularios con `inputType` nativos adicionales, `select.multiple`, `radioGroup` y `checkboxGroup`, compartiendo una misma semántica de opciones, limpieza y submit sobre `forms.*`.
 - Vigésima segunda feature del workflow cerrada para hacer que `form` limpie por defecto su estado local al desmontarse, recalculando `defaultValue` en remontajes reales y dejando la persistencia como excepción explícita con `persistOnUnmount`.
+- Vigésima tercera feature del workflow cerrada para sustituir `props.required` por `props.validations`, ampliar el catálogo de reglas locales declarativas y reutilizar una misma semántica de evaluación tanto en submit como al editar campos con error.
 
 ## Referencias
 

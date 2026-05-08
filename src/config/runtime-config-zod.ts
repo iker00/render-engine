@@ -22,6 +22,7 @@ const nonEmptyStringSchema = z.string().refine((value) => value.trim().length > 
 const nodeIdSchema = nonEmptyStringSchema
 const runtimeConfigValueSchema = z.union([z.string(), z.number(), z.boolean(), z.null()])
 const formFieldDefaultValueSchema = z.union([runtimeConfigValueSchema, z.array(z.unknown())])
+const formFieldValidationsSchema = z.record(z.string(), z.unknown())
 
 export const runtimeConfigShellSchema = z
   .object({
@@ -237,7 +238,7 @@ const formFieldNodePropsSchema = z
   .object({
     fieldId: nonEmptyStringSchema,
     label: z.string(),
-    required: z.boolean().optional(),
+    validations: formFieldValidationsSchema.optional(),
     defaultValue: formFieldDefaultValueSchema.optional(),
   })
   .strip()

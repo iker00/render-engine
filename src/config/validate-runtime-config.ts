@@ -33,6 +33,10 @@ import type {
   RuntimeConfig,
   RuntimeConfigError,
   RuntimeUiAction,
+  RuntimeFormFieldValidations,
+  RuntimeFormValidationRuleName,
+  RuntimeNumericValidationRule,
+  RuntimeRequiredValidationRule,
   RuntimeConfigValidationResult,
   RuntimePageConfig,
   SelectLayoutNode,
@@ -69,6 +73,15 @@ const collectionPathSegmentPattern = /^[A-Za-z0-9_-]+$/
 const visibilityComparisonOperators = new Set<RuntimeVisibilityOperator>(['equals', 'notEquals', 'greaterThan', 'lessThan'])
 const visibilityScalarOperators = new Set<RuntimeVisibilityOperator>(['equals', 'notEquals'])
 const visibilityTruthinessOperators = new Set<RuntimeVisibilityOperator>(['isTruthy', 'isFalsy'])
+const supportedFormValidationRuleNames = new Set<RuntimeFormValidationRuleName>([
+  'required',
+  'minLength',
+  'maxLength',
+  'min',
+  'max',
+  'minSelections',
+  'maxSelections',
+])
 
 export function validateRuntimeConfig(rawConfig: unknown): RuntimeConfigValidationResult {
   const configShellResult = runtimeConfigShellSchema.safeParse(rawConfig)
@@ -1366,10 +1379,29 @@ function validateInputNode(
     return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.defaultValue": input fields do not accept array literal defaultValue.`)
   }
 
+  const validationsResult = validateFormFieldValidations(
+    rawNode.props,
+    parseResult.data.props.validations,
+    {
+      type: 'input',
+      inputType: parseResult.data.props.inputType,
+    },
+    path,
+    pageId,
+  )
+
+  if (validationsResult.status === 'error') {
+    return validationsResult
+  }
+
   return {
     status: 'ready',
     node: {
       ...parseResult.data,
+      props: {
+        ...parseResult.data.props,
+        validations: validationsResult.validations,
+      },
       queryStateFeedback: feedbackResult.queryStateFeedback,
       visibility: visibilityResult.visibility,
     },
@@ -1423,10 +1455,20 @@ function validateTextareaNode(
     return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.defaultValue": textarea fields do not accept array literal defaultValue.`)
   }
 
+  const validationsResult = validateFormFieldValidations(rawNode.props, parseResult.data.props.validations, { type: 'textarea' }, path, pageId)
+
+  if (validationsResult.status === 'error') {
+    return validationsResult
+  }
+
   return {
     status: 'ready',
     node: {
       ...parseResult.data,
+      props: {
+        ...parseResult.data.props,
+        validations: validationsResult.validations,
+      },
       queryStateFeedback: feedbackResult.queryStateFeedback,
       visibility: visibilityResult.visibility,
     },
@@ -1493,6 +1535,21 @@ function validateSelectNode(
     return defaultValueIssue
   }
 
+  const validationsResult = validateFormFieldValidations(
+    rawNode.props,
+    parseResult.data.props.validations,
+    {
+      type: 'select',
+      multiple: parseResult.data.props.multiple === true,
+    },
+    path,
+    pageId,
+  )
+
+  if (validationsResult.status === 'error') {
+    return validationsResult
+  }
+
   return {
     status: 'ready',
     node: {
@@ -1502,6 +1559,7 @@ function validateSelectNode(
       props: {
         ...parseResult.data.props,
         items: itemsResult.items,
+        validations: validationsResult.validations,
       },
     },
   }
@@ -1567,6 +1625,20 @@ function validateRadioGroupNode(
     return defaultValueIssue
   }
 
+  const validationsResult = validateFormFieldValidations(
+    rawNode.props,
+    parseResult.data.props.validations,
+    {
+      type: 'radioGroup',
+    },
+    path,
+    pageId,
+  )
+
+  if (validationsResult.status === 'error') {
+    return validationsResult
+  }
+
   return {
     status: 'ready',
     node: {
@@ -1576,6 +1648,7 @@ function validateRadioGroupNode(
       props: {
         ...parseResult.data.props,
         items: itemsResult.items,
+        validations: validationsResult.validations,
       },
     },
   }
@@ -1641,6 +1714,20 @@ function validateCheckboxGroupNode(
     return defaultValueIssue
   }
 
+  const validationsResult = validateFormFieldValidations(
+    rawNode.props,
+    parseResult.data.props.validations,
+    {
+      type: 'checkboxGroup',
+    },
+    path,
+    pageId,
+  )
+
+  if (validationsResult.status === 'error') {
+    return validationsResult
+  }
+
   return {
     status: 'ready',
     node: {
@@ -1650,9 +1737,241 @@ function validateCheckboxGroupNode(
       props: {
         ...parseResult.data.props,
         items: itemsResult.items,
+        validations: validationsResult.validations,
       },
     },
   }
+}
+
+type FormFieldValidationTarget =
+  | { type: 'input'; inputType?: InputLayoutNode['props']['inputType'] }
+  | { type: 'textarea' }
+  | { type: 'select'; multiple: boolean }
+  | { type: 'radioGroup' }
+  | { type: 'checkboxGroup' }
+
+function validateFormFieldValidations(
+  rawProps: unknown,
+  rawValidations: unknown,
+  target: FormFieldValidationTarget,
+  path: string,
+  pageId: string,
+): { status: 'ready'; validations: RuntimeFormFieldValidations | undefined } | { status: 'error'; error: RuntimeConfigError } {
+  if (isRecord(rawProps) && Object.hasOwn(rawProps, 'required')) {
+    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.required": use props.validations.required instead.`)
+  }
+
+  if (typeof rawValidations === 'undefined') {
+    return {
+      status: 'ready',
+      validations: undefined,
+    }
+  }
+
+  if (!isRecord(rawValidations)) {
+    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.validations".`)
+  }
+
+  const validations: RuntimeFormFieldValidations = {}
+
+  for (const [ruleName, rawRule] of Object.entries(rawValidations)) {
+    if (!supportedFormValidationRuleNames.has(ruleName as RuntimeFormValidationRuleName)) {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.validations.${ruleName}".`)
+    }
+
+    const validationResult =
+      ruleName === 'required'
+        ? validateRequiredRule(rawRule, `${path}.props.validations.${ruleName}`, pageId)
+        : validateNumericRule(rawRule, `${path}.props.validations.${ruleName}`, pageId)
+
+    if (validationResult.status === 'error') {
+      return validationResult
+    }
+
+    const compatibilityError = validateValidationCompatibility(ruleName as RuntimeFormValidationRuleName, validationResult.rule, target, path, pageId)
+
+    if (compatibilityError) {
+      return compatibilityError
+    }
+
+    switch (ruleName) {
+      case 'required':
+        validations.required = validationResult.rule as RuntimeRequiredValidationRule
+        break
+      case 'minLength':
+        validations.minLength = validationResult.rule as RuntimeNumericValidationRule
+        break
+      case 'maxLength':
+        validations.maxLength = validationResult.rule as RuntimeNumericValidationRule
+        break
+      case 'min':
+        validations.min = validationResult.rule as RuntimeNumericValidationRule
+        break
+      case 'max':
+        validations.max = validationResult.rule as RuntimeNumericValidationRule
+        break
+      case 'minSelections':
+        validations.minSelections = validationResult.rule as RuntimeNumericValidationRule
+        break
+      case 'maxSelections':
+        validations.maxSelections = validationResult.rule as RuntimeNumericValidationRule
+        break
+    }
+  }
+
+  const rangesError = validateValidationRanges(validations, `${path}.props.validations`, pageId)
+
+  if (rangesError) {
+    return rangesError
+  }
+
+  return {
+    status: 'ready',
+    validations,
+  }
+}
+
+function validateRequiredRule(
+  rawRule: unknown,
+  path: string,
+  pageId: string,
+): { status: 'ready'; rule: RuntimeRequiredValidationRule } | { status: 'error'; error: RuntimeConfigError } {
+  if (rawRule === true) {
+    return {
+      status: 'ready',
+      rule: { value: true },
+    }
+  }
+
+  if (!isRecord(rawRule)) {
+    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}".`)
+  }
+
+  if (rawRule.value !== true) {
+    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.value".`)
+  }
+
+  if (typeof rawRule.message !== 'undefined' && typeof rawRule.message !== 'string') {
+    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.message".`)
+  }
+
+  return {
+    status: 'ready',
+    rule: typeof rawRule.message === 'string' ? { value: true, message: rawRule.message } : { value: true },
+  }
+}
+
+function validateNumericRule(
+  rawRule: unknown,
+  path: string,
+  pageId: string,
+): { status: 'ready'; rule: RuntimeNumericValidationRule } | { status: 'error'; error: RuntimeConfigError } {
+  if (typeof rawRule === 'number') {
+    if (!Number.isFinite(rawRule) || rawRule < 0) {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}".`)
+    }
+
+    return {
+      status: 'ready',
+      rule: { value: rawRule },
+    }
+  }
+
+  if (!isRecord(rawRule)) {
+    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}".`)
+  }
+
+  if (typeof rawRule.value !== 'number' || !Number.isFinite(rawRule.value) || rawRule.value < 0) {
+    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.value".`)
+  }
+
+  if (typeof rawRule.message !== 'undefined' && typeof rawRule.message !== 'string') {
+    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.message".`)
+  }
+
+  return {
+    status: 'ready',
+    rule: typeof rawRule.message === 'string' ? { value: rawRule.value, message: rawRule.message } : { value: rawRule.value },
+  }
+}
+
+function validateValidationCompatibility(
+  ruleName: RuntimeFormValidationRuleName,
+  rule: RuntimeRequiredValidationRule | RuntimeNumericValidationRule,
+  target: FormFieldValidationTarget,
+  path: string,
+  pageId: string,
+) {
+  if (ruleName === 'required') {
+    return null
+  }
+
+  if ((ruleName === 'minLength' || ruleName === 'maxLength') && supportsTextLengthValidations(target)) {
+    if (!Number.isInteger((rule as RuntimeNumericValidationRule).value)) {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.validations.${ruleName}.value".`)
+    }
+
+    return null
+  }
+
+  if ((ruleName === 'min' || ruleName === 'max') && target.type === 'input' && target.inputType === 'number') {
+    return null
+  }
+
+  if ((ruleName === 'minSelections' || ruleName === 'maxSelections') && supportsSelectionCardinalityValidations(target)) {
+    if (!Number.isInteger((rule as RuntimeNumericValidationRule).value)) {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.validations.${ruleName}.value".`)
+    }
+
+    return null
+  }
+
+  return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.validations.${ruleName}".`)
+}
+
+function validateValidationRanges(
+  validations: RuntimeFormFieldValidations,
+  path: string,
+  pageId: string,
+) {
+  if (
+    validations.minLength &&
+    validations.maxLength &&
+    validations.minLength.value > validations.maxLength.value
+  ) {
+    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}": minLength cannot be greater than maxLength.`)
+  }
+
+  if (validations.min && validations.max && validations.min.value > validations.max.value) {
+    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}": min cannot be greater than max.`)
+  }
+
+  if (
+    validations.minSelections &&
+    validations.maxSelections &&
+    validations.minSelections.value > validations.maxSelections.value
+  ) {
+    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}": minSelections cannot be greater than maxSelections.`)
+  }
+
+  return null
+}
+
+function supportsTextLengthValidations(target: FormFieldValidationTarget) {
+  if (target.type === 'textarea') {
+    return true
+  }
+
+  return (
+    target.type === 'input' &&
+    target.inputType !== 'number' &&
+    target.inputType !== 'date' &&
+    target.inputType !== 'datetime-local'
+  )
+}
+
+function supportsSelectionCardinalityValidations(target: FormFieldValidationTarget) {
+  return target.type === 'checkboxGroup' || (target.type === 'select' && target.multiple)
 }
 
 function validateSelectItemsContract(

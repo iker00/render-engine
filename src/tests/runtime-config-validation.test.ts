@@ -1957,7 +1957,9 @@ describe('validateRuntimeConfig', () => {
                 props: {
                   fieldId: 'name',
                   label: 'Name',
-                  required: true,
+                  validations: {
+                    required: true,
+                  },
                   defaultValue: 'Ada',
                 },
               },
@@ -2048,7 +2050,11 @@ describe('validateRuntimeConfig', () => {
                         props: {
                           fieldId: 'name',
                           label: 'Name',
-                          required: true,
+                          validations: {
+                            required: {
+                              value: true,
+                            },
+                          },
                           defaultValue: 'Ada',
                         },
                       },
@@ -2132,7 +2138,11 @@ describe('validateRuntimeConfig', () => {
                     props: {
                       fieldId: 'name',
                       label: 'Name',
-                      required: true,
+                      validations: {
+                        required: {
+                          value: true,
+                        },
+                      },
                       defaultValue: 'Ada',
                     },
                   },
@@ -2228,6 +2238,290 @@ describe('validateRuntimeConfig', () => {
         },
       },
     ])
+  })
+
+  it('accepts validations for form fields, normalizes brief rules, and preserves declaration order', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithFormLayout({
+        children: [
+          {
+            type: 'input',
+            props: {
+              fieldId: 'name',
+              label: 'Name',
+              validations: {
+                maxLength: { value: 20, message: 'Too long' },
+                required: true,
+                minLength: 3,
+              },
+            },
+          },
+          {
+            type: 'textarea',
+            props: {
+              fieldId: 'bio',
+              label: 'Bio',
+              validations: {
+                minLength: { value: 10 },
+                maxLength: 200,
+              },
+            },
+          },
+          {
+            type: 'input',
+            props: {
+              fieldId: 'age',
+              label: 'Age',
+              inputType: 'number',
+              validations: {
+                min: 18,
+                max: { value: 99, message: 'Too old' },
+              },
+            },
+          },
+          {
+            type: 'select',
+            props: {
+              fieldId: 'tags',
+              label: 'Tags',
+              multiple: true,
+              items: [
+                { label: 'Alpha', value: 'alpha' },
+                { label: 'Beta', value: 'beta' },
+              ],
+              validations: {
+                minSelections: 1,
+                maxSelections: { value: 2, message: 'Too many' },
+              },
+            },
+          },
+          {
+            type: 'radioGroup',
+            props: {
+              fieldId: 'role',
+              label: 'Role',
+              items: [
+                { label: 'Admin', value: 'admin' },
+                { label: 'Editor', value: 'editor' },
+              ],
+              validations: {
+                required: { value: true, message: 'Pick one' },
+              },
+            },
+          },
+          {
+            type: 'checkboxGroup',
+            props: {
+              fieldId: 'scopes',
+              label: 'Scopes',
+              items: [
+                { label: 'Read', value: 'read' },
+                { label: 'Write', value: 'write' },
+              ],
+              validations: {
+                required: true,
+                minSelections: 1,
+                maxSelections: 2,
+              },
+            },
+          },
+          {
+            type: 'button',
+            props: {
+              label: 'Submit',
+            },
+          },
+        ],
+      }),
+    )
+
+    expect(result.status).toBe('ready')
+    if (result.status !== 'ready') {
+      throw new Error('Expected runtime config validation to succeed.')
+    }
+
+    const inputNode = result.page.layout[0]
+    if (inputNode.type !== 'form') {
+      throw new Error('Expected a form layout node.')
+    }
+
+    const normalizedField = inputNode.children?.[0]
+    expect(normalizedField).toMatchObject({
+      type: 'input',
+      props: {
+        fieldId: 'name',
+        validations: {
+          maxLength: { value: 20, message: 'Too long' },
+          required: { value: true },
+          minLength: { value: 3 },
+        },
+      },
+    })
+    expect(Object.keys((normalizedField as Extract<(typeof normalizedField), { props: { validations: object } }>).props.validations)).toEqual([
+      'maxLength',
+      'required',
+      'minLength',
+    ])
+  })
+
+  it('rejects legacy required props, invalid validation shapes, incompatible rules, and contradictory ranges', () => {
+    expect(
+      validateRuntimeConfig(
+        createConfigWithFormLayout({
+          children: [
+            {
+              type: 'input',
+              props: {
+                fieldId: 'name',
+                label: 'Name',
+                required: true,
+              },
+            },
+          ],
+        }),
+      ),
+    ).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message: 'Page "home" has an invalid layout at "layout[0].children[0].props.required": use props.validations.required instead.',
+      },
+    })
+
+    expect(
+      validateRuntimeConfig(
+        createConfigWithFormLayout({
+          children: [
+            {
+              type: 'input',
+              props: {
+                fieldId: 'name',
+                label: 'Name',
+                validations: {
+                  required: false,
+                },
+              },
+            },
+          ],
+        }),
+      ),
+    ).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message: 'Page "home" has an invalid layout at "layout[0].children[0].props.validations.required".',
+      },
+    })
+
+    expect(
+      validateRuntimeConfig(
+        createConfigWithFormLayout({
+          children: [
+            {
+              type: 'textarea',
+              props: {
+                fieldId: 'bio',
+                label: 'Bio',
+                validations: {
+                  min: 2,
+                },
+              },
+            },
+          ],
+        }),
+      ),
+    ).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message: 'Page "home" has an invalid layout at "layout[0].children[0].props.validations.min".',
+      },
+    })
+
+    expect(
+      validateRuntimeConfig(
+        createConfigWithFormLayout({
+          children: [
+            {
+              type: 'radioGroup',
+              props: {
+                fieldId: 'role',
+                label: 'Role',
+                items: [{ label: 'Admin', value: 'admin' }],
+                validations: {
+                  maxSelections: 1,
+                },
+              },
+            },
+          ],
+        }),
+      ),
+    ).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message: 'Page "home" has an invalid layout at "layout[0].children[0].props.validations.maxSelections".',
+      },
+    })
+
+    expect(
+      validateRuntimeConfig(
+        createConfigWithFormLayout({
+          children: [
+            {
+              type: 'input',
+              props: {
+                fieldId: 'age',
+                label: 'Age',
+                inputType: 'number',
+                validations: {
+                  min: -1,
+                },
+              },
+            },
+          ],
+        }),
+      ),
+    ).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message: 'Page "home" has an invalid layout at "layout[0].children[0].props.validations.min".',
+      },
+    })
+
+    expect(
+      validateRuntimeConfig(
+        createConfigWithFormLayout({
+          children: [
+            {
+              type: 'checkboxGroup',
+              props: {
+                fieldId: 'scopes',
+                label: 'Scopes',
+                items: [{ label: 'Read', value: 'read' }],
+                validations: {
+                  minSelections: 2,
+                  maxSelections: 1,
+                },
+              },
+            },
+          ],
+        }),
+      ),
+    ).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message: 'Page "home" has an invalid layout at "layout[0].children[0].props.validations": minSelections cannot be greater than maxSelections.',
+      },
+    })
   })
 
   it('rejects form fields outside a form subtree and accepts them under containers inside a form', () => {

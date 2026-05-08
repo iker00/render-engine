@@ -51,19 +51,27 @@ Reglas estables del catálogo:
 - En `select.multiple` y en `checkboxGroup`, solo se conservan seleccionados los valores que sigan existiendo en la colección efectiva disponible.
 - El reset por formulario restaura el estado inicial efectivo de cada campo usando ese `defaultValue` cuando exista.
 
-## Validación básica de v1
+## Validación declarativa local vigente
 - `required`
-- mensaje de error simple por campo (`Required`)
+- `minLength`
+- `maxLength`
+- `min`
+- `max`
+- `minSelections`
+- `maxSelections`
+- un único mensaje visible por campo según la primera regla fallida en el orden declarado dentro de `props.validations`
 
 Qué valida hoy realmente:
 - El runtime solo aplica validación declarativa local a nivel de formulario.
-- La única regla funcional disponible en v1 es `required`.
-- No existe todavía validación remota, validación cruzada entre campos ni catálogo declarativo de mensajes personalizados.
+- La superficie declarativa vigente entra por `props.validations`; `props.required` ya no forma parte del contrato soportado.
+- `required` conserva su semántica histórica, pero ahora vive dentro del mismo catálogo que el resto de reglas.
+- No existe todavía validación remota, validación cruzada entre campos ni catálogo declarativo de mensajes personalizados efectivos en UI.
+- La forma extendida de cada regla ya admite `message`, pero en esta iteración el runtime sigue mostrando mensajes por defecto.
 
 Cuándo valida:
 - La validación se ejecuta al hacer submit del `form`.
 - Antes de validar, el runtime inicializa también cualquier campo visible del formulario que todavía no exista en store para que entre en la misma pasada de validación.
-- Mientras el usuario edita, el runtime no reejecuta una pasada completa de validación del formulario: solo limpia el error existente del campo cuando el nuevo valor ya deja de estar vacío según la semántica de ese control.
+- Mientras el usuario edita, el runtime no reejecuta una pasada completa de validación del formulario: solo reevalúa localmente el campo con error y conserva, cambia o limpia ese error según la primera regla visible que siga fallando.
 
 Dónde vive el resultado:
 - Los errores viven solo en `forms.{formId}.{fieldId}.error`.
@@ -74,12 +82,16 @@ Semántica estable vigente por tipo de campo:
 - `input` y `textarea` `required` consideran inválidos `''` y strings compuestos solo por espacios.
 - `select` simple y `radioGroup` `required` consideran inválido `''` aunque exista una opción placeholder visible en el caso de `select`.
 - `select.multiple` y `checkboxGroup` `required` consideran inválido `[]`.
+- `minLength` y `maxLength` solo aplican a `input` textuales y `textarea`, usando la longitud efectiva del string actual sin trim adicional.
+- `min` y `max` solo aplican a `inputType: 'number'`, comparando contra el valor numérico efectivo del campo cuando existe.
+- `minSelections` y `maxSelections` solo aplican a `select.multiple` y `checkboxGroup`, contando la selección efectiva después de normalizar el catálogo visible.
 
 Semántica estable vigente de errores y visibilidad:
 - Si un campo visible requerido falla, el runtime escribe `Required` en `forms.{formId}.{fieldId}.error` y bloquea el submit.
+- Si varias reglas fallan a la vez, el runtime escribe solo el mensaje de la primera regla fallida según el orden declarado en `props.validations`.
 - Si un `select` simple o un `radioGroup` pierde la opción correspondiente a su valor almacenado tras cambiar la colección efectiva, el runtime limpia ese valor a `''` y reutiliza ese mismo estado vacío para render, `required` y submit.
-- Si un `select.multiple` o un `checkboxGroup` pierde parte de sus opciones seleccionadas al cambiar la colección efectiva, el runtime elimina solo los valores ya inválidos y reutiliza la colección restante en render, `required` y submit.
-- Cuando un campo con error vuelve a un valor válido, el error se limpia al cambiar sin exigir un nuevo submit.
+- Si un `select.multiple` o un `checkboxGroup` pierde parte de sus opciones seleccionadas al cambiar la colección efectiva, el runtime elimina solo los valores ya inválidos y reutiliza la colección restante en render, validación y submit.
+- Cuando un campo con error vuelve a editarse, el runtime reevalúa localmente sus reglas visibles y solo limpia el error cuando el valor actual deja de incumplir la primera regla fallida.
 - Un campo oculto por `queryStateFeedback` conserva su valor y su error, pero no bloquea el submit mientras siga oculto.
 - Un campo oculto por `visibility` también conserva `value`, `error`, `dirty`, `touched` y `defaultValue`, pero no bloquea el submit mientras siga oculto.
 - La visibilidad efectiva de esos campos reutiliza exactamente la misma utilidad compartida que usa el renderer central para combinar `queryStateFeedback` y `visibility`.
@@ -91,6 +103,7 @@ Qué no hace todavía esta validación:
 - No valida al cambiar de página ni por desmontaje del formulario.
 - No rehidrata campos ni recalcula errores solo porque cambien `params.*`, `queries.*` o el catálogo dinámico de opciones mientras el formulario sigue montado.
 - No expone un estado agregado de `isValid`, `isSubmitting` o `submitErrors` separado de `forms.*` y `queries.*`.
+- No activa todavía `message` como copy visible personalizado por regla aunque el contrato ya reserve ese hueco.
 
 ## Submit y reseteo
 - `form` renderiza un `<form>` real y maneja submit nativo.

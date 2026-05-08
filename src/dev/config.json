@@ -504,17 +504,21 @@
         {
           "type": "form",
           "id": "dynamicForm",
-          "visibility": {
-            "reference": "forms.postForm.id",
-            "operator": "equals",
-            "value": "1"
+          "submitAction": {
+            "type": "executeOperation",
+            "operationName": "searchPosts"
           },
           "children": [
             {
               "type": "input",
               "props": {
                 "fieldId": "name",
-                "label": "Name"
+                "label": "Name",
+                "validations": {
+                  "required": true,
+                  "minLength": 3,
+                  "maxLength": 10
+                }
               }
             },
             {
@@ -522,7 +526,11 @@
               "props": {
                 "inputType": "email",
                 "fieldId": "email",
-                "label": "Email"
+                "label": "Email",
+                "validations": {
+                  "required": true,
+                  "maxLength": 15
+                }
               }
             },
             {
@@ -541,6 +549,61 @@
                   }
                 ],
                 "defaultValue": "particular"
+              }
+            },
+            {
+              "type": "checkboxGroup",
+              "props": {
+                "fieldId": "checkboxExample",
+                "label": "Checkbox example",
+                "items": [
+                  {
+                    "label": "Item 1",
+                    "value": "item1"
+                  },
+                  {
+                    "label": "Item 2",
+                    "value": "item2"
+                  },
+                  {
+                    "label": "Item 3",
+                    "value": "item3"
+                  },
+                  {
+                    "label": "Item 4",
+                    "value": "item4"
+                  },
+                  {
+                    "label": "Item 5",
+                    "value": "item5"
+                  },
+                  {
+                    "label": "Item 6",
+                    "value": "item6"
+                  }
+                ],
+                "defaultValue": [
+                  "item1",
+                  "item2"
+                ],
+                "validations": {
+                  "required": true,
+                  "minSelections": 2,
+                  "maxSelections": 3
+                }
+              }
+            },
+            {
+              "type": "input",
+              "props": {
+                "inputType": "number",
+                "fieldId": "number",
+                "label": "Número",
+                "validations": {
+                  "required": true,
+                  "min": 1,
+                  "max": 100
+                }
               }
             },
             {
@@ -622,12 +685,23 @@
               "type": "input",
               "props": {
                 "fieldId": "company.cif",
-                "label": "CIF"
+                "label": "CIF",
+                "validations": {
+                  "required": true,
+                  "minLength": 9,
+                  "maxLength": 9
+                }
               },
               "visibility": {
                 "reference": "forms.dynamicForm.clientType",
                 "operator": "equals",
                 "value": "empresa"
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Submit"
               }
             }
           ]

@@ -1,6 +1,6 @@
 import type { SelectLayoutNode } from '../../config/runtime-config'
 import { useOptionalFormContext } from '../form-context'
-import { resolveFieldDefaultValue } from './form-layout-node'
+import { resolveResolvedFormFieldDefinition } from './form-layout-node'
 import { normalizeChoiceFieldValue, resolveSelectCollectionItems } from '../runtime-collection-sources'
 import {
   getFieldControlClassName,
@@ -8,6 +8,7 @@ import {
   getFieldLabelClassName,
   getFieldWrapperClassName,
 } from '../runtime-node-styling'
+import { getValidationErrorForEditedField } from '../runtime-form-validations'
 import { useRuntimeState, useRuntimeStateActions } from '../runtime-state/runtime-state-provider'
 import { selectFormFieldState } from '../runtime-state/runtime-state-selectors'
 
@@ -25,7 +26,8 @@ export function SelectNode({ node }: SelectNodeProps) {
   }
 
   const fieldState = selectFormFieldState(state, formContext.formId, node.props.fieldId)
-  const defaultValue = resolveFieldDefaultValue(node, state)
+  const fieldDefinition = resolveResolvedFormFieldDefinition(node, state)
+  const defaultValue = fieldDefinition.defaultValue
   const resolvedItems = resolveSelectCollectionItems(node.props.items, state)
   const isMultiple = node.props.multiple === true
   const value = normalizeChoiceFieldValue(
@@ -58,8 +60,17 @@ export function SelectNode({ node }: SelectNodeProps) {
             : event.currentTarget.value
           setFormFieldValue(formContext.formId, node.props.fieldId, nextValue)
 
-          if (error && (Array.isArray(nextValue) ? nextValue.length > 0 : nextValue !== '')) {
-            setFormFieldError(formContext.formId, node.props.fieldId, null)
+          if (error) {
+            setFormFieldError(
+              formContext.formId,
+              node.props.fieldId,
+              getValidationErrorForEditedField({
+                fieldDefinition,
+                formId: formContext.formId,
+                state,
+                nextValue,
+              }),
+            )
           }
         }}
       >

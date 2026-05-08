@@ -31,6 +31,7 @@ src/
     layout-node-renderer.tsx
     form-context.tsx
     runtime-collection-sources.ts
+    runtime-form-validations.ts
     runtime-query-state-feedback.ts
     runtime-node-styling.ts
     runtime-page.tsx
@@ -75,6 +76,7 @@ Lectura operativa de esa estructura:
 - `form-context.tsx` propaga el `formId` efectivo a cualquier descendiente del árbol del formulario sin exigir props manuales repetidas.
 - `runtime-actions/` concentra la traducción `action.type -> handler del provider`, de modo que el nodo visual solo dispara el contrato común y no reimplementa navegación, queries ni formularios.
 - `runtime-collection-sources.ts` centraliza la resolución de colecciones efectivas para consumidores multi-valor, separando origen (`values` manuales o `queries.*`) de la proyección final que necesita cada nodo y de la normalización común de selección simple o múltiple para `select`, `radioGroup` y `checkboxGroup`.
+- `runtime-form-validations.ts` centraliza la evaluación de reglas locales declarativas, reutiliza la misma normalización efectiva de valores para submit y edición, y evita duplicar semánticas entre `form` y nodos de campo.
 - `runtime-node-styling.ts` concentra la convención visual base del runtime y la compatibilidad acotada para `gap` arbitrarios.
 - `runtime-query-state-feedback.ts` concentra la derivación `idle | loading | error | empty | success`, la heurística común de `empty` y la resolución de defaults efectivos de `queryStateFeedback`.
 - `runtime-references/` fija la semántica central de referencias string, distingue `literal | supported | unsupported | invalid`, soporta `forms.*`, `queries.*` y `params.*` dentro de su frontera actual y evita lógica dispersa en nodos visuales.
@@ -115,7 +117,8 @@ Lectura operativa de esa estructura:
 - La interpretación de `button.props.action` ya no vive en el propio nodo visual: un ejecutor común en `src/runtime/runtime-actions/` delega en los handlers del provider para `navigateTo`, `goBack`, `executeOperation` y `resetForm`.
 - La semántica declarativa de feedback por query vive fuera de los nodos visuales concretos: el renderer central consulta `queries.{queryName}`, deriva un estado visible único y decide entre nodo original, ocultación o fallback local reutilizando `LayoutRenderer`.
 - La visibilidad efectiva de nodos y campos ya no depende solo de `queryStateFeedback`: una capa compartida combina esa semántica con reglas `visibility` basadas en `forms.*` y `queries.*`, manteniendo la precedencia `queryStateFeedback` antes de `visibility`.
-- Los formularios declarativos viven íntegramente dentro de `runtime/`: `form` actúa como frontera de inicialización, validación `required` y submit, mientras los campos leen y escriben solo en `forms.{formId}.{fieldId}`.
-- La decisión de visibilidad efectiva de un nodo se reutiliza tanto en render como en validación de submit para evitar divergencias entre `queryStateFeedback`, `visibility` y reglas `required`.
+- Los formularios declarativos viven íntegramente dentro de `runtime/`: `form` actúa como frontera de inicialización, validación local y submit, mientras los campos leen y escriben solo en `forms.{formId}.{fieldId}`.
+- La decisión de visibilidad efectiva de un nodo se reutiliza tanto en render como en validación de submit para evitar divergencias entre `queryStateFeedback`, `visibility` y cualquier regla local declarada.
+- La validación declarativa ya no depende de props sueltas por campo: el contrato entra por `props.validations`, se cierra en `config/` y se evalúa en runtime según el orden declarado de sus claves.
 - `list` y `select` reutilizan una misma capa de resolución de colecciones para evitar semánticas divergentes entre catálogo visual, formularios y estado compartido.
 - Los errores de bootstrap y validación deben ser diagnósticos en desarrollo; en producción, los errores marcados como solo de desarrollo degradan sin mensaje visible genérico.

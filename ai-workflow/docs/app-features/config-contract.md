@@ -91,18 +91,29 @@ Nodos soportados hoy:
 - `input`
   - `props.fieldId`: string obligatorio y único dentro del `form` contenedor
   - `props.label`: string obligatorio
-  - `props.required`: boolean opcional
+  - `props.validations`: objeto opcional y ordenado por declaración
+  - `props.validations.required`: `true` o `{ value: true, message?: string }`
+  - `props.validations.minLength`: número o `{ value: number, message?: string }`, solo para `input` textuales
+  - `props.validations.maxLength`: número o `{ value: number, message?: string }`, solo para `input` textuales
+  - `props.validations.min`: número o `{ value: number, message?: string }`, solo para `inputType: 'number'`
+  - `props.validations.max`: número o `{ value: number, message?: string }`, solo para `inputType: 'number'`
   - `props.defaultValue`: literal JSON simple o referencia dinámica completa soportada por el runtime
   - `props.inputType`: `text | email | password | search | tel | url | number | date | datetime-local`
 - `textarea`
   - `props.fieldId`: string obligatorio y único dentro del `form` contenedor
   - `props.label`: string obligatorio
-  - `props.required`: boolean opcional
+  - `props.validations`: objeto opcional y ordenado por declaración
+  - `props.validations.required`: `true` o `{ value: true, message?: string }`
+  - `props.validations.minLength`: número o `{ value: number, message?: string }`
+  - `props.validations.maxLength`: número o `{ value: number, message?: string }`
   - `props.defaultValue`: literal JSON simple o referencia dinámica completa soportada por el runtime
 - `select`
   - `props.fieldId`: string obligatorio y único dentro del `form` contenedor
   - `props.label`: string obligatorio
-  - `props.required`: boolean opcional
+  - `props.validations`: objeto opcional y ordenado por declaración
+  - `props.validations.required`: `true` o `{ value: true, message?: string }`
+  - `props.validations.minSelections`: número o `{ value: number, message?: string }`, solo cuando `props.multiple: true`
+  - `props.validations.maxSelections`: número o `{ value: number, message?: string }`, solo cuando `props.multiple: true`
   - `props.defaultValue`: literal escalar para selección simple, array escalar homogéneo para selección múltiple o referencia dinámica completa soportada por el runtime
   - `props.items`: obligatorio
   - `props.multiple`: boolean opcional; cuando vale `true`, el valor efectivo del campo pasa a ser una colección ordenada
@@ -114,13 +125,17 @@ Nodos soportados hoy:
 - `radioGroup`
   - `props.fieldId`: string obligatorio y único dentro del `form` contenedor
   - `props.label`: string obligatorio
-  - `props.required`: boolean opcional
+  - `props.validations`: objeto opcional y ordenado por declaración
+  - `props.validations.required`: `true` o `{ value: true, message?: string }`
   - `props.defaultValue`: literal JSON simple o referencia dinámica completa soportada por el runtime
   - `props.items`: obligatorio con exactamente los mismos shapes soportados por `select`
 - `checkboxGroup`
   - `props.fieldId`: string obligatorio y único dentro del `form` contenedor
   - `props.label`: string obligatorio
-  - `props.required`: boolean opcional
+  - `props.validations`: objeto opcional y ordenado por declaración
+  - `props.validations.required`: `true` o `{ value: true, message?: string }`
+  - `props.validations.minSelections`: número o `{ value: number, message?: string }`
+  - `props.validations.maxSelections`: número o `{ value: number, message?: string }`
   - `props.defaultValue`: array escalar homogéneo o referencia dinámica completa soportada por el runtime
   - `props.items`: obligatorio con exactamente los mismos shapes soportados por `select`
 
@@ -129,6 +144,7 @@ Reglas estructurales adicionales del catálogo actual:
 - `input`, `textarea`, `select`, `radioGroup` y `checkboxGroup` solo son válidos como descendientes de un `form`.
 - `button` sin `action` solo es válido como descendiente de un `form`.
 - las claves extra no soportadas se descartan del objeto validado final sin convertir por sí solas la configuración en inválida.
+- `props.required` deja de formar parte del contrato soportado; la obligatoriedad solo se declara desde `props.validations.required`.
 
 ## `queryStateFeedback`
 Cualquier nodo soportado hoy puede declarar opcionalmente:
@@ -258,6 +274,13 @@ Reglas funcionales vigentes:
 - `form.persistOnUnmount` sigue siendo opcional; si aparece con un valor no booleano, el config completo se rechaza antes del render sobre la ruta exacta.
 - Si `form.id` se repite en cualquier página, el config completo se rechaza antes del render.
 - Si un `fieldId` se repite dentro del mismo `form`, el config completo se rechaza antes del render.
+- Si `props.validations` declara una regla desconocida, un shape inválido o una combinación incompatible con el tipo de campo, el config completo se rechaza antes del render sobre la ruta exacta.
+- `props.validations.required` solo admite `true` y `{ value: true, message?: string }`; `false` o `{ value: false }` no son contratos válidos.
+- `minLength`, `maxLength`, `min`, `max`, `minSelections` y `maxSelections` solo admiten número o `{ value: number, message?: string }`.
+- `minLength`, `maxLength`, `minSelections` y `maxSelections` deben usar enteros no negativos.
+- `min`, `max` y cualquier otro umbral numérico deben ser finitos y no negativos.
+- El bootstrap rechaza rangos contradictorios dentro del mismo campo: `minLength > maxLength`, `min > max` y `minSelections > maxSelections`.
+- El orden declarado de `props.validations` se conserva en el config normalizado y pasa a ser la prioridad efectiva de evaluación en runtime.
 - Si un `form.children` contiene nodos fuera de `input`, `textarea`, `select`, `radioGroup`, `checkboxGroup`, `button`, `heading`, `paragraph` y `container`, el config completo se rechaza antes del render.
 - Si `input`, `textarea`, `select`, `radioGroup` o `checkboxGroup` aparecen fuera de un subárbol `form`, el config completo se rechaza antes del render.
 - Si un `button` sin `action` aparece fuera de un subárbol `form`, el config completo se rechaza antes del render.
