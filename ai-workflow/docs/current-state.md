@@ -27,9 +27,11 @@
 - `button.props.action` ya reutiliza un contrato común de acciones UI con `navigateTo`, `goBack`, `executeOperation` y `resetForm`.
 - La interpretación de acciones UI ya está concentrada en una capa transversal del runtime y no en ramas imperativas dispersas dentro del nodo visual `button`.
 - `button.props.action.type: navigateTo` ya puede transportar `params` escalares resueltos contra el snapshot actual del runtime y `goBack` restaura también esos params al recuperar una entrada previa.
+- El contrato del runtime ya incorpora `repeater` como nodo estructural para repetir un `template` completo por item de una colección `queries.*`, con `props.items.key` como identidad declarativa obligatoria y degradación a cero iteraciones cuando la colección no está disponible o no es un array.
 - Cualquier nodo soportado ya puede declarar `queryStateFeedback` para reaccionar al estado visible `idle | loading | error | empty | success` de una query concreta con `show`, `hide` o un fallback local reutilizando el mismo catálogo declarativo de nodos.
 - La semántica visible de query ya está centralizada: `idle` representa una query no lanzada todavía y también cubre la query ausente del store; `loading` representa solo una ejecución real en curso; `null`, `undefined`, `''`, `[]` y `{}` se tratan como `empty`; `0` y `false` siguen la rama `success`.
-- Cualquier nodo soportado ya puede declarar también `visibility` para mostrarse u ocultarse según una única condición simple basada en `forms.*` o `queries.*`, con operadores `equals`, `notEquals`, `isTruthy`, `isFalsy`, `greaterThan` y `lessThan`.
+- La capa central de referencias del runtime ya soporta también `item` e `item.*` dentro del subárbol iterado de `repeater`, reutilizando la misma semántica de navegación segura por objetos y arrays que `queries.{queryName}.data.*`.
+- Cualquier nodo soportado ya puede declarar también `visibility` para mostrarse u ocultarse según una única condición simple basada en `forms.*`, `queries.*` o `item.*` dentro de `repeater`, con operadores `equals`, `notEquals`, `isTruthy`, `isFalsy`, `greaterThan` y `lessThan`.
 - La visibilidad efectiva del runtime ya está centralizada con precedencia estable: `queryStateFeedback` decide primero `show | hide | fallback`, y `visibility` solo se evalúa sobre la rama principal cuando esta sigue visible.
 - Catálogo declarativo de formularios ya operativo con `form`, `input`, `textarea`, `select`, `radioGroup` y `checkboxGroup`, incluyendo herencia de `formId` por descendencia y render de `<form>` real.
 - La inicialización de campos declarativos ya es lazy y reutiliza exclusivamente `forms.{formId}.{fieldId}`, con soporte para `defaultValue` literal o dinámico sin sobrescribir estado ya existente del usuario mientras el formulario sigue montado.
@@ -41,7 +43,9 @@
 - La edición de un campo con error ya no borra ese error a ciegas: el runtime reevalúa localmente sus reglas visibles y solo limpia el mensaje cuando el valor deja de incumplir la primera regla fallida.
 - El submit declarativo de formularios ya soporta `submitAction.type: executeOperation`, reusa `queries.{operationName}` como única superficie visible de loading/success/error, puede añadir `query`, `body` y `headers` por envío y puede resetear por `resetOnSuccess`.
 - `button.props.action.type: executeOperation` ya puede añadir también `query`, `body` y `headers` por ejecución sin duplicar operaciones `api`.
-- `list`, `select`, `radioGroup` y `checkboxGroup` ya pueden consumir colecciones manuales históricas o colecciones resueltas desde `queries.{queryName}.data` o `queries.{queryName}.data.*`, con una capa compartida de resolución y proyección por consumidor.
+- `button.props.action.type: navigateTo` y `button.props.action.type: executeOperation` ya pueden resolver también `item.*` cuando nacen dentro de un `repeater`, manteniendo el snapshot correcto por iteración.
+- El submit declarativo de formularios y los `defaultValue` de campos también pueden resolver `item.*` dentro de `repeater`.
+- `list`, `select`, `radioGroup` y `checkboxGroup` ya pueden consumir colecciones manuales históricas, colecciones resueltas desde `queries.{queryName}.data` o `queries.{queryName}.data.*`, y dentro de `repeater` también colecciones `item.*`, con una capa compartida de resolución y proyección por consumidor.
 - `list` ya soporta colecciones escalares y de objetos mediante `itemType: 'scalar'` o `itemText`, degradando a vacío cuando la referencia aún no ofrece una colección utilizable y degradando por item en desarrollo cuando faltan datos mínimos.
 - `select` ya soporta catálogos manuales o dinámicos de escalares y objetos, puede operar en selección simple o múltiple mediante `props.multiple`, mantiene una semántica única del valor vigente entre render, `defaultValue`, validación `required` y submit, y limpia automáticamente solo los valores que dejan de existir en su catálogo efectivo.
 - `radioGroup` ya reutiliza la misma semántica de opciones y selección simple que `select` simple.
@@ -55,8 +59,8 @@
 - No existe todavía panel de desarrollo local para editar configuración en vivo.
 - No existe todavía una integración completa de producto con backend más allá de `data-config` como frontera de entrada y de las operaciones remotas declarativas ejecutadas por `fetch`.
 - No existen todavía consumidores declarativos finales del agregado `pageEntry`.
-- El catálogo visual sigue limitado a `container`, `heading`, `paragraph`, `list`, `button`, `form`, `input`, `textarea`, `select`, `radioGroup` y `checkboxGroup`.
-- No existen todavía consumidores de referencias fuera de `heading.props.text`, `paragraph.props.text`, `queryStateFeedback`, `api.query`, `api.body`, `defaultValue` de campos de formulario, `navigateTo.params` y `source` de colecciones para `list`, `select`, `radioGroup` y `checkboxGroup`, ni interpolación parcial dentro de strings.
+- El catálogo visual sigue limitado a `container`, `repeater`, `heading`, `paragraph`, `list`, `button`, `form`, `input`, `textarea`, `select`, `radioGroup` y `checkboxGroup`.
+- No existen todavía consumidores de referencias fuera de `heading.props.text`, `paragraph.props.text`, `queryStateFeedback`, `visibility`, `api.query`, `api.body`, `defaultValue` de campos de formulario, `navigateTo.params`, `repeater.props.items.source` y `source` de colecciones para `list`, `select`, `radioGroup` y `checkboxGroup`, ni interpolación parcial dentro de strings.
 - No existen todavía validaciones remotas, cruzadas, `pattern`, mensajes personalizados efectivos por regla, búsqueda remota de opciones ni tipos de campo fuera del catálogo actual.
 - `routeParams.*` y `navigation.*` siguen sin resolverse como referencias soportadas.
 - `params.*` sigue sin abrirse en `visibility` ni en las fuentes dinámicas de colección para `list` y `select`.
@@ -89,6 +93,7 @@
 - Vigésima primera feature del workflow cerrada para ampliar el catálogo reutilizable de formularios con `inputType` nativos adicionales, `select.multiple`, `radioGroup` y `checkboxGroup`, compartiendo una misma semántica de opciones, limpieza y submit sobre `forms.*`.
 - Vigésima segunda feature del workflow cerrada para hacer que `form` limpie por defecto su estado local al desmontarse, recalculando `defaultValue` en remontajes reales y dejando la persistencia como excepción explícita con `persistOnUnmount`.
 - Vigésima tercera feature del workflow cerrada para sustituir `props.required` por `props.validations`, ampliar el catálogo de reglas locales declarativas y reutilizar una misma semántica de evaluación tanto en submit como al editar campos con error.
+- Vigésima cuarta feature del workflow cerrada para introducir `repeater`, el namespace `item.*` y su integración transversal en renderer, navegación, requests declarativos, formularios y consumidores descendientes de colecciones.
 
 ## Referencias
 

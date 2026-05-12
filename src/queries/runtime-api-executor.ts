@@ -18,6 +18,7 @@ export async function executeRuntimeApiOperation({
   operationName,
   state,
   requestParams,
+  iterationContext,
   fetch: fetchImplementation = fetch,
 }: ExecuteRuntimeApiOperationOptions): Promise<RuntimeApiExecutionResult> {
   const requestResult = buildRuntimeApiRequest({
@@ -25,6 +26,7 @@ export async function executeRuntimeApiOperation({
     operationName,
     state,
     requestParams,
+    iterationContext,
   })
 
   if (requestResult.status === 'error') {

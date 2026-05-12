@@ -31,6 +31,34 @@ function createConfigWithLayout(layout: Array<Record<string, unknown>>) {
   ])
 }
 
+function createRepeaterNode(overrides: Record<string, unknown> = {}) {
+  return {
+    type: 'repeater',
+    props: {
+      items: {
+        source: 'queries.posts.data',
+        key: 'id',
+      },
+      template: [
+        {
+          type: 'heading',
+          props: {
+            text: 'item.title',
+            level: 2,
+          },
+        },
+        {
+          type: 'paragraph',
+          props: {
+            text: 'item.summary',
+          },
+        },
+      ],
+    },
+    ...overrides,
+  }
+}
+
 function createConfigWithNavigateToButtonAction(
   actionOverrides: Record<string, unknown> = {},
   options: { extraPages?: Array<Record<string, unknown>> } = {},
@@ -2782,6 +2810,41 @@ describe('validateRuntimeConfig', () => {
     })
 
     expect(
+      validateRuntimeConfig(
+        createConfigWithFormLayout({
+          children: [
+            {
+              type: 'repeater',
+              props: {
+                items: {
+                  source: 'queries.posts.data.results',
+                  key: 'id',
+                },
+                template: [
+                  {
+                    type: 'input',
+                    props: {
+                      fieldId: 'title',
+                      label: 'Title',
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+        }),
+      ),
+    ).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message:
+          'Page "home" has an invalid layout at "layout[0].children[0]": form nodes only accept input, textarea, select, radioGroup, checkboxGroup, button, heading, paragraph and container descendants.',
+      },
+    })
+
+    expect(
       validateRuntimeConfig({
         api: {
           submitUserForm: {
@@ -3622,7 +3685,7 @@ describe('validateRuntimeConfig', () => {
         error: {
           code: 'invalid-layout',
           displayMode: 'development-only',
-          message: 'Page "home" has an invalid layout at "layout[0].props.items.source": collection sources must use queries.{queryName}.data or queries.{queryName}.data.*.',
+          message: 'Page "home" has an invalid layout at "layout[0].props.items.source": collection sources must use queries.{queryName}.data, queries.{queryName}.data.* or item.*.',
         },
       })
 
@@ -3648,7 +3711,7 @@ describe('validateRuntimeConfig', () => {
         error: {
           code: 'invalid-layout',
           displayMode: 'development-only',
-          message: 'Page "home" has an invalid layout at "layout[0].children[0].props.items.source": collection sources must use queries.{queryName}.data or queries.{queryName}.data.*.',
+          message: 'Page "home" has an invalid layout at "layout[0].children[0].props.items.source": collection sources must use queries.{queryName}.data, queries.{queryName}.data.* or item.*.',
         },
       })
     })
@@ -3678,7 +3741,7 @@ describe('validateRuntimeConfig', () => {
         error: {
           code: 'invalid-layout',
           displayMode: 'development-only',
-          message: 'Page "home" has an invalid layout at "layout[0].props.items.source": collection sources must use queries.{queryName}.data or queries.{queryName}.data.*.',
+          message: 'Page "home" has an invalid layout at "layout[0].props.items.source": collection sources must use queries.{queryName}.data, queries.{queryName}.data.* or item.*.',
         },
       })
 
@@ -3705,7 +3768,7 @@ describe('validateRuntimeConfig', () => {
         error: {
           code: 'invalid-layout',
           displayMode: 'development-only',
-          message: 'Page "home" has an invalid layout at "layout[0].children[0].props.items.source": collection sources must use queries.{queryName}.data or queries.{queryName}.data.*.',
+          message: 'Page "home" has an invalid layout at "layout[0].children[0].props.items.source": collection sources must use queries.{queryName}.data, queries.{queryName}.data.* or item.*.',
         },
       })
     })
@@ -5822,7 +5885,7 @@ describe('validateRuntimeConfig', () => {
           error: {
             code: 'invalid-layout',
             displayMode: 'development-only',
-            message: 'Page "home" has an invalid layout at "layout[0].visibility.reference": visibility references must use forms.{formId}.{fieldId}, queries.{queryName}, queries.{queryName}.data, queries.{queryName}.data.*, queries.{queryName}.status or queries.{queryName}.error.',
+            message: 'Page "home" has an invalid layout at "layout[0].visibility.reference": visibility references must use item, item.*, forms.{formId}.{fieldId}, queries.{queryName}, queries.{queryName}.data, queries.{queryName}.data.*, queries.{queryName}.status or queries.{queryName}.error.',
           },
         })
       }
@@ -6306,7 +6369,7 @@ describe('validateRuntimeConfig', () => {
           code: 'invalid-layout',
           displayMode: 'development-only',
           message:
-            'Page "home" has an invalid layout at "layout[0].visibility.reference": visibility references must use forms.{formId}.{fieldId}, queries.{queryName}, queries.{queryName}.data, queries.{queryName}.data.*, queries.{queryName}.status or queries.{queryName}.error.',
+            'Page "home" has an invalid layout at "layout[0].visibility.reference": visibility references must use item, item.*, forms.{formId}.{fieldId}, queries.{queryName}, queries.{queryName}.data, queries.{queryName}.data.*, queries.{queryName}.status or queries.{queryName}.error.',
         },
       })
     })
@@ -6332,7 +6395,7 @@ describe('validateRuntimeConfig', () => {
           code: 'invalid-layout',
           displayMode: 'development-only',
           message:
-            'Page "home" has an invalid layout at "layout[0].props.items.source": collection sources must use queries.{queryName}.data or queries.{queryName}.data.*.',
+            'Page "home" has an invalid layout at "layout[0].props.items.source": collection sources must use queries.{queryName}.data, queries.{queryName}.data.* or item.*.',
         },
       })
 
@@ -6358,7 +6421,249 @@ describe('validateRuntimeConfig', () => {
           code: 'invalid-layout',
           displayMode: 'development-only',
           message:
-            'Page "home" has an invalid layout at "layout[0].props.items.source": collection sources must use queries.{queryName}.data or queries.{queryName}.data.*.',
+            'Page "home" has an invalid layout at "layout[0].props.items.source": collection sources must use queries.{queryName}.data, queries.{queryName}.data.* or item.*.',
+        },
+      })
+    })
+
+    it('accepts repeater nodes with query collection source, relative key path and template', () => {
+      expect(
+        validateRuntimeConfig(
+          createConfigWithLayout([
+            createRepeaterNode({
+              extra: 'drop-me',
+              props: {
+                items: {
+                  source: 'queries.posts.data.results',
+                  key: 'meta.slug',
+                  extra: 'drop-me',
+                },
+                template: [
+                  {
+                    type: 'heading',
+                    props: {
+                      text: 'item.title',
+                      level: 2,
+                      extra: 'drop-me',
+                    },
+                  },
+                  {
+                    type: 'form',
+                    id: 'post-actions',
+                    children: [
+                      {
+                        type: 'input',
+                        props: {
+                          fieldId: 'note',
+                          label: 'Note',
+                        },
+                      },
+                    ],
+                  },
+                ],
+                extra: 'drop-me',
+              },
+            }),
+          ]),
+        ),
+      ).toEqual({
+        status: 'ready',
+        config: {
+          api: {},
+          pages: [
+            {
+              id: 'home',
+              layout: [
+                {
+                  type: 'repeater',
+                  props: {
+                    items: {
+                      source: 'queries.posts.data.results',
+                      key: 'meta.slug',
+                    },
+                    template: [
+                      {
+                        type: 'heading',
+                        props: {
+                          text: 'item.title',
+                          level: 2,
+                        },
+                      },
+                      {
+                        type: 'form',
+                        id: 'post-actions',
+                        children: [
+                          {
+                            type: 'input',
+                            props: {
+                              fieldId: 'note',
+                              label: 'Note',
+                            },
+                          },
+                        ],
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          ],
+          initialPage: 'home',
+        },
+        page: {
+          id: 'home',
+          layout: [
+            {
+              type: 'repeater',
+              props: {
+                items: {
+                  source: 'queries.posts.data.results',
+                  key: 'meta.slug',
+                },
+                template: [
+                  {
+                    type: 'heading',
+                    props: {
+                      text: 'item.title',
+                      level: 2,
+                    },
+                  },
+                  {
+                    type: 'form',
+                    id: 'post-actions',
+                    children: [
+                      {
+                        type: 'input',
+                        props: {
+                          fieldId: 'note',
+                          label: 'Note',
+                        },
+                      },
+                    ],
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      })
+    })
+
+    it('rejects repeater collection sources outside queries.{queryName}.data scope', () => {
+      expect(
+        validateRuntimeConfig(
+          createConfigWithLayout([
+            createRepeaterNode({
+              props: {
+                items: {
+                  source: 'queries.posts.status',
+                  key: 'id',
+                },
+                template: [],
+              },
+            }),
+          ]),
+        ),
+      ).toEqual({
+        status: 'error',
+        error: {
+          code: 'invalid-layout',
+          displayMode: 'development-only',
+          message:
+            'Page "home" has an invalid layout at "layout[0].props.items.source": collection sources must use queries.{queryName}.data, queries.{queryName}.data.* or item.*.',
+        },
+      })
+    })
+
+    it('rejects repeater keys that are empty, global references or malformed relative paths', () => {
+      for (const key of ['', 'item.id', 'queries.posts.data.0.id', 'author..id']) {
+        expect(
+          validateRuntimeConfig(
+            createConfigWithLayout([
+              createRepeaterNode({
+                props: {
+                  items: {
+                    source: 'queries.posts.data',
+                    key,
+                  },
+                  template: [],
+                },
+              }),
+            ]),
+          ),
+        ).toEqual({
+          status: 'error',
+          error: {
+            code: 'invalid-layout',
+            displayMode: 'development-only',
+            message:
+              'Page "home" has an invalid layout at "layout[0].props.items.key": repeater item keys must use a non-empty relative item path.',
+          },
+        })
+      }
+    })
+
+    it('rejects repeater nodes without template, with non-array template, or with children', () => {
+      expect(
+        validateRuntimeConfig(
+          createConfigWithLayout([
+            {
+              type: 'repeater',
+              props: {
+                items: {
+                  source: 'queries.posts.data',
+                  key: 'id',
+                },
+              },
+            },
+          ]),
+        ),
+      ).toEqual({
+        status: 'error',
+        error: {
+          code: 'invalid-layout',
+          displayMode: 'development-only',
+          message: 'Page "home" has an invalid layout at "layout[0].props.template".',
+        },
+      })
+
+      expect(
+        validateRuntimeConfig(
+          createConfigWithLayout([
+            createRepeaterNode({
+              props: {
+                items: {
+                  source: 'queries.posts.data',
+                  key: 'id',
+                },
+                template: 'not-an-array',
+              },
+            }),
+          ]),
+        ),
+      ).toEqual({
+        status: 'error',
+        error: {
+          code: 'invalid-layout',
+          displayMode: 'development-only',
+          message: 'Page "home" has an invalid layout at "layout[0].props.template".',
+        },
+      })
+
+      expect(
+        validateRuntimeConfig(
+          createConfigWithLayout([
+            createRepeaterNode({
+              children: [],
+            }),
+          ]),
+        ),
+      ).toEqual({
+        status: 'error',
+        error: {
+          code: 'invalid-layout',
+          displayMode: 'development-only',
+          message: 'Page "home" has an invalid layout at "layout[0].children".',
         },
       })
     })

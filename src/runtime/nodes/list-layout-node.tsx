@@ -1,15 +1,17 @@
 import type { ListLayoutNode } from '../../config/runtime-config'
+import type { RuntimeIterationContext } from '../runtime-references/runtime-reference-resolver'
 import { getListItemClassName, getListNodeClassName } from '../runtime-node-styling'
 import { useRuntimeState } from '../runtime-state/runtime-state-provider'
-import { resolveListCollectionItems } from '../runtime-collection-sources'
+import { resolveListCollectionItemsWithOptions } from '../runtime-collection-sources'
 
 interface ListNodeProps {
   node: ListLayoutNode
+  iterationContext?: RuntimeIterationContext
 }
 
-export function ListNode({ node }: ListNodeProps) {
+export function ListNode({ node, iterationContext }: ListNodeProps) {
   const state = useRuntimeState()
-  const items = resolveListCollectionItems(node.props.items, state)
+  const items = resolveListCollectionItemsWithOptions(node.props.items, state, { iterationContext })
 
   return (
     <ul data-layout-node="list" className={getListNodeClassName()}>

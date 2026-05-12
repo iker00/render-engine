@@ -1,4 +1,5 @@
 export type RuntimeReferenceNamespace =
+  | 'item'
   | 'forms'
   | 'queries'
   | 'navigation'
@@ -19,7 +20,7 @@ export interface RuntimeLiteralReference {
 export interface RuntimeSupportedReference {
   kind: 'reference'
   status: 'supported'
-  namespace: 'forms' | 'queries' | 'params'
+  namespace: 'item' | 'forms' | 'queries' | 'params'
   path: string[]
   source: string
 }
@@ -27,7 +28,7 @@ export interface RuntimeSupportedReference {
 export interface RuntimeUnsupportedReference {
   kind: 'reference'
   status: 'unsupported'
-  namespace: 'navigation' | 'routeParams'
+  namespace: 'item' | 'navigation' | 'routeParams'
   path: string[]
   source: string
 }

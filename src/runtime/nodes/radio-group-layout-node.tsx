@@ -1,5 +1,6 @@
 import type { RadioGroupLayoutNode } from '../../config/runtime-config'
 import { useOptionalFormContext } from '../form-context'
+import type { RuntimeIterationContext } from '../runtime-references/runtime-reference-resolver'
 import { resolveResolvedFormFieldDefinition } from './form-layout-node'
 import { normalizeChoiceFieldValue, resolveChoiceCollectionItems } from '../runtime-collection-sources'
 import {
@@ -13,9 +14,10 @@ import { selectFormFieldState } from '../runtime-state/runtime-state-selectors'
 
 interface RadioGroupNodeProps {
   node: RadioGroupLayoutNode
+  iterationContext?: RuntimeIterationContext
 }
 
-export function RadioGroupNode({ node }: RadioGroupNodeProps) {
+export function RadioGroupNode({ node, iterationContext }: RadioGroupNodeProps) {
   const formContext = useOptionalFormContext()
   const state = useRuntimeState()
   const { setFormFieldError, setFormFieldValue } = useRuntimeStateActions()
@@ -25,12 +27,13 @@ export function RadioGroupNode({ node }: RadioGroupNodeProps) {
   }
 
   const fieldState = selectFormFieldState(state, formContext.formId, node.props.fieldId)
-  const fieldDefinition = resolveResolvedFormFieldDefinition(node, state)
+  const fieldDefinition = resolveResolvedFormFieldDefinition(node, state, iterationContext)
   const defaultValue = fieldDefinition.defaultValue
-  const items = resolveChoiceCollectionItems(node.props.items, state, 'radioGroup.props.items')
+  const items = resolveChoiceCollectionItems(node.props.items, state, 'radioGroup.props.items', { iterationContext })
   const value = normalizeChoiceFieldValue(node.props.items, state, fieldState?.value ?? defaultValue, {
     multiple: false,
     surface: 'radioGroup.props.items',
+    iterationContext,
   })
   const error = fieldState?.error ?? null
 

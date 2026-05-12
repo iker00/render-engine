@@ -18,6 +18,7 @@ La política completa está en [`../docs/workflow.md`](../docs/workflow.md).
 - Ninguna ahora mismo.
 
 ## Completadas
+- `0024-query-driven-repeated-layout-node`: nuevo nodo declarativo `repeater` para repetir un subárbol completo una vez por cada item de una colección resuelta desde `queries.*`, con contexto local `item.*`, integración en navegación y requests declarativos, soporte en formularios y consumidores descendientes de colecciones.
 - `0023-declarative-form-validation-rules`: ampliar la validación local de formularios con una superficie común y extensible por regla, incorporando `minLength`, `maxLength`, `min`, `max`, `minSelections` y `maxSelections` sin abrir todavía validaciones remotas, cruzadas ni mensajes personalizados efectivos.
 - `0022-form-runtime-state-reset-on-unmount`: `form` ya elimina por defecto su estado local al desmontarse, recalcula `defaultValue` al remontar tras una reentrada real y permite conservar la persistencia histórica solo con `persistOnUnmount`.
 - `0021-reusable-form-field-expansion`: ampliar el catálogo reutilizable de formularios con más tipos útiles de `input`, añadir `radioGroup` y `checkboxGroup`, y extender `select` con multiselección compartiendo la misma semántica declarativa de extracción de opciones desde colecciones manuales o `queries.*`.

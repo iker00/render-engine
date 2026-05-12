@@ -111,6 +111,31 @@ function renderRuntimePageWithState(activePage: RuntimePageConfig, state: Runtim
   )
 }
 
+function createRuntimePageState(
+  activePage: RuntimePageConfig,
+  queries: RuntimeState['queries'],
+  navigation?: RuntimeState['navigation'],
+) {
+  const config: RuntimeConfig = {
+    api: {},
+    initialPage: activePage.id,
+    pages: [activePage],
+  }
+
+  const baseState = createRuntimeState(config)
+
+  return {
+    ...baseState,
+    queries,
+    navigation: navigation ?? baseState.navigation,
+    pageEntry: {
+      ...baseState.pageEntry,
+      pageId: (navigation ?? baseState.navigation).currentPageId,
+      params: navigation?.history[navigation.history.length - 1]?.params ?? baseState.pageEntry.params,
+    },
+  } satisfies RuntimeState
+}
+
 function seedRuntimeState(state: RuntimeState) {
   return [
     {
@@ -2111,6 +2136,268 @@ describe('RuntimePage', () => {
     expect(consoleWarnSpy).toHaveBeenCalledWith(
       '[runtime-references] Could not resolve "queries.searchUsers.data.results.3.name" for paragraph.props.text (missing).',
     )
+
+    consoleWarnSpy.mockRestore()
+  })
+
+  it('renders one repeater iteration per query item, keeps collection order, and resolves item.* in descendants', () => {
+    const activePage: RuntimePageConfig = {
+      id: 'posts',
+      layout: [
+        {
+          type: 'repeater',
+          props: {
+            items: {
+              source: 'queries.posts.data.results',
+              key: 'id',
+            },
+            template: [
+              {
+                type: 'heading',
+                props: {
+                  text: 'item.title',
+                  level: 2,
+                },
+              },
+              {
+                type: 'paragraph',
+                props: {
+                  text: 'item.author.name',
+                },
+              },
+              {
+                type: 'list',
+                props: {
+                  items: {
+                    source: 'item.tags',
+                    itemType: 'scalar',
+                  },
+                },
+              },
+            ],
+          },
+        },
+      ],
+    }
+
+    renderRuntimePageWithState(
+      activePage,
+      createRuntimePageState(activePage, {
+        posts: {
+          status: 'success',
+          data: {
+            results: [
+              {
+                id: 'post-1',
+                title: 'First post',
+                author: { name: 'Ada' },
+                tags: ['alpha', 'beta'],
+              },
+              {
+                id: 'post-2',
+                title: 'Second post',
+                author: { name: 'Grace' },
+                tags: ['gamma'],
+              },
+            ],
+          },
+          error: null,
+        },
+      }),
+    )
+
+    expect(screen.getAllByRole('heading', { level: 2 }).map((item) => item.textContent)).toEqual(['First post', 'Second post'])
+    expect(screen.getAllByText(/Ada|Grace/, { selector: 'p' }).map((item) => item.textContent)).toEqual(['Ada', 'Grace'])
+
+    const lists = screen.getAllByRole('list')
+    expect(within(lists[0]).getAllByRole('listitem').map((item) => item.textContent)).toEqual(['alpha', 'beta'])
+    expect(within(lists[1]).getAllByRole('listitem').map((item) => item.textContent)).toEqual(['gamma'])
+  })
+
+  it('renders scalar repeater items and degrades to zero iterations for missing, failed, or non-array sources', () => {
+    const scalarPage: RuntimePageConfig = {
+      id: 'scalars',
+      layout: [
+        {
+          type: 'repeater',
+          props: {
+            items: {
+              source: 'queries.tags.data',
+              key: '0',
+            },
+            template: [
+              {
+                type: 'paragraph',
+                props: {
+                  text: 'item.0',
+                },
+              },
+            ],
+          },
+        },
+      ],
+    }
+
+    const { unmount } = renderRuntimePageWithState(
+      scalarPage,
+      createRuntimePageState(scalarPage, {
+        tags: {
+          status: 'success',
+          data: [['alpha'], ['beta']],
+          error: null,
+        },
+      }),
+    )
+
+    expect(screen.getAllByText(/alpha|beta/, { selector: 'p' }).map((item) => item.textContent)).toEqual(['alpha', 'beta'])
+    unmount()
+
+    const emptyPage: RuntimePageConfig = {
+      id: 'empty',
+      layout: scalarPage.layout,
+    }
+
+    const { rerender } = renderRuntimePageWithState(
+      emptyPage,
+      createRuntimePageState(emptyPage, {
+        tags: {
+          status: 'error',
+          data: null,
+          error: { code: 'network', message: 'Nope' },
+        },
+      }),
+    )
+
+    expect(screen.queryByText('alpha', { selector: 'p' })).not.toBeInTheDocument()
+
+    const emptyConfig: RuntimeConfig = {
+      api: {},
+      initialPage: emptyPage.id,
+      pages: [emptyPage],
+    }
+    const nonArrayState = createRuntimePageState(emptyPage, {
+      tags: {
+        status: 'success',
+        data: { value: 'not-an-array' },
+        error: null,
+      },
+    })
+
+    rerender(
+      <RuntimeStateContext.Provider
+        value={{
+          config: emptyConfig,
+          initialState: nonArrayState,
+          state: nonArrayState,
+          dispatch: vi.fn(),
+          dispatchAndSyncState: vi.fn(),
+          getLatestState: () => nonArrayState,
+        }}
+      >
+        <RuntimePage />
+      </RuntimeStateContext.Provider>,
+    )
+
+    expect(screen.queryByText('alpha', { selector: 'p' })).not.toBeInTheDocument()
+  })
+
+  it('keeps queryStateFeedback and visibility behavior on repeater and skips invalid iteration keys with diagnostics', () => {
+    const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    const activePage: RuntimePageConfig = {
+      id: 'posts',
+      layout: [
+        {
+          type: 'repeater',
+          queryStateFeedback: {
+            query: 'posts',
+            states: {
+              loading: {
+                mode: 'fallback',
+                fallback: [
+                  {
+                    type: 'paragraph',
+                    props: {
+                      text: 'Loading posts',
+                    },
+                  },
+                ],
+              },
+            },
+          },
+          visibility: {
+            reference: 'queries.posts.data.results',
+            operator: 'greaterThan',
+            value: 0,
+          },
+          props: {
+            items: {
+              source: 'queries.posts.data.results',
+              key: 'id',
+            },
+            template: [
+              {
+                type: 'paragraph',
+                props: {
+                  text: 'item.title',
+                },
+              },
+            ],
+          },
+        },
+      ],
+    }
+
+    const { rerender } = renderRuntimePageWithState(
+      activePage,
+      createRuntimePageState(activePage, {
+        posts: {
+          status: 'loading',
+          data: null,
+          error: null,
+        },
+      }),
+    )
+
+    expect(screen.getByText('Loading posts')).toBeInTheDocument()
+
+    const config: RuntimeConfig = {
+      api: {},
+      initialPage: activePage.id,
+      pages: [activePage],
+    }
+    const invalidKeyState = createRuntimePageState(activePage, {
+      posts: {
+        status: 'success',
+        data: {
+          results: [
+            { id: 'post-1', title: 'First post' },
+            { id: 'post-1', title: 'Duplicate post' },
+            { id: null, title: 'Broken post' },
+          ],
+        },
+        error: null,
+      },
+    })
+
+    rerender(
+      <RuntimeStateContext.Provider
+        value={{
+          config,
+          initialState: invalidKeyState,
+          state: invalidKeyState,
+          dispatch: vi.fn<(action: RuntimeStateAction) => void>(),
+          dispatchAndSyncState: vi.fn<(action: RuntimeStateAction) => void>(),
+          getLatestState: () => invalidKeyState,
+        }}
+      >
+        <RuntimePage />
+      </RuntimeStateContext.Provider>,
+    )
+
+    expect(screen.getByText('First post')).toBeInTheDocument()
+    expect(screen.queryByText('Duplicate post')).not.toBeInTheDocument()
+    expect(screen.queryByText('Broken post')).not.toBeInTheDocument()
+    expect(consoleWarnSpy).toHaveBeenCalled()
 
     consoleWarnSpy.mockRestore()
   })

@@ -235,6 +235,87 @@ const navigateWithParamsConfig: RuntimeConfig = {
   ],
 }
 
+const repeaterNavigationConfig: RuntimeConfig = {
+  api: {
+    loadPost: {
+      method: 'POST',
+      endpoint: '/api/posts/load',
+    },
+  },
+  initialPage: 'home',
+  pages: [
+    {
+      id: 'home',
+      layout: [
+        {
+          type: 'repeater',
+          props: {
+            items: {
+              source: 'queries.posts.data.results',
+              key: 'id',
+            },
+            template: [
+              {
+                type: 'button',
+                props: {
+                  label: 'Open post',
+                  action: {
+                    type: 'navigateTo',
+                    pageId: 'details',
+                    params: {
+                      slug: 'item.slug',
+                      mode: 'item.meta.mode',
+                      tags: 'item.tags',
+                    },
+                  },
+                },
+              },
+              {
+                type: 'button',
+                props: {
+                  label: 'Load post',
+                  action: {
+                    type: 'executeOperation',
+                    operationName: 'loadPost',
+                    query: {
+                      slug: 'item.slug',
+                    },
+                    headers: {
+                      authorization: 'item.token',
+                    },
+                    body: {
+                      id: 'item.id',
+                      mode: 'item.meta.mode',
+                    },
+                  },
+                },
+              },
+            ],
+          },
+        },
+      ],
+    },
+    {
+      id: 'details',
+      layout: [
+        {
+          type: 'heading',
+          props: {
+            text: 'params.slug',
+            level: 1,
+          },
+        },
+        {
+          type: 'paragraph',
+          props: {
+            text: 'params.mode',
+          },
+        },
+      ],
+    },
+  ],
+}
+
 function renderRuntime(config: RuntimeConfig = navigationConfig) {
   return render(
     <RuntimeStateProvider config={config}>
@@ -269,6 +350,56 @@ function renderRuntimeWithStateSeed(config: RuntimeConfig) {
   return render(
     <RuntimeStateProvider config={config}>
       <RuntimeFormAndQuerySeed />
+      <RuntimeStateSnapshot />
+      <RuntimePage />
+    </RuntimeStateProvider>,
+  )
+}
+
+function RuntimeRepeaterSeed() {
+  const { initializeQuery, setQuerySuccess } = useRuntimeStateActions()
+
+  useEffect(() => {
+    initializeQuery('posts')
+  }, [initializeQuery])
+
+  return (
+    <button
+      type="button"
+      onClick={() =>
+        setQuerySuccess('posts', {
+          results: [
+            {
+              id: 'post-1',
+              slug: 'hello-world',
+              token: 'token-1',
+              tags: ['alpha'],
+              meta: {
+                mode: 'read',
+              },
+            },
+            {
+              id: 'post-2',
+              slug: 'goodbye-world',
+              token: 'token-2',
+              tags: ['beta'],
+              meta: {
+                mode: 'preview',
+              },
+            },
+          ],
+        })
+      }
+    >
+      Seed repeater posts
+    </button>
+  )
+}
+
+function renderRuntimeWithRepeaterSeed(config: RuntimeConfig) {
+  return render(
+    <RuntimeStateProvider config={config}>
+      <RuntimeRepeaterSeed />
       <RuntimeStateSnapshot />
       <RuntimePage />
     </RuntimeStateProvider>,
@@ -742,4 +873,49 @@ describe('Runtime button navigation', () => {
     expect(fetchMock).not.toHaveBeenCalled()
     expect(readRuntimeState().queries.submitProfile).toBeUndefined()
   })
+
+  it('resolves repeater navigateTo params from the current item and omits non-scalar params', async () => {
+    renderRuntimeWithRepeaterSeed(repeaterNavigationConfig)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Seed repeater posts' }))
+    fireEvent.click(screen.getAllByRole('button', { name: 'Open post' })[1]!)
+
+    await waitFor(() => expect(screen.getByTestId('runtime-page')).toHaveAttribute('data-runtime-page-id', 'details'))
+
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('goodbye-world')
+    expect(screen.getByText('preview')).toBeInTheDocument()
+    expect(readRuntimeState().navigation.history).toEqual([
+      { entryId: 0, pageId: 'home', params: {} },
+      { entryId: 1, pageId: 'details', params: { slug: 'goodbye-world', mode: 'preview' } },
+    ])
+  })
+
+  it('executes repeater button operations with query, body, and headers resolved from the current item', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      createJsonResponse({
+        ok: true,
+      }),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+
+    renderRuntimeWithRepeaterSeed(repeaterNavigationConfig)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Seed repeater posts' }))
+    fireEvent.click(screen.getAllByRole('button', { name: 'Load post' })[0]!)
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+    expect(fetchMock.mock.calls[0]?.[0]).toBe('/api/posts/load?slug=hello-world')
+    expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({
+      method: 'POST',
+      headers: {
+        authorization: 'token-1',
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        id: 'post-1',
+        mode: 'read',
+      }),
+    })
+  })
+
 })

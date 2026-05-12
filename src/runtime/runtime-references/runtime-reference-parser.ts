@@ -8,10 +8,14 @@ import type {
 
 const SUPPORTED_NAMESPACES = new Set<RuntimeReferenceNamespace>(['forms', 'queries', 'params'])
 const RESERVED_NAMESPACES = new Set<RuntimeReferenceNamespace>(['navigation', 'routeParams'])
-const REFERENCE_PATTERN = /^(forms|queries|navigation|routeParams|params)(\.[A-Za-z0-9_-]+)+$/
+const REFERENCE_PATTERN = /^(item|forms|queries|navigation|routeParams|params)(\.[A-Za-z0-9_-]+)*$/
 const REFERENCE_SEGMENT_PATTERN = /^[A-Za-z0-9_-]+$/
 
-export function parseRuntimeReference(value: string): RuntimeReferenceParseResult {
+interface ParseRuntimeReferenceOptions {
+  allowItemReference?: boolean
+}
+
+export function parseRuntimeReference(value: string, options: ParseRuntimeReferenceOptions = {}): RuntimeReferenceParseResult {
   if (value.startsWith('\\') && REFERENCE_PATTERN.test(value.slice(1))) {
     return {
       kind: 'literal',
@@ -31,6 +35,26 @@ export function parseRuntimeReference(value: string): RuntimeReferenceParseResul
 
   if (!hasValidReferenceShape(namespace, path)) {
     return createInvalidReference(namespace, path, value)
+  }
+
+  if (namespace === 'item') {
+    if (options.allowItemReference) {
+      return {
+        kind: 'reference',
+        status: 'supported',
+        namespace,
+        path,
+        source: value,
+      } satisfies RuntimeSupportedReference
+    }
+
+    return {
+      kind: 'reference',
+      status: 'unsupported',
+      namespace,
+      path,
+      source: value,
+    } satisfies RuntimeUnsupportedReference
   }
 
   if (SUPPORTED_NAMESPACES.has(namespace)) {
@@ -63,6 +87,7 @@ function hasRecognizedNamespace(value: string): boolean {
   const namespace = value.split('.')[0]
 
   return (
+    namespace === 'item' ||
     namespace === 'forms' ||
     namespace === 'queries' ||
     namespace === 'navigation' ||
@@ -72,22 +97,37 @@ function hasRecognizedNamespace(value: string): boolean {
 }
 
 function hasValidReferenceShape(namespace: RuntimeReferenceNamespace, path: string[]) {
-  if (
-    path.length === 0 ||
-    path.some((segment) => segment.length === 0 || !REFERENCE_SEGMENT_PATTERN.test(segment))
-  ) {
+  if (path.some((segment) => segment.length === 0 || !REFERENCE_SEGMENT_PATTERN.test(segment))) {
     return false
   }
 
   switch (namespace) {
+    case 'item':
+      return path.length >= 0
     case 'forms':
+      if (path.length === 0) {
+        return false
+      }
+
       return path.length === 2
     case 'queries':
+      if (path.length === 0) {
+        return false
+      }
+
       return hasValidQueryReferencePath(path)
     case 'params':
+      if (path.length === 0) {
+        return false
+      }
+
       return path.length === 1
     case 'navigation':
     case 'routeParams':
+      if (path.length === 0) {
+        return false
+      }
+
       return path.length >= 1
   }
 }

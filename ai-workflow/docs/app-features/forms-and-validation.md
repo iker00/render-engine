@@ -44,6 +44,7 @@ Reglas estables del catálogo:
 - Los campos pueden declarar `defaultValue`.
 - Ese valor puede ser literal o dinámico.
 - La familia `params.*` ya forma parte de las referencias dinámicas soportadas para `defaultValue`.
+- Dentro de un `repeater`, `defaultValue` también puede resolver `item.*` contra la iteración activa.
 - Si `defaultValue` es una referencia dinámica, se resuelve una sola vez en el momento de la primera inicialización efectiva del campo.
 - Si el dato dinámico aparece más tarde mientras el formulario sigue montado, el runtime no rehidrata automáticamente el campo.
 - Si el formulario se desmonta y vuelve a montarse sin `persistOnUnmount`, el runtime recalcula el `defaultValue` contra el contexto vigente de ese nuevo montaje.
@@ -112,6 +113,7 @@ Qué no hace todavía esta validación:
 - Un `button` con `action` explícita dentro del formulario sigue siendo auxiliar y no dispara submit implícito.
 - `submitAction` puede añadir `query`, `body` y `headers` por ejecución sobre la operación `api` base sin duplicar operaciones casi idénticas.
 - El payload efectivo del submit reutiliza referencias `forms.{formId}.{fieldId}` ya soportadas en `api.query`, `api.body`, `api.headers` y en los canales equivalentes de `submitAction`.
+- Dentro de un `repeater`, `submitAction.query`, `submitAction.body` y `submitAction.headers` también pueden resolver `item.*` contra el item actual sin abrir una semántica distinta por formulario.
 - El resultado visible del submit vive solo en `queries.{operationName}`; no existe un dominio paralelo de `submitting`, `submitSuccess` o `submitError`.
 - El submit resuelve sus referencias contra el snapshot más reciente del runtime tras la validación local del formulario.
 - Si `submitAction` y la operación base aportan request params a la vez, `query` y `headers` combinan por clave con precedencia del submit, y `body` sigue la misma semántica limitada de merge superficial o sustitución total que usa el dominio `queries`.
@@ -133,6 +135,7 @@ Semántica estable vigente del reset:
 - reentrada a una página con `defaultValue` dependiente de `params.*` o `queries.*` sin reutilizar por defecto valores escritos en una visita previa si hubo desmontaje real del formulario
 - `select` simple o múltiple dependiente de catálogos remotos ya cargados en `queries.*`, sin lógica React específica por pantalla
 - grupos `radioGroup` y `checkboxGroup` alimentados por colecciones manuales o por `queries.*`, compartiendo la misma semántica de opciones que `select`
+- grupos `radioGroup` y `checkboxGroup` dentro de `repeater` alimentados también por `item.*`, compartiendo la misma semántica de opciones que `select`
 
 ## Límites actuales
 - No existen todavía subida de archivos ni otros tipos de campo fuera de `input`, `textarea`, `select`, `radioGroup` y `checkboxGroup`.

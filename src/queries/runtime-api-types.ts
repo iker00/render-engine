@@ -1,4 +1,5 @@
 import type { RuntimeApiOperation, RuntimeApiRequestParams, RuntimeConfig } from '../config/runtime-config'
+import type { RuntimeIterationContext } from '../runtime/runtime-references/runtime-reference-resolver'
 import type { RuntimeState } from '../runtime/runtime-state/runtime-state-types'
 
 export interface BuildRuntimeApiRequestOptions {
@@ -6,6 +7,7 @@ export interface BuildRuntimeApiRequestOptions {
   operationName: string
   state: RuntimeState
   requestParams?: RuntimeApiRequestParams
+  iterationContext?: RuntimeIterationContext
 }
 
 export interface RuntimeApiRequest {

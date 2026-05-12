@@ -5,6 +5,7 @@ import type {
   RuntimeCollectionObjectItem,
   SelectLayoutNodeItems,
 } from '../config/runtime-config'
+import type { RuntimeIterationContext } from './runtime-references/runtime-reference-resolver'
 import { resolveRuntimeReference } from './runtime-references/runtime-reference-resolver'
 import type { RuntimeState } from './runtime-state/runtime-state-types'
 
@@ -25,11 +26,19 @@ type ChoiceCollectionItems =
   | CheckboxGroupLayoutNode['props']['items']
 
 export function resolveListCollectionItems(items: ListLayoutNodeItems, state: RuntimeState) {
+  return resolveListCollectionItemsWithOptions(items, state)
+}
+
+export function resolveListCollectionItemsWithOptions(
+  items: ListLayoutNodeItems,
+  state: RuntimeState,
+  options: { iterationContext?: RuntimeIterationContext } = {},
+) {
   if (Array.isArray(items)) {
     return items
   }
 
-  const collectionSource = resolveCollectionSource(items, state, 'list.props.items')
+  const collectionSource = resolveCollectionSource(items, state, 'list.props.items', options)
 
   if (collectionSource === null) {
     return []
@@ -42,14 +51,19 @@ export function resolveListCollectionItems(items: ListLayoutNodeItems, state: Ru
   return projectScalarCollectionToTextItems(collectionSource)
 }
 
-export function resolveSelectCollectionItems(items: SelectLayoutNodeItems, state: RuntimeState) {
-  return resolveChoiceCollectionItems(items, state, 'select.props.items')
+export function resolveSelectCollectionItems(
+  items: SelectLayoutNodeItems,
+  state: RuntimeState,
+  options: { iterationContext?: RuntimeIterationContext } = {},
+) {
+  return resolveChoiceCollectionItems(items, state, 'select.props.items', options)
 }
 
 export function resolveChoiceCollectionItems(
   items: ChoiceCollectionItems,
   state: RuntimeState,
   surface: ChoiceCollectionSurface,
+  options: { iterationContext?: RuntimeIterationContext } = {},
 ) {
   if (Array.isArray(items)) {
     return items.map((item) => ({
@@ -58,7 +72,7 @@ export function resolveChoiceCollectionItems(
     }))
   }
 
-  const collectionSource = resolveCollectionSource(items, state, surface)
+  const collectionSource = resolveCollectionSource(items, state, surface, options)
 
   if (collectionSource === null) {
     return []
@@ -83,9 +97,11 @@ export function normalizeChoiceFieldValue(
   items: ChoiceCollectionItems,
   state: RuntimeState,
   value: unknown,
-  options: { multiple: boolean; surface: ChoiceCollectionSurface },
+  options: { multiple: boolean; surface: ChoiceCollectionSurface; iterationContext?: RuntimeIterationContext },
 ) {
-  const resolvedItems = resolveChoiceCollectionItems(items, state, options.surface)
+  const resolvedItems = resolveChoiceCollectionItems(items, state, options.surface, {
+    iterationContext: options.iterationContext,
+  })
 
   if (options.multiple) {
     return normalizeMultipleChoiceFieldValue(resolvedItems, value)
@@ -98,6 +114,7 @@ function resolveCollectionSource(
   items: Exclude<ListLayoutNodeItems, string[]> | Exclude<ChoiceCollectionItems, Array<{ label: string; value: string | number }>>,
   state: RuntimeState,
   surface: 'list.props.items' | ChoiceCollectionSurface,
+  options: { iterationContext?: RuntimeIterationContext } = {},
 ): ResolvedCollectionSource | null {
   if ('values' in items) {
     return {
@@ -106,7 +123,9 @@ function resolveCollectionSource(
     }
   }
 
-  const result = resolveRuntimeReference(items.source, state)
+  const result = resolveRuntimeReference(items.source, state, {
+    iterationContext: options.iterationContext,
+  })
 
   if (result.status !== 'resolved' || !Array.isArray(result.value)) {
     return null

@@ -1,5 +1,6 @@
 export type LayoutNodeType =
   | 'container'
+  | 'repeater'
   | 'heading'
   | 'paragraph'
   | 'list'
@@ -84,6 +85,19 @@ export interface ContainerLayoutNode extends LayoutNodeFeedbackFields {
     gap?: string
   }
   children?: LayoutNode[]
+}
+
+export interface RepeaterLayoutNode extends LayoutNodeFeedbackFields {
+  type: 'repeater'
+  id?: string
+  props: {
+    items: {
+      source: string
+      key: string
+    }
+    template: LayoutNode[]
+  }
+  children?: never
 }
 
 export interface HeadingLayoutNode extends LayoutNodeFeedbackFields {
@@ -294,6 +308,7 @@ export interface ButtonLayoutNode extends LayoutNodeFeedbackFields {
 
 export type LayoutNode =
   | ContainerLayoutNode
+  | RepeaterLayoutNode
   | HeadingLayoutNode
   | ParagraphLayoutNode
   | ListLayoutNode

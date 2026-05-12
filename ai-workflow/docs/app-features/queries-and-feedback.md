@@ -1,7 +1,7 @@
 # Queries y feedback
 
 ## Objetivo
-Coordinar llamadas API declaradas y exponer su estado para que la UI pueda reaccionar de forma textual y visual antes de la primera ejecución, durante la carga real, ante error, vacío o éxito.
+Coordinar llamadas API declaradas y exponer su estado para que la UI pueda reaccionar de forma textual, visual y estructural antes de la primera ejecución, durante la carga real, ante error, vacío o éxito.
 
 ## Modelo de estado
 Cada query expone en v1:
@@ -19,6 +19,7 @@ En el estado implementado hoy:
 El runtime ya permite leer estado de queries desde superficies textuales concretas:
 - `heading.props.text`
 - `paragraph.props.text`
+- `repeater.props.items.source`
 - `list.props.items.source`
 - `select.props.items.source`
 - `visibility.reference`
@@ -37,6 +38,7 @@ Semántica estable:
 - si la query no existe, `data` todavía no está disponible, falta una clave, el índice queda fuera de rango o se intenta profundizar dentro de un primitivo, la referencia se trata como dato ausente
 - `status` y `error` no admiten navegación adicional; rutas como `queries.searchUsers.error.message` siguen siendo inválidas
 - en `heading` y `paragraph`, solo los resultados escalares compatibles con texto (`string`, `number`, `boolean`) se muestran de forma visible; objetos, arrays, `null`, `undefined` y referencias no resolubles degradan a string vacío
+- en `repeater`, una referencia válida cuyo valor runtime actual no es una colección utilizable degrada a cero iteraciones en vez de romper el render
 - en `list` y `select`, una referencia válida cuyo valor runtime actual no es una colección utilizable degrada a colección vacía en vez de romper render, validación o submit
 - cuando la colección contiene objetos y algún item no resuelve los datos mínimos requeridos por el consumidor, el runtime degrada solo ese item y conserva el resto de la colección
 - en `visibility`, `queries.{queryName}` y `queries.{queryName}.error` pueden evaluarse con `isTruthy` e `isFalsy`; `queries.{queryName}.status` y las rutas anidadas bajo `data` también pueden usarse con comparaciones literales o numéricas según el operador
@@ -48,6 +50,7 @@ Semántica estable:
 - La fachada pública actual del runtime expone `executeQueryOperation(operationName, { requestParams? })` para ejecutar una operación declarada y escribir su resultado en `queries.{operationName}`.
 - `button.props.action.type: executeOperation` reutiliza esa misma fachada compartida desde el árbol `layout`.
 - `form.submitAction.type: executeOperation` reutiliza la misma fachada compartida desde el submit nativo del formulario.
+- Cuando la acción o el submit ocurren dentro de un `repeater`, `query`, `body` y `headers` también pueden resolverse desde `item.*` para la iteración activa.
 - La UI no construye manualmente URLs, query strings ni payloads JSON.
 
 Semántica estable de ejecución:

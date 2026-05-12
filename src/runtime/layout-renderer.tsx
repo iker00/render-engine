@@ -1,18 +1,23 @@
 import type { LayoutNode, LayoutNodeCollection } from '../config/runtime-config'
+import type { RuntimeIterationContext } from './runtime-references/runtime-reference-resolver'
 import { LayoutNodeRenderer } from './layout-node-renderer'
 
 export interface LayoutRendererProps {
   nodes: LayoutNodeCollection
+  iterationContext?: RuntimeIterationContext
 }
 
-export function LayoutRenderer({ nodes }: LayoutRendererProps) {
+export function LayoutRenderer({ nodes, iterationContext }: LayoutRendererProps) {
   return (
     <>
       {nodes.map((node, index) => (
         <LayoutNodeRenderer
           key={getLayoutNodeKey(node, index)}
           node={node}
-          renderedChildren={hasChildren(node) ? <LayoutRenderer nodes={node.children ?? []} /> : undefined}
+          iterationContext={iterationContext}
+          renderedChildren={
+            hasChildren(node) ? <LayoutRenderer nodes={node.children ?? []} iterationContext={iterationContext} /> : undefined
+          }
         />
       ))}
     </>

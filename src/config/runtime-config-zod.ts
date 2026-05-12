@@ -2,6 +2,7 @@ import { z } from 'zod'
 
 export const supportedNodeTypes = [
   'container',
+  'repeater',
   'heading',
   'paragraph',
   'list',
@@ -144,6 +145,27 @@ export const headingNodeSchema = z
         level: z.number().int(),
       })
       .strip(),
+  })
+  .strip()
+
+export const repeaterNodeSchema = z
+  .object({
+    type: z.literal('repeater'),
+    id: nodeIdSchema.optional(),
+    queryStateFeedback: queryStateFeedbackSchema.optional(),
+    visibility: visibilitySchema.optional(),
+    props: z
+      .object({
+        items: z
+          .object({
+            source: nonEmptyStringSchema,
+            key: nonEmptyStringSchema,
+          })
+          .strip(),
+        template: z.array(z.unknown()),
+      })
+      .strip(),
+    children: z.never().optional(),
   })
   .strip()
 

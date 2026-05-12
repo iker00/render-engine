@@ -14,11 +14,22 @@ import type {
   RuntimeSupportedReference,
 } from './runtime-reference-types'
 
+export interface RuntimeIterationContext {
+  item: unknown
+}
+
+interface ResolveRuntimeReferenceOptions {
+  iterationContext?: RuntimeIterationContext
+}
+
 export function resolveRuntimeReference(
   value: string,
   state?: RuntimeState,
+  options: ResolveRuntimeReferenceOptions = {},
 ): RuntimeReferenceResolutionResult {
-  const parsedReference = parseRuntimeReference(value)
+  const parsedReference = parseRuntimeReference(value, {
+    allowItemReference: options.iterationContext !== undefined,
+  })
 
   if (parsedReference.kind === 'literal') {
     return {
@@ -42,7 +53,7 @@ export function resolveRuntimeReference(
   }
 
   if (state) {
-    const resolvedValue = resolveSupportedReferenceValue(parsedReference, state)
+    const resolvedValue = resolveSupportedReferenceValue(parsedReference, state, options.iterationContext)
 
     if (resolvedValue.found) {
       return {
@@ -63,8 +74,9 @@ export function resolveRuntimeTextReference(
   value: string,
   state: RuntimeState,
   surface: 'heading.props.text' | 'paragraph.props.text',
+  options: ResolveRuntimeReferenceOptions = {},
 ) {
-  const result = resolveRuntimeReference(value, state)
+  const result = resolveRuntimeReference(value, state, options)
   reportRuntimeReferenceDiagnostic(result, surface)
 
   if (result.status === 'literal') {
@@ -79,6 +91,14 @@ export function resolveRuntimeTextReference(
 }
 
 export function resolveRuntimeValue(value: unknown, state: RuntimeState) {
+  return resolveRuntimeValueWithOptions(value, state)
+}
+
+export function resolveRuntimeValueWithOptions(
+  value: unknown,
+  state: RuntimeState,
+  options: ResolveRuntimeReferenceOptions = {},
+) {
   if (typeof value !== 'string') {
     return {
       status: 'resolved',
@@ -86,7 +106,7 @@ export function resolveRuntimeValue(value: unknown, state: RuntimeState) {
     } as const
   }
 
-  const result = resolveRuntimeReference(value, state)
+  const result = resolveRuntimeReference(value, state, options)
 
   if (result.status === 'literal') {
     return {
@@ -102,7 +122,15 @@ export function resolveRuntimeValue(value: unknown, state: RuntimeState) {
   return result
 }
 
-function resolveSupportedReferenceValue(reference: RuntimeSupportedReference, state: RuntimeState) {
+function resolveSupportedReferenceValue(
+  reference: RuntimeSupportedReference,
+  state: RuntimeState,
+  iterationContext?: RuntimeIterationContext,
+) {
+  if (reference.namespace === 'item') {
+    return resolveNestedReferenceValue(iterationContext?.item, reference.path)
+  }
+
   if (reference.namespace === 'forms') {
     const [formId, fieldId] = reference.path
     const fieldState = selectFormFieldState(state, formId, fieldId)
@@ -156,6 +184,67 @@ function resolveSupportedReferenceValue(reference: RuntimeSupportedReference, st
     found: true,
     value: selectQueryReferenceValue(state, queryName, property),
   } as const
+}
+
+function resolveNestedReferenceValue(rootValue: unknown, path: string[]) {
+  if (typeof rootValue === 'undefined') {
+    return {
+      found: false,
+    } as const
+  }
+
+  let currentValue = rootValue
+
+  for (const segment of path) {
+    if (currentValue == null) {
+      return {
+        found: false,
+      } as const
+    }
+
+    if (Array.isArray(currentValue)) {
+      if (!isArrayIndexSegment(segment)) {
+        return {
+          found: false,
+        } as const
+      }
+
+      currentValue = currentValue[Number(segment)]
+
+      if (typeof currentValue === 'undefined') {
+        return {
+          found: false,
+        } as const
+      }
+
+      continue
+    }
+
+    if (typeof currentValue !== 'object') {
+      return {
+        found: false,
+      } as const
+    }
+
+    const objectValue = currentValue as Record<string, unknown>
+
+    if (!Object.hasOwn(objectValue, segment)) {
+      return {
+        found: false,
+      } as const
+    }
+
+    currentValue = objectValue[segment]
+  }
+
+  return {
+    found: true,
+    value: currentValue,
+  } as const
+}
+
+function isArrayIndexSegment(segment: string) {
+  return /^(0|[1-9]\d*)$/.test(segment)
 }
 
 function normalizeRuntimeTextValue(value: unknown) {

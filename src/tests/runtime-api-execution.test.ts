@@ -454,6 +454,65 @@ describe('Runtime api execution', () => {
     })
   })
 
+  it('resolves item references in query, body, and headers when an iteration context is provided', () => {
+    const configWithItemContext: RuntimeConfig = {
+      ...runtimeConfig,
+      api: {
+        ...runtimeConfig.api,
+        loadPost: {
+          method: 'POST',
+          endpoint: '/api/posts/load',
+          query: {
+            slug: 'item.slug',
+          },
+          headers: {
+            authorization: 'item.token',
+          },
+          body: {
+            id: 'item.id',
+            mode: 'item.meta.mode',
+          },
+        },
+      },
+    }
+
+    expect(
+      buildRuntimeApiRequest({
+        config: configWithItemContext,
+        operationName: 'loadPost',
+        state: runtimeState,
+        iterationContext: {
+          item: {
+            id: 'post-1',
+            slug: 'hello-world',
+            token: 'token-1',
+            meta: {
+              mode: 'preview',
+            },
+          },
+        },
+      }),
+    ).toEqual({
+      status: 'ready',
+      request: {
+        operationName: 'loadPost',
+        operation: configWithItemContext.api.loadPost,
+        url: '/api/posts/load?slug=hello-world',
+        init: {
+          method: 'POST',
+          headers: {
+            authorization: 'token-1',
+            'content-type': 'application/json',
+          },
+          body: JSON.stringify({
+            id: 'post-1',
+            mode: 'preview',
+          }),
+        },
+      },
+    })
+  })
+
   it('rejects missing or unsupported final query values before emitting a request', () => {
     expect(
       buildRuntimeApiRequest({

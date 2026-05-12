@@ -81,6 +81,18 @@ const nestedQueryRuntimeState: RuntimeState = {
   },
 }
 
+const iterationContext = {
+  item: {
+    id: 'post-1',
+    slug: 'hello-world',
+    author: {
+      name: 'Ada',
+    },
+    tags: ['news', 'featured'],
+    stats: null,
+  },
+}
+
 describe('Runtime reference resolution', () => {
   describe('T0007-01 parser contract', () => {
     it('classifies supported forms and queries paths as dynamic references', () => {
@@ -288,6 +300,59 @@ describe('Runtime reference resolution', () => {
     })
   })
 
+  describe('T0024-02 item reference parser contract', () => {
+    it('classifies item references as unsupported outside explicit iteration context', () => {
+      expect(parseRuntimeReference('item')).toMatchObject({
+        kind: 'reference',
+        status: 'unsupported',
+        namespace: 'item',
+        path: [],
+      })
+
+      expect(parseRuntimeReference('item.author.name')).toMatchObject({
+        kind: 'reference',
+        status: 'unsupported',
+        namespace: 'item',
+        path: ['author', 'name'],
+      })
+    })
+
+    it('classifies item references as supported when iteration context is enabled', () => {
+      expect(parseRuntimeReference('item', { allowItemReference: true })).toMatchObject({
+        kind: 'reference',
+        status: 'supported',
+        namespace: 'item',
+        path: [],
+      })
+
+      expect(parseRuntimeReference('item.tags.0', { allowItemReference: true })).toMatchObject({
+        kind: 'reference',
+        status: 'supported',
+        namespace: 'item',
+        path: ['tags', '0'],
+      })
+    })
+
+    it('keeps malformed item references invalid and escaped item references literal', () => {
+      expect(parseRuntimeReference('item.')).toMatchObject({
+        kind: 'reference',
+        status: 'invalid',
+        namespace: 'item',
+      })
+
+      expect(parseRuntimeReference('item..slug')).toMatchObject({
+        kind: 'reference',
+        status: 'invalid',
+        namespace: 'item',
+      })
+
+      expect(parseRuntimeReference('\\item.slug')).toEqual({
+        kind: 'literal',
+        value: 'item.slug',
+      })
+    })
+  })
+
   describe('T0007-02 store-backed resolution', () => {
     it('reads current form values from the shared runtime state', () => {
       expect(resolveRuntimeReference('forms.userSearch.name', runtimeState)).toEqual({
@@ -432,6 +497,11 @@ describe('Runtime reference resolution', () => {
         status: 'invalid',
         reference: parseRuntimeReference('forms.userSearch.name.error'),
       })
+
+      expect(resolveRuntimeReference('item.slug', runtimeState)).toEqual({
+        status: 'unsupported',
+        reference: parseRuntimeReference('item.slug'),
+      })
     })
   })
 
@@ -556,6 +626,75 @@ describe('Runtime reference resolution', () => {
         status: 'resolved',
         value: nestedQueryRuntimeState.queries.searchUsers.error,
         reference: parseRuntimeReference('queries.searchUsers.error'),
+      })
+    })
+  })
+
+  describe('T0024-02 item resolution with explicit iteration context', () => {
+    it('resolves the full current item and nested item paths', () => {
+      expect(resolveRuntimeReference('item', runtimeState, { iterationContext })).toEqual({
+        status: 'resolved',
+        value: iterationContext.item,
+        reference: parseRuntimeReference('item', { allowItemReference: true }),
+      })
+
+      expect(resolveRuntimeReference('item.slug', runtimeState, { iterationContext })).toEqual({
+        status: 'resolved',
+        value: 'hello-world',
+        reference: parseRuntimeReference('item.slug', { allowItemReference: true }),
+      })
+
+      expect(resolveRuntimeReference('item.author.name', runtimeState, { iterationContext })).toEqual({
+        status: 'resolved',
+        value: 'Ada',
+        reference: parseRuntimeReference('item.author.name', { allowItemReference: true }),
+      })
+
+      expect(resolveRuntimeReference('item.tags.1', runtimeState, { iterationContext })).toEqual({
+        status: 'resolved',
+        value: 'featured',
+        reference: parseRuntimeReference('item.tags.1', { allowItemReference: true }),
+      })
+    })
+
+    it('returns missing when item paths are valid but the current item does not provide navigable data', () => {
+      expect(resolveRuntimeReference('item.author.role', runtimeState, { iterationContext })).toEqual({
+        status: 'missing',
+        reference: parseRuntimeReference('item.author.role', { allowItemReference: true }),
+      })
+
+      expect(resolveRuntimeReference('item.tags.9', runtimeState, { iterationContext })).toEqual({
+        status: 'missing',
+        reference: parseRuntimeReference('item.tags.9', { allowItemReference: true }),
+      })
+
+      expect(resolveRuntimeReference('item.tags.label', runtimeState, { iterationContext })).toEqual({
+        status: 'missing',
+        reference: parseRuntimeReference('item.tags.label', { allowItemReference: true }),
+      })
+
+      expect(resolveRuntimeReference('item.stats.total', runtimeState, { iterationContext })).toEqual({
+        status: 'missing',
+        reference: parseRuntimeReference('item.stats.total', { allowItemReference: true }),
+      })
+    })
+
+    it('keeps forms, queries and params semantics unchanged while item context exists', () => {
+      expect(resolveRuntimeReference('forms.userSearch.name', runtimeState, { iterationContext })).toEqual({
+        status: 'resolved',
+        value: 'Grace',
+        reference: parseRuntimeReference('forms.userSearch.name'),
+      })
+
+      expect(resolveRuntimeReference('queries.searchUsers.status', runtimeState, { iterationContext })).toEqual({
+        status: 'resolved',
+        value: 'success',
+        reference: parseRuntimeReference('queries.searchUsers.status'),
+      })
+
+      expect(resolveRuntimeReference('params.userId', runtimeState, { iterationContext })).toEqual({
+        status: 'missing',
+        reference: parseRuntimeReference('params.userId'),
       })
     })
   })

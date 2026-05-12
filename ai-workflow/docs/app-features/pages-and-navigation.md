@@ -22,6 +22,7 @@ Definir cómo se organiza el catálogo de páginas del runtime y cuál es el alc
 - Existe una acción interna `navigateToPage(pageId, params?)` para cambiar de página sin tocar la URL del navegador.
 - `button.props.action` ya puede disparar `navigateTo` y `goBack` reutilizando ese mismo estado compartido.
 - `navigateTo` puede declarar `params` como objeto plano y escalar; si un valor llega como referencia soportada, el runtime lo resuelve al hacer click y persiste el valor efectivo en la nueva entrada.
+- Dentro de un `repeater`, `navigateTo.params` también puede resolver `item.*` contra la iteración activa y omite silenciosamente los params que acaben en valores no escalares.
 - Navegar a la misma página con los mismos params efectivos sigue siendo un no-op observable: no duplica historial ni relanza `preloads`.
 - Navegar a la misma página con params efectivos distintos crea una entrada nueva del historial.
 - El historial interno ya sostiene `goBack` como acción declarativa estable cuando existe una página previa válida y restaura también los params asociados a la entrada anterior.

@@ -36,7 +36,9 @@ describe('executeRuntimeUiAction', () => {
       handlers,
     )
 
-    expect(handlers.navigateToPage).toHaveBeenCalledWith('details', undefined)
+    expect(handlers.navigateToPage).toHaveBeenCalledWith('details', undefined, {
+      iterationContext: undefined,
+    })
     expect(handlers.goBackPage).not.toHaveBeenCalled()
     expect(handlers.executeQueryOperation).not.toHaveBeenCalled()
     expect(handlers.resetForm).not.toHaveBeenCalled()
@@ -57,10 +59,16 @@ describe('executeRuntimeUiAction', () => {
       handlers,
     )
 
-    expect(handlers.navigateToPage).toHaveBeenCalledWith('details', {
-      userId: 'queries.selectedUser.data.id',
-      isEditing: true,
-    })
+    expect(handlers.navigateToPage).toHaveBeenCalledWith(
+      'details',
+      {
+        userId: 'queries.selectedUser.data.id',
+        isEditing: true,
+      },
+      {
+        iterationContext: undefined,
+      },
+    )
   })
 
   it('maps goBack to goBackPage only', () => {
@@ -182,6 +190,9 @@ describe('ButtonNode', () => {
         },
       },
       runtimeHandlers,
+      {
+        iterationContext: undefined,
+      },
     )
   })
 

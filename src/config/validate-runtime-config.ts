@@ -19,6 +19,7 @@ import type {
   QueryStateFeedbackRule,
   QueryStateFeedbackVisibleState,
   RadioGroupLayoutNode,
+  RepeaterLayoutNode,
   RuntimeVisibilityConfig,
   RuntimeVisibilityOperator,
   RuntimeCollectionObjectItem,
@@ -54,6 +55,7 @@ import {
   navigateToButtonActionSchema,
   paragraphNodeSchema,
   radioGroupNodeSchema,
+  repeaterNodeSchema,
   resetFormRuntimeUiActionSchema,
   runtimeApiOperationShellSchema,
   runtimeApiHeadersSchema,
@@ -453,6 +455,8 @@ function validateLayoutNode(
   switch (rawNode.type) {
     case 'container':
       return validateContainerNode(rawNode, path, pageId)
+    case 'repeater':
+      return validateRepeaterNode(rawNode, path, pageId)
     case 'heading':
       return validateHeadingNode(rawNode, path, pageId)
     case 'paragraph':
@@ -565,6 +569,114 @@ function validateContainerNode(
       visibility: visibilityResult.visibility,
       props: parseResult.data.props,
       children,
+    },
+  }
+}
+
+function validateRepeaterNode(
+  rawNode: Record<string, unknown>,
+  path: string,
+  pageId: string,
+): { status: 'ready'; node: RepeaterLayoutNode } | { status: 'error'; error: RuntimeConfigError } {
+  const parseResult = repeaterNodeSchema.safeParse(rawNode)
+
+  if (!parseResult.success) {
+    const issue = parseResult.error.issues[0]
+    const issuePath = issue?.path ?? []
+
+    const feedbackIssue = mapQueryStateFeedbackIssue(pageId, path, issue)
+
+    if (feedbackIssue) {
+      return feedbackIssue
+    }
+
+    const visibilityIssue = mapVisibilityIssue(pageId, path, issue)
+
+    if (visibilityIssue) {
+      return visibilityIssue
+    }
+
+    if (issuePath[0] === 'id') {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.id".`)
+    }
+
+    if (issuePath[0] === 'children') {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.children".`)
+    }
+
+    if (issuePath[0] === 'props' && issuePath[1] === 'template') {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.template".`)
+    }
+
+    if (issuePath[0] === 'props' && issuePath[1] === 'items' && issuePath[2] === 'source') {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.items.source".`)
+    }
+
+    if (issuePath[0] === 'props' && issuePath[1] === 'items' && issuePath[2] === 'key') {
+      return invalidLayout(
+        `Page "${pageId}" has an invalid layout at "${path}.props.items.key": repeater item keys must use a non-empty relative item path.`,
+      )
+    }
+
+    if (issuePath[0] === 'props' && issuePath.length === 1) {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props".`)
+    }
+
+    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}".`)
+  }
+
+  const feedbackResult = validateQueryStateFeedback(
+    parseResult.data.queryStateFeedback as LayoutNodeFeedbackFields['queryStateFeedback'],
+    `${path}.queryStateFeedback`,
+    pageId,
+  )
+
+  if (feedbackResult.status === 'error') {
+    return feedbackResult
+  }
+
+  const visibilityResult = validateVisibility(
+    parseResult.data.visibility as LayoutNodeFeedbackFields['visibility'],
+    `${path}.visibility`,
+    pageId,
+  )
+
+  if (visibilityResult.status === 'error') {
+    return visibilityResult
+  }
+
+  const itemsSourceResult = validateCollectionSource(parseResult.data.props.items.source, `${path}.props.items.source`, pageId)
+
+  if (itemsSourceResult.status === 'error') {
+    return itemsSourceResult
+  }
+
+  if (!isValidRepeaterItemKeyPath(parseResult.data.props.items.key)) {
+    return invalidLayout(
+      `Page "${pageId}" has an invalid layout at "${path}.props.items.key": repeater item keys must use a non-empty relative item path.`,
+    )
+  }
+
+  const templateResult = validateLayoutCollection(parseResult.data.props.template, `${path}.props.template`, pageId)
+
+  if (templateResult.status === 'error') {
+    return templateResult
+  }
+
+  return {
+    status: 'ready',
+    node: {
+      type: 'repeater',
+      id: parseResult.data.id,
+      queryStateFeedback: feedbackResult.queryStateFeedback,
+      visibility: visibilityResult.visibility,
+      props: {
+        items: {
+          source: itemsSourceResult.source,
+          key: parseResult.data.props.items.key,
+        },
+        template: templateResult.nodes,
+      },
     },
   }
 }
@@ -772,7 +884,7 @@ function validateListItems(
   }
 
   if (hasSource) {
-    const sourceResult = validateCollectionSource(rawItems.source, `${path}.source`, pageId)
+    const sourceResult = validateCollectionSource(rawItems.source, `${path}.source`, pageId, { allowItemReference: true })
 
     if (sourceResult.status === 'error') {
       return sourceResult
@@ -1173,7 +1285,7 @@ function validateVisibility(
 
   if (!isValidVisibilityReference(rawVisibility.reference)) {
     return invalidLayout(
-      `Page "${pageId}" has an invalid layout at "${path}.reference": visibility references must use forms.{formId}.{fieldId}, queries.{queryName}, queries.{queryName}.data, queries.{queryName}.data.*, queries.{queryName}.status or queries.{queryName}.error.`,
+      `Page "${pageId}" has an invalid layout at "${path}.reference": visibility references must use item, item.*, forms.{formId}.{fieldId}, queries.{queryName}, queries.{queryName}.data, queries.{queryName}.data.*, queries.{queryName}.status or queries.{queryName}.error.`,
     )
   }
 
@@ -2022,7 +2134,7 @@ function validateSelectItemsContract(
   }
 
   if (hasSource) {
-    const sourceResult = validateCollectionSource(rawItems.source, `${path}.source`, pageId)
+    const sourceResult = validateCollectionSource(rawItems.source, `${path}.source`, pageId, { allowItemReference: true })
 
     if (sourceResult.status === 'error') {
       return sourceResult
@@ -2132,14 +2244,15 @@ function validateCollectionSource(
   rawSource: unknown,
   path: string,
   pageId: string,
+  options: { allowItemReference?: boolean } = {},
 ): { status: 'ready'; source: string } | { status: 'error'; error: RuntimeConfigError } {
   if (!isNonEmptyString(rawSource)) {
     return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}".`)
   }
 
-  if (!isValidQueryCollectionSource(rawSource)) {
+  if (!isValidCollectionSourceReference(rawSource, options)) {
     return invalidLayout(
-      `Page "${pageId}" has an invalid layout at "${path}": collection sources must use queries.{queryName}.data or queries.{queryName}.data.*.`,
+      `Page "${pageId}" has an invalid layout at "${path}": collection sources must use queries.{queryName}.data, queries.{queryName}.data.* or item.*.`,
     )
   }
 
@@ -2172,7 +2285,7 @@ function validateChoiceFieldDefaultValue(
   }
 
   if (typeof defaultValue === 'string') {
-    const parsedReference = parseRuntimeReference(defaultValue)
+    const parsedReference = parseRuntimeReference(defaultValue, { allowItemReference: true })
 
     if (parsedReference.kind === 'reference' && parsedReference.status === 'supported') {
       return null
@@ -2378,6 +2491,16 @@ function validateFormNodesInCollection(
 
       if (childrenError) {
         return childrenError
+      }
+
+      continue
+    }
+
+    if (node.type === 'repeater') {
+      const templateError = validateFormNodesInCollection(node.props.template, `${nodePath}.props.template`, pageId, context)
+
+      if (templateError) {
+        return templateError
       }
 
       continue
@@ -2589,6 +2712,14 @@ function findInvalidActionTarget(
         return childResult
       }
     }
+
+    if (node.type === 'repeater') {
+      const childResult = findInvalidActionTarget(node.props.template, `${nodePath}.props.template`, pageIds, operationNames)
+
+      if (childResult) {
+        return childResult
+      }
+    }
   }
 
   return null
@@ -2622,6 +2753,14 @@ function validateExecutionRequestParamsInCollection(
 
     if ((node.type === 'container' || node.type === 'form') && node.children) {
       const childError = validateExecutionRequestParamsInCollection(node.children, `${nodePath}.children`, pageId, api)
+
+      if (childError) {
+        return childError
+      }
+    }
+
+    if (node.type === 'repeater') {
+      const childError = validateExecutionRequestParamsInCollection(node.props.template, `${nodePath}.props.template`, pageId, api)
 
       if (childError) {
         return childError
@@ -2915,6 +3054,10 @@ function isRuntimeConfigValue(value: unknown): value is RuntimeVisibilityConfig[
 }
 
 function isValidVisibilityReference(reference: string): boolean {
+  if (reference === 'item' || reference.startsWith('item.')) {
+    return parseRuntimeReference(reference, { allowItemReference: true }).status === 'supported'
+  }
+
   const segments = reference.split('.')
 
   if (segments[0] === 'forms') {
@@ -2953,6 +3096,14 @@ function isNonEmptyString(value: unknown): value is string {
   return typeof value === 'string' && value.trim().length > 0
 }
 
+function isValidCollectionSourceReference(value: string, options: { allowItemReference?: boolean } = {}) {
+  if (options.allowItemReference && (value === 'item' || value.startsWith('item.'))) {
+    return parseRuntimeReference(value, { allowItemReference: true }).status === 'supported'
+  }
+
+  return isValidQueryCollectionSource(value)
+}
+
 function isValidQueryCollectionSource(value: string) {
   const parts = value.split('.')
 
@@ -2975,6 +3126,23 @@ function isValidCollectionItemPath(value: unknown): value is string {
   }
 
   return value.split('.').every(isValidCollectionPathSegment)
+}
+
+function isValidRepeaterItemKeyPath(value: unknown): value is string {
+  if (!isValidCollectionItemPath(value)) {
+    return false
+  }
+
+  const [firstSegment] = value.split('.')
+
+  return (
+    firstSegment !== 'item' &&
+    firstSegment !== 'queries' &&
+    firstSegment !== 'forms' &&
+    firstSegment !== 'params' &&
+    firstSegment !== 'navigation' &&
+    firstSegment !== 'routeParams'
+  )
 }
 
 function isValidCollectionPathSegment(segment: string) {

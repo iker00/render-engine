@@ -42,7 +42,7 @@ Cada elemento de layout usa un shape homogéneo basado en:
 - `id`: opcional
 - `props`: opcional según el tipo
 - `queryStateFeedback`: opcional para condicionar la salida visible del nodo según el estado de una query
-- `visibility`: opcional para mostrar u ocultar el nodo según un valor ya disponible en `forms.*` o `queries.*`
+- `visibility`: opcional para mostrar u ocultar el nodo según un valor ya disponible en `forms.*`, `queries.*` o `item.*` cuando exista contexto de iteración
 - `children`: opcional, pero solo interpretado en `container` y `form`
 
 Reglas estructurales vigentes:
@@ -55,6 +55,11 @@ Nodos soportados hoy:
 - `container`
   - `props.direction`: string opcional, con soporte visual actual para `row` y fallback a columna
   - `props.gap`: string opcional, con aliases como `sm`, `md` y `lg` o cualquier valor CSS válido
+- `repeater`
+  - `props.items.source`: obligatorio y limitado a `queries.{queryName}.data` o `queries.{queryName}.data.*`
+  - `props.items.key`: obligatorio; ruta relativa no vacía al item actual, por ejemplo `id` o `meta.slug`
+  - `props.template`: colección ordenada obligatoria de `LayoutNode[]`
+  - no admite `children`
 - `heading`
   - `props.text`: string obligatorio, literal o referencia dinámica completa soportada por el runtime
   - `props.level`: número entero obligatorio
@@ -65,8 +70,8 @@ Nodos soportados hoy:
   - shape histórico: array de strings
   - shape manual escalar: `{ values: Array<string> }`
   - shape manual objeto: `{ values: Array<object>, itemText: string }`
-  - shape dinámico escalar: `{ source: 'queries.{queryName}.data' | 'queries.{queryName}.data.*', itemType: 'scalar' }`
-  - shape dinámico objeto: `{ source: 'queries.{queryName}.data' | 'queries.{queryName}.data.*', itemText: string }`
+  - shape dinámico escalar: `{ source: 'queries.{queryName}.data' | 'queries.{queryName}.data.*' | 'item.*', itemType: 'scalar' }`
+  - shape dinámico objeto: `{ source: 'queries.{queryName}.data' | 'queries.{queryName}.data.*' | 'item.*', itemText: string }`
 - `button`
   - `props.label`: string obligatorio
   - `props.action`: opcional; sin `action` solo es válido dentro del subárbol de un `form` y actúa como submit implícito
@@ -120,8 +125,8 @@ Nodos soportados hoy:
   - shape histórico: array de `{ label, value }`, con `value` homogéneo `string` o `number` dentro del mismo campo
   - shape manual escalar: `{ values: Array<string | number> }`
   - shape manual objeto: `{ values: Array<object>, label: string, value: string }`
-  - shape dinámico escalar: `{ source: 'queries.{queryName}.data' | 'queries.{queryName}.data.*', itemType: 'scalar' }`
-  - shape dinámico objeto: `{ source: 'queries.{queryName}.data' | 'queries.{queryName}.data.*', label: string, value: string }`
+  - shape dinámico escalar: `{ source: 'queries.{queryName}.data' | 'queries.{queryName}.data.*' | 'item.*', itemType: 'scalar' }`
+  - shape dinámico objeto: `{ source: 'queries.{queryName}.data' | 'queries.{queryName}.data.*' | 'item.*', label: string, value: string }`
 - `radioGroup`
   - `props.fieldId`: string obligatorio y único dentro del `form` contenedor
   - `props.label`: string obligatorio
@@ -141,6 +146,7 @@ Nodos soportados hoy:
 
 Reglas estructurales adicionales del catálogo actual:
 - `heading`, `paragraph`, `list` y `button` siguen tratándose como nodos hoja; si reciben `children`, esos datos no pasan al resultado normalizado.
+- `repeater` rechaza `children` y solo admite repetición a través de `props.template`.
 - `input`, `textarea`, `select`, `radioGroup` y `checkboxGroup` solo son válidos como descendientes de un `form`.
 - `button` sin `action` solo es válido como descendiente de un `form`.
 - las claves extra no soportadas se descartan del objeto validado final sin convertir por sí solas la configuración en inválida.
@@ -172,6 +178,8 @@ Cualquier nodo soportado hoy puede declarar opcionalmente:
 - `value`: obligatorio solo para `equals`, `notEquals`, `greaterThan` y `lessThan`
 
 Referencias admitidas en `visibility`:
+- `item`
+- `item.{segmentosAnidados}`
 - `forms.{formId}.{fieldId}`
 - `queries.{queryName}`
 - `queries.{queryName}.data`
@@ -214,12 +222,16 @@ Esa misma convención se reutiliza también en:
 - `button.props.action.query`
 - `button.props.action.body`
 - `button.props.action.headers`
+- `button.props.action.params`
 - `form.submitAction.query`
 - `form.submitAction.body`
 - `form.submitAction.headers`
+- `repeater.props.items.source`
 - `visibility.reference`
 
 Referencias soportadas hoy:
+- `item`
+- `item.{segmentosAnidados}`
 - `forms.{formId}.{fieldId}`
 - `params.{paramName}`
 - `queries.{queryName}`
@@ -229,6 +241,7 @@ Referencias soportadas hoy:
 - `queries.{queryName}.data.{segmentosAnidados}`
 
 Consumidores adicionales ya soportados con esa misma frontera:
+- `repeater.props.items.source`
 - `list.props.items.source`
 - `select.props.items.source`
 - `radioGroup.props.items.source`
@@ -240,7 +253,13 @@ Frontera específica de `params.*`:
 - `params.userId` es válido; `params`, `params.user.id` y segmentos vacíos siguen siendo inválidos.
 - `params.*` puede usarse en `heading.props.text`, `paragraph.props.text`, `api.query`, `api.body`, `api.headers`, `button.props.action.query`, `button.props.action.body`, `button.props.action.headers`, `form.submitAction.query`, `form.submitAction.body`, `form.submitAction.headers` y `defaultValue` de `input`, `textarea`, `select`, `radioGroup` y `checkboxGroup`.
 - `params.*` también puede usarse como origen dentro de `navigateTo.params` para construir la siguiente navegación a partir de la entrada activa.
-- `params.*` sigue fuera de alcance en `visibility.reference`, `list.props.items.source`, `select.props.items.source`, `radioGroup.props.items.source` y `checkboxGroup.props.items.source`, aunque esas superficies reutilicen la misma familia general de referencias runtime.
+- `params.*` sigue fuera de alcance en `visibility.reference`, `repeater.props.items.source`, `list.props.items.source`, `select.props.items.source`, `radioGroup.props.items.source` y `checkboxGroup.props.items.source`, aunque esas superficies reutilicen la misma familia general de referencias runtime.
+
+Frontera específica de `item.*`:
+- `item` e `item.*` solo son válidos cuando el consumidor vive dentro del subárbol iterado de un `repeater`.
+- `item`, `item.slug`, `item.meta.author.name` o `item.tags.0` son ejemplos válidos dentro de ese contexto.
+- `item.*` puede usarse en `heading.props.text`, `paragraph.props.text`, `api.query`, `api.body`, `api.headers`, `button.props.action.query`, `button.props.action.body`, `button.props.action.headers`, `button.props.action.params`, `form.submitAction.query`, `form.submitAction.body`, `form.submitAction.headers`, `defaultValue` de campos, `visibility.reference`, `repeater.props.items.source`, `list.props.items.source`, `select.props.items.source`, `radioGroup.props.items.source` y `checkboxGroup.props.items.source`.
+- Fuera de un `repeater`, `item.*` no forma parte del contrato soportado aunque el shape del string siga siendo reconocible.
 
 Reglas funcionales vigentes:
 - la navegación anidada adicional solo se admite bajo `queries.{queryName}.data`
@@ -256,10 +275,12 @@ Reglas funcionales vigentes:
 - La validación comprueba estructura general, shape de `api`, `pages`, `preloads`, colección `layout` y shape de los nodos soportados.
 - Si `layout` no es un array válido, el arranque falla con un error explícito sobre la ruta afectada.
 - Si aparece un nodo no soportado en la raíz o dentro de `children`, el runtime lo trata como error de configuración y no lo reinterpreta.
+- Si un `repeater` omite `props.items.source`, `props.items.key` o `props.template`, el config completo se rechaza antes del render sobre la ruta exacta.
+- Si `repeater.props.items.key` está vacío, usa una referencia global como `item.id` o `queries.posts.data.0.id`, o contiene una ruta relativa mal formada, el config completo se rechaza antes del render.
 - Si `queryStateFeedback.states` contiene una clave fuera de `idle | loading | error | empty | success`, el config completo se rechaza con error de layout sobre esa ruta exacta.
 - Si una regla usa `mode: fallback` sin `fallback`, el config completo se rechaza antes del render.
 - Si cualquier nodo dentro de `queryStateFeedback.states.{estado}.fallback` es inválido o usa un `type` no soportado, el config completo se rechaza antes del render sobre la ruta afectada.
-- Si `visibility.reference` sale del alcance `forms.*` o `queries.*` soportado, el config completo se rechaza antes del render sobre la ruta exacta.
+- Si `visibility.reference` sale del alcance `item.*`, `forms.*` o `queries.*` soportado, el config completo se rechaza antes del render sobre la ruta exacta.
 - Si `visibility.operator` usa un valor fuera del catálogo soportado, el config completo se rechaza antes del render.
 - Si `visibility.operator` es `isTruthy` o `isFalsy` y declara `value`, el config completo se rechaza antes del render.
 - Si `visibility.operator` es `equals`, `notEquals`, `greaterThan` o `lessThan` y omite `value`, el config completo se rechaza antes del render.
@@ -291,8 +312,9 @@ Reglas funcionales vigentes:
 - Si `api.query`, `api.headers`, `button.props.action.query`, `button.props.action.headers`, `form.submitAction.query` o `form.submitAction.headers` contienen claves vacías, el config completo se rechaza antes del render.
 - Si `form.resetOnSuccess: true` aparece sin `submitAction`, el config completo se rechaza antes del render.
 - Si `select.props.items`, `radioGroup.props.items` o `checkboxGroup.props.items` mezclan `value` string y number dentro del mismo campo, el config completo se rechaza antes del render.
-- Si `list.props.items`, `select.props.items`, `radioGroup.props.items` o `checkboxGroup.props.items` declaran un `source`, este debe apuntar exactamente a `queries.{queryName}.data` o a una ruta anidada bajo `queries.{queryName}.data.*`.
-- Si `visibility.reference`, `list.props.items.source`, `select.props.items.source`, `radioGroup.props.items.source` o `checkboxGroup.props.items.source` intentan usar `params.*`, el config completo se rechaza antes del render porque esa familia sigue fuera de alcance en esas superficies.
+- Si `repeater.props.items.source` declara un origen dinámico, este debe apuntar exactamente a `queries.{queryName}.data` o a una ruta anidada bajo `queries.{queryName}.data.*`.
+- Si `list.props.items`, `select.props.items`, `radioGroup.props.items` o `checkboxGroup.props.items` declaran un `source`, este debe apuntar exactamente a `queries.{queryName}.data`, a una ruta anidada bajo `queries.{queryName}.data.*` o a `item.*` cuando el nodo viva dentro de un `repeater`.
+- Si `visibility.reference`, `repeater.props.items.source`, `list.props.items.source`, `select.props.items.source`, `radioGroup.props.items.source` o `checkboxGroup.props.items.source` intentan usar `params.*`, el config completo se rechaza antes del render porque esa familia sigue fuera de alcance en esas superficies.
 - Si `list.props.items`, `select.props.items`, `radioGroup.props.items` o `checkboxGroup.props.items` mezclan familias incompatibles de origen histórico, manual declarativo y dinámico, el config completo se rechaza antes del render.
 - Si un origen dinámico de escalares omite `itemType: 'scalar'`, el config completo se rechaza antes del render.
 - Si un origen dinámico u objeto manual omite los mapeos mínimos del consumidor (`itemText` para `list`; `label` y `value` para `select`, `radioGroup` y `checkboxGroup`), el config completo se rechaza antes del render.
@@ -314,14 +336,15 @@ La frontera estable de esta validación queda organizada así:
 - `api` ya puede dispararse declarativamente desde `button.props.action` usando `executeOperation`, además de por la fachada imperativa del provider y por `preloads` de página al entrar en ella.
 - `executeOperation` y `submitAction` ya pueden añadir `query`, `body` y `headers` por ejecución, pero siguen dependiendo de `operationName` como vínculo obligatorio con una operación existente de `api`.
 - `navigateTo` ya puede transportar `params` efectivos entre páginas, pero esos params siguen siendo escalares, internos al historial del runtime y sin sincronización con la URL del navegador.
+- `repeater` ya puede expandir un subárbol completo por item de una colección remota, pero sigue fuera de alcance cualquier DSL de templates, filtros cliente, ordenación, paginación o fuentes de colección ajenas a `queries.*`.
 - `action` sigue siendo una sola operación por trigger; no hay arrays, secuencias ni callbacks declarativos.
 - El trigger sigue siendo implícito por tipo de nodo; el contrato no abre todavía un bloque general de `events`.
-- Los formularios declarativos ya soportan `form`, `input`, `textarea`, `select`, `radioGroup` y `checkboxGroup`, con validación todavía limitada a `required`.
-- `visibility` ya cubre show/hide simple por valor runtime, pero no abre branching, `fallback`, arrays de reglas ni expresiones compuestas.
-- `list`, `select`, `radioGroup` y `checkboxGroup` ya pueden reutilizar datos de `queries.*` como colecciones, pero siguen fuera de alcance filtros cliente, ordenación declarativa, transformaciones arbitrarias, búsqueda remota y carga incremental.
+- Los formularios declarativos ya soportan `form`, `input`, `textarea`, `select`, `radioGroup` y `checkboxGroup`, con validación local declarativa ya ampliada a `required`, `minLength`, `maxLength`, `min`, `max`, `minSelections` y `maxSelections`.
+- `visibility` ya cubre show/hide simple por valor runtime, incluido `item.*` dentro de `repeater`, pero no abre branching, `fallback`, arrays de reglas ni expresiones compuestas.
+- `list`, `select`, `radioGroup` y `checkboxGroup` ya pueden reutilizar datos de `queries.*` y, dentro de `repeater`, datos de `item.*` como colecciones, pero siguen fuera de alcance filtros cliente, ordenación declarativa, transformaciones arbitrarias, búsqueda remota y carga incremental.
 - No hay todavía validaciones declarativas avanzadas (`min`, `max`, patrones o validaciones cruzadas).
 - `preloads` solo admite una lista plana de strings; no hay condiciones, prioridades, secuencialidad, dependencias ni políticas de caché.
 - No hay interpolación compleja dentro de strings.
 - No hay sistema de plugins para componentes externos.
-- No hay soporte para nodos distintos de `container`, `heading`, `paragraph`, `list`, `button`, `form`, `input`, `textarea`, `select`, `radioGroup` y `checkboxGroup`.
-- No hay consumidores declarativos de referencias fuera de `heading.props.text`, `paragraph.props.text`, `queryStateFeedback`, `visibility`, `api.query`, `api.body`, `defaultValue` de campos de formulario y `source` de colecciones para `list`, `select`, `radioGroup` y `checkboxGroup`, salvo la ampliación acotada de `params.*` en texto, requests, `defaultValue` y `navigateTo.params`.
+- No hay soporte para nodos distintos de `container`, `repeater`, `heading`, `paragraph`, `list`, `button`, `form`, `input`, `textarea`, `select`, `radioGroup` y `checkboxGroup`.
+- No hay consumidores declarativos de referencias fuera de `heading.props.text`, `paragraph.props.text`, `queryStateFeedback`, `visibility`, `api.query`, `api.body`, `defaultValue` de campos de formulario, `navigateTo.params`, `repeater.props.items.source` y `source` de colecciones para `list`, `select`, `radioGroup` y `checkboxGroup`.

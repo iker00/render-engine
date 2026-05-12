@@ -17,6 +17,7 @@ export function buildRuntimeApiRequest({
   operationName,
   state,
   requestParams,
+  iterationContext,
 }: BuildRuntimeApiRequestOptions): RuntimeApiRequestBuildResult {
   const operation = config.api[operationName]
 
@@ -32,19 +33,19 @@ export function buildRuntimeApiRequest({
 
   const effectiveRequestParams = mergeRuntimeApiRequestParams(operation, requestParams)
 
-  const queryResult = resolveQuery(operationName, effectiveRequestParams.query, state)
+  const queryResult = resolveQuery(operationName, effectiveRequestParams.query, state, iterationContext)
 
   if (queryResult.status === 'error') {
     return queryResult
   }
 
-  const bodyResult = resolveBody(operationName, effectiveRequestParams.body, state)
+  const bodyResult = resolveBody(operationName, effectiveRequestParams.body, state, iterationContext)
 
   if (bodyResult.status === 'error') {
     return bodyResult
   }
 
-  const headersResult = resolveHeaders(operationName, effectiveRequestParams.headers, state)
+  const headersResult = resolveHeaders(operationName, effectiveRequestParams.headers, state, iterationContext)
 
   if (headersResult.status === 'error') {
     return headersResult
@@ -65,6 +66,7 @@ function resolveQuery(
   operationName: string,
   queryDefinition: RuntimeApiQuery | undefined,
   state: BuildRuntimeApiRequestOptions['state'],
+  iterationContext: BuildRuntimeApiRequestOptions['iterationContext'],
 ) {
   if (!queryDefinition) {
     return {
@@ -76,7 +78,7 @@ function resolveQuery(
   const query = new URLSearchParams()
 
   for (const [key, rawValue] of Object.entries(queryDefinition)) {
-    const resolvedValue = resolvePayloadValue(rawValue, state)
+    const resolvedValue = resolvePayloadValue(rawValue, state, iterationContext)
 
     if (resolvedValue.status === 'error') {
       return {
@@ -115,6 +117,7 @@ function resolveBody(
   operationName: string,
   bodyDefinition: RuntimeApiBodyValue | undefined,
   state: BuildRuntimeApiRequestOptions['state'],
+  iterationContext: BuildRuntimeApiRequestOptions['iterationContext'],
 ) {
   if (bodyDefinition === undefined) {
     return {
@@ -130,7 +133,7 @@ function resolveBody(
     } as const
   }
 
-  const resolvedBody = resolveJsonPayloadValue(bodyDefinition, state)
+  const resolvedBody = resolveJsonPayloadValue(bodyDefinition, state, iterationContext)
 
   if (resolvedBody.status === 'error') {
     return {
@@ -152,6 +155,7 @@ function resolveHeaders(
   operationName: string,
   headersDefinition: RuntimeApiHeaders | undefined,
   state: BuildRuntimeApiRequestOptions['state'],
+  iterationContext: BuildRuntimeApiRequestOptions['iterationContext'],
 ) {
   if (!headersDefinition) {
     return {
@@ -163,7 +167,7 @@ function resolveHeaders(
   const headers: RuntimeApiHeaders = {}
 
   for (const [key, rawValue] of Object.entries(headersDefinition)) {
-    const resolvedValue = resolvePayloadValue(rawValue, state)
+    const resolvedValue = resolvePayloadValue(rawValue, state, iterationContext)
 
     if (resolvedValue.status === 'error') {
       return {
@@ -194,7 +198,11 @@ function resolveHeaders(
   } as const
 }
 
-function resolveJsonPayloadValue(value: RuntimeApiBodyValue, state: BuildRuntimeApiRequestOptions['state']) {
+function resolveJsonPayloadValue(
+  value: RuntimeApiBodyValue,
+  state: BuildRuntimeApiRequestOptions['state'],
+  iterationContext: BuildRuntimeApiRequestOptions['iterationContext'],
+) {
   if (value === null) {
     return {
       status: 'ready',
@@ -203,7 +211,7 @@ function resolveJsonPayloadValue(value: RuntimeApiBodyValue, state: BuildRuntime
   }
 
   if (typeof value === 'string') {
-    const resolvedValue = resolvePayloadValue(value, state)
+    const resolvedValue = resolvePayloadValue(value, state, iterationContext)
 
     if (resolvedValue.status === 'error' || !isRuntimeApiBodyRuntimeValue(resolvedValue.value)) {
       return {
@@ -225,7 +233,7 @@ function resolveJsonPayloadValue(value: RuntimeApiBodyValue, state: BuildRuntime
     const resolvedItems: RuntimeApiBodyValue[] = []
 
     for (const item of value) {
-      const resolvedItem = resolveJsonPayloadValue(item, state)
+      const resolvedItem = resolveJsonPayloadValue(item, state, iterationContext)
 
       if (resolvedItem.status === 'error') {
         return resolvedItem
@@ -243,7 +251,7 @@ function resolveJsonPayloadValue(value: RuntimeApiBodyValue, state: BuildRuntime
   const resolvedObject: Record<string, RuntimeApiBodyValue> = {}
 
   for (const [key, childValue] of Object.entries(value)) {
-    const resolvedChild = resolveJsonPayloadValue(childValue, state)
+    const resolvedChild = resolveJsonPayloadValue(childValue, state, iterationContext)
 
     if (resolvedChild.status === 'error') {
       return resolvedChild
@@ -287,7 +295,11 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
   return prototype === Object.prototype || prototype === null
 }
 
-function resolvePayloadValue(value: string | number | boolean, state: BuildRuntimeApiRequestOptions['state']) {
+function resolvePayloadValue(
+  value: string | number | boolean,
+  state: BuildRuntimeApiRequestOptions['state'],
+  iterationContext: BuildRuntimeApiRequestOptions['iterationContext'],
+) {
   if (typeof value !== 'string') {
     return {
       status: 'ready',
@@ -295,7 +307,7 @@ function resolvePayloadValue(value: string | number | boolean, state: BuildRunti
     } as const
   }
 
-  const resolvedReference = resolveRuntimeReference(value, state)
+  const resolvedReference = resolveRuntimeReference(value, state, { iterationContext })
 
   if (resolvedReference.status === 'literal') {
     return {

@@ -74,6 +74,16 @@ const runtimeState: RuntimeState = {
   },
 }
 
+const iterationContext = {
+  item: {
+    role: 'admin',
+    meta: {
+      score: 4,
+    },
+    tags: ['alpha', 'beta'],
+  },
+}
+
 function createNode(options: {
   queryStateFeedback?: QueryStateFeedbackConfig
   visibility?: RuntimeVisibilityConfig
@@ -376,5 +386,65 @@ describe('Runtime layout visibility', () => {
       mode: 'show',
     })
     expect(isLayoutNodeVisible(feedbackFields, runtimeState)).toBe(true)
+  })
+
+  it('supports item.* visibility references only when iteration context is provided', () => {
+    const visibility = {
+      reference: 'item.role',
+      operator: 'equals',
+      value: 'admin',
+    } satisfies RuntimeVisibilityConfig
+
+    expect(matchesVisibilityRule(visibility, runtimeState)).toBe(false)
+    expect(matchesVisibilityRule(visibility, runtimeState, iterationContext)).toBe(true)
+
+    expect(
+      resolveLayoutNodeVisibility(
+        {
+          visibility,
+        },
+        runtimeState,
+        iterationContext,
+      ),
+    ).toEqual({
+      mode: 'show',
+    })
+  })
+
+  it('degrades missing or non-navigable item visibility references without changing queryStateFeedback precedence', () => {
+    expect(
+      matchesVisibilityRule(
+        {
+          reference: 'item.meta.score.value',
+          operator: 'isTruthy',
+        },
+        runtimeState,
+        iterationContext,
+      ),
+    ).toBe(false)
+
+    expect(
+      resolveLayoutNodeVisibility(
+        {
+          queryStateFeedback: {
+            query: 'pendingUsers',
+            states: {
+              idle: {
+                mode: 'hide',
+              },
+            },
+          },
+          visibility: {
+            reference: 'item.role',
+            operator: 'equals',
+            value: 'admin',
+          },
+        },
+        runtimeState,
+        iterationContext,
+      ),
+    ).toEqual({
+      mode: 'hide',
+    })
   })
 })

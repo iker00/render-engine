@@ -3,7 +3,8 @@ import type { Dispatch, ReactNode } from 'react'
 import { useContext, useMemo, useReducer, useRef } from 'react'
 import type { NavigateToRuntimeUiAction, RuntimeApiRequestParams, RuntimeConfig, RuntimeConfigValue } from '../../config/runtime-config'
 import { executeRuntimeApiOperation } from '../../queries/runtime-api-executor'
-import { resolveRuntimeValue } from '../runtime-references/runtime-reference-resolver'
+import type { RuntimeIterationContext } from '../runtime-references/runtime-reference-resolver'
+import { resolveRuntimeValueWithOptions } from '../runtime-references/runtime-reference-resolver'
 import { RuntimeStateContext } from './runtime-state-context'
 import { createRuntimeState, runtimeStateReducer } from './runtime-state-reducer'
 import { selectCurrentNavigationEntry, selectCurrentPage } from './runtime-state-selectors'
@@ -20,6 +21,7 @@ async function executeQueryOperationWithSnapshot({
   operationName,
   snapshotState,
   requestParams,
+  iterationContext,
   fetchImplementation,
 }: {
   config: RuntimeConfig
@@ -27,6 +29,7 @@ async function executeQueryOperationWithSnapshot({
   operationName: string
   snapshotState: RuntimeState
   requestParams?: RuntimeApiRequestParams
+  iterationContext?: RuntimeIterationContext
   fetchImplementation?: typeof fetch
 }) {
   dispatch({
@@ -41,6 +44,7 @@ async function executeQueryOperationWithSnapshot({
     operationName,
     state: snapshotState,
     requestParams,
+    iterationContext,
     fetch: fetchImplementation,
   })
 
@@ -215,7 +219,11 @@ export function useRuntimeStateActions() {
   const { config, dispatch, dispatchAndSyncState, getLatestState, initialState } = useRuntimeStateContext()
 
   const navigateToPage = useCallback(
-    (pageId: string, params: NavigateToRuntimeUiAction['params'] = {}) => {
+    (
+      pageId: string,
+      params: NavigateToRuntimeUiAction['params'] = {},
+      options?: { iterationContext?: RuntimeIterationContext },
+    ) => {
       const page = config.pages.find((entry) => entry.id === pageId)
 
       if (!page) {
@@ -233,7 +241,7 @@ export function useRuntimeStateActions() {
         return
       }
 
-      const resolvedParams = resolveNavigationParams(params, getLatestState())
+      const resolvedParams = resolveNavigationParams(params, getLatestState(), options?.iterationContext)
 
       dispatchAndSyncState({
         type: 'navigation/navigate',
@@ -243,7 +251,7 @@ export function useRuntimeStateActions() {
         },
       })
     },
-    [config.pages, dispatchAndSyncState],
+    [config.pages, dispatchAndSyncState, getLatestState],
   )
 
   const goBackPage = useCallback(() => {
@@ -383,7 +391,12 @@ export function useRuntimeStateActions() {
   const executeQueryOperation = useCallback(
     async (
       operationName: string,
-      options?: { fetch?: typeof fetch; snapshotState?: RuntimeState; requestParams?: RuntimeApiRequestParams },
+      options?: {
+        fetch?: typeof fetch
+        snapshotState?: RuntimeState
+        requestParams?: RuntimeApiRequestParams
+        iterationContext?: RuntimeIterationContext
+      },
     ) => {
       return executeQueryOperationWithSnapshot({
         config,
@@ -391,6 +404,7 @@ export function useRuntimeStateActions() {
         operationName,
         snapshotState: options?.snapshotState ?? getLatestState(),
         requestParams: options?.requestParams,
+        iterationContext: options?.iterationContext,
         fetchImplementation: options?.fetch,
       })
     },
@@ -480,11 +494,15 @@ function arePageParamsEqual(left: RuntimePageParams, right: RuntimePageParams) {
 function resolveNavigationParams(
   params: NavigateToRuntimeUiAction['params'],
   state: RuntimeState,
+  iterationContext?: RuntimeIterationContext,
 ): RuntimePageParams {
   const resolvedParams: RuntimePageParams = {}
 
   for (const [key, value] of Object.entries(params ?? {})) {
-    const resolvedValue = typeof value === 'string' ? resolveRuntimeValue(value, state) : { status: 'resolved', value } as const
+    const resolvedValue =
+      typeof value === 'string'
+        ? resolveRuntimeValueWithOptions(value, state, { iterationContext })
+        : ({ status: 'resolved', value } as const)
 
     if (resolvedValue.status !== 'resolved') {
       continue

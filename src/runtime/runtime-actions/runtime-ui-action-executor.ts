@@ -1,16 +1,30 @@
 import type { NavigateToRuntimeUiAction, RuntimeApiRequestParams, RuntimeUiAction } from '../../config/runtime-config'
+import type { RuntimeIterationContext } from '../runtime-references/runtime-reference-resolver'
 
 export interface RuntimeUiActionHandlers {
-  executeQueryOperation: (operationName: string, options?: { requestParams?: RuntimeApiRequestParams }) => Promise<unknown>
+  executeQueryOperation: (
+    operationName: string,
+    options?: { requestParams?: RuntimeApiRequestParams; iterationContext?: RuntimeIterationContext },
+  ) => Promise<unknown>
   goBackPage: () => void
-  navigateToPage: (pageId: string, params?: NavigateToRuntimeUiAction['params']) => void
+  navigateToPage: (
+    pageId: string,
+    params?: NavigateToRuntimeUiAction['params'],
+    options?: { iterationContext?: RuntimeIterationContext },
+  ) => void
   resetForm: (formId: string) => void
 }
 
-export function executeRuntimeUiAction(action: RuntimeUiAction, handlers: RuntimeUiActionHandlers) {
+export function executeRuntimeUiAction(
+  action: RuntimeUiAction,
+  handlers: RuntimeUiActionHandlers,
+  options?: { iterationContext?: RuntimeIterationContext },
+) {
   switch (action.type) {
     case 'navigateTo':
-      handlers.navigateToPage(action.pageId, action.params)
+      handlers.navigateToPage(action.pageId, action.params, {
+        iterationContext: options?.iterationContext,
+      })
       return
     case 'goBack':
       handlers.goBackPage()
@@ -22,6 +36,7 @@ export function executeRuntimeUiAction(action: RuntimeUiAction, handlers: Runtim
           body: action.body,
           headers: action.headers,
         },
+        iterationContext: options?.iterationContext,
       })
       return
     case 'resetForm':

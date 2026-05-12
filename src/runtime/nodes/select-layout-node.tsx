@@ -1,6 +1,7 @@
 import type { SelectLayoutNode } from '../../config/runtime-config'
 import { useOptionalFormContext } from '../form-context'
 import { resolveResolvedFormFieldDefinition } from './form-layout-node'
+import type { RuntimeIterationContext } from '../runtime-references/runtime-reference-resolver'
 import { normalizeChoiceFieldValue, resolveSelectCollectionItems } from '../runtime-collection-sources'
 import {
   getFieldControlClassName,
@@ -14,9 +15,10 @@ import { selectFormFieldState } from '../runtime-state/runtime-state-selectors'
 
 interface SelectNodeProps {
   node: SelectLayoutNode
+  iterationContext?: RuntimeIterationContext
 }
 
-export function SelectNode({ node }: SelectNodeProps) {
+export function SelectNode({ node, iterationContext }: SelectNodeProps) {
   const formContext = useOptionalFormContext()
   const state = useRuntimeState()
   const { setFormFieldError, setFormFieldValue } = useRuntimeStateActions()
@@ -26,9 +28,9 @@ export function SelectNode({ node }: SelectNodeProps) {
   }
 
   const fieldState = selectFormFieldState(state, formContext.formId, node.props.fieldId)
-  const fieldDefinition = resolveResolvedFormFieldDefinition(node, state)
+  const fieldDefinition = resolveResolvedFormFieldDefinition(node, state, iterationContext)
   const defaultValue = fieldDefinition.defaultValue
-  const resolvedItems = resolveSelectCollectionItems(node.props.items, state)
+  const resolvedItems = resolveSelectCollectionItems(node.props.items, state, { iterationContext })
   const isMultiple = node.props.multiple === true
   const value = normalizeChoiceFieldValue(
     node.props.items,
@@ -37,6 +39,7 @@ export function SelectNode({ node }: SelectNodeProps) {
     {
       multiple: isMultiple,
       surface: 'select.props.items',
+      iterationContext,
     },
   )
   const error = fieldState?.error ?? null

@@ -14,6 +14,10 @@
       "query": {
         "id": "params.postId"
       }
+    },
+    "getComments": {
+      "method": "GET",
+      "endpoint": "https://jsonplaceholder.typicode.com/todos"
     }
   },
   "pages": [
@@ -76,19 +80,6 @@
                 "action": {
                   "type": "navigateTo",
                   "pageId": "search-posts"
-                }
-              }
-            },
-            {
-              "type": "button",
-              "props": {
-                "label": "Editar post",
-                "action": {
-                  "type": "navigateTo",
-                  "pageId": "post-form",
-                  "params": {
-                    "postId": "forms.postForm.id"
-                  }
                 }
               }
             },
@@ -232,24 +223,6 @@
           "resetOnSuccess": false,
           "children": [
             {
-              "type": "input",
-              "props": {
-                "fieldId": "id",
-                "label": "Post ID"
-              }
-            },
-            {
-              "type": "paragraph",
-              "visibility": {
-                "reference": "forms.postForm.id",
-                "operator": "notEquals",
-                "value": "10"
-              },
-              "props": {
-                "text": "El número no es 10"
-              }
-            },
-            {
               "type": "select",
               "props": {
                 "fieldId": "authorId",
@@ -302,10 +275,7 @@
           ]
         },
         {
-          "type": "container",
-          "props": {
-            "gap": "sm"
-          },
+          "type": "repeater",
           "queryStateFeedback": {
             "query": "searchPosts",
             "states": {
@@ -315,7 +285,7 @@
                   {
                     "type": "paragraph",
                     "props": {
-                      "text": "No se ha llamado a la API"
+                      "text": "No se ha realizado ninguna búsqueda"
                     }
                   }
                 ]
@@ -326,18 +296,7 @@
                   {
                     "type": "paragraph",
                     "props": {
-                      "text": "Buscando posts..."
-                    }
-                  }
-                ]
-              },
-              "error": {
-                "mode": "fallback",
-                "fallback": [
-                  {
-                    "type": "paragraph",
-                    "props": {
-                      "text": "Error al buscar posts"
+                      "text": "Cargando..."
                     }
                   }
                 ]
@@ -352,34 +311,62 @@
                     }
                   }
                 ]
+              },
+              "error": {
+                "mode": "fallback",
+                "fallback": [
+                  {
+                    "type": "paragraph",
+                    "props": {
+                      "text": "Ha ocurrido un error al buscar posts"
+                    }
+                  }
+                ]
               }
             }
           },
-          "children": [
-            {
-              "type": "paragraph",
-              "props": {
-                "text": "Posts encontrados:"
-              }
+          "props": {
+            "items": {
+              "source": "queries.searchPosts.data",
+              "key": "id"
             },
-            {
-              "type": "list",
-              "props": {
-                "items": {
-                  "source": "queries.searchPosts.data",
-                  "itemText": "title"
+            "template": [
+              {
+                "type": "heading",
+                "props": {
+                  "text": "item.title",
+                  "level": 3
+                }
+              },
+              {
+                "type": "paragraph",
+                "props": {
+                  "text": "item.body"
+                }
+              },
+              {
+                "type": "button",
+                "props": {
+                  "label": "Editar",
+                  "action": {
+                    "type": "navigateTo",
+                    "pageId": "post-form",
+                    "params": {
+                      "postId": "item.id"
+                    }
+                  }
                 }
               }
-            }
-          ]
+            ]
+          }
         }
       ]
     },
     {
       "id": "post-form",
       "preloads": [
-        "getPost",
-        "searchUsers"
+        "searchUsers",
+        "getPost"
       ],
       "layout": [
         {
@@ -423,6 +410,7 @@
             {
               "type": "form",
               "id": "editPost",
+              "persistOnUnmount": false,
               "resetOnSuccess": false,
               "queryStateFeedback": {
                 "query": "getPost",

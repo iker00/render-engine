@@ -12,7 +12,8 @@ import type {
 } from '../../config/runtime-config'
 import { FormContextProvider } from '../form-context'
 import { isLayoutNodeVisible } from '../runtime-layout-visibility'
-import { resolveRuntimeValue } from '../runtime-references/runtime-reference-resolver'
+import type { RuntimeIterationContext } from '../runtime-references/runtime-reference-resolver'
+import { resolveRuntimeValueWithOptions } from '../runtime-references/runtime-reference-resolver'
 import { getFormNodeClassName } from '../runtime-node-styling'
 import { normalizeChoiceFieldValue } from '../runtime-collection-sources'
 import { type ResolvedFormFieldDefinition, validateFormFields } from '../runtime-form-validations'
@@ -22,26 +23,27 @@ import { selectFormFieldState } from '../runtime-state/runtime-state-selectors'
 interface FormNodeProps {
   node: FormLayoutNode
   children?: ReactNode
+  iterationContext?: RuntimeIterationContext
 }
 
-export function FormNode({ node, children }: FormNodeProps) {
+export function FormNode({ node, children, iterationContext }: FormNodeProps) {
   const state = useRuntimeState()
   const { executeQueryOperation, initializeForm, readRuntimeState, removeForm, resetForm, setFormFieldError, setFormFieldValue } =
     useRuntimeStateActions()
   const mountedPageIdRef = useRef(state.navigation.currentPageId)
 
   const fieldDefinitions = useMemo(
-    () => collectResolvedFormFieldDefinitions(node.children ?? [], state),
-    [node.children, state],
+    () => collectResolvedFormFieldDefinitions(node.children ?? [], state, iterationContext),
+    [iterationContext, node.children, state],
   )
   const missingFieldDefinitions = useMemo(
     () =>
       fieldDefinitions.filter(
         (fieldDefinition) =>
-          isLayoutNodeVisible(fieldDefinition, state) &&
+          isLayoutNodeVisible(fieldDefinition, state, iterationContext) &&
           selectFormFieldState(state, node.id, fieldDefinition.fieldId) === null,
       ),
-    [fieldDefinitions, node.id, state],
+    [fieldDefinitions, iterationContext, node.id, state],
   )
 
   useEffect(() => {
@@ -89,6 +91,7 @@ export function FormNode({ node, children }: FormNodeProps) {
       const normalizedValue = normalizeChoiceFieldValue(fieldDefinition.items, state, fieldState.value, {
         multiple: fieldDefinition.multiple,
         surface: getChoiceFieldSurface(fieldDefinition.type),
+        iterationContext,
       })
 
       if (!areFieldValuesEqual(fieldState.value, normalizedValue)) {
@@ -101,10 +104,10 @@ export function FormNode({ node, children }: FormNodeProps) {
     event.preventDefault()
 
     const snapshotState = readRuntimeState()
-    const latestFieldDefinitions = collectResolvedFormFieldDefinitions(node.children ?? [], snapshotState)
+    const latestFieldDefinitions = collectResolvedFormFieldDefinitions(node.children ?? [], snapshotState, iterationContext)
     const visibleMissingFieldDefinitions = latestFieldDefinitions.filter(
       (fieldDefinition) =>
-        isLayoutNodeVisible(fieldDefinition, snapshotState) &&
+        isLayoutNodeVisible(fieldDefinition, snapshotState, iterationContext) &&
         selectFormFieldState(snapshotState, node.id, fieldDefinition.fieldId) === null,
     )
 
@@ -148,6 +151,7 @@ export function FormNode({ node, children }: FormNodeProps) {
         body: node.submitAction.body,
         headers: node.submitAction.headers,
       },
+      iterationContext,
     })
 
     if (result.status === 'success' && node.resetOnSuccess) {
@@ -164,12 +168,21 @@ export function FormNode({ node, children }: FormNodeProps) {
   )
 }
 
-export function collectResolvedFormFieldDefinitions(nodes: LayoutNodeCollection, state: ReturnType<typeof useRuntimeState>) {
+export function collectResolvedFormFieldDefinitions(
+  nodes: LayoutNodeCollection,
+  state: ReturnType<typeof useRuntimeState>,
+  iterationContext?: RuntimeIterationContext,
+) {
   const fields: ResolvedFormFieldDefinition[] = []
 
   for (const node of nodes) {
     if (node.type === 'container') {
-      fields.push(...collectResolvedFormFieldDefinitions(node.children ?? [], state))
+      fields.push(...collectResolvedFormFieldDefinitions(node.children ?? [], state, iterationContext))
+      continue
+    }
+
+    if (node.type === 'repeater') {
+      fields.push(...collectResolvedFormFieldDefinitions(node.props.template, state, iterationContext))
       continue
     }
 
@@ -180,7 +193,7 @@ export function collectResolvedFormFieldDefinitions(nodes: LayoutNodeCollection,
       node.type === 'radioGroup' ||
       node.type === 'checkboxGroup'
     ) {
-      fields.push(resolveResolvedFormFieldDefinition(node, state))
+      fields.push(resolveResolvedFormFieldDefinition(node, state, iterationContext))
     }
   }
 
@@ -190,6 +203,7 @@ export function collectResolvedFormFieldDefinitions(nodes: LayoutNodeCollection,
 export function resolveResolvedFormFieldDefinition(
   node: InputLayoutNode | TextareaLayoutNode | SelectLayoutNode | RadioGroupLayoutNode | CheckboxGroupLayoutNode,
   state: ReturnType<typeof useRuntimeState>,
+  iterationContext?: RuntimeIterationContext,
 ): ResolvedFormFieldDefinition {
   return {
     fieldId: node.props.fieldId,
@@ -199,15 +213,16 @@ export function resolveResolvedFormFieldDefinition(
     visibility: node.visibility,
     items: isChoiceFieldNode(node) ? node.props.items : undefined,
     multiple: isMultipleChoiceFieldNode(node),
-    defaultValue: resolveFieldDefaultValue(node, state),
+    defaultValue: resolveFieldDefaultValue(node, state, iterationContext),
     inputType: node.type === 'input' ? node.props.inputType : undefined,
   }
 }
 export function resolveFieldDefaultValue(
   node: InputLayoutNode | TextareaLayoutNode | SelectLayoutNode | RadioGroupLayoutNode | CheckboxGroupLayoutNode,
   state: ReturnType<typeof useRuntimeState>,
+  iterationContext?: RuntimeIterationContext,
 ) {
-  const resolvedValue = resolveRuntimeValue(node.props.defaultValue, state)
+  const resolvedValue = resolveRuntimeValueWithOptions(node.props.defaultValue, state, { iterationContext })
   const fallbackValue = isMultipleChoiceFieldNode(node) ? [] : ''
 
   if (resolvedValue.status !== 'resolved') {
@@ -218,6 +233,7 @@ export function resolveFieldDefaultValue(
     return normalizeChoiceFieldValue(node.props.items, state, resolvedValue.value, {
       multiple: isMultipleChoiceFieldNode(node),
       surface: getChoiceFieldSurface(node.type),
+      iterationContext,
     })
   }
 

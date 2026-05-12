@@ -12,6 +12,7 @@ export type {
   RuntimeApiQueryValue,
   RuntimeApiRequestParams,
   ContainerLayoutNode,
+  RepeaterLayoutNode,
   FormFieldLayoutNodeProps,
   FormLayoutNode,
   HeadingLayoutNode,

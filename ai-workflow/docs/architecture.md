@@ -58,6 +58,7 @@ src/
       list-layout-node.tsx
       radio-group-layout-node.tsx
       paragraph-layout-node.tsx
+      repeater-layout-node.tsx
       checkbox-group-layout-node.tsx
       select-layout-node.tsx
       textarea-layout-node.tsx
@@ -70,19 +71,19 @@ Lectura operativa de esa estructura:
 - `runtime-config-validation-errors.ts` adapta fallos estructurales y semánticos al shape público de `RuntimeConfigError`.
 - `validate-runtime-config.ts` concentra la validación previa al render, fija el contrato estable de `config.api` y reintroduce las validaciones cruzadas que dependen del conjunto completo ya parseado.
 - `queries/` encapsula la frontera HTTP del runtime: resolución de payloads, merge estable entre request base y overrides por ejecución, construcción de `RequestInit`, ejecución contra `fetch` y errores normalizados.
-- `layout-renderer.tsx` conserva la responsabilidad de renderizar colecciones ordenadas de nodos.
-- `layout-node-renderer.tsx` es el punto central de resolución `type -> pieza de render` y del borde transversal que decide si el nodo se muestra, se oculta o se sustituye por un fallback local.
+- `layout-renderer.tsx` conserva la responsabilidad de renderizar colecciones ordenadas de nodos y ahora puede propagar contexto de iteración a un subárbol repetido.
+- `layout-node-renderer.tsx` es el punto central de resolución `type -> pieza de render` y del borde transversal que decide si el nodo se muestra, se oculta o se sustituye por un fallback local; `repeater` entra ahí como expansión estructural y no como nodo visual con wrapper propio.
 - `runtime-layout-visibility.ts` centraliza la visibilidad efectiva de cualquier nodo, combinando `queryStateFeedback` y `visibility` con una única precedencia reutilizable por renderer y formularios.
 - `form-context.tsx` propaga el `formId` efectivo a cualquier descendiente del árbol del formulario sin exigir props manuales repetidas.
 - `runtime-actions/` concentra la traducción `action.type -> handler del provider`, de modo que el nodo visual solo dispara el contrato común y no reimplementa navegación, queries ni formularios.
-- `runtime-collection-sources.ts` centraliza la resolución de colecciones efectivas para consumidores multi-valor, separando origen (`values` manuales o `queries.*`) de la proyección final que necesita cada nodo y de la normalización común de selección simple o múltiple para `select`, `radioGroup` y `checkboxGroup`.
+- `runtime-collection-sources.ts` centraliza la resolución de colecciones efectivas para consumidores multi-valor, separando origen (`values` manuales, `queries.*` o `item.*` dentro de `repeater`) de la proyección final que necesita cada nodo y de la normalización común de selección simple o múltiple para `select`, `radioGroup` y `checkboxGroup`.
 - `runtime-form-validations.ts` centraliza la evaluación de reglas locales declarativas, reutiliza la misma normalización efectiva de valores para submit y edición, y evita duplicar semánticas entre `form` y nodos de campo.
 - `runtime-node-styling.ts` concentra la convención visual base del runtime y la compatibilidad acotada para `gap` arbitrarios.
 - `runtime-query-state-feedback.ts` concentra la derivación `idle | loading | error | empty | success`, la heurística común de `empty` y la resolución de defaults efectivos de `queryStateFeedback`.
-- `runtime-references/` fija la semántica central de referencias string, distingue `literal | supported | unsupported | invalid`, soporta `forms.*`, `queries.*` y `params.*` dentro de su frontera actual y evita lógica dispersa en nodos visuales.
+- `runtime-references/` fija la semántica central de referencias string, distingue `literal | supported | unsupported | invalid`, soporta `forms.*`, `queries.*`, `params.*` e `item.*` dentro de su frontera actual y evita lógica dispersa en nodos visuales.
 - `runtime-state/` concentra un store por instancia basado en `useReducer` + `Context`, con dominios separados para navegación, formularios, queries y `pageEntry`, historial parametrizado por entrada y fachada mínima para navegación, formularios, queries y lectura consistente del último snapshot sin absorber la lógica de red.
 - El dominio `forms` distingue ya entre resetear un formulario existente y eliminar `forms.{formId}` completo; el nodo `form` usa esa diferencia para limpiar por defecto solo al desmontarse realmente y no durante rerenders u ocultaciones.
-- `runtime/nodes/` materializa solo nodos con uso real inmediato, incluido el catálogo actual de formularios declarativos con selección simple y múltiple compartida.
+- `runtime/nodes/` materializa solo nodos con uso real inmediato, incluido `repeater` como pieza fina de expansión y el catálogo actual de formularios declarativos con selección simple y múltiple compartida.
 - `runtime-page.tsx` ya no decide la página visible por selección ad hoc; la resuelve desde el estado compartido del runtime.
 
 ## Módulos previstos para próximas features
@@ -110,11 +111,12 @@ Lectura operativa de esa estructura:
 - La presentación base de los nodos visibles del runtime se expresa con utilidades de `Tailwind`, con una excepción acotada basada en variable CSS para `container.props.gap` cuando llega un valor arbitrario.
 - El runtime crea un store compartido aislado por instancia, con `useReducer` + `Context`, para sostener navegación, formularios y queries sin depender todavía de subsistemas visuales separados.
 - La navegación visible ya se resuelve desde `navigation.currentPageId`, pero la unidad histórica real es una entrada con `entryId`, `pageId` y `params`; la URL del navegador queda fuera del contrato de esta primera capa interactiva.
-- La resolución de referencias declarativas vive en `src/runtime/runtime-references/`, soporta `params.{paramName}` como namespace plano adicional y sigue abriendo navegación anidada solo bajo `queries.{queryName}.data.*`.
+- La resolución de referencias declarativas vive en `src/runtime/runtime-references/`, soporta `params.{paramName}` como namespace plano adicional, expone `item.*` solo con contexto explícito de iteración y sigue abriendo navegación anidada solo bajo `queries.{queryName}.data.*` y el valor actual de `item`.
 - La navegación de subrutas de query usa una semántica iterativa única: índices solo sobre arrays, claves literales sobre objetos y resultado `missing` para rutas bien formadas cuyo dato no está disponible.
 - La ejecución remota declarativa vive en `src/queries/`, reutiliza la convención central de referencias del runtime, compone allí mismo la operación `api` base con `requestParams` por ejecución y deja sus resultados visibles solo a través de `queries.{operationName}`.
 - La orquestación automática de `preloads` vive en `runtime-state-provider.tsx`, reutiliza la frontera `src/queries/`, captura un snapshot común del estado por entrada ya parametrizada, se dispara por la entrada activa y limita la semántica latest-only al agregado `pageEntry`, no a las queries individuales.
 - La interpretación de `button.props.action` ya no vive en el propio nodo visual: un ejecutor común en `src/runtime/runtime-actions/` delega en los handlers del provider para `navigateTo`, `goBack`, `executeOperation` y `resetForm`.
+- `repeater` se resuelve en el borde central del renderer: valida su contrato en `config/`, obtiene la colección efectiva desde `queries.*`, crea un contexto `{ item }` por iteración y vuelve a usar `LayoutRenderer` para expandir `props.template` como hermanos.
 - La semántica declarativa de feedback por query vive fuera de los nodos visuales concretos: el renderer central consulta `queries.{queryName}`, deriva un estado visible único y decide entre nodo original, ocultación o fallback local reutilizando `LayoutRenderer`.
 - La visibilidad efectiva de nodos y campos ya no depende solo de `queryStateFeedback`: una capa compartida combina esa semántica con reglas `visibility` basadas en `forms.*` y `queries.*`, manteniendo la precedencia `queryStateFeedback` antes de `visibility`.
 - Los formularios declarativos viven íntegramente dentro de `runtime/`: `form` actúa como frontera de inicialización, validación local y submit, mientras los campos leen y escriben solo en `forms.{formId}.{fieldId}`.
