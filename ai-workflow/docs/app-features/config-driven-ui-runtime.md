@@ -14,14 +14,14 @@ Renderizar el runtime a partir de una configuración JSON validada, apoyado ya e
 - Resuelve referencias dinámicas desde una capa central del runtime para las superficies textuales ya soportadas.
 - Ejecuta operaciones remotas declaradas en `api` mediante una capa dedicada en `src/queries/` y refleja sus resultados en `queries.{operationName}`.
 - Formaliza `api.headers` como parte estable del contrato declarativo y permite que cada ejecución añada `query`, `body` y `headers` sin redefinir otra operación `api`.
-- Permite que cada página declare `preloads` y los dispare automáticamente al entrar, con un estado agregado `pageEntry` latest-only para la tanda activa.
+- Permite que cada página declare `preloads` y los dispare automáticamente al entrar, con un estado agregado `pageEntry` latest-only para la tanda activa y preparación previa de carga fresca para las queries precargadas.
 - Expone una capa común de acciones UI del runtime para que los nodos interactivos deleguen navegación, ejecución remota y reset de formularios sin lógica imperativa específica en el propio nodo visual.
-- Permite que `navigateTo` transporte params escalares por entrada, que `goBack` restaure esa entrada completa y que `preloads` dependan de la reentrada observable real, no solo del `pageId`.
+- Permite que `navigateTo` transporte params escalares por entrada, que `goBack` restaure esa entrada completa y que `preloads` dependan de la reentrada observable real, no solo del `pageId`, reaplicando su limpieza selectiva en cada nueva `pageEntry`.
 - Añade `repeater` como nodo estructural para repetir un `template` completo por item de una colección `queries.*`, con identidad declarativa por `props.items.key` y degradación a cero iteraciones cuando la colección no está disponible o no es un array.
 - Permite que cualquier nodo soportado declare `queryStateFeedback` para mostrarse, ocultarse o sustituirse por un fallback local según `idle | loading | error | empty | success`.
 - Permite que `item` e `item.*` existan solo dentro del subárbol iterado de un `repeater`, reutilizando la misma semántica de navegación segura por objetos y arrays ya fijada para `queries.{queryName}.data.*`.
 - Permite que cualquier nodo soportado declare `visibility` para mostrarse u ocultarse según valores de `forms.*`, `queries.*` y `item.*` cuando exista contexto de iteración, con una semántica compartida entre renderer y formularios.
-- Renderiza formularios declarativos reales con `form`, `input`, `textarea`, `select`, `radioGroup` y `checkboxGroup`, inicializa su estado lazy en `forms.{formId}.{fieldId}`, valida `required` solo sobre campos visibles, soporta submit con `executeOperation` y permite que `defaultValue`, colecciones dinámicas y requests lean `item.*` dentro de `repeater`.
+- Renderiza formularios declarativos reales con `form`, `input`, `textarea`, `select`, `radioGroup` y `checkboxGroup`, inicializa su estado lazy en `forms.{formId}.{fieldId}`, valida `required` solo sobre campos visibles, soporta submit con `executeOperation` y permite que `defaultValue`, colecciones dinámicas y requests lean `item.*` dentro de `repeater`, incluyendo la reentrada limpia de `defaultValue` dependiente de `preloads`.
 - Implementa la presentación visible del runtime con utilidades de `Tailwind CSS`, sin abrir todavía una capa de theming definida.
 
 ## Áreas funcionales principales

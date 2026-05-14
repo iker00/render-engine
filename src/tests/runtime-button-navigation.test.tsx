@@ -469,6 +469,57 @@ describe('Runtime button navigation', () => {
     expect(fetchMock).toHaveBeenCalledTimes(3)
   })
 
+  it('restarts goBack preloads from a clean loading state instead of keeping the previous query data', async () => {
+    let resolveInitialHome: ((response: Response) => void) | null = null
+    let resolveDetails: ((response: Response) => void) | null = null
+    let resolveReplayHome: ((response: Response) => void) | null = null
+    const fetchMock = vi.fn((url: string) => {
+      if (url === '/api/home' && resolveInitialHome === null) {
+        return new Promise<Response>((resolve) => {
+          resolveInitialHome = resolve
+        })
+      }
+
+      if (url === '/api/details') {
+        return new Promise<Response>((resolve) => {
+          resolveDetails = resolve
+        })
+      }
+
+      return new Promise<Response>((resolve) => {
+        resolveReplayHome = resolve
+      })
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    renderRuntime()
+
+    resolveInitialHome?.(createJsonResponse({ home: true }))
+    await waitFor(() => expect(readRuntimeState().pageEntry.status).toBe('success'))
+    expect(readRuntimeState().queries.loadHome).toEqual({
+      status: 'success',
+      data: { home: true },
+      error: null,
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open details' }))
+    resolveDetails?.(createJsonResponse({ details: true }))
+    await waitFor(() => expect(readRuntimeState().pageEntry.status).toBe('success'))
+
+    fireEvent.click(screen.getByRole('button', { name: 'Back home' }))
+
+    await waitFor(() => expect(screen.getByTestId('runtime-page')).toHaveAttribute('data-runtime-page-id', 'home'))
+    await waitFor(() => expect(readRuntimeState().pageEntry.status).toBe('loading'))
+    expect(readRuntimeState().queries.loadHome).toEqual({
+      status: 'loading',
+      data: null,
+      error: null,
+    })
+
+    resolveReplayHome?.(createJsonResponse({ home: 'again' }))
+    await waitFor(() => expect(readRuntimeState().pageEntry.status).toBe('success'))
+  })
+
   it('keeps navigation deterministic under successive button activations', async () => {
     const fetchMock = vi
       .fn()
@@ -612,6 +663,246 @@ describe('Runtime button navigation', () => {
 
     expect(screen.getByLabelText('Name')).toHaveValue('Grace')
     expect(readRuntimeState().forms.profileForm.name.value).toBe('Grace')
+  })
+
+  it('reenters a preload-driven page without rendering stale query text or stale query-based default values', async () => {
+    let resolveAdaProfile: ((response: Response) => void) | null = null
+    let resolveGraceProfile: ((response: Response) => void) | null = null
+    const fetchMock = vi.fn((url: string) => {
+      if (url === '/api/profile?userId=ada') {
+        return new Promise<Response>((resolve) => {
+          resolveAdaProfile = resolve
+        })
+      }
+
+      return new Promise<Response>((resolve) => {
+        resolveGraceProfile = resolve
+      })
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    renderRuntime({
+      api: {
+        loadProfile: {
+          method: 'GET',
+          endpoint: '/api/profile',
+          query: {
+            userId: 'params.userId',
+          },
+        },
+      },
+      initialPage: 'home',
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'button',
+              props: {
+                label: 'Edit Ada',
+                action: {
+                  type: 'navigateTo',
+                  pageId: 'details',
+                  params: {
+                    userId: 'ada',
+                  },
+                },
+              },
+            },
+            {
+              type: 'button',
+              props: {
+                label: 'Edit Grace',
+                action: {
+                  type: 'navigateTo',
+                  pageId: 'details',
+                  params: {
+                    userId: 'grace',
+                  },
+                },
+              },
+            },
+          ],
+        },
+        {
+          id: 'details',
+          preloads: ['loadProfile'],
+          layout: [
+            {
+              type: 'paragraph',
+              queryStateFeedback: {
+                query: 'loadProfile',
+                states: {
+                  loading: {
+                    mode: 'fallback',
+                    fallback: [
+                      {
+                        type: 'paragraph',
+                        props: {
+                          text: 'Loading profile...',
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+              props: {
+                text: 'queries.loadProfile.data.name',
+              },
+            },
+            {
+              type: 'form',
+              id: 'profileForm',
+              children: [
+                {
+                  type: 'input',
+                  queryStateFeedback: {
+                    query: 'loadProfile',
+                    states: {
+                      success: {
+                        mode: 'show',
+                      },
+                    },
+                  },
+                  props: {
+                    fieldId: 'name',
+                    label: 'Name',
+                    defaultValue: 'queries.loadProfile.data.name',
+                  },
+                },
+              ],
+            },
+            {
+              type: 'button',
+              props: {
+                label: 'Back home',
+                action: {
+                  type: 'navigateTo',
+                  pageId: 'home',
+                },
+              },
+            },
+          ],
+        },
+      ],
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit Ada' }))
+    resolveAdaProfile?.(createJsonResponse({ name: 'Ada' }))
+    await waitFor(() => expect(readRuntimeState().pageEntry.status).toBe('success'))
+    expect(screen.getByText('Ada')).toBeInTheDocument()
+    expect(screen.getByDisplayValue('Ada')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Back home' }))
+    await waitFor(() => expect(screen.getByTestId('runtime-page')).toHaveAttribute('data-runtime-page-id', 'home'))
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit Grace' }))
+
+    await waitFor(() => expect(readRuntimeState().pageEntry.status).toBe('loading'))
+    expect(screen.getByText('Loading profile...')).toBeInTheDocument()
+    expect(screen.queryByText('Ada')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Name')).not.toBeInTheDocument()
+
+    resolveGraceProfile?.(createJsonResponse({ name: 'Grace' }))
+    await waitFor(() => expect(readRuntimeState().pageEntry.status).toBe('success'))
+    expect(screen.getByText('Grace')).toBeInTheDocument()
+  })
+
+  it('reenters a preload-driven edit form without reusing the previous query default value', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(createJsonResponse({ name: 'Ada' }))
+      .mockResolvedValueOnce(createJsonResponse({ name: 'Grace' }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    renderRuntime({
+      api: {
+        loadProfile: {
+          method: 'GET',
+          endpoint: '/api/profile',
+          query: {
+            userId: 'params.userId',
+          },
+        },
+      },
+      initialPage: 'home',
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'button',
+              props: {
+                label: 'Edit Ada',
+                action: {
+                  type: 'navigateTo',
+                  pageId: 'details',
+                  params: {
+                    userId: 'ada',
+                  },
+                },
+              },
+            },
+            {
+              type: 'button',
+              props: {
+                label: 'Edit Grace',
+                action: {
+                  type: 'navigateTo',
+                  pageId: 'details',
+                  params: {
+                    userId: 'grace',
+                  },
+                },
+              },
+            },
+          ],
+        },
+        {
+          id: 'details',
+          preloads: ['loadProfile'],
+          layout: [
+            {
+              type: 'form',
+              id: 'profileForm',
+              children: [
+                {
+                  type: 'input',
+                  props: {
+                    fieldId: 'name',
+                    label: 'Name',
+                    defaultValue: 'queries.loadProfile.data.name',
+                  },
+                },
+              ],
+            },
+            {
+              type: 'button',
+              props: {
+                label: 'Back home',
+                action: {
+                  type: 'navigateTo',
+                  pageId: 'home',
+                },
+              },
+            },
+          ],
+        },
+      ],
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit Ada' }))
+    await waitFor(() => expect(readRuntimeState().pageEntry.status).toBe('success'))
+    await waitFor(() => expect(screen.getByLabelText('Name')).toHaveValue('Ada'))
+
+    fireEvent.click(screen.getByRole('button', { name: 'Back home' }))
+    await waitFor(() => expect(screen.getByTestId('runtime-page')).toHaveAttribute('data-runtime-page-id', 'home'))
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit Grace' }))
+    await waitFor(() => expect(readRuntimeState().pageEntry.status).toBe('success'))
+    await waitFor(() => expect(screen.getByLabelText('Name')).toHaveValue('Grace'))
+
+    expect(screen.getByLabelText('Name')).not.toHaveValue('Ada')
   })
 
   it('executes a declared operation from a rendered button and stores the result in queries', async () => {

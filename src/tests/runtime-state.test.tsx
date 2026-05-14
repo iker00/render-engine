@@ -18,6 +18,7 @@ import {
   useRuntimeStateActions,
 } from '../runtime/runtime-state/runtime-state-provider'
 import { RuntimePage } from '../runtime/runtime-page'
+import { createRuntimeState, runtimeStateReducer } from '../runtime/runtime-state/runtime-state-reducer'
 import {
   selectFormFieldValue,
   selectNestedQueryDataValue,
@@ -692,6 +693,79 @@ describe('Runtime shared state store', () => {
       currentPageId: 'home',
       history: [{ entryId: 0, pageId: 'home', params: {} }],
       lastError: null,
+    })
+  })
+
+  it('preserves manual query semantics while preload batching uses a separate transition', () => {
+    const baseState: RuntimeState = {
+      ...createRuntimeState(runtimeConfig),
+      queries: {
+        searchUsers: {
+          status: 'success',
+          data: ['Ada'],
+          error: null,
+        },
+      },
+    }
+
+    const loadingState = runtimeStateReducer(baseState, {
+      type: 'queries/set-loading',
+      payload: {
+        queryName: 'searchUsers',
+      },
+    })
+
+    expect(loadingState.queries.searchUsers).toEqual({
+      status: 'loading',
+      data: ['Ada'],
+      error: null,
+    })
+
+    const errorState = runtimeStateReducer(loadingState, {
+      type: 'queries/set-error',
+      payload: {
+        queryName: 'searchUsers',
+        error: {
+          code: 'network',
+          message: 'Could not load users.',
+        },
+      },
+    })
+
+    expect(errorState.queries.searchUsers).toEqual({
+      status: 'error',
+      data: ['Ada'],
+      error: {
+        code: 'network',
+        message: 'Could not load users.',
+      },
+    })
+
+    const successState = runtimeStateReducer(errorState, {
+      type: 'queries/set-success',
+      payload: {
+        queryName: 'searchUsers',
+        data: ['Grace'],
+      },
+    })
+
+    expect(successState.queries.searchUsers).toEqual({
+      status: 'success',
+      data: ['Grace'],
+      error: null,
+    })
+
+    const resetState = runtimeStateReducer(successState, {
+      type: 'queries/reset',
+      payload: {
+        queryName: 'searchUsers',
+      },
+    })
+
+    expect(resetState.queries.searchUsers).toEqual({
+      status: 'idle',
+      data: null,
+      error: null,
     })
   })
 
@@ -1708,6 +1782,92 @@ describe('Runtime shared state store', () => {
 
     expect(screen.getByLabelText('Name')).toHaveValue('Grace')
     expect(screen.getByTestId('runtime-state')).toHaveTextContent('"name":{"value":"Grace"')
+  })
+
+  it('reinitializes a reused form node when navigation activates a different page entry', () => {
+    const config: RuntimeConfig = {
+      api: {},
+      initialPage: 'home',
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'form',
+              id: 'profile-form',
+              children: [
+                {
+                  type: 'input',
+                  props: {
+                    fieldId: 'name',
+                    label: 'Name',
+                    defaultValue: 'Home profile',
+                  },
+                },
+              ],
+            },
+            {
+              type: 'button',
+              props: {
+                label: 'Go to details',
+                action: {
+                  type: 'navigateTo',
+                  pageId: 'details',
+                },
+              },
+            },
+          ],
+        },
+        {
+          id: 'details',
+          layout: [
+            {
+              type: 'form',
+              id: 'profile-form',
+              children: [
+                {
+                  type: 'input',
+                  props: {
+                    fieldId: 'name',
+                    label: 'Name',
+                    defaultValue: 'Details profile',
+                  },
+                },
+              ],
+            },
+            {
+              type: 'button',
+              props: {
+                label: 'Go home',
+                action: {
+                  type: 'navigateTo',
+                  pageId: 'home',
+                },
+              },
+            },
+          ],
+        },
+      ],
+    }
+
+    render(
+      <RuntimeStateProvider config={config}>
+        <RuntimePage />
+        <RuntimeStateSnapshot testId="runtime-state" />
+      </RuntimeStateProvider>,
+    )
+
+    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Manual home value' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Go to details' }))
+
+    expect(screen.getByLabelText('Name')).toHaveValue('Details profile')
+    expect(readRuntimeStateSnapshot('runtime-state').forms['profile-form']?.name?.value).toBe('Details profile')
+
+    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Manual details value' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Go home' }))
+
+    expect(screen.getByLabelText('Name')).toHaveValue('Home profile')
+    expect(readRuntimeStateSnapshot('runtime-state').forms['profile-form']?.name?.value).toBe('Home profile')
   })
 
   it('keeps form state when the form is hidden and shown again within the same page', async () => {

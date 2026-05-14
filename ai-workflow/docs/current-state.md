@@ -14,7 +14,7 @@
 - Núcleo de estado compartido por instancia ya integrado en `src/runtime/runtime-state/` para navegación, formularios y queries.
 - Navegación visible resuelta desde `navigation.currentPageId`, con historial interno por entradas completas `entryId/pageId/params`, no-op para reentradas idénticas y error recuperable al navegar a una página inexistente.
 - Dominio base de formularios disponible con almacenamiento por `forms.{formId}.{fieldId}`, `defaultValue`, `error`, `touched`, `dirty`, reset por formulario y borrado completo por `formId`.
-- Dominio base de queries disponible con almacenamiento por nombre, `status/data/error`, conservación del último dato válido durante recargas y reset por query.
+- Dominio base de queries disponible con almacenamiento por nombre, `status/data/error`, conservación del último dato válido durante recargas manuales y reset por query.
 - Capa central de referencias del runtime ya operativa para `forms.*`, `queries.{queryName}`, `queries.{queryName}.data`, `queries.{queryName}.status` y `queries.{queryName}.error`.
 - Navegación anidada de datos de query ya soportada bajo `queries.{queryName}.data.*`, con recorrido uniforme por objetos y arrays y consumo visible actual en `heading.props.text` y `paragraph.props.text`.
 - `config.api` ya funciona como catálogo declarativo tipado y validado de operaciones remotas con `method`, `endpoint`, `query`, `body` y `headers`.
@@ -24,6 +24,7 @@
 - Las páginas ya pueden declarar `preloads` como lista opcional de operaciones `api` y dispararlas automáticamente al entrar tanto en `initialPage` como en navegaciones posteriores.
 - Dominio agregado `pageEntry` ya disponible en el store compartido con `entryId`, `pageId`, `params`, `preloadNames` y `status: idle | loading | success | error`.
 - La tanda agregada de `preloads` ya usa semántica latest-only para no dejar que cierres tardíos de entradas antiguas sobrescriban la entrada activa más reciente.
+- Cada nueva `pageEntry` con `preloads` ya arranca mediante una transición atómica que limpia solo esas queries declaradas y las deja directamente en `loading` antes del primer render útil.
 - `button.props.action` ya reutiliza un contrato común de acciones UI con `navigateTo`, `goBack`, `executeOperation` y `resetForm`.
 - La interpretación de acciones UI ya está concentrada en una capa transversal del runtime y no en ramas imperativas dispersas dentro del nodo visual `button`.
 - `button.props.action.type: navigateTo` ya puede transportar `params` escalares resueltos contra el snapshot actual del runtime y `goBack` restaura también esos params al recuperar una entrada previa.
@@ -35,6 +36,7 @@
 - La visibilidad efectiva del runtime ya está centralizada con precedencia estable: `queryStateFeedback` decide primero `show | hide | fallback`, y `visibility` solo se evalúa sobre la rama principal cuando esta sigue visible.
 - Catálogo declarativo de formularios ya operativo con `form`, `input`, `textarea`, `select`, `radioGroup` y `checkboxGroup`, incluyendo herencia de `formId` por descendencia y render de `<form>` real.
 - La inicialización de campos declarativos ya es lazy y reutiliza exclusivamente `forms.{formId}.{fieldId}`, con soporte para `defaultValue` literal o dinámico sin sobrescribir estado ya existente del usuario mientras el formulario sigue montado.
+- En reentradas con `preloads`, los `defaultValue` basados en `queries.*` ya no pueden hidratar el dato de la entrada anterior: parten del estado limpio de la nueva entrada y pueden absorber el primer dato fresco solo mientras el campo siga prístino.
 - Los nodos `form` ya eliminan por defecto su estado local al desmontarse realmente, vuelven a inicializar sus campos en el siguiente montaje y permiten recuperar la persistencia histórica solo con `persistOnUnmount: true`.
 - `input` ya soporta además `number`, `date` y `datetime-local` sin abrir una familia separada de componentes de campo.
 - La capa central de referencias del runtime ya soporta también `params.{paramName}` para texto visible, requests declarativos, `defaultValue` de formularios y nuevas navegaciones originadas desde páginas ya parametrizadas.
@@ -94,6 +96,7 @@
 - Vigésima segunda feature del workflow cerrada para hacer que `form` limpie por defecto su estado local al desmontarse, recalculando `defaultValue` en remontajes reales y dejando la persistencia como excepción explícita con `persistOnUnmount`.
 - Vigésima tercera feature del workflow cerrada para sustituir `props.required` por `props.validations`, ampliar el catálogo de reglas locales declarativas y reutilizar una misma semántica de evaluación tanto en submit como al editar campos con error.
 - Vigésima cuarta feature del workflow cerrada para introducir `repeater`, el namespace `item.*` y su integración transversal en renderer, navegación, requests declarativos, formularios y consumidores descendientes de colecciones.
+- Vigésima quinta feature del workflow cerrada para hacer que cada reentrada con `preloads` limpie primero sus queries declaradas, mantenga la carga fresca por `pageEntry` y evite hidratar consumidores visibles o `defaultValue` con datos obsoletos de otra entrada.
 
 ## Referencias
 

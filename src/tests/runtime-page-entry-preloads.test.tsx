@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { useEffect, useState } from 'react'
+import { useEffect, useLayoutEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { RuntimeConfig } from '../config/runtime-config'
@@ -127,6 +127,16 @@ function RuntimeStateSnapshot() {
   return <pre data-testid="runtime-state">{JSON.stringify(state)}</pre>
 }
 
+function RuntimeStateHistoryRecorder({ history }: { history: RuntimeState[] }) {
+  const state = useRuntimeState()
+
+  useLayoutEffect(() => {
+    history.push(structuredClone(state))
+  }, [history, state])
+
+  return null
+}
+
 function NavigationFixture() {
   const { goBackPage, navigateToPage } = useRuntimeStateActions()
 
@@ -223,15 +233,18 @@ function renderPreloadHarness({
   config = preloadConfig,
   seedFormTerm,
   seedSelectedUserId,
+  history,
   withRerenderHarness = false,
 }: {
   config?: RuntimeConfig
   seedFormTerm?: string
   seedSelectedUserId?: string
+  history?: RuntimeState[]
   withRerenderHarness?: boolean
 } = {}) {
   const runtimeChildren = (
     <>
+      {history ? <RuntimeStateHistoryRecorder history={history} /> : null}
       <NavigationFixture />
       {(seedFormTerm || seedSelectedUserId) && (
         <SeedRuntimeState formTerm={seedFormTerm} selectedUserId={seedSelectedUserId} />
@@ -358,6 +371,61 @@ describe('Runtime page entry shared state', () => {
     })
   })
 
+  it('starts preload batches atomically by resetting only the declared queries directly into loading', () => {
+    const seededState: RuntimeState = {
+      ...createRuntimeState(baseConfig),
+      queries: {
+        searchUsers: {
+          status: 'success',
+          data: { results: ['Ada'] },
+          error: null,
+        },
+        loadTeams: {
+          status: 'error',
+          data: { teams: ['Legacy'] },
+          error: {
+            code: 'network',
+            message: 'Could not load teams.',
+          },
+        },
+        selectedUser: {
+          status: 'success',
+          data: { id: 'user-7' },
+          error: null,
+        },
+      },
+    }
+
+    const nextState = runtimeStateReducer(seededState, {
+      type: 'page-entry/start-preload-batch',
+      payload: {
+        entryId: 3,
+        pageId: 'details',
+        params: { userId: '42' },
+        preloadNames: ['searchUsers', 'loadTeams'],
+      },
+    })
+
+    expect(nextState.pageEntry).toEqual({
+      entryId: 3,
+      pageId: 'details',
+      params: { userId: '42' },
+      preloadNames: ['searchUsers', 'loadTeams'],
+      status: 'loading',
+    })
+    expect(nextState.queries.searchUsers).toEqual({
+      status: 'loading',
+      data: null,
+      error: null,
+    })
+    expect(nextState.queries.loadTeams).toEqual({
+      status: 'loading',
+      data: null,
+      error: null,
+    })
+    expect(nextState.queries.selectedUser).toEqual(seededState.queries.selectedUser)
+  })
+
   it('exposes selectors for the page entry domain without affecting navigation, forms, or queries', () => {
     const state: RuntimeState = {
       navigation: {
@@ -424,6 +492,46 @@ describe('Runtime page entry preloads integration', () => {
       data: { results: ['Ada'] },
       error: null,
     })
+  })
+
+  it('prepares a new preload entry directly in loading without exposing an idle commit for that entry', async () => {
+    let resolveUsers: ((response: Response) => void) | null = null
+    const fetchMock = vi.fn(() => new Promise<Response>((resolve) => {
+      resolveUsers = resolve
+    }))
+    vi.stubGlobal('fetch', fetchMock)
+    const history: RuntimeState[] = []
+
+    renderPreloadHarness({
+      config: {
+        ...preloadConfig,
+        initialPage: 'landing',
+      },
+      history,
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Go home user 1' }))
+
+    await waitFor(() => expect(readRuntimeState().pageEntry).toEqual({
+      entryId: 1,
+      pageId: 'home',
+      params: { userId: '1' },
+      preloadNames: ['searchUsers'],
+      status: 'loading',
+    }))
+
+    const newEntryStates = history.filter((snapshot) => snapshot.pageEntry.entryId === 1)
+
+    expect(newEntryStates.length).toBeGreaterThan(0)
+    expect(newEntryStates.some((snapshot) => snapshot.pageEntry.status === 'idle')).toBe(false)
+    expect(newEntryStates[0]?.queries.searchUsers).toEqual({
+      status: 'loading',
+      data: null,
+      error: null,
+    })
+
+    resolveUsers?.(createJsonResponse({ results: ['Ada'] }))
+    await waitFor(() => expect(readRuntimeState().pageEntry.status).toBe('success'))
   })
 
   it('applies the same visible query feedback semantics to preload-driven queries', async () => {
@@ -538,6 +646,59 @@ describe('Runtime page entry preloads integration', () => {
     expect(fetchMock).toHaveBeenNthCalledWith(1, '/api/users', { method: 'GET' })
     expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/teams', { method: 'GET' })
     expect(fetchMock).toHaveBeenNthCalledWith(3, '/api/users', { method: 'GET' })
+  })
+
+  it('resets the previous preload query data before replaying a goBack entry', async () => {
+    let resolveInitialHome: ((response: Response) => void) | null = null
+    let resolveDetails: ((response: Response) => void) | null = null
+    let resolveGoBackHome: ((response: Response) => void) | null = null
+    const fetchMock = vi.fn((url: string) => {
+      if (url === '/api/users' && resolveInitialHome === null) {
+        return new Promise<Response>((resolve) => {
+          resolveInitialHome = resolve
+        })
+      }
+
+      if (url === '/api/teams') {
+        return new Promise<Response>((resolve) => {
+          resolveDetails = resolve
+        })
+      }
+
+      return new Promise<Response>((resolve) => {
+        resolveGoBackHome = resolve
+      })
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    renderPreloadHarness()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Go home' }))
+    resolveInitialHome?.(createJsonResponse({ results: ['Ada'] }))
+    await waitFor(() => expect(readRuntimeState().pageEntry.status).toBe('success'))
+    expect(readRuntimeState().queries.searchUsers.data).toEqual({ results: ['Ada'] })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Go details' }))
+    resolveDetails?.(createJsonResponse({ teams: ['Runtime'] }))
+    await waitFor(() => expect(readRuntimeState().pageEntry.status).toBe('success'))
+
+    fireEvent.click(screen.getByRole('button', { name: 'Go back' }))
+
+    await waitFor(() => expect(readRuntimeState().pageEntry).toEqual({
+      entryId: 1,
+      pageId: 'home',
+      params: {},
+      preloadNames: ['searchUsers'],
+      status: 'loading',
+    }))
+    expect(readRuntimeState().queries.searchUsers).toEqual({
+      status: 'loading',
+      data: null,
+      error: null,
+    })
+
+    resolveGoBackHome?.(createJsonResponse({ results: ['Grace'] }))
+    await waitFor(() => expect(readRuntimeState().pageEntry.status).toBe('success'))
   })
 
   it('does not relaunch the same page entry preloads because queries update or the provider rerenders', async () => {
@@ -715,7 +876,6 @@ describe('Runtime page entry preloads integration', () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(createJsonResponse({ id: 'user-2' }))
-      .mockResolvedValueOnce(createJsonResponse({ profile: 'loaded' }))
     vi.stubGlobal('fetch', fetchMock)
 
     renderPreloadHarness({
@@ -724,11 +884,23 @@ describe('Runtime page entry preloads integration', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Go profile' }))
 
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2))
-    await waitFor(() => expect(readRuntimeState().pageEntry.status).toBe('success'))
+    await waitFor(() => expect(readRuntimeState().pageEntry.status).toBe('error'))
 
     expect(fetchMock).toHaveBeenNthCalledWith(1, '/api/users/current', { method: 'GET' })
-    expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/profile?id=user-1', { method: 'GET' })
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(readRuntimeState().queries.selectedUser).toEqual({
+      status: 'success',
+      data: { id: 'user-2' },
+      error: null,
+    })
+    expect(readRuntimeState().queries.loadProfile).toEqual({
+      status: 'error',
+      data: null,
+      error: {
+        code: 'request-build-failed',
+        message: 'The api operation "loadProfile" could not resolve "queries.selectedUser.data.id" for "query.id".',
+      },
+    })
   })
 
   it('relaunches preloads when navigating to the same page with different params', async () => {

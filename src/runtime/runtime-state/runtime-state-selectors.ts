@@ -35,7 +35,7 @@ export function selectPageEntryStatus(state: RuntimeState) {
 }
 
 export function selectCurrentPage(config: RuntimeConfig, state: RuntimeState) {
-  return config.pages.find((page) => page.id === state.navigation.currentPageId) ?? null
+  return config.pages.find((page) => page.id === state.pageEntry.pageId) ?? null
 }
 
 export function selectFormState(state: RuntimeState, formId: string) {

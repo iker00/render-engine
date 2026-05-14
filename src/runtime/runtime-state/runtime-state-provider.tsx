@@ -23,6 +23,7 @@ async function executeQueryOperationWithSnapshot({
   requestParams,
   iterationContext,
   fetchImplementation,
+  skipLoadingDispatch = false,
 }: {
   config: RuntimeConfig
   dispatch: Dispatch<RuntimeStateAction>
@@ -31,13 +32,16 @@ async function executeQueryOperationWithSnapshot({
   requestParams?: RuntimeApiRequestParams
   iterationContext?: RuntimeIterationContext
   fetchImplementation?: typeof fetch
+  skipLoadingDispatch?: boolean
 }) {
-  dispatch({
-    type: 'queries/set-loading',
-    payload: {
-      queryName: operationName,
-    },
-  })
+  if (!skipLoadingDispatch) {
+    dispatch({
+      type: 'queries/set-loading',
+      payload: {
+        queryName: operationName,
+      },
+    })
+  }
 
   const result = await executeRuntimeApiOperation({
     config,
@@ -74,7 +78,7 @@ async function executeQueryOperationWithSnapshot({
 export function RuntimeStateProvider({ config, children }: RuntimeStateProviderProps) {
   const [initialState] = useState(() => createRuntimeState(config))
   const [state, dispatch] = useReducer(runtimeStateReducer, initialState)
-  const isFirstEntryRef = useRef(true)
+  const activePreloadBatchSignatureRef = useRef<string | null>(null)
   const latestStateRef = useRef(state)
   const activeNavigationEntry = selectCurrentNavigationEntry(state)
 
@@ -104,7 +108,7 @@ export function RuntimeStateProvider({ config, children }: RuntimeStateProviderP
     [config, dispatch, dispatchAndSyncState, initialState, state],
   )
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!activeNavigationEntry) {
       return
     }
@@ -117,58 +121,24 @@ export function RuntimeStateProvider({ config, children }: RuntimeStateProviderP
 
     const preloadNames = activePage.preloads ?? []
 
-    if (
+    const isCurrentPageEntryPrepared =
       state.pageEntry.entryId === activeNavigationEntry.entryId &&
       state.pageEntry.pageId === activeNavigationEntry.pageId &&
       arePageParamsEqual(state.pageEntry.params, activeNavigationEntry.params) &&
-      state.pageEntry.preloadNames.length === preloadNames.length &&
-      state.pageEntry.preloadNames.every((name, index) => name === preloadNames[index])
-    ) {
+      arePreloadNamesEqual(state.pageEntry.preloadNames, preloadNames) &&
+      (preloadNames.length === 0 || state.pageEntry.status !== 'idle')
+
+    if (isCurrentPageEntryPrepared) {
       return
     }
-
-    dispatchAndSyncState({
-      type: 'page-entry/set-idle',
-      payload: {
-        entryId: activeNavigationEntry.entryId,
-        pageId: activeNavigationEntry.pageId,
-        params: activeNavigationEntry.params,
-        preloadNames,
-      },
-    })
-  }, [activeNavigationEntry, config.pages, dispatchAndSyncState, state.pageEntry])
-
-  useEffect(() => {
-    if (!activeNavigationEntry) {
-      isFirstEntryRef.current = false
-      return
-    }
-
-    const activePage = config.pages.find((page) => page.id === activeNavigationEntry.pageId)
-
-    if (!activePage) {
-      isFirstEntryRef.current = false
-      return
-    }
-
-    const preloadNames = activePage.preloads ?? []
-
-    if (preloadNames.length === 0 && isFirstEntryRef.current) {
-      isFirstEntryRef.current = false
-      return
-    }
-
-    isFirstEntryRef.current = false
-    const entryId = activeNavigationEntry.entryId
-    const params = activeNavigationEntry.params
 
     if (preloadNames.length === 0) {
       dispatchAndSyncState({
         type: 'page-entry/set-idle',
         payload: {
-          entryId,
+          entryId: activeNavigationEntry.entryId,
           pageId: activePage.id,
-          params,
+          params: activeNavigationEntry.params,
           preloadNames,
         },
       })
@@ -177,15 +147,51 @@ export function RuntimeStateProvider({ config, children }: RuntimeStateProviderP
     }
 
     dispatchAndSyncState({
-      type: 'page-entry/set-loading',
+      type: 'page-entry/start-preload-batch',
       payload: {
-        entryId,
+        entryId: activeNavigationEntry.entryId,
         pageId: activePage.id,
-        params,
+        params: activeNavigationEntry.params,
         preloadNames,
       },
     })
+  }, [activeNavigationEntry, config.pages, dispatchAndSyncState, state.pageEntry])
 
+  useEffect(() => {
+    if (!activeNavigationEntry) {
+      activePreloadBatchSignatureRef.current = null
+      return
+    }
+
+    const activePage = config.pages.find((page) => page.id === activeNavigationEntry.pageId)
+
+    if (!activePage) {
+      activePreloadBatchSignatureRef.current = null
+      return
+    }
+
+    const preloadNames = activePage.preloads ?? []
+
+    if (
+      preloadNames.length === 0 ||
+      state.pageEntry.status !== 'loading' ||
+      state.pageEntry.entryId !== activeNavigationEntry.entryId ||
+      state.pageEntry.pageId !== activeNavigationEntry.pageId ||
+      !arePageParamsEqual(state.pageEntry.params, activeNavigationEntry.params) ||
+      !arePreloadNamesEqual(state.pageEntry.preloadNames, preloadNames)
+    ) {
+      activePreloadBatchSignatureRef.current = null
+      return
+    }
+
+    const batchSignature = createPreloadBatchSignature(state.pageEntry)
+
+    if (activePreloadBatchSignatureRef.current === batchSignature) {
+      return
+    }
+
+    activePreloadBatchSignatureRef.current = batchSignature
+    const entryId = activeNavigationEntry.entryId
     const snapshotState = latestStateRef.current
 
     void Promise.all(
@@ -195,6 +201,7 @@ export function RuntimeStateProvider({ config, children }: RuntimeStateProviderP
           dispatch: dispatchAndSyncState,
           operationName,
           snapshotState,
+          skipLoadingDispatch: true,
         }),
       ),
     ).then((results) => {
@@ -206,7 +213,7 @@ export function RuntimeStateProvider({ config, children }: RuntimeStateProviderP
         },
       })
     })
-  }, [activeNavigationEntry, config, dispatchAndSyncState])
+  }, [activeNavigationEntry, config, dispatchAndSyncState, state.pageEntry])
 
   return <RuntimeStateContext.Provider value={contextValue}>{children}</RuntimeStateContext.Provider>
 }
@@ -489,6 +496,19 @@ function arePageParamsEqual(left: RuntimePageParams, right: RuntimePageParams) {
   }
 
   return true
+}
+
+function arePreloadNamesEqual(left: string[], right: string[]) {
+  return left.length === right.length && left.every((name, index) => name === right[index])
+}
+
+function createPreloadBatchSignature(pageEntry: RuntimeState['pageEntry']) {
+  return JSON.stringify({
+    entryId: pageEntry.entryId,
+    pageId: pageEntry.pageId,
+    params: pageEntry.params,
+    preloadNames: pageEntry.preloadNames,
+  })
 }
 
 function resolveNavigationParams(

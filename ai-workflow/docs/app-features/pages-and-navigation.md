@@ -28,6 +28,9 @@ Definir cómo se organiza el catálogo de páginas del runtime y cuál es el alc
 - El historial interno ya sostiene `goBack` como acción declarativa estable cuando existe una página previa válida y restaura también los params asociados a la entrada anterior.
 - Si se intenta navegar a una página inexistente, el runtime conserva la página anterior y guarda un error recuperable `page-not-found`.
 - Cada entrada a una página con `preloads` dispara una nueva tanda automática de operaciones, también al volver a una página ya visitada o al reentrar en la misma página con params distintos.
+- Esa nueva tanda prepara primero la `pageEntry` activa y resetea solo sus queries precargadas antes del primer render útil de la entrada reactivada.
+- Durante esa preparación, la nueva entrada ve esas queries ya limpias y en `loading`, sin un paso visible intermedio por `idle` ni reutilización transitoria del `data` de otra entrada.
+- La misma política se reaplica también cuando `goBack` reactiva una entrada histórica con `preloads`.
 - La unidad observable de reentrada es `pageEntry`, que refleja `entryId`, `pageId`, `params`, `preloadNames` y el estado agregado `idle | loading | success | error`.
 - La misma entrada de página no relanza sus `preloads` por rerenders del provider ni por cambios internos de estado mientras `pageEntry.entryId` no cambie.
 - La URL del navegador no cambia.
@@ -39,6 +42,7 @@ Definir cómo se organiza el catálogo de páginas del runtime y cuál es el alc
 - `params.*` representa datos de la entrada activa del historial interno, no segmentos de URL ni query string del navegador.
 - La familia `params.*` puede reutilizarse en texto visible, requests declarativos, `defaultValue` de campos y nuevas navegaciones originadas desde una página ya parametrizada.
 - Si una navegación desmonta un `form` y luego lo vuelve a montar en otra entrada, los `defaultValue` basados en `params.*` se recalculan por defecto contra los params vigentes de esa nueva entrada.
+- Si la nueva entrada además dispara `preloads`, cualquier `defaultValue` que dependa de esas queries precargadas se inicializa contra el estado limpio de la entrada nueva y ya no puede hidratarse con el dato de la visita anterior.
 - `params.*` no forma parte todavía de `visibility` ni de las fuentes dinámicas de colección para `list` y `select`.
 
 ## Relación con futuras iteraciones
@@ -48,5 +52,5 @@ Definir cómo se organiza el catálogo de páginas del runtime y cuál es el alc
 ## Límites de v1
 - no hay deep links
 - no hay sincronización con historial externo del navegador
-- no existen políticas alternativas de reentrada, caché, secuencialidad ni dependencias entre `preloads`
+- no existen políticas alternativas de reentrada, caché, secuencialidad ni dependencias entre `preloads`; la política vigente es carga fresca por `pageEntry`
 - no existen todavía `routeParams`

@@ -1990,6 +1990,75 @@ describe('RuntimePage', () => {
     await waitFor(() => expect(screen.getByLabelText('Nickname')).toHaveValue('Countess'))
   })
 
+  it('renders query-driven text and lazy defaults against a clean loading query state without reviving stale content', () => {
+    renderRuntimePageWithState(
+      {
+        id: 'profile',
+        layout: [
+          {
+            type: 'paragraph',
+            queryStateFeedback: {
+              query: 'selectedUser',
+              states: {
+                loading: {
+                  mode: 'fallback',
+                  fallback: [
+                    {
+                      type: 'paragraph',
+                      props: {
+                        text: 'Loading profile...',
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+            props: {
+              text: 'queries.selectedUser.data.profile.nickname',
+            },
+          },
+          {
+            type: 'form',
+            id: 'profile-form',
+            children: [
+              {
+                type: 'input',
+                props: {
+                  fieldId: 'nickname',
+                  label: 'Nickname',
+                  defaultValue: 'queries.selectedUser.data.profile.nickname',
+                },
+              },
+            ],
+          },
+        ],
+      },
+      {
+        ...createRuntimeState({
+          api: {},
+          initialPage: 'profile',
+          pages: [
+            {
+              id: 'profile',
+              layout: [],
+            },
+          ],
+        }),
+        queries: {
+          selectedUser: {
+            status: 'loading',
+            data: null,
+            error: null,
+          },
+        },
+      },
+    )
+
+    expect(screen.getByText('Loading profile...')).toBeInTheDocument()
+    expect(screen.queryByDisplayValue('Countess')).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Nickname')).toHaveValue('')
+  })
+
   it('keeps form fields hidden by queryStateFeedback from rendering until their query becomes visible', () => {
     renderRuntimeFormPage({
       id: 'profile',

@@ -46,7 +46,9 @@ Reglas estables del catálogo:
 - La familia `params.*` ya forma parte de las referencias dinámicas soportadas para `defaultValue`.
 - Dentro de un `repeater`, `defaultValue` también puede resolver `item.*` contra la iteración activa.
 - Si `defaultValue` es una referencia dinámica, se resuelve una sola vez en el momento de la primera inicialización efectiva del campo.
+- Si esa referencia dinámica apunta a una query incluida en los `preloads` de una nueva `pageEntry`, la primera inicialización efectiva de esa reentrada ya ocurre contra la query limpia de la entrada activa, no contra el éxito conservado de una visita anterior.
 - Si el dato dinámico aparece más tarde mientras el formulario sigue montado, el runtime no rehidrata automáticamente el campo.
+- Excepción acotada ya implementada: si el campo sigue prístino y todavía no ha quedado hidratado efectivamente durante la nueva entrada, puede absorber el primer dato fresco que llegue desde esa tanda de `preloads` sin convertir `defaultValue` en una referencia reactiva general.
 - Si el formulario se desmonta y vuelve a montarse sin `persistOnUnmount`, el runtime recalcula el `defaultValue` contra el contexto vigente de ese nuevo montaje.
 - En `select` simple y en `radioGroup`, si el valor efectivo no coincide con ninguna opción disponible en la colección resuelta, el campo queda vacío.
 - En `select.multiple` y en `checkboxGroup`, solo se conservan seleccionados los valores que sigan existiendo en la colección efectiva disponible.
@@ -133,6 +135,7 @@ Semántica estable vigente del reset:
 - campos condicionales ocultables por `queryStateFeedback` sin perder su estado local
 - campos condicionales ocultables por `visibility` según `forms.*` o `queries.*`, sin perder su estado local ni bloquear el submit mientras siguen ocultos
 - reentrada a una página con `defaultValue` dependiente de `params.*` o `queries.*` sin reutilizar por defecto valores escritos en una visita previa si hubo desmontaje real del formulario
+- reentrada a una página con `preloads` y `defaultValue` basado en `queries.*` sin hidratar transitoriamente el registro de la entrada anterior mientras la nueva carga está en curso
 - `select` simple o múltiple dependiente de catálogos remotos ya cargados en `queries.*`, sin lógica React específica por pantalla
 - grupos `radioGroup` y `checkboxGroup` alimentados por colecciones manuales o por `queries.*`, compartiendo la misma semántica de opciones que `select`
 - grupos `radioGroup` y `checkboxGroup` dentro de `repeater` alimentados también por `item.*`, compartiendo la misma semántica de opciones que `select`

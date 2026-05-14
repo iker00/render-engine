@@ -36,25 +36,35 @@ export function FormNode({ node, children, iterationContext }: FormNodeProps) {
     () => collectResolvedFormFieldDefinitions(node.children ?? [], state, iterationContext),
     [iterationContext, node.children, state],
   )
-  const missingFieldDefinitions = useMemo(
+  const fieldsNeedingInitialization = useMemo(
     () =>
       fieldDefinitions.filter(
-        (fieldDefinition) =>
-          isLayoutNodeVisible(fieldDefinition, state, iterationContext) &&
-          selectFormFieldState(state, node.id, fieldDefinition.fieldId) === null,
+        (fieldDefinition) => {
+          if (!isLayoutNodeVisible(fieldDefinition, state, iterationContext)) {
+            return false
+          }
+
+          const fieldState = selectFormFieldState(state, node.id, fieldDefinition.fieldId)
+
+          if (fieldState === null) {
+            return true
+          }
+
+          return shouldRefreshPristineFieldDefault(fieldState, fieldDefinition)
+        },
       ),
     [fieldDefinitions, iterationContext, node.id, state],
   )
 
   useEffect(() => {
-    if (missingFieldDefinitions.length === 0) {
+    if (fieldsNeedingInitialization.length === 0) {
       return
     }
 
     initializeForm(
       node.id,
       Object.fromEntries(
-        missingFieldDefinitions.map((fieldDefinition) => [
+        fieldsNeedingInitialization.map((fieldDefinition) => [
           fieldDefinition.fieldId,
           {
             defaultValue: fieldDefinition.defaultValue,
@@ -62,7 +72,7 @@ export function FormNode({ node, children, iterationContext }: FormNodeProps) {
         ]),
       ),
     )
-  }, [initializeForm, missingFieldDefinitions, node.id])
+  }, [fieldsNeedingInitialization, initializeForm, node.id])
 
   useEffect(() => {
     if (node.persistOnUnmount) {
@@ -286,4 +296,35 @@ function areFieldValuesEqual(left: unknown, right: unknown) {
   }
 
   return Object.is(left, right)
+}
+
+function shouldRefreshPristineFieldDefault(
+  fieldState: NonNullable<ReturnType<typeof selectFormFieldState>>,
+  fieldDefinition: Pick<ResolvedFormFieldDefinition, 'defaultValue' | 'type'>,
+) {
+  if (fieldDefinition.type !== 'input' && fieldDefinition.type !== 'textarea') {
+    return false
+  }
+
+  if (fieldState.touched || fieldState.dirty || fieldState.error !== null) {
+    return false
+  }
+
+  if (!areFieldValuesEqual(fieldState.value, fieldState.defaultValue)) {
+    return false
+  }
+
+  if (!isPlaceholderFieldDefault(fieldState.defaultValue)) {
+    return false
+  }
+
+  return !areFieldValuesEqual(fieldState.defaultValue, fieldDefinition.defaultValue)
+}
+
+function isPlaceholderFieldDefault(value: unknown) {
+  if (value === '' || typeof value === 'undefined') {
+    return true
+  }
+
+  return Array.isArray(value) && value.length === 0
 }

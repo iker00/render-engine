@@ -69,6 +69,10 @@ export type RuntimeStateAction =
   | { type: 'navigation/go-back' }
   | { type: 'navigation/set-error'; payload: { error: RuntimeNavigationError } }
   | { type: 'page-entry/set-idle'; payload: { entryId: number; pageId: string; params: RuntimePageParams; preloadNames: string[] } }
+  | {
+      type: 'page-entry/start-preload-batch'
+      payload: { entryId: number; pageId: string; params: RuntimePageParams; preloadNames: string[] }
+    }
   | { type: 'page-entry/set-loading'; payload: { entryId: number; pageId: string; params: RuntimePageParams; preloadNames: string[] } }
   | { type: 'page-entry/set-settled'; payload: { entryId: number; status: 'success' | 'error' } }
   | { type: 'forms/initialize'; payload: { formId: string; fields: Record<string, RuntimeFormFieldDefinition> } }

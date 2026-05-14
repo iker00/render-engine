@@ -109,6 +109,18 @@ export function runtimeStateReducer(state: RuntimeState, action: RuntimeStateAct
           status: 'idle',
         }),
       }
+    case 'page-entry/start-preload-batch':
+      return {
+        ...state,
+        queries: resetQueriesForPreloadBatch(state.queries, action.payload.preloadNames),
+        pageEntry: createRuntimePageEntryState({
+          entryId: action.payload.entryId,
+          pageId: action.payload.pageId,
+          params: action.payload.params,
+          preloadNames: action.payload.preloadNames,
+          status: 'loading',
+        }),
+      }
     case 'page-entry/set-loading':
       return {
         ...state,
@@ -302,6 +314,10 @@ function hydrateRuntimeFormFieldState(
   fieldState: RuntimeFormFieldState,
   defaultValue: unknown,
 ): RuntimeFormFieldState {
+  if (shouldRefreshPristinePlaceholderDefault(fieldState, defaultValue)) {
+    return createRuntimeFormFieldState(defaultValue)
+  }
+
   if (
     typeof fieldState.value !== 'undefined' ||
     typeof fieldState.defaultValue !== 'undefined' ||
@@ -328,6 +344,45 @@ function createRuntimeFormFieldState(defaultValue: unknown): RuntimeFormFieldSta
   }
 }
 
+function shouldRefreshPristinePlaceholderDefault(
+  fieldState: RuntimeFormFieldState,
+  nextDefaultValue: unknown,
+) {
+  if (fieldState.touched || fieldState.dirty || fieldState.error !== null) {
+    return false
+  }
+
+  if (!areRuntimeFormValuesEqual(fieldState.value, fieldState.defaultValue)) {
+    return false
+  }
+
+  if (!isPlaceholderDefaultValue(fieldState.defaultValue)) {
+    return false
+  }
+
+  return !areRuntimeFormValuesEqual(fieldState.defaultValue, nextDefaultValue)
+}
+
+function isPlaceholderDefaultValue(value: unknown) {
+  if (value === '' || typeof value === 'undefined') {
+    return true
+  }
+
+  return Array.isArray(value) && value.length === 0
+}
+
+function areRuntimeFormValuesEqual(left: unknown, right: unknown) {
+  if (Array.isArray(left) && Array.isArray(right)) {
+    if (left.length !== right.length) {
+      return false
+    }
+
+    return left.every((item, index) => Object.is(item, right[index]))
+  }
+
+  return Object.is(left, right)
+}
+
 function getRuntimeQueryState(queryState: RuntimeQueryState | undefined): RuntimeQueryState {
   return queryState ?? createRuntimeQueryState()
 }
@@ -338,6 +393,27 @@ function createRuntimeQueryState(): RuntimeQueryState {
     data: null,
     error: null,
   }
+}
+
+function resetQueriesForPreloadBatch(
+  queriesState: RuntimeState['queries'],
+  preloadNames: string[],
+): RuntimeState['queries'] {
+  if (preloadNames.length === 0) {
+    return queriesState
+  }
+
+  const nextQueriesState = { ...queriesState }
+
+  for (const queryName of preloadNames) {
+    nextQueriesState[queryName] = {
+      status: 'loading',
+      data: null,
+      error: null,
+    }
+  }
+
+  return nextQueriesState
 }
 
 function createRuntimePageEntryState(pageEntryState: RuntimePageEntryState): RuntimePageEntryState {

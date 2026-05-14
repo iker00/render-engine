@@ -14,6 +14,7 @@ En el estado implementado hoy:
 - una recarga puede pasar a `loading` conservando el último `data` válido
 - el error se guarda con shape estable orientado a UI (`message` y `code` opcional)
 - un cambio de página no limpia por defecto el estado de queries
+- excepción estable: cuando una nueva `pageEntry` arranca una tanda automática de `preloads`, solo esas queries declaradas se resetean primero a `data: null`, `error: null` y `status: loading`
 
 ## Lectura desde el layout
 El runtime ya permite leer estado de queries desde superficies textuales concretas:
@@ -81,11 +82,15 @@ Reglas de payload vigentes:
 - Cada entrada de página crea una tanda agregada con `entryId`, `pageId`, `params`, `preloadNames` y `status`.
 - El agregado distingue `idle | loading | success | error`.
 - `idle` representa explícitamente la entrada actual sin precargas que ejecutar.
+- El arranque de una tanda con `preloads` prepara primero la nueva `pageEntry` en un único paso observable: limpia solo las queries incluidas en `preloadNames` y las deja directamente en `loading`.
+- Esa preparación ocurre antes del primer render útil de la nueva entrada, así que cualquier consumidor de `queries.*` ve estado limpio o `loading`, nunca el `data` exitoso de otra entrada previa para esas mismas precargas.
+- La preparación previa no introduce un paso visible por `idle` para esa nueva tanda.
 - Las operaciones de una misma tanda se lanzan en paralelo.
 - Si al menos una precarga falla, el agregado final queda en `error`, pero las queries exitosas conservan sus datos.
 - El agregado es latest-only: una tanda antigua puede seguir cerrando sus queries individuales, pero no puede reescribir el resultado agregado de una entrada más reciente.
-- Todas las precargas de una misma tanda resuelven sus referencias contra un snapshot común del estado al inicio de la entrada.
+- Todas las precargas de una misma tanda resuelven sus referencias contra un snapshot común del estado ya preparado para esa entrada.
 - Ese snapshot ya incluye los params efectivos de la entrada activa, por lo que una precarga puede reutilizar `params.*` sin lógica imperativa adicional.
+- Esta política de limpieza fresca queda limitada al mecanismo automático de `pages[].preloads`; una ejecución manual de la misma operación sigue pudiendo recargar en `loading` conservando su último `data` válido.
 
 ## Refetch y acciones mutadoras
 - Algunas acciones pueden necesitar relanzar queries después de éxito.
@@ -113,6 +118,7 @@ Semántica estable:
 - varios nodos pueden reaccionar de forma distinta a la misma query sin colisionar entre sí
 - `loading` representa solo una ejecución real en curso, incluso cuando existe `data` previo conservado
 - una recarga que vuelve a `loading` con `data` previo conservado reactiva igualmente la rama `loading`
+- en `preloads`, una reentrada automática limpia antes ese `data` previo para la query afectada, por lo que la rama `loading` se evalúa contra un estado vacío de esa nueva entrada
 - tras una respuesta `success` vacía, el runtime entra en `empty` y no vuelve a tratar ese caso como `idle`
 
 Heurística común de `empty`:
