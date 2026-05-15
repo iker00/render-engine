@@ -52,11 +52,33 @@ describe('App shell', () => {
 
     expect(screen.getByTestId('runtime-page')).toHaveClass('grid', 'gap-6', 'lg:gap-8')
     expect(screen.getByText('Datos de la persona interesada').closest('[data-layout-node="container"]')).toHaveClass(
-      '-mx-5',
       'border-t',
       'border-app-border-soft',
-      'px-5',
+      'pt-6',
+    )
+    expect(screen.getByText('Datos de la persona interesada').closest('[data-layout-node="container"]')).not.toHaveClass(
+      '-mx-5',
+      'sm:-mx-6',
+    )
+    expect(screen.getByRole('button', { name: 'Continuar' }).closest('[data-layout-node="container"]')).not.toHaveClass(
+      'border-t',
+      'border-app-border-soft',
       'py-6',
+      '-mx-5',
+      'sm:-mx-6',
+    )
+    expect(screen.getByRole('button', { name: 'Buscar posts' }).closest('[data-layout-node="container"]')).toHaveClass(
+      'flex',
+      'w-full',
+      'flex-row',
+      'flex-nowrap',
+      'gap-3',
+    )
+    expect(screen.getByRole('button', { name: 'Buscar posts' }).closest('[data-layout-node="container"]')).not.toHaveClass(
+      'border-t',
+      'border-app-border-soft',
+      '-mx-5',
+      'sm:-mx-6',
     )
 
     consoleWarnSpy.mockRestore()

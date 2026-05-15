@@ -53,8 +53,9 @@
 - `select` ya soporta catálogos manuales o dinámicos de escalares y objetos, puede operar en selección simple o múltiple mediante `props.multiple`, mantiene una semántica única del valor vigente entre render, `defaultValue`, validación `required` y submit, y limpia automáticamente solo los valores que dejan de existir en su catálogo efectivo.
 - `radioGroup` ya reutiliza la misma semántica de opciones y selección simple que `select` simple.
 - `checkboxGroup` ya reutiliza la misma semántica de opciones y selección múltiple que `select.multiple`.
-- El runtime ya comparte una gramática visual clara y administrativa para shell, tipografía, listas, acciones y formularios: contenedor principal centrado, superficies sobrias, campos sin sombra propia, foco con `ring` y secciones internas de formulario separadas por una línea superior a sangre reutilizando `container` como `section`, también cuando ese contenedor usa columnas.
+- El runtime ya comparte una gramática visual clara y administrativa para shell, tipografía, listas, acciones y formularios: contenedor principal centrado, superficies sobrias, campos sin sombra propia, foco con `ring` y secciones internas de formulario separadas por una línea superior reutilizando `container` como `section` cuando el bloque es vertical por defecto o usa `columns`, ya sin sangrado lateral a sangre.
 - `container` ya soporta un layout declarativo más amplio: `gap` con default visible `md`, aliases estables `sm | md | lg | xl | 2xl`, columnas de `1` a `12`, `align`, `justify` y `wrap`, con precedencia de `columns` sobre `direction` y rechazo explícito de `columns + wrap`.
+- Dentro de `form`, `container` ya conserva la superficie visual de sección solo para bloques verticales por defecto o composiciones con `columns`, manteniendo `border-t` y padding vertical útil pero sin sangrado lateral ni márgenes negativos; `direction: row` sin `columns` ya se resuelve como layout lineal `plain`.
 - Aislamiento validado entre varias instancias del runtime y limpieza completa del estado al desmontar y remontar.
 - Manejo explícito de errores de configuración con diagnóstico visible en desarrollo y degradación silenciosa en producción para errores marcados como `development-only`.
 - Diagnósticos de validación ya alineados con rutas canónicas del JSON para ramas como `layout[*]`, `preloads[*]`, `api.query.*` y `api.body.*`.
@@ -102,6 +103,7 @@
 - Vigésima quinta feature del workflow cerrada para hacer que cada reentrada con `preloads` limpie primero sus queries declaradas, mantenga la carga fresca por `pageEntry` y evite hidratar consumidores visibles o `defaultValue` con datos obsoletos de otra entrada.
 - Vigésima sexta feature del workflow cerrada para alinear visualmente el runtime con una referencia institucional de sede electrónica, consolidar un baseline claro de shell y formularios y migrar los tokens visuales globales al modelo CSS-first de `Tailwind CSS v4`.
 - Vigésima séptima feature del workflow cerrada para ampliar `container` con defaults de `gap` más útiles, modo `grid` por `columns`, alineación y distribución declarativas, manteniendo compatibilidad con `gap` arbitrario y la semántica de sección dentro de `form`.
+- Vigésima octava feature del workflow cerrada para corregir la alineación de `container` dentro de `form`, eliminando el sangrado lateral y los márgenes negativos implícitos, manteniendo la superficie de sección para bloques verticales o con `columns` y dejando `direction: row` sin `columns` como layout lineal `plain`.
 
 ## Referencias
 

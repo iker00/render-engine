@@ -108,6 +108,21 @@ describe('runtime node styling', () => {
     })
   })
 
+  it('keeps form sections aligned to the form width while preserving their divider', () => {
+    expect(getContainerNodeStyling({ surface: 'form-section' })).toEqual({
+      className: 'flex w-full flex-col flex-nowrap border-t border-app-border-soft pt-6 sm:pt-8 gap-5',
+    })
+  })
+
+  it('keeps row containers inside forms plain unless columns force the section surface', () => {
+    expect(getContainerNodeStyling({ direction: 'row' })).toEqual({
+      className: 'flex w-full flex-row flex-nowrap gap-5',
+    })
+    expect(getContainerNodeStyling({ direction: 'row', columns: 2, surface: 'form-section' })).toEqual({
+      className: 'grid w-full grid-cols-2 border-t border-app-border-soft pt-6 sm:pt-8 gap-5',
+    })
+  })
+
   it('keeps focus styling on controls without outline offset gaps', () => {
     expect(getFieldControlClassName(false)).toContain('focus-visible:ring-2')
     expect(getFieldControlClassName(false)).toContain('focus-visible:outline-none')

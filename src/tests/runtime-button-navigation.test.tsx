@@ -1075,6 +1075,19 @@ describe('Runtime button navigation', () => {
       'text-white',
       'border-app-accent',
     )
+    expect(screen.getByRole('button', { name: 'Submit profile' }).closest('[data-layout-node="container"]')).toHaveClass(
+      'flex',
+      'w-full',
+      'flex-col',
+      'flex-nowrap',
+      'gap-5',
+      'border-t',
+      'border-app-border-soft',
+      'pt-6',
+    )
+    expect(
+      screen.getByRole('button', { name: 'Submit profile' }).closest('[data-layout-node="container"]'),
+    ).not.toHaveClass('-mx-5', 'sm:-mx-6')
 
     fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Grace' } })
     fireEvent.click(screen.getByRole('button', { name: 'Submit profile' }))

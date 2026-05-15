@@ -1789,12 +1789,11 @@ describe('RuntimePage', () => {
       'flex-col',
       'flex-nowrap',
       'gap-5',
-      '-mx-5',
       'border-t',
       'border-app-border-soft',
-      'px-5',
-      'py-6',
+      'pt-6',
     )
+    expect(screen.getByLabelText('Bio').closest('[data-layout-node="container"]')).not.toHaveClass('-mx-5', 'sm:-mx-6')
     expect(screen.getByRole('heading', { name: 'Profile form', level: 2 })).toBeInTheDocument()
     expect(screen.getByText('Name').closest('[data-layout-node="input"]')).toHaveClass('grid', 'gap-2.5')
     expect(screen.getByText('Name')).toHaveClass('text-sm', 'font-semibold', 'text-app-text-strong')
@@ -1873,15 +1872,72 @@ describe('RuntimePage', () => {
       'items-center',
       'justify-between',
       'gap-10',
-      '-mx-5',
       'border-t',
       'border-app-border-soft',
-      'px-5',
-      'py-6',
+      'pt-6',
     )
+    expect(container).not.toHaveClass('-mx-5', 'sm:-mx-6')
     expect(container).not.toHaveClass('flex-row')
     expect(screen.getByLabelText('Bio')).toHaveValue('Runtime builder')
     expect(screen.getByLabelText('Role')).toHaveValue('admin')
+  })
+
+  it('keeps row containers inside forms as plain linear layout without section bleed', () => {
+    renderRuntimeFormPage({
+      id: 'profile-actions',
+      layout: [
+        {
+          type: 'form',
+          id: 'profile-form',
+          children: [
+            {
+              type: 'container',
+              props: {
+                direction: 'row',
+                gap: 'sm',
+                justify: 'between',
+              },
+              children: [
+                {
+                  type: 'button',
+                  props: {
+                    label: 'Cancel',
+                    action: {
+                      type: 'resetForm',
+                      formId: 'profile-form',
+                    },
+                  },
+                },
+                {
+                  type: 'button',
+                  props: {
+                    label: 'Save',
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    })
+
+    const container = screen.getByRole('button', { name: 'Save' }).closest('[data-layout-node="container"]')
+
+    expect(container?.tagName).toBe('SECTION')
+    expect(container).toHaveClass(
+      'flex',
+      'w-full',
+      'flex-row',
+      'justify-between',
+      'flex-nowrap',
+      'gap-3',
+    )
+    expect(container).not.toHaveClass(
+      'border-t',
+      'border-app-border-soft',
+      '-mx-5',
+      'sm:-mx-6',
+    )
   })
 
   it('renders expanded form fields including native input types, select.multiple, radioGroup and checkboxGroup', () => {

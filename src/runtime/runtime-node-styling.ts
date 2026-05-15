@@ -73,6 +73,12 @@ type ContainerGapStyle = CSSProperties & {
   '--runtime-container-gap': string
 }
 
+interface ContainerNodeSurfaceOptions {
+  withinForm?: boolean
+  direction?: string
+  columns?: number
+}
+
 export function getAppShellClassName() {
   return 'min-h-screen bg-app-background text-app-text'
 }
@@ -101,6 +107,22 @@ export function getRuntimePageClassName() {
   return 'grid gap-6 lg:gap-8'
 }
 
+export function getContainerNodeSurface({
+  withinForm,
+  direction,
+  columns,
+}: ContainerNodeSurfaceOptions): 'plain' | 'form-section' {
+  if (!withinForm) {
+    return 'plain'
+  }
+
+  if (typeof columns === 'number') {
+    return 'form-section'
+  }
+
+  return direction === 'row' ? 'plain' : 'form-section'
+}
+
 export function getContainerNodeStyling({
   direction,
   gap,
@@ -116,16 +138,7 @@ export function getContainerNodeStyling({
     : ['flex', 'w-full', direction === 'row' ? 'flex-row' : 'flex-col']
   const surfaceClassNames =
     surface === 'form-section'
-      ? [
-          '-mx-5',
-          'border-t',
-          'border-app-border-soft',
-          'px-5',
-          'py-6',
-          'sm:-mx-6',
-          'sm:px-6',
-          'sm:py-7',
-        ]
+      ? ['border-t', 'border-app-border-soft', 'pt-6', 'sm:pt-8']
       : []
 
   if (align) {

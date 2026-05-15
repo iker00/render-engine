@@ -72,6 +72,7 @@ Reglas funcionales vigentes:
 - Si `container.props.columns` existe, el runtime cambia a modo `grid`, aplica `grid-cols-{n}` para `n` entre `1` y `12` y hace que `columns` prevalezca visualmente sobre `direction`.
 - `container.props.align` y `container.props.justify` se traducen a clases estables según el modo activo del contenedor.
 - `container.props.wrap` solo aplica en modo lineal (`flex`); su default efectivo es `nowrap` y no se admite junto con `columns`.
+- Dentro de `form`, un `container` conserva la superficie visual de sección solo cuando actúa como bloque vertical por defecto o cuando declara `columns`; si declara `direction: row` sin `columns`, se mantiene como layout lineal `plain` sin sangrado lateral ni márgenes negativos implícitos.
 - `heading.props` soporta `text` y `level`.
 - `paragraph.props` soporta `text`.
 - `list.props` soporta `items` como array histórico de strings o como origen declarativo manual/dinámico de colecciones escalares u objeto.
@@ -101,7 +102,7 @@ Reglas funcionales vigentes:
 - `src/runtime/runtime-actions/` concentra el ejecutor común `action.type -> handler del provider`, reutilizable por futuros triggers más allá de `button`.
 - `src/queries/` concentra también la composición final entre la operación `api` base y los request params por ejecución, incluida la semántica estable de merge para `query`, `body` y `headers`.
 - `src/app/index.css` centraliza los tokens visuales globales del runtime con `@theme` de `Tailwind CSS v4`.
-- `src/runtime/runtime-node-styling.ts` centraliza la convención visual base, la selección entre modos `flex` y `grid`, el mapeo de `columns`, `align`, `justify` y `wrap`, y la compatibilidad acotada de `gap`.
+- `src/runtime/runtime-node-styling.ts` centraliza la convención visual base, la selección entre modos `flex` y `grid`, la heurística `plain | form-section` para `container` dentro de `form`, el mapeo de `columns`, `align`, `justify` y `wrap`, y la compatibilidad acotada de `gap`.
 - `src/runtime/runtime-references/` centraliza parsing, resolución y diagnóstico de referencias string del runtime, incluido el namespace `item` limitado al contexto de iteración.
 - `src/runtime/runtime-collection-sources.ts` concentra la resolución compartida de colecciones efectivas para `list`, `select`, `radioGroup` y `checkboxGroup`, incluyendo degradación a vacío, proyección declarativa por item, soporte de `item.*` dentro de `repeater` y normalización común de selección simple o múltiple.
 - `src/queries/` concentra la construcción de requests, la ejecución contra `fetch` y la normalización de errores remotos.
