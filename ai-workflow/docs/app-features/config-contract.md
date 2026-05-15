@@ -53,8 +53,12 @@ Reglas estructurales vigentes:
 
 Nodos soportados hoy:
 - `container`
-  - `props.direction`: string opcional, con soporte visual actual para `row` y fallback a columna
-  - `props.gap`: string opcional, con aliases como `sm`, `md` y `lg` o cualquier valor CSS válido
+  - `props.direction`: string opcional, con soporte visual actual para `row` y fallback a columna cuando `columns` no está presente
+  - `props.gap`: string opcional; la escala recomendada y estable hoy es `sm | md | lg | xl | 2xl`, pero cualquier valor CSS string sigue admitiéndose como compatibilidad heredada
+  - `props.columns`: entero opcional entre `1` y `12`
+  - `props.align`: opcional, con catálogo cerrado `start | center | end | stretch`
+  - `props.justify`: opcional, con catálogo cerrado `start | center | end | between | around | evenly`
+  - `props.wrap`: opcional, con catálogo cerrado `nowrap | wrap | wrap-reverse`
 - `repeater`
   - `props.items.source`: obligatorio y limitado a `queries.{queryName}.data` o `queries.{queryName}.data.*`
   - `props.items.key`: obligatorio; ruta relativa no vacía al item actual, por ejemplo `id` o `meta.slug`
@@ -149,6 +153,10 @@ Reglas estructurales adicionales del catálogo actual:
 - `repeater` rechaza `children` y solo admite repetición a través de `props.template`.
 - `input`, `textarea`, `select`, `radioGroup` y `checkboxGroup` solo son válidos como descendientes de un `form`.
 - `button` sin `action` solo es válido como descendiente de un `form`.
+- `container.props.columns` solo admite enteros entre `1` y `12`.
+- `container.props.align`, `container.props.justify` y `container.props.wrap` se validan contra catálogos cerrados y se rechazan con ruta diagnóstica explícita cuando reciben valores fuera de contrato.
+- `container.props.wrap` no puede coexistir con `container.props.columns`; esa combinación se rechaza antes del render.
+- Si `container` declara `direction` y `columns` a la vez, ambas props siguen siendo válidas en el contrato, pero `columns` pasa a ser el modo de layout efectivo.
 - las claves extra no soportadas se descartan del objeto validado final sin convertir por sí solas la configuración en inválida.
 - `props.required` deja de formar parte del contrato soportado; la obligatoriedad solo se declara desde `props.validations.required`.
 

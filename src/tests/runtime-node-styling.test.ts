@@ -41,13 +41,67 @@ describe('runtime node styling', () => {
 
   it('returns stable Tailwind classes for container aliases without custom styles', () => {
     expect(getContainerNodeStyling({ direction: 'row', gap: 'sm' })).toEqual({
-      className: 'flex w-full flex-row gap-3',
+      className: 'flex w-full flex-row flex-nowrap gap-3',
+    })
+  })
+
+  it('uses md as the default container gap when none is declared', () => {
+    expect(getContainerNodeStyling({})).toEqual({
+      className: 'flex w-full flex-col flex-nowrap gap-5',
+    })
+  })
+
+  it('maps the expanded container gap aliases without custom styles', () => {
+    expect(getContainerNodeStyling({ gap: 'md' })).toEqual({
+      className: 'flex w-full flex-col flex-nowrap gap-5',
+    })
+    expect(getContainerNodeStyling({ gap: 'lg' })).toEqual({
+      className: 'flex w-full flex-col flex-nowrap gap-8',
+    })
+    expect(getContainerNodeStyling({ gap: 'xl' })).toEqual({
+      className: 'flex w-full flex-col flex-nowrap gap-10',
+    })
+    expect(getContainerNodeStyling({ gap: '2xl' })).toEqual({
+      className: 'flex w-full flex-col flex-nowrap gap-12',
+    })
+  })
+
+  it('switches to grid mode when columns are declared and ignores direction for the layout mode', () => {
+    expect(
+      getContainerNodeStyling({
+        direction: 'row',
+        columns: 4,
+        align: 'center',
+        justify: 'between',
+      }),
+    ).toEqual({
+      className: 'grid w-full grid-cols-4 items-center justify-between gap-5',
+    })
+  })
+
+  it('maps align justify and wrap in linear mode with nowrap as the default', () => {
+    expect(
+      getContainerNodeStyling({
+        direction: 'row',
+        align: 'end',
+        justify: 'evenly',
+      }),
+    ).toEqual({
+      className: 'flex w-full flex-row items-end justify-evenly flex-nowrap gap-5',
+    })
+
+    expect(
+      getContainerNodeStyling({
+        wrap: 'wrap-reverse',
+      }),
+    ).toEqual({
+      className: 'flex w-full flex-col flex-wrap-reverse gap-5',
     })
   })
 
   it('preserves arbitrary gap values with a CSS variable escape hatch', () => {
     expect(getContainerNodeStyling({ direction: 'column', gap: '18px' })).toEqual({
-      className: 'flex w-full flex-col gap-[var(--runtime-container-gap)]',
+      className: 'flex w-full flex-col flex-nowrap gap-[var(--runtime-container-gap)]',
       style: {
         '--runtime-container-gap': '18px',
       },
@@ -65,7 +119,7 @@ describe('runtime node styling', () => {
       'm-0 text-3xl sm:text-4xl font-semibold leading-tight tracking-[-0.03em] text-app-text-strong',
     )
     expect(getParagraphNodeClassName()).toBe(
-      'm-0 max-w-3xl text-base leading-7 text-app-text-muted sm:text-lg sm:leading-8',
+      'm-0 text-base leading-7 text-app-text-muted sm:text-lg sm:leading-8',
     )
     expect(getListNodeClassName()).toBe(
       'm-0 grid list-disc gap-3 pl-5 text-app-text marker:text-app-accent',

@@ -18,6 +18,7 @@ La política completa está en [`../docs/workflow.md`](../docs/workflow.md).
 - Ninguna ahora mismo.
 
 ## Completadas
+- `0027-expanded-container-layout-controls`: `container` ya soporta `gap` con default `md` y aliases `sm | md | lg | xl | 2xl`, distribución declarativa de `1` a `12` columnas, `align`, `justify` y `wrap`, con precedencia de `columns` sobre `direction`, rechazo explícito de `columns + wrap` y compatibilidad mantenida con `gap` arbitrario como escape hatch acotado.
 - `0026-sede-electronica-visual-alignment`: el runtime ya adopta un baseline visual institucional claro para shell, contenido y formularios, con tokens globales CSS-first en `Tailwind CSS v4`, secciones de formulario separadas por divisor superior y una configuración de desarrollo representativa alineada con la referencia de sede electrónica.
 - `0025-preload-query-reset-on-page-entry`: cada nueva `pageEntry` con `preloads` ya limpia primero solo sus queries declaradas, las deja directamente en `loading` antes del primer render útil y evita que páginas o formularios hidraten consumidores visibles o `defaultValue` con datos de la entrada anterior, sin cambiar la semántica manual de recarga.
 - `0024-query-driven-repeated-layout-node`: nuevo nodo declarativo `repeater` para repetir un subárbol completo una vez por cada item de una colección resuelta desde `queries.*`, con contexto local `item.*`, integración en navegación y requests declarativos, soporte en formularios y consumidores descendientes de colecciones.

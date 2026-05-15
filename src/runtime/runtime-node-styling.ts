@@ -4,6 +4,45 @@ const containerGapClassMap: Record<string, string> = {
   sm: 'gap-3',
   md: 'gap-5',
   lg: 'gap-8',
+  xl: 'gap-10',
+  '2xl': 'gap-12',
+}
+
+const containerColumnsClassMap: Record<number, string> = {
+  1: 'grid-cols-1',
+  2: 'grid-cols-2',
+  3: 'grid-cols-3',
+  4: 'grid-cols-4',
+  5: 'grid-cols-5',
+  6: 'grid-cols-6',
+  7: 'grid-cols-7',
+  8: 'grid-cols-8',
+  9: 'grid-cols-9',
+  10: 'grid-cols-10',
+  11: 'grid-cols-11',
+  12: 'grid-cols-12',
+}
+
+const containerAlignClassMap: Record<string, string> = {
+  start: 'items-start',
+  center: 'items-center',
+  end: 'items-end',
+  stretch: 'items-stretch',
+}
+
+const containerJustifyClassMap: Record<string, string> = {
+  start: 'justify-start',
+  center: 'justify-center',
+  end: 'justify-end',
+  between: 'justify-between',
+  around: 'justify-around',
+  evenly: 'justify-evenly',
+}
+
+const containerWrapClassMap: Record<string, string> = {
+  nowrap: 'flex-nowrap',
+  wrap: 'flex-wrap',
+  'wrap-reverse': 'flex-wrap-reverse',
 }
 
 const headingSizeClassMap: Record<number, string> = {
@@ -18,6 +57,10 @@ const headingSizeClassMap: Record<number, string> = {
 interface ContainerNodeStylingOptions {
   direction?: string
   gap?: string
+  columns?: number
+  align?: string
+  justify?: string
+  wrap?: string
   surface?: 'plain' | 'form-section'
 }
 
@@ -58,12 +101,19 @@ export function getRuntimePageClassName() {
   return 'grid gap-6 lg:gap-8'
 }
 
-export function getContainerNodeStyling({ direction, gap, surface }: ContainerNodeStylingOptions): ContainerNodeStyling {
-  const classNames = [
-    'flex',
-    'w-full',
-    direction === 'row' ? 'flex-row' : 'flex-col',
-  ]
+export function getContainerNodeStyling({
+  direction,
+  gap,
+  columns,
+  align,
+  justify,
+  wrap,
+  surface,
+}: ContainerNodeStylingOptions): ContainerNodeStyling {
+  const isGridLayout = typeof columns === 'number'
+  const classNames = isGridLayout
+    ? ['grid', 'w-full', containerColumnsClassMap[columns]]
+    : ['flex', 'w-full', direction === 'row' ? 'flex-row' : 'flex-col']
   const surfaceClassNames =
     surface === 'form-section'
       ? [
@@ -78,13 +128,20 @@ export function getContainerNodeStyling({ direction, gap, surface }: ContainerNo
         ]
       : []
 
-  if (!gap) {
-    return {
-      className: [...classNames, ...surfaceClassNames].join(' '),
-    }
+  if (align) {
+    classNames.push(containerAlignClassMap[align])
   }
 
-  const mappedGapClassName = containerGapClassMap[gap]
+  if (justify) {
+    classNames.push(containerJustifyClassMap[justify])
+  }
+
+  if (!isGridLayout) {
+    classNames.push(containerWrapClassMap[wrap ?? 'nowrap'])
+  }
+
+  const effectiveGap = gap ?? 'md'
+  const mappedGapClassName = containerGapClassMap[effectiveGap]
 
   if (mappedGapClassName) {
     return {
@@ -95,7 +152,7 @@ export function getContainerNodeStyling({ direction, gap, surface }: ContainerNo
   return {
     className: [...classNames, ...surfaceClassNames, 'gap-[var(--runtime-container-gap)]'].join(' '),
     style: {
-      '--runtime-container-gap': gap,
+      '--runtime-container-gap': effectiveGap,
     } satisfies ContainerGapStyle,
   }
 }
@@ -136,7 +193,7 @@ export function getHeadingNodeClassName(level: number) {
 }
 
 export function getParagraphNodeClassName() {
-  return 'm-0 max-w-3xl text-base leading-7 text-app-text-muted sm:text-lg sm:leading-8'
+  return 'm-0 text-base leading-7 text-app-text-muted sm:text-lg sm:leading-8'
 }
 
 export function getListNodeClassName() {

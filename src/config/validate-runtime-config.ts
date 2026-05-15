@@ -509,6 +509,22 @@ function validateContainerNode(
       return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.gap".`)
     }
 
+    if (issuePath === 'props' && issue.path[1] === 'columns') {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.columns".`)
+    }
+
+    if (issuePath === 'props' && issue.path[1] === 'align') {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.align".`)
+    }
+
+    if (issuePath === 'props' && issue.path[1] === 'justify') {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.justify".`)
+    }
+
+    if (issuePath === 'props' && issue.path[1] === 'wrap') {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.wrap".`)
+    }
+
     if (issuePath === 'children') {
       return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.children".`)
     }
@@ -548,6 +564,14 @@ function validateContainerNode(
     return visibilityResult
   }
 
+  const containerProps = parseResult.data.props
+
+  if (containerProps?.columns !== undefined && containerProps.wrap !== undefined) {
+    return invalidLayout(
+      `Page "${pageId}" has an invalid layout at "${path}.props.wrap": container nodes cannot declare "wrap" when "columns" is present.`,
+    )
+  }
+
   let children: LayoutNodeCollection | undefined
 
   if (parseResult.data.children !== undefined) {
@@ -567,7 +591,7 @@ function validateContainerNode(
       id: parseResult.data.id,
       queryStateFeedback: feedbackResult.queryStateFeedback,
       visibility: visibilityResult.visibility,
-      props: parseResult.data.props,
+      props: containerProps,
       children,
     },
   }

@@ -77,12 +77,20 @@ export interface LayoutNodeFeedbackFields {
   visibility?: RuntimeVisibilityConfig
 }
 
+export type ContainerAlign = 'start' | 'center' | 'end' | 'stretch'
+export type ContainerJustify = 'start' | 'center' | 'end' | 'between' | 'around' | 'evenly'
+export type ContainerWrap = 'nowrap' | 'wrap' | 'wrap-reverse'
+
 export interface ContainerLayoutNode extends LayoutNodeFeedbackFields {
   type: 'container'
   id?: string
   props?: {
     direction?: string
     gap?: string
+    columns?: number
+    align?: ContainerAlign
+    justify?: ContainerJustify
+    wrap?: ContainerWrap
   }
   children?: LayoutNode[]
 }

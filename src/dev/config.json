@@ -181,6 +181,16 @@
                   "pageId": "dynamic-form"
                 }
               }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Contenedores",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "containers-example"
+                }
+              }
             }
           ]
         }
@@ -572,13 +582,24 @@
       "id": "dynamic-form",
       "layout": [
         {
-          "type": "button",
+          "type": "container",
           "props": {
-            "label": "Volver",
-            "action": {
-              "type": "goBack"
+            "direction": "row",
+            "align": "start",
+            "justify": "end",
+            "wrap": "wrap"
+          },
+          "children": [
+            {
+              "type": "button",
+              "props": {
+                "label": "Volver",
+                "action": {
+                  "type": "goBack"
+                }
+              }
             }
-          }
+          ]
         },
         {
           "type": "heading",
@@ -605,18 +626,18 @@
           },
           "children": [
             {
+              "type": "heading",
+              "props": {
+                "text": "Datos del cliente",
+                "level": 2
+              }
+            },
+            {
               "type": "container",
               "props": {
-                "gap": "md"
+                "columns": 2
               },
               "children": [
-                {
-                  "type": "heading",
-                  "props": {
-                    "text": "Datos del cliente",
-                    "level": 2
-                  }
-                },
                 {
                   "type": "input",
                   "props": {
@@ -640,81 +661,81 @@
                       "maxLength": 15
                     }
                   }
-                },
-                {
-                  "type": "checkboxGroup",
-                  "props": {
-                    "fieldId": "checkboxExample",
-                    "label": "Prueba checkbox",
-                    "items": [
-                      {
-                        "label": "Item 1",
-                        "value": "item1"
-                      },
-                      {
-                        "label": "Item 2",
-                        "value": "item2"
-                      },
-                      {
-                        "label": "Item 3",
-                        "value": "item3"
-                      },
-                      {
-                        "label": "Item 4",
-                        "value": "item4"
-                      },
-                      {
-                        "label": "Item 5",
-                        "value": "item5"
-                      },
-                      {
-                        "label": "Item 6",
-                        "value": "item6"
-                      }
-                    ],
-                    "defaultValue": [
-                      "item1",
-                      "item2"
-                    ],
-                    "validations": {
-                      "required": true,
-                      "minSelections": 2,
-                      "maxSelections": 3
-                    }
-                  }
-                },
-                {
-                  "type": "radioGroup",
-                  "props": {
-                    "fieldId": "clientType",
-                    "label": "Tipo de cliente",
-                    "items": [
-                      {
-                        "label": "Particular",
-                        "value": "particular"
-                      },
-                      {
-                        "label": "Empresa",
-                        "value": "empresa"
-                      }
-                    ],
-                    "defaultValue": "particular"
-                  }
-                },
-                {
-                  "type": "input",
-                  "props": {
-                    "inputType": "number",
-                    "fieldId": "number",
-                    "label": "Número",
-                    "validations": {
-                      "required": true,
-                      "min": 1,
-                      "max": 100
-                    }
-                  }
                 }
               ]
+            },
+            {
+              "type": "checkboxGroup",
+              "props": {
+                "fieldId": "checkboxExample",
+                "label": "Prueba checkbox",
+                "items": [
+                  {
+                    "label": "Item 1",
+                    "value": "item1"
+                  },
+                  {
+                    "label": "Item 2",
+                    "value": "item2"
+                  },
+                  {
+                    "label": "Item 3",
+                    "value": "item3"
+                  },
+                  {
+                    "label": "Item 4",
+                    "value": "item4"
+                  },
+                  {
+                    "label": "Item 5",
+                    "value": "item5"
+                  },
+                  {
+                    "label": "Item 6",
+                    "value": "item6"
+                  }
+                ],
+                "defaultValue": [
+                  "item1",
+                  "item2"
+                ],
+                "validations": {
+                  "required": true,
+                  "minSelections": 2,
+                  "maxSelections": 3
+                }
+              }
+            },
+            {
+              "type": "radioGroup",
+              "props": {
+                "fieldId": "clientType",
+                "label": "Tipo de cliente",
+                "items": [
+                  {
+                    "label": "Particular",
+                    "value": "particular"
+                  },
+                  {
+                    "label": "Empresa",
+                    "value": "empresa"
+                  }
+                ],
+                "defaultValue": "particular"
+              }
+            },
+            {
+              "type": "input",
+              "props": {
+                "inputType": "number",
+                "fieldId": "number",
+                "label": "Número",
+                "validations": {
+                  "required": true,
+                  "min": 1,
+                  "max": 100
+                }
+              }
             },
             {
               "type": "container",
@@ -723,9 +744,9 @@
                 "gap": "sm"
               },
               "visibility": {
-                "reference": "forms.dynamicForm.number",
-                "operator": "greaterThan",
-                "value": 55
+                "reference": "forms.dynamicForm.clientType",
+                "operator": "equals",
+                "value": "particular"
               },
               "children": [
                 {
@@ -820,6 +841,1125 @@
               "type": "button",
               "props": {
                 "label": "Submit"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "containers-example",
+      "layout": [
+        {
+          "type": "container",
+          "props": {
+            "direction": "row",
+            "align": "start",
+            "justify": "end",
+            "wrap": "wrap"
+          },
+          "children": [
+            {
+              "type": "button",
+              "props": {
+                "label": "Volver",
+                "action": {
+                  "type": "goBack"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Containers example",
+            "level": 1
+          }
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Columnas",
+            "level": 2
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "El contenedor entre 1 y 12 columnas."
+          }
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "12 columnas",
+            "level": 3
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "{\"props\": \"columns\": 12}"
+          }
+        },
+        {
+          "type": "container",
+          "props": {
+            "columns": 12
+          },
+          "children": [
+            {
+              "type": "button",
+              "props": {
+                "label": "Button",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "bootstrap-home"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Button",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "bootstrap-home"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Button",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "bootstrap-home"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Button",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "bootstrap-home"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Button",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "bootstrap-home"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Button",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "bootstrap-home"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Button",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "bootstrap-home"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Button",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "bootstrap-home"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Button",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "bootstrap-home"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Button",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "bootstrap-home"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Button",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "bootstrap-home"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Button",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "bootstrap-home"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Button",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "bootstrap-home"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Button",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "bootstrap-home"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Button",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "bootstrap-home"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "4 columnas",
+            "level": 3
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "{\"props\": \"columns\": 4}"
+          }
+        },
+        {
+          "type": "container",
+          "props": {
+            "columns": 4
+          },
+          "children": [
+            {
+              "type": "button",
+              "props": {
+                "label": "Button",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "bootstrap-home"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Button",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "bootstrap-home"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Button",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "bootstrap-home"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Button",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "bootstrap-home"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Button",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "bootstrap-home"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Button",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "bootstrap-home"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Button",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "bootstrap-home"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Button",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "bootstrap-home"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Flex layout",
+            "level": 2
+          }
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Justify content: start",
+            "level": 3
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "{\"props\": \"direction\": \"row\", \"align\": \"start\", \"justify\": \"start\", \"wrap\": \"wrap\"}"
+          }
+        },
+        {
+          "type": "container",
+          "props": {
+            "direction": "row",
+            "align": "start",
+            "justify": "start",
+            "wrap": "wrap"
+          },
+          "children": [
+            {
+              "type": "button",
+              "props": {
+                "label": "Button",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "bootstrap-home"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Button",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "bootstrap-home"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Button",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "bootstrap-home"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Button",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "bootstrap-home"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Button",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "bootstrap-home"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Justify content: center",
+            "level": 3
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "{\"props\": \"direction\": \"row\", \"align\": \"start\", \"justify\": \"center\", \"wrap\": \"wrap\"}"
+          }
+        },
+        {
+          "type": "container",
+          "props": {
+            "direction": "row",
+            "align": "center",
+            "justify": "center",
+            "wrap": "wrap"
+          },
+          "children": [
+            {
+              "type": "button",
+              "props": {
+                "label": "Button",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "bootstrap-home"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Button",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "bootstrap-home"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Button",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "bootstrap-home"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Button",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "bootstrap-home"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Button",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "bootstrap-home"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Justify content: end",
+            "level": 3
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "{\"props\": \"direction\": \"row\", \"align\": \"start\", \"justify\": \"end\", \"wrap\": \"wrap\"}"
+          }
+        },
+        {
+          "type": "container",
+          "props": {
+            "direction": "row",
+            "align": "start",
+            "justify": "end",
+            "wrap": "wrap"
+          },
+          "children": [
+            {
+              "type": "button",
+              "props": {
+                "label": "Button",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "bootstrap-home"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Button",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "bootstrap-home"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Button",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "bootstrap-home"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Button",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "bootstrap-home"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Button",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "bootstrap-home"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Justify content: between",
+            "level": 3
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "Los elementos se reparten de forma uniforme dentro del contenedor, siguiendo la dirección principal.\n\nEl espacio entre cada elemento y el siguiente es siempre el mismo.\n\nEl primer elemento queda pegado al borde inicial, y el último queda pegado al borde final."
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "{\"props\": \"direction\": \"row\", \"align\": \"start\", \"justify\": \"between\", \"wrap\": \"wrap\"}"
+          }
+        },
+        {
+          "type": "container",
+          "props": {
+            "direction": "row",
+            "align": "start",
+            "justify": "between",
+            "wrap": "wrap"
+          },
+          "children": [
+            {
+              "type": "button",
+              "props": {
+                "label": "Button",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "bootstrap-home"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Button",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "bootstrap-home"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Justify content: around",
+            "level": 3
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "Los elementos se reparten de forma uniforme dentro del contenedor, siguiendo la dirección principal.\n\nEl espacio entre cada elemento y el siguiente es siempre el mismo.\n\nEl espacio vacío antes del primer elemento y después del último equivale a la mitad del espacio que hay entre dos elementos.\n\nSi solo hay un elemento, queda centrado."
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "{\"props\": \"direction\": \"row\", \"align\": \"start\", \"justify\": \"around\", \"wrap\": \"wrap\"}"
+          }
+        },
+        {
+          "type": "container",
+          "props": {
+            "direction": "row",
+            "align": "start",
+            "justify": "around",
+            "wrap": "wrap"
+          },
+          "children": [
+            {
+              "type": "button",
+              "props": {
+                "label": "Button",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "bootstrap-home"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Button",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "bootstrap-home"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Justify content: evenly",
+            "level": 3
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "Los elementos se reparten de forma uniforme dentro del contenedor, siguiendo la dirección principal.\n\nEl espacio entre cada elemento y el siguiente es exactamente el mismo que el espacio entre el primer elemento y el borde inicial, y entre el último elemento y el borde final."
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "{\"props\": \"direction\": \"row\", \"align\": \"start\", \"justify\": \"evenly\", \"wrap\": \"wrap\"}"
+          }
+        },
+        {
+          "type": "container",
+          "props": {
+            "direction": "row",
+            "align": "start",
+            "justify": "evenly",
+            "wrap": "wrap"
+          },
+          "children": [
+            {
+              "type": "button",
+              "props": {
+                "label": "Button",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "bootstrap-home"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Button",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "bootstrap-home"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Align items",
+            "level": 2
+          }
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Align items: start",
+            "level": 3
+          }
+        },
+        {
+          "type": "container",
+          "props": {
+            "direction": "row",
+            "align": "start",
+            "justify": "start",
+            "wrap": "nowrap"
+          },
+          "children": [
+            {
+              "type": "paragraph",
+              "props": {
+                "text": "Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."
+              }
+            },
+            {
+              "type": "container",
+              "props": {
+                "direction": "column",
+                "align": "start",
+                "justify": "start",
+                "wrap": "wrap"
+              },
+              "children": [
+                {
+                  "type": "paragraph",
+                  "props": {
+                    "text": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Align items: center",
+            "level": 3
+          }
+        },
+        {
+          "type": "container",
+          "props": {
+            "direction": "row",
+            "align": "center",
+            "justify": "start",
+            "wrap": "nowrap"
+          },
+          "children": [
+            {
+              "type": "paragraph",
+              "props": {
+                "text": "Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."
+              }
+            },
+            {
+              "type": "container",
+              "props": {
+                "direction": "column",
+                "align": "start",
+                "justify": "start",
+                "wrap": "wrap"
+              },
+              "children": [
+                {
+                  "type": "paragraph",
+                  "props": {
+                    "text": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Align items: end",
+            "level": 3
+          }
+        },
+        {
+          "type": "container",
+          "props": {
+            "direction": "row",
+            "align": "end",
+            "justify": "start",
+            "wrap": "nowrap"
+          },
+          "children": [
+            {
+              "type": "paragraph",
+              "props": {
+                "text": "Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."
+              }
+            },
+            {
+              "type": "container",
+              "props": {
+                "direction": "column",
+                "align": "start",
+                "justify": "start",
+                "wrap": "wrap"
+              },
+              "children": [
+                {
+                  "type": "paragraph",
+                  "props": {
+                    "text": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Gap",
+            "level": 2
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "El espacio entre los elementos puede ser sm, md (valor por defecto), lg, xl y 2xl."
+          }
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Gap sm",
+            "level": 3
+          }
+        },
+        {
+          "type": "container",
+          "props": {
+            "columns": 4,
+            "gap": "sm"
+          },
+          "children": [
+            {
+              "type": "button",
+              "props": {
+                "label": "Button",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "bootstrap-home"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Button",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "bootstrap-home"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Button",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "bootstrap-home"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Button",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "bootstrap-home"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Gap md",
+            "level": 3
+          }
+        },
+        {
+          "type": "container",
+          "props": {
+            "columns": 4,
+            "gap": "md"
+          },
+          "children": [
+            {
+              "type": "button",
+              "props": {
+                "label": "Button",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "bootstrap-home"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Button",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "bootstrap-home"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Button",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "bootstrap-home"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Button",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "bootstrap-home"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Gap lg",
+            "level": 3
+          }
+        },
+        {
+          "type": "container",
+          "props": {
+            "columns": 4,
+            "gap": "lg"
+          },
+          "children": [
+            {
+              "type": "button",
+              "props": {
+                "label": "Button",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "bootstrap-home"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Button",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "bootstrap-home"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Button",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "bootstrap-home"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Button",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "bootstrap-home"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Gap xl",
+            "level": 3
+          }
+        },
+        {
+          "type": "container",
+          "props": {
+            "columns": 4,
+            "gap": "xl"
+          },
+          "children": [
+            {
+              "type": "button",
+              "props": {
+                "label": "Button",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "bootstrap-home"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Button",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "bootstrap-home"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Button",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "bootstrap-home"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Button",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "bootstrap-home"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Gap 2xl",
+            "level": 3
+          }
+        },
+        {
+          "type": "container",
+          "props": {
+            "columns": 4,
+            "gap": "2xl"
+          },
+          "children": [
+            {
+              "type": "button",
+              "props": {
+                "label": "Button",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "bootstrap-home"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Button",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "bootstrap-home"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Button",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "bootstrap-home"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Button",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "bootstrap-home"
+                }
               }
             }
           ]

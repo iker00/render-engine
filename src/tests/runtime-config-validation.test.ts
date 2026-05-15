@@ -6668,4 +6668,298 @@ describe('validateRuntimeConfig', () => {
       })
     })
   })
+
+  describe('container layout contract', () => {
+    it('accepts the expanded container layout props and keeps direction alongside columns', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithLayout([
+          {
+            type: 'container',
+            props: {
+              direction: 'row',
+              gap: '2xl',
+              columns: 4,
+              align: 'center',
+              justify: 'between',
+            },
+            children: [
+              {
+                type: 'paragraph',
+                props: {
+                  text: 'First child',
+                },
+              },
+            ],
+          },
+        ]),
+      )
+
+      expect(result.status).toBe('ready')
+
+      if (result.status !== 'ready') {
+        throw new Error('Expected ready result')
+      }
+
+      expect(result.config.pages[0].layout[0]).toEqual({
+        type: 'container',
+        props: {
+          direction: 'row',
+          gap: '2xl',
+          columns: 4,
+          align: 'center',
+          justify: 'between',
+        },
+        children: [
+          {
+            type: 'paragraph',
+            props: {
+              text: 'First child',
+            },
+          },
+        ],
+      })
+    })
+
+    it('accepts arbitrary container gaps as a compatibility fallback', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithLayout([
+          {
+            type: 'container',
+            props: {
+              gap: '18px',
+            },
+            children: [
+              {
+                type: 'paragraph',
+                props: {
+                  text: 'Scoped gap fallback',
+                },
+              },
+            ],
+          },
+        ]),
+      )
+
+      expect(result.status).toBe('ready')
+
+      if (result.status !== 'ready') {
+        throw new Error('Expected ready result')
+      }
+
+      expect(result.config.pages[0].layout[0]).toEqual({
+        type: 'container',
+        props: {
+          gap: '18px',
+        },
+        children: [
+          {
+            type: 'paragraph',
+            props: {
+              text: 'Scoped gap fallback',
+            },
+          },
+        ],
+      })
+    })
+
+    it('accepts only the supported align justify and wrap values', () => {
+      const supportedProps = [
+        { align: 'start' },
+        { align: 'stretch' },
+        { justify: 'center' },
+        { justify: 'evenly' },
+        { wrap: 'nowrap' },
+        { wrap: 'wrap' },
+        { wrap: 'wrap-reverse' },
+      ]
+
+      for (const props of supportedProps) {
+        expect(
+          validateRuntimeConfig(
+            createConfigWithLayout([
+              {
+                type: 'container',
+                props,
+                children: [
+                  {
+                    type: 'paragraph',
+                    props: {
+                      text: 'Layout child',
+                    },
+                  },
+                ],
+              },
+            ]),
+          ),
+        ).toMatchObject({
+          status: 'ready',
+        })
+      }
+    })
+
+    it('rejects unsupported container columns and layout keywords with explicit prop paths', () => {
+      expect(
+        validateRuntimeConfig(
+          createConfigWithLayout([
+            {
+              type: 'container',
+              props: {
+                columns: 0,
+              },
+            },
+          ]),
+        ),
+      ).toEqual({
+        status: 'error',
+        error: {
+          code: 'invalid-layout',
+          displayMode: 'development-only',
+          message: 'Page "home" has an invalid layout at "layout[0].props.columns".',
+        },
+      })
+
+      expect(
+        validateRuntimeConfig(
+          createConfigWithLayout([
+            {
+              type: 'container',
+              props: {
+                align: 'baseline',
+              },
+            },
+          ]),
+        ),
+      ).toEqual({
+        status: 'error',
+        error: {
+          code: 'invalid-layout',
+          displayMode: 'development-only',
+          message: 'Page "home" has an invalid layout at "layout[0].props.align".',
+        },
+      })
+
+      expect(
+        validateRuntimeConfig(
+          createConfigWithLayout([
+            {
+              type: 'container',
+              props: {
+                justify: 'space-between',
+              },
+            },
+          ]),
+        ),
+      ).toEqual({
+        status: 'error',
+        error: {
+          code: 'invalid-layout',
+          displayMode: 'development-only',
+          message: 'Page "home" has an invalid layout at "layout[0].props.justify".',
+        },
+      })
+
+      expect(
+        validateRuntimeConfig(
+          createConfigWithLayout([
+            {
+              type: 'container',
+              props: {
+                wrap: 'balance',
+              },
+            },
+          ]),
+        ),
+      ).toEqual({
+        status: 'error',
+        error: {
+          code: 'invalid-layout',
+          displayMode: 'development-only',
+          message: 'Page "home" has an invalid layout at "layout[0].props.wrap".',
+        },
+      })
+    })
+
+    it('rejects containers that declare columns together with wrap', () => {
+      expect(
+        validateRuntimeConfig(
+          createConfigWithLayout([
+            {
+              type: 'container',
+              props: {
+                columns: 3,
+                wrap: 'wrap',
+              },
+            },
+          ]),
+        ),
+      ).toEqual({
+        status: 'error',
+        error: {
+          code: 'invalid-layout',
+          displayMode: 'development-only',
+          message: 'Page "home" has an invalid layout at "layout[0].props.wrap": container nodes cannot declare "wrap" when "columns" is present.',
+        },
+      })
+    })
+
+    it('keeps historical containers without the new props valid', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithLayout([
+          {
+            type: 'container',
+            children: [
+              {
+                type: 'list',
+                props: {
+                  items: ['One', 'Two'],
+                },
+              },
+            ],
+          },
+        ]),
+      )
+
+      expect(result).toEqual({
+        status: 'ready',
+        config: {
+          api: {},
+          pages: [
+            {
+              id: 'home',
+              layout: [
+                {
+                  type: 'container',
+                  children: [
+                    {
+                      type: 'list',
+                      props: {
+                        items: ['One', 'Two'],
+                      },
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+          initialPage: 'home',
+        },
+        page: {
+          id: 'home',
+          layout: [
+            {
+              type: 'container',
+              children: [
+                {
+                  type: 'list',
+                  props: {
+                    items: ['One', 'Two'],
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      })
+    })
+  })
 })

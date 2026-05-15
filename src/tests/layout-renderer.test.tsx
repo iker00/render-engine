@@ -717,6 +717,101 @@ describe('RuntimePage', () => {
     expect(container).not.toHaveAttribute('style')
   })
 
+  it('uses md as the default visible gap for containers without an explicit gap', () => {
+    renderRuntimePage({
+      id: 'default-gap',
+      layout: [
+        {
+          type: 'container',
+          children: [
+            {
+              type: 'paragraph',
+              props: {
+                text: 'Default gap container',
+              },
+            },
+          ],
+        },
+      ],
+    })
+
+    const container = screen.getByText('Default gap container').closest('[data-layout-node="container"]')
+
+    expect(container).toHaveClass(
+      'flex',
+      'w-full',
+      'flex-col',
+      'flex-nowrap',
+      'gap-5',
+    )
+    expect(container).not.toHaveAttribute('style')
+  })
+
+  it('renders columns as grid and lets columns win over direction', () => {
+    renderRuntimePage({
+      id: 'columns-layout',
+      layout: [
+        {
+          type: 'container',
+          props: {
+            direction: 'row',
+            columns: 3,
+          },
+          children: [
+            {
+              type: 'paragraph',
+              props: {
+                text: 'Grid item',
+              },
+            },
+          ],
+        },
+      ],
+    })
+
+    const container = screen.getByText('Grid item').closest('[data-layout-node="container"]')
+
+    expect(container).toHaveClass('grid', 'w-full', 'grid-cols-3', 'gap-5')
+    expect(container).not.toHaveClass('flex', 'flex-row')
+  })
+
+  it('maps align justify and wrap to the rendered container classes', () => {
+    renderRuntimePage({
+      id: 'aligned-layout',
+      layout: [
+        {
+          type: 'container',
+          props: {
+            direction: 'row',
+            align: 'center',
+            justify: 'between',
+            wrap: 'wrap',
+          },
+          children: [
+            {
+              type: 'paragraph',
+              props: {
+                text: 'Aligned child',
+              },
+            },
+          ],
+        },
+      ],
+    })
+
+    const container = screen.getByText('Aligned child').closest('[data-layout-node="container"]')
+
+    expect(container).toHaveClass(
+      'flex',
+      'w-full',
+      'flex-row',
+      'items-center',
+      'justify-between',
+      'flex-wrap',
+      'gap-5',
+    )
+  })
+
   it('keeps nodes without queryStateFeedback rendering exactly as before', () => {
     renderRuntimePageWithQueryFeedback(page)
 
@@ -1280,6 +1375,7 @@ describe('RuntimePage', () => {
       'flex',
       'w-full',
       'flex-col',
+      'flex-nowrap',
       'gap-[var(--runtime-container-gap)]',
     )
     expect(container).toHaveStyle('--runtime-container-gap: 18px')
@@ -1299,7 +1395,6 @@ describe('RuntimePage', () => {
     )
     expect(screen.getByText('Build forms from configuration.')).toHaveClass(
       'm-0',
-      'max-w-3xl',
       'text-base',
       'leading-7',
       'text-app-text-muted',
@@ -1690,6 +1785,10 @@ describe('RuntimePage', () => {
     expect(form).not.toHaveClass('rounded-form')
     expect(screen.getByLabelText('Bio').closest('[data-layout-node="container"]')?.tagName).toBe('SECTION')
     expect(screen.getByLabelText('Bio').closest('[data-layout-node="container"]')).toHaveClass(
+      'flex',
+      'flex-col',
+      'flex-nowrap',
+      'gap-5',
       '-mx-5',
       'border-t',
       'border-app-border-soft',
@@ -1717,6 +1816,72 @@ describe('RuntimePage', () => {
     expect(buttons[1]).toHaveClass('bg-app-accent', 'text-white')
     expect(buttons[0]).toHaveTextContent('Aux reset')
     expect(buttons[1]).toHaveTextContent('Submit profile')
+  })
+
+  it('keeps form section semantics when a container uses columns and direction together', () => {
+    renderRuntimeFormPage({
+      id: 'profile-columns',
+      layout: [
+        {
+          type: 'form',
+          id: 'profile-form',
+          children: [
+            {
+              type: 'container',
+              props: {
+                direction: 'row',
+                columns: 2,
+                align: 'center',
+                justify: 'between',
+                gap: 'xl',
+              },
+              children: [
+                {
+                  type: 'textarea',
+                  props: {
+                    fieldId: 'bio',
+                    label: 'Bio',
+                    defaultValue: 'Runtime builder',
+                  },
+                },
+                {
+                  type: 'select',
+                  props: {
+                    fieldId: 'role',
+                    label: 'Role',
+                    defaultValue: 'admin',
+                    items: [
+                      { label: 'Admin', value: 'admin' },
+                      { label: 'Editor', value: 'editor' },
+                    ],
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    })
+
+    const container = screen.getByLabelText('Bio').closest('[data-layout-node="container"]')
+
+    expect(container?.tagName).toBe('SECTION')
+    expect(container).toHaveClass(
+      'grid',
+      'w-full',
+      'grid-cols-2',
+      'items-center',
+      'justify-between',
+      'gap-10',
+      '-mx-5',
+      'border-t',
+      'border-app-border-soft',
+      'px-5',
+      'py-6',
+    )
+    expect(container).not.toHaveClass('flex-row')
+    expect(screen.getByLabelText('Bio')).toHaveValue('Runtime builder')
+    expect(screen.getByLabelText('Role')).toHaveValue('admin')
   })
 
   it('renders expanded form fields including native input types, select.multiple, radioGroup and checkboxGroup', () => {

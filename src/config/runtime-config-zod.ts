@@ -18,6 +18,9 @@ export const supportedApiMethods = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'] as 
 export const supportedQueryStateFeedbackStates = ['idle', 'loading', 'error', 'empty', 'success'] as const
 export const supportedVisibilityOperators = ['equals', 'notEquals', 'isTruthy', 'isFalsy', 'greaterThan', 'lessThan'] as const
 export const supportedInputTypes = ['text', 'email', 'password', 'search', 'tel', 'url', 'number', 'date', 'datetime-local'] as const
+export const supportedContainerAlignValues = ['start', 'center', 'end', 'stretch'] as const
+export const supportedContainerJustifyValues = ['start', 'center', 'end', 'between', 'around', 'evenly'] as const
+export const supportedContainerWrapValues = ['nowrap', 'wrap', 'wrap-reverse'] as const
 
 const nonEmptyStringSchema = z.string().refine((value) => value.trim().length > 0)
 const nodeIdSchema = nonEmptyStringSchema
@@ -126,6 +129,10 @@ export const containerNodeSchema = z
       .object({
         direction: z.string().optional(),
         gap: z.string().optional(),
+        columns: z.number().int().min(1).max(12).optional(),
+        align: z.enum(supportedContainerAlignValues).optional(),
+        justify: z.enum(supportedContainerJustifyValues).optional(),
+        wrap: z.enum(supportedContainerWrapValues).optional(),
       })
       .strip()
       .optional(),

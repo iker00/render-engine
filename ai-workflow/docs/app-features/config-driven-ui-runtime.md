@@ -63,11 +63,15 @@ Reglas funcionales vigentes:
 - La raíz de página se renderiza como colección; el runtime no inventa un `container` de layout para envolver hermanos.
 - `layout: []` es válido y resuelve una página vacía.
 - Solo `container` admite `children`.
-- `container.props` soporta `direction` y `gap`.
+- `container.props` soporta `direction`, `gap`, `columns`, `align`, `justify` y `wrap`.
 - `repeater.props.items.source` solo admite `queries.{queryName}.data` o `queries.{queryName}.data.*`, `repeater.props.items.key` exige una ruta relativa no vacía al item actual y `repeater.props.template` reutiliza una colección `LayoutNode[]` sin `children`.
 - `repeater` no introduce markup propio: expande su `template` como hermanos por iteración y omite cualquier item cuya key efectiva sea ausente, no escalar o duplicada, con diagnóstico en desarrollo.
-- Los alias de `container.props.gap` soportados hoy (`sm`, `md`, `lg`) se resuelven a clases estables de `Tailwind`.
+- Un `container` sin `gap` declarado usa `md` como separación visible por defecto.
+- Los alias estables de `container.props.gap` soportados hoy (`sm`, `md`, `lg`, `xl`, `2xl`) se resuelven a clases estables de `Tailwind`.
 - Un valor arbitrario de `container.props.gap` sigue siendo válido mediante una excepción acotada: clase `Tailwind` con variable CSS local, sin volver a estilos inline completos.
+- Si `container.props.columns` existe, el runtime cambia a modo `grid`, aplica `grid-cols-{n}` para `n` entre `1` y `12` y hace que `columns` prevalezca visualmente sobre `direction`.
+- `container.props.align` y `container.props.justify` se traducen a clases estables según el modo activo del contenedor.
+- `container.props.wrap` solo aplica en modo lineal (`flex`); su default efectivo es `nowrap` y no se admite junto con `columns`.
 - `heading.props` soporta `text` y `level`.
 - `paragraph.props` soporta `text`.
 - `list.props` soporta `items` como array histórico de strings o como origen declarativo manual/dinámico de colecciones escalares u objeto.
@@ -97,7 +101,7 @@ Reglas funcionales vigentes:
 - `src/runtime/runtime-actions/` concentra el ejecutor común `action.type -> handler del provider`, reutilizable por futuros triggers más allá de `button`.
 - `src/queries/` concentra también la composición final entre la operación `api` base y los request params por ejecución, incluida la semántica estable de merge para `query`, `body` y `headers`.
 - `src/app/index.css` centraliza los tokens visuales globales del runtime con `@theme` de `Tailwind CSS v4`.
-- `src/runtime/runtime-node-styling.ts` centraliza la convención visual base, el mapeo a utilidades del theme y la compatibilidad acotada de `gap`.
+- `src/runtime/runtime-node-styling.ts` centraliza la convención visual base, la selección entre modos `flex` y `grid`, el mapeo de `columns`, `align`, `justify` y `wrap`, y la compatibilidad acotada de `gap`.
 - `src/runtime/runtime-references/` centraliza parsing, resolución y diagnóstico de referencias string del runtime, incluido el namespace `item` limitado al contexto de iteración.
 - `src/runtime/runtime-collection-sources.ts` concentra la resolución compartida de colecciones efectivas para `list`, `select`, `radioGroup` y `checkboxGroup`, incluyendo degradación a vacío, proyección declarativa por item, soporte de `item.*` dentro de `repeater` y normalización común de selección simple o múltiple.
 - `src/queries/` concentra la construcción de requests, la ejecución contra `fetch` y la normalización de errores remotos.

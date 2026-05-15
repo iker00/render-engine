@@ -10,7 +10,7 @@ La feature requiere `design.md` y ya queda fijado en esta fase que:
 - no se implementarán upload ni acordeones móviles en esta iteración
 - la separación de secciones del formulario se resolverá reutilizando `form` y `container`
 
-Con esas decisiones, la implementación puede ejecutarse de forma secuencial sin rediseñar la feature sobre la marcha. La siguiente tarea que debe ejecutarse es `T0026-01`.
+Con esas decisiones, la implementación quedó cerrada como una secuencia lineal sin rediseñar la feature sobre la marcha. La ejecución histórica siguió el orden `T0026-01` → `T0026-05`.
 
 ## T0026-01
 
@@ -281,12 +281,12 @@ Ya cerrado por `T0026-04`. Esta tarea no reabre código salvo ajuste documental 
 Completado cuando la documentación afectada y `status.yaml` reflejan de forma estable el nuevo baseline visual del runtime.
 
 ## Orden de ejecución
-La siguiente tarea que debe escogerse en implementación es `T0026-01`.
+La secuencia planificada y efectivamente seguida para la implementación fue `T0026-01` → `T0026-02` → `T0026-03` → `T0026-04` → `T0026-05`.
 
-No se debe empezar `T0026-02` hasta cerrar `T0026-01`.
+No se debía empezar `T0026-02` antes de cerrar `T0026-01`.
 
-No se debe empezar `T0026-03` hasta cerrar `T0026-02`.
+No se debía empezar `T0026-03` antes de cerrar `T0026-02`.
 
-No se debe empezar `T0026-04` hasta cerrar `T0026-03`.
+No se debía empezar `T0026-04` antes de cerrar `T0026-03`.
 
-No se debe empezar `T0026-05` hasta cerrar `T0026-04`.
+No se debía empezar `T0026-05` antes de cerrar `T0026-04`.

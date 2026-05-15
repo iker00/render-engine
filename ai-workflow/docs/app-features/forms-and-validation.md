@@ -11,7 +11,8 @@ Soportar formularios declarativos con estado interno, campos reutilizables y val
 
 ## Gramática visual estable vigente
 - `form` funciona hoy como layout principal del trámite, no como una tarjeta adicional que envuelva otras tarjetas internas.
-- Los `container` verticales dentro de un `form` se renderizan como `section` semánticas y resuelven la separación visual entre bloques con una única línea superior a sangre, reutilizando padding interior sin introducir un nodo nuevo.
+- Los `container` dentro de un `form` se renderizan como `section` semánticas cuando actúan como bloques de composición general, incluidas las composiciones con `columns`; resuelven la separación visual entre bloques con una única línea superior a sangre, reutilizando padding interior sin introducir un nodo nuevo.
+- Dentro de `form`, un `container` puede seguir usando el modo lineal histórico o activar un layout en columnas de `1` a `12`, además de `align`, `justify` y la escala ampliada de `gap`, sin perder la semántica de sección.
 - `input`, `textarea` y `select` comparten borde sobrio, fondo blanco, foco por `ring` sobre el propio borde y ausencia de sombra propia en reposo.
 - `radioGroup` y `checkboxGroup` conservan controles nativos y texto alineado, sin convertir cada opción en una tarjeta con borde.
 - La jerarquía visual de acciones sigue distinguiendo CTA principal y acciones secundarias sin alterar su semántica funcional actual.
