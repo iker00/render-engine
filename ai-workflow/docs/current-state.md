@@ -10,6 +10,7 @@
 - Contrato de página estable con `pages[].layout` como colección ordenada de bloques y rechazo explícito del shape raíz antiguo basado en objeto.
 - Renderer estático inicial operativo para `container`, `heading`, `paragraph` y `list`, con soporte para varios hermanos en la raíz de página sin `container` sintético y con dispatcher central por `type` en `src/runtime/`.
 - Presentación base del runtime migrada a `Tailwind CSS` para `container`, `heading`, `paragraph` y `list`, con convención centralizada en `src/runtime/runtime-node-styling.ts`.
+- Base visual institucional ya consolidada para el shell de la app y el contenido principal, con tokens globales declarados en `src/app/index.css` mediante `@theme` de `Tailwind CSS v4`.
 - Resolución de `initialPage` con soporte para varias páginas declaradas y render exclusivo de la página seleccionada.
 - Núcleo de estado compartido por instancia ya integrado en `src/runtime/runtime-state/` para navegación, formularios y queries.
 - Navegación visible resuelta desde `navigation.currentPageId`, con historial interno por entradas completas `entryId/pageId/params`, no-op para reentradas idénticas y error recuperable al navegar a una página inexistente.
@@ -52,6 +53,7 @@
 - `select` ya soporta catálogos manuales o dinámicos de escalares y objetos, puede operar en selección simple o múltiple mediante `props.multiple`, mantiene una semántica única del valor vigente entre render, `defaultValue`, validación `required` y submit, y limpia automáticamente solo los valores que dejan de existir en su catálogo efectivo.
 - `radioGroup` ya reutiliza la misma semántica de opciones y selección simple que `select` simple.
 - `checkboxGroup` ya reutiliza la misma semántica de opciones y selección múltiple que `select.multiple`.
+- El runtime ya comparte una gramática visual clara y administrativa para shell, tipografía, listas, acciones y formularios: contenedor principal centrado, superficies sobrias, campos sin sombra propia, foco con `ring` y secciones internas de formulario separadas por una línea superior a sangre reutilizando `container` como `section`.
 - Aislamiento validado entre varias instancias del runtime y limpieza completa del estado al desmontar y remontar.
 - Manejo explícito de errores de configuración con diagnóstico visible en desarrollo y degradación silenciosa en producción para errores marcados como `development-only`.
 - Diagnósticos de validación ya alineados con rutas canónicas del JSON para ramas como `layout[*]`, `preloads[*]`, `api.query.*` y `api.body.*`.
@@ -67,7 +69,7 @@
 - `routeParams.*` y `navigation.*` siguen sin resolverse como referencias soportadas.
 - `params.*` sigue sin abrirse en `visibility` ni en las fuentes dinámicas de colección para `list` y `select`.
 - `visibility` sigue intencionadamente acotado a una sola condición por nodo, sin `fallback`, sin composición booleana y sin expresiones arbitrarias.
-- No existe todavía theming, tokens de diseño ni personalización visual declarativa desde JSON.
+- No existe todavía theming ni personalización visual declarativa desde JSON; la capa estable actual se limita a tokens globales en CSS y utilidades de tema consumidas por el runtime.
 
 ## Infraestructura vigente
 - Repositorio preparado para trabajar con documentación guiada por specs.
@@ -97,6 +99,7 @@
 - Vigésima tercera feature del workflow cerrada para sustituir `props.required` por `props.validations`, ampliar el catálogo de reglas locales declarativas y reutilizar una misma semántica de evaluación tanto en submit como al editar campos con error.
 - Vigésima cuarta feature del workflow cerrada para introducir `repeater`, el namespace `item.*` y su integración transversal en renderer, navegación, requests declarativos, formularios y consumidores descendientes de colecciones.
 - Vigésima quinta feature del workflow cerrada para hacer que cada reentrada con `preloads` limpie primero sus queries declaradas, mantenga la carga fresca por `pageEntry` y evite hidratar consumidores visibles o `defaultValue` con datos obsoletos de otra entrada.
+- Vigésima sexta feature del workflow cerrada para alinear visualmente el runtime con una referencia institucional de sede electrónica, consolidar un baseline claro de shell y formularios y migrar los tokens visuales globales al modelo CSS-first de `Tailwind CSS v4`.
 
 ## Referencias
 

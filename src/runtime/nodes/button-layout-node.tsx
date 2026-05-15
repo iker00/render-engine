@@ -2,7 +2,7 @@ import type { ButtonLayoutNode } from '../../config/runtime-config'
 import { useOptionalFormContext } from '../form-context'
 import type { RuntimeIterationContext } from '../runtime-references/runtime-reference-resolver'
 import { executeRuntimeUiAction } from '../runtime-actions/runtime-ui-action-executor'
-import { getButtonNodeClassName } from '../runtime-node-styling'
+import { getPrimaryButtonNodeClassName, getSecondaryButtonNodeClassName } from '../runtime-node-styling'
 import { useRuntimeStateActions } from '../runtime-state/runtime-state-provider'
 
 interface ButtonNodeProps {
@@ -15,12 +15,13 @@ export function ButtonNode({ node, iterationContext }: ButtonNodeProps) {
   const formContext = useOptionalFormContext()
   const action = node.props.action
   const isImplicitSubmit = action === undefined && formContext !== null
+  const className = isImplicitSubmit ? getPrimaryButtonNodeClassName() : getSecondaryButtonNodeClassName()
 
   return (
     <button
       data-layout-node="button"
       type={isImplicitSubmit ? 'submit' : 'button'}
-      className={getButtonNodeClassName()}
+      className={className}
       onClick={
         action
           ? () =>

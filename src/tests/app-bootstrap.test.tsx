@@ -123,6 +123,16 @@ describe('App bootstrap', () => {
 
     expect(screen.getByRole('heading', { name: /runtime configuration could not be loaded/i })).toBeInTheDocument()
     expect(screen.getByText(/initialPage "missing-page" does not match any page id/i)).toBeInTheDocument()
+    expect(screen.getByTestId('runtime-shell-content')).toHaveClass('justify-center')
+    expect(screen.getByTestId('runtime-error-eyebrow')).toHaveClass(
+      'uppercase',
+      'tracking-[0.24em]',
+      'text-app-accent',
+    )
+    expect(screen.getByTestId('runtime-error-message')).toHaveClass(
+      'text-app-text-muted',
+      'sm:text-lg',
+    )
   })
 
   it('shows a readable development error when layout is invalid', () => {
@@ -150,6 +160,10 @@ describe('App bootstrap', () => {
 
     expect(screen.getByRole('heading', { name: /runtime configuration could not be loaded/i })).toBeInTheDocument()
     expect(screen.getByText(/page "broken-layout" has an invalid layout at "layout\[0\]\.children"/i)).toBeInTheDocument()
+    expect(screen.getByTestId('runtime-shell-frame')).toHaveClass(
+      'rounded-shell',
+      'bg-app-surface',
+    )
   })
 
   it('shows a readable development error when a node type is not supported', () => {

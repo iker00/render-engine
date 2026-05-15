@@ -1,11 +1,37 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Source Sans 3", "Segoe UI", sans-serif;
+  /*--color-app-background: #edf3f8;*/
+  --color-app-background: #fff;
+  /*--color-app-surface: #fff;*/
+  --color-app-surface: #F7FAF3;
+  --color-app-surface: oklch(98.4% 0.003 247.858);
+  --color-app-surface-subtle: #f8fbfe;
+  --color-app-border-strong: #d5e1ee;
+  --color-app-border-soft: #ced5db;
+  /*--color-app-text: #141c35;*/
+  --color-app-text: #1F2933;
+  --color-app-text-strong: #141c35;
+  --color-app-text-muted: #526579;
+  /*--color-app-accent: #005ea8;*/
+  --color-app-accent: #A6D82F;
+  /*--color-app-accent-strong: #004d89;*/
+  --color-app-accent-strong:  #A6D82F;
+  --color-app-danger: #b42318;
+  --radius-shell: 0.5em;
+  --radius-section: 0.75rem;
+  --radius-form: 1.5rem;
+  --radius-control: 0.5rem;
+  --shadow-shell: 0 6px 18px rgba(19, 34, 56, 0.04);
+  --shadow-section: 0 4px 12px rgba(19, 34, 56, 0.03);
+  --shadow-form: 0 8px 20px rgba(19, 34, 56, 0.04);
+  --container-shell: 76rem;
+}
 
 :root {
-  color: #e2e8f0;
-  background: #020617;
-  font-family: Inter, system-ui, sans-serif;
+  color: var(--color-app-text);
+  background: var(--color-app-background);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -15,11 +41,16 @@
 body {
   margin: 0;
   min-width: 320px;
+  font-family: var(--font-sans);
   background:
-    radial-gradient(circle at top, rgba(34, 211, 238, 0.18), transparent 32%),
-    linear-gradient(180deg, #020617 0%, #0f172a 100%);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(237, 243, 248, 1) 48%, rgba(228, 237, 245, 1) 100%);
 }
 
 * {
   box-sizing: border-box;
+}
+
+body,
+#root {
+  min-height: 100vh;
 }

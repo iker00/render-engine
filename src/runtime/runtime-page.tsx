@@ -1,4 +1,5 @@
 import { LayoutRenderer } from './layout-renderer'
+import { getRuntimePageClassName } from './runtime-node-styling'
 import { useRuntimeCurrentPage, useRuntimeState } from './runtime-state/runtime-state-provider'
 
 export function RuntimePage() {
@@ -11,7 +12,7 @@ export function RuntimePage() {
   }
 
   return (
-    <section data-runtime-page-id={page.id} data-testid="runtime-page">
+    <section className={getRuntimePageClassName()} data-runtime-page-id={page.id} data-testid="runtime-page">
       <LayoutRenderer key={`${page.id}:${activeEntryId}`} nodes={page.layout} />
     </section>
   )

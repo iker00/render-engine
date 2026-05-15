@@ -4,6 +4,8 @@ import type { RuntimeIterationContext } from '../runtime-references/runtime-refe
 import { resolveResolvedFormFieldDefinition } from './form-layout-node'
 import { normalizeChoiceFieldValue, resolveChoiceCollectionItems } from '../runtime-collection-sources'
 import {
+  getChoiceGroupClassName,
+  getChoiceOptionClassName,
   getFieldErrorClassName,
   getFieldLabelClassName,
   getFieldWrapperClassName,
@@ -40,34 +42,37 @@ export function RadioGroupNode({ node, iterationContext }: RadioGroupNodeProps) 
   return (
     <fieldset className={getFieldWrapperClassName()} data-layout-node="radio-group">
       <legend className={getFieldLabelClassName()}>{node.props.label}</legend>
-      {items.map((item, index) => (
-        <label key={`${node.props.fieldId}-${index}-${item.value}`} className="flex items-center gap-2 text-sm text-slate-100">
-          <input
-            type="radio"
-            name={`${formContext.formId}-${node.props.fieldId}`}
-            value={item.value}
-            checked={value === item.value}
-            onChange={(event) => {
-              const nextValue = event.currentTarget.value
-              setFormFieldValue(formContext.formId, node.props.fieldId, nextValue)
+      <div className={getChoiceGroupClassName()}>
+        {items.map((item, index) => (
+          <label key={`${node.props.fieldId}-${index}-${item.value}`} className={getChoiceOptionClassName()}>
+            <input
+              type="radio"
+              name={`${formContext.formId}-${node.props.fieldId}`}
+              value={item.value}
+              checked={value === item.value}
+              className="mt-1 h-4 w-4 text-app-accent focus:ring-app-accent"
+              onChange={(event) => {
+                const nextValue = event.currentTarget.value
+                setFormFieldValue(formContext.formId, node.props.fieldId, nextValue)
 
-              if (error) {
-                setFormFieldError(
-                  formContext.formId,
-                  node.props.fieldId,
-                  getValidationErrorForEditedField({
-                    fieldDefinition,
-                    formId: formContext.formId,
-                    state,
-                    nextValue,
-                  }),
-                )
-              }
-            }}
-          />
-          <span>{item.label}</span>
-        </label>
-      ))}
+                if (error) {
+                  setFormFieldError(
+                    formContext.formId,
+                    node.props.fieldId,
+                    getValidationErrorForEditedField({
+                      fieldDefinition,
+                      formId: formContext.formId,
+                      state,
+                      nextValue,
+                    }),
+                  )
+                }
+              }}
+            />
+            <span>{item.label}</span>
+          </label>
+        ))}
+      </div>
       {error ? <span className={getFieldErrorClassName()}>{error}</span> : null}
     </fieldset>
   )

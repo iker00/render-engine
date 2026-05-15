@@ -50,6 +50,10 @@ export function FormNode({ node, children, iterationContext }: FormNodeProps) {
             return true
           }
 
+          if (state.pageEntry.preloadNames.length === 0) {
+            return false
+          }
+
           return shouldRefreshPristineFieldDefault(fieldState, fieldDefinition)
         },
       ),

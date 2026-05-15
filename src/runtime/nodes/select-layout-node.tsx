@@ -53,36 +53,47 @@ export function SelectNode({ node, iterationContext }: SelectNodeProps) {
   return (
     <label className={getFieldWrapperClassName()} data-layout-node="select">
       <span className={getFieldLabelClassName()}>{node.props.label}</span>
-      <select
-        className={getFieldControlClassName(error !== null)}
-        multiple={isMultiple}
-        value={value}
-        onChange={(event) => {
-          const nextValue = isMultiple
-            ? Array.from(event.currentTarget.selectedOptions, (option) => option.value)
-            : event.currentTarget.value
-          setFormFieldValue(formContext.formId, node.props.fieldId, nextValue)
+      <div className="relative">
+        <select
+          aria-label={node.props.label}
+          className={`${getFieldControlClassName(error !== null)} ${isMultiple ? 'min-h-40' : 'appearance-none pr-12'}`.trim()}
+          multiple={isMultiple}
+          value={value}
+          onChange={(event) => {
+            const nextValue = isMultiple
+              ? Array.from(event.currentTarget.selectedOptions, (option) => option.value)
+              : event.currentTarget.value
+            setFormFieldValue(formContext.formId, node.props.fieldId, nextValue)
 
-          if (error) {
-            setFormFieldError(
-              formContext.formId,
-              node.props.fieldId,
-              getValidationErrorForEditedField({
-                fieldDefinition,
-                formId: formContext.formId,
-                state,
-                nextValue,
-              }),
-            )
-          }
-        }}
-      >
-        {items.map((item, index) => (
-          <option key={`${node.props.fieldId}-${index}-${String(item.value)}`} value={String(item.value)}>
-            {item.label}
-          </option>
-        ))}
-      </select>
+            if (error) {
+              setFormFieldError(
+                formContext.formId,
+                node.props.fieldId,
+                getValidationErrorForEditedField({
+                  fieldDefinition,
+                  formId: formContext.formId,
+                  state,
+                  nextValue,
+                }),
+              )
+            }
+          }}
+        >
+          {items.map((item, index) => (
+            <option key={`${node.props.fieldId}-${index}-${String(item.value)}`} value={String(item.value)}>
+              {item.label}
+            </option>
+          ))}
+        </select>
+        {isMultiple ? null : (
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-base text-app-text-muted"
+          >
+            <span className="-translate-y-px">▾</span>
+          </span>
+        )}
+      </div>
       {error ? <span className={getFieldErrorClassName()}>{error}</span> : null}
     </label>
   )

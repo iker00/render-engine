@@ -18,6 +18,7 @@ La política completa está en [`../docs/workflow.md`](../docs/workflow.md).
 - Ninguna ahora mismo.
 
 ## Completadas
+- `0026-sede-electronica-visual-alignment`: el runtime ya adopta un baseline visual institucional claro para shell, contenido y formularios, con tokens globales CSS-first en `Tailwind CSS v4`, secciones de formulario separadas por divisor superior y una configuración de desarrollo representativa alineada con la referencia de sede electrónica.
 - `0025-preload-query-reset-on-page-entry`: cada nueva `pageEntry` con `preloads` ya limpia primero solo sus queries declaradas, las deja directamente en `loading` antes del primer render útil y evita que páginas o formularios hidraten consumidores visibles o `defaultValue` con datos de la entrada anterior, sin cambiar la semántica manual de recarga.
 - `0024-query-driven-repeated-layout-node`: nuevo nodo declarativo `repeater` para repetir un subárbol completo una vez por cada item de una colección resuelta desde `queries.*`, con contexto local `item.*`, integración en navegación y requests declarativos, soporte en formularios y consumidores descendientes de colecciones.
 - `0023-declarative-form-validation-rules`: ampliar la validación local de formularios con una superficie común y extensible por regla, incorporando `minLength`, `maxLength`, `min`, `max`, `minSelections` y `maxSelections` sin abrir todavía validaciones remotas, cruzadas ni mensajes personalizados efectivos.

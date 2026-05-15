@@ -1070,6 +1070,12 @@ describe('Runtime button navigation', () => {
       ],
     })
 
+    expect(screen.getByRole('button', { name: 'Submit profile' })).toHaveClass(
+      'bg-app-accent',
+      'text-white',
+      'border-app-accent',
+    )
+
     fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Grace' } })
     fireEvent.click(screen.getByRole('button', { name: 'Submit profile' }))
 
@@ -1157,6 +1163,12 @@ describe('Runtime button navigation', () => {
         },
       ],
     })
+
+    expect(screen.getByRole('button', { name: 'Open details' })).toHaveClass(
+      'bg-white',
+      'text-app-text-strong',
+      'border-app-border-strong',
+    )
 
     fireEvent.click(screen.getByRole('button', { name: 'Open details' }))
 

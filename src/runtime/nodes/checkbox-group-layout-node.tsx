@@ -4,6 +4,8 @@ import type { RuntimeIterationContext } from '../runtime-references/runtime-refe
 import { resolveResolvedFormFieldDefinition } from './form-layout-node'
 import { normalizeChoiceFieldValue, resolveChoiceCollectionItems } from '../runtime-collection-sources'
 import {
+  getChoiceGroupClassName,
+  getChoiceOptionClassName,
   getFieldErrorClassName,
   getFieldLabelClassName,
   getFieldWrapperClassName,
@@ -41,41 +43,44 @@ export function CheckboxGroupNode({ node, iterationContext }: CheckboxGroupNodeP
   return (
     <fieldset className={getFieldWrapperClassName()} data-layout-node="checkbox-group">
       <legend className={getFieldLabelClassName()}>{node.props.label}</legend>
-      {items.map((item, index) => (
-        <label key={`${node.props.fieldId}-${index}-${item.value}`} className="flex items-center gap-2 text-sm text-slate-100">
-          <input
-            type="checkbox"
-            value={item.value}
-            checked={selectedValues.has(item.value)}
-            onChange={(event) => {
-              const nextUncheckedValues = event.currentTarget.checked
-                ? [...value, item.value]
-                : value.filter((entry) => entry !== item.value)
-              const nextValue = normalizeChoiceFieldValue(node.props.items, state, nextUncheckedValues, {
-                multiple: true,
-                surface: 'checkboxGroup.props.items',
-                iterationContext,
-              })
+      <div className={getChoiceGroupClassName()}>
+        {items.map((item, index) => (
+          <label key={`${node.props.fieldId}-${index}-${item.value}`} className={getChoiceOptionClassName()}>
+            <input
+              type="checkbox"
+              value={item.value}
+              checked={selectedValues.has(item.value)}
+              className="mt-1 h-4 w-4 rounded text-app-accent focus:ring-app-accent"
+              onChange={(event) => {
+                const nextUncheckedValues = event.currentTarget.checked
+                  ? [...value, item.value]
+                  : value.filter((entry) => entry !== item.value)
+                const nextValue = normalizeChoiceFieldValue(node.props.items, state, nextUncheckedValues, {
+                  multiple: true,
+                  surface: 'checkboxGroup.props.items',
+                  iterationContext,
+                })
 
-              setFormFieldValue(formContext.formId, node.props.fieldId, nextValue)
+                setFormFieldValue(formContext.formId, node.props.fieldId, nextValue)
 
-              if (error) {
-                setFormFieldError(
-                  formContext.formId,
-                  node.props.fieldId,
-                  getValidationErrorForEditedField({
-                    fieldDefinition,
-                    formId: formContext.formId,
-                    state,
-                    nextValue,
-                  }),
-                )
-              }
-            }}
-          />
-          <span>{item.label}</span>
-        </label>
-      ))}
+                if (error) {
+                  setFormFieldError(
+                    formContext.formId,
+                    node.props.fieldId,
+                    getValidationErrorForEditedField({
+                      fieldDefinition,
+                      formId: formContext.formId,
+                      state,
+                      nextValue,
+                    }),
+                  )
+                }
+              }}
+            />
+            <span>{item.label}</span>
+          </label>
+        ))}
+      </div>
       {error ? <span className={getFieldErrorClassName()}>{error}</span> : null}
     </fieldset>
   )

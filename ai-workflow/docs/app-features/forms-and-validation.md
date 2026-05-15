@@ -9,6 +9,13 @@ Soportar formularios declarativos con estado interno, campos reutilizables y val
 - `form.children` reutiliza el árbol declarativo existente y admite `input`, `textarea`, `select`, `radioGroup`, `checkboxGroup`, `button`, `heading`, `paragraph` y `container`.
 - El dominio compartido `forms` del store sigue siendo la única fuente de verdad para valores y errores de formulario.
 
+## Gramática visual estable vigente
+- `form` funciona hoy como layout principal del trámite, no como una tarjeta adicional que envuelva otras tarjetas internas.
+- Los `container` verticales dentro de un `form` se renderizan como `section` semánticas y resuelven la separación visual entre bloques con una única línea superior a sangre, reutilizando padding interior sin introducir un nodo nuevo.
+- `input`, `textarea` y `select` comparten borde sobrio, fondo blanco, foco por `ring` sobre el propio borde y ausencia de sombra propia en reposo.
+- `radioGroup` y `checkboxGroup` conservan controles nativos y texto alineado, sin convertir cada opción en una tarjeta con borde.
+- La jerarquía visual de acciones sigue distinguiendo CTA principal y acciones secundarias sin alterar su semántica funcional actual.
+
 ## Modelo de formulario
 - Cada formulario tiene `id`.
 - `form.id` debe ser único dentro de toda la configuración.

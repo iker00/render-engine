@@ -67,13 +67,15 @@ src/
 ### Principios
 - Usar `Tailwind CSS` como mecanismo por defecto para los estilos de la UI renderizada.
 - Evitar estilos inline en componentes del runtime salvo casos excepcionales y explícitamente justificados.
-- No introducir todavía una capa de theming, tokens de diseño o API visual configurable hasta que exista una feature específica para ello.
+- No introducir theming ni API visual configurable desde JSON sin una feature específica para ello.
+- Los tokens visuales globales compartidos del runtime deben declararse en `src/app/index.css` mediante `@theme`, no dispersarse entre componentes.
 
 ### Convención
 - Los componentes visuales del runtime deben expresar su presentación con `className` y utilidades de `Tailwind`.
+- Cuando exista un token global estable, los nodos deben consumir antes una utilidad de tema como `bg-app-surface` o `text-app-text` que una clase arbitraria basada en `var(--...)`.
 - Si `container.props.gap` recibe un valor arbitrario fuera de los alias soportados, la única excepción admitida es pasar una variable CSS local para alimentar una clase de `Tailwind`; no se debe reintroducir un objeto `style` completo para toda la presentación del nodo.
-- Si un requisito visual no encaja todavía en una escala de diseño estable, se debe resolver con utilidades de `Tailwind` locales y revisables, no con un sistema de theme implícito.
-- Si una necesidad futura exige theming o tokens compartidos, debe abrirse como alcance nuevo en vez de mezclarse silenciosamente con la conversión a `Tailwind`.
+- Si un requisito visual no encaja todavía en una escala de diseño estable, se debe resolver con utilidades de `Tailwind` locales y revisables, no con una API visual paralela.
+- Si una necesidad futura exige theming declarativo por JSON o variantes visuales configurables por nodo, debe abrirse como alcance nuevo en vez de mezclarse silenciosamente con la capa de tema global actual.
 
 ## Errores
 

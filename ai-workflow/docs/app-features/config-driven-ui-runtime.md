@@ -22,7 +22,7 @@ Renderizar el runtime a partir de una configuración JSON validada, apoyado ya e
 - Permite que `item` e `item.*` existan solo dentro del subárbol iterado de un `repeater`, reutilizando la misma semántica de navegación segura por objetos y arrays ya fijada para `queries.{queryName}.data.*`.
 - Permite que cualquier nodo soportado declare `visibility` para mostrarse u ocultarse según valores de `forms.*`, `queries.*` y `item.*` cuando exista contexto de iteración, con una semántica compartida entre renderer y formularios.
 - Renderiza formularios declarativos reales con `form`, `input`, `textarea`, `select`, `radioGroup` y `checkboxGroup`, inicializa su estado lazy en `forms.{formId}.{fieldId}`, valida `required` solo sobre campos visibles, soporta submit con `executeOperation` y permite que `defaultValue`, colecciones dinámicas y requests lean `item.*` dentro de `repeater`, incluyendo la reentrada limpia de `defaultValue` dependiente de `preloads`.
-- Implementa la presentación visible del runtime con utilidades de `Tailwind CSS`, sin abrir todavía una capa de theming definida.
+- Implementa la presentación visible del runtime con utilidades de `Tailwind CSS`, apoyada ya en tokens globales CSS-first declarados con `@theme` en `src/app/index.css`, sin abrir todavía theming declarativo desde JSON.
 
 ## Áreas funcionales principales
 - Configuración y contrato JSON.
@@ -74,7 +74,7 @@ Reglas funcionales vigentes:
 - `button.props` soporta `label` y `action`, con `navigateTo`, `goBack`, `executeOperation` y `resetForm` como acciones declarativas vigentes; `navigateTo` puede añadir `params` escalares por entrada; `executeOperation` puede aportar `query`, `body` y `headers` por ejecución; dentro de un `form`, un botón sin `action` actúa como submit implícito.
 - `form` renderiza un `<form>` real, hereda un contexto estable de `formId` a sus descendientes, inicializa solo los campos todavía ausentes en el store, elimina por defecto `forms.{formId}` al desmontarse realmente y puede ejecutar `submitAction.type: executeOperation` con `query`, `body` y `headers` por envío.
 - `form.persistOnUnmount: true` convierte esa limpieza por desmontaje en una excepción opt-in para conservar la persistencia histórica de un formulario concreto dentro de la misma instancia del runtime.
-- `input`, `textarea`, `select`, `radioGroup` y `checkboxGroup` leen y escriben exclusivamente en `forms.{formId}.{fieldId}` y comparten una base visual accesible con estado de error.
+- `input`, `textarea`, `select`, `radioGroup` y `checkboxGroup` leen y escriben exclusivamente en `forms.{formId}.{fieldId}` y comparten una base visual accesible con estado de error, foco por `ring` y sin sombra propia en los controles.
 - `input` ya soporta también `number`, `date` y `datetime-local` además del catálogo textual inicial.
 - `select` soporta items históricos estáticos y también orígenes declarativos manuales o dinámicos de escalares u objetos; normaliza internamente a string los valores efectivos y deja el valor vigente vacío cuando ya no coincide con ninguna opción disponible.
 - `select.props.multiple` activa una semántica de selección múltiple basada en `string[]`, con el mismo orden estable del catálogo efectivo visible y la misma limpieza automática de valores ya inválidos.
@@ -96,7 +96,8 @@ Reglas funcionales vigentes:
 - `src/runtime/form-context.tsx` propaga el `formId` efectivo por descendencia sin acoplar los nodos de campo a props manuales repetidas.
 - `src/runtime/runtime-actions/` concentra el ejecutor común `action.type -> handler del provider`, reutilizable por futuros triggers más allá de `button`.
 - `src/queries/` concentra también la composición final entre la operación `api` base y los request params por ejecución, incluida la semántica estable de merge para `query`, `body` y `headers`.
-- `src/runtime/runtime-node-styling.ts` centraliza la convención visual base y la compatibilidad acotada de `gap`.
+- `src/app/index.css` centraliza los tokens visuales globales del runtime con `@theme` de `Tailwind CSS v4`.
+- `src/runtime/runtime-node-styling.ts` centraliza la convención visual base, el mapeo a utilidades del theme y la compatibilidad acotada de `gap`.
 - `src/runtime/runtime-references/` centraliza parsing, resolución y diagnóstico de referencias string del runtime, incluido el namespace `item` limitado al contexto de iteración.
 - `src/runtime/runtime-collection-sources.ts` concentra la resolución compartida de colecciones efectivas para `list`, `select`, `radioGroup` y `checkboxGroup`, incluyendo degradación a vacío, proyección declarativa por item, soporte de `item.*` dentro de `repeater` y normalización común de selección simple o múltiple.
 - `src/queries/` concentra la construcción de requests, la ejecución contra `fetch` y la normalización de errores remotos.
@@ -163,7 +164,7 @@ Además, el runtime reutiliza la misma convención de referencias completas en:
 - El agregado `pageEntry` todavía no se expone como familia de referencias declarativas dentro del JSON.
 - `routeParams.*` y `navigation.*` siguen sin resolverse como referencias soportadas.
 - `params.*` sigue intencionadamente fuera de `visibility` y de las fuentes dinámicas de colección.
-- La presentación base del runtime sigue siendo intencionadamente mínima y no define todavía theming, tokens de diseño ni personalización visual declarativa.
+- El runtime no expone todavía theming ni personalización visual declarativa desde JSON; la capa estable actual se limita a tokens globales en CSS y a la gramática compartida codificada en el propio runtime.
 
 ## Referencias relacionadas
 - [`./config-contract.md`](./config-contract.md)
