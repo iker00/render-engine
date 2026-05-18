@@ -119,6 +119,7 @@ const preloadConfig: RuntimeConfig = {
 afterEach(() => {
   vi.restoreAllMocks()
   vi.unstubAllGlobals()
+  window.history.replaceState(null, '', window.location.pathname + window.location.search)
 })
 
 function RuntimeStateSnapshot() {

@@ -4,7 +4,7 @@
 Renderizar el runtime a partir de una configuración JSON validada, apoyado ya en un estado compartido por instancia para navegación, formularios y queries, con una frontera declarativa real para ejecutar operaciones remotas, dispararlas automáticamente al entrar en página, activarlas desde botones o desde submit de formularios, permitir request params por ejecución sobre una operación `api` base, transportar params de navegación interna por entrada, expandir subárboles completos con `repeater` y condicionar la salida visible de cada nodo tanto por estado de query como por valores ya presentes en el propio runtime sin acoplar la UI a HTTP. El catálogo estable de formularios ya cubre selección simple y múltiple sobre una semántica compartida de opciones.
 
 ## Qué resuelve
-- Permite que la configuración declare varias páginas aunque, por ahora, solo se resuelva la indicada por `initialPage`.
+- Permite que la configuración declare varias páginas y resolver la visible desde el hash del navegador o, en ausencia de hash válido, desde `initialPage`.
 - Valida el contrato mínimo del runtime antes de renderizar.
 - Apoya esa validación previa al render en una base `Zod`, sin exponer `Zod` en la API pública de bootstrap.
 - Interpreta un layout raíz basado en colección ordenada y un catálogo inicial y acotado de nodos.
@@ -16,7 +16,7 @@ Renderizar el runtime a partir de una configuración JSON validada, apoyado ya e
 - Formaliza `api.headers` como parte estable del contrato declarativo y permite que cada ejecución añada `query`, `body` y `headers` sin redefinir otra operación `api`.
 - Permite que cada página declare `preloads` y los dispare automáticamente al entrar, con un estado agregado `pageEntry` latest-only para la tanda activa y preparación previa de carga fresca para las queries precargadas.
 - Expone una capa común de acciones UI del runtime para que los nodos interactivos deleguen navegación, ejecución remota y reset de formularios sin lógica imperativa específica en el propio nodo visual.
-- Permite que `navigateTo` transporte params escalares por entrada, que `goBack` restaure esa entrada completa y que `preloads` dependan de la reentrada observable real, no solo del `pageId`, reaplicando su limpieza selectiva en cada nueva `pageEntry`.
+- Permite que `navigateTo` transporte params escalares por entrada, los refleje en el hash canónico del navegador, que `goBack` restaure esa entrada completa desde el historial real y que `preloads` dependan de la reentrada observable real, no solo del `pageId`, reaplicando su limpieza selectiva en cada nueva `pageEntry`.
 - Añade `repeater` como nodo estructural para repetir un `template` completo por item de una colección `queries.*`, con identidad declarativa por `props.items.key` y degradación a cero iteraciones cuando la colección no está disponible o no es un array.
 - Permite que cualquier nodo soportado declare `queryStateFeedback` para mostrarse, ocultarse o sustituirse por un fallback local según `idle | loading | error | empty | success`.
 - Permite que `item` e `item.*` existan solo dentro del subárbol iterado de un `repeater`, reutilizando la misma semántica de navegación segura por objetos y arrays ya fijada para `queries.{queryName}.data.*`.
@@ -76,7 +76,7 @@ Reglas funcionales vigentes:
 - `heading.props` soporta `text` y `level`.
 - `paragraph.props` soporta `text`.
 - `list.props` soporta `items` como array histórico de strings o como origen declarativo manual/dinámico de colecciones escalares u objeto.
-- `button.props` soporta `label` y `action`, con `navigateTo`, `goBack`, `executeOperation` y `resetForm` como acciones declarativas vigentes; `navigateTo` puede añadir `params` escalares por entrada; `executeOperation` puede aportar `query`, `body` y `headers` por ejecución; dentro de un `form`, un botón sin `action` actúa como submit implícito.
+- `button.props` soporta `label` y `action`, con `navigateTo`, `goBack`, `executeOperation` y `resetForm` como acciones declarativas vigentes; `navigateTo` puede añadir `params` escalares por entrada y escribirlos en `#/pageId?...` o `#/?...` para la home funcional; `executeOperation` puede aportar `query`, `body` y `headers` por ejecución; dentro de un `form`, un botón sin `action` actúa como submit implícito.
 - `form` renderiza un `<form>` real, hereda un contexto estable de `formId` a sus descendientes, inicializa solo los campos todavía ausentes en el store, elimina por defecto `forms.{formId}` al desmontarse realmente y puede ejecutar `submitAction.type: executeOperation` con `query`, `body` y `headers` por envío.
 - `form.persistOnUnmount: true` convierte esa limpieza por desmontaje en una excepción opt-in para conservar la persistencia histórica de un formulario concreto dentro de la misma instancia del runtime.
 - `input`, `textarea`, `select`, `radioGroup` y `checkboxGroup` leen y escriben exclusivamente en `forms.{formId}.{fieldId}` y comparten una base visual accesible con estado de error, foco por `ring` y sin sombra propia en los controles.
@@ -134,6 +134,7 @@ Límites funcionales de esa capa:
 - `item.*` solo existe dentro del subárbol iterado de un `repeater`
 - objetos y arrays pueden recorrerse de izquierda a derecha con una única semántica central
 - `params.*` solo admite `params.{paramName}` y no abre navegación anidada adicional
+- cuando nace de la URL, `params.*` expone siempre strings ya normalizados desde el hash canónico
 - `status`, `error`, `navigation.*` y `routeParams.*` no se abren como navegación dinámica soportada
 - las referencias textuales no resolubles degradan a string vacío y mantienen diagnóstico de desarrollo coherente con la referencia original
 
@@ -156,6 +157,7 @@ Además, el runtime reutiliza la misma convención de referencias completas en:
 ## Comportamiento de errores
 - Si `initialPage` no coincide con ninguna página declarada, el runtime muestra un error visible.
 - Si un botón `navigateTo` apunta a una página inexistente, el runtime rechaza el config antes del render con una ruta diagnóstica del árbol afectado.
+- Si el navegador entra con un hash inválido o con un slug de página inexistente, el runtime degrada a `initialPage` y reescribe la URL a `#/`.
 - Si el `layout` es inválido, usa el shape raíz antiguo basado en objeto o aparece un nodo no soportado, en desarrollo se muestra un error diagnóstico.
 - Los errores estructurales mantienen los códigos públicos actuales y mejoran la trazabilidad con rutas canónicas del JSON cuando el fallo depende de una rama concreta.
 - En producción, los errores marcados como `development-only` degradan a una superficie vacía en lugar de mostrar un mensaje genérico o inventar contenido.
@@ -169,6 +171,7 @@ Además, el runtime reutiliza la misma convención de referencias completas en:
 - El agregado `pageEntry` todavía no se expone como familia de referencias declarativas dentro del JSON.
 - `routeParams.*` y `navigation.*` siguen sin resolverse como referencias soportadas.
 - `params.*` sigue intencionadamente fuera de `visibility` y de las fuentes dinámicas de colección.
+- El runtime sigue intencionadamente acotado a hash routing simple y no abre un router general por `pathname`, subrutas ni segmentos dinámicos.
 - El runtime no expone todavía theming ni personalización visual declarativa desde JSON; la capa estable actual se limita a tokens globales en CSS y a la gramática compartida codificada en el propio runtime.
 
 ## Referencias relacionadas

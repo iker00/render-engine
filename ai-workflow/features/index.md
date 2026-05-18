@@ -15,9 +15,10 @@ Cada feature nueva debería usar, cuando aplique:
 La política completa está en [`../docs/workflow.md`](../docs/workflow.md).
 
 ## Planificadas
-- Ninguna ahora mismo.
+- Ninguna actualmente.
 
 ## Completadas
+- `0029-browser-hash-navigation`: la navegación del runtime ya se sincroniza con el hash del navegador usando `#/pageId` y `#/?query...` para la home, reutiliza `params.*` para leer query params string desde la URL, normaliza hashes inválidos a `#/` y delega atrás/adelante en el historial del navegador manteniendo `pageEntry` y la semántica estable de `preloads`.
 - `0028-form-container-alignment`: los `container` dentro de `form` ya no se renderizan con sangrado lateral ni márgenes negativos implícitos; conservan la superficie visual de sección cuando actúan como bloques verticales o usan `columns`, y los `direction: row` sin `columns` quedan como layouts lineales `plain`.
 - `0027-expanded-container-layout-controls`: `container` ya soporta `gap` con default `md` y aliases `sm | md | lg | xl | 2xl`, distribución declarativa de `1` a `12` columnas, `align`, `justify` y `wrap`, con precedencia de `columns` sobre `direction`, rechazo explícito de `columns + wrap` y compatibilidad mantenida con `gap` arbitrario como escape hatch acotado.
 - `0026-sede-electronica-visual-alignment`: el runtime ya adopta un baseline visual institucional claro para shell, contenido y formularios, con tokens globales CSS-first en `Tailwind CSS v4`, secciones de formulario separadas por divisor superior y una configuración de desarrollo representativa alineada con la referencia de sede electrónica.

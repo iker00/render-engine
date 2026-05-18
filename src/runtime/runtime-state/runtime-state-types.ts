@@ -18,6 +18,7 @@ export interface RuntimeNavigationHistoryEntry {
 export interface RuntimeNavigationState {
   currentPageId: string
   history: RuntimeNavigationHistoryEntry[]
+  currentEntryIndex: number
   lastError: RuntimeNavigationError | null
 }
 
@@ -65,6 +66,7 @@ export interface RuntimeState {
 
 export type RuntimeStateAction =
   | { type: 'runtime/reset'; payload: { state: RuntimeState } }
+  | { type: 'navigation/sync-from-browser'; payload: { pageId: string; params?: RuntimePageParams } }
   | { type: 'navigation/navigate'; payload: { pageId: string; params?: RuntimePageParams } }
   | { type: 'navigation/go-back' }
   | { type: 'navigation/set-error'; payload: { error: RuntimeNavigationError } }

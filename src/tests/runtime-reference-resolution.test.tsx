@@ -371,6 +371,7 @@ describe('Runtime reference resolution', () => {
             { entryId: 0, pageId: 'home', params: {} },
             { entryId: 1, pageId: 'details', params: { userId: '42' } },
           ],
+          currentEntryIndex: 1,
           lastError: null,
         },
         pageEntry: {

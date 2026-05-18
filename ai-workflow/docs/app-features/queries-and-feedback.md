@@ -89,7 +89,7 @@ Reglas de payload vigentes:
 - Si al menos una precarga falla, el agregado final queda en `error`, pero las queries exitosas conservan sus datos.
 - El agregado es latest-only: una tanda antigua puede seguir cerrando sus queries individuales, pero no puede reescribir el resultado agregado de una entrada más reciente.
 - Todas las precargas de una misma tanda resuelven sus referencias contra un snapshot común del estado ya preparado para esa entrada.
-- Ese snapshot ya incluye los params efectivos de la entrada activa, por lo que una precarga puede reutilizar `params.*` sin lógica imperativa adicional.
+- Ese snapshot ya incluye los params efectivos de la entrada activa, leídos desde la URL canónica o desde navegación interna equivalente, por lo que una precarga puede reutilizar `params.*` sin lógica imperativa adicional.
 - Esta política de limpieza fresca queda limitada al mecanismo automático de `pages[].preloads`; una ejecución manual de la misma operación sigue pudiendo recargar en `loading` conservando su último `data` válido.
 
 ## Refetch y acciones mutadoras

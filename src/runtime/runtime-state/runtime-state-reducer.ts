@@ -13,17 +13,13 @@ import type {
 
 export function createRuntimeState(config: RuntimeConfig): RuntimeState {
   const initialPage = config.pages.find((page) => page.id === config.initialPage)
+  const initialEntry = createNavigationHistoryEntry(0, config.initialPage, {})
 
   return {
     navigation: {
-      currentPageId: config.initialPage,
-      history: [
-        {
-          entryId: 0,
-          pageId: config.initialPage,
-          params: {},
-        },
-      ],
+      currentPageId: initialEntry.pageId,
+      history: [initialEntry],
+      currentEntryIndex: 0,
       lastError: null,
     },
     forms: {},
@@ -42,33 +38,12 @@ export function runtimeStateReducer(state: RuntimeState, action: RuntimeStateAct
   switch (action.type) {
     case 'runtime/reset':
       return action.payload.state
+    case 'navigation/sync-from-browser':
+      return synchronizeNavigationWithEntry(state, action.payload.pageId, action.payload.params)
     case 'navigation/navigate':
-      if (isSameNavigationEntry(state.navigation.history[state.navigation.history.length - 1], action.payload.pageId, action.payload.params)) {
-        return {
-          ...state,
-          navigation: {
-            ...state.navigation,
-            lastError: null,
-          },
-        }
-      }
-
-      const nextEntry = createNavigationHistoryEntry(
-        getNextNavigationEntryId(state.navigation.history),
-        action.payload.pageId,
-        action.payload.params,
-      )
-
-      return {
-        ...state,
-        navigation: {
-          currentPageId: nextEntry.pageId,
-          history: [...state.navigation.history, nextEntry],
-          lastError: null,
-        },
-      }
+      return appendNavigationEntry(state, action.payload.pageId, action.payload.params)
     case 'navigation/go-back': {
-      if (state.navigation.history.length < 2) {
+      if (state.navigation.currentEntryIndex < 1) {
         return {
           ...state,
           navigation: {
@@ -78,14 +53,14 @@ export function runtimeStateReducer(state: RuntimeState, action: RuntimeStateAct
         }
       }
 
-      const nextHistory = state.navigation.history.slice(0, -1)
-      const previousEntry = nextHistory[nextHistory.length - 1]
+      const previousEntry = state.navigation.history[state.navigation.currentEntryIndex - 1]
 
       return {
         ...state,
         navigation: {
           currentPageId: previousEntry.pageId,
-          history: nextHistory,
+          history: state.navigation.history,
+          currentEntryIndex: state.navigation.currentEntryIndex - 1,
           lastError: null,
         },
       }
@@ -439,7 +414,7 @@ function createNavigationHistoryEntry(
 }
 
 function getNextNavigationEntryId(history: RuntimeNavigationHistoryEntry[]) {
-  return (history[history.length - 1]?.entryId ?? -1) + 1
+  return Math.max(-1, ...history.map((entry) => entry.entryId)) + 1
 }
 
 function isSameNavigationEntry(
@@ -452,6 +427,96 @@ function isSameNavigationEntry(
   }
 
   return arePageParamsEqual(currentEntry.params, params ?? {})
+}
+
+function synchronizeNavigationWithEntry(
+  state: RuntimeState,
+  pageId: string,
+  params: RuntimePageParams | undefined,
+): RuntimeState {
+  const nextParams = { ...(params ?? {}) }
+  const currentEntry = state.navigation.history[state.navigation.currentEntryIndex]
+
+  if (isSameNavigationEntry(currentEntry, pageId, nextParams)) {
+    return {
+      ...state,
+      navigation: {
+        ...state.navigation,
+        lastError: null,
+      },
+    }
+  }
+
+  const matchingEntryIndex = state.navigation.history.findIndex((entry) =>
+    isSameNavigationEntry(entry, pageId, nextParams),
+  )
+
+  if (matchingEntryIndex >= 0) {
+    const matchingEntry = state.navigation.history[matchingEntryIndex]
+
+    return {
+      ...state,
+      navigation: {
+        currentPageId: matchingEntry.pageId,
+        history: state.navigation.history,
+        currentEntryIndex: matchingEntryIndex,
+        lastError: null,
+      },
+    }
+  }
+
+  const nextEntry = createNavigationHistoryEntry(
+    getNextNavigationEntryId(state.navigation.history),
+    pageId,
+    nextParams,
+  )
+  const nextHistory = [...state.navigation.history.slice(0, state.navigation.currentEntryIndex + 1), nextEntry]
+
+  return {
+    ...state,
+    navigation: {
+      currentPageId: nextEntry.pageId,
+      history: nextHistory,
+      currentEntryIndex: nextHistory.length - 1,
+      lastError: null,
+    },
+  }
+}
+
+function appendNavigationEntry(
+  state: RuntimeState,
+  pageId: string,
+  params: RuntimePageParams | undefined,
+): RuntimeState {
+  const nextParams = { ...(params ?? {}) }
+  const currentEntry = state.navigation.history[state.navigation.currentEntryIndex]
+
+  if (isSameNavigationEntry(currentEntry, pageId, nextParams)) {
+    return {
+      ...state,
+      navigation: {
+        ...state.navigation,
+        lastError: null,
+      },
+    }
+  }
+
+  const nextEntry = createNavigationHistoryEntry(
+    getNextNavigationEntryId(state.navigation.history),
+    pageId,
+    nextParams,
+  )
+  const nextHistory = [...state.navigation.history.slice(0, state.navigation.currentEntryIndex + 1), nextEntry]
+
+  return {
+    ...state,
+    navigation: {
+      currentPageId: nextEntry.pageId,
+      history: nextHistory,
+      currentEntryIndex: nextHistory.length - 1,
+      lastError: null,
+    },
+  }
 }
 
 function arePageParamsEqual(left: RuntimePageParams, right: RuntimePageParams) {

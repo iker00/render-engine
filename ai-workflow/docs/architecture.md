@@ -85,7 +85,7 @@ Lectura operativa de esa estructura:
 - `runtime-node-styling.ts` concentra la convención visual base del runtime, el mapeo a utilidades del theme global y la compatibilidad acotada para `gap` arbitrarios.
 - `runtime-query-state-feedback.ts` concentra la derivación `idle | loading | error | empty | success`, la heurística común de `empty` y la resolución de defaults efectivos de `queryStateFeedback`.
 - `runtime-references/` fija la semántica central de referencias string, distingue `literal | supported | unsupported | invalid`, soporta `forms.*`, `queries.*`, `params.*` e `item.*` dentro de su frontera actual y evita lógica dispersa en nodos visuales.
-- `runtime-state/` concentra un store por instancia basado en `useReducer` + `Context`, con dominios separados para navegación, formularios, queries y `pageEntry`, historial parametrizado por entrada, transición atómica para arrancar tandas de `preloads` y fachada mínima para navegación, formularios, queries y lectura consistente del último snapshot sin absorber la lógica de red.
+- `runtime-state/` concentra un store por instancia basado en `useReducer` + `Context`, con dominios separados para navegación, formularios, queries y `pageEntry`, sincronización con el hash del navegador, historial parametrizado por entrada, transición atómica para arrancar tandas de `preloads` y fachada mínima para navegación, formularios, queries y lectura consistente del último snapshot sin absorber la lógica de red.
 - El dominio `forms` distingue ya entre resetear un formulario existente y eliminar `forms.{formId}` completo; el nodo `form` usa esa diferencia para limpiar por defecto solo al desmontarse realmente y no durante rerenders u ocultaciones.
 - `container-layout-node.tsx` mantiene `container` como wrapper semántico `section` y, cuando vive dentro de un `form` vertical, reutiliza esa misma pieza para dibujar divisores de sección a ancho completo sin introducir un nodo nuevo.
 - `runtime/nodes/` materializa solo nodos con uso real inmediato, incluido `repeater` como pieza fina de expansión y el catálogo actual de formularios declarativos con selección simple y múltiple compartida.
@@ -102,7 +102,7 @@ Lectura operativa de esa estructura:
 - Mantener la red y las llamadas API fuera de los componentes visuales.
 - Resolver referencias declarativas en una capa explícita de runtime.
 - Validar la configuración antes de intentar renderizarla.
-- Tratar la navegación interna como estado de aplicación, no como routing del navegador en la primera versión.
+- Tratar la navegación del runtime como estado de aplicación sincronizado con un hash routing simple del navegador, no como un router general por `pathname`.
 
 ## Decisiones estables iniciales
 - El repositorio arranca como frontend de paquete único en la raíz.
@@ -116,7 +116,7 @@ Lectura operativa de esa estructura:
 - La presentación base de los nodos visibles del runtime se expresa con utilidades de `Tailwind`; los tokens globales viven en `src/app/index.css` con `@theme`, y la única excepción visual acotada sigue siendo la variable CSS local usada para `container.props.gap` cuando llega un valor arbitrario.
 - El shell visible de la app y la gramática compartida de formularios forman parte de la arquitectura estable del runtime, no de un ejemplo aislado en `src/dev/config.json`.
 - El runtime crea un store compartido aislado por instancia, con `useReducer` + `Context`, para sostener navegación, formularios y queries sin depender todavía de subsistemas visuales separados.
-- La navegación visible ya se resuelve desde `navigation.currentPageId`, pero la unidad histórica real es una entrada con `entryId`, `pageId` y `params`; la URL del navegador queda fuera del contrato de esta primera capa interactiva.
+- La navegación visible ya se resuelve desde una entrada normalizada derivada del hash del navegador; la unidad histórica real sigue siendo una entrada con `entryId`, `pageId` y `params`, y la URL canónica usa `#/` para la home funcional y `#/pageId` para el resto.
 - La resolución de referencias declarativas vive en `src/runtime/runtime-references/`, soporta `params.{paramName}` como namespace plano adicional, expone `item.*` solo con contexto explícito de iteración y sigue abriendo navegación anidada solo bajo `queries.{queryName}.data.*` y el valor actual de `item`.
 - La navegación de subrutas de query usa una semántica iterativa única: índices solo sobre arrays, claves literales sobre objetos y resultado `missing` para rutas bien formadas cuyo dato no está disponible.
 - La ejecución remota declarativa vive en `src/queries/`, reutiliza la convención central de referencias del runtime, compone allí mismo la operación `api` base con `requestParams` por ejecución y deja sus resultados visibles solo a través de `queries.{operationName}`.

@@ -261,6 +261,7 @@ Frontera específica de `params.*`:
 - `params.userId` es válido; `params`, `params.user.id` y segmentos vacíos siguen siendo inválidos.
 - `params.*` puede usarse en `heading.props.text`, `paragraph.props.text`, `api.query`, `api.body`, `api.headers`, `button.props.action.query`, `button.props.action.body`, `button.props.action.headers`, `form.submitAction.query`, `form.submitAction.body`, `form.submitAction.headers` y `defaultValue` de `input`, `textarea`, `select`, `radioGroup` y `checkboxGroup`.
 - `params.*` también puede usarse como origen dentro de `navigateTo.params` para construir la siguiente navegación a partir de la entrada activa.
+- Cuando el runtime hidrata `params.*` desde la URL, todos sus valores llegan como string.
 - `params.*` sigue fuera de alcance en `visibility.reference`, `repeater.props.items.source`, `list.props.items.source`, `select.props.items.source`, `radioGroup.props.items.source` y `checkboxGroup.props.items.source`, aunque esas superficies reutilicen la misma familia general de referencias runtime.
 
 Frontera específica de `item.*`:
@@ -343,7 +344,7 @@ La frontera estable de esta validación queda organizada así:
 ## Límites de v1
 - `api` ya puede dispararse declarativamente desde `button.props.action` usando `executeOperation`, además de por la fachada imperativa del provider y por `preloads` de página al entrar en ella.
 - `executeOperation` y `submitAction` ya pueden añadir `query`, `body` y `headers` por ejecución, pero siguen dependiendo de `operationName` como vínculo obligatorio con una operación existente de `api`.
-- `navigateTo` ya puede transportar `params` efectivos entre páginas, pero esos params siguen siendo escalares, internos al historial del runtime y sin sincronización con la URL del navegador.
+- `navigateTo` ya puede transportar `params` efectivos entre páginas y reflejarlos en el hash canónico del navegador, pero esos params siguen siendo escalares y no abren arrays, objetos, subrutas ni otro namespace distinto de `params.*`.
 - `repeater` ya puede expandir un subárbol completo por item de una colección remota, pero sigue fuera de alcance cualquier DSL de templates, filtros cliente, ordenación, paginación o fuentes de colección ajenas a `queries.*`.
 - `action` sigue siendo una sola operación por trigger; no hay arrays, secuencias ni callbacks declarativos.
 - El trigger sigue siendo implícito por tipo de nodo; el contrato no abre todavía un bloque general de `events`.

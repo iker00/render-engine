@@ -351,6 +351,7 @@ describe('Runtime api execution', () => {
           { entryId: 0, pageId: 'home', params: {} },
           { entryId: 1, pageId: 'details', params: { userId: 'user-7', mode: 'edit' } },
         ],
+        currentEntryIndex: 1,
         lastError: null,
       },
       pageEntry: {

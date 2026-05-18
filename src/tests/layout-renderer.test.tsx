@@ -2440,6 +2440,7 @@ describe('RuntimePage', () => {
       navigation: {
         currentPageId: 'details',
         history: [{ entryId: 0, pageId: 'details', params: { userId: 'user-7', mode: 'edit' } }],
+        currentEntryIndex: 0,
         lastError: null,
       },
       pageEntry: {

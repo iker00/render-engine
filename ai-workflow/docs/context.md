@@ -18,7 +18,7 @@ Permitir que una aplicación legacy o de negocio pueda describir pantallas y flu
 - La v1 es intencionadamente acotada: no busca resolver un motor UI completamente genérico.
 - La configuración de producción llega en `data-config` desde backend.
 - En desarrollo debe existir un mecanismo local para cargar y editar la configuración sin depender del backend.
-- La navegación inicial es interna al renderer y no modifica la URL del navegador.
+- La navegación visible del runtime se sincroniza con el hash del navegador usando una convención simple `#/pageId` y `#/` para la home funcional.
 - La configuración usa referencias string por convención, por ejemplo `queries.searchUsers.data` o `forms.user.name`, para reducir fricción con el backend legacy.
 - Mientras no exista un sistema de theming definido, los estilos del runtime deben implementarse con utilidades de `Tailwind CSS` en lugar de estilos inline u otra capa visual paralela.
 - La primera versión deja fuera autenticación, permisos, subida de archivos, tablas avanzadas y plantillas de texto interpolado complejas.

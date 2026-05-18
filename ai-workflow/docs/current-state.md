@@ -13,7 +13,7 @@
 - Base visual institucional ya consolidada para el shell de la app y el contenido principal, con tokens globales declarados en `src/app/index.css` mediante `@theme` de `Tailwind CSS v4`.
 - Resolución de `initialPage` con soporte para varias páginas declaradas y render exclusivo de la página seleccionada.
 - Núcleo de estado compartido por instancia ya integrado en `src/runtime/runtime-state/` para navegación, formularios y queries.
-- Navegación visible resuelta desde `navigation.currentPageId`, con historial interno por entradas completas `entryId/pageId/params`, no-op para reentradas idénticas y error recuperable al navegar a una página inexistente.
+- Navegación visible sincronizada con el hash del navegador, resuelta en el store desde `navigation.currentPageId`, con historial interno por entradas completas `entryId/pageId/params`, no-op para reentradas idénticas, normalización canónica de `#/` y `#/pageId?...` y error recuperable solo para `navigateTo` hacia una página inexistente.
 - Dominio base de formularios disponible con almacenamiento por `forms.{formId}.{fieldId}`, `defaultValue`, `error`, `touched`, `dirty`, reset por formulario y borrado completo por `formId`.
 - Dominio base de queries disponible con almacenamiento por nombre, `status/data/error`, conservación del último dato válido durante recargas manuales y reset por query.
 - Capa central de referencias del runtime ya operativa para `forms.*`, `queries.{queryName}`, `queries.{queryName}.data`, `queries.{queryName}.status` y `queries.{queryName}.error`.
@@ -28,7 +28,7 @@
 - Cada nueva `pageEntry` con `preloads` ya arranca mediante una transición atómica que limpia solo esas queries declaradas y las deja directamente en `loading` antes del primer render útil.
 - `button.props.action` ya reutiliza un contrato común de acciones UI con `navigateTo`, `goBack`, `executeOperation` y `resetForm`.
 - La interpretación de acciones UI ya está concentrada en una capa transversal del runtime y no en ramas imperativas dispersas dentro del nodo visual `button`.
-- `button.props.action.type: navigateTo` ya puede transportar `params` escalares resueltos contra el snapshot actual del runtime y `goBack` restaura también esos params al recuperar una entrada previa.
+- `button.props.action.type: navigateTo` ya puede transportar `params` escalares resueltos contra el snapshot actual del runtime, reflejarlos en la URL canónica y `goBack` restaura también esos params al recuperar una entrada previa del historial del navegador observada por la sesión.
 - El contrato del runtime ya incorpora `repeater` como nodo estructural para repetir un `template` completo por item de una colección `queries.*`, con `props.items.key` como identidad declarativa obligatoria y degradación a cero iteraciones cuando la colección no está disponible o no es un array.
 - Cualquier nodo soportado ya puede declarar `queryStateFeedback` para reaccionar al estado visible `idle | loading | error | empty | success` de una query concreta con `show`, `hide` o un fallback local reutilizando el mismo catálogo declarativo de nodos.
 - La semántica visible de query ya está centralizada: `idle` representa una query no lanzada todavía y también cubre la query ausente del store; `loading` representa solo una ejecución real en curso; `null`, `undefined`, `''`, `[]` y `{}` se tratan como `empty`; `0` y `false` siguen la rama `success`.
@@ -40,7 +40,7 @@
 - En reentradas con `preloads`, los `defaultValue` basados en `queries.*` ya no pueden hidratar el dato de la entrada anterior: parten del estado limpio de la nueva entrada y pueden absorber el primer dato fresco solo mientras el campo siga prístino.
 - Los nodos `form` ya eliminan por defecto su estado local al desmontarse realmente, vuelven a inicializar sus campos en el siguiente montaje y permiten recuperar la persistencia histórica solo con `persistOnUnmount: true`.
 - `input` ya soporta además `number`, `date` y `datetime-local` sin abrir una familia separada de componentes de campo.
-- La capa central de referencias del runtime ya soporta también `params.{paramName}` para texto visible, requests declarativos, `defaultValue` de formularios y nuevas navegaciones originadas desde páginas ya parametrizadas.
+- La capa central de referencias del runtime ya soporta también `params.{paramName}` para texto visible, requests declarativos, `defaultValue` de formularios y nuevas navegaciones originadas desde páginas ya parametrizadas, leyendo esos valores como strings desde la entrada activa normalizada del hash.
 - La validación declarativa local de formularios ya funciona a nivel de formulario desde `props.validations`, con soporte para `required`, `minLength`, `maxLength`, `min`, `max`, `minSelections` y `maxSelections`.
 - El runtime ya conserva el orden declarado de `props.validations` como prioridad efectiva, escribe un único error visible por campo en `forms.*` y excluye del bloqueo de submit a campos ocultos por `queryStateFeedback` o `visibility`.
 - La edición de un campo con error ya no borra ese error a ciegas: el runtime reevalúa localmente sus reglas visibles y solo limpia el mensaje cuando el valor deja de incumplir la primera regla fallida.
@@ -104,6 +104,7 @@
 - Vigésima sexta feature del workflow cerrada para alinear visualmente el runtime con una referencia institucional de sede electrónica, consolidar un baseline claro de shell y formularios y migrar los tokens visuales globales al modelo CSS-first de `Tailwind CSS v4`.
 - Vigésima séptima feature del workflow cerrada para ampliar `container` con defaults de `gap` más útiles, modo `grid` por `columns`, alineación y distribución declarativas, manteniendo compatibilidad con `gap` arbitrario y la semántica de sección dentro de `form`.
 - Vigésima octava feature del workflow cerrada para corregir la alineación de `container` dentro de `form`, eliminando el sangrado lateral y los márgenes negativos implícitos, manteniendo la superficie de sección para bloques verticales o con `columns` y dejando `direction: row` sin `columns` como layout lineal `plain`.
+- Vigésima novena feature del workflow cerrada para sincronizar la navegación del runtime con el hash del navegador, normalizar `#/` y `#/pageId?...`, reutilizar `params.*` como lectura de query params string y delegar atrás/adelante en el historial real sin perder `pageEntry` ni la semántica de `preloads`.
 
 ## Referencias
 

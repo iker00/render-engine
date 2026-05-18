@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { useEffect } from 'react'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { RuntimeConfig } from '../config/runtime-config'
 import type { RuntimeState } from '../runtime/runtime-state/runtime-state-types'
 import {
@@ -26,6 +26,10 @@ import {
   selectQueryVisibleState,
   selectQueryReferenceValue,
 } from '../runtime/runtime-state/runtime-state-selectors'
+
+afterEach(() => {
+  window.history.replaceState(null, '', window.location.pathname + window.location.search)
+})
 
 const runtimeConfig: RuntimeConfig = {
   api: {},
@@ -641,7 +645,7 @@ describe('Runtime shared state store', () => {
     })
   })
 
-  it('renders the visible page from navigation.currentPageId and changes it without touching the URL', () => {
+  it('renders the visible page from navigation.currentPageId and changes it through the hash without touching the pathname', async () => {
     const initialPathname = window.location.pathname
 
     render(
@@ -655,8 +659,11 @@ describe('Runtime shared state store', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Navigate to details' }))
 
-    expect(screen.getByTestId('runtime-page')).toHaveAttribute('data-runtime-page-id', 'details')
+    await waitFor(() =>
+      expect(screen.getByTestId('runtime-page')).toHaveAttribute('data-runtime-page-id', 'details'),
+    )
     expect(window.location.pathname).toBe(initialPathname)
+    expect(window.location.hash).toBe('#/details')
   })
 
   it('keeps the previous page and stores a recoverable navigation error when the target page does not exist', () => {
@@ -676,7 +683,50 @@ describe('Runtime shared state store', () => {
     )
   })
 
-  it('goes back to the previous valid history entry and prunes the current one', () => {
+  it('hydrates the visible entry from a direct hash and rewrites it to the canonical order', async () => {
+    window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}#/details?userId=42&mode=edit`)
+
+    render(
+      <RuntimeStateProvider config={runtimeConfig}>
+        <RuntimeStateSnapshot testId="runtime-state" />
+        <RuntimePage />
+      </RuntimeStateProvider>,
+    )
+
+    await waitFor(() => expect(window.location.hash).toBe('#/details?mode=edit&userId=42'))
+    expect(screen.getByTestId('runtime-page')).toHaveAttribute('data-runtime-page-id', 'details')
+    expect(readRuntimeStateSnapshot('runtime-state').navigation).toMatchObject({
+      currentPageId: 'details',
+      currentEntryIndex: 0,
+      history: [{ entryId: 0, pageId: 'details', params: { mode: 'edit', userId: '42' } }],
+    })
+    expect(readRuntimeStateSnapshot('runtime-state').pageEntry).toMatchObject({
+      entryId: 0,
+      pageId: 'details',
+      params: { mode: 'edit', userId: '42' },
+    })
+  })
+
+  it('falls back to the initial page and canonical home hash for invalid direct hashes', async () => {
+    window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}#/missing`)
+
+    render(
+      <RuntimeStateProvider config={runtimeConfig}>
+        <RuntimeStateSnapshot testId="runtime-state" />
+        <RuntimePage />
+      </RuntimeStateProvider>,
+    )
+
+    await waitFor(() => expect(window.location.hash).toBe('#/'))
+    expect(screen.getByTestId('runtime-page')).toHaveAttribute('data-runtime-page-id', 'home')
+    expect(readRuntimeStateSnapshot('runtime-state').navigation).toMatchObject({
+      currentPageId: 'home',
+      currentEntryIndex: 0,
+      history: [{ entryId: 0, pageId: 'home', params: {} }],
+    })
+  })
+
+  it('goes back to the previous valid history entry while keeping the observed session trace', async () => {
     render(
       <RuntimeStateProvider config={runtimeConfig}>
         <NavigationControls />
@@ -688,10 +738,40 @@ describe('Runtime shared state store', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Navigate to details' }))
     fireEvent.click(screen.getByRole('button', { name: 'Go back' }))
 
-    expect(screen.getByTestId('runtime-page')).toHaveAttribute('data-runtime-page-id', 'home')
+    await waitFor(() =>
+      expect(screen.getByTestId('runtime-page')).toHaveAttribute('data-runtime-page-id', 'home'),
+    )
     expect(readRuntimeStateSnapshot('runtime-state').navigation).toEqual({
       currentPageId: 'home',
-      history: [{ entryId: 0, pageId: 'home', params: {} }],
+      history: [
+        { entryId: 0, pageId: 'home', params: {} },
+        { entryId: 1, pageId: 'details', params: {} },
+      ],
+      currentEntryIndex: 0,
+      lastError: null,
+    })
+    expect(window.location.hash).toBe('#/')
+  })
+
+  it('treats a direct hash entry as having no previous in-session history for goBack', async () => {
+    window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}#/details`)
+
+    render(
+      <RuntimeStateProvider config={runtimeConfig}>
+        <NavigationControls />
+        <RuntimeStateSnapshot testId="runtime-state" />
+        <RuntimePage />
+      </RuntimeStateProvider>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Go back' }))
+
+    expect(screen.getByTestId('runtime-page')).toHaveAttribute('data-runtime-page-id', 'details')
+    expect(window.location.hash).toBe('#/details')
+    expect(readRuntimeStateSnapshot('runtime-state').navigation).toEqual({
+      currentPageId: 'details',
+      history: [{ entryId: 0, pageId: 'details', params: {} }],
+      currentEntryIndex: 0,
       lastError: null,
     })
   })
@@ -769,7 +849,7 @@ describe('Runtime shared state store', () => {
     })
   })
 
-  it('supports goBack after revisiting a page and returns to the previous entry in history order', () => {
+  it('supports goBack after revisiting a page and returns to the previous entry in history order', async () => {
     render(
       <RuntimeStateProvider config={runtimeConfig}>
         <NavigationControls />
@@ -782,13 +862,17 @@ describe('Runtime shared state store', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Navigate to home' }))
     fireEvent.click(screen.getByRole('button', { name: 'Go back' }))
 
-    expect(screen.getByTestId('runtime-page')).toHaveAttribute('data-runtime-page-id', 'details')
+    await waitFor(() =>
+      expect(screen.getByTestId('runtime-page')).toHaveAttribute('data-runtime-page-id', 'details'),
+    )
     expect(readRuntimeStateSnapshot('runtime-state').navigation).toEqual({
       currentPageId: 'details',
       history: [
         { entryId: 0, pageId: 'home', params: {} },
         { entryId: 1, pageId: 'details', params: {} },
+        { entryId: 2, pageId: 'home', params: {} },
       ],
+      currentEntryIndex: 1,
       lastError: null,
     })
   })
@@ -808,11 +892,12 @@ describe('Runtime shared state store', () => {
     expect(readRuntimeStateSnapshot('runtime-state').navigation).toEqual({
       currentPageId: 'home',
       history: [{ entryId: 0, pageId: 'home', params: {} }],
+      currentEntryIndex: 0,
       lastError: null,
     })
   })
 
-  it('creates distinct same-page history entries when params differ and restores the previous params on goBack', () => {
+  it('creates distinct same-page history entries when params differ and restores the previous params on goBack', async () => {
     render(
       <RuntimeStateProvider config={runtimeConfig}>
         <NavigationControls />
@@ -823,14 +908,17 @@ describe('Runtime shared state store', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Navigate to details with params' }))
 
-    expect(readRuntimeStateSnapshot('runtime-state').navigation).toEqual({
-      currentPageId: 'details',
-      history: [
-        { entryId: 0, pageId: 'home', params: {} },
-        { entryId: 1, pageId: 'details', params: { userId: '42' } },
-      ],
-      lastError: null,
-    })
+    await waitFor(() =>
+      expect(readRuntimeStateSnapshot('runtime-state').navigation).toEqual({
+        currentPageId: 'details',
+        history: [
+          { entryId: 0, pageId: 'home', params: {} },
+          { entryId: 1, pageId: 'details', params: { userId: '42' } },
+        ],
+        currentEntryIndex: 1,
+        lastError: null,
+      }),
+    )
     expect(readRuntimeStateSnapshot('runtime-state').pageEntry).toMatchObject({
       entryId: 1,
       pageId: 'details',
@@ -839,15 +927,18 @@ describe('Runtime shared state store', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Navigate to details with other params' }))
 
-    expect(readRuntimeStateSnapshot('runtime-state').navigation).toEqual({
-      currentPageId: 'details',
-      history: [
-        { entryId: 0, pageId: 'home', params: {} },
-        { entryId: 1, pageId: 'details', params: { userId: '42' } },
-        { entryId: 2, pageId: 'details', params: { userId: '7' } },
-      ],
-      lastError: null,
-    })
+    await waitFor(() =>
+      expect(readRuntimeStateSnapshot('runtime-state').navigation).toEqual({
+        currentPageId: 'details',
+        history: [
+          { entryId: 0, pageId: 'home', params: {} },
+          { entryId: 1, pageId: 'details', params: { userId: '42' } },
+          { entryId: 2, pageId: 'details', params: { userId: '7' } },
+        ],
+        currentEntryIndex: 2,
+        lastError: null,
+      }),
+    )
     expect(readRuntimeStateSnapshot('runtime-state').pageEntry).toMatchObject({
       entryId: 2,
       pageId: 'details',
@@ -856,14 +947,18 @@ describe('Runtime shared state store', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Go back' }))
 
-    expect(readRuntimeStateSnapshot('runtime-state').navigation).toEqual({
-      currentPageId: 'details',
-      history: [
-        { entryId: 0, pageId: 'home', params: {} },
-        { entryId: 1, pageId: 'details', params: { userId: '42' } },
-      ],
-      lastError: null,
-    })
+    await waitFor(() =>
+      expect(readRuntimeStateSnapshot('runtime-state').navigation).toEqual({
+        currentPageId: 'details',
+        history: [
+          { entryId: 0, pageId: 'home', params: {} },
+          { entryId: 1, pageId: 'details', params: { userId: '42' } },
+          { entryId: 2, pageId: 'details', params: { userId: '7' } },
+        ],
+        currentEntryIndex: 1,
+        lastError: null,
+      }),
+    )
     expect(readRuntimeStateSnapshot('runtime-state').pageEntry).toMatchObject({
       entryId: 1,
       pageId: 'details',
@@ -987,7 +1082,7 @@ describe('Runtime shared state store', () => {
     )
   })
 
-  it('removes one form completely without affecting other forms, navigation, or queries', () => {
+  it('removes one form completely without affecting other forms, navigation, or queries', async () => {
     render(
       <RuntimeStateProvider config={runtimeConfig}>
         <FormsFixture />
@@ -1000,6 +1095,7 @@ describe('Runtime shared state store', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Set user name error' }))
     fireEvent.click(screen.getByRole('button', { name: 'Store query success' }))
     fireEvent.click(screen.getByRole('button', { name: 'Go to details page' }))
+    await waitFor(() => expect(screen.getByTestId('runtime-state')).toHaveTextContent('"currentPageId":"details"'))
     fireEvent.click(screen.getByRole('button', { name: 'Remove user search form' }))
 
     const runtimeState = readRuntimeStateSnapshot('runtime-state')
@@ -1074,7 +1170,7 @@ describe('Runtime shared state store', () => {
     )
   })
 
-  it('keeps form state across page changes inside the same runtime instance', () => {
+  it('keeps form state across page changes inside the same runtime instance', async () => {
     render(
       <RuntimeStateProvider config={runtimeConfig}>
         <FormsFixture />
@@ -1086,7 +1182,9 @@ describe('Runtime shared state store', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Update user name' }))
     fireEvent.click(screen.getByRole('button', { name: 'Go to details page' }))
 
-    expect(screen.getByTestId('runtime-page')).toHaveAttribute('data-runtime-page-id', 'details')
+    await waitFor(() =>
+      expect(screen.getByTestId('runtime-page')).toHaveAttribute('data-runtime-page-id', 'details'),
+    )
     expect(screen.getByTestId('runtime-state')).toHaveTextContent(
       '"userSearch":{"name":{"value":"Grace","error":null,"touched":true,"dirty":true,"defaultValue":"Ada"}}',
     )
@@ -1408,7 +1506,7 @@ describe('Runtime shared state store', () => {
     })
   })
 
-  it('keeps query state across page changes inside the same runtime instance', () => {
+  it('keeps query state across page changes inside the same runtime instance', async () => {
     render(
       <RuntimeStateProvider config={runtimeConfig}>
         <QueriesFixture />
@@ -1420,7 +1518,9 @@ describe('Runtime shared state store', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Store query success' }))
     fireEvent.click(screen.getByRole('button', { name: 'Go to details page from query fixture' }))
 
-    expect(screen.getByTestId('runtime-page')).toHaveAttribute('data-runtime-page-id', 'details')
+    await waitFor(() =>
+      expect(screen.getByTestId('runtime-page')).toHaveAttribute('data-runtime-page-id', 'details'),
+    )
     expect(screen.getByTestId('runtime-state')).toHaveTextContent(
       '"queries":{"searchUsers":{"status":"success","data":["Ada","Grace"],"error":null}}',
     )
@@ -1582,7 +1682,7 @@ describe('Runtime shared state store', () => {
     )
   })
 
-  it('keeps navigation, forms and queries isolated across multiple runtime instances', () => {
+  it('keeps navigation, forms and queries isolated across multiple runtime instances', async () => {
     render(
       <>
         <RuntimeStateProvider config={runtimeConfig}>
@@ -1603,7 +1703,7 @@ describe('Runtime shared state store', () => {
     fireEvent.click(screen.getByRole('button', { name: 'first set form value' }))
     fireEvent.click(screen.getByRole('button', { name: 'first set query success' }))
 
-    expect(screen.getByTestId('first-state')).toHaveTextContent('"currentPageId":"details"')
+    await waitFor(() => expect(screen.getByTestId('first-state')).toHaveTextContent('"currentPageId":"details"'))
     expect(screen.getByTestId('first-state')).toHaveTextContent('"value":"first-value"')
     expect(screen.getByTestId('first-state')).toHaveTextContent('"data":["first-query"]')
 
@@ -1612,7 +1712,7 @@ describe('Runtime shared state store', () => {
     expect(screen.getByTestId('second-state')).toHaveTextContent('"status":"idle","data":null,"error":null')
   })
 
-  it('creates a clean shared state when the runtime unmounts and mounts again', () => {
+  it('creates a clean shared state when the runtime unmounts and mounts again', async () => {
     const { unmount } = render(
       <RuntimeStateProvider config={runtimeConfig}>
         <RuntimeInstanceFixture name="single" initialPage="home" />
@@ -1623,11 +1723,12 @@ describe('Runtime shared state store', () => {
     fireEvent.click(screen.getByRole('button', { name: 'single set form value' }))
     fireEvent.click(screen.getByRole('button', { name: 'single set query success' }))
 
-    expect(screen.getByTestId('single-state')).toHaveTextContent('"currentPageId":"details"')
+    await waitFor(() => expect(screen.getByTestId('single-state')).toHaveTextContent('"currentPageId":"details"'))
     expect(screen.getByTestId('single-state')).toHaveTextContent('"value":"single-value"')
     expect(screen.getByTestId('single-state')).toHaveTextContent('"data":["single-query"]')
 
     unmount()
+    window.history.replaceState(null, '', window.location.pathname + window.location.search)
 
     render(
       <RuntimeStateProvider config={runtimeConfig}>
@@ -1640,7 +1741,7 @@ describe('Runtime shared state store', () => {
     expect(screen.getByTestId('single-remount-state')).toHaveTextContent('"status":"idle","data":null,"error":null')
   })
 
-  it('cleans declarative form state on unmount and reinitializes defaults on the next mount by default', () => {
+  it('cleans declarative form state on unmount and reinitializes defaults on the next mount by default', async () => {
     const config: RuntimeConfig = {
       api: {},
       initialPage: 'home',
@@ -1709,14 +1810,16 @@ describe('Runtime shared state store', () => {
 
     fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Grace' } })
     fireEvent.click(screen.getByRole('button', { name: 'Go to details' }))
+    await waitFor(() => expect(screen.getByTestId('runtime-page')).toHaveAttribute('data-runtime-page-id', 'details'))
     fireEvent.click(screen.getByRole('button', { name: 'Go home' }))
 
+    await waitFor(() => expect(screen.getByTestId('runtime-page')).toHaveAttribute('data-runtime-page-id', 'home'))
     expect(screen.getByLabelText('Name')).toHaveValue('Ada')
     expect(screen.getByLabelText('Bio')).toHaveValue('Builder')
     expect(screen.getByTestId('runtime-state')).toHaveTextContent('"name":{"value":"Ada"')
   })
 
-  it('preserves declarative form values across unmount and remount when persistOnUnmount is enabled', () => {
+  it('preserves declarative form values across unmount and remount when persistOnUnmount is enabled', async () => {
     const config: RuntimeConfig = {
       api: {},
       initialPage: 'home',
@@ -1778,13 +1881,15 @@ describe('Runtime shared state store', () => {
 
     fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Grace' } })
     fireEvent.click(screen.getByRole('button', { name: 'Go to details' }))
+    await waitFor(() => expect(screen.getByTestId('runtime-page')).toHaveAttribute('data-runtime-page-id', 'details'))
     fireEvent.click(screen.getByRole('button', { name: 'Go home' }))
 
+    await waitFor(() => expect(screen.getByTestId('runtime-page')).toHaveAttribute('data-runtime-page-id', 'home'))
     expect(screen.getByLabelText('Name')).toHaveValue('Grace')
     expect(screen.getByTestId('runtime-state')).toHaveTextContent('"name":{"value":"Grace"')
   })
 
-  it('reinitializes a reused form node when navigation activates a different page entry', () => {
+  it('reinitializes a reused form node when navigation activates a different page entry', async () => {
     const config: RuntimeConfig = {
       api: {},
       initialPage: 'home',
@@ -1860,12 +1965,14 @@ describe('Runtime shared state store', () => {
     fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Manual home value' } })
     fireEvent.click(screen.getByRole('button', { name: 'Go to details' }))
 
+    await waitFor(() => expect(screen.getByTestId('runtime-page')).toHaveAttribute('data-runtime-page-id', 'details'))
     expect(screen.getByLabelText('Name')).toHaveValue('Details profile')
     expect(readRuntimeStateSnapshot('runtime-state').forms['profile-form']?.name?.value).toBe('Details profile')
 
     fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Manual details value' } })
     fireEvent.click(screen.getByRole('button', { name: 'Go home' }))
 
+    await waitFor(() => expect(screen.getByTestId('runtime-page')).toHaveAttribute('data-runtime-page-id', 'home'))
     expect(screen.getByLabelText('Name')).toHaveValue('Home profile')
     expect(readRuntimeStateSnapshot('runtime-state').forms['profile-form']?.name?.value).toBe('Home profile')
   })
@@ -1922,7 +2029,7 @@ describe('Runtime shared state store', () => {
     expect(readRuntimeStateSnapshot('runtime-state').forms['profile-form']?.name?.value).toBe('Grace')
   })
 
-  it('keeps query-driven defaults stable while mounted and rebuilds them from the latest query data after remount', () => {
+  it('keeps query-driven defaults stable while mounted and rebuilds them from the latest query data after remount', async () => {
     const config: RuntimeConfig = {
       api: {},
       initialPage: 'home',
@@ -1964,7 +2071,7 @@ describe('Runtime shared state store', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Seed Countess' }))
     fireEvent.click(screen.getByRole('button', { name: 'Open editor' }))
 
-    expect(screen.getByLabelText('Nickname')).toHaveValue('Countess')
+    await waitFor(() => expect(screen.getByLabelText('Nickname')).toHaveValue('Countess'))
 
     fireEvent.change(screen.getByLabelText('Nickname'), { target: { value: 'Manual nickname' } })
     fireEvent.click(screen.getByRole('button', { name: 'Seed Architect' }))
@@ -1972,9 +2079,10 @@ describe('Runtime shared state store', () => {
     expect(screen.getByLabelText('Nickname')).toHaveValue('Manual nickname')
 
     fireEvent.click(screen.getByRole('button', { name: 'Leave editor' }))
+    await waitFor(() => expect(screen.getByTestId('runtime-page')).toHaveAttribute('data-runtime-page-id', 'home'))
     fireEvent.click(screen.getByRole('button', { name: 'Open editor' }))
 
-    expect(screen.getByLabelText('Nickname')).toHaveValue('Architect')
+    await waitFor(() => expect(screen.getByLabelText('Nickname')).toHaveValue('Architect'))
     expect(screen.getByTestId('runtime-state')).toHaveTextContent('"nickname":{"value":"Architect"')
   })
 

@@ -3,6 +3,11 @@ import type { Dispatch, ReactNode } from 'react'
 import { useContext, useMemo, useReducer, useRef } from 'react'
 import type { NavigateToRuntimeUiAction, RuntimeApiRequestParams, RuntimeConfig, RuntimeConfigValue } from '../../config/runtime-config'
 import { executeRuntimeApiOperation } from '../../queries/runtime-api-executor'
+import {
+  areBrowserHashNavigationEntriesEqual,
+  createBrowserHashNavigationHash,
+  parseBrowserHashNavigationHash,
+} from '../runtime-navigation/browser-hash-navigation'
 import type { RuntimeIterationContext } from '../runtime-references/runtime-reference-resolver'
 import { resolveRuntimeValueWithOptions } from '../runtime-references/runtime-reference-resolver'
 import { RuntimeStateContext } from './runtime-state-context'
@@ -76,7 +81,7 @@ async function executeQueryOperationWithSnapshot({
 }
 
 export function RuntimeStateProvider({ config, children }: RuntimeStateProviderProps) {
-  const [initialState] = useState(() => createRuntimeState(config))
+  const [initialState] = useState(() => createRuntimeStateFromBrowserHash(config))
   const [state, dispatch] = useReducer(runtimeStateReducer, initialState)
   const activePreloadBatchSignatureRef = useRef<string | null>(null)
   const latestStateRef = useRef(state)
@@ -107,6 +112,46 @@ export function RuntimeStateProvider({ config, children }: RuntimeStateProviderP
     }),
     [config, dispatch, dispatchAndSyncState, initialState, state],
   )
+
+  useLayoutEffect(() => {
+    const normalizedHash = parseBrowserHashNavigationHash(window.location.hash, {
+      initialPageId: config.initialPage,
+      knownPageIds: config.pages.map((page) => page.id),
+    })
+
+    if (window.location.hash !== normalizedHash.canonicalHash) {
+      replaceBrowserHash(normalizedHash.canonicalHash)
+    }
+  }, [config.initialPage, config.pages])
+
+  useEffect(() => {
+    const syncFromBrowserHash = () => {
+      const parsedHash = parseBrowserHashNavigationHash(window.location.hash, {
+        initialPageId: config.initialPage,
+        knownPageIds: config.pages.map((page) => page.id),
+      })
+
+      if (window.location.hash !== parsedHash.canonicalHash) {
+        replaceBrowserHash(parsedHash.canonicalHash)
+      }
+
+      dispatchAndSyncState({
+        type: 'navigation/sync-from-browser',
+        payload: {
+          pageId: parsedHash.entry.pageId,
+          params: parsedHash.entry.params,
+        },
+      })
+    }
+
+    window.addEventListener('hashchange', syncFromBrowserHash)
+    window.addEventListener('popstate', syncFromBrowserHash)
+
+    return () => {
+      window.removeEventListener('hashchange', syncFromBrowserHash)
+      window.removeEventListener('popstate', syncFromBrowserHash)
+    }
+  }, [config.initialPage, config.pages, dispatchAndSyncState])
 
   useLayoutEffect(() => {
     if (!activeNavigationEntry) {
@@ -249,23 +294,63 @@ export function useRuntimeStateActions() {
       }
 
       const resolvedParams = resolveNavigationParams(params, getLatestState(), options?.iterationContext)
-
-      dispatchAndSyncState({
-        type: 'navigation/navigate',
-        payload: {
+      const nextHash = createBrowserHashNavigationHash(
+        {
           pageId: page.id,
           params: resolvedParams,
         },
-      })
+        {
+          initialPageId: config.initialPage,
+        },
+      )
+      const currentEntry = selectCurrentNavigationEntry(getLatestState())
+
+      if (
+        currentEntry &&
+        areBrowserHashNavigationEntriesEqual(
+          {
+            pageId: currentEntry.pageId,
+            params: normalizePageParamsAsStrings(currentEntry.params),
+          },
+          {
+            pageId: page.id,
+            params: normalizePageParamsAsStrings(resolvedParams),
+          },
+        )
+      ) {
+        dispatchAndSyncState({
+          type: 'navigation/sync-from-browser',
+          payload: {
+            pageId: currentEntry.pageId,
+            params: currentEntry.params,
+          },
+        })
+        return
+      }
+
+      if (window.location.hash !== nextHash) {
+        dispatchAndSyncState({
+          type: 'navigation/navigate',
+          payload: {
+            pageId: page.id,
+            params: resolvedParams,
+          },
+        })
+        pushBrowserHash(nextHash)
+      }
     },
-    [config.pages, dispatchAndSyncState, getLatestState],
+    [config.initialPage, config.pages, dispatchAndSyncState, getLatestState],
   )
 
   const goBackPage = useCallback(() => {
-    dispatchAndSyncState({
-      type: 'navigation/go-back',
-    })
-  }, [dispatchAndSyncState])
+    const runtimeState = getLatestState()
+
+    if (runtimeState.navigation.currentEntryIndex < 1) {
+      return
+    }
+
+    window.history.back()
+  }, [getLatestState])
 
   const initializeForm = useCallback(
     (formId: string, fields: Record<string, RuntimeFormFieldDefinition>) => {
@@ -538,4 +623,67 @@ function resolveNavigationParams(
 
 function isRuntimePageParamValue(value: unknown): value is RuntimeConfigValue {
   return value === null || typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean'
+}
+
+function createRuntimeStateFromBrowserHash(config: RuntimeConfig) {
+  const parsedHash = parseBrowserHashNavigationHash(window.location.hash, {
+    initialPageId: config.initialPage,
+    knownPageIds: config.pages.map((page) => page.id),
+  })
+  const initialState = createRuntimeState(config)
+  const initialPage = config.pages.find((page) => page.id === parsedHash.entry.pageId)
+
+  return {
+    ...initialState,
+    navigation: {
+      currentPageId: parsedHash.entry.pageId,
+      history: [
+        {
+          entryId: 0,
+          pageId: parsedHash.entry.pageId,
+          params: parsedHash.entry.params,
+        },
+      ],
+      currentEntryIndex: 0,
+      lastError: null,
+    },
+    pageEntry: {
+      entryId: 0,
+      pageId: parsedHash.entry.pageId,
+      params: parsedHash.entry.params,
+      preloadNames: initialPage?.preloads ?? [],
+      status: 'idle',
+    },
+  } satisfies RuntimeState
+}
+
+function replaceBrowserHash(hash: string) {
+  const currentUrl = new URL(window.location.href)
+  currentUrl.hash = hash
+  window.history.replaceState(window.history.state, '', currentUrl)
+}
+
+function pushBrowserHash(hash: string) {
+  const previousUrl = new URL(window.location.href)
+  const nextUrl = new URL(window.location.href)
+  nextUrl.hash = hash
+  window.history.pushState(window.history.state, '', nextUrl)
+
+  window.dispatchEvent(
+    new HashChangeEvent('hashchange', {
+      oldURL: previousUrl.toString(),
+      newURL: nextUrl.toString(),
+    }),
+  )
+}
+
+function normalizePageParamsAsStrings(params: RuntimePageParams) {
+  return Object.entries(params).reduce<Record<string, string>>((normalizedParams, [key, value]) => {
+    if (value == null) {
+      return normalizedParams
+    }
+
+    normalizedParams[key] = String(value)
+    return normalizedParams
+  }, {})
 }

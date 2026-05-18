@@ -40,6 +40,7 @@
         {
           "type": "form",
           "id": "generalRequestForm",
+          "persistOnUnmount": true,
           "children": [
             {
               "type": "container",
@@ -332,6 +333,25 @@
                   "label": "name",
                   "value": "id"
                 }
+              },
+              "queryStateFeedback": {
+                "query": "searchUsers",
+                "states": {
+                  "idle": {
+                    "mode": "hide"
+                  },
+                  "loading": {
+                    "mode": "fallback",
+                    "fallback": [
+                      {
+                        "type": "paragraph",
+                        "props": {
+                          "text": "Obteniendo autores..."
+                        }
+                      }
+                    ]
+                  }
+                }
               }
             },
             {
@@ -362,7 +382,7 @@
                       "idle": {
                         "mode": "show"
                       },
-                      "empty": {
+                      "error": {
                         "mode": "show"
                       },
                       "loading": {
@@ -585,9 +605,7 @@
           "type": "container",
           "props": {
             "direction": "row",
-            "align": "start",
-            "justify": "end",
-            "wrap": "wrap"
+            "justify": "end"
           },
           "children": [
             {
@@ -811,11 +829,6 @@
                   "props": {
                     "text": "Datos de la empresa",
                     "level": 2
-                  },
-                  "visibility": {
-                    "reference": "forms.dynamicForm.clientType",
-                    "operator": "equals",
-                    "value": "empresa"
                   }
                 },
                 {
@@ -828,11 +841,6 @@
                       "minLength": 9,
                       "maxLength": 9
                     }
-                  },
-                  "visibility": {
-                    "reference": "forms.dynamicForm.clientType",
-                    "operator": "equals",
-                    "value": "empresa"
                   }
                 }
               ]

@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { useEffect } from 'react'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { RuntimeConfig } from '../config/runtime-config'
 import { RuntimePage } from '../runtime/runtime-page'
 import {
@@ -9,6 +9,12 @@ import {
   useRuntimeStateActions,
 } from '../runtime/runtime-state/runtime-state-provider'
 import type { RuntimeState } from '../runtime/runtime-state/runtime-state-types'
+
+afterEach(() => {
+  vi.restoreAllMocks()
+  vi.unstubAllGlobals()
+  window.history.replaceState(null, '', window.location.pathname + window.location.search)
+})
 
 function RuntimeStateSnapshot() {
   const state = useRuntimeState()
@@ -465,7 +471,11 @@ describe('Runtime button navigation', () => {
     await waitFor(() => expect(screen.getByTestId('runtime-page')).toHaveAttribute('data-runtime-page-id', 'home'))
     await waitFor(() => expect(readRuntimeState().pageEntry.status).toBe('success'))
 
-    expect(readRuntimeState().navigation.history).toEqual([{ entryId: 0, pageId: 'home', params: {} }])
+    expect(readRuntimeState().navigation.history).toEqual([
+      { entryId: 0, pageId: 'home', params: {} },
+      { entryId: 1, pageId: 'details', params: {} },
+    ])
+    expect(readRuntimeState().navigation.currentEntryIndex).toBe(0)
     expect(fetchMock).toHaveBeenCalledTimes(3)
   })
 
