@@ -30,7 +30,10 @@ const baseConfig: RuntimeConfig = {
     },
     {
       id: 'details',
-      preloads: ['searchUsers', 'loadTeams'],
+      preloads: [
+        { operationName: 'searchUsers', requestParams: {} },
+        { operationName: 'loadTeams', requestParams: {} },
+      ],
       layout: [],
     },
   ],
@@ -80,32 +83,41 @@ const preloadConfig: RuntimeConfig = {
     },
     {
       id: 'home',
-      preloads: ['searchUsers'],
+      preloads: [{ operationName: 'searchUsers', requestParams: {} }],
       layout: [],
     },
     {
       id: 'details',
-      preloads: ['loadTeams'],
+      preloads: [{ operationName: 'loadTeams', requestParams: {} }],
       layout: [],
     },
     {
       id: 'dashboard',
-      preloads: ['searchUsers', 'loadTeams'],
+      preloads: [
+        { operationName: 'searchUsers', requestParams: {} },
+        { operationName: 'loadTeams', requestParams: {} },
+      ],
       layout: [],
     },
     {
       id: 'broken',
-      preloads: ['missingOperation', 'invalidSearch'],
+      preloads: [
+        { operationName: 'missingOperation', requestParams: {} },
+        { operationName: 'invalidSearch', requestParams: {} },
+      ],
       layout: [],
     },
     {
       id: 'profile',
-      preloads: ['selectedUser', 'loadProfile'],
+      preloads: [
+        { operationName: 'selectedUser', requestParams: {} },
+        { operationName: 'loadProfile', requestParams: {} },
+      ],
       layout: [],
     },
     {
       id: 'editor',
-      preloads: ['loadEditor'],
+      preloads: [{ operationName: 'loadEditor', requestParams: {} }],
       layout: [],
     },
     {
@@ -167,6 +179,9 @@ function NavigationFixture() {
       <button type="button" onClick={() => navigateToPage('editor', { userId: 'user-7' })}>
         Go editor user 7
       </button>
+      <button type="button" onClick={() => navigateToPage('editor', { userId: 'user-8' })}>
+        Go editor user 8
+      </button>
       <button type="button" onClick={() => navigateToPage('empty')}>
         Go empty
       </button>
@@ -206,6 +221,23 @@ function SeedRuntimeState({
   }, [formTerm, initializeForm, initializeQuery, selectedUserId, setFormFieldValue, setQuerySuccess])
 
   return null
+}
+
+function QueryMutationHarness() {
+  const { setQuerySuccess } = useRuntimeStateActions()
+
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        setQuerySuccess('selectedUser', {
+          id: 'user-2',
+        })
+      }}
+    >
+      Change selected user
+    </button>
+  )
 }
 
 function ProviderRerenderHarness({
@@ -418,11 +450,13 @@ describe('Runtime page entry shared state', () => {
       status: 'loading',
       data: null,
       error: null,
+      requestSignature: null,
     })
     expect(nextState.queries.loadTeams).toEqual({
       status: 'loading',
       data: null,
       error: null,
+      requestSignature: null,
     })
     expect(nextState.queries.selectedUser).toEqual(seededState.queries.selectedUser)
   })
@@ -492,6 +526,7 @@ describe('Runtime page entry preloads integration', () => {
       status: 'success',
       data: { results: ['Ada'] },
       error: null,
+      requestSignature: '{"endpoint":"/api/users","method":"GET","operationName":"searchUsers"}',
     })
   })
 
@@ -529,6 +564,7 @@ describe('Runtime page entry preloads integration', () => {
       status: 'loading',
       data: null,
       error: null,
+      requestSignature: '{"endpoint":"/api/users","method":"GET","operationName":"searchUsers"}',
     })
 
     resolveUsers?.(createJsonResponse({ results: ['Ada'] }))
@@ -556,7 +592,7 @@ describe('Runtime page entry preloads integration', () => {
       pages: [
         {
           id: 'home',
-          preloads: ['searchUsers'],
+          preloads: [{ operationName: 'searchUsers', requestParams: {} }],
           layout: [
             {
               type: 'paragraph',
@@ -596,12 +632,12 @@ describe('Runtime page entry preloads integration', () => {
     expect(screen.getByText('Users loaded')).toBeInTheDocument()
   })
 
-  it('triggers a new preload entry when navigating to a page and when revisiting it later', async () => {
+  it('does not relaunch a preload when revisiting a page whose effective request signature did not change', async () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(createJsonResponse({ results: ['Ada'] }))
       .mockResolvedValueOnce(createJsonResponse({ teams: ['Runtime'] }))
-      .mockResolvedValueOnce(createJsonResponse({ results: ['Grace'] }))
+      
     vi.stubGlobal('fetch', fetchMock)
 
     renderPreloadHarness()
@@ -615,19 +651,19 @@ describe('Runtime page entry preloads integration', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Go home' }))
     await waitFor(() => expect(readRuntimeState().pageEntry.pageId).toBe('home'))
-    await waitFor(() => expect(readRuntimeState().queries.searchUsers.data).toEqual({ results: ['Grace'] }))
+    await waitFor(() => expect(readRuntimeState().queries.searchUsers.data).toEqual({ results: ['Ada'] }))
 
     expect(fetchMock).toHaveBeenNthCalledWith(1, '/api/users', { method: 'GET' })
     expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/teams', { method: 'GET' })
-    expect(fetchMock).toHaveBeenNthCalledWith(3, '/api/users', { method: 'GET' })
+    expect(fetchMock).toHaveBeenCalledTimes(2)
   })
 
-  it('relaunches preloads when going back to a previously visited page entry', async () => {
+  it('does not relaunch goBack preloads when the visible query already represents the same request signature', async () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(createJsonResponse({ results: ['Ada'] }))
       .mockResolvedValueOnce(createJsonResponse({ teams: ['Runtime'] }))
-      .mockResolvedValueOnce(createJsonResponse({ results: ['Grace'] }))
+      
     vi.stubGlobal('fetch', fetchMock)
 
     renderPreloadHarness()
@@ -643,16 +679,15 @@ describe('Runtime page entry preloads integration', () => {
     await waitFor(() => expect(readRuntimeState().pageEntry.pageId).toBe('home'))
     await waitFor(() => expect(readRuntimeState().pageEntry.status).toBe('success'))
 
-    expect(readRuntimeState().queries.searchUsers.data).toEqual({ results: ['Grace'] })
+    expect(readRuntimeState().queries.searchUsers.data).toEqual({ results: ['Ada'] })
     expect(fetchMock).toHaveBeenNthCalledWith(1, '/api/users', { method: 'GET' })
     expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/teams', { method: 'GET' })
-    expect(fetchMock).toHaveBeenNthCalledWith(3, '/api/users', { method: 'GET' })
+    expect(fetchMock).toHaveBeenCalledTimes(2)
   })
 
-  it('resets the previous preload query data before replaying a goBack entry', async () => {
+  it('keeps the existing query data when going back to a page whose preload signature did not change', async () => {
     let resolveInitialHome: ((response: Response) => void) | null = null
     let resolveDetails: ((response: Response) => void) | null = null
-    let resolveGoBackHome: ((response: Response) => void) | null = null
     const fetchMock = vi.fn((url: string) => {
       if (url === '/api/users' && resolveInitialHome === null) {
         return new Promise<Response>((resolve) => {
@@ -666,9 +701,7 @@ describe('Runtime page entry preloads integration', () => {
         })
       }
 
-      return new Promise<Response>((resolve) => {
-        resolveGoBackHome = resolve
-      })
+      return Promise.resolve(createJsonResponse({ results: ['Unexpected replay'] }))
     })
     vi.stubGlobal('fetch', fetchMock)
 
@@ -690,16 +723,15 @@ describe('Runtime page entry preloads integration', () => {
       pageId: 'home',
       params: {},
       preloadNames: ['searchUsers'],
-      status: 'loading',
+      status: 'success',
     }))
     expect(readRuntimeState().queries.searchUsers).toEqual({
-      status: 'loading',
-      data: null,
+      status: 'success',
+      data: { results: ['Ada'] },
       error: null,
+      requestSignature: '{"endpoint":"/api/users","method":"GET","operationName":"searchUsers"}',
     })
-
-    resolveGoBackHome?.(createJsonResponse({ results: ['Grace'] }))
-    await waitFor(() => expect(readRuntimeState().pageEntry.status).toBe('success'))
+    expect(fetchMock).toHaveBeenCalledTimes(2)
   })
 
   it('does not relaunch the same page entry preloads because queries update or the provider rerenders', async () => {
@@ -720,6 +752,73 @@ describe('Runtime page entry preloads integration', () => {
 
     await waitFor(() => expect(screen.getByTestId('provider-render-count')).toHaveTextContent('1'))
     expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('relaunches a settled page entry preload when a query dependency changes its effective request signature', async () => {
+    let resolveSecondProfile: ((response: Response) => void) | null = null
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(createJsonResponse({ name: 'Ada' }))
+      .mockImplementationOnce(
+        () =>
+          new Promise<Response>((resolve) => {
+            resolveSecondProfile = resolve
+          }),
+      )
+    vi.stubGlobal('fetch', fetchMock)
+
+    render(
+      <RuntimeStateProvider
+        config={{
+          api: {
+            loadProfile: {
+              method: 'GET',
+              endpoint: '/api/profile',
+              query: {
+                userId: 'queries.selectedUser.data.id',
+              },
+            },
+          },
+          initialPage: 'profile',
+          pages: [
+            {
+              id: 'profile',
+              preloads: [{ operationName: 'loadProfile', requestParams: {} }],
+              layout: [],
+            },
+          ],
+        }}
+      >
+        <SeedRuntimeState selectedUserId="user-1" />
+        <QueryMutationHarness />
+        <RuntimeStateSnapshot />
+      </RuntimeStateProvider>,
+    )
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(readRuntimeState().pageEntry.status).toBe('success'))
+    expect(fetchMock).toHaveBeenNthCalledWith(1, '/api/profile?userId=user-1', { method: 'GET' })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Change selected user' }))
+
+    await waitFor(() => expect(readRuntimeState().pageEntry.status).toBe('loading'))
+    expect(readRuntimeState().queries.loadProfile).toEqual({
+      status: 'loading',
+      data: null,
+      error: null,
+      requestSignature: '{"endpoint":"/api/profile","method":"GET","operationName":"loadProfile","query":{"userId":"user-2"}}',
+    })
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2))
+    expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/profile?userId=user-2', { method: 'GET' })
+    resolveSecondProfile?.(createJsonResponse({ name: 'Grace' }))
+    await waitFor(() => expect(readRuntimeState().pageEntry.status).toBe('success'))
+    expect(readRuntimeState().queries.loadProfile).toEqual({
+      status: 'success',
+      data: { name: 'Grace' },
+      error: null,
+      requestSignature: '{"endpoint":"/api/profile","method":"GET","operationName":"loadProfile","query":{"userId":"user-2"}}',
+    })
   })
 
   it('keeps the aggregate idle and emits no network calls for pages without preloads or with an empty list', async () => {
@@ -790,6 +889,7 @@ describe('Runtime page entry preloads integration', () => {
       status: 'success',
       data: { results: ['Ada'] },
       error: null,
+      requestSignature: '{"endpoint":"/api/users","method":"GET","operationName":"searchUsers"}',
     })
     expect(state.queries.loadTeams).toEqual({
       status: 'error',
@@ -798,6 +898,7 @@ describe('Runtime page entry preloads integration', () => {
         code: 'http-error',
         message: 'The api operation "loadTeams" failed with HTTP status 500.',
       },
+      requestSignature: '{"endpoint":"/api/teams","method":"GET","operationName":"loadTeams"}',
     })
   })
 
@@ -820,6 +921,7 @@ describe('Runtime page entry preloads integration', () => {
         code: 'operation-not-found',
         message: 'The api operation "missingOperation" does not exist.',
       },
+      requestSignature: null,
     })
     expect(state.queries.invalidSearch).toEqual({
       status: 'error',
@@ -828,6 +930,7 @@ describe('Runtime page entry preloads integration', () => {
         code: 'request-build-failed',
         message: 'The api operation "invalidSearch" could not resolve "forms.userSearch.missingField" for "query.search".',
       },
+      requestSignature: null,
     })
   })
 
@@ -893,6 +996,7 @@ describe('Runtime page entry preloads integration', () => {
       status: 'success',
       data: { id: 'user-2' },
       error: null,
+      requestSignature: '{"endpoint":"/api/users/current","method":"GET","operationName":"selectedUser"}',
     })
     expect(readRuntimeState().queries.loadProfile).toEqual({
       status: 'error',
@@ -901,14 +1005,15 @@ describe('Runtime page entry preloads integration', () => {
         code: 'request-build-failed',
         message: 'The api operation "loadProfile" could not resolve "queries.selectedUser.data.id" for "query.id".',
       },
+      requestSignature: null,
     })
   })
 
-  it('relaunches preloads when navigating to the same page with different params', async () => {
+  it('relaunches preloads when navigating to the same page with different params that change the effective request signature', async () => {
     const fetchMock = vi
       .fn()
-      .mockResolvedValueOnce(createJsonResponse({ results: ['Ada'] }))
-      .mockResolvedValueOnce(createJsonResponse({ results: ['Grace'] }))
+      .mockResolvedValueOnce(createJsonResponse({ ok: true }))
+      .mockResolvedValueOnce(createJsonResponse({ ok: true }))
     vi.stubGlobal('fetch', fetchMock)
 
     renderPreloadHarness({
@@ -918,17 +1023,17 @@ describe('Runtime page entry preloads integration', () => {
       },
     })
 
-    fireEvent.click(screen.getByRole('button', { name: 'Go home user 1' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Go editor user 7' }))
     await waitFor(() => expect(readRuntimeState().pageEntry.status).toBe('success'))
 
-    fireEvent.click(screen.getByRole('button', { name: 'Go home user 2' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Go editor user 8' }))
     await waitFor(() => expect(readRuntimeState().pageEntry.status).toBe('success'))
 
     expect(fetchMock).toHaveBeenCalledTimes(2)
     expect(readRuntimeState().navigation.history).toEqual([
       { entryId: 0, pageId: 'landing', params: {} },
-      { entryId: 1, pageId: 'home', params: { userId: '1' } },
-      { entryId: 2, pageId: 'home', params: { userId: '2' } },
+      { entryId: 1, pageId: 'editor', params: { userId: 'user-7' } },
+      { entryId: 2, pageId: 'editor', params: { userId: 'user-8' } },
     ])
   })
 
@@ -951,5 +1056,331 @@ describe('Runtime page entry preloads integration', () => {
       preloadNames: ['loadEditor'],
       status: 'success',
     })
+  })
+
+  it('rebuilds preload-driven forms on same-page goBack while keeping persistOnUnmount forms intact', async () => {
+    let resolveAdaInitial: ((response: Response) => void) | null = null
+    let resolveGrace: ((response: Response) => void) | null = null
+    let resolveAdaReplay: ((response: Response) => void) | null = null
+    const fetchMock = vi.fn((url: string) => {
+      if (url === '/api/profile?userId=ada' && resolveAdaInitial === null) {
+        return new Promise<Response>((resolve) => {
+          resolveAdaInitial = resolve
+        })
+      }
+
+      if (url === '/api/profile?userId=grace') {
+        return new Promise<Response>((resolve) => {
+          resolveGrace = resolve
+        })
+      }
+
+      return new Promise<Response>((resolve) => {
+        resolveAdaReplay = resolve
+      })
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    renderRuntimePageWithPreloads({
+      api: {
+        loadProfile: {
+          method: 'GET',
+          endpoint: '/api/profile',
+          query: {
+            userId: 'params.userId',
+          },
+        },
+      },
+      initialPage: 'landing',
+      pages: [
+        {
+          id: 'landing',
+          layout: [
+            {
+              type: 'button',
+              props: {
+                label: 'Edit Ada',
+                action: {
+                  type: 'navigateTo',
+                  pageId: 'editor',
+                  params: {
+                    userId: 'ada',
+                  },
+                },
+              },
+            },
+          ],
+        },
+        {
+          id: 'editor',
+          preloads: [{ operationName: 'loadProfile', requestParams: {} }],
+          layout: [
+            {
+              type: 'form',
+              id: 'profileForm',
+              children: [
+                {
+                  type: 'input',
+                  queryStateFeedback: {
+                    query: 'loadProfile',
+                    states: {
+                      success: {
+                        mode: 'show',
+                      },
+                    },
+                  },
+                  props: {
+                    fieldId: 'name',
+                    label: 'Name',
+                    defaultValue: 'queries.loadProfile.data.name',
+                  },
+                },
+              ],
+            },
+            {
+              type: 'form',
+              id: 'stickyForm',
+              persistOnUnmount: true,
+              children: [
+                {
+                  type: 'input',
+                  props: {
+                    fieldId: 'notes',
+                    label: 'Notes',
+                    defaultValue: '',
+                  },
+                },
+              ],
+            },
+            {
+              type: 'button',
+              props: {
+                label: 'Edit Grace',
+                action: {
+                  type: 'navigateTo',
+                  pageId: 'editor',
+                  params: {
+                    userId: 'grace',
+                  },
+                },
+              },
+            },
+            {
+              type: 'button',
+              props: {
+                label: 'Go back',
+                action: {
+                  type: 'goBack',
+                },
+              },
+            },
+          ],
+        },
+      ],
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit Ada' }))
+    resolveAdaInitial?.(createJsonResponse({ name: 'Ada' }))
+    await waitFor(() => expect(readRuntimeState().pageEntry.status).toBe('success'))
+    await waitFor(() => expect(screen.getByLabelText('Name')).toHaveValue('Ada'))
+
+    fireEvent.change(screen.getByLabelText('Notes'), { target: { value: 'Pinned note' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Edit Grace' }))
+
+    await waitFor(() => expect(readRuntimeState().pageEntry).toMatchObject({
+      pageId: 'editor',
+      params: { userId: 'grace' },
+      status: 'loading',
+    }))
+    expect(screen.getByLabelText('Notes')).toHaveValue('Pinned note')
+    expect(screen.queryByLabelText('Name')).not.toBeInTheDocument()
+    expect(screen.queryByDisplayValue('Ada')).not.toBeInTheDocument()
+
+    resolveGrace?.(createJsonResponse({ name: 'Grace' }))
+    await waitFor(() => expect(readRuntimeState().pageEntry.status).toBe('success'))
+    await waitFor(() => expect(screen.getByLabelText('Name')).toHaveValue('Grace'))
+    expect(screen.getByLabelText('Notes')).toHaveValue('Pinned note')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Go back' }))
+
+    await waitFor(() => expect(readRuntimeState().pageEntry).toMatchObject({
+      pageId: 'editor',
+      params: { userId: 'ada' },
+      status: 'loading',
+    }))
+    expect(readRuntimeState().queries.loadProfile).toEqual({
+      status: 'loading',
+      data: null,
+      error: null,
+      requestSignature: '{"endpoint":"/api/profile","method":"GET","operationName":"loadProfile","query":{"userId":"ada"}}',
+    })
+    expect(screen.getByLabelText('Notes')).toHaveValue('Pinned note')
+    expect(screen.queryByLabelText('Name')).not.toBeInTheDocument()
+    expect(screen.queryByDisplayValue('Grace')).not.toBeInTheDocument()
+
+    resolveAdaReplay?.(createJsonResponse({ name: 'Ada replay' }))
+    await waitFor(() => expect(readRuntimeState().pageEntry.status).toBe('success'))
+    await waitFor(() => expect(screen.getByLabelText('Name')).toHaveValue('Ada replay'))
+    expect(screen.getByLabelText('Notes')).toHaveValue('Pinned note')
+    expect(readRuntimeState().forms.profileForm.name.value).toBe('Ada replay')
+    expect(readRuntimeState().forms.stickyForm.notes.value).toBe('Pinned note')
+  })
+
+  it('keeps reset, validation, and submit aligned with the reconstructed form state after same-page preload invalidation', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(createJsonResponse({ name: 'Ada' }))
+      .mockResolvedValueOnce(createJsonResponse({ name: 'Grace' }))
+      .mockResolvedValueOnce(createJsonResponse({ ok: true }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    renderRuntimePageWithPreloads({
+      api: {
+        loadProfile: {
+          method: 'GET',
+          endpoint: '/api/profile',
+          query: {
+            userId: 'params.userId',
+          },
+        },
+        saveProfile: {
+          method: 'POST',
+          endpoint: '/api/profile',
+          body: {
+            userId: 'params.userId',
+            name: 'forms.profileForm.name',
+          },
+        },
+      },
+      initialPage: 'landing',
+      pages: [
+        {
+          id: 'landing',
+          layout: [
+            {
+              type: 'button',
+              props: {
+                label: 'Edit Ada',
+                action: {
+                  type: 'navigateTo',
+                  pageId: 'editor',
+                  params: {
+                    userId: 'ada',
+                  },
+                },
+              },
+            },
+          ],
+        },
+        {
+          id: 'editor',
+          preloads: [{ operationName: 'loadProfile', requestParams: {} }],
+          layout: [
+            {
+              type: 'form',
+              id: 'profileForm',
+              submitAction: {
+                type: 'executeOperation',
+                operationName: 'saveProfile',
+              },
+              children: [
+                {
+                  type: 'input',
+                  props: {
+                    fieldId: 'name',
+                    label: 'Name',
+                    defaultValue: 'queries.loadProfile.data.name',
+                    validations: {
+                      required: {
+                        value: true,
+                      },
+                    },
+                  },
+                },
+                {
+                  type: 'button',
+                  props: {
+                    label: 'Submit profile',
+                  },
+                },
+              ],
+            },
+            {
+              type: 'button',
+              props: {
+                label: 'Reset profile form',
+                action: {
+                  type: 'resetForm',
+                  formId: 'profileForm',
+                },
+              },
+            },
+            {
+              type: 'button',
+              props: {
+                label: 'Edit Grace',
+                action: {
+                  type: 'navigateTo',
+                  pageId: 'editor',
+                  params: {
+                    userId: 'grace',
+                  },
+                },
+              },
+            },
+          ],
+        },
+      ],
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit Ada' }))
+    await waitFor(() => expect(readRuntimeState().pageEntry.status).toBe('success'))
+    await waitFor(() => expect(screen.getByRole('textbox', { name: /^Name/ })).toHaveValue('Ada'))
+
+    fireEvent.change(screen.getByRole('textbox', { name: /^Name/ }), { target: { value: 'Manual Ada' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Edit Grace' }))
+
+    await waitFor(() => expect(readRuntimeState().pageEntry).toMatchObject({
+      pageId: 'editor',
+      params: { userId: 'grace' },
+      status: 'success',
+    }))
+    await waitFor(() => expect(screen.getByRole('textbox', { name: /^Name/ })).toHaveValue('Grace'))
+    expect(readRuntimeState().forms.profileForm.name.value).toBe('Grace')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Reset profile form' }))
+    await waitFor(() => expect(screen.getByRole('textbox', { name: /^Name/ })).toHaveValue('Grace'))
+    expect(readRuntimeState().forms.profileForm.name.value).toBe('Grace')
+
+    fireEvent.change(screen.getByRole('textbox', { name: /^Name/ }), { target: { value: '' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Submit profile' }))
+
+    await waitFor(() => expect(screen.getByText('Required')).toBeInTheDocument())
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+
+    fireEvent.change(screen.getByRole('textbox', { name: /^Name/ }), { target: { value: 'Grace Updated' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Submit profile' }))
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3))
+    expect(fetchMock.mock.calls[2]?.[0]).toBe('/api/profile')
+    expect(fetchMock.mock.calls[2]?.[1]).toMatchObject({
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        userId: 'grace',
+        name: 'Grace Updated',
+      }),
+    })
+    await waitFor(() =>
+      expect(readRuntimeState().queries.saveProfile).toEqual({
+        status: 'success',
+        data: { ok: true },
+        error: null,
+        requestSignature:
+          '{"body":{"name":"Grace Updated","userId":"grace"},"endpoint":"/api/profile","method":"POST","operationName":"saveProfile"}',
+      }),
+    )
   })
 })

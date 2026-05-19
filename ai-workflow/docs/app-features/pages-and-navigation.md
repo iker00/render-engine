@@ -37,11 +37,13 @@ Definir cómo se organiza el catálogo de páginas del runtime y cuál es el alc
 - Si se intenta navegar con `navigateTo` a una página inexistente, el runtime conserva la página anterior y guarda un error recuperable `page-not-found`.
 - Si el usuario entra con un hash inválido o con una página inexistente en la URL, el runtime degrada a `initialPage` y normaliza el hash a `#/`.
 - Cada entrada a una página con `preloads` dispara una nueva tanda automática de operaciones, también al volver a una página ya visitada o al reentrar en la misma página con params distintos.
-- Esa nueva tanda prepara primero la `pageEntry` activa y resetea solo sus queries precargadas antes del primer render útil de la entrada reactivada.
+- Cada preload se evalúa hoy por su request efectiva resuelta, no solo por `pageId` ni por `operationName`.
+- Esa request efectiva reutiliza la misma semántica de composición que `executeOperation`, puede depender de `params.*`, `forms.*` y `queries.*`, y se compara mediante una firma estable derivada del request final.
+- Esa nueva tanda prepara primero la `pageEntry` activa y resetea solo las queries cuyos preloads realmente necesitan relanzarse antes del primer render útil de la entrada reactivada.
 - Durante esa preparación, la nueva entrada ve esas queries ya limpias y en `loading`, sin un paso visible intermedio por `idle` ni reutilización transitoria del `data` de otra entrada.
 - La misma política se reaplica también cuando `goBack` reactiva una entrada histórica con `preloads`.
 - La unidad observable de reentrada es `pageEntry`, que refleja `entryId`, `pageId`, `params`, `preloadNames` y el estado agregado `idle | loading | success | error`.
-- La misma entrada de página no relanza sus `preloads` por rerenders del provider ni por cambios internos de estado mientras `pageEntry.entryId` no cambie.
+- La misma entrada de página no relanza sus `preloads` por mero rerender del provider, pero sí puede reevaluarlos y relanzar solo los afectados si cambia la firma efectiva de alguno de ellos dentro de esa entrada visible.
 - Declarar varias páginas ya permite navegación controlada desde el runtime tanto por acciones imperativas internas como por `button.props.action`, con deep link por hash y soporte para atrás/adelante del navegador.
 
 ## Parámetros de navegación
@@ -60,5 +62,5 @@ Definir cómo se organiza el catálogo de páginas del runtime y cuál es el alc
 ## Límites de v1
 - no hay routing por `pathname`
 - no hay subrutas ni segmentos dinámicos
-- no existen políticas alternativas de reentrada, caché, secuencialidad ni dependencias entre `preloads`; la política vigente es carga fresca por `pageEntry`
+- no existen políticas alternativas de reentrada, caché histórica por firma, secuencialidad ni dependencias entre `preloads`; la política vigente sigue siendo carga fresca selectiva por firma de request dentro de `pageEntry`
 - no existen todavía `routeParams`

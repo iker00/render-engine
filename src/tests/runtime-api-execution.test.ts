@@ -654,6 +654,217 @@ describe('Runtime api execution', () => {
     })
   })
 
+  it('produces a stable request signature for functionally equivalent requests regardless of object key order', () => {
+    const firstRequest = buildRuntimeApiRequest({
+      config: {
+        ...runtimeConfig,
+        api: {
+          mergeRequest: {
+            method: 'POST',
+            endpoint: '/api/users/search',
+            query: {
+              search: 'forms.userSearch.term',
+              page: 1,
+            },
+            headers: {
+              authorization: 'base-token',
+              accept: 'application/json',
+            },
+            body: {
+              filters: {
+                active: false,
+                role: 'editor',
+              },
+            },
+          },
+        },
+      },
+      operationName: 'mergeRequest',
+      state: runtimeState,
+      requestParams: {
+        query: {
+          active: 'forms.userSearch.active',
+          page: 'forms.userSearch.page',
+        },
+        headers: {
+          'x-trace-id': 'queries.selectedUser.data.id',
+          authorization: 'override-token',
+        },
+        body: {
+          profile: {
+            nickname: 'queries.selectedUser.data.profile.nickname',
+          },
+          filters: {
+            active: 'forms.userSearch.active',
+          },
+        },
+      },
+    })
+
+    const secondRequest = buildRuntimeApiRequest({
+      config: {
+        ...runtimeConfig,
+        api: {
+          mergeRequest: {
+            method: 'POST',
+            endpoint: '/api/users/search',
+            query: {
+              page: 1,
+              search: 'forms.userSearch.term',
+            },
+            headers: {
+              accept: 'application/json',
+              authorization: 'base-token',
+            },
+            body: {
+              filters: {
+                role: 'editor',
+                active: false,
+              },
+            },
+          },
+        },
+      },
+      operationName: 'mergeRequest',
+      state: runtimeState,
+      requestParams: {
+        query: {
+          page: 'forms.userSearch.page',
+          active: 'forms.userSearch.active',
+        },
+        headers: {
+          authorization: 'override-token',
+          'x-trace-id': 'queries.selectedUser.data.id',
+        },
+        body: {
+          filters: {
+            active: 'forms.userSearch.active',
+          },
+          profile: {
+            nickname: 'queries.selectedUser.data.profile.nickname',
+          },
+        },
+      },
+    })
+
+    expect(firstRequest.status).toBe('ready')
+    expect(secondRequest.status).toBe('ready')
+
+    if (firstRequest.status !== 'ready' || secondRequest.status !== 'ready') {
+      return
+    }
+
+    expect(firstRequest.request.requestSignature).toBe(secondRequest.request.requestSignature)
+  })
+
+  it('changes the request signature when only query headers or body change', () => {
+    const baseQueryRequest = buildRuntimeApiRequest({
+      config: runtimeConfig,
+      operationName: 'searchUsers',
+      state: runtimeState,
+    })
+
+    const queryRequest = buildRuntimeApiRequest({
+      config: runtimeConfig,
+      operationName: 'searchUsers',
+      state: runtimeState,
+      requestParams: {
+        query: {
+          search: 'Grace',
+        },
+      },
+    })
+
+    const headersRequest = buildRuntimeApiRequest({
+      config: {
+        ...runtimeConfig,
+        api: {
+          explicitOverrideContentType: {
+            method: 'POST',
+            endpoint: '/api/users',
+            body: {
+              active: true,
+            },
+          },
+        },
+      },
+      operationName: 'explicitOverrideContentType',
+      state: runtimeState,
+      requestParams: {
+        headers: {
+          authorization: 'token-a',
+        },
+      },
+    })
+
+    const changedHeadersRequest = buildRuntimeApiRequest({
+      config: {
+        ...runtimeConfig,
+        api: {
+          explicitOverrideContentType: {
+            method: 'POST',
+            endpoint: '/api/users',
+            body: {
+              active: true,
+            },
+          },
+        },
+      },
+      operationName: 'explicitOverrideContentType',
+      state: runtimeState,
+      requestParams: {
+        headers: {
+          authorization: 'token-b',
+        },
+      },
+    })
+
+    const bodyRequest = buildRuntimeApiRequest({
+      config: runtimeConfig,
+      operationName: 'createUser',
+      state: runtimeState,
+    })
+
+    const changedBodyRequest = buildRuntimeApiRequest({
+      config: runtimeConfig,
+      operationName: 'createUser',
+      state: {
+        ...runtimeState,
+        forms: {
+          ...runtimeState.forms,
+          userSearch: {
+            ...runtimeState.forms.userSearch,
+            term: {
+              ...runtimeState.forms.userSearch.term,
+              value: 'Grace',
+            },
+          },
+        },
+      },
+    })
+
+    expect(queryRequest.status).toBe('ready')
+    expect(headersRequest.status).toBe('ready')
+    expect(changedHeadersRequest.status).toBe('ready')
+    expect(bodyRequest.status).toBe('ready')
+    expect(changedBodyRequest.status).toBe('ready')
+
+    if (
+      baseQueryRequest.status !== 'ready' ||
+      queryRequest.status !== 'ready' ||
+      headersRequest.status !== 'ready' ||
+      changedHeadersRequest.status !== 'ready' ||
+      bodyRequest.status !== 'ready' ||
+      changedBodyRequest.status !== 'ready'
+    ) {
+      return
+    }
+
+    expect(queryRequest.request.requestSignature).not.toBe(baseQueryRequest.request.requestSignature)
+    expect(headersRequest.request.requestSignature).not.toBe(changedHeadersRequest.request.requestSignature)
+    expect(bodyRequest.request.requestSignature).not.toBe(changedBodyRequest.request.requestSignature)
+  })
+
   it('replaces the whole body when either layer uses a non-object root value', () => {
     expect(
       buildRuntimeApiRequest({

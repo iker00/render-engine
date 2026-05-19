@@ -11,7 +11,7 @@ Alcance efectivo de esta referencia:
 
 Fuente de referencia:
 - imagen proporcionada por el usuario en el hilo
-- copia existente en el repositorio: `ai-workflow/sede.png`
+- copia existente en el repositorio: `ai-workflow/design/sede.png`
 
 ## Intención visual
 - Producto institucional y confiable.

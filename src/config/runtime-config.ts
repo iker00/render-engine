@@ -11,6 +11,7 @@ export type {
   RuntimeApiQuery,
   RuntimeApiQueryValue,
   RuntimeApiRequestParams,
+  RuntimePreloadConfig,
   ContainerLayoutNode,
   ContainerAlign,
   ContainerJustify,

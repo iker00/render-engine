@@ -10,10 +10,7 @@
     },
     "getPost": {
       "method": "GET",
-      "endpoint": "https://jsonplaceholder.typicode.com/posts",
-      "query": {
-        "id": "params.postId"
-      }
+      "endpoint": "https://jsonplaceholder.typicode.com/posts"
     },
     "getComments": {
       "method": "GET",
@@ -291,7 +288,9 @@
     {
       "id": "search-posts",
       "preloads": [
-        "searchUsers"
+        {
+          "searchUsers": {}
+        }
       ],
       "layout": [
         {
@@ -494,7 +493,16 @@
     {
       "id": "post-form",
       "preloads": [
-        "getPost"
+        {
+          "getPost": {
+            "query": {
+              "id": "params.postId"
+            }
+          }
+        },
+        {
+          "searchUsers": {}
+        }
       ],
       "layout": [
         {
@@ -502,7 +510,8 @@
           "props": {
             "label": "Volver",
             "action": {
-              "type": "goBack"
+              "type": "navigateTo",
+              "pageId": "search-posts"
             }
           }
         },

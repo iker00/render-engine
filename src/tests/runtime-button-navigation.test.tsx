@@ -50,7 +50,7 @@ const navigationConfig: RuntimeConfig = {
   pages: [
     {
       id: 'home',
-      preloads: ['loadHome'],
+      preloads: [{ operationName: 'loadHome', requestParams: {} }],
       layout: [
         {
           type: 'heading',
@@ -83,7 +83,7 @@ const navigationConfig: RuntimeConfig = {
     },
     {
       id: 'details',
-      preloads: ['loadDetails'],
+      preloads: [{ operationName: 'loadDetails', requestParams: {} }],
       layout: [
         {
           type: 'heading',
@@ -455,7 +455,6 @@ describe('Runtime button navigation', () => {
       .fn()
       .mockResolvedValueOnce(createJsonResponse({ home: true }))
       .mockResolvedValueOnce(createJsonResponse({ details: true }))
-      .mockResolvedValueOnce(createJsonResponse({ home: 'again' }))
     vi.stubGlobal('fetch', fetchMock)
 
     renderRuntime()
@@ -476,13 +475,12 @@ describe('Runtime button navigation', () => {
       { entryId: 1, pageId: 'details', params: {} },
     ])
     expect(readRuntimeState().navigation.currentEntryIndex).toBe(0)
-    expect(fetchMock).toHaveBeenCalledTimes(3)
+    expect(fetchMock).toHaveBeenCalledTimes(2)
   })
 
-  it('restarts goBack preloads from a clean loading state instead of keeping the previous query data', async () => {
+  it('keeps the previous query data when goBack returns to a page whose preload signature did not change', async () => {
     let resolveInitialHome: ((response: Response) => void) | null = null
     let resolveDetails: ((response: Response) => void) | null = null
-    let resolveReplayHome: ((response: Response) => void) | null = null
     const fetchMock = vi.fn((url: string) => {
       if (url === '/api/home' && resolveInitialHome === null) {
         return new Promise<Response>((resolve) => {
@@ -496,9 +494,7 @@ describe('Runtime button navigation', () => {
         })
       }
 
-      return new Promise<Response>((resolve) => {
-        resolveReplayHome = resolve
-      })
+      return Promise.resolve(createJsonResponse({ home: 'unexpected replay' }))
     })
     vi.stubGlobal('fetch', fetchMock)
 
@@ -510,6 +506,7 @@ describe('Runtime button navigation', () => {
       status: 'success',
       data: { home: true },
       error: null,
+      requestSignature: '{"endpoint":"/api/home","method":"GET","operationName":"loadHome"}',
     })
 
     fireEvent.click(screen.getByRole('button', { name: 'Open details' }))
@@ -519,15 +516,14 @@ describe('Runtime button navigation', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Back home' }))
 
     await waitFor(() => expect(screen.getByTestId('runtime-page')).toHaveAttribute('data-runtime-page-id', 'home'))
-    await waitFor(() => expect(readRuntimeState().pageEntry.status).toBe('loading'))
-    expect(readRuntimeState().queries.loadHome).toEqual({
-      status: 'loading',
-      data: null,
-      error: null,
-    })
-
-    resolveReplayHome?.(createJsonResponse({ home: 'again' }))
     await waitFor(() => expect(readRuntimeState().pageEntry.status).toBe('success'))
+    expect(readRuntimeState().queries.loadHome).toEqual({
+      status: 'success',
+      data: { home: true },
+      error: null,
+      requestSignature: '{"endpoint":"/api/home","method":"GET","operationName":"loadHome"}',
+    })
+    expect(fetchMock).toHaveBeenCalledTimes(2)
   })
 
   it('keeps navigation deterministic under successive button activations', async () => {
@@ -675,6 +671,114 @@ describe('Runtime button navigation', () => {
     expect(readRuntimeState().forms.profileForm.name.value).toBe('Grace')
   })
 
+  it('rebuilds params-based form defaults when navigating to a different page entry on the same page', async () => {
+    renderRuntime({
+      api: {},
+      initialPage: 'details',
+      pages: [
+        {
+          id: 'details',
+          layout: [
+            {
+              type: 'form',
+              id: 'profileForm',
+              children: [
+                {
+                  type: 'input',
+                  props: {
+                    fieldId: 'name',
+                    label: 'Name',
+                    defaultValue: 'params.userId',
+                  },
+                },
+              ],
+            },
+            {
+              type: 'button',
+              props: {
+                label: 'Edit Ada',
+                action: {
+                  type: 'navigateTo',
+                  pageId: 'details',
+                  params: {
+                    userId: 'Ada',
+                  },
+                },
+              },
+            },
+            {
+              type: 'button',
+              props: {
+                label: 'Edit Grace',
+                action: {
+                  type: 'navigateTo',
+                  pageId: 'details',
+                  params: {
+                    userId: 'Grace',
+                  },
+                },
+              },
+            },
+            {
+              type: 'button',
+              props: {
+                label: 'Stay on Grace',
+                action: {
+                  type: 'navigateTo',
+                  pageId: 'details',
+                  params: {
+                    userId: 'Grace',
+                    mode: 'edit',
+                  },
+                },
+              },
+            },
+            {
+              type: 'button',
+              props: {
+                label: 'Stay on Grace reordered',
+                action: {
+                  type: 'navigateTo',
+                  pageId: 'details',
+                  params: {
+                    mode: 'edit',
+                    userId: 'Grace',
+                  },
+                },
+              },
+            },
+          ],
+        },
+      ],
+    })
+
+    expect(screen.getByLabelText('Name')).toHaveValue('')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit Ada' }))
+    await waitFor(() => expect(screen.getByLabelText('Name')).toHaveValue('Ada'))
+
+    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Manual Ada' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Edit Grace' }))
+
+    await waitFor(() => expect(screen.getByLabelText('Name')).toHaveValue('Grace'))
+    expect(readRuntimeState().forms.profileForm.name.value).toBe('Grace')
+
+    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Manual Grace' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Stay on Grace' }))
+    await waitFor(() => expect(readRuntimeState().pageEntry.params).toEqual({ mode: 'edit', userId: 'Grace' }))
+
+    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Manual Grace retained' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Stay on Grace reordered' }))
+
+    expect(screen.getByLabelText('Name')).toHaveValue('Manual Grace retained')
+    expect(readRuntimeState().navigation.history).toEqual([
+      { entryId: 0, pageId: 'details', params: {} },
+      { entryId: 1, pageId: 'details', params: { userId: 'Ada' } },
+      { entryId: 2, pageId: 'details', params: { userId: 'Grace' } },
+      { entryId: 3, pageId: 'details', params: { mode: 'edit', userId: 'Grace' } },
+    ])
+  })
+
   it('reenters a preload-driven page without rendering stale query text or stale query-based default values', async () => {
     let resolveAdaProfile: ((response: Response) => void) | null = null
     let resolveGraceProfile: ((response: Response) => void) | null = null
@@ -736,7 +840,7 @@ describe('Runtime button navigation', () => {
         },
         {
           id: 'details',
-          preloads: ['loadProfile'],
+          preloads: [{ operationName: 'loadProfile', requestParams: {} }],
           layout: [
             {
               type: 'paragraph',
@@ -870,7 +974,7 @@ describe('Runtime button navigation', () => {
         },
         {
           id: 'details',
-          preloads: ['loadProfile'],
+          preloads: [{ operationName: 'loadProfile', requestParams: {} }],
           layout: [
             {
               type: 'form',

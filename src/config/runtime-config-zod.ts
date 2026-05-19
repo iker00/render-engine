@@ -39,7 +39,7 @@ export const runtimeConfigShellSchema = z
 export const runtimePageShellSchema = z
   .object({
     id: nonEmptyStringSchema,
-    preloads: z.array(nonEmptyStringSchema).optional(),
+    preloads: z.array(z.unknown()).optional(),
     layout: z.array(z.unknown()),
   })
   .strip()

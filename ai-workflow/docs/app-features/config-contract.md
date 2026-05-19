@@ -29,10 +29,18 @@ Reglas funcionales vigentes:
 ## Modelo de página
 Cada página debe incluir:
 - `id`: string no vacío y único dentro de `pages`
-- `preloads`: array opcional y ordenado de nombres de operación declarados en `api`
+- `preloads`: array opcional y ordenado de objetos declarativos de una sola clave
 - `layout`: array ordenado obligatorio de elementos declarativos
 
 La página ya no depende de `title` ni `description` fuera del árbol `layout`.
+
+Contrato estable de `preloads`:
+- cada entrada debe ser un objeto con exactamente una clave no vacía cuyo nombre actúa como `operationName`
+- el valor de esa clave debe ser `{}` o un objeto con `query`, `body` y/o `headers`
+- `query`, `body` y `headers` reutilizan exactamente el mismo contrato de `RuntimeApiRequestParams` ya soportado por `executeOperation`
+- el runtime normaliza internamente cada entrada a `{ operationName, requestParams }`
+- dentro de una misma página no se admite repetir el mismo `operationName`, aunque las requests declaradas fueran distintas
+- el shape histórico `preloads: ["loadUsers"]` ya no forma parte del contrato soportado y se rechaza antes del render
 
 ## Shape del layout
 `layout` ya no usa un nodo raíz artificial. La colección puede empezar directamente con varios bloques hermanos y su orden define el orden visible de renderizado.
@@ -352,7 +360,7 @@ La frontera estable de esta validación queda organizada así:
 - `visibility` ya cubre show/hide simple por valor runtime, incluido `item.*` dentro de `repeater`, pero no abre branching, `fallback`, arrays de reglas ni expresiones compuestas.
 - `list`, `select`, `radioGroup` y `checkboxGroup` ya pueden reutilizar datos de `queries.*` y, dentro de `repeater`, datos de `item.*` como colecciones, pero siguen fuera de alcance filtros cliente, ordenación declarativa, transformaciones arbitrarias, búsqueda remota y carga incremental.
 - No hay todavía validaciones declarativas avanzadas (`min`, `max`, patrones o validaciones cruzadas).
-- `preloads` solo admite una lista plana de strings; no hay condiciones, prioridades, secuencialidad, dependencias ni políticas de caché.
+- `preloads` ya puede declarar `query`, `body` y `headers` por entrada, pero no admite condiciones, prioridades, secuencialidad, dependencias, múltiples instancias simultáneas del mismo `operationName` ni una caché histórica reutilizable por firma.
 - No hay interpolación compleja dentro de strings.
 - No hay sistema de plugins para componentes externos.
 - No hay soporte para nodos distintos de `container`, `repeater`, `heading`, `paragraph`, `list`, `button`, `form`, `input`, `textarea`, `select`, `radioGroup` y `checkboxGroup`.

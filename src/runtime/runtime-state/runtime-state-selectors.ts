@@ -54,6 +54,10 @@ export function selectQueryState(state: RuntimeState, queryName: string) {
   return state.queries[queryName] ?? null
 }
 
+export function selectQueryRequestSignature(state: RuntimeState, queryName: string) {
+  return selectQueryState(state, queryName)?.requestSignature ?? null
+}
+
 export function selectQueryVisibleState(state: RuntimeState, queryName: string) {
   return deriveQueryVisibleState(selectQueryState(state, queryName))
 }

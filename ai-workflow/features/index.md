@@ -15,9 +15,10 @@ Cada feature nueva debería usar, cuando aplique:
 La política completa está en [`../docs/workflow.md`](../docs/workflow.md).
 
 ## Planificadas
-- Ninguna actualmente.
+- `0030-form-page-entry-invalidation`: cuando cambia la `pageEntry`, un formulario con `persistOnUnmount: false` debe invalidar su estado aunque la `pageId` no cambie, para reconstruir `defaultValue` y demás estado inicial con los `params` y `preloads` de la nueva entrada.
 
 ## Completadas
+- `0031-request-aware-preloads`: `preloads` ya se declara como lista de objetos por `operationName`, puede aportar `query`, `body` y `headers` con la misma semántica que `executeOperation`, deriva una firma estable de request desde `src/queries/` y relanza solo las cargas automáticas cuya request efectiva cambió, sin introducir todavía caché histórica ni varias instancias simultáneas del mismo `operationName`.
 - `0029-browser-hash-navigation`: la navegación del runtime ya se sincroniza con el hash del navegador usando `#/pageId` y `#/?query...` para la home, reutiliza `params.*` para leer query params string desde la URL, normaliza hashes inválidos a `#/` y delega atrás/adelante en el historial del navegador manteniendo `pageEntry` y la semántica estable de `preloads`.
 - `0028-form-container-alignment`: los `container` dentro de `form` ya no se renderizan con sangrado lateral ni márgenes negativos implícitos; conservan la superficie visual de sección cuando actúan como bloques verticales o usan `columns`, y los `direction: row` sin `columns` quedan como layouts lineales `plain`.
 - `0027-expanded-container-layout-controls`: `container` ya soporta `gap` con default `md` y aliases `sm | md | lg | xl | 2xl`, distribución declarativa de `1` a `12` columnas, `align`, `justify` y `wrap`, con precedencia de `columns` sobre `direction`, rechazo explícito de `columns + wrap` y compatibilidad mantenida con `gap` arbitrario como escape hatch acotado.

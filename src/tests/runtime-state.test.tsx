@@ -784,6 +784,7 @@ describe('Runtime shared state store', () => {
           status: 'success',
           data: ['Ada'],
           error: null,
+          requestSignature: null,
         },
       },
     }
@@ -799,6 +800,7 @@ describe('Runtime shared state store', () => {
       status: 'loading',
       data: ['Ada'],
       error: null,
+      requestSignature: null,
     })
 
     const errorState = runtimeStateReducer(loadingState, {
@@ -819,6 +821,7 @@ describe('Runtime shared state store', () => {
         code: 'network',
         message: 'Could not load users.',
       },
+      requestSignature: null,
     })
 
     const successState = runtimeStateReducer(errorState, {
@@ -833,6 +836,7 @@ describe('Runtime shared state store', () => {
       status: 'success',
       data: ['Grace'],
       error: null,
+      requestSignature: null,
     })
 
     const resetState = runtimeStateReducer(successState, {
@@ -846,7 +850,57 @@ describe('Runtime shared state store', () => {
       status: 'idle',
       data: null,
       error: null,
+      requestSignature: null,
     })
+  })
+
+  it('persists the effective request signature across loading success and error, and clears it on reset', () => {
+    const signature = '{"endpoint":"/api/users","method":"GET","operationName":"searchUsers","query":{"search":"Ada"}}'
+    const baseState = createRuntimeState(runtimeConfig)
+
+    const loadingState = runtimeStateReducer(baseState, {
+      type: 'queries/set-loading',
+      payload: {
+        queryName: 'searchUsers',
+        requestSignature: signature,
+      },
+    })
+
+    expect(loadingState.queries.searchUsers.requestSignature).toBe(signature)
+
+    const successState = runtimeStateReducer(loadingState, {
+      type: 'queries/set-success',
+      payload: {
+        queryName: 'searchUsers',
+        data: ['Ada'],
+        requestSignature: signature,
+      },
+    })
+
+    expect(successState.queries.searchUsers.requestSignature).toBe(signature)
+
+    const errorState = runtimeStateReducer(successState, {
+      type: 'queries/set-error',
+      payload: {
+        queryName: 'searchUsers',
+        error: {
+          code: 'http-error',
+          message: 'Boom',
+        },
+        requestSignature: signature,
+      },
+    })
+
+    expect(errorState.queries.searchUsers.requestSignature).toBe(signature)
+
+    const resetState = runtimeStateReducer(errorState, {
+      type: 'queries/reset',
+      payload: {
+        queryName: 'searchUsers',
+      },
+    })
+
+    expect(resetState.queries.searchUsers.requestSignature).toBeNull()
   })
 
   it('supports goBack after revisiting a page and returns to the previous entry in history order', async () => {
@@ -1105,6 +1159,7 @@ describe('Runtime shared state store', () => {
       status: 'success',
       data: ['Ada', 'Grace'],
       error: null,
+      requestSignature: null,
     })
     expect(runtimeState.forms.userSearch).toBeUndefined()
     expect(runtimeState.forms).toEqual({
@@ -1199,7 +1254,7 @@ describe('Runtime shared state store', () => {
     )
 
     expect(screen.getByTestId('runtime-state')).toHaveTextContent(
-      '"queries":{"searchUsers":{"status":"idle","data":null,"error":null}}',
+      '"queries":{"searchUsers":{"status":"idle","data":null,"error":null,"requestSignature":null}}',
     )
   })
 
@@ -1215,7 +1270,7 @@ describe('Runtime shared state store', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Reload query' }))
 
     expect(screen.getByTestId('runtime-state')).toHaveTextContent(
-      '"queries":{"searchUsers":{"status":"loading","data":["Ada","Grace"],"error":null}}',
+      '"queries":{"searchUsers":{"status":"loading","data":["Ada","Grace"],"error":null,"requestSignature":null}}',
     )
   })
 
@@ -1232,7 +1287,7 @@ describe('Runtime shared state store', () => {
 
     expect(screen.getByTestId('runtime-page')).toHaveAttribute('data-runtime-page-id', 'home')
     expect(screen.getByTestId('runtime-state')).toHaveTextContent(
-      '"queries":{"searchUsers":{"status":"error","data":null,"error":{"code":"network","message":"Could not load users."}}}',
+      '"queries":{"searchUsers":{"status":"error","data":null,"error":{"code":"network","message":"Could not load users."},"requestSignature":null}}',
     )
   })
 
@@ -1259,6 +1314,7 @@ describe('Runtime shared state store', () => {
           status: 'success' as const,
           data: ['Ada', 'Grace'],
           error: null,
+          requestSignature: null,
         },
       },
       pageEntry: {
@@ -1522,7 +1578,7 @@ describe('Runtime shared state store', () => {
       expect(screen.getByTestId('runtime-page')).toHaveAttribute('data-runtime-page-id', 'details'),
     )
     expect(screen.getByTestId('runtime-state')).toHaveTextContent(
-      '"queries":{"searchUsers":{"status":"success","data":["Ada","Grace"],"error":null}}',
+      '"queries":{"searchUsers":{"status":"success","data":["Ada","Grace"],"error":null,"requestSignature":null}}',
     )
   })
 
@@ -1546,9 +1602,14 @@ describe('Runtime shared state store', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Execute operation' }))
 
     await waitFor(() =>
-      expect(screen.getByTestId('runtime-state')).toHaveTextContent(
-        '"queries":{"searchUsers":{"status":"success","data":{"results":["Ada","Grace"]},"error":null}}',
-      ),
+      expect(readRuntimeStateSnapshot('runtime-state').queries.searchUsers).toMatchObject({
+        status: 'success',
+        data: { results: ['Ada', 'Grace'] },
+        error: null,
+      }),
+    )
+    expect(readRuntimeStateSnapshot('runtime-state').queries.searchUsers.requestSignature).toBe(
+      '{"endpoint":"/api/users","method":"GET","operationName":"searchUsers","query":{"search":"Ada"}}',
     )
   })
 
@@ -1570,8 +1631,13 @@ describe('Runtime shared state store', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Seed prior query success' }))
     fireEvent.click(screen.getByRole('button', { name: 'Execute operation' }))
 
-    expect(screen.getByTestId('runtime-state')).toHaveTextContent(
-      '"queries":{"searchUsers":{"status":"loading","data":["Ada"],"error":null}}',
+    expect(readRuntimeStateSnapshot('runtime-state').queries.searchUsers).toMatchObject({
+      status: 'loading',
+      data: ['Ada'],
+      error: null,
+    })
+    expect(readRuntimeStateSnapshot('runtime-state').queries.searchUsers.requestSignature).toBe(
+      '{"endpoint":"/api/users","method":"GET","operationName":"searchUsers","query":{"search":"Ada"}}',
     )
 
     if (resolveFetch) {
@@ -1586,9 +1652,11 @@ describe('Runtime shared state store', () => {
     }
 
     await waitFor(() =>
-      expect(screen.getByTestId('runtime-state')).toHaveTextContent(
-        '"queries":{"searchUsers":{"status":"success","data":{"results":["Ada","Grace"]},"error":null}}',
-      ),
+      expect(readRuntimeStateSnapshot('runtime-state').queries.searchUsers).toMatchObject({
+        status: 'success',
+        data: { results: ['Ada', 'Grace'] },
+        error: null,
+      }),
     )
   })
 
@@ -1613,9 +1681,17 @@ describe('Runtime shared state store', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Execute operation' }))
 
     await waitFor(() =>
-      expect(screen.getByTestId('runtime-state')).toHaveTextContent(
-        '"queries":{"searchUsers":{"status":"error","data":["Ada"],"error":{"code":"http-error","message":"The api operation \\"searchUsers\\" failed with HTTP status 500."}}}',
-      ),
+      expect(readRuntimeStateSnapshot('runtime-state').queries.searchUsers).toMatchObject({
+        status: 'error',
+        data: ['Ada'],
+        error: {
+          code: 'http-error',
+          message: 'The api operation "searchUsers" failed with HTTP status 500.',
+        },
+      }),
+    )
+    expect(readRuntimeStateSnapshot('runtime-state').queries.searchUsers.requestSignature).toBe(
+      '{"endpoint":"/api/users","method":"GET","operationName":"searchUsers","query":{"search":"Ada"}}',
     )
   })
 
@@ -1631,9 +1707,15 @@ describe('Runtime shared state store', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Execute operation' }))
 
     await waitFor(() =>
-      expect(screen.getByTestId('runtime-state')).toHaveTextContent(
-        '"missingOperation":{"status":"error","data":null,"error":{"code":"operation-not-found","message":"The api operation \\"missingOperation\\" does not exist."}}',
-      ),
+      expect(readRuntimeStateSnapshot('runtime-state').queries.missingOperation).toEqual({
+        status: 'error',
+        data: null,
+        error: {
+          code: 'operation-not-found',
+          message: 'The api operation "missingOperation" does not exist.',
+        },
+        requestSignature: null,
+      }),
     )
 
     expect(fetchMock).not.toHaveBeenCalled()
@@ -1651,9 +1733,15 @@ describe('Runtime shared state store', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Execute operation' }))
 
     await waitFor(() =>
-      expect(screen.getByTestId('runtime-state')).toHaveTextContent(
-        '"invalidSearch":{"status":"error","data":null,"error":{"code":"request-build-failed","message":"The api operation \\"invalidSearch\\" could not resolve \\"forms.userSearch.missingField\\" for \\"query.search\\"."}}',
-      ),
+      expect(readRuntimeStateSnapshot('runtime-state').queries.invalidSearch).toEqual({
+        status: 'error',
+        data: null,
+        error: {
+          code: 'request-build-failed',
+          message: 'The api operation "invalidSearch" could not resolve "forms.userSearch.missingField" for "query.search".',
+        },
+        requestSignature: null,
+      }),
     )
 
     expect(fetchMock).not.toHaveBeenCalled()
@@ -1676,9 +1764,14 @@ describe('Runtime shared state store', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Execute operation' }))
 
     await waitFor(() =>
-      expect(screen.getByTestId('runtime-state')).toHaveTextContent(
-        '"clearUsers":{"status":"success","data":null,"error":null}',
-      ),
+      expect(readRuntimeStateSnapshot('runtime-state').queries.clearUsers).toMatchObject({
+        status: 'success',
+        data: null,
+        error: null,
+      }),
+    )
+    expect(readRuntimeStateSnapshot('runtime-state').queries.clearUsers.requestSignature).toBe(
+      '{"endpoint":"/api/users","method":"DELETE","operationName":"clearUsers"}',
     )
   })
 
@@ -1887,6 +1980,176 @@ describe('Runtime shared state store', () => {
     await waitFor(() => expect(screen.getByTestId('runtime-page')).toHaveAttribute('data-runtime-page-id', 'home'))
     expect(screen.getByLabelText('Name')).toHaveValue('Grace')
     expect(screen.getByTestId('runtime-state')).toHaveTextContent('"name":{"value":"Grace"')
+  })
+
+  it('invalidates default-persistence form state when the active page entry changes within the same page', async () => {
+    const config: RuntimeConfig = {
+      api: {},
+      initialPage: 'home',
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'form',
+              id: 'profile-form',
+              children: [
+                {
+                  type: 'input',
+                  props: {
+                    fieldId: 'name',
+                    label: 'Name',
+                    defaultValue: 'params.userId',
+                  },
+                },
+              ],
+            },
+            {
+              type: 'button',
+              props: {
+                label: 'Edit Ada',
+                action: {
+                  type: 'navigateTo',
+                  pageId: 'home',
+                  params: {
+                    userId: 'Ada',
+                  },
+                },
+              },
+            },
+            {
+              type: 'button',
+              props: {
+                label: 'Edit Grace',
+                action: {
+                  type: 'navigateTo',
+                  pageId: 'home',
+                  params: {
+                    userId: 'Grace',
+                  },
+                },
+              },
+            },
+            {
+              type: 'button',
+              props: {
+                label: 'Stay on Grace',
+                action: {
+                  type: 'navigateTo',
+                  pageId: 'home',
+                  params: {
+                    userId: 'Grace',
+                  },
+                },
+              },
+            },
+          ],
+        },
+      ],
+    }
+
+    render(
+      <RuntimeStateProvider config={config}>
+        <RuntimePage />
+        <RuntimeStateSnapshot testId="runtime-state" />
+      </RuntimeStateProvider>,
+    )
+
+    expect(screen.getByLabelText('Name')).toHaveValue('')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit Ada' }))
+    await waitFor(() => expect(screen.getByLabelText('Name')).toHaveValue('Ada'))
+
+    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Manual Ada' } })
+    expect(readRuntimeStateSnapshot('runtime-state').forms['profile-form']?.name?.value).toBe('Manual Ada')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit Grace' }))
+    await waitFor(() => expect(screen.getByLabelText('Name')).toHaveValue('Grace'))
+    expect(readRuntimeStateSnapshot('runtime-state').forms['profile-form']?.name?.value).toBe('Grace')
+    expect(readRuntimeStateSnapshot('runtime-state').pageEntry.params).toEqual({ userId: 'Grace' })
+
+    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Manual Grace' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Stay on Grace' }))
+
+    expect(screen.getByLabelText('Name')).toHaveValue('Manual Grace')
+    expect(readRuntimeStateSnapshot('runtime-state').navigation.history).toEqual([
+      { entryId: 0, pageId: 'home', params: {} },
+      { entryId: 1, pageId: 'home', params: { userId: 'Ada' } },
+      { entryId: 2, pageId: 'home', params: { userId: 'Grace' } },
+    ])
+  })
+
+  it('keeps same-page form values across page-entry changes when persistOnUnmount is enabled', async () => {
+    const config: RuntimeConfig = {
+      api: {},
+      initialPage: 'home',
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'form',
+              id: 'profile-form',
+              persistOnUnmount: true,
+              children: [
+                {
+                  type: 'input',
+                  props: {
+                    fieldId: 'name',
+                    label: 'Name',
+                    defaultValue: 'params.userId',
+                  },
+                },
+              ],
+            },
+            {
+              type: 'button',
+              props: {
+                label: 'Edit Ada',
+                action: {
+                  type: 'navigateTo',
+                  pageId: 'home',
+                  params: {
+                    userId: 'Ada',
+                  },
+                },
+              },
+            },
+            {
+              type: 'button',
+              props: {
+                label: 'Edit Grace',
+                action: {
+                  type: 'navigateTo',
+                  pageId: 'home',
+                  params: {
+                    userId: 'Grace',
+                  },
+                },
+              },
+            },
+          ],
+        },
+      ],
+    }
+
+    render(
+      <RuntimeStateProvider config={config}>
+        <RuntimePage />
+        <RuntimeStateSnapshot testId="runtime-state" />
+      </RuntimeStateProvider>,
+    )
+
+    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Pinned value' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Edit Ada' }))
+    await waitFor(() => expect(readRuntimeStateSnapshot('runtime-state').pageEntry.params).toEqual({ userId: 'Ada' }))
+    expect(screen.getByLabelText('Name')).toHaveValue('Pinned value')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit Grace' }))
+
+    await waitFor(() => expect(screen.getByLabelText('Name')).toHaveValue('Pinned value'))
+    expect(readRuntimeStateSnapshot('runtime-state').forms['profile-form']?.name?.value).toBe('Pinned value')
+    expect(readRuntimeStateSnapshot('runtime-state').pageEntry.params).toEqual({ userId: 'Grace' })
   })
 
   it('reinitializes a reused form node when navigation activates a different page entry', async () => {

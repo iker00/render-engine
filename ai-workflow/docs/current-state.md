@@ -21,11 +21,13 @@
 - `config.api` ya funciona como catálogo declarativo tipado y validado de operaciones remotas con `method`, `endpoint`, `query`, `body` y `headers`.
 - Capa `src/queries/` ya integrada para construir requests desde referencias del runtime, ejecutar operaciones por nombre y normalizar errores remotos con códigos estables orientados a UI.
 - La composición efectiva del request ya permite mezclar una operación `api` base con `requestParams` por ejecución, con merge superficial estable en `query`, `headers` y `body` raíz-objeto, y sustitución del body cuando la raíz no es objeto.
+- Cada request efectiva ya deriva además una `requestSignature` estable, sensible a cambios reales de método, endpoint, `query`, `body` y `headers`, pero inmune al orden no funcional de claves en objetos equivalentes.
 - Fachada `executeQueryOperation(operationName, { requestParams? })` ya expuesta desde el provider para hidratar `queries.{operationName}` con transiciones `loading | success | error`.
-- Las páginas ya pueden declarar `preloads` como lista opcional de operaciones `api` y dispararlas automáticamente al entrar tanto en `initialPage` como en navegaciones posteriores.
+- Las páginas ya pueden declarar `preloads` como lista opcional de objetos `{ [operationName]: requestParams }`, reutilizando la misma semántica de composición de request que `executeOperation`.
 - Dominio agregado `pageEntry` ya disponible en el store compartido con `entryId`, `pageId`, `params`, `preloadNames` y `status: idle | loading | success | error`.
 - La tanda agregada de `preloads` ya usa semántica latest-only para no dejar que cierres tardíos de entradas antiguas sobrescriban la entrada activa más reciente.
-- Cada nueva `pageEntry` con `preloads` ya arranca mediante una transición atómica que limpia solo esas queries declaradas y las deja directamente en `loading` antes del primer render útil.
+- Cada nueva `pageEntry` con `preloads` ya arranca mediante una transición atómica que limpia solo las queries cuyo preload realmente relanza y las deja directamente en `loading` antes del primer render útil.
+- La reevaluación automática de `preloads` ya se decide preload a preload por `requestSignature`, no solo por `pageId` ni por `operationName`, y puede reaccionar también a cambios de `forms.*` o `queries.*` si alteran la request efectiva visible.
 - `button.props.action` ya reutiliza un contrato común de acciones UI con `navigateTo`, `goBack`, `executeOperation` y `resetForm`.
 - La interpretación de acciones UI ya está concentrada en una capa transversal del runtime y no en ramas imperativas dispersas dentro del nodo visual `button`.
 - `button.props.action.type: navigateTo` ya puede transportar `params` escalares resueltos contra el snapshot actual del runtime, reflejarlos en la URL canónica y `goBack` restaura también esos params al recuperar una entrada previa del historial del navegador observada por la sesión.
@@ -105,6 +107,7 @@
 - Vigésima séptima feature del workflow cerrada para ampliar `container` con defaults de `gap` más útiles, modo `grid` por `columns`, alineación y distribución declarativas, manteniendo compatibilidad con `gap` arbitrario y la semántica de sección dentro de `form`.
 - Vigésima octava feature del workflow cerrada para corregir la alineación de `container` dentro de `form`, eliminando el sangrado lateral y los márgenes negativos implícitos, manteniendo la superficie de sección para bloques verticales o con `columns` y dejando `direction: row` sin `columns` como layout lineal `plain`.
 - Vigésima novena feature del workflow cerrada para sincronizar la navegación del runtime con el hash del navegador, normalizar `#/` y `#/pageId?...`, reutilizar `params.*` como lectura de query params string y delegar atrás/adelante en el historial real sin perder `pageEntry` ni la semántica de `preloads`.
+- Trigésima primera feature del workflow cerrada para hacer que `preloads` declare requests efectivas por objeto, firmarlas desde `src/queries/` y relanzarlas de forma selectiva por firma en vez de por nombre de operación o `pageId`.
 
 ## Referencias
 

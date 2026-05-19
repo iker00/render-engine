@@ -1,11 +1,13 @@
 import { buildRuntimeApiRequest } from './runtime-api-request'
 import type {
+  ExecuteBuiltRuntimeApiRequestOptions,
   ExecuteRuntimeApiOperationOptions,
   RuntimeApiExecutionResult,
 } from './runtime-api-types'
 
 export { buildRuntimeApiRequest } from './runtime-api-request'
 export type {
+  ExecuteBuiltRuntimeApiRequestOptions,
   ExecuteRuntimeApiOperationOptions,
   RuntimeApiError,
   RuntimeApiExecutionResult,
@@ -33,16 +35,26 @@ export async function executeRuntimeApiOperation({
     return requestResult
   }
 
+  return executeBuiltRuntimeApiRequest({
+    request: requestResult.request,
+    fetch: fetchImplementation,
+  })
+}
+
+export async function executeBuiltRuntimeApiRequest({
+  request,
+  fetch: fetchImplementation = fetch,
+}: ExecuteBuiltRuntimeApiRequestOptions): Promise<RuntimeApiExecutionResult> {
   let response: Response
 
   try {
-    response = await fetchImplementation(requestResult.request.url, requestResult.request.init)
+    response = await fetchImplementation(request.url, request.init)
   } catch {
     return {
       status: 'error',
       error: {
         code: 'network-error',
-        message: `The api operation "${operationName}" failed due to a network error.`,
+        message: `The api operation "${request.operationName}" failed due to a network error.`,
       },
     }
   }
@@ -52,7 +64,7 @@ export async function executeRuntimeApiOperation({
       status: 'error',
       error: {
         code: 'http-error',
-        message: `The api operation "${operationName}" failed with HTTP status ${response.status}.`,
+        message: `The api operation "${request.operationName}" failed with HTTP status ${response.status}.`,
       },
     }
   }
@@ -83,7 +95,7 @@ export async function executeRuntimeApiOperation({
       status: 'error',
       error: {
         code: 'invalid-json-response',
-        message: `The api operation "${operationName}" returned invalid JSON.`,
+        message: `The api operation "${request.operationName}" returned invalid JSON.`,
       },
     }
   }

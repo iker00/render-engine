@@ -30,7 +30,7 @@ export function FormNode({ node, children, iterationContext }: FormNodeProps) {
   const state = useRuntimeState()
   const { executeQueryOperation, initializeForm, readRuntimeState, removeForm, resetForm, setFormFieldError, setFormFieldValue } =
     useRuntimeStateActions()
-  const mountedPageIdRef = useRef(state.navigation.currentPageId)
+  const mountedPageEntryIdRef = useRef(state.pageEntry.entryId)
 
   const fieldDefinitions = useMemo(
     () => collectResolvedFormFieldDefinitions(node.children ?? [], state, iterationContext),
@@ -84,7 +84,7 @@ export function FormNode({ node, children, iterationContext }: FormNodeProps) {
     }
 
     return () => {
-      if (readRuntimeState().navigation.currentPageId !== mountedPageIdRef.current) {
+      if (readRuntimeState().pageEntry.entryId !== mountedPageEntryIdRef.current) {
         removeForm(node.id)
       }
     }

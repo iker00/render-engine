@@ -1,8 +1,15 @@
 import { useCallback, useEffect, useLayoutEffect, useState } from 'react'
 import type { Dispatch, ReactNode } from 'react'
 import { useContext, useMemo, useReducer, useRef } from 'react'
-import type { NavigateToRuntimeUiAction, RuntimeApiRequestParams, RuntimeConfig, RuntimeConfigValue } from '../../config/runtime-config'
-import { executeRuntimeApiOperation } from '../../queries/runtime-api-executor'
+import type {
+  NavigateToRuntimeUiAction,
+  RuntimeApiRequestParams,
+  RuntimeConfig,
+  RuntimeConfigValue,
+  RuntimePageConfig,
+  RuntimePreloadConfig,
+} from '../../config/runtime-config'
+import { buildRuntimeApiRequest, executeBuiltRuntimeApiRequest } from '../../queries/runtime-api-executor'
 import {
   areBrowserHashNavigationEntriesEqual,
   createBrowserHashNavigationHash,
@@ -18,6 +25,22 @@ import type { RuntimeFormFieldDefinition, RuntimePageParams, RuntimeQueryError, 
 interface RuntimeStateProviderProps {
   config: RuntimeConfig
   children: ReactNode
+}
+
+interface PlannedPreloadReloadItem {
+  operationName: string
+  requestParams: RuntimeApiRequestParams
+  requestSignature: string | null
+}
+
+interface PlannedPreloadBatch {
+  batchSignature: string
+  entryId: number
+  pageId: string
+  params: RuntimePageParams
+  preloadNames: string[]
+  reloadItems: PlannedPreloadReloadItem[]
+  snapshotState: RuntimeState
 }
 
 async function executeQueryOperationWithSnapshot({
@@ -39,21 +62,39 @@ async function executeQueryOperationWithSnapshot({
   fetchImplementation?: typeof fetch
   skipLoadingDispatch?: boolean
 }) {
-  if (!skipLoadingDispatch) {
-    dispatch({
-      type: 'queries/set-loading',
-      payload: {
-        queryName: operationName,
-      },
-    })
-  }
-
-  const result = await executeRuntimeApiOperation({
+  const requestResult = buildRuntimeApiRequest({
     config,
     operationName,
     state: snapshotState,
     requestParams,
     iterationContext,
+  })
+
+  if (requestResult.status === 'error') {
+    dispatch({
+      type: 'queries/set-error',
+      payload: {
+        queryName: operationName,
+        error: requestResult.error satisfies RuntimeQueryError,
+        requestSignature: null,
+      },
+    })
+
+    return requestResult
+  }
+
+  if (!skipLoadingDispatch) {
+    dispatch({
+      type: 'queries/set-loading',
+      payload: {
+        queryName: operationName,
+        requestSignature: requestResult.request.requestSignature,
+      },
+    })
+  }
+
+  const result = await executeBuiltRuntimeApiRequest({
+    request: requestResult.request,
     fetch: fetchImplementation,
   })
 
@@ -63,6 +104,7 @@ async function executeQueryOperationWithSnapshot({
       payload: {
         queryName: operationName,
         data: result.data,
+        requestSignature: requestResult.request.requestSignature,
       },
     })
 
@@ -71,11 +113,12 @@ async function executeQueryOperationWithSnapshot({
 
   dispatch({
     type: 'queries/set-error',
-    payload: {
-      queryName: operationName,
-      error: result.error satisfies RuntimeQueryError,
-    },
-  })
+      payload: {
+        queryName: operationName,
+        error: result.error satisfies RuntimeQueryError,
+        requestSignature: requestResult.request.requestSignature,
+      },
+    })
 
   return result
 }
@@ -84,6 +127,8 @@ export function RuntimeStateProvider({ config, children }: RuntimeStateProviderP
   const [initialState] = useState(() => createRuntimeStateFromBrowserHash(config))
   const [state, dispatch] = useReducer(runtimeStateReducer, initialState)
   const activePreloadBatchSignatureRef = useRef<string | null>(null)
+  const completedPreloadEntryIdRef = useRef<number | null>(null)
+  const plannedPreloadBatchRef = useRef<PlannedPreloadBatch | null>(null)
   const latestStateRef = useRef(state)
   const activeNavigationEntry = selectCurrentNavigationEntry(state)
 
@@ -155,29 +200,42 @@ export function RuntimeStateProvider({ config, children }: RuntimeStateProviderP
 
   useLayoutEffect(() => {
     if (!activeNavigationEntry) {
+      plannedPreloadBatchRef.current = null
+      activePreloadBatchSignatureRef.current = null
+      completedPreloadEntryIdRef.current = null
       return
+    }
+
+    if (completedPreloadEntryIdRef.current !== null && completedPreloadEntryIdRef.current !== activeNavigationEntry.entryId) {
+      completedPreloadEntryIdRef.current = null
     }
 
     const activePage = config.pages.find((page) => page.id === activeNavigationEntry.pageId)
 
     if (!activePage) {
+      plannedPreloadBatchRef.current = null
+      activePreloadBatchSignatureRef.current = null
       return
     }
 
-    const preloadNames = activePage.preloads ?? []
-
-    const isCurrentPageEntryPrepared =
-      state.pageEntry.entryId === activeNavigationEntry.entryId &&
-      state.pageEntry.pageId === activeNavigationEntry.pageId &&
-      arePageParamsEqual(state.pageEntry.params, activeNavigationEntry.params) &&
-      arePreloadNamesEqual(state.pageEntry.preloadNames, preloadNames) &&
-      (preloadNames.length === 0 || state.pageEntry.status !== 'idle')
-
-    if (isCurrentPageEntryPrepared) {
-      return
-    }
+    const snapshotState = latestStateRef.current
+  const preloadPlan = planPagePreloadExecution({
+      config,
+      page: activePage,
+      entryId: activeNavigationEntry.entryId,
+      params: activeNavigationEntry.params,
+      state: snapshotState,
+    })
+    const preloadNames = preloadPlan.preloadNames
 
     if (preloadNames.length === 0) {
+      plannedPreloadBatchRef.current = null
+      activePreloadBatchSignatureRef.current = null
+
+      if (isMatchingPageEntryState(state.pageEntry, activeNavigationEntry.entryId, activePage.id, activeNavigationEntry.params, preloadNames, 'idle')) {
+        return
+      }
+
       dispatchAndSyncState({
         type: 'page-entry/set-idle',
         payload: {
@@ -191,6 +249,83 @@ export function RuntimeStateProvider({ config, children }: RuntimeStateProviderP
       return
     }
 
+    if (preloadPlan.reloadItems.length === 0) {
+      if (
+        preloadPlan.aggregateStatus === 'loading' &&
+        plannedPreloadBatchRef.current !== null &&
+        isMatchingPageEntryState(
+          state.pageEntry,
+          activeNavigationEntry.entryId,
+          activePage.id,
+          activeNavigationEntry.params,
+          preloadNames,
+          'loading',
+        )
+      ) {
+        return
+      }
+
+      plannedPreloadBatchRef.current = null
+      activePreloadBatchSignatureRef.current = null
+
+      if (
+        isMatchingPageEntryState(
+          state.pageEntry,
+          activeNavigationEntry.entryId,
+          activePage.id,
+          activeNavigationEntry.params,
+          preloadNames,
+          preloadPlan.aggregateStatus,
+        )
+      ) {
+        return
+      }
+
+      if (preloadPlan.aggregateStatus === 'loading') {
+        dispatchAndSyncState({
+          type: 'page-entry/set-loading',
+          payload: {
+            entryId: activeNavigationEntry.entryId,
+            pageId: activePage.id,
+            params: activeNavigationEntry.params,
+            preloadNames,
+          },
+        })
+
+        return
+      }
+
+      dispatchAndSyncState({
+        type: 'page-entry/set-settled-entry',
+        payload: {
+          entryId: activeNavigationEntry.entryId,
+          pageId: activePage.id,
+          params: activeNavigationEntry.params,
+          preloadNames,
+          status: preloadPlan.aggregateStatus,
+        },
+      })
+
+      return
+    }
+
+    if (
+      isMatchingPageEntryState(state.pageEntry, activeNavigationEntry.entryId, activePage.id, activeNavigationEntry.params, preloadNames, 'loading') &&
+      plannedPreloadBatchRef.current?.batchSignature === preloadPlan.batchSignature
+    ) {
+      return
+    }
+
+    plannedPreloadBatchRef.current = {
+      batchSignature: preloadPlan.batchSignature,
+      entryId: activeNavigationEntry.entryId,
+      pageId: activePage.id,
+      params: activeNavigationEntry.params,
+      preloadNames,
+      reloadItems: preloadPlan.reloadItems,
+      snapshotState: preloadPlan.snapshotState,
+    }
+
     dispatchAndSyncState({
       type: 'page-entry/start-preload-batch',
       payload: {
@@ -198,58 +333,60 @@ export function RuntimeStateProvider({ config, children }: RuntimeStateProviderP
         pageId: activePage.id,
         params: activeNavigationEntry.params,
         preloadNames,
+        resetQueries: preloadPlan.reloadItems.map((item) => ({
+          queryName: item.operationName,
+          requestSignature: item.requestSignature,
+        })),
       },
     })
-  }, [activeNavigationEntry, config.pages, dispatchAndSyncState, state.pageEntry])
+  }, [activeNavigationEntry, config, dispatchAndSyncState, state])
 
   useEffect(() => {
     if (!activeNavigationEntry) {
+      plannedPreloadBatchRef.current = null
       activePreloadBatchSignatureRef.current = null
       return
     }
 
-    const activePage = config.pages.find((page) => page.id === activeNavigationEntry.pageId)
+    const plannedBatch = plannedPreloadBatchRef.current
 
-    if (!activePage) {
+    if (!plannedBatch) {
       activePreloadBatchSignatureRef.current = null
       return
     }
-
-    const preloadNames = activePage.preloads ?? []
 
     if (
-      preloadNames.length === 0 ||
       state.pageEntry.status !== 'loading' ||
-      state.pageEntry.entryId !== activeNavigationEntry.entryId ||
-      state.pageEntry.pageId !== activeNavigationEntry.pageId ||
-      !arePageParamsEqual(state.pageEntry.params, activeNavigationEntry.params) ||
-      !arePreloadNamesEqual(state.pageEntry.preloadNames, preloadNames)
+      state.pageEntry.entryId !== plannedBatch.entryId ||
+      state.pageEntry.pageId !== plannedBatch.pageId ||
+      !arePageParamsEqual(state.pageEntry.params, plannedBatch.params) ||
+      !arePreloadNamesEqual(state.pageEntry.preloadNames, plannedBatch.preloadNames)
     ) {
       activePreloadBatchSignatureRef.current = null
       return
     }
 
-    const batchSignature = createPreloadBatchSignature(state.pageEntry)
-
-    if (activePreloadBatchSignatureRef.current === batchSignature) {
+    if (activePreloadBatchSignatureRef.current === plannedBatch.batchSignature) {
       return
     }
 
-    activePreloadBatchSignatureRef.current = batchSignature
-    const entryId = activeNavigationEntry.entryId
-    const snapshotState = latestStateRef.current
+    activePreloadBatchSignatureRef.current = plannedBatch.batchSignature
+    const entryId = plannedBatch.entryId
 
     void Promise.all(
-      preloadNames.map((operationName) =>
+      plannedBatch.reloadItems.map((reloadItem) =>
         executeQueryOperationWithSnapshot({
           config,
           dispatch: dispatchAndSyncState,
-          operationName,
-          snapshotState,
+          operationName: reloadItem.operationName,
+          snapshotState: plannedBatch.snapshotState,
+          requestParams: reloadItem.requestParams,
           skipLoadingDispatch: true,
         }),
       ),
     ).then((results) => {
+      plannedPreloadBatchRef.current = null
+      completedPreloadEntryIdRef.current = entryId
       dispatchAndSyncState({
         type: 'page-entry/set-settled',
         payload: {
@@ -424,6 +561,7 @@ export function useRuntimeStateActions() {
         type: 'queries/initialize',
         payload: {
           queryName,
+          requestSignature: null,
         },
       })
     },
@@ -449,6 +587,7 @@ export function useRuntimeStateActions() {
         payload: {
           queryName,
           data,
+          requestSignature: null,
         },
       })
     },
@@ -462,6 +601,7 @@ export function useRuntimeStateActions() {
         payload: {
           queryName,
           error,
+          requestSignature: null,
         },
       })
     },
@@ -587,12 +727,183 @@ function arePreloadNamesEqual(left: string[], right: string[]) {
   return left.length === right.length && left.every((name, index) => name === right[index])
 }
 
-function createPreloadBatchSignature(pageEntry: RuntimeState['pageEntry']) {
+function isMatchingPageEntryState(
+  pageEntry: RuntimeState['pageEntry'],
+  entryId: number,
+  pageId: string,
+  params: RuntimePageParams,
+  preloadNames: string[],
+  status: RuntimeState['pageEntry']['status'],
+) {
+  return (
+    pageEntry.entryId === entryId &&
+    pageEntry.pageId === pageId &&
+    pageEntry.status === status &&
+    arePageParamsEqual(pageEntry.params, params) &&
+    arePreloadNamesEqual(pageEntry.preloadNames, preloadNames)
+  )
+}
+
+function planPagePreloadExecution({
+  config,
+  page,
+  entryId,
+  params,
+  state,
+}: {
+  config: RuntimeConfig
+  page: RuntimePageConfig
+  entryId: number
+  params: RuntimePageParams
+  state: RuntimeState
+}) {
+  const preloads = page.preloads ?? []
+  const preloadNames = preloads.map((preload) => preload.operationName)
+  const snapshotState = createPreloadPlanningSnapshot(state, preloadNames)
+
+  if (preloads.length === 0) {
+    return {
+      preloadNames,
+      reloadItems: [] as PlannedPreloadReloadItem[],
+      aggregateStatus: 'idle' as const,
+      batchSignature: '',
+      snapshotState,
+    }
+  }
+
+  const evaluations = preloads.map((preload) =>
+    evaluatePreloadExecution({
+      config,
+      preload,
+      requestState: snapshotState,
+      currentState: state,
+    }),
+  )
+  const reloadItems = evaluations
+    .filter((evaluation) => evaluation.shouldReload)
+    .map((evaluation) => ({
+      operationName: evaluation.operationName,
+      requestParams: evaluation.requestParams,
+      requestSignature: evaluation.requestSignature,
+    }))
+
+  return {
+    preloadNames,
+    reloadItems,
+    aggregateStatus: deriveAggregatePageEntryStatus(preloadNames, state.queries),
+    snapshotState,
+    batchSignature: createPlannedPreloadBatchSignature({
+      entryId,
+      pageId: page.id,
+      params,
+      preloadNames,
+      evaluations,
+    }),
+  }
+}
+
+function evaluatePreloadExecution({
+  config,
+  preload,
+  requestState,
+  currentState,
+}: {
+  config: RuntimeConfig
+  preload: RuntimePreloadConfig
+  requestState: RuntimeState
+  currentState: RuntimeState
+}) {
+  const requestResult = buildRuntimeApiRequest({
+    config,
+    operationName: preload.operationName,
+    state: requestState,
+    requestParams: preload.requestParams,
+  })
+  const currentQuery = currentState.queries[preload.operationName]
+
+  if (requestResult.status === 'ready') {
+    return {
+      operationName: preload.operationName,
+      requestParams: preload.requestParams,
+      requestSignature: requestResult.request.requestSignature,
+      shouldReload: currentQuery?.requestSignature !== requestResult.request.requestSignature,
+    }
+  }
+
+  return {
+    operationName: preload.operationName,
+    requestParams: preload.requestParams,
+    requestSignature: null,
+    error: requestResult.error,
+    shouldReload:
+      currentQuery?.status !== 'error' ||
+      currentQuery.error?.code !== requestResult.error.code ||
+      currentQuery.error?.message !== requestResult.error.message,
+  }
+}
+
+function createPreloadPlanningSnapshot(state: RuntimeState, preloadNames: string[]): RuntimeState {
+  if (preloadNames.length === 0) {
+    return state
+  }
+
+  return {
+    ...state,
+    queries: Object.fromEntries(
+      Object.entries(state.queries).map(([queryName, queryState]) => [
+        queryName,
+        preloadNames.includes(queryName)
+          ? {
+              status: 'idle',
+              data: null,
+              error: null,
+              requestSignature: null,
+            }
+          : queryState,
+      ]),
+    ),
+  }
+}
+
+function deriveAggregatePageEntryStatus(preloadNames: string[], state: RuntimeState['queries']) {
+  if (preloadNames.some((queryName) => state[queryName]?.status === 'loading')) {
+    return 'loading' as const
+  }
+
+  if (preloadNames.some((queryName) => state[queryName]?.status === 'error')) {
+    return 'error' as const
+  }
+
+  return 'success' as const
+}
+
+function createPlannedPreloadBatchSignature({
+  entryId,
+  pageId,
+  params,
+  preloadNames,
+  evaluations,
+}: {
+  entryId: number
+  pageId: string
+  params: RuntimePageParams
+  preloadNames: string[]
+  evaluations: Array<{
+    operationName: string
+    requestSignature: string | null
+    error?: RuntimeQueryError
+  }>
+}) {
   return JSON.stringify({
-    entryId: pageEntry.entryId,
-    pageId: pageEntry.pageId,
-    params: pageEntry.params,
-    preloadNames: pageEntry.preloadNames,
+    entryId,
+    pageId,
+    params,
+    preloadNames,
+    evaluations: evaluations.map((evaluation) => ({
+      operationName: evaluation.operationName,
+      requestSignature: evaluation.requestSignature,
+      error: evaluation.error ?? null,
+    })),
   })
 }
 
@@ -651,7 +962,7 @@ function createRuntimeStateFromBrowserHash(config: RuntimeConfig) {
       entryId: 0,
       pageId: parsedHash.entry.pageId,
       params: parsedHash.entry.params,
-      preloadNames: initialPage?.preloads ?? [],
+      preloadNames: initialPage?.preloads?.map((preload) => preload.operationName) ?? [],
       status: 'idle',
     },
   } satisfies RuntimeState

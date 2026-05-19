@@ -34,6 +34,7 @@ import type {
   RuntimeConfig,
   RuntimeConfigError,
   RuntimeUiAction,
+  RuntimePreloadConfig,
   RuntimeFormFieldValidations,
   RuntimeFormValidationRuleName,
   RuntimeNumericValidationRule,
@@ -60,6 +61,7 @@ import {
   runtimeApiOperationShellSchema,
   runtimeApiHeadersSchema,
   runtimeApiQuerySchema,
+  runtimeApiRequestParamsSchema,
   runtimeConfigShellSchema,
   runtimePageShellSchema,
   selectItemSchema,
@@ -116,7 +118,11 @@ export function validateRuntimeConfig(rawConfig: unknown): RuntimeConfigValidati
     return apiResult
   }
 
-  const pageShellResults: RuntimePageConfig[] = []
+  const pageShellResults: Array<{
+    id: string
+    preloads?: RuntimePreloadConfig[]
+    layout: LayoutNodeCollection
+  }> = []
 
   for (let index = 0; index < configShellResult.data.pages.length; index += 1) {
     const pageShellResult = runtimePageShellSchema.safeParse(configShellResult.data.pages[index])
@@ -129,12 +135,8 @@ export function validateRuntimeConfig(rawConfig: unknown): RuntimeConfigValidati
         return invalidLayout(`The page at "pages[${index}].id" must be a non-empty string.`)
       }
 
-      if (pagePath === 'preloads' && issue.path.length === 1) {
-        return invalidLayout(`The page at "pages[${index}].preloads" must be an array of non-empty strings.`)
-      }
-
-      if (pagePath === 'preloads' && typeof issue.path[1] === 'number') {
-        return invalidLayout(`The page at "pages[${index}].preloads[${issue.path[1]}]" must be a non-empty string.`)
+      if (pagePath === 'preloads') {
+        return invalidLayout(`The page at "pages[${index}].preloads" must be an array of preload objects.`)
       }
 
       if (pagePath === 'layout') {
@@ -146,9 +148,15 @@ export function validateRuntimeConfig(rawConfig: unknown): RuntimeConfigValidati
       return invalidLayout(`The page at "pages[${index}]" must be an object.`)
     }
 
+    const preloadsResult = validatePagePreloads(pageShellResult.data.preloads, index)
+
+    if (preloadsResult.status === 'error') {
+      return preloadsResult
+    }
+
     pageShellResults.push({
       id: pageShellResult.data.id,
-      preloads: pageShellResult.data.preloads,
+      preloads: preloadsResult.preloads,
       layout: pageShellResult.data.layout as LayoutNodeCollection,
     })
   }
@@ -210,6 +218,166 @@ export function validateRuntimeConfig(rawConfig: unknown): RuntimeConfigValidati
     config,
     page,
   }
+}
+
+function validatePagePreloads(
+  rawPreloads: unknown[] | undefined,
+  pageIndex: number,
+): { status: 'ready'; preloads?: RuntimePreloadConfig[] } | { status: 'error'; error: RuntimeConfigError } {
+  if (rawPreloads === undefined) {
+    return {
+      status: 'ready',
+    }
+  }
+
+  const preloads: RuntimePreloadConfig[] = []
+  const seenOperationNames = new Set<string>()
+
+  for (let preloadIndex = 0; preloadIndex < rawPreloads.length; preloadIndex += 1) {
+    const rawPreload = rawPreloads[preloadIndex]
+
+    if (!isRecord(rawPreload)) {
+      return invalidPreloadEntry(pageIndex, preloadIndex)
+    }
+
+    const entries = Object.entries(rawPreload)
+
+    if (entries.length !== 1) {
+      return invalidPreloadEntry(pageIndex, preloadIndex)
+    }
+
+    const [operationName, rawRequestParams] = entries[0]
+
+    if (operationName.trim().length === 0) {
+      return invalidPreloadEntry(pageIndex, preloadIndex)
+    }
+
+    const requestParamsResult = runtimeApiRequestParamsSchema.safeParse(rawRequestParams)
+
+    if (!requestParamsResult.success) {
+      const issuePath = requestParamsResult.error.issues[0]?.path ?? []
+
+      if (issuePath[0] === 'query') {
+        return mapPreloadRequestQueryIssue(pageIndex, preloadIndex, operationName, rawRequestParams, issuePath.slice(1))
+      }
+
+      if (issuePath[0] === 'headers') {
+        return mapPreloadRequestHeadersIssue(pageIndex, preloadIndex, operationName, rawRequestParams, issuePath.slice(1))
+      }
+
+      if (issuePath[0] === 'body') {
+        return mapPreloadRequestBodyIssue(pageIndex, preloadIndex, operationName, rawRequestParams, issuePath.slice(1))
+      }
+
+      return invalidLayout(`The page at "${getPreloadPath(pageIndex, preloadIndex, operationName)}" must be an object.`)
+    }
+
+    const requestParamsPath = getPreloadPath(pageIndex, preloadIndex, operationName)
+    const requestParamsIssue = validateRuntimeApiRequestParams(
+      requestParamsResult.data as RuntimeApiRequestParams,
+      requestParamsPath,
+      `pages[${pageIndex}]`,
+    )
+
+    if (requestParamsIssue) {
+      return normalizePagePreloadRequestParamsIssue(requestParamsIssue, pageIndex)
+    }
+
+    if (seenOperationNames.has(operationName)) {
+      return invalidLayout(`The page at "pages[${pageIndex}].preloads" contains duplicate operationName "${operationName}".`)
+    }
+
+    seenOperationNames.add(operationName)
+    preloads.push({
+      operationName,
+      requestParams: requestParamsResult.data as RuntimeApiRequestParams,
+    })
+  }
+
+  return {
+    status: 'ready',
+    preloads,
+  }
+}
+
+function invalidPreloadEntry(
+  pageIndex: number,
+  preloadIndex: number,
+): { status: 'error'; error: RuntimeConfigError } {
+  return invalidLayout(
+    `The page at "pages[${pageIndex}].preloads[${preloadIndex}]" must be an object with exactly one non-empty operationName key.`,
+  )
+}
+
+function getPreloadPath(pageIndex: number, preloadIndex: number, operationName: string): string {
+  return `pages[${pageIndex}].preloads[${preloadIndex}].${operationName}`
+}
+
+function mapPreloadRequestQueryIssue(
+  pageIndex: number,
+  preloadIndex: number,
+  operationName: string,
+  rawRequestParams: unknown,
+  issuePath: PropertyKey[],
+): { status: 'error'; error: RuntimeConfigError } {
+  if (!isRecord(rawRequestParams) || !isRecord(rawRequestParams.query)) {
+    return invalidLayout(`The page at "${getPreloadPath(pageIndex, preloadIndex, operationName)}.query" must be an object.`)
+  }
+
+  if (typeof issuePath[0] === 'string') {
+    return invalidLayout(
+      `The page at "${getPreloadPath(pageIndex, preloadIndex, operationName)}.query.${issuePath[0]}" must resolve to a string, number, or boolean.`,
+    )
+  }
+
+  return invalidLayout(`The page at "${getPreloadPath(pageIndex, preloadIndex, operationName)}.query" must be an object.`)
+}
+
+function mapPreloadRequestHeadersIssue(
+  pageIndex: number,
+  preloadIndex: number,
+  operationName: string,
+  rawRequestParams: unknown,
+  issuePath: PropertyKey[],
+): { status: 'error'; error: RuntimeConfigError } {
+  if (!isRecord(rawRequestParams) || !isRecord(rawRequestParams.headers)) {
+    return invalidLayout(`The page at "${getPreloadPath(pageIndex, preloadIndex, operationName)}.headers" must be an object.`)
+  }
+
+  if (typeof issuePath[0] === 'string') {
+    return invalidLayout(
+      `The page at "${getPreloadPath(pageIndex, preloadIndex, operationName)}.headers.${issuePath[0]}" must resolve to a string.`,
+    )
+  }
+
+  return invalidLayout(`The page at "${getPreloadPath(pageIndex, preloadIndex, operationName)}.headers" must be an object.`)
+}
+
+function mapPreloadRequestBodyIssue(
+  pageIndex: number,
+  preloadIndex: number,
+  operationName: string,
+  rawRequestParams: unknown,
+  issuePath: PropertyKey[],
+): { status: 'error'; error: RuntimeConfigError } {
+  const rawBody = isRecord(rawRequestParams) ? rawRequestParams.body : undefined
+  const bodyPath = findInvalidJsonBodyPath(rawBody, `${getPreloadPath(pageIndex, preloadIndex, operationName)}.body`)
+
+  if (bodyPath) {
+    return invalidLayout(`The page at "${bodyPath}" must be valid JSON data.`)
+  }
+
+  const formattedPath = issuePath.map(formatPathSegment).join('')
+  return invalidLayout(
+    `The page at "${getPreloadPath(pageIndex, preloadIndex, operationName)}.body${formattedPath}" must be valid JSON data.`,
+  )
+}
+
+function normalizePagePreloadRequestParamsIssue(
+  issue: { status: 'error'; error: RuntimeConfigError },
+  pageIndex: number,
+): { status: 'error'; error: RuntimeConfigError } {
+  return invalidLayout(issue.error.message.replace(`Page "pages[${pageIndex}]" has an invalid layout at "`, 'The page at "'))
 }
 
 function validateApiConfig(

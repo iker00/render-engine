@@ -411,7 +411,7 @@ describe('validateRuntimeConfig', () => {
       pages: [
         {
           id: 'home',
-          preloads: ['searchUsers', 'loadTeams'],
+          preloads: [{ searchUsers: {} }, { loadTeams: {} }],
           layout: [],
         },
       ],
@@ -425,7 +425,16 @@ describe('validateRuntimeConfig', () => {
         pages: [
           {
             id: 'home',
-            preloads: ['searchUsers', 'loadTeams'],
+            preloads: [
+              {
+                operationName: 'searchUsers',
+                requestParams: {},
+              },
+              {
+                operationName: 'loadTeams',
+                requestParams: {},
+              },
+            ],
             layout: [],
           },
         ],
@@ -433,7 +442,100 @@ describe('validateRuntimeConfig', () => {
       },
       page: {
         id: 'home',
-        preloads: ['searchUsers', 'loadTeams'],
+        preloads: [
+          {
+            operationName: 'searchUsers',
+            requestParams: {},
+          },
+          {
+            operationName: 'loadTeams',
+            requestParams: {},
+          },
+        ],
+        layout: [],
+      },
+    })
+  })
+
+  it('accepts preload request overrides and normalizes them to operationName plus requestParams', () => {
+    const result = validateRuntimeConfig({
+      api: {},
+      pages: [
+        {
+          id: 'home',
+          preloads: [
+            {
+              loadUser: {
+                query: {
+                  userId: 'params.userId',
+                },
+                headers: {
+                  Authorization: 'forms.session.token',
+                },
+                body: {
+                  filters: {
+                    active: true,
+                  },
+                },
+              },
+            },
+          ],
+          layout: [],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(result).toEqual({
+      status: 'ready',
+      config: {
+        api: {},
+        pages: [
+          {
+            id: 'home',
+            preloads: [
+              {
+                operationName: 'loadUser',
+                requestParams: {
+                  query: {
+                    userId: 'params.userId',
+                  },
+                  headers: {
+                    Authorization: 'forms.session.token',
+                  },
+                  body: {
+                    filters: {
+                      active: true,
+                    },
+                  },
+                },
+              },
+            ],
+            layout: [],
+          },
+        ],
+        initialPage: 'home',
+      },
+      page: {
+        id: 'home',
+        preloads: [
+          {
+            operationName: 'loadUser',
+            requestParams: {
+              query: {
+                userId: 'params.userId',
+              },
+              headers: {
+                Authorization: 'forms.session.token',
+              },
+              body: {
+                filters: {
+                  active: true,
+                },
+              },
+            },
+          },
+        ],
         layout: [],
       },
     })
@@ -1393,19 +1495,19 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'The page at "pages[0].preloads" must be an array of non-empty strings.',
+        message: 'The page at "pages[0].preloads" must be an array of preload objects.',
       },
     })
   })
 
-  it('rejects preloads entries that are empty, whitespace-only, or not strings', () => {
+  it('rejects the historical string preload shape and other invalid preload entries', () => {
     expect(
       validateRuntimeConfig({
         api: {},
         pages: [
           {
             id: 'home',
-            preloads: ['searchUsers', '', 'loadTeams'],
+            preloads: ['searchUsers'],
             layout: [],
           },
         ],
@@ -1416,7 +1518,7 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'The page at "pages[0].preloads[1]" must be a non-empty string.',
+        message: 'The page at "pages[0].preloads[0]" must be an object with exactly one non-empty operationName key.',
       },
     })
 
@@ -1426,7 +1528,7 @@ describe('validateRuntimeConfig', () => {
         pages: [
           {
             id: 'home',
-            preloads: ['searchUsers', '   '],
+            preloads: [{}],
             layout: [],
           },
         ],
@@ -1437,7 +1539,7 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'The page at "pages[0].preloads[1]" must be a non-empty string.',
+        message: 'The page at "pages[0].preloads[0]" must be an object with exactly one non-empty operationName key.',
       },
     })
 
@@ -1447,7 +1549,7 @@ describe('validateRuntimeConfig', () => {
         pages: [
           {
             id: 'home',
-            preloads: ['searchUsers', 42],
+            preloads: [{ '   ': {} }],
             layout: [],
           },
         ],
@@ -1458,7 +1560,93 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'The page at "pages[0].preloads[1]" must be a non-empty string.',
+        message: 'The page at "pages[0].preloads[0]" must be an object with exactly one non-empty operationName key.',
+      },
+    })
+
+    expect(
+      validateRuntimeConfig({
+        api: {},
+        pages: [
+          {
+            id: 'home',
+            preloads: [{ searchUsers: {} }, { searchUsers: {} }],
+            layout: [],
+          },
+        ],
+        initialPage: 'home',
+      }),
+    ).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message: 'The page at "pages[0].preloads" contains duplicate operationName "searchUsers".',
+      },
+    })
+
+    expect(
+      validateRuntimeConfig({
+        api: {},
+        pages: [
+          {
+            id: 'home',
+            preloads: [{ searchUsers: {} }, { loadTeams: {}, loadUsers: {} }],
+            layout: [],
+          },
+        ],
+        initialPage: 'home',
+      }),
+    ).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message: 'The page at "pages[0].preloads[1]" must be an object with exactly one non-empty operationName key.',
+      },
+    })
+  })
+
+  it('keeps missing preload operations as runtime-recoverable instead of rejecting them in config validation', () => {
+    const result = validateRuntimeConfig({
+      api: {},
+      pages: [
+        {
+          id: 'home',
+          preloads: [{ missingOperation: {} }],
+          layout: [],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(result).toEqual({
+      status: 'ready',
+      config: {
+        api: {},
+        pages: [
+          {
+            id: 'home',
+            preloads: [
+              {
+                operationName: 'missingOperation',
+                requestParams: {},
+              },
+            ],
+            layout: [],
+          },
+        ],
+        initialPage: 'home',
+      },
+      page: {
+        id: 'home',
+        preloads: [
+          {
+            operationName: 'missingOperation',
+            requestParams: {},
+          },
+        ],
+        layout: [],
       },
     })
   })

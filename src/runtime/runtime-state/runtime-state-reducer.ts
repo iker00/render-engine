@@ -28,7 +28,7 @@ export function createRuntimeState(config: RuntimeConfig): RuntimeState {
       entryId: 0,
       pageId: config.initialPage,
       params: {},
-      preloadNames: initialPage?.preloads ?? [],
+      preloadNames: initialPage?.preloads?.map((preload) => preload.operationName) ?? [],
       status: 'idle',
     }),
   }
@@ -87,7 +87,10 @@ export function runtimeStateReducer(state: RuntimeState, action: RuntimeStateAct
     case 'page-entry/start-preload-batch':
       return {
         ...state,
-        queries: resetQueriesForPreloadBatch(state.queries, action.payload.preloadNames),
+        queries: resetQueriesForPreloadBatch(
+          state.queries,
+          action.payload.resetQueries ?? action.payload.preloadNames.map((queryName) => ({ queryName, requestSignature: null })),
+        ),
         pageEntry: createRuntimePageEntryState({
           entryId: action.payload.entryId,
           pageId: action.payload.pageId,
@@ -105,6 +108,17 @@ export function runtimeStateReducer(state: RuntimeState, action: RuntimeStateAct
           params: action.payload.params,
           preloadNames: action.payload.preloadNames,
           status: 'loading',
+        }),
+      }
+    case 'page-entry/set-settled-entry':
+      return {
+        ...state,
+        pageEntry: createRuntimePageEntryState({
+          entryId: action.payload.entryId,
+          pageId: action.payload.pageId,
+          params: action.payload.params,
+          preloadNames: action.payload.preloadNames,
+          status: action.payload.status,
         }),
       }
     case 'page-entry/set-settled':
@@ -192,6 +206,7 @@ export function runtimeStateReducer(state: RuntimeState, action: RuntimeStateAct
             ...getRuntimeQueryState(state.queries[action.payload.queryName]),
             status: 'loading',
             error: null,
+            requestSignature: action.payload.requestSignature ?? null,
           },
         },
       }
@@ -204,6 +219,7 @@ export function runtimeStateReducer(state: RuntimeState, action: RuntimeStateAct
             status: 'success',
             data: action.payload.data,
             error: null,
+            requestSignature: action.payload.requestSignature ?? null,
           },
         },
       }
@@ -216,6 +232,7 @@ export function runtimeStateReducer(state: RuntimeState, action: RuntimeStateAct
             ...getRuntimeQueryState(state.queries[action.payload.queryName]),
             status: 'error',
             error: action.payload.error,
+            requestSignature: action.payload.requestSignature ?? null,
           },
         },
       }
@@ -367,24 +384,26 @@ function createRuntimeQueryState(): RuntimeQueryState {
     status: 'idle',
     data: null,
     error: null,
+    requestSignature: null,
   }
 }
 
 function resetQueriesForPreloadBatch(
   queriesState: RuntimeState['queries'],
-  preloadNames: string[],
+  preloadQueries: Array<{ queryName: string; requestSignature: string | null }>,
 ): RuntimeState['queries'] {
-  if (preloadNames.length === 0) {
+  if (preloadQueries.length === 0) {
     return queriesState
   }
 
   const nextQueriesState = { ...queriesState }
 
-  for (const queryName of preloadNames) {
-    nextQueriesState[queryName] = {
+  for (const preloadQuery of preloadQueries) {
+    nextQueriesState[preloadQuery.queryName] = {
       status: 'loading',
       data: null,
       error: null,
+      requestSignature: preloadQuery.requestSignature,
     }
   }
 

@@ -1,4 +1,11 @@
-import type { RuntimeApiOperation, RuntimeApiRequestParams, RuntimeConfig } from '../config/runtime-config'
+import type {
+  RuntimeApiBodyValue,
+  RuntimeApiHeaders,
+  RuntimeApiOperation,
+  RuntimeApiQuery,
+  RuntimeApiRequestParams,
+  RuntimeConfig,
+} from '../config/runtime-config'
 import type { RuntimeIterationContext } from '../runtime/runtime-references/runtime-reference-resolver'
 import type { RuntimeState } from '../runtime/runtime-state/runtime-state-types'
 
@@ -15,6 +22,17 @@ export interface RuntimeApiRequest {
   operation: RuntimeApiOperation
   url: string
   init: RequestInit
+  descriptor: RuntimeApiRequestDescriptor
+  requestSignature: string
+}
+
+export interface RuntimeApiRequestDescriptor {
+  operationName: string
+  method: RuntimeApiOperation['method']
+  endpoint: string
+  query?: RuntimeApiQuery
+  body?: RuntimeApiBodyValue | null
+  headers?: RuntimeApiHeaders
 }
 
 export interface RuntimeApiError {
@@ -38,6 +56,11 @@ export type RuntimeApiRequestBuildResult =
     }
 
 export interface ExecuteRuntimeApiOperationOptions extends BuildRuntimeApiRequestOptions {
+  fetch?: typeof fetch
+}
+
+export interface ExecuteBuiltRuntimeApiRequestOptions {
+  request: RuntimeApiRequest
   fetch?: typeof fetch
 }
 

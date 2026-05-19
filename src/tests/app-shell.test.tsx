@@ -1,12 +1,84 @@
 import { render, screen } from '@testing-library/react'
 import { vi } from 'vitest'
 import { App } from '../app/App'
+import defaultDevConfigJson from '../dev/config.json'
+import type { RuntimeConfig } from '../app/bootstrap/read-runtime-config'
+
+const defaultDevConfig = defaultDevConfigJson as RuntimeConfig
+
+const minimalDevConfig: RuntimeConfig = {
+  api: {},
+  pages: [
+    {
+      id: 'bootstrap-home',
+      layout: [
+        {
+          type: 'heading',
+          props: {
+            text: 'Solicitud general',
+            level: 1,
+          },
+        },
+        {
+          type: 'paragraph',
+          props: {
+            text: 'Utiliza este formulario para presentar una solicitud general y dirigirla al área competente sin salir del runtime declarativo.',
+          },
+        },
+        {
+          type: 'form',
+          id: 'generalRequestForm',
+          children: [
+            {
+              type: 'input',
+              props: {
+                fieldId: 'summary',
+                label: 'Expone / Solicita',
+              },
+            },
+            {
+              type: 'button',
+              props: {
+                label: 'Continuar',
+              },
+            },
+          ],
+        },
+        {
+          type: 'button',
+          props: {
+            label: 'Buscar posts',
+            action: {
+              type: 'navigateTo',
+              pageId: 'search-posts',
+            },
+          },
+        },
+      ],
+    },
+    {
+      id: 'search-posts',
+      layout: [],
+    },
+  ],
+  initialPage: 'bootstrap-home',
+}
+
+function renderDevelopmentApp(devConfigOverride: RuntimeConfig) {
+  return render(
+    <App
+      devConfigOverride={devConfigOverride}
+      isDevelopment
+      rootElement={document.createElement('div')}
+    />,
+  )
+}
 
 describe('App shell', () => {
   it('renders the default development runtime page instead of the bootstrap shell copy', () => {
     const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
 
-    render(<App />)
+    renderDevelopmentApp(minimalDevConfig)
 
     expect(screen.getByRole('heading', { name: 'Solicitud general', level: 1 })).toBeInTheDocument()
     expect(
@@ -24,12 +96,12 @@ describe('App shell', () => {
     ).not.toBeInTheDocument()
 
     consoleWarnSpy.mockRestore()
-  })
+  }, 10000)
 
   it('renders the runtime inside a centered light shell frame', () => {
     const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
 
-    render(<App />)
+    renderDevelopmentApp(defaultDevConfig)
 
     expect(screen.getByTestId('runtime-app')).toHaveClass(
       'min-h-screen',

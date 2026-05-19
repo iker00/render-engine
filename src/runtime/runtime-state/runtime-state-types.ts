@@ -45,6 +45,7 @@ export interface RuntimeQueryState {
   status: 'idle' | 'loading' | 'success' | 'error'
   data: unknown
   error: RuntimeQueryError | null
+  requestSignature: string | null
 }
 
 export type RuntimePageEntryStatus = 'idle' | 'loading' | 'success' | 'error'
@@ -73,9 +74,25 @@ export type RuntimeStateAction =
   | { type: 'page-entry/set-idle'; payload: { entryId: number; pageId: string; params: RuntimePageParams; preloadNames: string[] } }
   | {
       type: 'page-entry/start-preload-batch'
-      payload: { entryId: number; pageId: string; params: RuntimePageParams; preloadNames: string[] }
+      payload: {
+        entryId: number
+        pageId: string
+        params: RuntimePageParams
+        preloadNames: string[]
+        resetQueries?: Array<{ queryName: string; requestSignature: string | null }>
+      }
     }
   | { type: 'page-entry/set-loading'; payload: { entryId: number; pageId: string; params: RuntimePageParams; preloadNames: string[] } }
+  | {
+      type: 'page-entry/set-settled-entry'
+      payload: {
+        entryId: number
+        pageId: string
+        params: RuntimePageParams
+        preloadNames: string[]
+        status: 'success' | 'error'
+      }
+    }
   | { type: 'page-entry/set-settled'; payload: { entryId: number; status: 'success' | 'error' } }
   | { type: 'forms/initialize'; payload: { formId: string; fields: Record<string, RuntimeFormFieldDefinition> } }
   | { type: 'forms/set-value'; payload: { formId: string; fieldId: string; value: unknown } }
@@ -86,9 +103,9 @@ export type RuntimeStateAction =
   | { type: 'forms/reset'; payload: { formId: string } }
   | { type: 'forms/remove'; payload: { formId: string } }
   | { type: 'queries/initialize'; payload: { queryName: string } }
-  | { type: 'queries/set-loading'; payload: { queryName: string } }
-  | { type: 'queries/set-success'; payload: { queryName: string; data: unknown } }
-  | { type: 'queries/set-error'; payload: { queryName: string; error: RuntimeQueryError } }
+  | { type: 'queries/set-loading'; payload: { queryName: string; requestSignature?: string | null } }
+  | { type: 'queries/set-success'; payload: { queryName: string; data: unknown; requestSignature?: string | null } }
+  | { type: 'queries/set-error'; payload: { queryName: string; error: RuntimeQueryError; requestSignature?: string | null } }
   | { type: 'queries/reset'; payload: { queryName: string } }
 
 export interface RuntimeStateContextValue {

@@ -33,6 +33,11 @@ export interface RuntimeApiOperation extends RuntimeApiRequestParams {
   endpoint: string
 }
 
+export interface RuntimePreloadConfig {
+  operationName: string
+  requestParams: RuntimeApiRequestParams
+}
+
 export type RuntimeApiConfig = Record<string, RuntimeApiOperation>
 export type RuntimeCollectionObjectValue =
   | RuntimeConfigValue
@@ -332,7 +337,7 @@ export type LayoutNodeCollection = LayoutNode[]
 
 export interface RuntimePageConfig {
   id: string
-  preloads?: string[]
+  preloads?: RuntimePreloadConfig[]
   layout: LayoutNodeCollection
 }
 

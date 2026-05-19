@@ -9,6 +9,7 @@ import { resolveRuntimeReference } from '../runtime/runtime-references/runtime-r
 import type {
   BuildRuntimeApiRequestOptions,
   RuntimeApiRequest,
+  RuntimeApiRequestDescriptor,
   RuntimeApiRequestBuildResult,
 } from './runtime-api-types'
 
@@ -53,12 +54,18 @@ export function buildRuntimeApiRequest({
 
   return {
     status: 'ready',
-    request: {
+    request: createRuntimeApiRequest({
       operationName,
       operation,
-      url: appendQueryString(operation.endpoint, queryResult.query),
-      init: buildRequestInit(operation.method, headersResult.headers, bodyResult.body),
-    } satisfies RuntimeApiRequest,
+      descriptor: {
+        operationName,
+        method: operation.method,
+        endpoint: operation.endpoint,
+        query: queryResult.query,
+        body: bodyResult.body,
+        headers: headersResult.headers,
+      },
+    }),
   }
 }
 
@@ -74,8 +81,7 @@ function resolveQuery(
       query: undefined,
     } as const
   }
-
-  const query = new URLSearchParams()
+  const query: RuntimeApiQuery = {}
 
   for (const [key, rawValue] of Object.entries(queryDefinition)) {
     const resolvedValue = resolvePayloadValue(rawValue, state, iterationContext)
@@ -104,7 +110,7 @@ function resolveQuery(
       } as const
     }
 
-    query.set(key, String(resolvedValue.value))
+    query[key] = resolvedValue.value
   }
 
   return {
@@ -328,14 +334,52 @@ function resolvePayloadValue(
   } as const
 }
 
-function appendQueryString(endpoint: string, query: URLSearchParams | undefined) {
-  const serializedQuery = query?.toString()
+function createRuntimeApiRequest({
+  operationName,
+  operation,
+  descriptor,
+}: {
+  operationName: string
+  operation: RuntimeApiOperation
+  descriptor: RuntimeApiRequestDescriptor
+}): RuntimeApiRequest {
+  const request = {
+    operationName,
+    operation,
+    url: appendQueryString(operation.endpoint, descriptor.query),
+    init: buildRequestInit(operation.method, descriptor.headers, descriptor.body),
+  } as RuntimeApiRequest
+
+  Object.defineProperties(request, {
+    descriptor: {
+      value: descriptor,
+      enumerable: false,
+      configurable: false,
+      writable: false,
+    },
+    requestSignature: {
+      value: createStableRequestSignature(descriptor),
+      enumerable: false,
+      configurable: false,
+      writable: false,
+    },
+  })
+
+  return request
+}
+
+function appendQueryString(endpoint: string, query: RuntimeApiQuery | undefined) {
+  const serializedQuery = query ? new URLSearchParams(toQueryStringRecord(query)).toString() : ''
 
   if (!serializedQuery) {
     return endpoint
   }
 
   return `${endpoint}${endpoint.includes('?') ? '&' : '?'}${serializedQuery}`
+}
+
+function toQueryStringRecord(query: RuntimeApiQuery) {
+  return Object.fromEntries(Object.entries(query).map(([key, value]) => [key, String(value)]))
 }
 
 function buildRequestInit(
@@ -422,4 +466,28 @@ function mergeRuntimeApiBody(
   }
 
   return overrideBody
+}
+
+function createStableRequestSignature(descriptor: RuntimeApiRequestDescriptor) {
+  return stableSerializeJsonValue(descriptor)
+}
+
+function stableSerializeJsonValue(value: unknown): string {
+  return JSON.stringify(stabilizeJsonValue(value))
+}
+
+function stabilizeJsonValue(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map((item) => stabilizeJsonValue(item))
+  }
+
+  if (!isPlainObject(value)) {
+    return value
+  }
+
+  return Object.fromEntries(
+    Object.entries(value)
+      .sort(([leftKey], [rightKey]) => leftKey.localeCompare(rightKey))
+      .map(([key, childValue]) => [key, stabilizeJsonValue(childValue)]),
+  )
 }
