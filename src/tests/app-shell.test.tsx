@@ -113,20 +113,24 @@ describe('App shell', () => {
       'mx-auto',
       'max-w-shell',
       'px-4',
+      'py-8',
       'lg:px-8',
+      'lg:py-12',
     )
 
     expect(screen.getByTestId('runtime-shell-frame')).toHaveClass(
       'rounded-shell',
       'border-app-border-strong',
       'bg-app-surface',
+      'p-4',
+      'lg:p-8',
     )
 
-    expect(screen.getByTestId('runtime-page')).toHaveClass('grid', 'gap-6', 'lg:gap-8')
+    expect(screen.getByTestId('runtime-page')).toHaveClass('grid', 'gap-5', 'lg:gap-6')
     expect(screen.getByText('Datos de la persona interesada').closest('[data-layout-node="container"]')).toHaveClass(
       'border-t',
       'border-app-border-soft',
-      'pt-6',
+      'pt-5',
     )
     expect(screen.getByText('Datos de la persona interesada').closest('[data-layout-node="container"]')).not.toHaveClass(
       '-mx-5',

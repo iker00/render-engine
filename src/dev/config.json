@@ -614,9 +614,16 @@
           "type": "container",
           "props": {
             "direction": "row",
-            "justify": "end"
+            "justify": "between"
           },
           "children": [
+            {
+              "type": "heading",
+              "props": {
+                "text": "Dynamic form example",
+                "level": 1
+              }
+            },
             {
               "type": "button",
               "props": {
@@ -627,13 +634,6 @@
               }
             }
           ]
-        },
-        {
-          "type": "heading",
-          "props": {
-            "text": "Dynamic form example",
-            "level": 1
-          }
         },
         {
           "type": "form",
@@ -662,7 +662,10 @@
             {
               "type": "container",
               "props": {
-                "columns": 2
+                "direction": "row",
+                "align": "start",
+                "justify": "start",
+                "wrap": "wrap"
               },
               "children": [
                 {

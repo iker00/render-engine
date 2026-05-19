@@ -1197,7 +1197,7 @@ describe('Runtime button navigation', () => {
       'gap-5',
       'border-t',
       'border-app-border-soft',
-      'pt-6',
+      'pt-5',
     )
     expect(
       screen.getByRole('button', { name: 'Submit profile' }).closest('[data-layout-node="container"]'),

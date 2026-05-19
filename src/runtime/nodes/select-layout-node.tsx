@@ -56,7 +56,7 @@ export function SelectNode({ node, iterationContext }: SelectNodeProps) {
       <div className="relative">
         <select
           aria-label={node.props.label}
-          className={`${getFieldControlClassName(error !== null)} ${isMultiple ? 'min-h-40' : 'appearance-none pr-12'}`.trim()}
+          className={`${getFieldControlClassName(error !== null)} ${isMultiple ? 'min-h-32 sm:min-h-36' : 'appearance-none pr-12'}`.trim()}
           multiple={isMultiple}
           value={value}
           onChange={(event) => {

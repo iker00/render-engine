@@ -130,8 +130,12 @@ describe('App bootstrap', () => {
       'text-app-accent',
     )
     expect(screen.getByTestId('runtime-error-message')).toHaveClass(
+      'max-w-2xl',
+      'text-sm',
+      'leading-6',
       'text-app-text-muted',
-      'sm:text-lg',
+      'sm:text-base',
+      'sm:leading-7',
     )
   })
 

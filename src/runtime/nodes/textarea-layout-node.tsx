@@ -39,7 +39,7 @@ export function TextareaNode({ node }: TextareaNodeProps) {
     <label className={getFieldWrapperClassName()} data-layout-node="textarea">
       <span className={getFieldLabelClassName()}>{node.props.label}</span>
       <textarea
-        className={`${getFieldControlClassName(error !== null)} min-h-32 resize-y`}
+        className={`${getFieldControlClassName(error !== null)} min-h-28 resize-y sm:min-h-32`}
         value={value}
         onChange={(event) => {
           const nextValue = event.currentTarget.value

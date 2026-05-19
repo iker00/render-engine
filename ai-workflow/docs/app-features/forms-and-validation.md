@@ -11,11 +11,14 @@ Soportar formularios declarativos con estado interno, campos reutilizables y val
 
 ## Gramática visual estable vigente
 - `form` funciona hoy como layout principal del trámite, no como una tarjeta adicional que envuelva otras tarjetas internas.
-- Los `container` dentro de un `form` se renderizan como `section` semánticas cuando actúan como bloques verticales por defecto o cuando usan `columns`; resuelven la separación visual entre bloques con una única línea superior de sección y padding vertical útil, sin introducir padding horizontal implícito, sangrado lateral ni un nodo nuevo.
+- La baseline visual vigente del formulario es deliberadamente compacta: el bloque introductorio, las secciones, los campos y el cierre de acciones ocupan menos altura total que en la baseline institucional inicial, sin abandonar su gramática administrativa.
+- Los `container` dentro de un `form` se renderizan como `section` semánticas cuando actúan como bloques verticales por defecto o cuando usan `columns`; resuelven la separación visual entre bloques con una única línea superior de sección y padding vertical útil algo más contenido, sin introducir padding horizontal implícito, sangrado lateral ni un nodo nuevo.
 - Dentro de `form`, un `container` con `direction: row` y sin `columns` mantiene un layout lineal `plain`, mientras que `columns` conserva la semántica de sección aunque también exista `direction: row`; en ambos casos siguen disponibles `align`, `justify` y la escala ampliada de `gap`.
-- `input`, `textarea` y `select` comparten borde sobrio, fondo blanco, foco por `ring` sobre el propio borde y ausencia de sombra propia en reposo.
-- `radioGroup` y `checkboxGroup` conservan controles nativos y texto alineado, sin convertir cada opción en una tarjeta con borde.
-- La jerarquía visual de acciones sigue distinguiendo CTA principal y acciones secundarias sin alterar su semántica funcional actual.
+- `input`, `textarea` y `select` comparten borde sobrio, fondo blanco, foco por `ring` sobre el propio borde y ausencia de sombra propia en reposo, con padding y altura percibida más contenidos.
+- `textarea` conserva `resize-y` y una altura mínima útil, ahora más compacta en móvil base que en breakpoints mayores.
+- `select.props.multiple` mantiene una altura mínima suficiente para uso real, pero también más contenida que en la baseline previa.
+- `radioGroup` y `checkboxGroup` conservan controles nativos y texto alineado, sin convertir cada opción en una tarjeta con borde, con menor separación vertical entre opciones.
+- La jerarquía visual de acciones sigue distinguiendo CTA principal y acciones secundarias sin alterar su semántica funcional actual, pero ambas reducen padding y altura percibida respecto a la baseline previa.
 
 ## Modelo de formulario
 - Cada formulario tiene `id`.
@@ -47,6 +50,7 @@ Reglas estables del catálogo:
 - Los valores numéricos de `select`, `radioGroup` y `checkboxGroup` se normalizan a string en runtime para compararse, almacenarse, renderizarse y enviarse.
 - `select` simple y `radioGroup` comparten la misma semántica de valor vacío `''`.
 - `select.multiple` y `checkboxGroup` comparten la misma semántica de valor vacío `[]` y el mismo orden estable según el catálogo efectivo visible.
+- Las variantes multilínea y multiselección mantienen una altura mínima explícita para no volverse frágiles tras la compactación general del formulario.
 
 ## Valores por defecto
 - Los campos pueden declarar `defaultValue`.

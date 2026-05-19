@@ -1386,20 +1386,20 @@ describe('RuntimePage', () => {
 
     expect(screen.getByRole('heading', { name: 'Welcome', level: 1 })).toHaveClass(
       'm-0',
-      'text-4xl',
+      'text-3xl',
       'font-semibold',
       'leading-tight',
       'tracking-[-0.03em]',
       'text-app-text-strong',
-      'sm:text-5xl',
+      'sm:text-4xl',
     )
     expect(screen.getByText('Build forms from configuration.')).toHaveClass(
       'm-0',
-      'text-base',
-      'leading-7',
+      'text-sm',
+      'leading-6',
       'text-app-text-muted',
-      'sm:text-lg',
-      'sm:leading-8',
+      'sm:text-base',
+      'sm:leading-7',
     )
     expect(screen.getByRole('list')).toHaveClass(
       'm-0',
@@ -1439,6 +1439,8 @@ describe('RuntimePage', () => {
       'bg-white',
       'px-4',
       'py-3',
+      'sm:px-3.5',
+      'sm:py-2.5',
       'text-sm',
       'font-semibold',
       'text-app-text-strong',
@@ -1780,7 +1782,7 @@ describe('RuntimePage', () => {
     expect(form).toHaveClass(
       'grid',
       'w-full',
-      'gap-6',
+      'gap-5',
     )
     expect(form).not.toHaveClass('rounded-form')
     expect(screen.getByLabelText('Bio').closest('[data-layout-node="container"]')?.tagName).toBe('SECTION')
@@ -1791,28 +1793,39 @@ describe('RuntimePage', () => {
       'gap-5',
       'border-t',
       'border-app-border-soft',
-      'pt-6',
+      'pt-5',
     )
     expect(screen.getByLabelText('Bio').closest('[data-layout-node="container"]')).not.toHaveClass('-mx-5', 'sm:-mx-6')
     expect(screen.getByRole('heading', { name: 'Profile form', level: 2 })).toBeInTheDocument()
-    expect(screen.getByText('Name').closest('[data-layout-node="input"]')).toHaveClass('grid', 'gap-2.5')
-    expect(screen.getByText('Name')).toHaveClass('text-sm', 'font-semibold', 'text-app-text-strong')
+    expect(screen.getByText('Name').closest('[data-layout-node="input"]')).toHaveClass('grid', 'gap-2')
+    expect(screen.getByText('Name')).toHaveClass('text-sm', 'font-semibold', 'leading-5', 'text-app-text-strong')
     expect(screen.getByLabelText('Name')).toHaveValue('Ada')
     expect(screen.getByLabelText('Name')).toHaveClass(
       'rounded-control',
       'border-app-border-soft',
       'bg-white',
+      'px-4',
+      'py-3',
+      'sm:px-3.5',
+      'sm:py-2.5',
       'text-app-text',
     )
     expect(screen.getByLabelText('Name')).not.toHaveClass('shadow-sm')
     expect(screen.getByLabelText('Bio')).toHaveValue('Runtime builder')
     expect(screen.getByLabelText('Role')).toHaveValue('2')
-    expect(screen.getByLabelText('Bio')).toHaveClass('rounded-control', 'bg-white')
+    expect(screen.getByLabelText('Bio')).toHaveClass('rounded-control', 'bg-white', 'min-h-28', 'sm:min-h-32')
     expect(screen.getByLabelText('Bio')).not.toHaveClass('shadow-sm')
-    expect(screen.getByLabelText('Role')).toHaveClass('rounded-control', 'bg-white', 'appearance-none', 'pr-12')
+    expect(screen.getByLabelText('Role')).toHaveClass(
+      'rounded-control',
+      'bg-white',
+      'appearance-none',
+      'pr-12',
+      'sm:px-3.5',
+      'sm:py-2.5',
+    )
     expect(screen.getByLabelText('Role')).not.toHaveClass('shadow-sm')
-    expect(buttons[0]).toHaveClass('bg-white', 'text-app-text-strong')
-    expect(buttons[1]).toHaveClass('bg-app-accent', 'text-white')
+    expect(buttons[0]).toHaveClass('bg-white', 'text-app-text-strong', 'sm:px-3.5', 'sm:py-2.5')
+    expect(buttons[1]).toHaveClass('bg-app-accent', 'text-white', 'sm:px-3.5', 'sm:py-2.5')
     expect(buttons[0]).toHaveTextContent('Aux reset')
     expect(buttons[1]).toHaveTextContent('Submit profile')
   })
@@ -1874,7 +1887,7 @@ describe('RuntimePage', () => {
       'gap-10',
       'border-t',
       'border-app-border-soft',
-      'pt-6',
+      'pt-5',
     )
     expect(container).not.toHaveClass('-mx-5', 'sm:-mx-6')
     expect(container).not.toHaveClass('flex-row')
@@ -2018,8 +2031,8 @@ describe('RuntimePage', () => {
     expect(screen.getByLabelText('Age')).toHaveValue(42)
     expect(screen.getByLabelText('Birthday')).toHaveValue('2026-05-07')
     expect(screen.getByLabelText('Appointment')).toHaveValue('2026-05-07T12:30')
-    expect(screen.getByRole('radio', { name: 'Admin' }).closest('div')).toHaveClass('grid', 'gap-3')
-    expect(screen.getByRole('checkbox', { name: 'alpha' }).closest('div')).toHaveClass('grid', 'gap-3')
+    expect(screen.getByRole('radio', { name: 'Admin' }).closest('div')).toHaveClass('grid', 'gap-2.5')
+    expect(screen.getByRole('checkbox', { name: 'alpha' }).closest('div')).toHaveClass('grid', 'gap-2.5')
     expect(screen.getByRole('radio', { name: 'Admin' }).closest('label')).not.toHaveClass('border')
     expect(screen.getByRole('checkbox', { name: 'alpha' }).closest('label')).not.toHaveClass('border')
     expect(screen.getByRole('listbox', { name: 'Scopes' })).toBeInTheDocument()
