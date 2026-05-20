@@ -20,6 +20,11 @@
   "pages": [
     {
       "id": "bootstrap-home",
+      "preloads": [
+        {
+          "searchPosts": {}
+        }
+      ],
       "layout": [
         {
           "type": "heading",
@@ -32,6 +37,92 @@
           "type": "paragraph",
           "props": {
             "text": "Utiliza este formulario para presentar una solicitud general y dirigirla al área competente sin salir del runtime declarativo."
+          }
+        },
+        {
+          "type": "image",
+          "props": {
+            "src": "https://picsum.photos/seed/picsum/1920/1080",
+            "alt": "Imagen de ejemplo"
+          }
+        },
+        {
+          "type": "table",
+          "props": {
+            "headers": [
+              "ID",
+              "title",
+              "body",
+              "userId"
+            ],
+            "rows": [
+              [
+                15,
+                "Lorem ipsum dolor sit amet",
+                "consectetur adipiscing elit",
+                1
+              ],
+              [
+                16,
+                "Sed do eiusmod tempor incididunt",
+                "ut labore et dolore magna aliqua",
+                2
+              ],
+              [
+                17,
+                "Ut enim ad minim veniam",
+                "quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat",
+                3
+              ],
+              [
+                18,
+                "Duis aute irure dolor in reprehenderit",
+                "in voluptate velit esse cillum dolore eu fugiat nulla pariatur",
+                4
+              ],
+              [
+                19,
+                "Excepteur sint occaecat cupidatat non",
+                "proident, sunt in culpa qui officia deserunt mollit anim id est laborum proident, sunt in culpa qui officia deserunt mollit anim id est laborum proident, sunt in culpa qui officia deserunt mollit anim id est laborum proident, sunt in culpa qui officia deserunt mollit anim id est laborum",
+                5
+              ]
+            ]
+          }
+        },
+        {
+          "type": "table",
+          "props": {
+            "headers": [
+              "ID",
+              "title",
+              "body",
+              "userId"
+            ],
+            "rows": {
+              "source": "queries.searchPosts.data",
+              "cells": [
+                "item.id",
+                "item.title",
+                "item.body",
+                "item.userId"
+              ]
+            },
+            "queryStateFeedback": {
+              "query": "searchPosts",
+              "states": {
+                "loading": {
+                  "mode": "fallback",
+                  "fallback": [
+                    {
+                      "type": "paragraph",
+                      "props": {
+                        "text": "Loading posts..."
+                      }
+                    }
+                  ]
+                }
+              }
+            }
           }
         },
         {
@@ -187,6 +278,16 @@
                 "action": {
                   "type": "navigateTo",
                   "pageId": "containers-example"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Demo",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "demo"
                 }
               }
             }
@@ -1981,6 +2082,431 @@
                   "pageId": "bootstrap-home"
                 }
               }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "demo",
+      "layout": [
+        {
+          "type": "container",
+          "props": {
+            "direction": "row",
+            "align": "start",
+            "justify": "between",
+            "wrap": "wrap"
+          },
+          "children": [
+            {
+              "type": "button",
+              "props": {
+                "label": "<",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "bootstrap-home"
+                }
+              }
+            },
+            {
+              "type": "heading",
+              "props": {
+                "text": "Perfil",
+                "level": 1
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "...",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "bootstrap-home"
+                }
+              }
+            },
+            {
+              "type": "container",
+              "props": {
+                "direction": "row",
+                "align": "start",
+                "justify": "start",
+                "wrap": "wrap"
+              },
+              "children": [
+                {
+                  "type": "image",
+                  "props": {
+                    "src": "https://picsum.photos/200/200",
+                    "alt": "Imagen de perfil",
+                    "width": "",
+                    "height": ""
+                  }
+                },
+                {
+                  "type": "container",
+                  "props": {
+                    "direction": "column",
+                    "align": "start",
+                    "justify": "start",
+                    "wrap": "wrap"
+                  },
+                  "children": [
+                    {
+                      "type": "heading",
+                      "props": {
+                        "text": "Alex Rivera",
+                        "level": 2
+                      }
+                    },
+                    {
+                      "type": "paragraph",
+                      "props": {
+                        "text": "Calle Luna 45, Madrid"
+                      }
+                    },
+                    {
+                      "type": "paragraph",
+                      "props": {
+                        "text": "+34 612 345 678"
+                      }
+                    },
+                    {
+                      "type": "paragraph",
+                      "props": {
+                        "text": "14/06/1995"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "container",
+              "props": {
+                "columns": 3
+              },
+              "children": [
+                {
+                  "type": "button",
+                  "props": {
+                    "label": "Personal",
+                    "action": {
+                      "type": "navigateTo",
+                      "pageId": "bootstrap-home"
+                    }
+                  }
+                },
+                {
+                  "type": "button",
+                  "props": {
+                    "label": "Mapa",
+                    "action": {
+                      "type": "navigateTo",
+                      "pageId": "bootstrap-home"
+                    }
+                  }
+                },
+                {
+                  "type": "button",
+                  "props": {
+                    "label": "Hechos",
+                    "action": {
+                      "type": "navigateTo",
+                      "pageId": "bootstrap-home"
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "type": "heading",
+              "props": {
+                "text": "Personas relacionadas",
+                "level": 2
+              }
+            },
+            {
+              "type": "container",
+              "props": {
+                "columns": 4
+              },
+              "children": [
+                {
+                  "type": "container",
+                  "props": {
+                    "direction": "column",
+                    "align": "start",
+                    "justify": "start",
+                    "wrap": "wrap"
+                  },
+                  "children": [
+                    {
+                      "type": "image",
+                      "props": {
+                        "src": "https://picsum.photos/seed/picsum/100/100",
+                        "alt": "Imagen de perfil",
+                        "width": "",
+                        "height": ""
+                      }
+                    },
+                    {
+                      "type": "paragraph",
+                      "props": {
+                        "text": "Lorem"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "container",
+                  "props": {
+                    "direction": "column",
+                    "align": "start",
+                    "justify": "start",
+                    "wrap": "wrap"
+                  },
+                  "children": [
+                    {
+                      "type": "image",
+                      "props": {
+                        "src": "https://picsum.photos/seed/1/100/100",
+                        "alt": "Imagen de perfil",
+                        "width": "",
+                        "height": ""
+                      }
+                    },
+                    {
+                      "type": "paragraph",
+                      "props": {
+                        "text": "Lorem"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "container",
+                  "props": {
+                    "direction": "column",
+                    "align": "start",
+                    "justify": "start",
+                    "wrap": "wrap"
+                  },
+                  "children": [
+                    {
+                      "type": "image",
+                      "props": {
+                        "src": "https://picsum.photos/seed/2/100/100",
+                        "alt": "Imagen de perfil",
+                        "width": "",
+                        "height": ""
+                      }
+                    },
+                    {
+                      "type": "paragraph",
+                      "props": {
+                        "text": "Lorem"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "container",
+                  "props": {
+                    "direction": "column",
+                    "align": "start",
+                    "justify": "start",
+                    "wrap": "wrap"
+                  },
+                  "children": [
+                    {
+                      "type": "image",
+                      "props": {
+                        "src": "https://picsum.photos/seed/3/100/100",
+                        "alt": "Imagen de perfil",
+                        "width": "",
+                        "height": ""
+                      }
+                    },
+                    {
+                      "type": "paragraph",
+                      "props": {
+                        "text": "Lorem"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "heading",
+                  "props": {
+                    "text": "Incidentes",
+                    "level": 3
+                  }
+                }
+              ]
+            },
+            {
+              "type": "container",
+              "props": {
+                "direction": "row",
+                "align": "start",
+                "justify": "start",
+                "wrap": "wrap"
+              },
+              "children": [
+                {
+                  "type": "image",
+                  "props": {
+                    "src": "https://picsum.photos/seed/4/100/100",
+                    "alt": "Imagen de perfil",
+                    "width": "",
+                    "height": ""
+                  }
+                },
+                {
+                  "type": "heading",
+                  "props": {
+                    "text": "Robo reportado en la plaza durante la noche",
+                    "level": 4
+                  }
+                },
+                {
+                  "type": "container",
+                  "props": {
+                    "direction": "row",
+                    "align": "start",
+                    "justify": "between",
+                    "wrap": "wrap"
+                  },
+                  "children": [
+                    {
+                      "type": "paragraph",
+                      "props": {
+                        "text": "Incidente #1"
+                      }
+                    },
+                    {
+                      "type": "button",
+                      "props": {
+                        "label": "Detalles",
+                        "action": {
+                          "type": "navigateTo",
+                          "pageId": "bootstrap-home"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "container",
+              "props": {
+                "direction": "row",
+                "align": "start",
+                "justify": "start",
+                "wrap": "wrap"
+              },
+              "children": [
+                {
+                  "type": "image",
+                  "props": {
+                    "src": "https://picsum.photos/seed/4/100/100",
+                    "alt": "Imagen de perfil",
+                    "width": "",
+                    "height": ""
+                  }
+                },
+                {
+                  "type": "heading",
+                  "props": {
+                    "text": "Robo reportado en la plaza durante la noche",
+                    "level": 4
+                  }
+                },
+                {
+                  "type": "container",
+                  "props": {
+                    "direction": "row",
+                    "align": "start",
+                    "justify": "between",
+                    "wrap": "wrap"
+                  },
+                  "children": [
+                    {
+                      "type": "paragraph",
+                      "props": {
+                        "text": "Incidente #1"
+                      }
+                    },
+                    {
+                      "type": "button",
+                      "props": {
+                        "label": "Detalles",
+                        "action": {
+                          "type": "navigateTo",
+                          "pageId": "bootstrap-home"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "container",
+              "props": {
+                "direction": "row",
+                "align": "start",
+                "justify": "start",
+                "wrap": "wrap"
+              },
+              "children": [
+                {
+                  "type": "image",
+                  "props": {
+                    "src": "https://picsum.photos/seed/4/100/100",
+                    "alt": "Imagen de perfil",
+                    "width": "",
+                    "height": ""
+                  }
+                },
+                {
+                  "type": "heading",
+                  "props": {
+                    "text": "Robo reportado en la plaza durante la noche",
+                    "level": 4
+                  }
+                },
+                {
+                  "type": "container",
+                  "props": {
+                    "direction": "row",
+                    "align": "start",
+                    "justify": "between",
+                    "wrap": "wrap"
+                  },
+                  "children": [
+                    {
+                      "type": "paragraph",
+                      "props": {
+                        "text": "Incidente #1"
+                      }
+                    },
+                    {
+                      "type": "button",
+                      "props": {
+                        "label": "Detalles",
+                        "action": {
+                          "type": "navigateTo",
+                          "pageId": "bootstrap-home"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
             }
           ]
         }

@@ -9,12 +9,14 @@ import { CheckboxGroupNode } from './nodes/checkbox-group-layout-node'
 import { ContainerNode } from './nodes/container-layout-node'
 import { FormNode } from './nodes/form-layout-node'
 import { HeadingNode } from './nodes/heading-layout-node'
+import { ImageNode } from './nodes/image-layout-node'
 import { InputNode } from './nodes/input-layout-node'
 import { ListNode } from './nodes/list-layout-node'
 import { ParagraphNode } from './nodes/paragraph-layout-node'
 import { RadioGroupNode } from './nodes/radio-group-layout-node'
 import { RepeaterNode } from './nodes/repeater-layout-node'
 import { SelectNode } from './nodes/select-layout-node'
+import { TableNode } from './nodes/table-layout-node'
 import { TextareaNode } from './nodes/textarea-layout-node'
 
 export interface LayoutNodeRendererProps {
@@ -46,6 +48,10 @@ export function LayoutNodeRenderer({ node, renderedChildren, iterationContext }:
       return <ParagraphNode node={node} iterationContext={iterationContext} />
     case 'list':
       return <ListNode node={node} iterationContext={iterationContext} />
+    case 'image':
+      return <ImageNode node={node} iterationContext={iterationContext} />
+    case 'table':
+      return <TableNode node={node} iterationContext={iterationContext} />
     case 'button':
       return <ButtonNode node={node} iterationContext={iterationContext} />
     case 'form':

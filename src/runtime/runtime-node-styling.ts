@@ -217,6 +217,30 @@ export function getListItemClassName() {
   return 'leading-7'
 }
 
+export function getImageNodeClassName() {
+  return 'block max-w-full rounded-card border border-app-border-soft bg-app-surface-subtle object-cover'
+}
+
+export function getTableContainerClassName() {
+  return 'overflow-x-auto rounded-card border border-app-border-soft bg-white'
+}
+
+export function getTableNodeClassName() {
+  return 'min-w-full border-collapse text-left text-sm leading-6 text-app-text'
+}
+
+export function getTableHeaderCellClassName() {
+  return 'border-b border-app-border-soft bg-app-surface-subtle px-4 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-app-text-strong'
+}
+
+export function getTableBodyRowClassName() {
+  return 'border-b border-app-border-soft last:border-b-0'
+}
+
+export function getTableCellClassName() {
+  return 'px-4 py-3 align-top text-sm text-app-text'
+}
+
 export function getButtonNodeClassName() {
   return getSecondaryButtonNodeClassName()
 }

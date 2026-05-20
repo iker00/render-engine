@@ -8,6 +8,7 @@ import {
   selectQueryReferenceValue,
 } from '../runtime-state/runtime-state-selectors'
 import { reportRuntimeReferenceDiagnostic } from './runtime-reference-diagnostics'
+import type { RuntimeReferenceSurface } from './runtime-reference-diagnostics'
 import { parseRuntimeReference } from './runtime-reference-parser'
 import type {
   RuntimeReferenceResolutionResult,
@@ -76,6 +77,19 @@ export function resolveRuntimeTextReference(
   surface: 'heading.props.text' | 'paragraph.props.text',
   options: ResolveRuntimeReferenceOptions = {},
 ) {
+  return normalizeRuntimeTextValue(resolveRuntimeVisibleValue(value, state, surface, options))
+}
+
+export function resolveRuntimeVisibleValue(
+  value: string | number | boolean,
+  state: RuntimeState,
+  surface: RuntimeReferenceSurface,
+  options: ResolveRuntimeReferenceOptions = {},
+) {
+  if (typeof value !== 'string') {
+    return value
+  }
+
   const result = resolveRuntimeReference(value, state, options)
   reportRuntimeReferenceDiagnostic(result, surface)
 
@@ -87,7 +101,33 @@ export function resolveRuntimeTextReference(
     return ''
   }
 
-  return normalizeRuntimeTextValue(result.value)
+  if (typeof result.value === 'string' || typeof result.value === 'number' || typeof result.value === 'boolean') {
+    return result.value
+  }
+
+  return ''
+}
+
+export function resolveRuntimeImageSource(
+  value: string,
+  state: RuntimeState,
+  options: ResolveRuntimeReferenceOptions = {},
+) {
+  const resolvedValue = resolveRuntimeVisibleValue(value, state, 'image.props.src', options)
+
+  if (typeof resolvedValue !== 'string' || resolvedValue.length === 0) {
+    return null
+  }
+
+  return resolvedValue
+}
+
+export function resolveRuntimeImageAlt(
+  value: string,
+  state: RuntimeState,
+  options: ResolveRuntimeReferenceOptions = {},
+) {
+  return normalizeRuntimeTextValue(resolveRuntimeVisibleValue(value, state, 'image.props.alt', options))
 }
 
 export function resolveRuntimeValue(value: unknown, state: RuntimeState) {

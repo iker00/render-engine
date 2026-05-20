@@ -6,6 +6,7 @@ import type {
   FormLayoutNode,
   GoBackButtonAction,
   HeadingLayoutNode,
+  ImageLayoutNode,
   InputLayoutNode,
   LayoutNode,
   LayoutNodeCollection,
@@ -39,6 +40,9 @@ import type {
   RuntimeFormValidationRuleName,
   RuntimeNumericValidationRule,
   RuntimeRequiredValidationRule,
+  TableCellValue,
+  TableDynamicRows,
+  TableLayoutNode,
   RuntimeConfigValidationResult,
   RuntimePageConfig,
   SelectLayoutNode,
@@ -51,6 +55,7 @@ import {
   formNodeSchema,
   goBackButtonActionSchema,
   headingNodeSchema,
+  imageNodeSchema,
   inputNodeSchema,
   listNodeSchema,
   navigateToButtonActionSchema,
@@ -67,6 +72,7 @@ import {
   selectItemSchema,
   selectNodeSchema,
   supportedNodeTypes,
+  tableNodeSchema,
   textareaNodeSchema,
   checkboxGroupNodeSchema,
 } from './runtime-config-zod'
@@ -631,6 +637,10 @@ function validateLayoutNode(
       return validateParagraphNode(rawNode, path, pageId)
     case 'list':
       return validateListNode(rawNode, path, pageId)
+    case 'image':
+      return validateImageNode(rawNode, path, pageId)
+    case 'table':
+      return validateTableNode(rawNode, path, pageId)
     case 'button':
       return validateButtonNode(rawNode, path, pageId)
     case 'form':
@@ -1042,6 +1052,129 @@ function validateListNode(
   }
 }
 
+function validateImageNode(
+  rawNode: Record<string, unknown>,
+  path: string,
+  pageId: string,
+): { status: 'ready'; node: ImageLayoutNode } | { status: 'error'; error: RuntimeConfigError } {
+  const parseResult = imageNodeSchema.safeParse(rawNode)
+
+  if (!parseResult.success) {
+    const feedbackIssue = mapQueryStateFeedbackIssue(pageId, path, parseResult.error.issues[0])
+
+    if (feedbackIssue) {
+      return feedbackIssue
+    }
+
+    const visibilityIssue = mapVisibilityIssue(pageId, path, parseResult.error.issues[0])
+
+    if (visibilityIssue) {
+      return visibilityIssue
+    }
+
+    return mapLeafNodeIssue(pageId, path, parseResult.error.issues[0]?.path ?? [])
+  }
+
+  const feedbackResult = validateQueryStateFeedback(
+    parseResult.data.queryStateFeedback as LayoutNodeFeedbackFields['queryStateFeedback'],
+    `${path}.queryStateFeedback`,
+    pageId,
+  )
+
+  if (feedbackResult.status === 'error') {
+    return feedbackResult
+  }
+
+  const visibilityResult = validateVisibility(
+    parseResult.data.visibility as LayoutNodeFeedbackFields['visibility'],
+    `${path}.visibility`,
+    pageId,
+  )
+
+  if (visibilityResult.status === 'error') {
+    return visibilityResult
+  }
+
+  return {
+    status: 'ready',
+    node: {
+      ...parseResult.data,
+      queryStateFeedback: feedbackResult.queryStateFeedback,
+      visibility: visibilityResult.visibility,
+    },
+  }
+}
+
+function validateTableNode(
+  rawNode: Record<string, unknown>,
+  path: string,
+  pageId: string,
+): { status: 'ready'; node: TableLayoutNode } | { status: 'error'; error: RuntimeConfigError } {
+  const parseResult = tableNodeSchema.safeParse(rawNode)
+
+  if (!parseResult.success) {
+    const feedbackIssue = mapQueryStateFeedbackIssue(pageId, path, parseResult.error.issues[0])
+
+    if (feedbackIssue) {
+      return feedbackIssue
+    }
+
+    const visibilityIssue = mapVisibilityIssue(pageId, path, parseResult.error.issues[0])
+
+    if (visibilityIssue) {
+      return visibilityIssue
+    }
+
+    return mapLeafNodeIssue(pageId, path, parseResult.error.issues[0]?.path ?? [])
+  }
+
+  const feedbackResult = validateQueryStateFeedback(
+    parseResult.data.queryStateFeedback as LayoutNodeFeedbackFields['queryStateFeedback'],
+    `${path}.queryStateFeedback`,
+    pageId,
+  )
+
+  if (feedbackResult.status === 'error') {
+    return feedbackResult
+  }
+
+  const visibilityResult = validateVisibility(
+    parseResult.data.visibility as LayoutNodeFeedbackFields['visibility'],
+    `${path}.visibility`,
+    pageId,
+  )
+
+  if (visibilityResult.status === 'error') {
+    return visibilityResult
+  }
+
+  const headersResult = validateTableHeaders(parseResult.data.props.headers, `${path}.props.headers`, pageId)
+
+  if (headersResult.status === 'error') {
+    return headersResult
+  }
+
+  const rowsResult = validateTableRows(parseResult.data.props.rows, headersResult.headers.length, `${path}.props.rows`, pageId)
+
+  if (rowsResult.status === 'error') {
+    return rowsResult
+  }
+
+  return {
+    status: 'ready',
+    node: {
+      type: 'table',
+      id: parseResult.data.id,
+      queryStateFeedback: feedbackResult.queryStateFeedback,
+      visibility: visibilityResult.visibility,
+      props: {
+        headers: headersResult.headers,
+        rows: rowsResult.rows,
+      },
+    },
+  }
+}
+
 function validateListItems(
   rawItems: unknown,
   path: string,
@@ -1247,6 +1380,140 @@ function validateButtonNode(
         label: parseResult.data.props.label,
         action,
       },
+    },
+  }
+}
+
+function validateTableHeaders(
+  rawHeaders: unknown,
+  path: string,
+  pageId: string,
+): { status: 'ready'; headers: string[] } | { status: 'error'; error: RuntimeConfigError } {
+  if (!Array.isArray(rawHeaders) || rawHeaders.length === 0) {
+    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}".`)
+  }
+
+  const headers: string[] = []
+
+  for (let index = 0; index < rawHeaders.length; index += 1) {
+    if (!isNonEmptyString(rawHeaders[index])) {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}".`)
+    }
+
+    headers.push(rawHeaders[index])
+  }
+
+  return {
+    status: 'ready',
+    headers,
+  }
+}
+
+function validateTableRows(
+  rawRows: unknown,
+  headersLength: number,
+  path: string,
+  pageId: string,
+): { status: 'ready'; rows: TableLayoutNode['props']['rows'] } | { status: 'error'; error: RuntimeConfigError } {
+  if (Array.isArray(rawRows)) {
+    return validateTableManualRows(rawRows, headersLength, path, pageId)
+  }
+
+  if (!isRecord(rawRows)) {
+    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}".`)
+  }
+
+  return validateTableDynamicRows(rawRows, headersLength, path, pageId)
+}
+
+function validateTableManualRows(
+  rawRows: unknown[],
+  headersLength: number,
+  path: string,
+  pageId: string,
+): { status: 'ready'; rows: TableLayoutNode['props']['rows'] } | { status: 'error'; error: RuntimeConfigError } {
+  const rows: TableCellValue[][] = []
+
+  for (let rowIndex = 0; rowIndex < rawRows.length; rowIndex += 1) {
+    const rawRow = rawRows[rowIndex]
+
+    if (!Array.isArray(rawRow)) {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}[${rowIndex}]".`)
+    }
+
+    if (rawRow.length !== headersLength) {
+      return invalidLayout(
+        `Page "${pageId}" has an invalid layout at "${path}[${rowIndex}]": table rows must have exactly ${headersLength} cells to match headers.`,
+      )
+    }
+
+    const row: TableCellValue[] = []
+
+    for (let cellIndex = 0; cellIndex < rawRow.length; cellIndex += 1) {
+      if (!isTableCellValue(rawRow[cellIndex])) {
+        return invalidLayout(
+          `Page "${pageId}" has an invalid layout at "${path}[${rowIndex}][${cellIndex}]": table cells only accept string, number or boolean values.`,
+        )
+      }
+
+      row.push(rawRow[cellIndex])
+    }
+
+    rows.push(row)
+  }
+
+  return {
+    status: 'ready',
+    rows,
+  }
+}
+
+function validateTableDynamicRows(
+  rawRows: Record<string, unknown>,
+  headersLength: number,
+  path: string,
+  pageId: string,
+): { status: 'ready'; rows: TableDynamicRows } | { status: 'error'; error: RuntimeConfigError } {
+  const hasSource = Object.prototype.hasOwnProperty.call(rawRows, 'source')
+  const hasCells = Object.prototype.hasOwnProperty.call(rawRows, 'cells')
+
+  if ('values' in rawRows || !hasSource || !hasCells) {
+    return invalidLayout(
+      `Page "${pageId}" has an invalid layout at "${path}": table rows must use either manual rows or a dynamic { source, cells } object.`,
+    )
+  }
+
+  const sourceResult = validateCollectionSource(rawRows.source, `${path}.source`, pageId, { allowItemReference: true })
+
+  if (sourceResult.status === 'error') {
+    return sourceResult
+  }
+
+  if (!Array.isArray(rawRows.cells)) {
+    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.cells".`)
+  }
+
+  if (rawRows.cells.length !== headersLength) {
+    return invalidLayout(
+      `Page "${pageId}" has an invalid layout at "${path}.cells": table dynamic cells must have exactly ${headersLength} entries to match headers.`,
+    )
+  }
+
+  const cells: string[] = []
+
+  for (let index = 0; index < rawRows.cells.length; index += 1) {
+    if (!isNonEmptyString(rawRows.cells[index])) {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.cells[${index}]".`)
+    }
+
+    cells.push(rawRows.cells[index])
+  }
+
+  return {
+    status: 'ready',
+    rows: {
+      source: sourceResult.source,
+      cells,
     },
   }
 }
@@ -2756,10 +3023,12 @@ function validateFormChildren(
       node.type !== 'button' &&
       node.type !== 'heading' &&
       node.type !== 'paragraph' &&
+      node.type !== 'image' &&
+      node.type !== 'table' &&
       node.type !== 'container'
     ) {
       return invalidLayout(
-        `Page "${pageId}" has an invalid layout at "${nodePath}": form nodes only accept input, textarea, select, radioGroup, checkboxGroup, button, heading, paragraph and container descendants.`,
+        `Page "${pageId}" has an invalid layout at "${nodePath}": form nodes only accept input, textarea, select, radioGroup, checkboxGroup, button, heading, paragraph, image, table and container descendants.`,
       )
     }
 
@@ -3243,6 +3512,10 @@ function mapRequestBodyIssue(
 
 function isRuntimeConfigValue(value: unknown): value is RuntimeVisibilityConfig['value'] {
   return value === null || typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean'
+}
+
+function isTableCellValue(value: unknown): value is TableCellValue {
+  return typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean'
 }
 
 function isValidVisibilityReference(reference: string): boolean {

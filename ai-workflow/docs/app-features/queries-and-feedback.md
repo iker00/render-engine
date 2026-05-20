@@ -21,8 +21,12 @@ En el estado implementado hoy:
 El runtime ya permite leer estado de queries desde superficies textuales concretas:
 - `heading.props.text`
 - `paragraph.props.text`
+- `image.props.src`
+- `image.props.alt`
 - `repeater.props.items.source`
 - `list.props.items.source`
+- `table.props.rows.source`
+- celdas string de `table`
 - `select.props.items.source`
 - `visibility.reference`
 
@@ -40,8 +44,10 @@ Semántica estable:
 - si la query no existe, `data` todavía no está disponible, falta una clave, el índice queda fuera de rango o se intenta profundizar dentro de un primitivo, la referencia se trata como dato ausente
 - `status` y `error` no admiten navegación adicional; rutas como `queries.searchUsers.error.message` siguen siendo inválidas
 - en `heading` y `paragraph`, solo los resultados escalares compatibles con texto (`string`, `number`, `boolean`) se muestran de forma visible; objetos, arrays, `null`, `undefined` y referencias no resolubles degradan a string vacío
+- en `image`, `src` solo produce render cuando la resolución final es un string no vacío; referencias ausentes, no resolubles o con valor final no textual degradan a no render, y `alt` degrada a string vacío si no hay valor visible
 - en `repeater`, una referencia válida cuyo valor runtime actual no es una colección utilizable degrada a cero iteraciones en vez de romper el render
 - en `list` y `select`, una referencia válida cuyo valor runtime actual no es una colección utilizable degrada a colección vacía en vez de romper render, validación o submit
+- en `table`, `props.rows.source` degrada a cero filas cuando la colección no existe o no es array, y cada celda string reutiliza la misma normalización visible de `heading`, `paragraph` e `image`, vaciándose sin romper la fila cuando el valor no es renderizable
 - cuando la colección contiene objetos y algún item no resuelve los datos mínimos requeridos por el consumidor, el runtime degrada solo ese item y conserva el resto de la colección
 - en `visibility`, `queries.{queryName}` y `queries.{queryName}.error` pueden evaluarse con `isTruthy` e `isFalsy`; `queries.{queryName}.status` y las rutas anidadas bajo `data` también pueden usarse con comparaciones literales o numéricas según el operador
 
@@ -146,5 +152,7 @@ No se consideran `empty`:
 - mostrar un mensaje de “sin resultados” cuando la query resuelve vacía
 - ocultar bloques hasta que exista un resultado útil
 - hacer que varios nodos reaccionen de forma distinta al mismo `queryName`
+- renderizar una `image` cuyo `src` o `alt` depende de `queries.*`, también dentro de `repeater`
+- renderizar una `table` dinámica desde `queries.*`, conservando filas parciales y vaciando solo las celdas sin dato visible
 - reutilizar una misma query para alimentar a la vez varios `list` o `select` con proyecciones distintas por item
 - mostrar u ocultar nodos o campos según `queries.{queryName}.status`, `queries.{queryName}.error` o una ruta anidada de `queries.{queryName}.data.*` sin lógica imperativa por pantalla

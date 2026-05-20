@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { parseRuntimeReference } from '../runtime/runtime-references/runtime-reference-parser'
-import { resolveRuntimeReference } from '../runtime/runtime-references/runtime-reference-resolver'
+import {
+  resolveRuntimeImageAlt,
+  resolveRuntimeImageSource,
+  resolveRuntimeReference,
+  resolveRuntimeVisibleValue,
+} from '../runtime/runtime-references/runtime-reference-resolver'
 import type { RuntimeState } from '../runtime/runtime-state/runtime-state-types'
 
 const runtimeState: RuntimeState = {
@@ -697,6 +702,30 @@ describe('Runtime reference resolution', () => {
         status: 'missing',
         reference: parseRuntimeReference('params.userId'),
       })
+    })
+  })
+
+  describe('T0033-02 visible value resolution for image surfaces', () => {
+    it('keeps literal strings and scalar resolved values visible across surfaces', () => {
+      expect(resolveRuntimeVisibleValue('Plain text', runtimeState, 'image.props.alt')).toBe('Plain text')
+      expect(resolveRuntimeVisibleValue('queries.searchUsers.data.1', runtimeState, 'image.props.alt')).toBe('Grace')
+      expect(resolveRuntimeVisibleValue('queries.searchUsers.status', runtimeState, 'image.props.alt')).toBe('success')
+    })
+
+    it('normalizes image src and alt independently from the shared visible value helper', () => {
+      expect(resolveRuntimeImageSource('/media/hero.png', runtimeState)).toBe('/media/hero.png')
+      expect(resolveRuntimeImageSource('queries.searchUsers.data.1', runtimeState)).toBe('Grace')
+      expect(resolveRuntimeImageSource('queries.searchUsers.status', runtimeState)).toBe('success')
+      expect(resolveRuntimeImageSource('queries.searchUsers.data', runtimeState)).toBeNull()
+
+      expect(resolveRuntimeImageAlt('/media/hero.png', runtimeState)).toBe('/media/hero.png')
+      expect(resolveRuntimeImageAlt('queries.searchUsers.data.1', runtimeState)).toBe('Grace')
+      expect(resolveRuntimeImageAlt('queries.searchUsers.data', runtimeState)).toBe('')
+    })
+
+    it('keeps item context available to the shared visible value helper', () => {
+      expect(resolveRuntimeVisibleValue('item.author.name', runtimeState, 'image.props.alt', { iterationContext })).toBe('Ada')
+      expect(resolveRuntimeImageSource('item.slug', runtimeState, { iterationContext })).toBe('hello-world')
     })
   })
 })

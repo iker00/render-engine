@@ -1,7 +1,7 @@
 # Contrato de configuración
 
 ## Objetivo
-Definir la estructura funcional mínima del JSON que el runtime interpreta hoy para resolver y renderizar la UI configurable ya disponible, incluidas las referencias dinámicas soportadas por el runtime en texto, formularios y colecciones declarativas.
+Definir la estructura funcional mínima del JSON que el runtime interpreta hoy para resolver y renderizar la UI configurable ya disponible, incluidas las referencias dinámicas soportadas por el runtime en texto, imágenes, tablas, formularios y colecciones declarativas.
 
 ## Estructura vigente
 La configuración parte de tres bloques principales:
@@ -84,6 +84,16 @@ Nodos soportados hoy:
   - shape manual objeto: `{ values: Array<object>, itemText: string }`
   - shape dinámico escalar: `{ source: 'queries.{queryName}.data' | 'queries.{queryName}.data.*' | 'item.*', itemType: 'scalar' }`
   - shape dinámico objeto: `{ source: 'queries.{queryName}.data' | 'queries.{queryName}.data.*' | 'item.*', itemText: string }`
+- `image`
+  - `props.src`: string obligatorio, literal o referencia dinámica completa soportada por el runtime
+  - `props.alt`: string obligatorio, literal o referencia dinámica completa soportada por el runtime
+- `table`
+  - `props.headers`: array ordenado obligatorio de strings no vacíos
+  - `props.rows`: obligatorio y exclusivo entre:
+    - modo manual: `Array<Array<string | number | boolean>>`
+    - modo dinámico: `{ source: 'queries.{queryName}.data' | 'queries.{queryName}.data.*' | 'item.*', cells: string[] }`
+  - cada fila manual y cada colección `cells` dinámica debe mantener correspondencia exacta con `headers`
+  - las celdas string reutilizan la misma semántica de literal o referencia dinámica completa soportada por el runtime
 - `button`
   - `props.label`: string obligatorio
   - `props.action`: opcional; sin `action` solo es válido dentro del subárbol de un `form` y actúa como submit implícito
@@ -157,7 +167,7 @@ Nodos soportados hoy:
   - `props.items`: obligatorio con exactamente los mismos shapes soportados por `select`
 
 Reglas estructurales adicionales del catálogo actual:
-- `heading`, `paragraph`, `list` y `button` siguen tratándose como nodos hoja; si reciben `children`, esos datos no pasan al resultado normalizado.
+- `heading`, `paragraph`, `list`, `image`, `table` y `button` siguen tratándose como nodos hoja; si reciben `children`, esos datos no pasan al resultado normalizado.
 - `repeater` rechaza `children` y solo admite repetición a través de `props.template`.
 - `input`, `textarea`, `select`, `radioGroup` y `checkboxGroup` solo son válidos como descendientes de un `form`.
 - `button` sin `action` solo es válido como descendiente de un `form`.
@@ -179,7 +189,7 @@ Cada regla de `states` admite exactamente uno de estos modos:
 - `mode: fallback`, que exige `fallback` como colección ordenada de `LayoutNode[]`
 
 Reglas funcionales vigentes:
-- `queryStateFeedback` es transversal a `container`, `heading`, `paragraph`, `list`, `button`, `form`, `input`, `textarea`, `select`, `radioGroup` y `checkboxGroup`.
+- `queryStateFeedback` es transversal a `container`, `heading`, `paragraph`, `list`, `image`, `table`, `button`, `form`, `input`, `textarea`, `select`, `radioGroup` y `checkboxGroup`.
 - `fallback` reutiliza el mismo catálogo de nodos soportados por `layout`; no introduce un dialecto paralelo ni un wrapper sintético obligatorio.
 - un fallback puede contener varios nodos hermanos y conserva su orden declarado.
 - si un estado visible no tiene regla explícita, el runtime aplica `success -> show` y `idle/loading/error/empty -> hide`.
@@ -204,7 +214,7 @@ Referencias admitidas en `visibility`:
 - `queries.{queryName}.error`
 
 Reglas funcionales vigentes:
-- `visibility` es transversal a `container`, `heading`, `paragraph`, `list`, `button`, `form`, `input`, `textarea`, `select`, `radioGroup` y `checkboxGroup`.
+- `visibility` es transversal a `container`, `heading`, `paragraph`, `list`, `image`, `table`, `button`, `form`, `input`, `textarea`, `select`, `radioGroup` y `checkboxGroup`.
 - si un nodo no declara `visibility`, conserva su comportamiento visible previo.
 - `equals` y `notEquals` comparan contra un literal declarado ya validado, sin reinterpretar strings con forma de referencia runtime.
 - `equals` y `notEquals` solo aceptan `string`, `number`, `boolean` o `null` como `value`.
@@ -223,7 +233,7 @@ Reglas funcionales vigentes:
 
 ## Referencias dinámicas
 Las referencias dinámicas ya forman parte del contrato visible actual, pero con un alcance intencionadamente acotado:
-- solo se interpretan cuando el string completo de `heading.props.text` o `paragraph.props.text` coincide con una referencia soportada
+- solo se interpretan cuando el string completo de `heading.props.text`, `paragraph.props.text`, `image.props.src`, `image.props.alt` o una celda string de `table` coincide con una referencia soportada
 - el escape literal con `\` permite mostrar una referencia tal cual, por ejemplo `\queries.searchUsers.data.results.0.name`
 - no existe interpolación parcial dentro de strings
 
@@ -242,6 +252,10 @@ Esa misma convención se reutiliza también en:
 - `form.submitAction.query`
 - `form.submitAction.body`
 - `form.submitAction.headers`
+- `image.props.src`
+- `image.props.alt`
+- celdas string manuales de `table`
+- `table.props.rows.cells`
 - `repeater.props.items.source`
 - `visibility.reference`
 
@@ -267,7 +281,7 @@ Consumidores adicionales ya soportados con esa misma frontera:
 Frontera específica de `params.*`:
 - `params.{paramName}` solo admite un segmento dinámico después del namespace.
 - `params.userId` es válido; `params`, `params.user.id` y segmentos vacíos siguen siendo inválidos.
-- `params.*` puede usarse en `heading.props.text`, `paragraph.props.text`, `api.query`, `api.body`, `api.headers`, `button.props.action.query`, `button.props.action.body`, `button.props.action.headers`, `form.submitAction.query`, `form.submitAction.body`, `form.submitAction.headers` y `defaultValue` de `input`, `textarea`, `select`, `radioGroup` y `checkboxGroup`.
+- `params.*` puede usarse en `heading.props.text`, `paragraph.props.text`, `image.props.src`, `image.props.alt`, celdas string de `table`, `api.query`, `api.body`, `api.headers`, `button.props.action.query`, `button.props.action.body`, `button.props.action.headers`, `form.submitAction.query`, `form.submitAction.body`, `form.submitAction.headers` y `defaultValue` de `input`, `textarea`, `select`, `radioGroup` y `checkboxGroup`.
 - `params.*` también puede usarse como origen dentro de `navigateTo.params` para construir la siguiente navegación a partir de la entrada activa.
 - Cuando el runtime hidrata `params.*` desde la URL, todos sus valores llegan como string.
 - `params.*` sigue fuera de alcance en `visibility.reference`, `repeater.props.items.source`, `list.props.items.source`, `select.props.items.source`, `radioGroup.props.items.source` y `checkboxGroup.props.items.source`, aunque esas superficies reutilicen la misma familia general de referencias runtime.
@@ -275,7 +289,7 @@ Frontera específica de `params.*`:
 Frontera específica de `item.*`:
 - `item` e `item.*` solo son válidos cuando el consumidor vive dentro del subárbol iterado de un `repeater`.
 - `item`, `item.slug`, `item.meta.author.name` o `item.tags.0` son ejemplos válidos dentro de ese contexto.
-- `item.*` puede usarse en `heading.props.text`, `paragraph.props.text`, `api.query`, `api.body`, `api.headers`, `button.props.action.query`, `button.props.action.body`, `button.props.action.headers`, `button.props.action.params`, `form.submitAction.query`, `form.submitAction.body`, `form.submitAction.headers`, `defaultValue` de campos, `visibility.reference`, `repeater.props.items.source`, `list.props.items.source`, `select.props.items.source`, `radioGroup.props.items.source` y `checkboxGroup.props.items.source`.
+- `item.*` puede usarse en `heading.props.text`, `paragraph.props.text`, `image.props.src`, `image.props.alt`, celdas string de `table`, `api.query`, `api.body`, `api.headers`, `button.props.action.query`, `button.props.action.body`, `button.props.action.headers`, `button.props.action.params`, `form.submitAction.query`, `form.submitAction.body`, `form.submitAction.headers`, `defaultValue` de campos, `visibility.reference`, `repeater.props.items.source`, `list.props.items.source`, `select.props.items.source`, `radioGroup.props.items.source` y `checkboxGroup.props.items.source`.
 - Fuera de un `repeater`, `item.*` no forma parte del contrato soportado aunque el shape del string siga siendo reconocible.
 
 Reglas funcionales vigentes:
@@ -292,6 +306,8 @@ Reglas funcionales vigentes:
 - La validación comprueba estructura general, shape de `api`, `pages`, `preloads`, colección `layout` y shape de los nodos soportados.
 - Si `layout` no es un array válido, el arranque falla con un error explícito sobre la ruta afectada.
 - Si aparece un nodo no soportado en la raíz o dentro de `children`, el runtime lo trata como error de configuración y no lo reinterpreta.
+- Si un nodo `image` omite `props.src` o `props.alt`, el config completo se rechaza antes del render sobre la ruta exacta.
+- Si un nodo `table` omite `headers` o `rows`, mezcla modo manual y dinámico, usa celdas manuales fuera de `string | number | boolean`, declara un `source` fuera de `queries.{queryName}.data`, `queries.{queryName}.data.*` o `item.*`, o rompe la correspondencia exacta entre `headers` y celdas, el config completo se rechaza antes del render sobre la ruta exacta.
 - Si un `repeater` omite `props.items.source`, `props.items.key` o `props.template`, el config completo se rechaza antes del render sobre la ruta exacta.
 - Si `repeater.props.items.key` está vacío, usa una referencia global como `item.id` o `queries.posts.data.0.id`, o contiene una ruta relativa mal formada, el config completo se rechaza antes del render.
 - Si `queryStateFeedback.states` contiene una clave fuera de `idle | loading | error | empty | success`, el config completo se rechaza con error de layout sobre esa ruta exacta.
@@ -319,7 +335,7 @@ Reglas funcionales vigentes:
 - `min`, `max` y cualquier otro umbral numérico deben ser finitos y no negativos.
 - El bootstrap rechaza rangos contradictorios dentro del mismo campo: `minLength > maxLength`, `min > max` y `minSelections > maxSelections`.
 - El orden declarado de `props.validations` se conserva en el config normalizado y pasa a ser la prioridad efectiva de evaluación en runtime.
-- Si un `form.children` contiene nodos fuera de `input`, `textarea`, `select`, `radioGroup`, `checkboxGroup`, `button`, `heading`, `paragraph` y `container`, el config completo se rechaza antes del render.
+- Si un `form.children` contiene nodos fuera de `input`, `textarea`, `select`, `radioGroup`, `checkboxGroup`, `button`, `heading`, `paragraph`, `image`, `table` y `container`, el config completo se rechaza antes del render.
 - Si `input`, `textarea`, `select`, `radioGroup` o `checkboxGroup` aparecen fuera de un subárbol `form`, el config completo se rechaza antes del render.
 - Si un `button` sin `action` aparece fuera de un subárbol `form`, el config completo se rechaza antes del render.
 - Si `form.submitAction.operationName` apunta a una operación inexistente en `api`, el config completo se rechaza antes del render.
@@ -363,5 +379,5 @@ La frontera estable de esta validación queda organizada así:
 - `preloads` ya puede declarar `query`, `body` y `headers` por entrada, pero no admite condiciones, prioridades, secuencialidad, dependencias, múltiples instancias simultáneas del mismo `operationName` ni una caché histórica reutilizable por firma.
 - No hay interpolación compleja dentro de strings.
 - No hay sistema de plugins para componentes externos.
-- No hay soporte para nodos distintos de `container`, `repeater`, `heading`, `paragraph`, `list`, `button`, `form`, `input`, `textarea`, `select`, `radioGroup` y `checkboxGroup`.
-- No hay consumidores declarativos de referencias fuera de `heading.props.text`, `paragraph.props.text`, `queryStateFeedback`, `visibility`, `api.query`, `api.body`, `defaultValue` de campos de formulario, `navigateTo.params`, `repeater.props.items.source` y `source` de colecciones para `list`, `select`, `radioGroup` y `checkboxGroup`.
+- No hay soporte para nodos distintos de `container`, `repeater`, `heading`, `paragraph`, `list`, `image`, `table`, `button`, `form`, `input`, `textarea`, `select`, `radioGroup` y `checkboxGroup`.
+- No hay consumidores declarativos de referencias fuera de `heading.props.text`, `paragraph.props.text`, `image.props.src`, `image.props.alt`, celdas string de `table`, `queryStateFeedback`, `visibility`, `api.query`, `api.body`, `defaultValue` de campos de formulario, `navigateTo.params`, `repeater.props.items.source` y `source` de colecciones para `list`, `select`, `radioGroup` y `checkboxGroup`.

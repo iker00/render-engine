@@ -1412,6 +1412,318 @@ describe('RuntimePage', () => {
     )
   })
 
+  it('renders image nodes from literals and runtime references, including item.* inside repeater', () => {
+    const activePage: RuntimePageConfig = {
+      id: 'images',
+      layout: [
+        {
+          type: 'image',
+          props: {
+            src: '/media/hero.png',
+            alt: 'Hero image',
+          },
+        },
+        {
+          type: 'image',
+          props: {
+            src: 'queries.searchUsers.data.user.profile.avatarUrl',
+            alt: 'queries.searchUsers.data.user.profile.name',
+          },
+        },
+        {
+          type: 'repeater',
+          props: {
+            items: {
+              source: 'queries.searchUsers.data.results',
+              key: 'id',
+            },
+            template: [
+              {
+                type: 'image',
+                props: {
+                  src: 'item.avatarUrl',
+                  alt: 'item.name',
+                },
+              },
+            ],
+          },
+        },
+      ],
+    }
+
+    renderRuntimePageWithState(
+      activePage,
+      createRuntimePageState(activePage, {
+        searchUsers: {
+          status: 'success',
+          data: {
+            user: {
+              profile: {
+                name: 'Ada',
+                avatarUrl: '/media/ada-profile.png',
+              },
+            },
+            results: [
+              {
+                id: 'user-1',
+                name: 'Ada',
+                avatarUrl: '/media/ada.png',
+              },
+              {
+                id: 'user-2',
+                name: 'Grace',
+                avatarUrl: '/media/grace.png',
+              },
+            ],
+          },
+          error: null,
+        },
+      }),
+    )
+
+    const heroImage = screen.getByRole('img', { name: 'Hero image' })
+    expect(heroImage).toHaveAttribute('src', '/media/hero.png')
+    expect(heroImage).toHaveClass(
+      'block',
+      'max-w-full',
+      'rounded-card',
+      'border',
+      'border-app-border-soft',
+      'bg-app-surface-subtle',
+      'object-cover',
+    )
+
+    expect(
+      screen
+        .getAllByRole('img', { name: 'Ada' })
+        .find((image) => image.getAttribute('src') === '/media/ada-profile.png'),
+    ).toBeDefined()
+
+    const repeaterImages = screen.getAllByRole('img').filter((image) =>
+      ['/media/ada.png', '/media/grace.png'].includes(image.getAttribute('src') ?? ''),
+    )
+    expect(repeaterImages.map((image) => image.getAttribute('alt'))).toEqual(['Ada', 'Grace'])
+  })
+
+  it('degrades image nodes safely when src is missing or not a usable string and keeps alt as empty text when unavailable', () => {
+    const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    const activePage: RuntimePageConfig = {
+      id: 'broken-images',
+      layout: [
+        {
+          type: 'image',
+          props: {
+            src: 'queries.searchUsers.data.user.profile.avatarUrl',
+            alt: 'queries.searchUsers.data.user.profile.nickname',
+          },
+        },
+        {
+          type: 'image',
+          props: {
+            src: 'queries.searchUsers.data',
+            alt: 'queries.searchUsers.data.user.profile.name',
+          },
+        },
+        {
+          type: 'image',
+          props: {
+            src: 'queries.unknown.data.url',
+            alt: 'Unknown image',
+          },
+        },
+      ],
+    }
+
+    renderRuntimePageWithState(
+      activePage,
+      createRuntimePageState(activePage, {
+        searchUsers: {
+          status: 'success',
+          data: {
+            user: {
+              profile: {
+                name: 'Ada',
+                avatarUrl: '/media/ada-profile.png',
+              },
+            },
+          },
+          error: null,
+        },
+      }),
+    )
+
+    const images = Array.from(document.querySelectorAll('img[data-layout-node="image"]'))
+    expect(images).toHaveLength(1)
+    expect(images[0]).toHaveAttribute('src', '/media/ada-profile.png')
+    expect(images[0]).toHaveAttribute('alt', '')
+
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      '[runtime-references] Could not resolve "queries.searchUsers.data.user.profile.nickname" for image.props.alt (missing).',
+    )
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      '[runtime-references] Could not resolve "queries.unknown.data.url" for image.props.src (missing).',
+    )
+
+    consoleWarnSpy.mockRestore()
+  })
+
+  it('renders manual tables with semantic markup, declared order, and shared visible scalar normalization', () => {
+    const activePage: RuntimePageConfig = {
+      id: 'manual-table',
+      layout: [
+        {
+          type: 'table',
+          props: {
+            headers: ['Name', 'Status', 'Visits'],
+            rows: [
+              ['queries.searchUsers.data.user.profile.name', true, 12],
+              ['Grace', false, 7],
+            ],
+          },
+        },
+      ],
+    }
+
+    renderRuntimePageWithState(
+      activePage,
+      createRuntimePageState(activePage, {
+        searchUsers: {
+          status: 'success',
+          data: {
+            user: {
+              profile: {
+                name: 'Ada',
+              },
+            },
+          },
+          error: null,
+        },
+      }),
+    )
+
+    const table = screen.getByRole('table')
+    expect(within(table).getAllByRole('columnheader').map((cell) => cell.textContent)).toEqual(['Name', 'Status', 'Visits'])
+
+    const bodyRows = within(table).getAllByRole('row').slice(1)
+    expect(bodyRows).toHaveLength(2)
+    expect(within(bodyRows[0]).getAllByRole('cell').map((cell) => cell.textContent)).toEqual(['Ada', 'true', '12'])
+    expect(within(bodyRows[1]).getAllByRole('cell').map((cell) => cell.textContent)).toEqual(['Grace', 'false', '7'])
+  })
+
+  it('renders dynamic tables from collection sources, preserves rows with partial items, and reuses global references per cell', () => {
+    const activePage: RuntimePageConfig = {
+      id: 'dynamic-table',
+      layout: [
+        {
+          type: 'table',
+          props: {
+            headers: ['Name', 'Role', 'Query status'],
+            rows: {
+              source: 'queries.searchUsers.data.results',
+              cells: ['item.name', 'item.role', 'queries.searchUsers.status'],
+            },
+          },
+        },
+      ],
+    }
+
+    renderRuntimePageWithState(
+      activePage,
+      createRuntimePageState(activePage, {
+        searchUsers: {
+          status: 'success',
+          data: {
+            results: [
+              {
+                id: 'user-1',
+                name: 'Ada',
+                role: 'Admin',
+              },
+              {
+                id: 'user-2',
+                name: 'Grace',
+              },
+            ],
+          },
+          error: null,
+        },
+      }),
+    )
+
+    const table = screen.getByRole('table')
+    const bodyRows = within(table).getAllByRole('row').slice(1)
+    expect(bodyRows).toHaveLength(2)
+    expect(within(bodyRows[0]).getAllByRole('cell').map((cell) => cell.textContent)).toEqual(['Ada', 'Admin', 'success'])
+    expect(within(bodyRows[1]).getAllByRole('cell').map((cell) => cell.textContent)).toEqual(['Grace', '', 'success'])
+  })
+
+  it('renders tables inside repeaters using item.* as the dynamic source context and degrades missing collections to zero body rows', () => {
+    const activePage: RuntimePageConfig = {
+      id: 'department-tables',
+      layout: [
+        {
+          type: 'repeater',
+          props: {
+            items: {
+              source: 'queries.departments.data',
+              key: 'id',
+            },
+            template: [
+              {
+                type: 'heading',
+                props: {
+                  text: 'item.name',
+                  level: 2,
+                },
+              },
+              {
+                type: 'table',
+                props: {
+                  headers: ['Member', 'Role'],
+                  rows: {
+                    source: 'item.members',
+                    cells: ['item.name', 'item.role'],
+                  },
+                },
+              },
+            ],
+          },
+        },
+      ],
+    }
+
+    renderRuntimePageWithState(
+      activePage,
+      createRuntimePageState(activePage, {
+        departments: {
+          status: 'success',
+          data: [
+            {
+              id: 'dept-1',
+              name: 'Engineering',
+              members: [
+                { name: 'Ada', role: 'Lead' },
+                { name: 'Grace', role: 'Reviewer' },
+              ],
+            },
+            {
+              id: 'dept-2',
+              name: 'Operations',
+            },
+          ],
+          error: null,
+        },
+      }),
+    )
+
+    expect(screen.getAllByRole('heading', { level: 2 }).map((item) => item.textContent)).toEqual(['Engineering', 'Operations'])
+
+    const tables = screen.getAllByRole('table')
+    expect(within(tables[0]).getAllByRole('row').slice(1)).toHaveLength(2)
+    expect(within(tables[0]).getAllByRole('cell').map((cell) => cell.textContent)).toEqual(['Ada', 'Lead', 'Grace', 'Reviewer'])
+    expect(within(tables[1]).queryAllByRole('row').slice(1)).toHaveLength(0)
+  })
+
   it('renders button nodes as accessible button elements with stable base classes', () => {
     renderRuntimePage({
       id: 'button-page',

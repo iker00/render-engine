@@ -29,6 +29,22 @@ export function resolveListCollectionItems(items: ListLayoutNodeItems, state: Ru
   return resolveListCollectionItemsWithOptions(items, state)
 }
 
+export function resolveCollectionSourceItems(
+  source: string,
+  state: RuntimeState,
+  options: { iterationContext?: RuntimeIterationContext } = {},
+) {
+  const result = resolveRuntimeReference(source, state, {
+    iterationContext: options.iterationContext,
+  })
+
+  if (result.status !== 'resolved' || !Array.isArray(result.value)) {
+    return []
+  }
+
+  return result.value
+}
+
 export function resolveListCollectionItemsWithOptions(
   items: ListLayoutNodeItems,
   state: RuntimeState,
@@ -123,16 +139,8 @@ function resolveCollectionSource(
     }
   }
 
-  const result = resolveRuntimeReference(items.source, state, {
-    iterationContext: options.iterationContext,
-  })
-
-  if (result.status !== 'resolved' || !Array.isArray(result.value)) {
-    return null
-  }
-
   return {
-    items: result.value,
+    items: resolveCollectionSourceItems(items.source, state, options),
     itemBasePath: items.source,
   }
 }

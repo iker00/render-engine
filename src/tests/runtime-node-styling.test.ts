@@ -17,10 +17,16 @@ import {
   getContainerNodeStyling,
   getHeadingNodeClassName,
   getHeadingTag,
+  getImageNodeClassName,
   getListItemClassName,
   getListNodeClassName,
   getParagraphNodeClassName,
   getSecondaryButtonNodeClassName,
+  getTableBodyRowClassName,
+  getTableCellClassName,
+  getTableContainerClassName,
+  getTableHeaderCellClassName,
+  getTableNodeClassName,
 } from '../runtime/runtime-node-styling'
 
 describe('runtime node styling', () => {
@@ -164,6 +170,16 @@ describe('runtime node styling', () => {
       'm-0 grid list-disc gap-3 pl-5 text-app-text marker:text-app-accent',
     )
     expect(getListItemClassName()).toBe('leading-7')
+    expect(getImageNodeClassName()).toBe(
+      'block max-w-full rounded-card border border-app-border-soft bg-app-surface-subtle object-cover',
+    )
+    expect(getTableContainerClassName()).toBe('overflow-x-auto rounded-card border border-app-border-soft bg-white')
+    expect(getTableNodeClassName()).toBe('min-w-full border-collapse text-left text-sm leading-6 text-app-text')
+    expect(getTableHeaderCellClassName()).toBe(
+      'border-b border-app-border-soft bg-app-surface-subtle px-4 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-app-text-strong',
+    )
+    expect(getTableBodyRowClassName()).toBe('border-b border-app-border-soft last:border-b-0')
+    expect(getTableCellClassName()).toBe('px-4 py-3 align-top text-sm text-app-text')
   })
 
   it('keeps heading tag resolution separate from styling', () => {

@@ -4,6 +4,8 @@ export type LayoutNodeType =
   | 'heading'
   | 'paragraph'
   | 'list'
+  | 'image'
+  | 'table'
   | 'button'
   | 'form'
   | 'input'
@@ -137,6 +139,36 @@ export interface ListLayoutNode extends LayoutNodeFeedbackFields {
   id?: string
   props: {
     items: ListLayoutNodeItems
+  }
+  children?: unknown
+}
+
+export interface ImageLayoutNode extends LayoutNodeFeedbackFields {
+  type: 'image'
+  id?: string
+  props: {
+    src: string
+    alt: string
+  }
+  children?: unknown
+}
+
+export type TableCellValue = string | number | boolean
+export type TableManualRows = TableCellValue[][]
+
+export interface TableDynamicRows {
+  source: string
+  cells: string[]
+}
+
+export type TableRows = TableManualRows | TableDynamicRows
+
+export interface TableLayoutNode extends LayoutNodeFeedbackFields {
+  type: 'table'
+  id?: string
+  props: {
+    headers: string[]
+    rows: TableRows
   }
   children?: unknown
 }
@@ -325,6 +357,8 @@ export type LayoutNode =
   | HeadingLayoutNode
   | ParagraphLayoutNode
   | ListLayoutNode
+  | ImageLayoutNode
+  | TableLayoutNode
   | ButtonLayoutNode
   | FormLayoutNode
   | InputLayoutNode

@@ -6,6 +6,8 @@ export const supportedNodeTypes = [
   'heading',
   'paragraph',
   'list',
+  'image',
+  'table',
   'button',
   'form',
   'input',
@@ -199,6 +201,36 @@ export const listNodeSchema = z
     props: z
       .object({
         items: z.unknown(),
+      })
+      .strip(),
+  })
+  .strip()
+
+export const imageNodeSchema = z
+  .object({
+    type: z.literal('image'),
+    id: nodeIdSchema.optional(),
+    queryStateFeedback: queryStateFeedbackSchema.optional(),
+    visibility: visibilitySchema.optional(),
+    props: z
+      .object({
+        src: nonEmptyStringSchema,
+        alt: nonEmptyStringSchema,
+      })
+      .strip(),
+  })
+  .strip()
+
+export const tableNodeSchema = z
+  .object({
+    type: z.literal('table'),
+    id: nodeIdSchema.optional(),
+    queryStateFeedback: queryStateFeedbackSchema.optional(),
+    visibility: visibilitySchema.optional(),
+    props: z
+      .object({
+        headers: z.array(z.string()),
+        rows: z.unknown(),
       })
       .strip(),
   })

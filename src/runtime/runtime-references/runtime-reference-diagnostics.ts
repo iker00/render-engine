@@ -1,6 +1,11 @@
 import type { RuntimeReferenceResolutionResult } from './runtime-reference-types'
 
-export type RuntimeReferenceSurface = 'heading.props.text' | 'paragraph.props.text'
+export type RuntimeReferenceSurface =
+  | 'heading.props.text'
+  | 'paragraph.props.text'
+  | 'image.props.src'
+  | 'image.props.alt'
+  | 'table.cell'
 
 export function reportRuntimeReferenceDiagnostic(
   result: RuntimeReferenceResolutionResult,

@@ -1340,9 +1340,9 @@ describe('validateRuntimeConfig', () => {
     ).toEqual({
       status: 'error',
       error: {
-        code: 'unsupported-node-type',
+        code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" uses unsupported layout node type "image" at "layout[0].queryStateFeedback.states.loading.fallback[0]".',
+        message: 'Page "home" has an invalid layout at "layout[0].queryStateFeedback.states.loading.fallback[0].props.alt".',
       },
     })
   })
@@ -2993,7 +2993,7 @@ describe('validateRuntimeConfig', () => {
         code: 'invalid-layout',
         displayMode: 'development-only',
         message:
-          'Page "home" has an invalid layout at "layout[0].children[0]": form nodes only accept input, textarea, select, radioGroup, checkboxGroup, button, heading, paragraph and container descendants.',
+          'Page "home" has an invalid layout at "layout[0].children[0]": form nodes only accept input, textarea, select, radioGroup, checkboxGroup, button, heading, paragraph, image, table and container descendants.',
       },
     })
 
@@ -3028,9 +3028,9 @@ describe('validateRuntimeConfig', () => {
         code: 'invalid-layout',
         displayMode: 'development-only',
         message:
-          'Page "home" has an invalid layout at "layout[0].children[0]": form nodes only accept input, textarea, select, radioGroup, checkboxGroup, button, heading, paragraph and container descendants.',
-      },
-    })
+          'Page "home" has an invalid layout at "layout[0].children[0]": form nodes only accept input, textarea, select, radioGroup, checkboxGroup, button, heading, paragraph, image, table and container descendants.',
+        },
+      })
 
     expect(
       validateRuntimeConfig({
@@ -4381,7 +4381,7 @@ describe('validateRuntimeConfig', () => {
           code: 'invalid-layout',
           displayMode: 'development-only',
           message:
-            'Page "home" has an invalid layout at "layout[0].children[0]": form nodes only accept input, textarea, select, radioGroup, checkboxGroup, button, heading, paragraph and container descendants.',
+            'Page "home" has an invalid layout at "layout[0].children[0]": form nodes only accept input, textarea, select, radioGroup, checkboxGroup, button, heading, paragraph, image, table and container descendants.',
         },
       })
     })
@@ -7146,6 +7146,413 @@ describe('validateRuntimeConfig', () => {
               ],
             },
           ],
+        },
+      })
+    })
+  })
+
+  describe('image and table node validation', () => {
+    it('accepts image nodes with src and alt plus shared feedback fields', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithLayout([
+          {
+            type: 'image',
+            queryStateFeedback: {
+              query: 'heroImage',
+            },
+            visibility: createVisibilityRule(),
+            props: {
+              src: 'queries.heroImage.data.url',
+              alt: 'queries.heroImage.data.alt',
+            },
+          },
+        ]),
+      )
+
+      expect(result).toEqual({
+        status: 'ready',
+        config: {
+          api: {},
+          pages: [
+            {
+              id: 'home',
+              layout: [
+                {
+                  type: 'image',
+                  queryStateFeedback: {
+                    query: 'heroImage',
+                  },
+                  visibility: createVisibilityRule(),
+                  props: {
+                    src: 'queries.heroImage.data.url',
+                    alt: 'queries.heroImage.data.alt',
+                  },
+                },
+              ],
+            },
+          ],
+          initialPage: 'home',
+        },
+        page: {
+          id: 'home',
+          layout: [
+            {
+              type: 'image',
+              queryStateFeedback: {
+                query: 'heroImage',
+              },
+              visibility: createVisibilityRule(),
+              props: {
+                src: 'queries.heroImage.data.url',
+                alt: 'queries.heroImage.data.alt',
+              },
+            },
+          ],
+        },
+      })
+    })
+
+    it('accepts table nodes with manual rows and scalar cells', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithLayout([
+          {
+            type: 'table',
+            props: {
+              headers: ['Name', 'Active', 'Visits'],
+              rows: [
+                ['Ada', true, 12],
+                ['Grace', false, 7],
+              ],
+            },
+          },
+        ]),
+      )
+
+      expect(result).toEqual({
+        status: 'ready',
+        config: {
+          api: {},
+          pages: [
+            {
+              id: 'home',
+              layout: [
+                {
+                  type: 'table',
+                  props: {
+                    headers: ['Name', 'Active', 'Visits'],
+                    rows: [
+                      ['Ada', true, 12],
+                      ['Grace', false, 7],
+                    ],
+                  },
+                },
+              ],
+            },
+          ],
+          initialPage: 'home',
+        },
+        page: {
+          id: 'home',
+          layout: [
+            {
+              type: 'table',
+              props: {
+                headers: ['Name', 'Active', 'Visits'],
+                rows: [
+                  ['Ada', true, 12],
+                  ['Grace', false, 7],
+                ],
+              },
+            },
+          ],
+        },
+      })
+    })
+
+    it('accepts table nodes with dynamic rows from queries and item references', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithLayout([
+          {
+            type: 'table',
+            queryStateFeedback: {
+              query: 'users',
+            },
+            visibility: createVisibilityRule({
+              reference: 'queries.users.status',
+              operator: 'equals',
+              value: 'success',
+            }),
+            props: {
+              headers: ['Name', 'Role'],
+              rows: {
+                source: 'queries.users.data.items',
+                cells: ['item.name', 'item.role'],
+              },
+            },
+          },
+        ]),
+      )
+
+      expect(result).toEqual({
+        status: 'ready',
+        config: {
+          api: {},
+          pages: [
+            {
+              id: 'home',
+              layout: [
+                {
+                  type: 'table',
+                  queryStateFeedback: {
+                    query: 'users',
+                  },
+                  visibility: {
+                    reference: 'queries.users.status',
+                    operator: 'equals',
+                    value: 'success',
+                  },
+                  props: {
+                    headers: ['Name', 'Role'],
+                    rows: {
+                      source: 'queries.users.data.items',
+                      cells: ['item.name', 'item.role'],
+                    },
+                  },
+                },
+              ],
+            },
+          ],
+          initialPage: 'home',
+        },
+        page: {
+          id: 'home',
+          layout: [
+            {
+              type: 'table',
+              queryStateFeedback: {
+                query: 'users',
+              },
+              visibility: {
+                reference: 'queries.users.status',
+                operator: 'equals',
+                value: 'success',
+              },
+              props: {
+                headers: ['Name', 'Role'],
+                rows: {
+                  source: 'queries.users.data.items',
+                  cells: ['item.name', 'item.role'],
+                },
+              },
+            },
+          ],
+        },
+      })
+    })
+
+    it('rejects image nodes without src or alt', () => {
+      expect(
+        validateRuntimeConfig(
+          createConfigWithLayout([
+            {
+              type: 'image',
+              props: {
+                alt: 'Missing src',
+              },
+            },
+          ]),
+        ),
+      ).toEqual({
+        status: 'error',
+        error: {
+          code: 'invalid-layout',
+          displayMode: 'development-only',
+          message: 'Page "home" has an invalid layout at "layout[0].props.src".',
+        },
+      })
+
+      expect(
+        validateRuntimeConfig(
+          createConfigWithLayout([
+            {
+              type: 'image',
+              props: {
+                src: '/hero.png',
+              },
+            },
+          ]),
+        ),
+      ).toEqual({
+        status: 'error',
+        error: {
+          code: 'invalid-layout',
+          displayMode: 'development-only',
+          message: 'Page "home" has an invalid layout at "layout[0].props.alt".',
+        },
+      })
+    })
+
+    it('rejects table nodes without headers rows or matching row lengths', () => {
+      expect(
+        validateRuntimeConfig(
+          createConfigWithLayout([
+            {
+              type: 'table',
+              props: {
+                headers: [],
+                rows: [['Ada']],
+              },
+            },
+          ]),
+        ),
+      ).toEqual({
+        status: 'error',
+        error: {
+          code: 'invalid-layout',
+          displayMode: 'development-only',
+          message: 'Page "home" has an invalid layout at "layout[0].props.headers".',
+        },
+      })
+
+      expect(
+        validateRuntimeConfig(
+          createConfigWithLayout([
+            {
+              type: 'table',
+              props: {
+                headers: ['Name'],
+              },
+            },
+          ]),
+        ),
+      ).toEqual({
+        status: 'error',
+        error: {
+          code: 'invalid-layout',
+          displayMode: 'development-only',
+          message: 'Page "home" has an invalid layout at "layout[0].props.rows".',
+        },
+      })
+
+      expect(
+        validateRuntimeConfig(
+          createConfigWithLayout([
+            {
+              type: 'table',
+              props: {
+                headers: ['Name', 'Role'],
+                rows: [['Ada']],
+              },
+            },
+          ]),
+        ),
+      ).toEqual({
+        status: 'error',
+        error: {
+          code: 'invalid-layout',
+          displayMode: 'development-only',
+          message: 'Page "home" has an invalid layout at "layout[0].props.rows[0]": table rows must have exactly 2 cells to match headers.',
+        },
+      })
+    })
+
+    it('rejects table nodes that mix manual and dynamic row modes', () => {
+      expect(
+        validateRuntimeConfig(
+          createConfigWithLayout([
+            {
+              type: 'table',
+              props: {
+                headers: ['Name'],
+                rows: {
+                  source: 'queries.users.data',
+                  cells: ['item.name'],
+                  values: [['Ada']],
+                },
+              },
+            },
+          ]),
+        ),
+      ).toEqual({
+        status: 'error',
+        error: {
+          code: 'invalid-layout',
+          displayMode: 'development-only',
+          message: 'Page "home" has an invalid layout at "layout[0].props.rows": table rows must use either manual rows or a dynamic { source, cells } object.',
+        },
+      })
+    })
+
+    it('rejects table nodes with unsupported cell values or dynamic source shapes', () => {
+      expect(
+        validateRuntimeConfig(
+          createConfigWithLayout([
+            {
+              type: 'table',
+              props: {
+                headers: ['Name'],
+                rows: [[{ name: 'Ada' }]],
+              },
+            },
+          ]),
+        ),
+      ).toEqual({
+        status: 'error',
+        error: {
+          code: 'invalid-layout',
+          displayMode: 'development-only',
+          message: 'Page "home" has an invalid layout at "layout[0].props.rows[0][0]": table cells only accept string, number or boolean values.',
+        },
+      })
+
+      expect(
+        validateRuntimeConfig(
+          createConfigWithLayout([
+            {
+              type: 'table',
+              props: {
+                headers: ['Name'],
+                rows: {
+                  source: 'forms.profile.roles',
+                  cells: ['item.name'],
+                },
+              },
+            },
+          ]),
+        ),
+      ).toEqual({
+        status: 'error',
+        error: {
+          code: 'invalid-layout',
+          displayMode: 'development-only',
+          message:
+            'Page "home" has an invalid layout at "layout[0].props.rows.source": collection sources must use queries.{queryName}.data, queries.{queryName}.data.* or item.*.',
+        },
+      })
+    })
+
+    it('rejects table nodes with dynamic cells that do not match the headers length', () => {
+      expect(
+        validateRuntimeConfig(
+          createConfigWithLayout([
+            {
+              type: 'table',
+              props: {
+                headers: ['Name', 'Role'],
+                rows: {
+                  source: 'queries.users.data',
+                  cells: ['item.name'],
+                },
+              },
+            },
+          ]),
+        ),
+      ).toEqual({
+        status: 'error',
+        error: {
+          code: 'invalid-layout',
+          displayMode: 'development-only',
+          message: 'Page "home" has an invalid layout at "layout[0].props.rows.cells": table dynamic cells must have exactly 2 entries to match headers.',
         },
       })
     })
