@@ -775,6 +775,63 @@ describe('RuntimePage', () => {
     expect(container).not.toHaveClass('flex', 'flex-row')
   })
 
+  it('renders container variant default like the historical default and card as a closed surface', () => {
+    renderRuntimePage({
+      id: 'container-variants',
+      layout: [
+        {
+          type: 'container',
+          props: {
+            variant: 'default',
+          },
+          children: [
+            {
+              type: 'paragraph',
+              props: {
+                text: 'Default variant body',
+              },
+            },
+          ],
+        },
+        {
+          type: 'container',
+          props: {
+            variant: 'card',
+            columns: 2,
+          },
+          children: [
+            {
+              type: 'paragraph',
+              props: {
+                text: 'Card variant body',
+              },
+            },
+          ],
+        },
+      ],
+    })
+
+    const defaultContainer = screen.getByText('Default variant body').closest('[data-layout-node="container"]')
+    const cardContainer = screen.getByText('Card variant body').closest('[data-layout-node="container"]')
+
+    expect(defaultContainer).toHaveClass('flex', 'w-full', 'flex-col', 'flex-nowrap', 'gap-5')
+    expect(defaultContainer).not.toHaveClass('rounded-section', 'border', 'shadow-section')
+
+    expect(cardContainer).toHaveClass(
+      'grid',
+      'w-full',
+      'grid-cols-2',
+      'rounded-section',
+      'border',
+      'border-app-border-soft',
+      'bg-white',
+      'p-4',
+      'shadow-section',
+      'gap-5',
+    )
+    expect(cardContainer).not.toHaveClass('border-t', 'pt-5')
+  })
+
   it('maps align justify and wrap to the rendered container classes', () => {
     renderRuntimePage({
       id: 'aligned-layout',
@@ -2263,6 +2320,251 @@ describe('RuntimePage', () => {
       '-mx-5',
       'sm:-mx-6',
     )
+  })
+
+  it('lets card containers inside forms replace the implicit form-section surface', () => {
+    renderRuntimeFormPage({
+      id: 'profile-card',
+      layout: [
+        {
+          type: 'form',
+          id: 'profile-form',
+          children: [
+            {
+              type: 'container',
+              props: {
+                variant: 'card',
+                columns: 2,
+                gap: 'lg',
+              },
+              children: [
+                {
+                  type: 'textarea',
+                  props: {
+                    fieldId: 'bio',
+                    label: 'Bio',
+                    defaultValue: 'Runtime builder',
+                  },
+                },
+                {
+                  type: 'select',
+                  props: {
+                    fieldId: 'role',
+                    label: 'Role',
+                    defaultValue: 'admin',
+                    items: [
+                      { label: 'Admin', value: 'admin' },
+                      { label: 'Editor', value: 'editor' },
+                    ],
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    })
+
+    const container = screen.getByLabelText('Bio').closest('[data-layout-node="container"]')
+
+    expect(container).toHaveClass(
+      'grid',
+      'w-full',
+      'grid-cols-2',
+      'rounded-section',
+      'border',
+      'border-app-border-soft',
+      'bg-white',
+      'p-4',
+      'shadow-section',
+      'gap-8',
+    )
+    expect(container).not.toHaveClass('border-t', 'pt-5', 'sm:pt-6')
+  })
+
+  it('applies layout.span to leaf and composite nodes only inside effective grid parents', () => {
+    renderRuntimePage({
+      id: 'grid-span-layout',
+      layout: [
+        {
+          type: 'container',
+          props: {
+            columns: 4,
+          },
+          children: [
+            {
+              type: 'heading',
+              layout: {
+                span: 2,
+              },
+              props: {
+                text: 'Grid heading',
+                level: 2,
+              },
+            },
+            {
+              type: 'container',
+              layout: {
+                span: 3,
+              },
+              children: [
+                {
+                  type: 'paragraph',
+                  props: {
+                    text: 'Composite span body',
+                  },
+                },
+              ],
+            },
+            {
+              type: 'form',
+              id: 'grid-form',
+              layout: {
+                span: 6,
+              },
+              children: [
+                {
+                  type: 'input',
+                  props: {
+                    fieldId: 'name',
+                    label: 'Name',
+                  },
+                },
+              ],
+            },
+          ],
+        },
+        {
+          type: 'paragraph',
+          layout: {
+            span: 4,
+          },
+          props: {
+            text: 'Outside grid body',
+          },
+        },
+      ],
+    })
+
+    const headingWrapper = screen.getByRole('heading', { name: 'Grid heading', level: 2 }).parentElement
+    const compositeWrapper = screen.getByText('Composite span body').closest('[data-layout-node="container"]')?.parentElement
+    const formWrapper = screen.getByLabelText('Name').closest('form')?.parentElement
+    const outsideGridWrapper = screen.getByText('Outside grid body').parentElement
+
+    expect(headingWrapper).toHaveClass('col-span-2')
+    expect(compositeWrapper).toHaveClass('col-span-3')
+    expect(formWrapper).toHaveClass('col-span-4')
+    expect(outsideGridWrapper).not.toHaveClass('col-span-4')
+  })
+
+  it('keeps repeater itself span-less and applies layout.span only to visible template roots inside grids', () => {
+    renderRuntimePageWithState(
+      {
+        id: 'repeater-grid-span',
+        layout: [
+          {
+            type: 'container',
+            props: {
+              columns: 4,
+            },
+            children: [
+              {
+                type: 'repeater',
+                layout: {
+                  span: 4,
+                },
+                props: {
+                  items: {
+                    source: 'queries.users.data.results',
+                    key: 'id',
+                  },
+                  template: [
+                    {
+                      type: 'container',
+                      layout: {
+                        span: 2,
+                      },
+                      children: [
+                        {
+                          type: 'paragraph',
+                          props: {
+                            text: 'item.name',
+                          },
+                        },
+                      ],
+                    },
+                  ],
+                },
+              },
+            ],
+          },
+        ],
+      },
+      createRuntimePageState(
+        {
+          id: 'repeater-grid-span',
+          layout: [
+            {
+              type: 'container',
+              props: {
+                columns: 4,
+              },
+              children: [
+                {
+                  type: 'repeater',
+                  layout: {
+                    span: 4,
+                  },
+                  props: {
+                    items: {
+                      source: 'queries.users.data.results',
+                      key: 'id',
+                    },
+                    template: [
+                      {
+                        type: 'container',
+                        layout: {
+                          span: 2,
+                        },
+                        children: [
+                          {
+                            type: 'paragraph',
+                            props: {
+                              text: 'item.name',
+                            },
+                          },
+                        ],
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          ],
+        },
+        {
+          users: {
+            status: 'success',
+            data: {
+              results: [
+                { id: 'user-1', name: 'Ada' },
+                { id: 'user-2', name: 'Grace' },
+              ],
+            },
+            error: null,
+            requestSignature: null,
+          },
+        },
+      ),
+    )
+
+    const adaCard = screen.getByText('Ada').closest('[data-layout-node="container"]')
+    const graceCard = screen.getByText('Grace').closest('[data-layout-node="container"]')
+    const repeaterGrid = adaCard?.parentElement
+
+    expect(adaCard?.parentElement).toHaveClass('col-span-2')
+    expect(graceCard?.parentElement).toHaveClass('col-span-2')
+    expect(repeaterGrid).not.toHaveClass('col-span-4')
   })
 
   it('renders expanded form fields including native input types, select.multiple, radioGroup and checkboxGroup', () => {

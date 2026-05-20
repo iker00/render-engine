@@ -2,6 +2,8 @@ import type { ReactNode } from 'react'
 import type { LayoutNode } from '../config/runtime-config'
 import type { RuntimeIterationContext } from './runtime-references/runtime-reference-resolver'
 import { resolveLayoutNodeVisibility } from './runtime-layout-visibility'
+import { useRuntimeLayoutContext } from './runtime-layout-context'
+import { getGridChildSpanClassName } from './runtime-node-styling'
 import { useRuntimeState } from './runtime-state/runtime-state-provider'
 import { LayoutRenderer } from './layout-renderer'
 import { ButtonNode } from './nodes/button-layout-node'
@@ -27,6 +29,7 @@ export interface LayoutNodeRendererProps {
 
 export function LayoutNodeRenderer({ node, renderedChildren, iterationContext }: LayoutNodeRendererProps) {
   const state = useRuntimeState()
+  const { parentGridColumns } = useRuntimeLayoutContext()
   const resolvedVisibility = resolveLayoutNodeVisibility(node, state, iterationContext)
 
   if (resolvedVisibility.mode === 'hide') {
@@ -37,34 +40,61 @@ export function LayoutNodeRenderer({ node, renderedChildren, iterationContext }:
     return <LayoutRenderer nodes={resolvedVisibility.fallback} iterationContext={iterationContext} />
   }
 
+  let renderedNode: ReactNode
+
   switch (node.type) {
     case 'container':
-      return <ContainerNode node={node}>{renderedChildren}</ContainerNode>
+      renderedNode = <ContainerNode node={node}>{renderedChildren}</ContainerNode>
+      break
     case 'repeater':
-      return <RepeaterNode node={node} />
+      renderedNode = <RepeaterNode node={node} />
+      break
     case 'heading':
-      return <HeadingNode node={node} iterationContext={iterationContext} />
+      renderedNode = <HeadingNode node={node} iterationContext={iterationContext} />
+      break
     case 'paragraph':
-      return <ParagraphNode node={node} iterationContext={iterationContext} />
+      renderedNode = <ParagraphNode node={node} iterationContext={iterationContext} />
+      break
     case 'list':
-      return <ListNode node={node} iterationContext={iterationContext} />
+      renderedNode = <ListNode node={node} iterationContext={iterationContext} />
+      break
     case 'image':
-      return <ImageNode node={node} iterationContext={iterationContext} />
+      renderedNode = <ImageNode node={node} iterationContext={iterationContext} />
+      break
     case 'table':
-      return <TableNode node={node} iterationContext={iterationContext} />
+      renderedNode = <TableNode node={node} iterationContext={iterationContext} />
+      break
     case 'button':
-      return <ButtonNode node={node} iterationContext={iterationContext} />
+      renderedNode = <ButtonNode node={node} iterationContext={iterationContext} />
+      break
     case 'form':
-      return <FormNode node={node} iterationContext={iterationContext}>{renderedChildren}</FormNode>
+      renderedNode = <FormNode node={node} iterationContext={iterationContext}>{renderedChildren}</FormNode>
+      break
     case 'input':
-      return <InputNode node={node} />
+      renderedNode = <InputNode node={node} />
+      break
     case 'textarea':
-      return <TextareaNode node={node} />
+      renderedNode = <TextareaNode node={node} />
+      break
     case 'select':
-      return <SelectNode node={node} iterationContext={iterationContext} />
+      renderedNode = <SelectNode node={node} iterationContext={iterationContext} />
+      break
     case 'radioGroup':
-      return <RadioGroupNode node={node} iterationContext={iterationContext} />
+      renderedNode = <RadioGroupNode node={node} iterationContext={iterationContext} />
+      break
     case 'checkboxGroup':
-      return <CheckboxGroupNode node={node} iterationContext={iterationContext} />
+      renderedNode = <CheckboxGroupNode node={node} iterationContext={iterationContext} />
+      break
   }
+
+  const gridChildSpanClassName =
+    node.type === 'repeater'
+      ? null
+      : getGridChildSpanClassName(node.layout?.span, parentGridColumns)
+
+  if (!gridChildSpanClassName) {
+    return renderedNode
+  }
+
+  return <div className={gridChildSpanClassName}>{renderedNode}</div>
 }

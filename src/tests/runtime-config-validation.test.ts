@@ -6863,10 +6863,14 @@ describe('validateRuntimeConfig', () => {
         createConfigWithLayout([
           {
             type: 'container',
+            layout: {
+              span: 3,
+            },
             props: {
               direction: 'row',
               gap: '2xl',
               columns: 4,
+              variant: 'card',
               align: 'center',
               justify: 'between',
             },
@@ -6888,12 +6892,16 @@ describe('validateRuntimeConfig', () => {
         throw new Error('Expected ready result')
       }
 
-      expect(result.config.pages[0].layout[0]).toEqual({
+      expect(result.config.pages[0].layout[0]).toMatchObject({
         type: 'container',
+        layout: {
+          span: 3,
+        },
         props: {
           direction: 'row',
           gap: '2xl',
           columns: 4,
+          variant: 'card',
           align: 'center',
           justify: 'between',
         },
@@ -6913,8 +6921,12 @@ describe('validateRuntimeConfig', () => {
         createConfigWithLayout([
           {
             type: 'container',
+            layout: {
+              span: 2,
+            },
             props: {
               gap: '18px',
+              variant: 'default',
             },
             children: [
               {
@@ -6934,10 +6946,14 @@ describe('validateRuntimeConfig', () => {
         throw new Error('Expected ready result')
       }
 
-      expect(result.config.pages[0].layout[0]).toEqual({
+      expect(result.config.pages[0].layout[0]).toMatchObject({
         type: 'container',
+        layout: {
+          span: 2,
+        },
         props: {
           gap: '18px',
+          variant: 'default',
         },
         children: [
           {
@@ -7146,6 +7162,268 @@ describe('validateRuntimeConfig', () => {
               ],
             },
           ],
+        },
+      })
+    })
+
+    it('accepts layout.span across leaf, composite, form and repeater nodes', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithPages([
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'heading',
+                layout: {
+                  span: 1,
+                },
+                props: {
+                  text: 'Welcome',
+                  level: 1,
+                },
+              },
+              {
+                type: 'container',
+                layout: {
+                  span: 2,
+                },
+                children: [
+                  {
+                    type: 'paragraph',
+                    layout: {
+                      span: 3,
+                    },
+                    props: {
+                      text: 'Body copy',
+                    },
+                  },
+                ],
+              },
+              {
+                type: 'form',
+                id: 'profile-form',
+                layout: {
+                  span: 4,
+                },
+                children: [
+                  {
+                    type: 'input',
+                    layout: {
+                      span: 5,
+                    },
+                    props: {
+                      fieldId: 'name',
+                      label: 'Name',
+                    },
+                  },
+                ],
+              },
+              {
+                type: 'repeater',
+                layout: {
+                  span: 6,
+                },
+                props: {
+                  items: {
+                    source: 'queries.posts.data',
+                    key: 'id',
+                  },
+                  template: [
+                    {
+                      type: 'container',
+                      layout: {
+                        span: 7,
+                      },
+                      children: [
+                        {
+                          type: 'paragraph',
+                          props: {
+                            text: 'item.title',
+                          },
+                        },
+                      ],
+                    },
+                  ],
+                },
+              },
+            ],
+          },
+        ]),
+      )
+
+      expect(result.status).toBe('ready')
+
+      if (result.status !== 'ready') {
+        throw new Error('Expected ready result')
+      }
+
+      expect(result.config.pages[0].layout).toMatchObject([
+        {
+          type: 'heading',
+          layout: {
+            span: 1,
+          },
+          props: {
+            text: 'Welcome',
+            level: 1,
+          },
+        },
+        {
+          type: 'container',
+          layout: {
+            span: 2,
+          },
+          children: [
+            {
+              type: 'paragraph',
+              layout: {
+                span: 3,
+              },
+              props: {
+                text: 'Body copy',
+              },
+            },
+          ],
+        },
+        {
+          type: 'form',
+          id: 'profile-form',
+          layout: {
+            span: 4,
+          },
+          children: [
+            {
+              type: 'input',
+              layout: {
+                span: 5,
+              },
+              props: {
+                fieldId: 'name',
+                label: 'Name',
+              },
+            },
+          ],
+        },
+        {
+          type: 'repeater',
+          layout: {
+            span: 6,
+          },
+          props: {
+            items: {
+              source: 'queries.posts.data',
+              key: 'id',
+            },
+            template: [
+              {
+                type: 'container',
+                layout: {
+                  span: 7,
+                },
+                children: [
+                  {
+                    type: 'paragraph',
+                    props: {
+                      text: 'item.title',
+                    },
+                  },
+                ],
+              },
+            ],
+          },
+        },
+      ])
+    })
+
+    it('rejects invalid container variant and layout span paths explicitly', () => {
+      expect(
+        validateRuntimeConfig(
+          createConfigWithLayout([
+            {
+              type: 'container',
+              props: {
+                variant: 'hero',
+              },
+            },
+          ]),
+        ),
+      ).toEqual({
+        status: 'error',
+        error: {
+          code: 'invalid-layout',
+          displayMode: 'development-only',
+          message: 'Page "home" has an invalid layout at "layout[0].props.variant".',
+        },
+      })
+
+      expect(
+        validateRuntimeConfig(
+          createConfigWithLayout([
+            {
+              type: 'container',
+              layout: {
+                span: 0,
+              },
+            },
+          ]),
+        ),
+      ).toEqual({
+        status: 'error',
+        error: {
+          code: 'invalid-layout',
+          displayMode: 'development-only',
+          message: 'Page "home" has an invalid layout at "layout[0].layout.span".',
+        },
+      })
+
+      expect(
+        validateRuntimeConfig(
+          createConfigWithLayout([
+            {
+              type: 'heading',
+              layout: {
+                span: '2',
+              },
+              props: {
+                text: 'Welcome',
+                level: 1,
+              },
+            },
+          ]),
+        ),
+      ).toEqual({
+        status: 'error',
+        error: {
+          code: 'invalid-layout',
+          displayMode: 'development-only',
+          message: 'Page "home" has an invalid layout at "layout[0].layout.span".',
+        },
+      })
+
+      expect(
+        validateRuntimeConfig(
+          createConfigWithLayout([
+            {
+              type: 'repeater',
+              layout: {
+                span: 13,
+              },
+              props: {
+                items: {
+                  source: 'queries.posts.data',
+                  key: 'id',
+                },
+                template: [],
+              },
+            },
+          ]),
+        ),
+      ).toEqual({
+        status: 'error',
+        error: {
+          code: 'invalid-layout',
+          displayMode: 'development-only',
+          message: 'Page "home" has an invalid layout at "layout[0].layout.span".',
         },
       })
     })

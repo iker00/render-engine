@@ -12,6 +12,7 @@ import {
   getFieldLabelClassName,
   getFieldWrapperClassName,
   getFormNodeClassName,
+  getGridChildSpanClassName,
   getPrimaryButtonNodeClassName,
   getRuntimePageClassName,
   getContainerNodeStyling,
@@ -61,6 +62,16 @@ describe('runtime node styling', () => {
   it('uses md as the default container gap when none is declared', () => {
     expect(getContainerNodeStyling({})).toEqual({
       className: 'flex w-full flex-col flex-nowrap gap-5',
+    })
+  })
+
+  it('treats variant default like the historical container styling and adds a closed card preset', () => {
+    expect(getContainerNodeStyling({ variant: 'default' })).toEqual({
+      className: 'flex w-full flex-col flex-nowrap gap-5',
+    })
+
+    expect(getContainerNodeStyling({ variant: 'card' })).toEqual({
+      className: 'flex w-full flex-col flex-nowrap rounded-section border border-app-border-soft bg-white p-4 shadow-section sm:p-5 gap-5',
     })
   })
 
@@ -134,6 +145,23 @@ describe('runtime node styling', () => {
     expect(getContainerNodeStyling({ direction: 'row', columns: 2, surface: 'form-section' })).toEqual({
       className: 'grid w-full grid-cols-2 border-t border-app-border-soft pt-5 sm:pt-6 gap-5',
     })
+  })
+
+  it('lets card take visual precedence over form-section and coexist with grid columns', () => {
+    expect(getContainerNodeStyling({ variant: 'card', surface: 'form-section' })).toEqual({
+      className: 'flex w-full flex-col flex-nowrap rounded-section border border-app-border-soft bg-white p-4 shadow-section sm:p-5 gap-5',
+    })
+
+    expect(getContainerNodeStyling({ variant: 'card', columns: 2, surface: 'form-section' })).toEqual({
+      className: 'grid w-full grid-cols-2 rounded-section border border-app-border-soft bg-white p-4 shadow-section sm:p-5 gap-5',
+    })
+  })
+
+  it('maps grid span wrappers only inside grid parents and clamps to parent columns', () => {
+    expect(getGridChildSpanClassName()).toBeNull()
+    expect(getGridChildSpanClassName(2)).toBeNull()
+    expect(getGridChildSpanClassName(2, 4)).toBe('col-span-2')
+    expect(getGridChildSpanClassName(5, 3)).toBe('col-span-3')
   })
 
   it('keeps focus styling on controls without outline offset gaps', () => {

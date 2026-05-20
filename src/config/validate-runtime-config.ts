@@ -691,6 +691,10 @@ function validateContainerNode(
       return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.columns".`)
     }
 
+    if (issuePath === 'props' && issue.path[1] === 'variant') {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.variant".`)
+    }
+
     if (issuePath === 'props' && issue.path[1] === 'align') {
       return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.align".`)
     }
@@ -705,6 +709,12 @@ function validateContainerNode(
 
     if (issuePath === 'children') {
       return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.children".`)
+    }
+
+    const layoutIssue = mapLayoutNodeIssue(pageId, path, issue.path)
+
+    if (layoutIssue) {
+      return layoutIssue
     }
 
     const feedbackIssue = mapQueryStateFeedbackIssue(pageId, path, issue)
@@ -769,6 +779,7 @@ function validateContainerNode(
       id: parseResult.data.id,
       queryStateFeedback: feedbackResult.queryStateFeedback,
       visibility: visibilityResult.visibility,
+      layout: parseResult.data.layout,
       props: containerProps,
       children,
     },
@@ -804,6 +815,12 @@ function validateRepeaterNode(
 
     if (issuePath[0] === 'children') {
       return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.children".`)
+    }
+
+    const layoutIssue = mapLayoutNodeIssue(pageId, path, issuePath)
+
+    if (layoutIssue) {
+      return layoutIssue
     }
 
     if (issuePath[0] === 'props' && issuePath[1] === 'template') {
@@ -872,6 +889,7 @@ function validateRepeaterNode(
       id: parseResult.data.id,
       queryStateFeedback: feedbackResult.queryStateFeedback,
       visibility: visibilityResult.visibility,
+      layout: parseResult.data.layout,
       props: {
         items: {
           source: itemsSourceResult.source,
@@ -1045,6 +1063,7 @@ function validateListNode(
       id: parseResult.data.id,
       queryStateFeedback: feedbackResult.queryStateFeedback,
       visibility: visibilityResult.visibility,
+      layout: parseResult.data.layout,
       props: {
         items: itemsResult.items,
       },
@@ -1167,6 +1186,7 @@ function validateTableNode(
       id: parseResult.data.id,
       queryStateFeedback: feedbackResult.queryStateFeedback,
       visibility: visibilityResult.visibility,
+      layout: parseResult.data.layout,
       props: {
         headers: headersResult.headers,
         rows: rowsResult.rows,
@@ -1295,6 +1315,22 @@ function mapLeafNodeIssue(
   return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}${formattedIssuePath}".`)
 }
 
+function mapLayoutNodeIssue(
+  pageId: string,
+  path: string,
+  issuePath: PropertyKey[],
+): { status: 'error'; error: RuntimeConfigError } | null {
+  if (issuePath[0] === 'layout' && issuePath.length === 1) {
+    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.layout".`)
+  }
+
+  if (issuePath[0] === 'layout' && issuePath[1] === 'span') {
+    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.layout.span".`)
+  }
+
+  return null
+}
+
 function validateButtonNode(
   rawNode: Record<string, unknown>,
   path: string,
@@ -1332,6 +1368,12 @@ function validateButtonNode(
 
     if (issuePath[0] === 'props' && issuePath[1] === 'action') {
       return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.action".`)
+    }
+
+    const layoutIssue = mapLayoutNodeIssue(pageId, path, issuePath)
+
+    if (layoutIssue) {
+      return layoutIssue
     }
 
     return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props".`)
@@ -1376,6 +1418,7 @@ function validateButtonNode(
       id: parseResult.data.id,
       queryStateFeedback: feedbackResult.queryStateFeedback,
       visibility: visibilityResult.visibility,
+      layout: parseResult.data.layout,
       props: {
         label: parseResult.data.props.label,
         action,
@@ -1842,6 +1885,12 @@ function validateFormNode(
       return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.children".`)
     }
 
+    const layoutIssue = mapLayoutNodeIssue(pageId, path, issuePath)
+
+    if (layoutIssue) {
+      return layoutIssue
+    }
+
     return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}".`)
   }
 
@@ -1895,6 +1944,7 @@ function validateFormNode(
       id: parseResult.data.id,
       queryStateFeedback: feedbackResult.queryStateFeedback,
       visibility: visibilityResult.visibility,
+      layout: parseResult.data.layout,
       persistOnUnmount: parseResult.data.persistOnUnmount,
       submitAction,
       resetOnSuccess: parseResult.data.resetOnSuccess,
@@ -2124,6 +2174,8 @@ function validateSelectNode(
   return {
     status: 'ready',
     node: {
+      id: parseResult.data.id,
+      layout: parseResult.data.layout,
       type: 'select',
       queryStateFeedback: feedbackResult.queryStateFeedback,
       visibility: visibilityResult.visibility,
@@ -2213,6 +2265,8 @@ function validateRadioGroupNode(
   return {
     status: 'ready',
     node: {
+      id: parseResult.data.id,
+      layout: parseResult.data.layout,
       type: 'radioGroup',
       queryStateFeedback: feedbackResult.queryStateFeedback,
       visibility: visibilityResult.visibility,
@@ -2302,6 +2356,8 @@ function validateCheckboxGroupNode(
   return {
     status: 'ready',
     node: {
+      id: parseResult.data.id,
+      layout: parseResult.data.layout,
       type: 'checkboxGroup',
       queryStateFeedback: feedbackResult.queryStateFeedback,
       visibility: visibilityResult.visibility,

@@ -475,28 +475,6 @@
                   "type": "button",
                   "props": {
                     "label": "Enviar"
-                  },
-                  "queryStateFeedback": {
-                    "query": "searchPosts",
-                    "states": {
-                      "idle": {
-                        "mode": "show"
-                      },
-                      "error": {
-                        "mode": "show"
-                      },
-                      "loading": {
-                        "mode": "fallback",
-                        "fallback": [
-                          {
-                            "type": "button",
-                            "props": {
-                              "label": "Enviando formulario..."
-                            }
-                          }
-                        ]
-                      }
-                    }
                   }
                 }
               ]
@@ -763,10 +741,7 @@
             {
               "type": "container",
               "props": {
-                "direction": "row",
-                "align": "start",
-                "justify": "start",
-                "wrap": "wrap"
+                "columns": 12
               },
               "children": [
                 {
@@ -779,6 +754,9 @@
                       "minLength": 3,
                       "maxLength": 10
                     }
+                  },
+                  "layout": {
+                    "span": 4
                   }
                 },
                 {
@@ -791,6 +769,25 @@
                       "required": true,
                       "maxLength": 15
                     }
+                  },
+                  "layout": {
+                    "span": 6
+                  }
+                },
+                {
+                  "type": "input",
+                  "props": {
+                    "inputType": "number",
+                    "fieldId": "number",
+                    "label": "Número",
+                    "validations": {
+                      "required": true,
+                      "min": 1,
+                      "max": 100
+                    }
+                  },
+                  "layout": {
+                    "span": 12
                   }
                 }
               ]
@@ -853,19 +850,6 @@
                   }
                 ],
                 "defaultValue": "particular"
-              }
-            },
-            {
-              "type": "input",
-              "props": {
-                "inputType": "number",
-                "fieldId": "number",
-                "label": "Número",
-                "validations": {
-                  "required": true,
-                  "min": 1,
-                  "max": 100
-                }
               }
             },
             {
@@ -2129,19 +2113,20 @@
             {
               "type": "container",
               "props": {
-                "direction": "row",
-                "align": "start",
-                "justify": "start",
-                "wrap": "wrap"
+                "columns": 12,
+                "variant": "card"
               },
               "children": [
                 {
                   "type": "image",
                   "props": {
-                    "src": "https://picsum.photos/200/200",
+                    "src": "https://picsum.photos/250/250",
                     "alt": "Imagen de perfil",
                     "width": "",
                     "height": ""
+                  },
+                  "layout": {
+                    "span": 4
                   }
                 },
                 {
@@ -2150,7 +2135,11 @@
                     "direction": "column",
                     "align": "start",
                     "justify": "start",
-                    "wrap": "wrap"
+                    "wrap": "wrap",
+                    "gap": "sm"
+                  },
+                  "layout": {
+                    "span": 8
                   },
                   "children": [
                     {
@@ -2245,7 +2234,7 @@
                     {
                       "type": "image",
                       "props": {
-                        "src": "https://picsum.photos/seed/picsum/100/100",
+                        "src": "https://picsum.photos/seed/picsum/200/200",
                         "alt": "Imagen de perfil",
                         "width": "",
                         "height": ""
@@ -2271,7 +2260,7 @@
                     {
                       "type": "image",
                       "props": {
-                        "src": "https://picsum.photos/seed/1/100/100",
+                        "src": "https://picsum.photos/seed/1/200/200",
                         "alt": "Imagen de perfil",
                         "width": "",
                         "height": ""
@@ -2297,7 +2286,7 @@
                     {
                       "type": "image",
                       "props": {
-                        "src": "https://picsum.photos/seed/2/100/100",
+                        "src": "https://picsum.photos/seed/2/200/200",
                         "alt": "Imagen de perfil",
                         "width": "",
                         "height": ""
@@ -2323,7 +2312,7 @@
                     {
                       "type": "image",
                       "props": {
-                        "src": "https://picsum.photos/seed/3/100/100",
+                        "src": "https://picsum.photos/seed/3/200/200",
                         "alt": "Imagen de perfil",
                         "width": "",
                         "height": ""
@@ -2349,41 +2338,49 @@
             {
               "type": "container",
               "props": {
-                "direction": "row",
-                "align": "start",
-                "justify": "start",
-                "wrap": "wrap"
+                "columns": 12,
+                "variant": "card",
+                "gap": "sm"
               },
               "children": [
                 {
-                  "type": "image",
+                  "type": "paragraph",
                   "props": {
-                    "src": "https://picsum.photos/seed/4/100/100",
-                    "alt": "Imagen de perfil",
-                    "width": "",
-                    "height": ""
+                    "text": "Incidente #1"
+                  },
+                  "layout": {
+                    "span": 12
                   }
                 },
                 {
-                  "type": "heading",
+                  "type": "image",
                   "props": {
-                    "text": "Robo reportado en la plaza durante la noche",
-                    "level": 4
+                    "src": "https://picsum.photos/seed/8/200/200",
+                    "alt": "Imagen de perfil",
+                    "width": "",
+                    "height": ""
+                  },
+                  "layout": {
+                    "span": 4
                   }
                 },
                 {
                   "type": "container",
                   "props": {
-                    "direction": "row",
+                    "direction": "column",
                     "align": "start",
                     "justify": "between",
                     "wrap": "wrap"
                   },
+                  "layout": {
+                    "span": 8
+                  },
                   "children": [
                     {
-                      "type": "paragraph",
+                      "type": "heading",
                       "props": {
-                        "text": "Incidente #1"
+                        "text": "Robo reportado en la plaza durante la noche",
+                        "level": 4
                       }
                     },
                     {
@@ -2403,41 +2400,49 @@
             {
               "type": "container",
               "props": {
-                "direction": "row",
-                "align": "start",
-                "justify": "start",
-                "wrap": "wrap"
+                "columns": 12,
+                "variant": "card",
+                "gap": "sm"
               },
               "children": [
                 {
-                  "type": "image",
+                  "type": "paragraph",
                   "props": {
-                    "src": "https://picsum.photos/seed/4/100/100",
-                    "alt": "Imagen de perfil",
-                    "width": "",
-                    "height": ""
+                    "text": "Incidente #1"
+                  },
+                  "layout": {
+                    "span": 12
                   }
                 },
                 {
-                  "type": "heading",
+                  "type": "image",
                   "props": {
-                    "text": "Robo reportado en la plaza durante la noche",
-                    "level": 4
+                    "src": "https://picsum.photos/seed/8/200/200",
+                    "alt": "Imagen de perfil",
+                    "width": "",
+                    "height": ""
+                  },
+                  "layout": {
+                    "span": 4
                   }
                 },
                 {
                   "type": "container",
                   "props": {
-                    "direction": "row",
+                    "direction": "column",
                     "align": "start",
                     "justify": "between",
                     "wrap": "wrap"
                   },
+                  "layout": {
+                    "span": 8
+                  },
                   "children": [
                     {
-                      "type": "paragraph",
+                      "type": "heading",
                       "props": {
-                        "text": "Incidente #1"
+                        "text": "Robo reportado en la plaza durante la noche",
+                        "level": 4
                       }
                     },
                     {
@@ -2457,41 +2462,49 @@
             {
               "type": "container",
               "props": {
-                "direction": "row",
-                "align": "start",
-                "justify": "start",
-                "wrap": "wrap"
+                "columns": 12,
+                "variant": "card",
+                "gap": "sm"
               },
               "children": [
                 {
-                  "type": "image",
+                  "type": "paragraph",
                   "props": {
-                    "src": "https://picsum.photos/seed/4/100/100",
-                    "alt": "Imagen de perfil",
-                    "width": "",
-                    "height": ""
+                    "text": "Incidente #1"
+                  },
+                  "layout": {
+                    "span": 12
                   }
                 },
                 {
-                  "type": "heading",
+                  "type": "image",
                   "props": {
-                    "text": "Robo reportado en la plaza durante la noche",
-                    "level": 4
+                    "src": "https://picsum.photos/seed/8/200/200",
+                    "alt": "Imagen de perfil",
+                    "width": "",
+                    "height": ""
+                  },
+                  "layout": {
+                    "span": 4
                   }
                 },
                 {
                   "type": "container",
                   "props": {
-                    "direction": "row",
+                    "direction": "column",
                     "align": "start",
                     "justify": "between",
                     "wrap": "wrap"
                   },
+                  "layout": {
+                    "span": 8
+                  },
                   "children": [
                     {
-                      "type": "paragraph",
+                      "type": "heading",
                       "props": {
-                        "text": "Incidente #1"
+                        "text": "Robo reportado en la plaza durante la noche",
+                        "level": 4
                       }
                     },
                     {

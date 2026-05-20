@@ -84,17 +84,27 @@ export interface LayoutNodeFeedbackFields {
   visibility?: RuntimeVisibilityConfig
 }
 
+export interface LayoutNodeLayoutFields {
+  layout?: LayoutNodeLayoutConfig
+}
+
+export interface LayoutNodeLayoutConfig {
+  span?: number
+}
+
 export type ContainerAlign = 'start' | 'center' | 'end' | 'stretch'
 export type ContainerJustify = 'start' | 'center' | 'end' | 'between' | 'around' | 'evenly'
 export type ContainerWrap = 'nowrap' | 'wrap' | 'wrap-reverse'
+export type ContainerVariant = 'default' | 'card'
 
-export interface ContainerLayoutNode extends LayoutNodeFeedbackFields {
+export interface ContainerLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayoutFields {
   type: 'container'
   id?: string
   props?: {
     direction?: string
     gap?: string
     columns?: number
+    variant?: ContainerVariant
     align?: ContainerAlign
     justify?: ContainerJustify
     wrap?: ContainerWrap
@@ -102,7 +112,7 @@ export interface ContainerLayoutNode extends LayoutNodeFeedbackFields {
   children?: LayoutNode[]
 }
 
-export interface RepeaterLayoutNode extends LayoutNodeFeedbackFields {
+export interface RepeaterLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayoutFields {
   type: 'repeater'
   id?: string
   props: {
@@ -115,7 +125,7 @@ export interface RepeaterLayoutNode extends LayoutNodeFeedbackFields {
   children?: never
 }
 
-export interface HeadingLayoutNode extends LayoutNodeFeedbackFields {
+export interface HeadingLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayoutFields {
   type: 'heading'
   id?: string
   props: {
@@ -125,7 +135,7 @@ export interface HeadingLayoutNode extends LayoutNodeFeedbackFields {
   children?: unknown
 }
 
-export interface ParagraphLayoutNode extends LayoutNodeFeedbackFields {
+export interface ParagraphLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayoutFields {
   type: 'paragraph'
   id?: string
   props: {
@@ -134,7 +144,7 @@ export interface ParagraphLayoutNode extends LayoutNodeFeedbackFields {
   children?: unknown
 }
 
-export interface ListLayoutNode extends LayoutNodeFeedbackFields {
+export interface ListLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayoutFields {
   type: 'list'
   id?: string
   props: {
@@ -143,7 +153,7 @@ export interface ListLayoutNode extends LayoutNodeFeedbackFields {
   children?: unknown
 }
 
-export interface ImageLayoutNode extends LayoutNodeFeedbackFields {
+export interface ImageLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayoutFields {
   type: 'image'
   id?: string
   props: {
@@ -163,7 +173,7 @@ export interface TableDynamicRows {
 
 export type TableRows = TableManualRows | TableDynamicRows
 
-export interface TableLayoutNode extends LayoutNodeFeedbackFields {
+export interface TableLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayoutFields {
   type: 'table'
   id?: string
   props: {
@@ -173,7 +183,7 @@ export interface TableLayoutNode extends LayoutNodeFeedbackFields {
   children?: unknown
 }
 
-export interface FormLayoutNode extends LayoutNodeFeedbackFields {
+export interface FormLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayoutFields {
   type: 'form'
   id: string
   persistOnUnmount?: boolean
@@ -218,7 +228,7 @@ export interface FormFieldLayoutNodeProps {
   defaultValue?: RuntimeConfigValue | unknown[]
 }
 
-export interface InputLayoutNode extends LayoutNodeFeedbackFields {
+export interface InputLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayoutFields {
   type: 'input'
   id?: string
   props: FormFieldLayoutNodeProps & {
@@ -227,7 +237,7 @@ export interface InputLayoutNode extends LayoutNodeFeedbackFields {
   children?: unknown
 }
 
-export interface TextareaLayoutNode extends LayoutNodeFeedbackFields {
+export interface TextareaLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayoutFields {
   type: 'textarea'
   id?: string
   props: FormFieldLayoutNodeProps
@@ -283,7 +293,7 @@ export type SelectLayoutNodeItems =
   | SelectManualScalarItemsSource
   | SelectManualObjectItemsSource
 
-export interface SelectLayoutNode extends LayoutNodeFeedbackFields {
+export interface SelectLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayoutFields {
   type: 'select'
   id?: string
   props: FormFieldLayoutNodeProps & {
@@ -293,7 +303,7 @@ export interface SelectLayoutNode extends LayoutNodeFeedbackFields {
   children?: unknown
 }
 
-export interface RadioGroupLayoutNode extends LayoutNodeFeedbackFields {
+export interface RadioGroupLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayoutFields {
   type: 'radioGroup'
   id?: string
   props: FormFieldLayoutNodeProps & {
@@ -302,7 +312,7 @@ export interface RadioGroupLayoutNode extends LayoutNodeFeedbackFields {
   children?: unknown
 }
 
-export interface CheckboxGroupLayoutNode extends LayoutNodeFeedbackFields {
+export interface CheckboxGroupLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayoutFields {
   type: 'checkboxGroup'
   id?: string
   props: FormFieldLayoutNodeProps & {
@@ -341,7 +351,7 @@ export type NavigateToButtonAction = NavigateToRuntimeUiAction
 export type GoBackButtonAction = GoBackRuntimeUiAction
 export type ButtonAction = RuntimeUiAction
 
-export interface ButtonLayoutNode extends LayoutNodeFeedbackFields {
+export interface ButtonLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayoutFields {
   type: 'button'
   id?: string
   props: {

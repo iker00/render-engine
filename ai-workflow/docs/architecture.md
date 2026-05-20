@@ -34,6 +34,7 @@ src/
     layout-renderer.tsx
     layout-node-renderer.tsx
     form-context.tsx
+    runtime-layout-context.tsx
     runtime-collection-sources.ts
     runtime-form-validations.ts
     runtime-query-state-feedback.ts
@@ -76,18 +77,20 @@ Lectura operativa de esa estructura:
 - `validate-runtime-config.ts` concentra la validación previa al render, fija el contrato estable de `config.api` y reintroduce las validaciones cruzadas que dependen del conjunto completo ya parseado.
 - `queries/` encapsula la frontera HTTP del runtime: resolución de payloads, merge estable entre request base y overrides por ejecución, construcción de `RequestInit`, ejecución contra `fetch` y errores normalizados.
 - `layout-renderer.tsx` conserva la responsabilidad de renderizar colecciones ordenadas de nodos y ahora puede propagar contexto de iteración a un subárbol repetido.
-- `layout-node-renderer.tsx` es el punto central de resolución `type -> pieza de render` y del borde transversal que decide si el nodo se muestra, se oculta o se sustituye por un fallback local; `repeater` entra ahí como expansión estructural y no como nodo visual con wrapper propio.
+- `layout-node-renderer.tsx` es el punto central de resolución `type -> pieza de render` y del borde transversal que decide si el nodo se muestra, se oculta o se sustituye por un fallback local; `repeater` entra ahí como expansión estructural y no como nodo visual con wrapper propio, y el mismo borde aplica también el wrapper genérico de `layout.span` solo cuando el padre efectivo aporta un grid.
+- `runtime-layout-context.tsx` propaga solo el contexto mínimo de layout que necesita esa semántica transversal: columnas efectivas del grid padre, sin mezclarlo con el store global del runtime.
 - `runtime-layout-visibility.ts` centraliza la visibilidad efectiva de cualquier nodo, combinando `queryStateFeedback` y `visibility` con una única precedencia reutilizable por renderer y formularios.
 - `form-context.tsx` propaga el `formId` efectivo a cualquier descendiente del árbol del formulario sin exigir props manuales repetidas.
 - `runtime-actions/` concentra la traducción `action.type -> handler del provider`, de modo que el nodo visual solo dispara el contrato común y no reimplementa navegación, queries ni formularios.
 - `runtime-collection-sources.ts` centraliza la resolución de colecciones efectivas para consumidores multi-valor, separando origen (`values` manuales, `queries.*` o `item.*` dentro de `repeater`) de la proyección final que necesita cada nodo y de la normalización común de selección simple o múltiple para `select`, `radioGroup` y `checkboxGroup`.
 - `runtime-form-validations.ts` centraliza la evaluación de reglas locales declarativas, reutiliza la misma normalización efectiva de valores para submit y edición, y evita duplicar semánticas entre `form` y nodos de campo.
-- `runtime-node-styling.ts` concentra la convención visual base del runtime, el mapeo a utilidades del theme global y la compatibilidad acotada para `gap` arbitrarios.
+- `runtime-node-styling.ts` concentra la convención visual base del runtime, el mapeo a utilidades del theme global, la variante cerrada `card`, la compatibilidad acotada para `gap` arbitrarios y el cálculo compartido de `col-span-*` con clamp seguro al grid padre.
 - `runtime-query-state-feedback.ts` concentra la derivación `idle | loading | error | empty | success`, la heurística común de `empty` y la resolución de defaults efectivos de `queryStateFeedback`.
 - `runtime-references/` fija la semántica central de referencias string, distingue `literal | supported | unsupported | invalid`, soporta `forms.*`, `queries.*`, `params.*` e `item.*` dentro de su frontera actual y evita lógica dispersa en nodos visuales.
 - `runtime-state/` concentra un store por instancia basado en `useReducer` + `Context`, con dominios separados para navegación, formularios, queries y `pageEntry`, sincronización con el hash del navegador, historial parametrizado por entrada, transición atómica para arrancar tandas de `preloads`, persistencia de `requestSignature` por query y fachada mínima para navegación, formularios, queries y lectura consistente del último snapshot sin absorber la lógica de red.
 - El dominio `forms` distingue ya entre resetear un formulario existente y eliminar `forms.{formId}` completo; el nodo `form` usa esa diferencia para limpiar por defecto solo al desmontarse realmente y no durante rerenders u ocultaciones.
 - `container-layout-node.tsx` mantiene `container` como wrapper semántico `section` y, cuando vive dentro de un `form` vertical, reutiliza esa misma pieza para dibujar divisores de sección a ancho completo sin introducir un nodo nuevo.
+- `container-layout-node.tsx` sigue siendo también el punto donde un `container` con `columns` abre el contexto de grid efectivo para sus descendientes inmediatos, sin repartir esa decisión por nodos hoja o compuestos.
 - `runtime/nodes/` materializa solo nodos con uso real inmediato, incluido `repeater` como pieza fina de expansión y el catálogo actual de formularios declarativos con selección simple y múltiple compartida.
 - `runtime-page.tsx` ya no decide la página visible por selección ad hoc; la resuelve desde el estado compartido del runtime.
 
@@ -114,6 +117,7 @@ Lectura operativa de esa estructura:
 - La primera UI estable del runtime es un renderer estático para `container`, `heading`, `paragraph` y `list`.
 - La organización interna del runtime separa contrato, validación, render de colecciones y render concreto por nodo sin cambiar el comportamiento observable.
 - La presentación base de los nodos visibles del runtime se expresa con utilidades de `Tailwind`; los tokens globales viven en `src/app/index.css` con `@theme`, y la única excepción visual acotada sigue siendo la variable CSS local usada para `container.props.gap` cuando llega un valor arbitrario.
+- Las ampliaciones de layout transversal deben vivir fuera de los nodos visuales concretos cuando no formen parte de su semántica propia; `layout.span` queda fijado como wrapper genérico en el borde del renderer y no como una prop interpretada ad hoc por cada nodo.
 - El shell visible de la app y la gramática compartida de formularios forman parte de la arquitectura estable del runtime, no de un ejemplo aislado en `src/dev/config.json`.
 - El runtime crea un store compartido aislado por instancia, con `useReducer` + `Context`, para sostener navegación, formularios y queries sin depender todavía de subsistemas visuales separados.
 - La navegación visible ya se resuelve desde una entrada normalizada derivada del hash del navegador; la unidad histórica real sigue siendo una entrada con `entryId`, `pageId` y `params`, y la URL canónica usa `#/` para la home funcional y `#/pageId` para el resto.
@@ -125,6 +129,7 @@ Lectura operativa de esa estructura:
 - `repeater` se resuelve en el borde central del renderer: valida su contrato en `config/`, obtiene la colección efectiva desde `queries.*`, crea un contexto `{ item }` por iteración y vuelve a usar `LayoutRenderer` para expandir `props.template` como hermanos.
 - La semántica declarativa de feedback por query vive fuera de los nodos visuales concretos: el renderer central consulta `queries.{queryName}`, deriva un estado visible único y decide entre nodo original, ocultación o fallback local reutilizando `LayoutRenderer`.
 - La visibilidad efectiva de nodos y campos ya no depende solo de `queryStateFeedback`: una capa compartida combina esa semántica con reglas `visibility` basadas en `forms.*` y `queries.*`, manteniendo la precedencia `queryStateFeedback` antes de `visibility`.
+- La semántica de grid declarativo queda partida en dos capas pequeñas y explícitas: `container` decide si existe grid efectivo mediante `columns`, y `layout-node-renderer.tsx` decide si un hijo visible recibe `col-span-*` a partir de `layout.span` y del contexto propagado.
 - Los formularios declarativos viven íntegramente dentro de `runtime/`: `form` actúa como frontera de inicialización, validación local y submit, mientras los campos leen y escriben solo en `forms.{formId}.{fieldId}`.
 - La decisión de visibilidad efectiva de un nodo se reutiliza tanto en render como en validación de submit para evitar divergencias entre `queryStateFeedback`, `visibility` y cualquier regla local declarada.
 - La validación declarativa ya no depende de props sueltas por campo: el contrato entra por `props.validations`, se cierra en `config/` y se evalúa en runtime según el orden declarado de sus claves.

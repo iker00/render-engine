@@ -48,6 +48,7 @@ Contrato estable de `preloads`:
 Cada elemento de layout usa un shape homogéneo basado en:
 - `type`: tipo de nodo soportado
 - `id`: opcional
+- `layout`: opcional para metadatos transversales de layout
 - `props`: opcional según el tipo
 - `queryStateFeedback`: opcional para condicionar la salida visible del nodo según el estado de una query
 - `visibility`: opcional para mostrar u ocultar el nodo según un valor ya disponible en `forms.*`, `queries.*` o `item.*` cuando exista contexto de iteración
@@ -57,6 +58,7 @@ Reglas estructurales vigentes:
 - `layout` debe ser siempre un array.
 - `layout: []` es válido y produce una página sin contenido inventado.
 - El shape antiguo con `layout` como objeto único ya no forma parte del contrato estable y se rechaza como error de configuración.
+- el bloque opcional `node.layout` admite hoy `span` como entero entre `1` y `12`.
 - `container.children` reutiliza el mismo modelo de colección ordenada y puede ser `[]` o no declararse.
 
 Nodos soportados hoy:
@@ -64,6 +66,7 @@ Nodos soportados hoy:
   - `props.direction`: string opcional, con soporte visual actual para `row` y fallback a columna cuando `columns` no está presente
   - `props.gap`: string opcional; la escala recomendada y estable hoy es `sm | md | lg | xl | 2xl`, pero cualquier valor CSS string sigue admitiéndose como compatibilidad heredada
   - `props.columns`: entero opcional entre `1` y `12`
+  - `props.variant`: opcional, con catálogo cerrado `default | card`
   - `props.align`: opcional, con catálogo cerrado `start | center | end | stretch`
   - `props.justify`: opcional, con catálogo cerrado `start | center | end | between | around | evenly`
   - `props.wrap`: opcional, con catálogo cerrado `nowrap | wrap | wrap-reverse`
@@ -172,9 +175,13 @@ Reglas estructurales adicionales del catálogo actual:
 - `input`, `textarea`, `select`, `radioGroup` y `checkboxGroup` solo son válidos como descendientes de un `form`.
 - `button` sin `action` solo es válido como descendiente de un `form`.
 - `container.props.columns` solo admite enteros entre `1` y `12`.
+- `node.layout.span` solo admite enteros entre `1` y `12`.
 - `container.props.align`, `container.props.justify` y `container.props.wrap` se validan contra catálogos cerrados y se rechazan con ruta diagnóstica explícita cuando reciben valores fuera de contrato.
+- `container.props.variant` se valida contra el catálogo cerrado `default | card` y se rechaza con ruta diagnóstica explícita cuando recibe otro valor.
 - `container.props.wrap` no puede coexistir con `container.props.columns`; esa combinación se rechaza antes del render.
 - Si `container` declara `direction` y `columns` a la vez, ambas props siguen siendo válidas en el contrato, pero `columns` pasa a ser el modo de layout efectivo.
+- `node.layout.span` se valida solo por shape; el contrato no exige conocer el padre para aceptarlo y el runtime lo degrada sin efecto cuando no existe un grid efectivo donde aplicarlo.
+- `repeater` puede declarar `layout.span` porque la superficie es transversal, pero esa prop no genera wrapper propio ni ocupación visible sobre el `repeater`; si una repetición necesita ocupar columnas, el nodo raíz visible de `props.template` debe declarar su propio `layout.span`.
 - las claves extra no soportadas se descartan del objeto validado final sin convertir por sí solas la configuración en inválida.
 - `props.required` deja de formar parte del contrato soportado; la obligatoriedad solo se declara desde `props.validations.required`.
 

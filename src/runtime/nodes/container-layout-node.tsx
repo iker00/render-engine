@@ -1,6 +1,7 @@
 import { createElement, type ReactNode } from 'react'
 import type { ContainerLayoutNode } from '../../config/runtime-config'
 import { useOptionalFormContext } from '../form-context'
+import { RuntimeLayoutContextProvider } from '../runtime-layout-context'
 import { getContainerNodeStyling, getContainerNodeSurface } from '../runtime-node-styling'
 
 interface ContainerLayoutNodeViewProps {
@@ -14,6 +15,7 @@ export function ContainerNode({ node, children }: ContainerLayoutNodeViewProps) 
     direction: node.props?.direction,
     gap: node.props?.gap,
     columns: node.props?.columns,
+    variant: node.props?.variant,
     align: node.props?.align,
     justify: node.props?.justify,
     wrap: node.props?.wrap,
@@ -31,6 +33,12 @@ export function ContainerNode({ node, children }: ContainerLayoutNodeViewProps) 
       className: styling.className,
       style: styling.style,
     },
-    children,
+    <RuntimeLayoutContextProvider
+      value={{
+        parentGridColumns: typeof node.props?.columns === 'number' ? node.props.columns : null,
+      }}
+    >
+      {children}
+    </RuntimeLayoutContextProvider>,
   )
 }

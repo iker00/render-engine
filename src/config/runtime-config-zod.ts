@@ -23,6 +23,7 @@ export const supportedInputTypes = ['text', 'email', 'password', 'search', 'tel'
 export const supportedContainerAlignValues = ['start', 'center', 'end', 'stretch'] as const
 export const supportedContainerJustifyValues = ['start', 'center', 'end', 'between', 'around', 'evenly'] as const
 export const supportedContainerWrapValues = ['nowrap', 'wrap', 'wrap-reverse'] as const
+export const supportedContainerVariantValues = ['default', 'card'] as const
 
 const nonEmptyStringSchema = z.string().refine((value) => value.trim().length > 0)
 const nodeIdSchema = nonEmptyStringSchema
@@ -121,17 +122,25 @@ const visibilitySchema = z
   })
   .strip()
 
+const layoutNodeLayoutSchema = z
+  .object({
+    span: z.number().int().min(1).max(12).optional(),
+  })
+  .strip()
+
 export const containerNodeSchema = z
   .object({
     type: z.literal('container'),
     id: nodeIdSchema.optional(),
     queryStateFeedback: queryStateFeedbackSchema.optional(),
     visibility: visibilitySchema.optional(),
+    layout: layoutNodeLayoutSchema.optional(),
     props: z
       .object({
         direction: z.string().optional(),
         gap: z.string().optional(),
         columns: z.number().int().min(1).max(12).optional(),
+        variant: z.enum(supportedContainerVariantValues).optional(),
         align: z.enum(supportedContainerAlignValues).optional(),
         justify: z.enum(supportedContainerJustifyValues).optional(),
         wrap: z.enum(supportedContainerWrapValues).optional(),
@@ -148,6 +157,7 @@ export const headingNodeSchema = z
     id: nodeIdSchema.optional(),
     queryStateFeedback: queryStateFeedbackSchema.optional(),
     visibility: visibilitySchema.optional(),
+    layout: layoutNodeLayoutSchema.optional(),
     props: z
       .object({
         text: z.string(),
@@ -163,6 +173,7 @@ export const repeaterNodeSchema = z
     id: nodeIdSchema.optional(),
     queryStateFeedback: queryStateFeedbackSchema.optional(),
     visibility: visibilitySchema.optional(),
+    layout: layoutNodeLayoutSchema.optional(),
     props: z
       .object({
         items: z
@@ -184,6 +195,7 @@ export const paragraphNodeSchema = z
     id: nodeIdSchema.optional(),
     queryStateFeedback: queryStateFeedbackSchema.optional(),
     visibility: visibilitySchema.optional(),
+    layout: layoutNodeLayoutSchema.optional(),
     props: z
       .object({
         text: z.string(),
@@ -198,6 +210,7 @@ export const listNodeSchema = z
     id: nodeIdSchema.optional(),
     queryStateFeedback: queryStateFeedbackSchema.optional(),
     visibility: visibilitySchema.optional(),
+    layout: layoutNodeLayoutSchema.optional(),
     props: z
       .object({
         items: z.unknown(),
@@ -212,6 +225,7 @@ export const imageNodeSchema = z
     id: nodeIdSchema.optional(),
     queryStateFeedback: queryStateFeedbackSchema.optional(),
     visibility: visibilitySchema.optional(),
+    layout: layoutNodeLayoutSchema.optional(),
     props: z
       .object({
         src: nonEmptyStringSchema,
@@ -227,6 +241,7 @@ export const tableNodeSchema = z
     id: nodeIdSchema.optional(),
     queryStateFeedback: queryStateFeedbackSchema.optional(),
     visibility: visibilitySchema.optional(),
+    layout: layoutNodeLayoutSchema.optional(),
     props: z
       .object({
         headers: z.array(z.string()),
@@ -273,6 +288,7 @@ export const buttonNodeSchema = z
     id: nodeIdSchema.optional(),
     queryStateFeedback: queryStateFeedbackSchema.optional(),
     visibility: visibilitySchema.optional(),
+    layout: layoutNodeLayoutSchema.optional(),
     props: z
       .object({
         label: z.string(),
@@ -288,6 +304,7 @@ export const formNodeSchema = z
     id: nodeIdSchema,
     queryStateFeedback: queryStateFeedbackSchema.optional(),
     visibility: visibilitySchema.optional(),
+    layout: layoutNodeLayoutSchema.optional(),
     persistOnUnmount: z.boolean().optional(),
     submitAction: z.unknown().optional(),
     resetOnSuccess: z.boolean().optional(),
@@ -309,6 +326,7 @@ export const inputNodeSchema = z
     type: z.literal('input'),
     queryStateFeedback: queryStateFeedbackSchema.optional(),
     visibility: visibilitySchema.optional(),
+    layout: layoutNodeLayoutSchema.optional(),
     props: formFieldNodePropsSchema
       .extend({
         inputType: z.enum(supportedInputTypes).optional(),
@@ -322,6 +340,7 @@ export const textareaNodeSchema = z
     type: z.literal('textarea'),
     queryStateFeedback: queryStateFeedbackSchema.optional(),
     visibility: visibilitySchema.optional(),
+    layout: layoutNodeLayoutSchema.optional(),
     props: formFieldNodePropsSchema,
   })
   .strip()
@@ -338,6 +357,7 @@ export const selectNodeSchema = z
     type: z.literal('select'),
     queryStateFeedback: queryStateFeedbackSchema.optional(),
     visibility: visibilitySchema.optional(),
+    layout: layoutNodeLayoutSchema.optional(),
     props: formFieldNodePropsSchema
       .extend({
         items: z.unknown(),
@@ -352,6 +372,7 @@ export const radioGroupNodeSchema = z
     type: z.literal('radioGroup'),
     queryStateFeedback: queryStateFeedbackSchema.optional(),
     visibility: visibilitySchema.optional(),
+    layout: layoutNodeLayoutSchema.optional(),
     props: formFieldNodePropsSchema
       .extend({
         items: z.unknown(),
@@ -365,6 +386,7 @@ export const checkboxGroupNodeSchema = z
     type: z.literal('checkboxGroup'),
     queryStateFeedback: queryStateFeedbackSchema.optional(),
     visibility: visibilitySchema.optional(),
+    layout: layoutNodeLayoutSchema.optional(),
     props: formFieldNodePropsSchema
       .extend({
         items: z.unknown(),

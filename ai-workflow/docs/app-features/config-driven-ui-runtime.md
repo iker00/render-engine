@@ -68,16 +68,19 @@ Reglas funcionales vigentes:
 - La raíz de página se renderiza como colección; el runtime no inventa un `container` de layout para envolver hermanos.
 - `layout: []` es válido y resuelve una página vacía.
 - Solo `container` admite `children`.
-- `container.props` soporta `direction`, `gap`, `columns`, `align`, `justify` y `wrap`.
+- `container.props` soporta `direction`, `gap`, `columns`, `variant`, `align`, `justify` y `wrap`.
+- cualquier nodo soportado del árbol `layout` puede declarar `layout.span` como ocupación de grid transversal, pero solo tiene efecto visible dentro de un `container` cuyo layout efectivo use `columns`.
 - `repeater.props.items.source` solo admite `queries.{queryName}.data` o `queries.{queryName}.data.*`, `repeater.props.items.key` exige una ruta relativa no vacía al item actual y `repeater.props.template` reutiliza una colección `LayoutNode[]` sin `children`.
 - `repeater` no introduce markup propio: expande su `template` como hermanos por iteración y omite cualquier item cuya key efectiva sea ausente, no escalar o duplicada, con diagnóstico en desarrollo.
 - Un `container` sin `gap` declarado usa `md` como separación visible por defecto.
 - Los alias estables de `container.props.gap` soportados hoy (`sm`, `md`, `lg`, `xl`, `2xl`) se resuelven a clases estables de `Tailwind`.
 - Un valor arbitrario de `container.props.gap` sigue siendo válido mediante una excepción acotada: clase `Tailwind` con variable CSS local, sin volver a estilos inline completos.
 - Si `container.props.columns` existe, el runtime cambia a modo `grid`, aplica `grid-cols-{n}` para `n` entre `1` y `12` y hace que `columns` prevalezca visualmente sobre `direction`.
+- `container.props.variant` mantiene una superficie cerrada: ausencia de `variant` y `variant: default` conservan la apariencia histórica, y `variant: card` añade una tarjeta institucional con borde, fondo, sombra y padding propios sin abrir theming libre.
 - `container.props.align` y `container.props.justify` se traducen a clases estables según el modo activo del contenedor.
 - `container.props.wrap` solo aplica en modo lineal (`flex`); su default efectivo es `nowrap` y no se admite junto con `columns`.
-- Dentro de `form`, un `container` conserva la superficie visual de sección solo cuando actúa como bloque vertical por defecto o cuando declara `columns`; si declara `direction: row` sin `columns`, se mantiene como layout lineal `plain` sin sangrado lateral ni márgenes negativos implícitos.
+- Dentro de `form`, un `container` conserva la superficie visual de sección solo cuando actúa como bloque vertical por defecto o cuando declara `columns`; si declara `direction: row` sin `columns`, se mantiene como layout lineal `plain` sin sangrado lateral ni márgenes negativos implícitos, y si además declara `variant: card`, la tarjeta sustituye visualmente a esa superficie implícita para evitar doble marco.
+- `layout.span` se aplica desde el borde central del renderer con un wrapper ligero solo para nodos visibles distintos de `repeater`; fuera de un grid efectivo no produce efecto, y dentro de grid se clampa al número de columnas del padre antes de emitir `col-span-*`.
 - `heading.props` soporta `text` y `level`.
 - `paragraph.props` soporta `text`.
 - El shell visible del runtime mantiene el mismo marco institucional, pero con menos padding exterior e interior para que la página útil entre antes en pantalla.
@@ -106,12 +109,13 @@ Reglas funcionales vigentes:
 - `src/config/runtime-config-validation-errors.ts` adapta los fallos internos a la taxonomía pública estable de errores.
 - `src/config/validate-runtime-config.ts` contiene la validación estructural previa al render y las validaciones cruzadas posteriores al parseo.
 - `src/runtime/layout-renderer.tsx` renderiza colecciones ordenadas, conserva el soporte de varios hermanos raíz y propaga opcionalmente un contexto de iteración por subárbol.
-- `src/runtime/layout-node-renderer.tsx` centraliza la resolución `type -> pieza de render`, aplica el borde transversal de visibilidad efectiva antes de delegar al nodo concreto y mantiene `repeater` como expansión estructural sin wrapper visual.
+- `src/runtime/layout-node-renderer.tsx` centraliza la resolución `type -> pieza de render`, aplica el borde transversal de visibilidad efectiva antes de delegar al nodo concreto, mantiene `repeater` como expansión estructural sin wrapper visual y resuelve también el wrapper genérico de `layout.span` solo cuando el padre efectivo es grid.
+- `src/runtime/runtime-layout-context.tsx` propaga un contexto mínimo de layout con las columnas efectivas del grid padre, separado del store global del runtime.
 - `src/runtime/form-context.tsx` propaga el `formId` efectivo por descendencia sin acoplar los nodos de campo a props manuales repetidas.
 - `src/runtime/runtime-actions/` concentra el ejecutor común `action.type -> handler del provider`, reutilizable por futuros triggers más allá de `button`.
 - `src/queries/` concentra también la composición final entre la operación `api` base y los request params por ejecución, incluida la semántica estable de merge para `query`, `body` y `headers`.
 - `src/app/index.css` centraliza los tokens visuales globales del runtime con `@theme` de `Tailwind CSS v4`.
-- `src/runtime/runtime-node-styling.ts` centraliza la convención visual base, la selección entre modos `flex` y `grid`, la heurística `plain | form-section` para `container` dentro de `form`, el mapeo de `columns`, `align`, `justify` y `wrap`, y la compatibilidad acotada de `gap`.
+- `src/runtime/runtime-node-styling.ts` centraliza la convención visual base, la selección entre modos `flex` y `grid`, la heurística `plain | form-section` para `container` dentro de `form`, la variante cerrada `card`, el mapeo de `columns`, `align`, `justify` y `wrap`, la compatibilidad acotada de `gap` y el cálculo de `col-span-*` con clamp seguro al grid padre.
 - `src/runtime/runtime-references/` centraliza parsing, resolución y diagnóstico de referencias string del runtime, incluido el namespace `item` limitado al contexto de iteración y la normalización visible compartida de `image` y celdas de `table`.
 - `src/runtime/runtime-collection-sources.ts` concentra la resolución compartida de colecciones efectivas para `list`, `select`, `radioGroup`, `checkboxGroup` y las filas dinámicas de `table`, incluyendo degradación a vacío, proyección declarativa por item, soporte de `item.*` dentro de `repeater` y normalización común de selección simple o múltiple.
 - `src/queries/` concentra la construcción de requests, la ejecución contra `fetch` y la normalización de errores remotos.
@@ -186,6 +190,7 @@ Además, el runtime reutiliza la misma convención de referencias completas en:
 - `params.*` sigue intencionadamente fuera de `visibility` y de las fuentes dinámicas de colección.
 - El runtime sigue intencionadamente acotado a hash routing simple y no abre un router general por `pathname`, subrutas ni segmentos dinámicos.
 - El runtime no expone todavía theming ni personalización visual declarativa desde JSON; la capa estable actual se limita a tokens globales en CSS y a la gramática compartida codificada en el propio runtime.
+- `layout.span` sigue intencionadamente acotado a semántica de grid sobre `columns`; no existe soporte responsive por breakpoint, widths libres para layouts `flex` ni wrapper visible propio en `repeater`.
 
 ## Referencias relacionadas
 - [`./config-contract.md`](./config-contract.md)
