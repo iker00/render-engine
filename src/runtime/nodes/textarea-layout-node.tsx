@@ -1,5 +1,6 @@
 import type { TextareaLayoutNode } from '../../config/runtime-config'
 import { useOptionalFormContext } from '../form-context'
+import type { RuntimeIterationContext } from '../runtime-references/runtime-reference-resolver'
 import { resolveResolvedFormFieldDefinition } from './form-layout-node'
 import {
   getFieldControlClassName,
@@ -13,9 +14,10 @@ import { selectFormFieldState } from '../runtime-state/runtime-state-selectors'
 
 interface TextareaNodeProps {
   node: TextareaLayoutNode
+  iterationContext?: RuntimeIterationContext
 }
 
-export function TextareaNode({ node }: TextareaNodeProps) {
+export function TextareaNode({ node, iterationContext }: TextareaNodeProps) {
   const formContext = useOptionalFormContext()
   const state = useRuntimeState()
   const { setFormFieldError, setFormFieldValue } = useRuntimeStateActions()
@@ -25,7 +27,7 @@ export function TextareaNode({ node }: TextareaNodeProps) {
   }
 
   const fieldState = selectFormFieldState(state, formContext.formId, node.props.fieldId)
-  const fieldDefinition = resolveResolvedFormFieldDefinition(node, state)
+  const fieldDefinition = resolveResolvedFormFieldDefinition(node, state, iterationContext)
   const defaultValue = fieldDefinition.defaultValue
   const value =
     typeof fieldState?.value === 'string'
@@ -54,6 +56,7 @@ export function TextareaNode({ node }: TextareaNodeProps) {
                 formId: formContext.formId,
                 state,
                 nextValue,
+                iterationContext,
               }),
             )
           }

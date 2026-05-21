@@ -71,10 +71,10 @@ export function LayoutNodeRenderer({ node, renderedChildren, iterationContext }:
       renderedNode = <FormNode node={node} iterationContext={iterationContext}>{renderedChildren}</FormNode>
       break
     case 'input':
-      renderedNode = <InputNode node={node} />
+      renderedNode = <InputNode node={node} iterationContext={iterationContext} />
       break
     case 'textarea':
-      renderedNode = <TextareaNode node={node} />
+      renderedNode = <TextareaNode node={node} iterationContext={iterationContext} />
       break
     case 'select':
       renderedNode = <SelectNode node={node} iterationContext={iterationContext} />

@@ -1,5 +1,6 @@
 import type { InputLayoutNode } from '../../config/runtime-config'
 import { useOptionalFormContext } from '../form-context'
+import type { RuntimeIterationContext } from '../runtime-references/runtime-reference-resolver'
 import { resolveResolvedFormFieldDefinition } from './form-layout-node'
 import {
   getFieldControlClassName,
@@ -13,9 +14,10 @@ import { selectFormFieldState } from '../runtime-state/runtime-state-selectors'
 
 interface InputNodeProps {
   node: InputLayoutNode
+  iterationContext?: RuntimeIterationContext
 }
 
-export function InputNode({ node }: InputNodeProps) {
+export function InputNode({ node, iterationContext }: InputNodeProps) {
   const formContext = useOptionalFormContext()
   const state = useRuntimeState()
   const { setFormFieldError, setFormFieldValue } = useRuntimeStateActions()
@@ -25,7 +27,7 @@ export function InputNode({ node }: InputNodeProps) {
   }
 
   const fieldState = selectFormFieldState(state, formContext.formId, node.props.fieldId)
-  const fieldDefinition = resolveResolvedFormFieldDefinition(node, state)
+  const fieldDefinition = resolveResolvedFormFieldDefinition(node, state, iterationContext)
   const defaultValue = fieldDefinition.defaultValue
   const value =
     typeof fieldState?.value === 'string'
@@ -55,6 +57,7 @@ export function InputNode({ node }: InputNodeProps) {
                 formId: formContext.formId,
                 state,
                 nextValue,
+                iterationContext,
               }),
             )
           }

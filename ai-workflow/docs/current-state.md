@@ -46,7 +46,7 @@
 - `input` ya soporta además `number`, `date` y `datetime-local` sin abrir una familia separada de componentes de campo.
 - La capa central de referencias del runtime ya soporta también `params.{paramName}` para texto visible, requests declarativos, `defaultValue` de formularios y nuevas navegaciones originadas desde páginas ya parametrizadas, leyendo esos valores como strings desde la entrada activa normalizada del hash.
 - La validación declarativa local de formularios ya funciona a nivel de formulario desde `props.validations`, con soporte para `required`, `minLength`, `maxLength`, `min`, `max`, `minSelections` y `maxSelections`.
-- El runtime ya conserva el orden declarado de `props.validations` como prioridad efectiva, escribe un único error visible por campo en `forms.*` y excluye del bloqueo de submit a campos ocultos por `queryStateFeedback` o `visibility`.
+- El runtime ya conserva el orden declarado de `props.validations` como prioridad efectiva, escribe un único error visible por campo en `forms.*`, inicializa en submit solo los campos visibles que todavía no existan y excluye del bloqueo a los ocultos por `queryStateFeedback` o `visibility`.
 - La edición de un campo con error ya no borra ese error a ciegas: el runtime reevalúa localmente sus reglas visibles y solo limpia el mensaje cuando el valor deja de incumplir la primera regla fallida.
 - El submit declarativo de formularios ya soporta `submitAction.type: executeOperation`, reusa `queries.{operationName}` como única superficie visible de loading/success/error, puede añadir `query`, `body` y `headers` por envío y puede resetear por `resetOnSuccess`.
 - `button.props.action.type: executeOperation` ya puede añadir también `query`, `body` y `headers` por ejecución sin duplicar operaciones `api`.
@@ -116,6 +116,7 @@
 - Trigésima segunda feature del workflow cerrada para compactar de forma coordinada la baseline institucional del runtime, reduciendo escala tipográfica, padding de shell, separación entre secciones, altura percibida de campos y acciones, y manteniendo intactos el contrato funcional y el lenguaje visual base.
 - Trigésima tercera feature del workflow cerrada para ampliar el catálogo declarativo con `image` y `table`, reutilizando la frontera central de referencias, las colecciones dinámicas de `queries.*` e `item.*`, el feedback visible por query y una degradación segura a no render, cero filas o celdas vacías según el dato disponible.
 - Trigésima cuarta feature del workflow cerrada para añadir `container.props.variant: default | card` y `layout.span` transversal sobre grids efectivos, con clamp seguro al número de columnas del padre, precedencia visual de `card` dentro de `form` y sin abrir theming libre ni widths arbitrarios.
+- Trigésima sexta feature del workflow cerrada para hacer que el submit de formularios valide, inicialice y escriba errores solo sobre campos efectivamente visibles, manteniendo fuera del bloqueo a los ocultos por `visibility` o `queryStateFeedback` sin perder su estado local.
 
 ## Referencias
 

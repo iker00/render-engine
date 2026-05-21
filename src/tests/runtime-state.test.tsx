@@ -357,6 +357,27 @@ function QueryDrivenFormLifecycleFixture() {
   )
 }
 
+function RepeaterFormFixture() {
+  const { initializeQuery, setQuerySuccess } = useRuntimeStateActions()
+
+  useEffect(() => {
+    initializeQuery('profiles')
+    setQuerySuccess('profiles', [
+      {
+        id: 'ada',
+        requiresCode: true,
+      },
+    ])
+  }, [initializeQuery, setQuerySuccess])
+
+  return (
+    <>
+      <RuntimePage />
+      <RuntimeStateSnapshot testId="runtime-state" />
+    </>
+  )
+}
+
 function FormVisibilityFixture() {
   const { initializeForm, setFormFieldValue } = useRuntimeStateActions()
 
@@ -2943,6 +2964,335 @@ describe('Runtime shared state store', () => {
       expect(nicknameInput).toHaveValue('')
     })
     expect(screen.getByText('Required')).toBeInTheDocument()
+  })
+
+  it('does not validate required fields nested inside a visibility-hidden container', async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: {
+          'content-type': 'application/json',
+        },
+      }),
+    )
+
+    const config: RuntimeConfig = {
+      api: {
+        submitProfile: {
+          method: 'POST',
+          endpoint: '/api/profile',
+          query: {
+            clientType: 'forms.dynamicForm.clientType',
+          },
+        },
+      },
+      initialPage: 'home',
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'form',
+              id: 'dynamicForm',
+              submitAction: {
+                type: 'executeOperation',
+                operationName: 'submitProfile',
+              },
+              children: [
+                {
+                  type: 'radioGroup',
+                  props: {
+                    fieldId: 'clientType',
+                    label: 'Tipo de cliente',
+                    items: [
+                      { label: 'Particular', value: 'particular' },
+                      { label: 'Empresa', value: 'empresa' },
+                    ],
+                    defaultValue: 'particular',
+                  },
+                },
+                {
+                  type: 'container',
+                  visibility: {
+                    reference: 'forms.dynamicForm.clientType',
+                    operator: 'equals',
+                    value: 'empresa',
+                  },
+                  children: [
+                    {
+                      type: 'input',
+                      props: {
+                        fieldId: 'company_cif',
+                        label: 'CIF',
+                        validations: {
+                          required: {
+                            value: true,
+                          },
+                        },
+                        defaultValue: '',
+                      },
+                    },
+                  ],
+                },
+                {
+                  type: 'button',
+                  props: {
+                    label: 'Submit profile',
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    }
+
+    globalThis.fetch = fetchMock
+
+    render(
+      <RuntimeStateProvider config={config}>
+        <RuntimePage />
+        <RuntimeStateSnapshot testId="runtime-state" />
+      </RuntimeStateProvider>,
+    )
+
+    expect(screen.queryByRole('textbox', { name: 'CIF' })).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Submit profile' }))
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+    expect(screen.queryByText('Required')).not.toBeInTheDocument()
+    expect(screen.getByTestId('runtime-state')).not.toHaveTextContent('"company_cif"')
+  })
+
+  it('allows submit while a queryStateFeedback-hidden required field stays hidden and revalidates it when visible again', async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockImplementation(async () =>
+      new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: {
+          'content-type': 'application/json',
+        },
+      }),
+    )
+
+    const config: RuntimeConfig = {
+      api: {
+        submitProfile: {
+          method: 'POST',
+          endpoint: '/api/profile',
+          body: {
+            name: 'forms.profileForm.name',
+          },
+        },
+      },
+      initialPage: 'home',
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'form',
+              id: 'profileForm',
+              submitAction: {
+                type: 'executeOperation',
+                operationName: 'submitProfile',
+              },
+              children: [
+                {
+                  type: 'input',
+                  props: {
+                    fieldId: 'name',
+                    label: 'Name',
+                    defaultValue: 'Ada',
+                    validations: {
+                      required: {
+                        value: true,
+                      },
+                    },
+                  },
+                },
+                {
+                  type: 'input',
+                  queryStateFeedback: {
+                    query: 'visibilityQuery',
+                    states: {
+                      loading: {
+                        mode: 'hide',
+                      },
+                      success: {
+                        mode: 'show',
+                      },
+                    },
+                  },
+                  props: {
+                    fieldId: 'roleCode',
+                    label: 'Role code',
+                    defaultValue: '',
+                    validations: {
+                      required: {
+                        value: true,
+                      },
+                    },
+                  },
+                },
+                {
+                  type: 'button',
+                  props: {
+                    label: 'Submit profile',
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    }
+
+    globalThis.fetch = fetchMock
+
+    render(
+      <RuntimeStateProvider config={config}>
+        <FormRuntimeFixture />
+      </RuntimeStateProvider>,
+    )
+
+    expect(screen.queryByRole('textbox', { name: 'Role code' })).not.toBeInTheDocument()
+    expect(screen.getByTestId('runtime-state')).not.toHaveTextContent('"roleCode"')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Submit profile' }))
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+    expect(screen.getByTestId('runtime-state')).not.toHaveTextContent('"roleCode"')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Set visibility success' }))
+
+    await waitFor(() => {
+      const roleCodeInput = screen.getByText('Role code').closest('label')?.querySelector('input')
+      expect(roleCodeInput).not.toBeNull()
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Submit profile' }))
+
+    await waitFor(() => expect(screen.getByText('Required')).toBeInTheDocument())
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(screen.getByTestId('runtime-state')).toHaveTextContent('"roleCode":{"value":"","error":"Required"')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Set visibility loading' }))
+
+    await waitFor(() => expect(screen.queryByRole('textbox', { name: 'Role code' })).not.toBeInTheDocument())
+    expect(screen.getByTestId('runtime-state')).toHaveTextContent('"roleCode":{"value":"","error":"Required"')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Submit profile' }))
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2))
+
+    fireEvent.click(screen.getByRole('button', { name: 'Set visibility success' }))
+
+    await waitFor(() => {
+      const roleCodeInput = screen.getByText('Role code').closest('label')?.querySelector('input')
+      expect(roleCodeInput).not.toBeNull()
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Submit profile' }))
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2))
+    expect(screen.getByText('Required')).toBeInTheDocument()
+  })
+
+  it('blocks submit for repeater form fields whose visibility depends on the current item context', async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: {
+          'content-type': 'application/json',
+        },
+      }),
+    )
+
+    const config: RuntimeConfig = {
+      api: {
+        submitProfile: {
+          method: 'POST',
+          endpoint: '/api/profile',
+        },
+      },
+      initialPage: 'home',
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'repeater',
+              props: {
+                items: {
+                  source: 'queries.profiles.data',
+                  key: 'id',
+                },
+                template: [
+                  {
+                    type: 'form',
+                    id: 'profileForm',
+                    submitAction: {
+                      type: 'executeOperation',
+                      operationName: 'submitProfile',
+                    },
+                    children: [
+                      {
+                        type: 'input',
+                        props: {
+                          fieldId: 'name',
+                          label: 'Name',
+                          defaultValue: 'Ada',
+                        },
+                      },
+                      {
+                        type: 'input',
+                        visibility: {
+                          reference: 'item.requiresCode',
+                          operator: 'equals',
+                          value: true,
+                        },
+                        props: {
+                          fieldId: 'roleCode',
+                          label: 'Role code',
+                          defaultValue: '',
+                          validations: {
+                            required: {
+                              value: true,
+                            },
+                          },
+                        },
+                      },
+                      {
+                        type: 'button',
+                        props: {
+                          label: 'Submit profile',
+                        },
+                      },
+                    ],
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      ],
+    }
+
+    globalThis.fetch = fetchMock
+
+    render(
+      <RuntimeStateProvider config={config}>
+        <RepeaterFormFixture />
+      </RuntimeStateProvider>,
+    )
+
+    await waitFor(() => expect(screen.getByRole('textbox', { name: 'Role code' })).toBeInTheDocument())
+
+    fireEvent.click(screen.getByRole('button', { name: 'Submit profile' }))
+
+    await waitFor(() => expect(screen.getByText('Required')).toBeInTheDocument())
+    expect(fetchMock).not.toHaveBeenCalled()
   })
 
   it('initializes visibility-controlled fields lazily, keeps queryStateFeedback precedence, and supports length-based rules for input textarea and select', async () => {

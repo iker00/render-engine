@@ -72,6 +72,7 @@ export function CheckboxGroupNode({ node, iterationContext }: CheckboxGroupNodeP
                       formId: formContext.formId,
                       state,
                       nextValue,
+                      iterationContext,
                     }),
                   )
                 }

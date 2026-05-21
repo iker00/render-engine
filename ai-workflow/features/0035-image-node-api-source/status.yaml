@@ -1,0 +1,25 @@
+phase: complete
+risk_level: medium
+requires_design: true
+current_task_id: null
+blocked_by: []
+artifacts:
+  discovery: missing
+  spec: ready
+  design: draft
+  tasks: draft
+  test_plan: draft
+  notes: optional
+implementation:
+  ready: false
+  completed_task_ids: []
+  in_progress_task_id: null
+validation:
+  tests_green: false
+  coverage_gate_passed: false
+documentation:
+  ready: false
+  done: false
+feature_status: archived
+resolution: archived
+resolution_reason: "Se descarta por ahora: el enfoque complica el runtime y el caso de imagen privada encaja mejor con URLs protegidas o firmadas resueltas por backend."

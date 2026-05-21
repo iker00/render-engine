@@ -17,7 +17,11 @@ La política completa está en [`../docs/workflow.md`](../docs/workflow.md).
 ## Planificadas
 - `0030-form-page-entry-invalidation`: cuando cambia la `pageEntry`, un formulario con `persistOnUnmount: false` debe invalidar su estado aunque la `pageId` no cambie, para reconstruir `defaultValue` y demás estado inicial con los `params` y `preloads` de la nueva entrada.
 
+## Archivadas
+- `0035-image-node-api-source`: archivada. Se descarta por ahora porque el caso de imágenes privadas encaja mejor con URLs protegidas o firmadas desde backend que con una carga remota específica integrada en el nodo `image`.
+
 ## Completadas
+- `0036-hidden-fields-ignore-validation-when-hidden`: los campos ocultos dentro de un formulario ya no participan en la validación ni bloquean el submit mientras sigan ocultos, tanto con `visibility` como con `queryStateFeedback`, sin perder su estado local ni inicializarse artificialmente en submit.
 - `0034-container-variants-and-responsive-grid-span`: `container` ya soporta `variant: default | card`, con `card` como preset visual cerrado fiel a la baseline institucional, y cualquier nodo soportado ya puede declarar `layout.span` para ocupar columnas dentro de grids efectivos con clamp seguro al padre y sin abrir theming libre ni widths arbitrarios.
 - `0033-declarative-table-and-image-nodes`: el runtime ya incorpora `image` y `table`, con validación previa al render, soporte de referencias completas en `src`, `alt` y celdas, tablas manuales o dinámicas sobre `queries.*` e `item.*`, y degradación segura a no render, cero filas o celdas vacías según el dato disponible.
 - `0032-compact-institutional-density`: la baseline visual institucional del runtime ya es más compacta y coordinada en shell, tipografía, formularios, secciones y acciones, acercando la densidad general a la referencia de "Solicitud general" sin reabrir theming ni el contrato funcional.

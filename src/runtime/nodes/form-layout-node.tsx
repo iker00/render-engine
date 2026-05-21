@@ -119,9 +119,11 @@ export function FormNode({ node, children, iterationContext }: FormNodeProps) {
 
     const snapshotState = readRuntimeState()
     const latestFieldDefinitions = collectResolvedFormFieldDefinitions(node.children ?? [], snapshotState, iterationContext)
-    const visibleMissingFieldDefinitions = latestFieldDefinitions.filter(
+    const visibleFieldDefinitions = latestFieldDefinitions.filter((fieldDefinition) =>
+      isLayoutNodeVisible(fieldDefinition, snapshotState, iterationContext),
+    )
+    const visibleMissingFieldDefinitions = visibleFieldDefinitions.filter(
       (fieldDefinition) =>
-        isLayoutNodeVisible(fieldDefinition, snapshotState, iterationContext) &&
         selectFormFieldState(snapshotState, node.id, fieldDefinition.fieldId) === null,
     )
 
@@ -141,11 +143,12 @@ export function FormNode({ node, children, iterationContext }: FormNodeProps) {
 
     const validationResult = validateFormFields({
       formId: node.id,
-      fieldDefinitions: latestFieldDefinitions,
+      fieldDefinitions: visibleFieldDefinitions,
       state: snapshotState,
+      iterationContext,
     })
     const defaultValuesByFieldId = Object.fromEntries(
-      latestFieldDefinitions.map((fieldDefinition) => [fieldDefinition.fieldId, fieldDefinition.defaultValue]),
+      visibleFieldDefinitions.map((fieldDefinition) => [fieldDefinition.fieldId, fieldDefinition.defaultValue]),
     )
 
     for (const [fieldId, error] of Object.entries(validationResult.errorsByFieldId)) {
@@ -190,6 +193,10 @@ export function collectResolvedFormFieldDefinitions(
   const fields: ResolvedFormFieldDefinition[] = []
 
   for (const node of nodes) {
+    if (!isLayoutNodeVisible(node, state, iterationContext)) {
+      continue
+    }
+
     if (node.type === 'container') {
       fields.push(...collectResolvedFormFieldDefinitions(node.children ?? [], state, iterationContext))
       continue

@@ -64,6 +64,7 @@ export function RadioGroupNode({ node, iterationContext }: RadioGroupNodeProps) 
                       formId: formContext.formId,
                       state,
                       nextValue,
+                      iterationContext,
                     }),
                   )
                 }

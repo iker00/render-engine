@@ -74,6 +74,7 @@ export function SelectNode({ node, iterationContext }: SelectNodeProps) {
                   formId: formContext.formId,
                   state,
                   nextValue,
+                  iterationContext,
                 }),
               )
             }

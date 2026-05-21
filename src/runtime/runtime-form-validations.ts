@@ -8,6 +8,7 @@ import type {
 } from '../config/runtime-config'
 import { isLayoutNodeVisible } from './runtime-layout-visibility'
 import { normalizeChoiceFieldValue } from './runtime-collection-sources'
+import type { RuntimeIterationContext } from './runtime-references/runtime-reference-resolver'
 import { selectFormFieldState } from './runtime-state/runtime-state-selectors'
 import type { RuntimeState } from './runtime-state/runtime-state-types'
 
@@ -27,10 +28,12 @@ export function validateFormFields({
   formId,
   fieldDefinitions,
   state,
+  iterationContext,
 }: {
   formId: string
   fieldDefinitions: ResolvedFormFieldDefinition[]
   state: RuntimeState
+  iterationContext?: RuntimeIterationContext
 }) {
   const errorsByFieldId: Record<string, string | null> = {}
   let isValid = true
@@ -38,7 +41,7 @@ export function validateFormFields({
   for (const fieldDefinition of fieldDefinitions) {
     const fieldState = selectFormFieldState(state, formId, fieldDefinition.fieldId)
     const currentValue = resolveFormFieldValue(fieldDefinition, formId, state)
-    const isVisible = isLayoutNodeVisible(fieldDefinition, state)
+    const isVisible = isLayoutNodeVisible(fieldDefinition, state, iterationContext)
 
     if (!isVisible) {
       errorsByFieldId[fieldDefinition.fieldId] = fieldState?.error ?? null
@@ -125,11 +128,13 @@ export function getValidationErrorForEditedField({
   formId,
   state,
   nextValue,
+  iterationContext,
 }: {
   fieldDefinition: ResolvedFormFieldDefinition
   formId: string
   state: RuntimeState
   nextValue: unknown
+  iterationContext?: RuntimeIterationContext
 }) {
   const nextState = {
     ...state,
@@ -152,7 +157,7 @@ export function getValidationErrorForEditedField({
 
   const nextFieldState = selectFormFieldState(nextState, formId, fieldDefinition.fieldId)
 
-  if (!isLayoutNodeVisible(fieldDefinition, nextState)) {
+  if (!isLayoutNodeVisible(fieldDefinition, nextState, iterationContext)) {
     return nextFieldState?.error ?? null
   }
 
