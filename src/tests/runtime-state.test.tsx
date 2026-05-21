@@ -2573,7 +2573,7 @@ describe('Runtime shared state store', () => {
     expect(screen.getByTestId('runtime-state')).toHaveTextContent('"scopes":{"value":["read","publish"]')
   })
 
-  it('keeps radioGroup as a single string value and cleans it when the dynamic option disappears', async () => {
+  it('keeps inline radioGroup as a single string value and cleans it when the dynamic option disappears', async () => {
     const config: RuntimeConfig = {
       api: {},
       initialPage: 'home',
@@ -2590,6 +2590,7 @@ describe('Runtime shared state store', () => {
                   props: {
                     fieldId: 'role',
                     label: 'Role',
+                    optionLayout: 'inline',
                     defaultValue: 'editor',
                     items: {
                       source: 'queries.roleCatalog.data.results',
@@ -2626,7 +2627,7 @@ describe('Runtime shared state store', () => {
     expect(screen.getByTestId('runtime-state')).toHaveTextContent('"role":{"value":"","error":null')
   })
 
-  it('shares multiple-selection semantics between checkboxGroup and select.multiple for cleanup and submit payloads', async () => {
+  it('shares multiple-selection semantics between inline checkboxGroup and select.multiple for cleanup and submit payloads', async () => {
     const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
       new Response(JSON.stringify({ ok: true }), {
         status: 200,
@@ -2679,6 +2680,7 @@ describe('Runtime shared state store', () => {
                   props: {
                     fieldId: 'teams',
                     label: 'Teams',
+                    optionLayout: 'inline',
                     defaultValue: ['editor', 'admin'],
                     items: {
                       source: 'queries.roleCatalog.data.results',
@@ -2768,7 +2770,7 @@ describe('Runtime shared state store', () => {
                   },
                 },
                 {
-                  type: 'select',
+                  type: 'radioGroup',
                   queryStateFeedback: {
                     query: 'visibilityQuery',
                     states: {
@@ -2786,6 +2788,7 @@ describe('Runtime shared state store', () => {
                   props: {
                     fieldId: 'role',
                     label: 'Role',
+                    optionLayout: 'inline',
                     validations: {
                       required: {
                         value: true,
@@ -2793,8 +2796,8 @@ describe('Runtime shared state store', () => {
                     },
                     defaultValue: '',
                     items: [
-                      { label: '', value: '' },
                       { label: 'Editor', value: 'editor' },
+                      { label: 'Admin', value: 'admin' },
                     ],
                   },
                 },
@@ -3004,6 +3007,7 @@ describe('Runtime shared state store', () => {
                   props: {
                     fieldId: 'clientType',
                     label: 'Tipo de cliente',
+                    optionLayout: 'inline',
                     items: [
                       { label: 'Particular', value: 'particular' },
                       { label: 'Empresa', value: 'empresa' },
@@ -3472,6 +3476,7 @@ describe('Runtime shared state store', () => {
                   props: {
                     fieldId: 'scopes',
                     label: 'Scopes',
+                    optionLayout: 'inline',
                     defaultValue: ['read'],
                     items: [
                       { label: 'Read', value: 'read' },

@@ -18,6 +18,7 @@ Soportar formularios declarativos con estado interno, campos reutilizables y val
 - `textarea` conserva `resize-y` y una altura mínima útil, ahora más compacta en móvil base que en breakpoints mayores.
 - `select.props.multiple` mantiene una altura mínima suficiente para uso real, pero también más contenida que en la baseline previa.
 - `radioGroup` y `checkboxGroup` conservan controles nativos y texto alineado, sin convertir cada opción en una tarjeta con borde, con menor separación vertical entre opciones.
+- `radioGroup.props.optionLayout` y `checkboxGroup.props.optionLayout` ya permiten además una variante opt-in `inline` que reparte opciones en línea con `wrap`; si la prop no existe, ambos grupos mantienen el apilado vertical actual.
 - La jerarquía visual de acciones sigue distinguiendo CTA principal y acciones secundarias sin alterar su semántica funcional actual, pero ambas reducen padding y altura percibida respecto a la baseline previa.
 
 ## Modelo de formulario
@@ -45,6 +46,7 @@ Reglas estables del catálogo:
 - `select.props.multiple` convierte el campo en selección múltiple y hace que su valor efectivo sea `string[]`.
 - `radioGroup` acepta exactamente los mismos shapes de `items` que `select` y conserva una única selección efectiva como `string`.
 - `checkboxGroup` acepta exactamente los mismos shapes de `items` que `select` y conserva una selección múltiple efectiva como `string[]`.
+- `radioGroup` y `checkboxGroup` aceptan opcionalmente `props.optionLayout: 'vertical' | 'inline'` como decisión visual por nodo, sin alterar el shape de `items`, `defaultValue`, validación ni submit.
 - Dentro de un mismo `select`, todos los `value` efectivos deben ser homogéneos en origen (`string` o `number`) aunque en runtime se normalicen a string.
 - Dentro de un mismo `radioGroup` o `checkboxGroup`, todos los `value` efectivos también deben ser homogéneos en origen (`string` o `number`).
 - Los valores numéricos de `select`, `radioGroup` y `checkboxGroup` se normalizan a string en runtime para compararse, almacenarse, renderizarse y enviarse.
@@ -151,6 +153,7 @@ Semántica estable vigente del reset:
 - `select` simple o múltiple dependiente de catálogos remotos ya cargados en `queries.*`, sin lógica React específica por pantalla
 - grupos `radioGroup` y `checkboxGroup` alimentados por colecciones manuales o por `queries.*`, compartiendo la misma semántica de opciones que `select`
 - grupos `radioGroup` y `checkboxGroup` dentro de `repeater` alimentados también por `item.*`, compartiendo la misma semántica de opciones que `select`
+- formularios que mezclan grupos `radioGroup` o `checkboxGroup` verticales e inline dentro de la misma pantalla, manteniendo la misma semántica de selección, validación y submit
 
 ## Límites actuales
 - No existen todavía subida de archivos ni otros tipos de campo fuera de `input`, `textarea`, `select`, `radioGroup` y `checkboxGroup`.

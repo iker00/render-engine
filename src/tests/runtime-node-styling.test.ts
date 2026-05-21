@@ -187,6 +187,16 @@ describe('runtime node styling', () => {
     expect(getChoiceOptionClassName()).toBe('flex items-start gap-2.5 text-sm leading-5 text-app-text')
   })
 
+  it('supports an inline choice-group variant with wrap and without option card styling', () => {
+    expect(getChoiceGroupClassName('inline')).toBe('flex flex-wrap gap-x-4 gap-y-2.5')
+    expect(getChoiceGroupClassName('vertical')).toBe('grid gap-2.5')
+    expect(getChoiceOptionClassName('inline')).toBe('flex max-w-full items-start gap-2.5 text-sm leading-5 text-app-text')
+    expect(getChoiceOptionClassName('inline')).not.toContain('border')
+    expect(getChoiceOptionClassName('inline')).not.toContain('rounded')
+    expect(getChoiceOptionClassName('inline')).not.toContain('basis-')
+    expect(getChoiceOptionClassName('inline')).not.toContain('min-w-')
+  })
+
   it('returns stable Tailwind classes for leaf nodes', () => {
     expect(getHeadingNodeClassName(2)).toBe(
       'm-0 text-2xl sm:text-3xl font-semibold leading-tight tracking-[-0.03em] text-app-text-strong',

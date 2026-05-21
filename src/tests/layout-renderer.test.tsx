@@ -2659,6 +2659,55 @@ describe('RuntimePage', () => {
     expect(screen.getByRole('checkbox', { name: 'beta' })).toBeChecked()
   })
 
+  it('renders inline and vertical choice groups side by side without cross-contaminating classes', () => {
+    renderRuntimeFormPage({
+      id: 'mixed-choice-layouts',
+      layout: [
+        {
+          type: 'form',
+          id: 'profile-form',
+          children: [
+            {
+              type: 'radioGroup',
+              props: {
+                fieldId: 'role',
+                label: 'Role',
+                optionLayout: 'inline',
+                items: [
+                  { label: 'Administrator with a long label that can wrap on small widths', value: 'admin' },
+                  { label: 'Editor', value: 'editor' },
+                ],
+              },
+            },
+            {
+              type: 'checkboxGroup',
+              props: {
+                fieldId: 'teams',
+                label: 'Teams',
+                items: {
+                  values: ['alpha', 'beta', 'gamma'],
+                },
+              },
+            },
+          ],
+        },
+      ],
+    })
+
+    const inlineRadioGroup = screen.getByRole('radio', { name: 'Administrator with a long label that can wrap on small widths' }).closest('div')
+    const verticalCheckboxGroup = screen.getByRole('checkbox', { name: 'alpha' }).closest('div')
+
+    expect(inlineRadioGroup).toHaveClass('flex', 'flex-wrap', 'gap-x-4', 'gap-y-2.5')
+    expect(verticalCheckboxGroup).toHaveClass('grid', 'gap-2.5')
+    expect(verticalCheckboxGroup).not.toHaveClass('flex-wrap')
+    expect(screen.getByRole('group', { name: 'Role' })).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: 'Teams' })).toBeInTheDocument()
+    expect(screen.getByRole('radio', { name: 'Administrator with a long label that can wrap on small widths' }).closest('label')).toHaveClass(
+      'max-w-full',
+      'items-start',
+    )
+  })
+
   it('renders dynamic scalar and object select options from query-backed collections', () => {
     renderRuntimePageWithCollectionControls({
       id: 'dynamic-selects',
@@ -2750,6 +2799,53 @@ describe('RuntimePage', () => {
     expect(screen.getAllByRole('radio').map((radio) => radio.getAttribute('value'))).toEqual(['user-1', 'user-2'])
     expect(screen.getAllByRole('radio').map((radio) => radio.parentElement?.textContent)).toEqual(['Ada', 'Grace'])
     expect(screen.getAllByRole('checkbox').map((checkbox) => checkbox.parentElement?.textContent)).toEqual(['Admin', 'Editor'])
+  })
+
+  it('renders inline choice groups from query-backed collections with the same semantic fieldset structure', () => {
+    renderRuntimePageWithCollectionControls({
+      id: 'dynamic-inline-choice-fields',
+      layout: [
+        {
+          type: 'form',
+          id: 'catalog-form',
+          children: [
+            {
+              type: 'radioGroup',
+              props: {
+                fieldId: 'userId',
+                label: 'User',
+                optionLayout: 'inline',
+                items: {
+                  source: 'queries.searchUsers.data.results',
+                  label: 'profile.name',
+                  value: 'id',
+                },
+              },
+            },
+            {
+              type: 'checkboxGroup',
+              props: {
+                fieldId: 'roles',
+                label: 'Roles',
+                optionLayout: 'inline',
+                items: {
+                  source: 'queries.searchUsers.data.results',
+                  label: 'meta.role',
+                  value: 'id',
+                },
+              },
+            },
+          ],
+        },
+      ],
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Seed object results' }))
+
+    expect(screen.getByRole('group', { name: 'User' })).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: 'Roles' })).toBeInTheDocument()
+    expect(screen.getByRole('radio', { name: 'Ada' }).closest('div')).toHaveClass('flex', 'flex-wrap')
+    expect(screen.getByRole('checkbox', { name: 'Admin' }).closest('div')).toHaveClass('flex', 'flex-wrap')
   })
 
   it('degrades only invalid dynamic object options and reports a development diagnostic for each skipped select item', () => {

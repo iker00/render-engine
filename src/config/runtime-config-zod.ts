@@ -24,6 +24,7 @@ export const supportedContainerAlignValues = ['start', 'center', 'end', 'stretch
 export const supportedContainerJustifyValues = ['start', 'center', 'end', 'between', 'around', 'evenly'] as const
 export const supportedContainerWrapValues = ['nowrap', 'wrap', 'wrap-reverse'] as const
 export const supportedContainerVariantValues = ['default', 'card'] as const
+export const supportedChoiceGroupOptionLayoutValues = ['vertical', 'inline'] as const
 
 const nonEmptyStringSchema = z.string().refine((value) => value.trim().length > 0)
 const nodeIdSchema = nonEmptyStringSchema
@@ -376,6 +377,7 @@ export const radioGroupNodeSchema = z
     props: formFieldNodePropsSchema
       .extend({
         items: z.unknown(),
+        optionLayout: z.enum(supportedChoiceGroupOptionLayoutValues).optional(),
       })
       .strip(),
   })
@@ -390,6 +392,7 @@ export const checkboxGroupNodeSchema = z
     props: formFieldNodePropsSchema
       .extend({
         items: z.unknown(),
+        optionLayout: z.enum(supportedChoiceGroupOptionLayoutValues).optional(),
       })
       .strip(),
   })

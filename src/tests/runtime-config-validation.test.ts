@@ -4313,6 +4313,152 @@ describe('validateRuntimeConfig', () => {
       })
     })
 
+    it('accepts supported optionLayout values for radioGroup and checkboxGroup and preserves omission as the vertical default', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithFormLayout({
+          children: [
+            {
+              type: 'radioGroup',
+              props: {
+                fieldId: 'role',
+                label: 'Role',
+                optionLayout: 'inline',
+                defaultValue: 'admin',
+                items: [
+                  { label: 'Admin', value: 'admin' },
+                  { label: 'Editor', value: 'editor' },
+                ],
+                validations: {
+                  required: true,
+                },
+              },
+            },
+            {
+              type: 'checkboxGroup',
+              props: {
+                fieldId: 'scopes',
+                label: 'Scopes',
+                optionLayout: 'vertical',
+                defaultValue: ['read'],
+                items: {
+                  values: ['read', 'write', 'publish'],
+                },
+                validations: {
+                  minSelections: 1,
+                },
+              },
+            },
+            {
+              type: 'checkboxGroup',
+              props: {
+                fieldId: 'secondary-scopes',
+                label: 'Secondary scopes',
+                items: {
+                  values: ['read', 'write'],
+                },
+              },
+            },
+          ],
+        }),
+      )
+
+      expect(result.status).toBe('ready')
+      if (result.status !== 'ready') {
+        throw new Error('Expected runtime config validation to succeed.')
+      }
+
+      const formNode = result.page.layout[0]
+      if (formNode.type !== 'form') {
+        throw new Error('Expected a form layout node.')
+      }
+
+      expect(formNode.children).toMatchObject([
+        {
+          type: 'radioGroup',
+          props: {
+            fieldId: 'role',
+            optionLayout: 'inline',
+            defaultValue: 'admin',
+            validations: {
+              required: { value: true },
+            },
+          },
+        },
+        {
+          type: 'checkboxGroup',
+          props: {
+            fieldId: 'scopes',
+            optionLayout: 'vertical',
+            defaultValue: ['read'],
+            validations: {
+              minSelections: { value: 1 },
+            },
+          },
+        },
+        {
+          type: 'checkboxGroup',
+          props: {
+            fieldId: 'secondary-scopes',
+          },
+        },
+      ])
+      expect(formNode.children?.[2]).not.toHaveProperty('props.optionLayout')
+    })
+
+    it('rejects unsupported optionLayout values for choice groups with a diagnostic path in props.optionLayout', () => {
+      expect(
+        validateRuntimeConfig(
+          createConfigWithFormLayout({
+            children: [
+              {
+                type: 'radioGroup',
+                props: {
+                  fieldId: 'role',
+                  label: 'Role',
+                  optionLayout: 'stacked',
+                  items: [{ label: 'Admin', value: 'admin' }],
+                },
+              },
+            ],
+          }),
+        ),
+      ).toEqual({
+        status: 'error',
+        error: {
+          code: 'invalid-layout',
+          displayMode: 'development-only',
+          message: 'Page "home" has an invalid layout at "layout[0].children[0].props.optionLayout".',
+        },
+      })
+
+      expect(
+        validateRuntimeConfig(
+          createConfigWithFormLayout({
+            children: [
+              {
+                type: 'checkboxGroup',
+                props: {
+                  fieldId: 'scopes',
+                  label: 'Scopes',
+                  optionLayout: 'grid',
+                  items: {
+                    values: ['read', 'write'],
+                  },
+                },
+              },
+            ],
+          }),
+        ),
+      ).toEqual({
+        status: 'error',
+        error: {
+          code: 'invalid-layout',
+          displayMode: 'development-only',
+          message: 'Page "home" has an invalid layout at "layout[0].children[0].props.optionLayout".',
+        },
+      })
+    })
+
     it('rejects radioGroup and checkboxGroup outside forms', () => {
       expect(
         validateRuntimeConfig(

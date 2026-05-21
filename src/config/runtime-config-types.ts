@@ -303,11 +303,14 @@ export interface SelectLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLa
   children?: unknown
 }
 
+export type ChoiceGroupOptionLayout = 'vertical' | 'inline'
+
 export interface RadioGroupLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayoutFields {
   type: 'radioGroup'
   id?: string
   props: FormFieldLayoutNodeProps & {
     items: SelectLayoutNodeItems
+    optionLayout?: ChoiceGroupOptionLayout
   }
   children?: unknown
 }
@@ -317,6 +320,7 @@ export interface CheckboxGroupLayoutNode extends LayoutNodeFeedbackFields, Layou
   id?: string
   props: FormFieldLayoutNodeProps & {
     items: SelectLayoutNodeItems
+    optionLayout?: ChoiceGroupOptionLayout
   }
   children?: unknown
 }

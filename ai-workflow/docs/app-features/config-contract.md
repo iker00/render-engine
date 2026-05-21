@@ -155,6 +155,7 @@ Nodos soportados hoy:
 - `radioGroup`
   - `props.fieldId`: string obligatorio y único dentro del `form` contenedor
   - `props.label`: string obligatorio
+  - `props.optionLayout`: opcional, con catálogo cerrado `vertical | inline`; si no existe, el runtime conserva el layout vertical como default efectivo
   - `props.validations`: objeto opcional y ordenado por declaración
   - `props.validations.required`: `true` o `{ value: true, message?: string }`
   - `props.defaultValue`: literal JSON simple o referencia dinámica completa soportada por el runtime
@@ -162,6 +163,7 @@ Nodos soportados hoy:
 - `checkboxGroup`
   - `props.fieldId`: string obligatorio y único dentro del `form` contenedor
   - `props.label`: string obligatorio
+  - `props.optionLayout`: opcional, con catálogo cerrado `vertical | inline`; si no existe, el runtime conserva el layout vertical como default efectivo
   - `props.validations`: objeto opcional y ordenado por declaración
   - `props.validations.required`: `true` o `{ value: true, message?: string }`
   - `props.validations.minSelections`: número o `{ value: number, message?: string }`

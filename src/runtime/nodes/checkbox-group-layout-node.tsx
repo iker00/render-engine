@@ -39,13 +39,14 @@ export function CheckboxGroupNode({ node, iterationContext }: CheckboxGroupNodeP
   })
   const selectedValues = new Set(value)
   const error = fieldState?.error ?? null
+  const optionLayout = node.props.optionLayout ?? 'vertical'
 
   return (
     <fieldset className={getFieldWrapperClassName()} data-layout-node="checkbox-group">
       <legend className={getFieldLabelClassName()}>{node.props.label}</legend>
-      <div className={getChoiceGroupClassName()}>
+      <div className={getChoiceGroupClassName(optionLayout)}>
         {items.map((item, index) => (
-          <label key={`${node.props.fieldId}-${index}-${item.value}`} className={getChoiceOptionClassName()}>
+          <label key={`${node.props.fieldId}-${index}-${item.value}`} className={getChoiceOptionClassName(optionLayout)}>
             <input
               type="checkbox"
               value={item.value}

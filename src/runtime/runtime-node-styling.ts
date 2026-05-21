@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react'
+import type { ChoiceGroupOptionLayout } from '../config/runtime-config'
 
 const containerGapClassMap: Record<string, string> = {
   sm: 'gap-3',
@@ -365,10 +366,16 @@ export function getFieldErrorClassName() {
   return 'text-sm font-medium text-app-danger'
 }
 
-export function getChoiceGroupClassName() {
+export function getChoiceGroupClassName(optionLayout: ChoiceGroupOptionLayout = 'vertical') {
+  if (optionLayout === 'inline') {
+    return 'flex flex-wrap gap-x-4 gap-y-2.5'
+  }
+
   return 'grid gap-2.5'
 }
 
-export function getChoiceOptionClassName() {
-  return 'flex items-start gap-2.5 text-sm leading-5 text-app-text'
+export function getChoiceOptionClassName(optionLayout: ChoiceGroupOptionLayout = 'vertical') {
+  return optionLayout === 'inline'
+    ? 'flex max-w-full items-start gap-2.5 text-sm leading-5 text-app-text'
+    : 'flex items-start gap-2.5 text-sm leading-5 text-app-text'
 }
