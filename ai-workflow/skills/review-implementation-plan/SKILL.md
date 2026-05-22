@@ -9,19 +9,26 @@ profile_rationale: Fase de control de calidad del plan; debe detectar ambigüeda
 
 Usa esta skill cuando ya exista una spec y un plan preliminar, pero quieras comprobar si el contrato de ejecución está lo bastante cerrado como para implementar sin reinterpretaciones peligrosas.
 
-## Leer primero
+## Leer siempre
 - `ai-workflow/docs/workflow.md`
 - `ai-workflow/features/NNNN-feature-name/spec.md`
 - `ai-workflow/features/NNNN-feature-name/tasks.md`
 - `ai-workflow/features/NNNN-feature-name/test-plan.md`
 - `ai-workflow/features/NNNN-feature-name/status.yaml`
-- `ai-workflow/features/NNNN-feature-name/design.md` si existe
+- `ai-workflow/features/NNNN-feature-name/design.md` si existe o si `status.yaml` marca `requires_design: true`
 - `ai-workflow/docs/context.md`
 - `ai-workflow/docs/app-features/index.md`
 - solo las fichas relevantes de `ai-workflow/docs/app-features/`
 - `ai-workflow/docs/architecture.md`
 - `ai-workflow/docs/conventions.md`
-- `ai-workflow/standards/*.md`
+- `ai-workflow/standards/testing-rules.md`
+- `ai-workflow/standards/coding-style.md`
+
+## Leer si aplica
+- Otros documentos de `ai-workflow/standards/` según el tipo de riesgo que deba revisarse: React, errores, seguridad u otras reglas de calidad afectadas.
+- `ai-workflow/docs/current-state.md` si hace falta confirmar estado vigente o límites actuales.
+- `ai-workflow/features/index.md` si hace falta contexto histórico o coordinación con otras features.
+- `ai-workflow/docs/index.md` solo como mapa documental auxiliar si no está claro qué contexto adicional seleccionar.
 
 ## Objetivo
 Revisar si el plan está realmente listo para implementación y, si hace falta, refinar:

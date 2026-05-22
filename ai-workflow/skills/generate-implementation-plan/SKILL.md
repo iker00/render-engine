@@ -13,22 +13,27 @@ Esta skill debe comportarse como la fase de planificación de un flujo guiado po
 
 La calidad del plan debe ser suficientemente alta como para que dos agentes competentes distintos interpreten lo mismo y produzcan un resultado funcionalmente equivalente, aunque el código final no sea idéntico línea por línea.
 
-## Leer primero
+## Leer siempre
 - `ai-workflow/docs/workflow.md`
 - `ai-workflow/features/NNNN-feature-name/spec.md`
 - `ai-workflow/features/NNNN-feature-name/status.yaml`
+- `ai-workflow/features/NNNN-feature-name/design.md` si existe o si `status.yaml` marca `requires_design: true`
+- `ai-workflow/features/NNNN-feature-name/tasks.md` si existe
+- `ai-workflow/features/NNNN-feature-name/test-plan.md` si existe
 - `ai-workflow/docs/context.md`
 - `ai-workflow/docs/app-features/index.md`
-- solo los documentos de `ai-workflow/docs/app-features/` que el índice marque como relevantes para la feature
+- solo las fichas de `ai-workflow/docs/app-features/` que el índice marque como relevantes para la feature
 - `ai-workflow/docs/architecture.md`
 - `ai-workflow/docs/conventions.md`
 - `ai-workflow/docs/current-state.md` si existe
-- `ai-workflow/features/index.md` si existe
-- todos los archivos de `ai-workflow/standards/`
-- todos los archivos relevantes de `ai-workflow/examples/` si existen ejemplos reales
-- `ai-workflow/features/NNNN-feature-name/design.md` si existe
-- `ai-workflow/features/NNNN-feature-name/tasks.md` existente
-- `ai-workflow/features/NNNN-feature-name/test-plan.md` existente
+- `ai-workflow/standards/testing-rules.md`
+- `ai-workflow/standards/coding-style.md`
+
+## Leer si aplica
+- Otros documentos de `ai-workflow/standards/` según el tipo de cambio: React, errores, seguridad u otras reglas de calidad afectadas.
+- `ai-workflow/features/index.md` si hace falta contexto histórico o coordinación con otras features.
+- Archivos relevantes de `ai-workflow/examples/` si existen ejemplos reales aplicables.
+- `ai-workflow/docs/index.md` solo como mapa documental auxiliar si no está claro qué contexto adicional seleccionar.
 
 ## Objetivo
 Escribir o refinar:

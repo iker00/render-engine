@@ -4,10 +4,9 @@
 Este índice existe para que una skill o un agente no tenga que leer toda la documentación funcional de la aplicación.
 
 Orden recomendado de lectura:
-1. [`../context.md`](../context.md)
-2. este índice
-3. solo las fichas de feature que sean relevantes para la petición
-4. [`../current-state.md`](../current-state.md) si hace falta confirmar qué está implementado hoy
+1. este índice
+2. solo las fichas de feature que sean relevantes para la petición
+3. ninguna otra ficha funcional por defecto
 
 ## Features documentadas
 - [`./config-driven-ui-runtime.md`](./config-driven-ui-runtime.md): visión general del runtime declarativo ya implementado, su renderer visible actual, el store compartido por instancia, la capa remota `src/queries/`, la base común de acciones UI, la navegación parametrizada por entrada, los `preloads` declarativos por firma de request, los nodos `repeater`, `image` y `table`, el alcance actual de `container` con defaults de `gap`, modo `grid` por `columns`, variante visual cerrada `card`, `layout.span` transversal sobre grids efectivos y la baseline institucional compacta hoy vigente.
@@ -24,9 +23,10 @@ Orden recomendado de lectura:
 - Si la petición afecta a formularios, campos, valores por defecto, submit o validación, leer `forms-and-validation.md`.
 - Si la petición afecta al modo local de trabajo sin backend, leer `development-workflow.md`.
 - Si la petición es amplia o cambia el comportamiento global del runtime, empezar por `config-driven-ui-runtime.md`.
-- Si la petición afecta solo a setup técnico o tooling, complementar con [`../architecture.md`](../architecture.md) y [`../current-state.md`](../current-state.md).
+- Si la petición afecta solo a setup técnico o tooling, probablemente no necesita ninguna ficha funcional.
 
 ## Regla para skills
 - No leer todas las fichas por defecto.
 - Seleccionar solo las fichas relevantes desde este índice.
+- Este índice no decide la lectura de documentación transversal.
 - Si una implementación cambia el comportamiento estable de una feature de producto, actualizar la ficha correspondiente.

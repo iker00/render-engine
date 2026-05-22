@@ -11,18 +11,21 @@ Usa esta skill cuando la tarea sea definir una feature antes de planificar su im
 
 Esta skill debe comportarse como la fase de alineamiento de un flujo guiado por specs: acordar qué se va a construir antes de planificar cambios de código.
 
-## Leer primero
+## Leer siempre
 - `ai-workflow/docs/workflow.md`
 - `ai-workflow/docs/context.md`
 - `ai-workflow/docs/app-features/index.md`
-- solo los documentos de `ai-workflow/docs/app-features/` que el índice marque como relevantes para la petición
+- solo las fichas de `ai-workflow/docs/app-features/` que el índice marque como relevantes para la petición
 - `ai-workflow/docs/architecture.md`
 - `ai-workflow/docs/conventions.md`
 - `ai-workflow/docs/current-state.md` si existe
-- `ai-workflow/features/index.md` si existe
 - `ai-workflow/features/NNNN-feature-name/discovery.md` si existe
 - `ai-workflow/features/NNNN-feature-name/status.yaml` si existe
-- el archivo objetivo `features/NNNN-feature-name/spec.md` si ya existe
+- `ai-workflow/features/NNNN-feature-name/spec.md` si ya existe
+
+## Leer si aplica
+- `ai-workflow/features/index.md` si hace falta histórico reciente, coordinación con otras features o actualizar el mapa de entregas.
+- `ai-workflow/docs/index.md` solo como mapa documental auxiliar si no está claro qué contexto adicional seleccionar.
 
 ## Objetivo
 Cerrar las dudas mínimas necesarias de producto antes de escribir o refinar `features/NNNN-feature-name/spec.md`, y dejar `status.yaml` alineado con el estado de la feature.
@@ -85,15 +88,14 @@ Estos son solo apoyos para el alineamiento. No son tareas de implementación.
 - Evitar desgloses de tareas, listas de archivos o pasos técnicos de implementación.
 - Preferir comportamiento concreto y revisable frente a descripciones vagas de la feature.
 - Si la petición entra en conflicto con restricciones existentes del proyecto, reflejar el conflicto con claridad en la spec.
-- Si la spec necesita referenciar estado vigente o histórico reciente, preferir `ai-workflow/docs/current-state.md` y `ai-workflow/features/index.md` antes que ampliar `README.md`.
-- No cargar todas las fichas de feature por defecto; seleccionar solo las relevantes desde `ai-workflow/docs/app-features/index.md`.
+- Si la spec necesita referenciar estado vigente, usar `ai-workflow/docs/current-state.md`; si necesita histórico reciente, usar `ai-workflow/features/index.md`. No ampliar `README.md` para ese propósito.
 - Si existe `discovery.md`, usarlo para resolver qué preguntas ya quedaron respondidas y cuáles siguen abiertas.
 - Si no existe `status.yaml`, crearlo usando `ai-workflow/templates/status.yaml`.
 - Si para cerrar la feature a nivel funcional hacen falta decisiones de interacción, flujos de pantalla, estados vacíos, validaciones visibles o jerarquía de información, crear o actualizar `design.md` en la misma feature.
 - Tras cerrar la spec, actualizar `status.yaml` como mínimo para reflejar:
   - `phase: spec` o `phase: planning` según el punto alcanzado
   - `artifacts.spec: ready` cuando la spec ya esté lista
-  - `artifacts.design: ready | not-needed | pending` según corresponda
+  - `artifacts.design: missing | draft | ready | not_required` según corresponda
   - `feature_status: drafting` o `planned` según corresponda
   - `requires_design` si ya es evidente que la feature necesitará `design.md`
   - `risk_level` con una valoración razonada `low | medium | high`

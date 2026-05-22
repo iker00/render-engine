@@ -192,9 +192,7 @@ Además, el runtime reutiliza la misma convención de referencias completas en:
 - El runtime no expone todavía theming ni personalización visual declarativa desde JSON; la capa estable actual se limita a tokens globales en CSS y a la gramática compartida codificada en el propio runtime.
 - `layout.span` sigue intencionadamente acotado a semántica de grid sobre `columns`; no existe soporte responsive por breakpoint, widths libres para layouts `flex` ni wrapper visible propio en `repeater`.
 
-## Referencias relacionadas
-- [`./config-contract.md`](./config-contract.md)
-- [`./pages-and-navigation.md`](./pages-and-navigation.md)
-- [`./queries-and-feedback.md`](./queries-and-feedback.md)
-- [`./forms-and-validation.md`](./forms-and-validation.md)
-- [`./development-workflow.md`](./development-workflow.md)
+## Cómo ampliar contexto
+Esta ficha resume el runtime declarativo de forma global, pero no debe actuar como índice hacia todas las demás fichas.
+
+La selección de fichas funcionales adicionales debe venir indicada por la skill activa y por el índice funcional que esa skill haya cargado.

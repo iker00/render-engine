@@ -11,21 +11,25 @@ Usa esta skill cuando una implementación ya está hecha y validada, y ahora toc
 
 Esta skill debe comportarse como una fase documental posterior al código: revisar qué cambió realmente, decidir qué documentos quedan afectados y actualizarlos sin reabrir la implementación.
 
-## Leer primero
+## Leer siempre
 - `ai-workflow/docs/workflow.md`
 - `ai-workflow/features/NNNN-feature-name/spec.md`
 - `ai-workflow/features/NNNN-feature-name/tasks.md`
 - `ai-workflow/features/NNNN-feature-name/test-plan.md`
 - `ai-workflow/features/NNNN-feature-name/status.yaml`
+- `ai-workflow/features/NNNN-feature-name/notes.md` si existe
 - `ai-workflow/docs/context.md`
 - `ai-workflow/docs/app-features/index.md`
 - solo las fichas de `ai-workflow/docs/app-features/` que el índice marque como relevantes para la feature implementada
 - `ai-workflow/docs/current-state.md` si existe
-- `ai-workflow/docs/architecture.md`
-- `ai-workflow/docs/conventions.md`
 - `ai-workflow/features/index.md` si existe
-- `ai-workflow/features/NNNN-feature-name/notes.md` si existe
 - el código y los tests ya modificados por la implementación
+
+## Leer si aplica
+- `ai-workflow/docs/architecture.md` si la implementación consolidó una decisión arquitectónica estable.
+- `ai-workflow/docs/conventions.md` si la implementación consolidó una convención repetible.
+- `README.md` si hace falta ajustar información breve de entrada.
+- `ai-workflow/docs/index.md` solo como mapa documental auxiliar si no está claro qué contexto adicional seleccionar.
 
 ## Objetivo
 Actualizar la documentación para que describa el comportamiento estable realmente implementado, usando el índice de features como puerta de entrada y manteniendo el contexto corto.

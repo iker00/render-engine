@@ -29,9 +29,3 @@ Permitir que una aplicación legacy o de negocio pueda describir pantallas y flu
 - El estado de formularios es local al runtime y se organiza por `formId.fieldId`.
 - El estado de cada query o acción API es global dentro del runtime para que varios bloques de la UI puedan reaccionar al mismo resultado.
 - Los datos devueltos por backend se tratan como entrada no confiable hasta validarse o consumirse con defensas de render y manejo de errores.
-
-## Cómo leer el contexto funcional detallado
-El detalle funcional del producto vive en las fichas funcionales y en las features del workflow:
-
-- [`./app-features/index.md`](./app-features/index.md)
-- [`../features/index.md`](../features/index.md)

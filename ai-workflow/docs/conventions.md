@@ -111,10 +111,10 @@ src/
 - ruido repetitivo que no ayude a diagnosticar
 
 ## Convenciones de documentación
-- `context.md` debe mantenerse breve como contexto global y puerta de entrada documental.
+- `context.md` debe mantenerse breve como contexto global mínimo y no debe actuar como puerta de entrada documental.
 - El detalle funcional por features de producto debe vivir en `ai-workflow/docs/app-features/`.
 - Si una decisión reduce alcance o cambia comportamiento estable de una feature de producto, debe reflejarse en la ficha correspondiente de `ai-workflow/docs/app-features/` y, solo si afecta al marco general, también en `context.md`.
-- Si una tarea afecta arquitectura, actualizar `architecture.md`.
+- Actualizar `architecture.md` solo si cambia una frontera arquitectónica, una responsabilidad de capa o un punto de extensión estable.
 - Si una tarea cambia criterios de implementación repetibles, actualizar `conventions.md`.
 
 ## Convenciones para commands y skills del workflow

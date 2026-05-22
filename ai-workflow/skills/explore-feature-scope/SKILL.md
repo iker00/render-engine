@@ -11,16 +11,18 @@ Usa esta skill cuando una petición todavía no esté lista para convertirse dir
 
 Esta skill debe comportarse como una fase de discovery previa a la spec: aclarar el problema, detectar ambigüedades, revisar el contexto mínimo necesario y dejar un artefacto corto que permita decidir si ya conviene escribir la spec o si siguen faltando decisiones.
 
-## Leer primero
+## Leer siempre
 - `ai-workflow/docs/workflow.md`
 - `ai-workflow/docs/context.md`
-- `ai-workflow/docs/app-features/index.md`
-- solo las fichas de `ai-workflow/docs/app-features/` relevantes para la petición
-- `ai-workflow/docs/current-state.md` si existe
-- `ai-workflow/docs/architecture.md` solo si hay dudas técnicas que condicionen producto
-- `ai-workflow/features/index.md` si existe
 - `ai-workflow/features/NNNN-feature-name/discovery.md` si existe
 - `ai-workflow/features/NNNN-feature-name/status.yaml` si existe
+
+## Leer si aplica
+- `ai-workflow/docs/app-features/index.md` y solo las fichas relevantes si la petición afecta comportamiento de producto, contrato JSON, runtime visible, formularios, queries, navegación o modo de desarrollo local.
+- `ai-workflow/docs/current-state.md` si hace falta confirmar si una capacidad ya existe o si sigue fuera de alcance.
+- `ai-workflow/docs/architecture.md` si hay dudas técnicas que condicionen el alcance de producto.
+- `ai-workflow/features/index.md` si hace falta contexto histórico o coordinación con features planificadas, archivadas o completadas.
+- `ai-workflow/docs/index.md` solo como mapa documental auxiliar si no está claro qué contexto adicional seleccionar.
 
 ## Objetivo
 Escribir o refinar:

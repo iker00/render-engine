@@ -12,7 +12,7 @@ Cada feature nueva debería usar, cuando aplique:
 - `test-plan.md` como contrato de verificación
 - `status.yaml` como estado estructurado del workflow
 
-La política completa está en [`../docs/workflow.md`](../docs/workflow.md).
+La política completa está definida en el documento de workflow del proyecto.
 
 ## Planificadas
 - `0030-form-page-entry-invalidation`: cuando cambia la `pageEntry`, un formulario con `persistOnUnmount: false` debe invalidar su estado aunque la `pageId` no cambie, para reconstruir `defaultValue` y demás estado inicial con los `params` y `preloads` de la nueva entrada.

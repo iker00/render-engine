@@ -1,129 +1,42 @@
-# Estado actual
+# Estado vigente
+
+## Proposito
+Este documento es un snapshot corto del estado actual del proyecto. Sirve para confirmar rapidamente si una capacidad ya existe o si sigue fuera de alcance.
+
+No debe funcionar como historico acumulado ni como sustituto de las fichas funcionales. El detalle estable vive en [`app-features/`](./app-features/) y el mapa historico de entregas vive en [`../features/index.md`](../features/index.md).
 
 ## Capacidades disponibles
-- Flujo documental base de `ai-workflow` disponible.
-- Contexto del producto ya orientado a la nueva app de UI configurable.
-- Bootstrap frontend de paquete único ya creado en la raíz del repositorio.
-- Scripts estables de `dev`, `build`, `lint` y `test` disponibles con `pnpm`.
-- Frontera de bootstrap para resolver configuración desde `data-config` o `src/dev/config.json`.
-- Validación del runtime config antes de renderizar ya migrada a una base `Zod`, separada en fachada pública, esquemas internos, adaptación de errores y validaciones cruzadas dentro de `src/config/`.
-- Contrato de página estable con `pages[].layout` como colección ordenada de bloques y rechazo explícito del shape raíz antiguo basado en objeto.
-- Renderer estático inicial operativo para `container`, `heading`, `paragraph` y `list`, con soporte para varios hermanos en la raíz de página sin `container` sintético y con dispatcher central por `type` en `src/runtime/`.
-- Presentación base del runtime migrada a `Tailwind CSS` para `container`, `heading`, `paragraph` y `list`, con convención centralizada en `src/runtime/runtime-node-styling.ts`.
-- Base visual institucional ya consolidada para el shell de la app y el contenido principal, con tokens globales declarados en `src/app/index.css` mediante `@theme` de `Tailwind CSS v4`.
-- Resolución de `initialPage` con soporte para varias páginas declaradas y render exclusivo de la página seleccionada.
-- Núcleo de estado compartido por instancia ya integrado en `src/runtime/runtime-state/` para navegación, formularios y queries.
-- Navegación visible sincronizada con el hash del navegador, resuelta en el store desde `navigation.currentPageId`, con historial interno por entradas completas `entryId/pageId/params`, no-op para reentradas idénticas, normalización canónica de `#/` y `#/pageId?...` y error recuperable solo para `navigateTo` hacia una página inexistente.
-- Dominio base de formularios disponible con almacenamiento por `forms.{formId}.{fieldId}`, `defaultValue`, `error`, `touched`, `dirty`, reset por formulario y borrado completo por `formId`.
-- Dominio base de queries disponible con almacenamiento por nombre, `status/data/error`, conservación del último dato válido durante recargas manuales y reset por query.
-- Capa central de referencias del runtime ya operativa para `forms.*`, `queries.{queryName}`, `queries.{queryName}.data`, `queries.{queryName}.status` y `queries.{queryName}.error`.
-- Navegación anidada de datos de query ya soportada bajo `queries.{queryName}.data.*`, con recorrido uniforme por objetos y arrays y consumo visible actual en `heading.props.text`, `paragraph.props.text`, `image.props.src`, `image.props.alt` y celdas string de `table`.
-- `config.api` ya funciona como catálogo declarativo tipado y validado de operaciones remotas con `method`, `endpoint`, `query`, `body` y `headers`.
-- Capa `src/queries/` ya integrada para construir requests desde referencias del runtime, ejecutar operaciones por nombre y normalizar errores remotos con códigos estables orientados a UI.
-- La composición efectiva del request ya permite mezclar una operación `api` base con `requestParams` por ejecución, con merge superficial estable en `query`, `headers` y `body` raíz-objeto, y sustitución del body cuando la raíz no es objeto.
-- Cada request efectiva ya deriva además una `requestSignature` estable, sensible a cambios reales de método, endpoint, `query`, `body` y `headers`, pero inmune al orden no funcional de claves en objetos equivalentes.
-- Fachada `executeQueryOperation(operationName, { requestParams? })` ya expuesta desde el provider para hidratar `queries.{operationName}` con transiciones `loading | success | error`.
-- Las páginas ya pueden declarar `preloads` como lista opcional de objetos `{ [operationName]: requestParams }`, reutilizando la misma semántica de composición de request que `executeOperation`.
-- Dominio agregado `pageEntry` ya disponible en el store compartido con `entryId`, `pageId`, `params`, `preloadNames` y `status: idle | loading | success | error`.
-- La tanda agregada de `preloads` ya usa semántica latest-only para no dejar que cierres tardíos de entradas antiguas sobrescriban la entrada activa más reciente.
-- Cada nueva `pageEntry` con `preloads` ya arranca mediante una transición atómica que limpia solo las queries cuyo preload realmente relanza y las deja directamente en `loading` antes del primer render útil.
-- La reevaluación automática de `preloads` ya se decide preload a preload por `requestSignature`, no solo por `pageId` ni por `operationName`, y puede reaccionar también a cambios de `forms.*` o `queries.*` si alteran la request efectiva visible.
-- `button.props.action` ya reutiliza un contrato común de acciones UI con `navigateTo`, `goBack`, `executeOperation` y `resetForm`.
-- La interpretación de acciones UI ya está concentrada en una capa transversal del runtime y no en ramas imperativas dispersas dentro del nodo visual `button`.
-- `button.props.action.type: navigateTo` ya puede transportar `params` escalares resueltos contra el snapshot actual del runtime, reflejarlos en la URL canónica y `goBack` restaura también esos params al recuperar una entrada previa del historial del navegador observada por la sesión.
-- El contrato del runtime ya incorpora `repeater` como nodo estructural para repetir un `template` completo por item de una colección `queries.*`, con `props.items.key` como identidad declarativa obligatoria y degradación a cero iteraciones cuando la colección no está disponible o no es un array.
-- El catálogo visible del runtime ya incorpora `image` como nodo hoja con `src` y `alt` literales o resueltos desde referencias completas, degradando a no render cuando `src` no produce un string utilizable y a `alt=""` cuando no hay texto alternativo visible.
-- El catálogo visible del runtime ya incorpora `table` como nodo hoja para lectura tabular básica con `headers` ordenados, filas manuales o dinámicas desde `queries.*` e `item.*`, marcado HTML semántico real y degradación a cero filas o celdas vacías cuando faltan datos.
-- Cualquier nodo soportado ya puede declarar `queryStateFeedback` para reaccionar al estado visible `idle | loading | error | empty | success` de una query concreta con `show`, `hide` o un fallback local reutilizando el mismo catálogo declarativo de nodos.
-- La semántica visible de query ya está centralizada: `idle` representa una query no lanzada todavía y también cubre la query ausente del store; `loading` representa solo una ejecución real en curso; `null`, `undefined`, `''`, `[]` y `{}` se tratan como `empty`; `0` y `false` siguen la rama `success`.
-- La capa central de referencias del runtime ya soporta también `item` e `item.*` dentro del subárbol iterado de `repeater`, reutilizando la misma semántica de navegación segura por objetos y arrays que `queries.{queryName}.data.*`.
-- Cualquier nodo soportado ya puede declarar también `visibility` para mostrarse u ocultarse según una única condición simple basada en `forms.*`, `queries.*` o `item.*` dentro de `repeater`, con operadores `equals`, `notEquals`, `isTruthy`, `isFalsy`, `greaterThan` y `lessThan`.
-- La visibilidad efectiva del runtime ya está centralizada con precedencia estable: `queryStateFeedback` decide primero `show | hide | fallback`, y `visibility` solo se evalúa sobre la rama principal cuando esta sigue visible.
-- Catálogo declarativo de formularios ya operativo con `form`, `input`, `textarea`, `select`, `radioGroup` y `checkboxGroup`, incluyendo herencia de `formId` por descendencia, render de `<form>` real y soporte visual opt-in `optionLayout: 'inline'` para choice groups.
-- La inicialización de campos declarativos ya es lazy y reutiliza exclusivamente `forms.{formId}.{fieldId}`, con soporte para `defaultValue` literal o dinámico sin sobrescribir estado ya existente del usuario mientras el formulario sigue montado.
-- En reentradas con `preloads`, los `defaultValue` basados en `queries.*` ya no pueden hidratar el dato de la entrada anterior: parten del estado limpio de la nueva entrada y pueden absorber el primer dato fresco solo mientras el campo siga prístino.
-- Los nodos `form` ya eliminan por defecto su estado local al desmontarse realmente, vuelven a inicializar sus campos en el siguiente montaje y permiten recuperar la persistencia histórica solo con `persistOnUnmount: true`.
-- `input` ya soporta además `number`, `date` y `datetime-local` sin abrir una familia separada de componentes de campo.
-- La capa central de referencias del runtime ya soporta también `params.{paramName}` para texto visible, requests declarativos, `defaultValue` de formularios y nuevas navegaciones originadas desde páginas ya parametrizadas, leyendo esos valores como strings desde la entrada activa normalizada del hash.
-- La validación declarativa local de formularios ya funciona a nivel de formulario desde `props.validations`, con soporte para `required`, `minLength`, `maxLength`, `min`, `max`, `minSelections` y `maxSelections`.
-- El runtime ya conserva el orden declarado de `props.validations` como prioridad efectiva, escribe un único error visible por campo en `forms.*`, inicializa en submit solo los campos visibles que todavía no existan y excluye del bloqueo a los ocultos por `queryStateFeedback` o `visibility`.
-- La edición de un campo con error ya no borra ese error a ciegas: el runtime reevalúa localmente sus reglas visibles y solo limpia el mensaje cuando el valor deja de incumplir la primera regla fallida.
-- El submit declarativo de formularios ya soporta `submitAction.type: executeOperation`, reusa `queries.{operationName}` como única superficie visible de loading/success/error, puede añadir `query`, `body` y `headers` por envío y puede resetear por `resetOnSuccess`.
-- `button.props.action.type: executeOperation` ya puede añadir también `query`, `body` y `headers` por ejecución sin duplicar operaciones `api`.
-- `button.props.action.type: navigateTo` y `button.props.action.type: executeOperation` ya pueden resolver también `item.*` cuando nacen dentro de un `repeater`, manteniendo el snapshot correcto por iteración.
-- El submit declarativo de formularios y los `defaultValue` de campos también pueden resolver `item.*` dentro de `repeater`.
-- `list`, `select`, `radioGroup` y `checkboxGroup` ya pueden consumir colecciones manuales históricas, colecciones resueltas desde `queries.{queryName}.data` o `queries.{queryName}.data.*`, y dentro de `repeater` también colecciones `item.*`, con una capa compartida de resolución y proyección por consumidor.
-- `list` ya soporta colecciones escalares y de objetos mediante `itemType: 'scalar'` o `itemText`, degradando a vacío cuando la referencia aún no ofrece una colección utilizable y degradando por item en desarrollo cuando faltan datos mínimos.
-- `select` ya soporta catálogos manuales o dinámicos de escalares y objetos, puede operar en selección simple o múltiple mediante `props.multiple`, mantiene una semántica única del valor vigente entre render, `defaultValue`, validación `required` y submit, y limpia automáticamente solo los valores que dejan de existir en su catálogo efectivo.
-- `radioGroup` ya reutiliza la misma semántica de opciones y selección simple que `select` simple.
-- `checkboxGroup` ya reutiliza la misma semántica de opciones y selección múltiple que `select.multiple`.
-- `radioGroup` y `checkboxGroup` ya pueden declarar `props.optionLayout: 'vertical' | 'inline'`; la ausencia de la prop mantiene el render vertical histórico y la variante inline solo cambia la disposición visible de opciones con `wrap`.
-- El runtime ya comparte una gramática visual clara, administrativa y más compacta para shell, tipografía, listas, imágenes, tablas, acciones y formularios: contenedor principal centrado con menos padding útil, bloque introductorio más contenido, títulos y párrafos con menor salto vertical, campos y botones sin sombra propia, foco con `ring`, imágenes acotadas al ancho disponible, tablas con contenedor horizontal scrollable y secciones internas de formulario separadas por una línea superior reutilizando `container` como `section` cuando el bloque es vertical por defecto o usa `columns`, ya sin sangrado lateral a sangre.
-- `container` ya soporta un layout declarativo más amplio: `gap` con default visible `md`, aliases estables `sm | md | lg | xl | 2xl`, columnas de `1` a `12`, `align`, `justify` y `wrap`, con precedencia de `columns` sobre `direction` y rechazo explícito de `columns + wrap`.
-- `container` ya soporta además `props.variant: default | card`; la ausencia de `variant` y `variant: default` conservan la apariencia histórica, mientras `card` añade una superficie institucional cerrada y sustituye la sección implícita de `form` cuando ambas competirían.
-- Dentro de `form`, `container` ya conserva la superficie visual de sección solo para bloques verticales por defecto o composiciones con `columns`, manteniendo `border-t` y padding vertical útil pero sin sangrado lateral ni márgenes negativos; `direction: row` sin `columns` ya se resuelve como layout lineal `plain`.
-- Cualquier nodo soportado del árbol `layout` ya puede declarar `layout.span` con validación estructural entre `1` y `12`, aplicación visible solo dentro de `container` con `columns`, clamp seguro al grid padre y sin efecto fuera de grid.
-- La semántica visible de `layout.span` ya está centralizada en el borde del renderer con un contexto mínimo de columnas de grid padre en `src/runtime/runtime-layout-context.tsx`; `repeater` sigue sin wrapper propio y solo puede ocupar columnas a través del nodo raíz visible de su `template`.
-- Aislamiento validado entre varias instancias del runtime y limpieza completa del estado al desmontar y remontar.
-- Manejo explícito de errores de configuración con diagnóstico visible en desarrollo y degradación silenciosa en producción para errores marcados como `development-only`.
-- Diagnósticos de validación ya alineados con rutas canónicas del JSON para ramas como `layout[*]`, `preloads[*]`, `api.query.*` y `api.body.*`.
-- Tests automatizados del bootstrap, del validador y del renderer, con gate global de coverage activo sobre `src/`.
+- Proyecto frontend de paquete unico con `Vite`, `React`, `Tailwind CSS v4`, `TypeScript`, `Vitest` y `Zod`.
+- Configuracion de runtime cargable desde `data-config` en produccion o `src/dev/config.json` en desarrollo.
+- Validacion previa al render con diagnosticos estructurales y semanticos del contrato JSON.
+- Runtime declarativo basado en `pages`, `initialPage`, `layout` como coleccion ordenada y hash routing canonico `#/` / `#/pageId`.
+- Estado compartido aislado por instancia para navegacion, formularios, queries y `pageEntry`.
+- Operaciones remotas declarativas en `config.api`, ejecutadas por nombre y visibles mediante `queries.{operationName}`.
+- Composicion de requests por ejecucion con `query`, `body`, `headers` y `requestSignature` estable.
+- `preloads` por entrada de pagina con reevaluacion selectiva por firma efectiva y proteccion latest-only del agregado `pageEntry`.
+- Acciones UI declarativas para `navigateTo`, `goBack`, `executeOperation` y `resetForm`.
+- Referencias declarativas soportadas para `forms.*`, `queries.*`, `queries.*.data.*`, `params.*` en superficies acotadas e `item.*` dentro de `repeater`.
+- Nodos visibles soportados: `container`, `repeater`, `heading`, `paragraph`, `list`, `image`, `table`, `button`, `form`, `input`, `textarea`, `select`, `radioGroup` y `checkboxGroup`.
+- Formularios declarativos con estado por `formId.fieldId`, `defaultValue`, limpieza por desmontaje por defecto, persistencia opt-in, validaciones locales y submit via `executeOperation`.
+- Consumidores de colecciones manuales, `queries.*` e `item.*` en `list`, `select`, `radioGroup` y `checkboxGroup`.
+- Feedback visual por estado de query y reglas simples de `visibility`, reutilizadas tambien para excluir campos ocultos de la validacion.
+- Layout declarativo con `container` por direccion o grid, `gap`, `columns`, `align`, `justify`, `wrap`, variante `card` y `layout.span` dentro de grids efectivos.
+- Baseline visual institucional compacta basada en tokens globales CSS-first y utilidades de `Tailwind`.
+- Tests automatizados con gate de cobertura global sobre `src/`.
 
-## Límites actuales
-- No existe todavía panel de desarrollo local para editar configuración en vivo.
-- No existe todavía una integración completa de producto con backend más allá de `data-config` como frontera de entrada y de las operaciones remotas declarativas ejecutadas por `fetch`.
-- No existen todavía consumidores declarativos finales del agregado `pageEntry`.
-- El catálogo visual sigue limitado a `container`, `repeater`, `heading`, `paragraph`, `list`, `image`, `table`, `button`, `form`, `input`, `textarea`, `select`, `radioGroup` y `checkboxGroup`.
-- No existen todavía consumidores de referencias fuera de `heading.props.text`, `paragraph.props.text`, `image.props.src`, `image.props.alt`, celdas string de `table`, `queryStateFeedback`, `visibility`, `api.query`, `api.body`, `defaultValue` de campos de formulario, `navigateTo.params`, `repeater.props.items.source` y `source` de colecciones para `list`, `select`, `radioGroup` y `checkboxGroup`, ni interpolación parcial dentro de strings.
-- No existen todavía validaciones remotas, cruzadas, `pattern`, mensajes personalizados efectivos por regla, búsqueda remota de opciones ni tipos de campo fuera del catálogo actual.
-- `routeParams.*` y `navigation.*` siguen sin resolverse como referencias soportadas.
-- `params.*` sigue sin abrirse en `visibility` ni en las fuentes dinámicas de colección para `list` y `select`.
-- `visibility` sigue intencionadamente acotado a una sola condición por nodo, sin `fallback`, sin composición booleana y sin expresiones arbitrarias.
-- No existe todavía theming ni personalización visual declarativa desde JSON; la capa estable actual se limita a tokens globales en CSS y utilidades de tema consumidas por el runtime.
+## Limites vigentes
+- No existe panel de desarrollo local para editar configuracion en vivo.
+- No existe integracion completa con backend mas alla de `data-config` y operaciones remotas declarativas via `fetch`.
+- `pageEntry` no esta expuesto todavia como namespace de referencias declarativas.
+- No existen `routeParams.*` ni `navigation.*` como referencias soportadas.
+- `params.*` no aplica aun en `visibility` ni en fuentes dinamicas de coleccion.
+- No hay interpolacion parcial dentro de strings.
+- No hay validaciones remotas, validaciones cruzadas, `pattern` ni mensajes personalizados efectivos por regla.
+- No hay subida de archivos, busqueda remota de opciones, paginacion avanzada ni carga incremental de colecciones.
+- `visibility` sigue limitada a una unica condicion simple, sin composicion booleana ni fallback propio.
+- No existe theming declarativo desde JSON; la personalizacion visual sigue cerrada al baseline actual y a las props soportadas.
 
-## Infraestructura vigente
-- Repositorio preparado para trabajar con documentación guiada por specs.
-- Stack frontend inicial versionado con `Vite`, `React`, `Tailwind`, `TypeScript` y `Vitest`.
-- Contrato de entorno explicitado con `.nvmrc`, `engines.node` y `packageManager`.
-- Estándares de testing, estilo, errores y seguridad definidos en `ai-workflow/standards/`.
-- Base de runtime estático ya integrada en la app en sustitución del shell provisional.
-- Tercera feature del workflow cerrada sobre esta base, simplificando la raíz de página antes de añadir navegación, formularios y datos remotos en iteraciones posteriores.
-- Cuarta feature del workflow cerrada para reorganizar la estructura interna del runtime sin cambiar el contrato funcional observable.
-- Quinta feature del workflow cerrada para alinear el styling visible del runtime con `Tailwind CSS` sin introducir theming.
-- Sexta feature del workflow cerrada para introducir el núcleo de estado compartido del runtime sin abrir todavía la capa declarativa de interacción y datos remotos.
-- Séptima feature del workflow cerrada para centralizar la resolución de referencias string del runtime.
-- Octava feature del workflow cerrada para ampliar `queries.{queryName}.data` con navegación anidada por objetos y colecciones.
-- Novena feature del workflow cerrada para convertir `api` en una frontera declarativa operativa y conectar su ejecución con el dominio compartido `queries`.
-- Décima feature del workflow cerrada para soportar `preloads` por página y su orquestación automática con agregado de entrada latest-only.
-- Duodécima feature del workflow cerrada para migrar la validación del runtime config a una base `Zod` sin cambiar la frontera pública de bootstrap ni perder las validaciones cruzadas estables.
-- Decimotercera feature del workflow cerrada para añadir feedback visual declarativo por nodo ligado al estado visible de queries.
-- Decimocuarta feature del workflow cerrada para introducir una base común de acciones UI reutilizable desde `button.props.action`, conectando navegación, ejecución remota y reset de formularios sin abrir todavía un sistema general de eventos.
-- Decimoquinta feature del workflow cerrada para introducir formularios declarativos reales con catálogo mínimo de campos, validación `required` y submit vía `executeOperation`.
-- Decimosexta feature del workflow cerrada para distinguir `idle` de `loading` en `queryStateFeedback`, tratar queries ausentes como `idle` y reutilizar esa misma semántica visible en renderer y formularios.
-- Decimoséptima feature del workflow cerrada para permitir colecciones multi-origen en `list` y `select`, reutilizando datos de `queries.*` con mapeos declarativos por consumidor y manteniendo coherencia entre render, formularios y validación.
-- Decimoctava feature del workflow cerrada para formalizar `api.headers` y permitir `query`, `body` y `headers` por ejecución desde `button.props.action` y `form.submitAction`, centralizando la composición final del request en `src/queries/`.
-- Decimonovena feature del workflow cerrada para añadir reglas declarativas `visibility` reutilizables por renderer y formularios, con precedencia estable sobre `queryStateFeedback` y exclusión coherente de campos ocultos durante la validación.
-- Vigésima feature del workflow cerrada para permitir params de navegación interna por entrada, con historial parametrizado, `params.*` en superficies acotadas y `preloads` reactivados por reentrada observable.
-- Vigésima primera feature del workflow cerrada para ampliar el catálogo reutilizable de formularios con `inputType` nativos adicionales, `select.multiple`, `radioGroup` y `checkboxGroup`, compartiendo una misma semántica de opciones, limpieza y submit sobre `forms.*`.
-- Vigésima segunda feature del workflow cerrada para hacer que `form` limpie por defecto su estado local al desmontarse, recalculando `defaultValue` en remontajes reales y dejando la persistencia como excepción explícita con `persistOnUnmount`.
-- Vigésima tercera feature del workflow cerrada para sustituir `props.required` por `props.validations`, ampliar el catálogo de reglas locales declarativas y reutilizar una misma semántica de evaluación tanto en submit como al editar campos con error.
-- Vigésima cuarta feature del workflow cerrada para introducir `repeater`, el namespace `item.*` y su integración transversal en renderer, navegación, requests declarativos, formularios y consumidores descendientes de colecciones.
-- Vigésima quinta feature del workflow cerrada para hacer que cada reentrada con `preloads` limpie primero sus queries declaradas, mantenga la carga fresca por `pageEntry` y evite hidratar consumidores visibles o `defaultValue` con datos obsoletos de otra entrada.
-- Vigésima sexta feature del workflow cerrada para alinear visualmente el runtime con una referencia institucional de sede electrónica, consolidar un baseline claro de shell y formularios y migrar los tokens visuales globales al modelo CSS-first de `Tailwind CSS v4`.
-- Vigésima séptima feature del workflow cerrada para ampliar `container` con defaults de `gap` más útiles, modo `grid` por `columns`, alineación y distribución declarativas, manteniendo compatibilidad con `gap` arbitrario y la semántica de sección dentro de `form`.
-- Vigésima octava feature del workflow cerrada para corregir la alineación de `container` dentro de `form`, eliminando el sangrado lateral y los márgenes negativos implícitos, manteniendo la superficie de sección para bloques verticales o con `columns` y dejando `direction: row` sin `columns` como layout lineal `plain`.
-- Vigésima novena feature del workflow cerrada para sincronizar la navegación del runtime con el hash del navegador, normalizar `#/` y `#/pageId?...`, reutilizar `params.*` como lectura de query params string y delegar atrás/adelante en el historial real sin perder `pageEntry` ni la semántica de `preloads`.
-- Trigésima primera feature del workflow cerrada para hacer que `preloads` declare requests efectivas por objeto, firmarlas desde `src/queries/` y relanzarlas de forma selectiva por firma en vez de por nombre de operación o `pageId`.
-- Trigésima segunda feature del workflow cerrada para compactar de forma coordinada la baseline institucional del runtime, reduciendo escala tipográfica, padding de shell, separación entre secciones, altura percibida de campos y acciones, y manteniendo intactos el contrato funcional y el lenguaje visual base.
-- Trigésima tercera feature del workflow cerrada para ampliar el catálogo declarativo con `image` y `table`, reutilizando la frontera central de referencias, las colecciones dinámicas de `queries.*` e `item.*`, el feedback visible por query y una degradación segura a no render, cero filas o celdas vacías según el dato disponible.
-- Trigésima cuarta feature del workflow cerrada para añadir `container.props.variant: default | card` y `layout.span` transversal sobre grids efectivos, con clamp seguro al número de columnas del padre, precedencia visual de `card` dentro de `form` y sin abrir theming libre ni widths arbitrarios.
-- Trigésima sexta feature del workflow cerrada para hacer que el submit de formularios valide, inicialice y escriba errores solo sobre campos efectivamente visibles, manteniendo fuera del bloqueo a los ocultos por `visibility` o `queryStateFeedback` sin perder su estado local.
-- Trigésima séptima feature del workflow cerrada para añadir `optionLayout: 'vertical' | 'inline'` a `radioGroup` y `checkboxGroup`, manteniendo el layout vertical como default y fijando que la variante inline cambia solo la presentación visible de las opciones, no su semántica de selección, validación, limpieza ni submit.
-
-## Referencias
-
-- [`./context.md`](./context.md)
-- [`./app-features/index.md`](./app-features/index.md)
-- [`./architecture.md`](./architecture.md)
-- [`./onboarding.md`](./onboarding.md)
-- [`../features/index.md`](../features/index.md)
+## Mantenimiento
+- Actualizar este snapshot solo cuando cambie una capacidad vigente o un limite actual.
+- No anadir historico de features cerradas.
+- No duplicar aqui el detalle de las fichas funcionales.

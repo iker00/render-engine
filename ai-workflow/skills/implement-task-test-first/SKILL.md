@@ -11,24 +11,27 @@ Usa esta skill cuando la feature ya esté especificada y planificada, y el objet
 
 Esta skill debe comportarse como la fase de ejecución de un flujo guiado por specs, pero centrada en código y validación: implementar las tareas de la feature de manera consecutiva, aplicar tests-first cuando sea práctico, y no pasar a la siguiente tarea hasta que la actual quede terminada con sus tests. La actualización documental amplia se delega a una skill posterior.
 
-## Leer primero
+## Leer siempre
 - `ai-workflow/docs/workflow.md`
 - `ai-workflow/features/NNNN-feature-name/spec.md`
 - `ai-workflow/features/NNNN-feature-name/tasks.md`
 - `ai-workflow/features/NNNN-feature-name/test-plan.md`
 - `ai-workflow/features/NNNN-feature-name/status.yaml`
+- `ai-workflow/features/NNNN-feature-name/design.md` si existe o si `status.yaml` marca `requires_design: true`
+- `ai-workflow/features/NNNN-feature-name/notes.md` si existe
 - `ai-workflow/docs/architecture.md`
 - `ai-workflow/docs/conventions.md`
-- todos los archivos de `ai-workflow/standards/`
-- `ai-workflow/features/NNNN-feature-name/design.md` si existe
+- `ai-workflow/standards/testing-rules.md`
+- `ai-workflow/standards/coding-style.md`
 - código y tests relevantes para la tarea seleccionada
-- `ai-workflow/features/NNNN-feature-name/notes.md` si existe
 
-## Leer solo si hace falta
-- `ai-workflow/docs/context.md` si `tasks.md` no basta para entender el comportamiento esperado
-- `ai-workflow/docs/app-features/index.md` y solo las fichas relevantes si la tarea remite explícitamente a una feature funcional o si el contrato de ejecución no es suficiente
-- `ai-workflow/docs/current-state.md` si existe y hay dudas sobre el estado vigente
-- `ai-workflow/features/index.md` si existe y hace falta contexto adicional sobre el mapa de features
+## Leer si aplica
+- `ai-workflow/docs/context.md` si `tasks.md` no basta para entender el comportamiento esperado.
+- `ai-workflow/docs/app-features/index.md` y solo las fichas relevantes si la tarea remite a una feature funcional o cambia comportamiento estable.
+- `ai-workflow/docs/current-state.md` si hay dudas sobre el estado vigente.
+- `ai-workflow/features/index.md` si hace falta contexto adicional sobre el mapa de features.
+- Otros documentos de `ai-workflow/standards/` según el tipo de cambio: React, errores, seguridad u otras reglas de calidad afectadas.
+- `ai-workflow/docs/index.md` solo como mapa documental auxiliar si no está claro qué contexto adicional seleccionar.
 
 ## Objetivo
 Implementar las tareas planificadas de la feature en orden usando un flujo tests-first.

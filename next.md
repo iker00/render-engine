@@ -9,8 +9,6 @@ limpieza de APIs internas, dejando una base estable antes de ampliar alcance fun
 
 ## checkboxGroup y radioGroup:
 
-- Opción para que estén los elementos en línea o en columna
-
 ## container
 
 - Opción para que los elementos hijos tengan un ancho determinado. Es decir, si se especifica, los elementos hijos
