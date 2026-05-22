@@ -112,6 +112,18 @@ export interface ContainerLayoutNode extends LayoutNodeFeedbackFields, LayoutNod
   children?: LayoutNode[]
 }
 
+export type RuntimeCollectionPaginationControlsVariant = 'previousNext'
+
+export interface RuntimeCollectionPaginationControlsConfig {
+  variant?: RuntimeCollectionPaginationControlsVariant
+}
+
+export interface RuntimeCollectionPaginationConfig {
+  enabled: true
+  pageSize: number
+  controls?: RuntimeCollectionPaginationControlsConfig
+}
+
 export interface RepeaterLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayoutFields {
   type: 'repeater'
   id?: string
@@ -120,6 +132,7 @@ export interface RepeaterLayoutNode extends LayoutNodeFeedbackFields, LayoutNode
       source: string
       key: string
     }
+    pagination?: RuntimeCollectionPaginationConfig
     template: LayoutNode[]
   }
   children?: never

@@ -25,6 +25,7 @@ export const supportedContainerJustifyValues = ['start', 'center', 'end', 'betwe
 export const supportedContainerWrapValues = ['nowrap', 'wrap', 'wrap-reverse'] as const
 export const supportedContainerVariantValues = ['default', 'card'] as const
 export const supportedChoiceGroupOptionLayoutValues = ['vertical', 'inline'] as const
+export const supportedCollectionPaginationControlsVariants = ['previousNext'] as const
 
 const nonEmptyStringSchema = z.string().refine((value) => value.trim().length > 0)
 const nodeIdSchema = nonEmptyStringSchema
@@ -152,6 +153,20 @@ export const containerNodeSchema = z
   })
   .strip()
 
+const collectionPaginationControlsSchema = z
+  .object({
+    variant: z.enum(supportedCollectionPaginationControlsVariants).optional(),
+  })
+  .strict()
+
+const collectionPaginationSchema = z
+  .object({
+    enabled: z.literal(true),
+    pageSize: z.number().int().finite().min(1),
+    controls: collectionPaginationControlsSchema.optional(),
+  })
+  .strict()
+
 export const headingNodeSchema = z
   .object({
     type: z.literal('heading'),
@@ -183,6 +198,7 @@ export const repeaterNodeSchema = z
             key: nonEmptyStringSchema,
           })
           .strip(),
+        pagination: collectionPaginationSchema.optional(),
         template: z.array(z.unknown()),
       })
       .strip(),

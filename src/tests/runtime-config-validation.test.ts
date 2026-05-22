@@ -6883,6 +6883,172 @@ describe('validateRuntimeConfig', () => {
       })
     })
 
+    it('accepts repeater pagination with the closed previousNext v1 contract', () => {
+      expect(
+        validateRuntimeConfig(
+          createConfigWithLayout([
+            createRepeaterNode({
+              queryStateFeedback: {
+                query: 'posts',
+              },
+              visibility: {
+                reference: 'queries.posts.status',
+                operator: 'equals',
+                value: 'success',
+              },
+              layout: {
+                span: 6,
+              },
+              props: {
+                items: {
+                  source: 'queries.posts.data.results',
+                  key: 'id',
+                },
+                pagination: {
+                  enabled: true,
+                  pageSize: 10,
+                  controls: {
+                    variant: 'previousNext',
+                  },
+                },
+                template: [
+                  {
+                    type: 'heading',
+                    props: {
+                      text: 'item.title',
+                      level: 2,
+                    },
+                  },
+                ],
+              },
+            }),
+          ]),
+        ),
+      ).toMatchObject({
+        status: 'ready',
+        page: {
+          layout: [
+            {
+              type: 'repeater',
+              queryStateFeedback: {
+                query: 'posts',
+              },
+              visibility: {
+                reference: 'queries.posts.status',
+                operator: 'equals',
+                value: 'success',
+              },
+              layout: {
+                span: 6,
+              },
+              props: {
+                items: {
+                  source: 'queries.posts.data.results',
+                  key: 'id',
+                },
+                pagination: {
+                  enabled: true,
+                  pageSize: 10,
+                  controls: {
+                    variant: 'previousNext',
+                  },
+                },
+              },
+            },
+          ],
+        },
+      })
+    })
+
+    it('accepts repeater pagination without controls or with empty controls for the runtime default', () => {
+      for (const pagination of [
+        {
+          enabled: true,
+          pageSize: 2,
+        },
+        {
+          enabled: true,
+          pageSize: 2,
+          controls: {},
+        },
+      ]) {
+        const result = validateRuntimeConfig(
+          createConfigWithLayout([
+            createRepeaterNode({
+              props: {
+                items: {
+                  source: 'queries.posts.data',
+                  key: 'id',
+                },
+                pagination,
+                template: [],
+              },
+            }),
+          ]),
+        )
+
+        expect(result).toMatchObject({
+          status: 'ready',
+          page: {
+            layout: [
+              {
+                type: 'repeater',
+                props: {
+                  pagination,
+                },
+              },
+            ],
+          },
+        })
+      }
+    })
+
+    it('rejects invalid repeater pagination values with focused diagnostic paths', () => {
+      const cases: Array<{ pagination: unknown; path: string }> = [
+        { pagination: { enabled: false, pageSize: 2 }, path: 'props.pagination.enabled' },
+        { pagination: { pageSize: 2 }, path: 'props.pagination.enabled' },
+        { pagination: { enabled: true }, path: 'props.pagination.pageSize' },
+        { pagination: { enabled: true, pageSize: 1.5 }, path: 'props.pagination.pageSize' },
+        { pagination: { enabled: true, pageSize: 0 }, path: 'props.pagination.pageSize' },
+        { pagination: { enabled: true, pageSize: Number.POSITIVE_INFINITY }, path: 'props.pagination.pageSize' },
+        {
+          pagination: { enabled: true, pageSize: 2, controls: { variant: 'numbers' } },
+          path: 'props.pagination.controls.variant',
+        },
+        { pagination: { enabled: true, pageSize: 2, remote: true }, path: 'props.pagination.remote' },
+        {
+          pagination: { enabled: true, pageSize: 2, controls: { cursor: 'next' } },
+          path: 'props.pagination.controls.cursor',
+        },
+      ]
+
+      for (const { pagination, path } of cases) {
+        expect(
+          validateRuntimeConfig(
+            createConfigWithLayout([
+              createRepeaterNode({
+                props: {
+                  items: {
+                    source: 'queries.posts.data',
+                    key: 'id',
+                  },
+                  pagination,
+                  template: [],
+                },
+              }),
+            ]),
+          ),
+        ).toEqual({
+          status: 'error',
+          error: {
+            code: 'invalid-layout',
+            displayMode: 'development-only',
+            message: `Page "home" has an invalid layout at "layout[0].${path}".`,
+          },
+        })
+      }
+    })
+
     it('rejects repeater collection sources outside queries.{queryName}.data scope', () => {
       expect(
         validateRuntimeConfig(

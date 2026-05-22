@@ -3290,6 +3290,572 @@ describe('RuntimePage', () => {
     expect(within(lists[1]).getAllByRole('listitem').map((item) => item.textContent)).toEqual(['gamma'])
   })
 
+  it('renders only the first effective page for paginated repeaters without changing item context', () => {
+    const activePage: RuntimePageConfig = {
+      id: 'posts',
+      layout: [
+        {
+          type: 'repeater',
+          props: {
+            items: {
+              source: 'queries.posts.data.results',
+              key: 'id',
+            },
+            pagination: {
+              enabled: true,
+              pageSize: 2,
+            },
+            template: [
+              {
+                type: 'heading',
+                props: {
+                  text: 'item.title',
+                  level: 2,
+                },
+              },
+              {
+                type: 'paragraph',
+                props: {
+                  text: 'item.author.name',
+                },
+              },
+            ],
+          },
+        },
+      ],
+    }
+
+    renderRuntimePageWithState(
+      activePage,
+      createRuntimePageState(activePage, {
+        posts: {
+          status: 'success',
+          data: {
+            results: [
+              { id: 'post-1', title: 'First post', author: { name: 'Ada' } },
+              { id: 'post-2', title: 'Second post', author: { name: 'Grace' } },
+              { id: 'post-3', title: 'Third post', author: { name: 'Lin' } },
+              { id: 'post-4', title: 'Fourth post', author: { name: 'Katherine' } },
+              { id: 'post-5', title: 'Fifth post', author: { name: 'Evelyn' } },
+            ],
+          },
+          error: null,
+        },
+      }),
+    )
+
+    expect(screen.getAllByRole('heading', { level: 2 }).map((item) => item.textContent)).toEqual(['First post', 'Second post'])
+    expect(screen.getAllByText(/Ada|Grace/, { selector: 'p' }).map((item) => item.textContent)).toEqual(['Ada', 'Grace'])
+    expect(screen.queryByText('Third post')).not.toBeInTheDocument()
+    expect(screen.queryByText('Lin')).not.toBeInTheDocument()
+  })
+
+  it('paginates only renderable repeater items after applying key diagnostics', () => {
+    const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    const activePage: RuntimePageConfig = {
+      id: 'posts',
+      layout: [
+        {
+          type: 'repeater',
+          props: {
+            items: {
+              source: 'queries.posts.data.results',
+              key: 'id',
+            },
+            pagination: {
+              enabled: true,
+              pageSize: 2,
+            },
+            template: [
+              {
+                type: 'paragraph',
+                props: {
+                  text: 'item.title',
+                },
+              },
+            ],
+          },
+        },
+      ],
+    }
+
+    renderRuntimePageWithState(
+      activePage,
+      createRuntimePageState(activePage, {
+        posts: {
+          status: 'success',
+          data: {
+            results: [
+              { id: 'post-1', title: 'First post' },
+              { id: 'post-1', title: 'Duplicate post' },
+              { id: null, title: 'Broken post' },
+              { id: 'post-2', title: 'Second post' },
+              { id: 'post-3', title: 'Third post' },
+            ],
+          },
+          error: null,
+        },
+      }),
+    )
+
+    expect(screen.getAllByText(/First post|Second post/, { selector: 'p' }).map((item) => item.textContent)).toEqual([
+      'First post',
+      'Second post',
+    ])
+    expect(screen.queryByText('Duplicate post')).not.toBeInTheDocument()
+    expect(screen.queryByText('Broken post')).not.toBeInTheDocument()
+    expect(screen.queryByText('Third post')).not.toBeInTheDocument()
+    expect(consoleWarnSpy).toHaveBeenCalled()
+
+    consoleWarnSpy.mockRestore()
+  })
+
+  it('renders repeater pagination controls, navigates within bounds, and exposes page state', () => {
+    const activePage: RuntimePageConfig = {
+      id: 'posts',
+      layout: [
+        {
+          type: 'repeater',
+          props: {
+            items: {
+              source: 'queries.posts.data.results',
+              key: 'id',
+            },
+            pagination: {
+              enabled: true,
+              pageSize: 2,
+            },
+            template: [
+              {
+                type: 'paragraph',
+                props: {
+                  text: 'item.title',
+                },
+              },
+            ],
+          },
+        },
+      ],
+    }
+
+    renderRuntimePageWithState(
+      activePage,
+      createRuntimePageState(activePage, {
+        posts: {
+          status: 'success',
+          data: {
+            results: [
+              { id: 'post-1', title: 'First post' },
+              { id: 'post-2', title: 'Second post' },
+              { id: 'post-3', title: 'Third post' },
+              { id: 'post-4', title: 'Fourth post' },
+              { id: 'post-5', title: 'Fifth post' },
+            ],
+          },
+          error: null,
+        },
+      }),
+    )
+
+    const previousButton = screen.getByRole('button', { name: 'Anterior' })
+    const nextButton = screen.getByRole('button', { name: 'Siguiente' })
+
+    expect(previousButton).toHaveAttribute('type', 'button')
+    expect(nextButton).toHaveAttribute('type', 'button')
+    expect(previousButton).toBeDisabled()
+    expect(nextButton).toBeEnabled()
+    expect(screen.getByText('Página 1 de 3')).toBeInTheDocument()
+    expect(screen.getAllByText(/First post|Second post/, { selector: 'p' }).map((item) => item.textContent)).toEqual([
+      'First post',
+      'Second post',
+    ])
+
+    fireEvent.click(nextButton)
+    expect(screen.getByText('Página 2 de 3')).toBeInTheDocument()
+    expect(previousButton).toBeEnabled()
+    expect(screen.getAllByText(/Third post|Fourth post/, { selector: 'p' }).map((item) => item.textContent)).toEqual([
+      'Third post',
+      'Fourth post',
+    ])
+
+    fireEvent.click(nextButton)
+    expect(screen.getByText('Página 3 de 3')).toBeInTheDocument()
+    expect(nextButton).toBeDisabled()
+    expect(screen.getByText('Fifth post')).toBeInTheDocument()
+
+    fireEvent.click(nextButton)
+    expect(screen.getByText('Página 3 de 3')).toBeInTheDocument()
+
+    fireEvent.click(previousButton)
+    expect(screen.getByText('Página 2 de 3')).toBeInTheDocument()
+    expect(screen.getAllByText(/Third post|Fourth post/, { selector: 'p' }).map((item) => item.textContent)).toEqual([
+      'Third post',
+      'Fourth post',
+    ])
+
+    fireEvent.click(previousButton)
+    expect(screen.getByText('Página 1 de 3')).toBeInTheDocument()
+    expect(previousButton).toBeDisabled()
+  })
+
+  it('hides repeater pagination controls when no navigation is useful', () => {
+    const activePage: RuntimePageConfig = {
+      id: 'posts',
+      layout: [
+        {
+          type: 'repeater',
+          props: {
+            items: {
+              source: 'queries.posts.data.results',
+              key: 'id',
+            },
+            pagination: {
+              enabled: true,
+              pageSize: 5,
+            },
+            template: [
+              {
+                type: 'paragraph',
+                props: {
+                  text: 'item.title',
+                },
+              },
+            ],
+          },
+        },
+      ],
+    }
+
+    renderRuntimePageWithState(
+      activePage,
+      createRuntimePageState(activePage, {
+        posts: {
+          status: 'success',
+          data: {
+            results: [{ id: 'post-1', title: 'First post' }],
+          },
+          error: null,
+        },
+      }),
+    )
+
+    expect(screen.getByText('First post')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Anterior' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Siguiente' })).not.toBeInTheDocument()
+    expect(screen.queryByText(/Página/)).not.toBeInTheDocument()
+  })
+
+  it('renders repeater pagination controls as a full row inside effective grids', () => {
+    const activePage: RuntimePageConfig = {
+      id: 'posts',
+      layout: [
+        {
+          type: 'container',
+          props: {
+            columns: 4,
+          },
+          children: [
+            {
+              type: 'repeater',
+              props: {
+                items: {
+                  source: 'queries.posts.data.results',
+                  key: 'id',
+                },
+                pagination: {
+                  enabled: true,
+                  pageSize: 2,
+                },
+                template: [
+                  {
+                    type: 'paragraph',
+                    layout: {
+                      span: 2,
+                    },
+                    props: {
+                      text: 'item.title',
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      ],
+    }
+
+    renderRuntimePageWithState(
+      activePage,
+      createRuntimePageState(activePage, {
+        posts: {
+          status: 'success',
+          data: {
+            results: [
+              { id: 'post-1', title: 'First post' },
+              { id: 'post-2', title: 'Second post' },
+              { id: 'post-3', title: 'Third post' },
+            ],
+          },
+          error: null,
+        },
+      }),
+    )
+
+    expect(screen.getByText('First post').parentElement).toHaveClass('col-span-2')
+    expect(document.querySelector('[data-layout-node="repeater-pagination"]')).toHaveClass('col-span-4')
+  })
+
+  it('resets a paginated repeater to the first page when the collection reference changes', () => {
+    const activePage: RuntimePageConfig = {
+      id: 'posts',
+      layout: [
+        {
+          type: 'repeater',
+          props: {
+            items: {
+              source: 'queries.posts.data.results',
+              key: 'id',
+            },
+            pagination: {
+              enabled: true,
+              pageSize: 2,
+            },
+            template: [
+              {
+                type: 'paragraph',
+                props: {
+                  text: 'item.title',
+                },
+              },
+            ],
+          },
+        },
+      ],
+    }
+    const config: RuntimeConfig = {
+      api: {},
+      initialPage: activePage.id,
+      pages: [activePage],
+    }
+    const firstState = createRuntimePageState(activePage, {
+      posts: {
+        status: 'success',
+        data: {
+          results: [
+            { id: 'post-1', title: 'First post' },
+            { id: 'post-2', title: 'Second post' },
+            { id: 'post-3', title: 'Third post' },
+            { id: 'post-4', title: 'Fourth post' },
+          ],
+        },
+        error: null,
+      },
+    })
+
+    const { rerender } = renderRuntimePageWithState(activePage, firstState)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
+    expect(screen.getByText('Página 2 de 2')).toBeInTheDocument()
+    expect(screen.getByText('Third post')).toBeInTheDocument()
+
+    const replacementState = createRuntimePageState(activePage, {
+      posts: {
+        status: 'success',
+        data: {
+          results: [
+            { id: 'new-1', title: 'New first post' },
+            { id: 'new-2', title: 'New second post' },
+            { id: 'new-3', title: 'New third post' },
+          ],
+        },
+        error: null,
+      },
+    })
+
+    rerender(
+      <RuntimeStateContext.Provider
+        value={{
+          config,
+          initialState: replacementState,
+          state: replacementState,
+          dispatch: vi.fn<(action: RuntimeStateAction) => void>(),
+          dispatchAndSyncState: vi.fn<(action: RuntimeStateAction) => void>(),
+          getLatestState: () => replacementState,
+        }}
+      >
+        <RuntimePage />
+      </RuntimeStateContext.Provider>,
+    )
+
+    expect(screen.getByText('Página 1 de 2')).toBeInTheDocument()
+    expect(screen.getByText('New first post')).toBeInTheDocument()
+    expect(screen.getByText('New second post')).toBeInTheDocument()
+    expect(screen.queryByText('New third post')).not.toBeInTheDocument()
+  })
+
+  it('resets a paginated repeater when pageSize changes', () => {
+    function createPage(pageSize: number): RuntimePageConfig {
+      return {
+        id: 'posts',
+        layout: [
+          {
+            type: 'repeater',
+            props: {
+              items: {
+                source: 'queries.posts.data.results',
+                key: 'id',
+              },
+              pagination: {
+                enabled: true,
+                pageSize,
+              },
+              template: [
+                {
+                  type: 'paragraph',
+                  props: {
+                    text: 'item.title',
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      }
+    }
+
+    const initialPage = createPage(2)
+    const state = createRuntimePageState(initialPage, {
+      posts: {
+        status: 'success',
+        data: {
+          results: [
+            { id: 'post-1', title: 'First post' },
+            { id: 'post-2', title: 'Second post' },
+            { id: 'post-3', title: 'Third post' },
+            { id: 'post-4', title: 'Fourth post' },
+            { id: 'post-5', title: 'Fifth post' },
+          ],
+        },
+        error: null,
+      },
+    })
+    const { rerender } = renderRuntimePageWithState(initialPage, state)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
+    expect(screen.getByText('Página 2 de 3')).toBeInTheDocument()
+
+    const resizedPage = createPage(3)
+    const resizedConfig: RuntimeConfig = {
+      api: {},
+      initialPage: resizedPage.id,
+      pages: [resizedPage],
+    }
+
+    rerender(
+      <RuntimeStateContext.Provider
+        value={{
+          config: resizedConfig,
+          initialState: state,
+          state,
+          dispatch: vi.fn<(action: RuntimeStateAction) => void>(),
+          dispatchAndSyncState: vi.fn<(action: RuntimeStateAction) => void>(),
+          getLatestState: () => state,
+        }}
+      >
+        <RuntimePage />
+      </RuntimeStateContext.Provider>,
+    )
+
+    expect(screen.getByText('Página 1 de 2')).toBeInTheDocument()
+    expect(screen.getAllByText(/First post|Second post|Third post/, { selector: 'p' }).map((item) => item.textContent)).toEqual([
+      'First post',
+      'Second post',
+      'Third post',
+    ])
+  })
+
+  it('keeps paginated repeaters independent even when they read the same query', () => {
+    const activePage: RuntimePageConfig = {
+      id: 'posts',
+      layout: [
+        {
+          type: 'repeater',
+          props: {
+            items: {
+              source: 'queries.posts.data.primary',
+              key: 'id',
+            },
+            pagination: {
+              enabled: true,
+              pageSize: 2,
+            },
+            template: [
+              {
+                type: 'paragraph',
+                props: {
+                  text: 'item.title',
+                },
+              },
+            ],
+          },
+        },
+        {
+          type: 'repeater',
+          props: {
+            items: {
+              source: 'queries.posts.data.secondary',
+              key: 'id',
+            },
+            pagination: {
+              enabled: true,
+              pageSize: 2,
+            },
+            template: [
+              {
+                type: 'paragraph',
+                props: {
+                  text: 'item.title',
+                },
+              },
+            ],
+          },
+        },
+      ],
+    }
+
+    renderRuntimePageWithState(
+      activePage,
+      createRuntimePageState(activePage, {
+        posts: {
+          status: 'success',
+          data: {
+            primary: [
+              { id: 'primary-1', title: 'Primary one' },
+              { id: 'primary-2', title: 'Primary two' },
+              { id: 'primary-3', title: 'Primary three' },
+            ],
+            secondary: [
+              { id: 'secondary-1', title: 'Secondary one' },
+              { id: 'secondary-2', title: 'Secondary two' },
+              { id: 'secondary-3', title: 'Secondary three' },
+            ],
+          },
+          error: null,
+        },
+      }),
+    )
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'Siguiente' })[0])
+
+    expect(screen.getByText('Primary three')).toBeInTheDocument()
+    expect(screen.queryByText('Primary one')).not.toBeInTheDocument()
+    expect(screen.getByText('Secondary one')).toBeInTheDocument()
+    expect(screen.getByText('Secondary two')).toBeInTheDocument()
+    expect(screen.queryByText('Secondary three')).not.toBeInTheDocument()
+    expect(screen.getAllByText('Página 1 de 2')).toHaveLength(1)
+    expect(screen.getAllByText('Página 2 de 2')).toHaveLength(1)
+  })
+
   it('renders scalar repeater items and degrades to zero iterations for missing, failed, or non-array sources', () => {
     const scalarPage: RuntimePageConfig = {
       id: 'scalars',

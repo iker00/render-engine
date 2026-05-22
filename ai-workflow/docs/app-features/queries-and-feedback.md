@@ -46,6 +46,7 @@ Semántica estable:
 - en `heading` y `paragraph`, solo los resultados escalares compatibles con texto (`string`, `number`, `boolean`) se muestran de forma visible; objetos, arrays, `null`, `undefined` y referencias no resolubles degradan a string vacío
 - en `image`, `src` solo produce render cuando la resolución final es un string no vacío; referencias ausentes, no resolubles o con valor final no textual degradan a no render, y `alt` degrada a string vacío si no hay valor visible
 - en `repeater`, una referencia válida cuyo valor runtime actual no es una colección utilizable degrada a cero iteraciones en vez de romper el render
+- en `repeater` paginado, la colección completa ya resuelta desde `queries.*` se pagina en cliente después de aplicar la política de keys válidas y únicas; cambiar de página solo cambia estado local del consumidor y no ejecuta ni limpia queries
 - en `list` y `select`, una referencia válida cuyo valor runtime actual no es una colección utilizable degrada a colección vacía en vez de romper render, validación o submit
 - en `table`, `props.rows.source` degrada a cero filas cuando la colección no existe o no es array, y cada celda string reutiliza la misma normalización visible de `heading`, `paragraph` e `image`, vaciándose sin romper la fila cuando el valor no es renderizable
 - cuando la colección contiene objetos y algún item no resuelve los datos mínimos requeridos por el consumidor, el runtime degrada solo ese item y conserva el resto de la colección
@@ -156,3 +157,4 @@ No se consideran `empty`:
 - renderizar una `table` dinámica desde `queries.*`, conservando filas parciales y vaciando solo las celdas sin dato visible
 - reutilizar una misma query para alimentar a la vez varios `list` o `select` con proyecciones distintas por item
 - mostrar u ocultar nodos o campos según `queries.{queryName}.status`, `queries.{queryName}.error` o una ruta anidada de `queries.{queryName}.data.*` sin lógica imperativa por pantalla
+- paginar localmente un `repeater` alimentado por `queries.*` sin cambiar el estado de la query ni el feedback de `idle | loading | error | empty | success`

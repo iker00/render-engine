@@ -537,6 +537,13 @@
               "source": "queries.searchPosts.data",
               "key": "id"
             },
+              "pagination": {
+                "enabled": true,
+                "pageSize": 3,
+                "controls": {
+                  "variant": "previousNext"
+                }
+              },
             "template": [
               {
                 "type": "heading",

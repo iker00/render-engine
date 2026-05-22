@@ -1,5 +1,13 @@
+import { useEffect, useMemo, useState } from 'react'
 import type { RepeaterLayoutNode } from '../../config/runtime-config'
 import { LayoutRenderer } from '../layout-renderer'
+import { useRuntimeLayoutContext } from '../runtime-layout-context'
+import { createCollectionPaginationModel } from '../runtime-collection-pagination'
+import {
+  getRepeaterPaginationButtonClassName,
+  getRepeaterPaginationControlsClassName,
+  getRepeaterPaginationIndicatorClassName,
+} from '../runtime-node-styling'
 import type { RuntimeIterationContext } from '../runtime-references/runtime-reference-resolver'
 import { resolveRuntimeReference } from '../runtime-references/runtime-reference-resolver'
 import { useRuntimeState } from '../runtime-state/runtime-state-provider'
@@ -8,41 +16,95 @@ interface RepeaterNodeProps {
   node: RepeaterLayoutNode
 }
 
+interface RepeaterIteration {
+  key: string
+  item: unknown
+}
+
 export function RepeaterNode({ node }: RepeaterNodeProps) {
   const state = useRuntimeState()
+  const { parentGridColumns } = useRuntimeLayoutContext()
+  const [activePage, setActivePage] = useState(1)
   const items = resolveRepeaterItems(node.props.items.source, state)
+  const pageSize = node.props.pagination?.pageSize
+  const iterations = useMemo(() => resolveRepeaterIterations(node, items), [node, items])
+  const paginationModel = useMemo(
+    () => (pageSize === undefined ? null : createCollectionPaginationModel(iterations, pageSize)),
+    [iterations, pageSize],
+  )
+  const paginationPage = paginationModel?.getPage(activePage)
+  const visibleIterations = paginationPage?.visibleItems ?? iterations
 
-  if (items.length === 0) {
+  useEffect(() => {
+    setActivePage(1)
+  }, [items, pageSize])
+
+  if (visibleIterations.length === 0) {
     return null
   }
 
-  const seenKeys = new Set<string>()
-
   return (
     <>
-      {items.map((item, index) => {
-        const resolvedKey = resolveRepeaterItemKey(item, node.props.items.key)
+      {visibleIterations.map((iteration) => {
+        const iterationContext: RuntimeIterationContext = { item: iteration.item }
 
-        if (resolvedKey === null) {
-          reportRepeaterKeyDiagnostic(node, index, 'invalid')
-          return null
-        }
-
-        const effectiveKey = String(resolvedKey)
-
-        if (seenKeys.has(effectiveKey)) {
-          reportRepeaterKeyDiagnostic(node, index, 'duplicate', effectiveKey)
-          return null
-        }
-
-        seenKeys.add(effectiveKey)
-
-        const iterationContext: RuntimeIterationContext = { item }
-
-        return <LayoutRenderer key={effectiveKey} nodes={node.props.template} iterationContext={iterationContext} />
+        return <LayoutRenderer key={iteration.key} nodes={node.props.template} iterationContext={iterationContext} />
       })}
+      {paginationPage && paginationPage.totalPages > 1 ? (
+        <div className={getRepeaterPaginationControlsClassName(parentGridColumns)} data-layout-node="repeater-pagination">
+          <button
+            type="button"
+            className={getRepeaterPaginationButtonClassName()}
+            disabled={!paginationPage.canGoPrevious}
+            onClick={() => setActivePage((currentPage) => Math.max(1, currentPage - 1))}
+          >
+            Anterior
+          </button>
+          <span className={getRepeaterPaginationIndicatorClassName()}>
+            Página {paginationPage.currentPage} de {paginationPage.totalPages}
+          </span>
+          <button
+            type="button"
+            className={getRepeaterPaginationButtonClassName()}
+            disabled={!paginationPage.canGoNext}
+            onClick={() => setActivePage((currentPage) => Math.min(paginationPage.totalPages, currentPage + 1))}
+          >
+            Siguiente
+          </button>
+        </div>
+      ) : null}
     </>
   )
+}
+
+function resolveRepeaterIterations(node: RepeaterLayoutNode, items: unknown[]): RepeaterIteration[] {
+  const seenKeys = new Set<string>()
+  const iterations: RepeaterIteration[] = []
+
+  for (let index = 0; index < items.length; index += 1) {
+    const item = items[index]
+    const resolvedKey = resolveRepeaterItemKey(item, node.props.items.key)
+
+    if (resolvedKey === null) {
+      reportRepeaterKeyDiagnostic(node, index, 'invalid')
+      continue
+    }
+
+    const effectiveKey = String(resolvedKey)
+
+    if (seenKeys.has(effectiveKey)) {
+      reportRepeaterKeyDiagnostic(node, index, 'duplicate', effectiveKey)
+      continue
+    }
+
+    seenKeys.add(effectiveKey)
+    iterations.push({
+      key: effectiveKey,
+      item,
+    })
+  }
+
+  return iterations
 }
 
 function resolveRepeaterItems(source: string, state: ReturnType<typeof useRuntimeState>) {

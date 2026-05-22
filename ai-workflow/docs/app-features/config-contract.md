@@ -73,6 +73,11 @@ Nodos soportados hoy:
 - `repeater`
   - `props.items.source`: obligatorio y limitado a `queries.{queryName}.data` o `queries.{queryName}.data.*`
   - `props.items.key`: obligatorio; ruta relativa no vacía al item actual, por ejemplo `id` o `meta.slug`
+  - `props.pagination`: opcional; cuando existe activa paginación local en cliente con el shape cerrado de v1
+  - `props.pagination.enabled`: obligatorio y exactamente `true`
+  - `props.pagination.pageSize`: obligatorio, entero, finito y mayor o igual que `1`
+  - `props.pagination.controls`: opcional; si se omite, el runtime usa el default efectivo de controles anterior/siguiente
+  - `props.pagination.controls.variant`: opcional y limitado a `previousNext`
   - `props.template`: colección ordenada obligatoria de `LayoutNode[]`
   - no admite `children`
 - `heading`
@@ -174,6 +179,8 @@ Nodos soportados hoy:
 Reglas estructurales adicionales del catálogo actual:
 - `heading`, `paragraph`, `list`, `image`, `table` y `button` siguen tratándose como nodos hoja; si reciben `children`, esos datos no pasan al resultado normalizado.
 - `repeater` rechaza `children` y solo admite repetición a través de `props.template`.
+- `repeater.props.pagination` solo acepta la superficie local v1; claves extra dentro de `props.pagination` o `props.pagination.controls` se rechazan de forma explícita para no aceptar cursores, paginación remota o variantes de controles todavía no soportadas.
+- La ausencia de `repeater.props.pagination` es el único modo soportado para no paginar; `enabled: false`, `pagination: {}` o paginación sin `pageSize` no son contratos válidos.
 - `input`, `textarea`, `select`, `radioGroup` y `checkboxGroup` solo son válidos como descendientes de un `form`.
 - `button` sin `action` solo es válido como descendiente de un `form`.
 - `container.props.columns` solo admite enteros entre `1` y `12`.
@@ -319,6 +326,9 @@ Reglas funcionales vigentes:
 - Si un nodo `table` omite `headers` o `rows`, mezcla modo manual y dinámico, usa celdas manuales fuera de `string | number | boolean`, declara un `source` fuera de `queries.{queryName}.data`, `queries.{queryName}.data.*` o `item.*`, o rompe la correspondencia exacta entre `headers` y celdas, el config completo se rechaza antes del render sobre la ruta exacta.
 - Si un `repeater` omite `props.items.source`, `props.items.key` o `props.template`, el config completo se rechaza antes del render sobre la ruta exacta.
 - Si `repeater.props.items.key` está vacío, usa una referencia global como `item.id` o `queries.posts.data.0.id`, o contiene una ruta relativa mal formada, el config completo se rechaza antes del render.
+- Si `repeater.props.pagination` existe, debe declarar `enabled: true` y un `pageSize` entero, finito y mayor o igual que `1`; valores como `enabled: false`, `pageSize: 0`, decimales, infinitos o `pageSize` ausente se rechazan antes del render sobre la ruta exacta.
+- Si `repeater.props.pagination.controls.variant` existe, debe ser `previousNext`; cualquier otra variante se rechaza antes del render.
+- Si `repeater.props.pagination` o `repeater.props.pagination.controls` incluyen claves no soportadas, el config completo se rechaza antes del render sobre la ruta exacta de la clave extra.
 - Si `queryStateFeedback.states` contiene una clave fuera de `idle | loading | error | empty | success`, el config completo se rechaza con error de layout sobre esa ruta exacta.
 - Si una regla usa `mode: fallback` sin `fallback`, el config completo se rechaza antes del render.
 - Si cualquier nodo dentro de `queryStateFeedback.states.{estado}.fallback` es inválido o usa un `type` no soportado, el config completo se rechaza antes del render sobre la ruta afectada.
@@ -378,12 +388,13 @@ La frontera estable de esta validación queda organizada así:
 - `api` ya puede dispararse declarativamente desde `button.props.action` usando `executeOperation`, además de por la fachada imperativa del provider y por `preloads` de página al entrar en ella.
 - `executeOperation` y `submitAction` ya pueden añadir `query`, `body` y `headers` por ejecución, pero siguen dependiendo de `operationName` como vínculo obligatorio con una operación existente de `api`.
 - `navigateTo` ya puede transportar `params` efectivos entre páginas y reflejarlos en el hash canónico del navegador, pero esos params siguen siendo escalares y no abren arrays, objetos, subrutas ni otro namespace distinto de `params.*`.
-- `repeater` ya puede expandir un subárbol completo por item de una colección remota, pero sigue fuera de alcance cualquier DSL de templates, filtros cliente, ordenación, paginación o fuentes de colección ajenas a `queries.*`.
+- `repeater` ya puede expandir un subárbol completo por item de una colección remota y aplicar paginación local opcional con `props.pagination`, pero sigue fuera de alcance cualquier DSL de templates, filtros cliente, ordenación, paginación remota o fuentes de colección ajenas a `queries.*`.
 - `action` sigue siendo una sola operación por trigger; no hay arrays, secuencias ni callbacks declarativos.
 - El trigger sigue siendo implícito por tipo de nodo; el contrato no abre todavía un bloque general de `events`.
 - Los formularios declarativos ya soportan `form`, `input`, `textarea`, `select`, `radioGroup` y `checkboxGroup`, con validación local declarativa ya ampliada a `required`, `minLength`, `maxLength`, `min`, `max`, `minSelections` y `maxSelections`.
 - `visibility` ya cubre show/hide simple por valor runtime, incluido `item.*` dentro de `repeater`, pero no abre branching, `fallback`, arrays de reglas ni expresiones compuestas.
-- `list`, `select`, `radioGroup` y `checkboxGroup` ya pueden reutilizar datos de `queries.*` y, dentro de `repeater`, datos de `item.*` como colecciones, pero siguen fuera de alcance filtros cliente, ordenación declarativa, transformaciones arbitrarias, búsqueda remota y carga incremental.
+- `list`, `select`, `radioGroup` y `checkboxGroup` ya pueden reutilizar datos de `queries.*` y, dentro de `repeater`, datos de `item.*` como colecciones, pero siguen fuera de alcance filtros cliente, ordenación declarativa, transformaciones arbitrarias, búsqueda remota, paginación y carga incremental.
+- `table` no acepta todavía `props.pagination`; la semántica local de paginación queda preparada como base reusable, pero solo `repeater` la expone en el contrato público actual.
 - No hay todavía validaciones declarativas avanzadas (`min`, `max`, patrones o validaciones cruzadas).
 - `preloads` ya puede declarar `query`, `body` y `headers` por entrada, pero no admite condiciones, prioridades, secuencialidad, dependencias, múltiples instancias simultáneas del mismo `operationName` ni una caché histórica reutilizable por firma.
 - No hay interpolación compleja dentro de strings.

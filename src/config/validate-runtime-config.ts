@@ -21,6 +21,7 @@ import type {
   QueryStateFeedbackVisibleState,
   RadioGroupLayoutNode,
   RepeaterLayoutNode,
+  RuntimeCollectionPaginationConfig,
   RuntimeVisibilityConfig,
   RuntimeVisibilityOperator,
   RuntimeCollectionObjectItem,
@@ -837,6 +838,12 @@ function validateRepeaterNode(
       )
     }
 
+    const paginationIssue = mapRepeaterPaginationIssue(pageId, path, issue)
+
+    if (paginationIssue) {
+      return paginationIssue
+    }
+
     if (issuePath[0] === 'props' && issuePath.length === 1) {
       return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props".`)
     }
@@ -895,10 +902,51 @@ function validateRepeaterNode(
           source: itemsSourceResult.source,
           key: parseResult.data.props.items.key,
         },
+        pagination: parseResult.data.props.pagination as RuntimeCollectionPaginationConfig | undefined,
         template: templateResult.nodes,
       },
     },
   }
+}
+
+function mapRepeaterPaginationIssue(
+  pageId: string,
+  path: string,
+  issue: { path: PropertyKey[]; code?: string; keys?: string[] },
+): { status: 'error'; error: RuntimeConfigError } | null {
+  const issuePath = issue.path
+
+  if (issuePath[0] !== 'props' || issuePath[1] !== 'pagination') {
+    return null
+  }
+
+  if (issuePath[2] === 'controls') {
+    if (issue.code === 'unrecognized_keys' && Array.isArray(issue.keys) && issue.keys.length > 0) {
+      return invalidLayout(
+        `Page "${pageId}" has an invalid layout at "${path}.props.pagination.controls.${issue.keys[0]}".`,
+      )
+    }
+
+    if (issuePath[3] === 'variant') {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.pagination.controls.variant".`)
+    }
+
+    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.pagination.controls".`)
+  }
+
+  if (issue.code === 'unrecognized_keys' && Array.isArray(issue.keys) && issue.keys.length > 0) {
+    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.pagination.${issue.keys[0]}".`)
+  }
+
+  if (issuePath[2] === 'enabled') {
+    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.pagination.enabled".`)
+  }
+
+  if (issuePath[2] === 'pageSize') {
+    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.pagination.pageSize".`)
+  }
+
+  return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.pagination".`)
 }
 
 function validateHeadingNode(
