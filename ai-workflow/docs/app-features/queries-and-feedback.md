@@ -21,8 +21,12 @@ En el estado implementado hoy:
 El runtime ya permite leer estado de queries desde superficies textuales concretas:
 - `heading.props.text`
 - `paragraph.props.text`
+- `button.props.label`
+- labels de `input`, `textarea`, `select`, `radioGroup` y `checkboxGroup`
 - `image.props.src`
 - `image.props.alt`
+- strings visibles y `itemText` de `list`
+- labels y values string de opciones de `select`, `radioGroup` y `checkboxGroup`
 - `repeater.props.items.source`
 - `list.props.items.source`
 - `table.props.rows.source`
@@ -43,11 +47,12 @@ Semántica estable:
 - los segmentos numéricos actúan como índice solo cuando el valor actual es un array
 - si la query no existe, `data` todavía no está disponible, falta una clave, el índice queda fuera de rango o se intenta profundizar dentro de un primitivo, la referencia se trata como dato ausente
 - `status` y `error` no admiten navegación adicional; rutas como `queries.searchUsers.error.message` siguen siendo inválidas
-- en `heading` y `paragraph`, solo los resultados escalares compatibles con texto (`string`, `number`, `boolean`) se muestran de forma visible; objetos, arrays, `null`, `undefined` y referencias no resolubles degradan a string vacío
+- en superficies visibles interpolables, un string puede combinar literal y placeholders `{{queries.*}}`; solo los resultados escalares compatibles con texto (`string`, `number`, `boolean`) se muestran de forma visible, y objetos, arrays, `null`, `undefined` o referencias no resolubles degradan a string vacío solo para el placeholder afectado
 - en `image`, `src` solo produce render cuando la resolución final es un string no vacío; referencias ausentes, no resolubles o con valor final no textual degradan a no render, y `alt` degrada a string vacío si no hay valor visible
 - en `repeater`, una referencia válida cuyo valor runtime actual no es una colección utilizable degrada a cero iteraciones en vez de romper el render
-- en `repeater` paginado, la colección completa ya resuelta desde `queries.*` se pagina en cliente después de aplicar la política de keys válidas y únicas; cambiar de página solo cambia estado local del consumidor y no ejecuta ni limpia queries
-- en `list` y `select`, una referencia válida cuyo valor runtime actual no es una colección utilizable degrada a colección vacía en vez de romper render, validación o submit
+- en `repeater` paginado, la colección completa ya resuelta desde `queries.*` se pagina en cliente después de aplicar la política de keys válidas y únicas; cambiar de página, seleccionar una página numerada o ampliar la ventana visible de `scroll` solo cambia estado local del consumidor y no ejecuta ni limpia queries
+- en `list`, `select`, `radioGroup` y `checkboxGroup`, una referencia válida cuyo valor runtime actual no es una colección utilizable degrada a colección vacía en vez de romper render, validación o submit
+- en proyecciones interpoladas de colecciones, `item.*` apunta al item local de cada entrada, opción o fila, y `queries.*` puede combinarse con ese contexto dentro del mismo string visible
 - en `table`, `props.rows.source` degrada a cero filas cuando la colección no existe o no es array, y cada celda string reutiliza la misma normalización visible de `heading`, `paragraph` e `image`, vaciándose sin romper la fila cuando el valor no es renderizable
 - cuando la colección contiene objetos y algún item no resuelve los datos mínimos requeridos por el consumidor, el runtime degrada solo ese item y conserva el resto de la colección
 - en `visibility`, `queries.{queryName}` y `queries.{queryName}.error` pueden evaluarse con `isTruthy` e `isFalsy`; `queries.{queryName}.status` y las rutas anidadas bajo `data` también pueden usarse con comparaciones literales o numéricas según el operador
@@ -81,6 +86,7 @@ Reglas de payload vigentes:
 - `body: null` en la raíz equivale a una petición deliberada sin body serializado
 - `headers` admite solo valores finales string
 - referencias completas y strings escapados siguen la misma convención central del runtime
+- la interpolación parcial `{{...}}` no aplica en `api.query`, `api.body`, `api.headers`, `preloads`, `button.props.action.*` ni `form.submitAction.*`; esos strings no vacían placeholders silenciosamente ni cambian la semántica de `request-build-failed`
 - esa convención ya permite `params.{paramName}` en `api.query`, `api.body`, `api.headers`, `button.props.action.*` y `form.submitAction.*`
 
 ## Precargas
@@ -156,5 +162,6 @@ No se consideran `empty`:
 - renderizar una `image` cuyo `src` o `alt` depende de `queries.*`, también dentro de `repeater`
 - renderizar una `table` dinámica desde `queries.*`, conservando filas parciales y vaciando solo las celdas sin dato visible
 - reutilizar una misma query para alimentar a la vez varios `list` o `select` con proyecciones distintas por item
+- combinar datos de `queries.*` con texto literal en headings, párrafos, botones, labels, imágenes, listas, opciones y celdas mediante placeholders visibles `{{...}}`
 - mostrar u ocultar nodos o campos según `queries.{queryName}.status`, `queries.{queryName}.error` o una ruta anidada de `queries.{queryName}.data.*` sin lógica imperativa por pantalla
-- paginar localmente un `repeater` alimentado por `queries.*` sin cambiar el estado de la query ni el feedback de `idle | loading | error | empty | success`
+- paginar localmente un `repeater` alimentado por `queries.*` con controles `previousNext`, `numbered` o `scroll`, sin cambiar el estado de la query ni el feedback de `idle | loading | error | empty | success`

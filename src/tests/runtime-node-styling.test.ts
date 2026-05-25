@@ -16,7 +16,7 @@ import {
   getPrimaryButtonNodeClassName,
   getRepeaterPaginationButtonClassName,
   getRepeaterPaginationControlsClassName,
-  getRepeaterPaginationIndicatorClassName,
+  getRepeaterPaginationCurrentButtonClassName,
   getRuntimePageClassName,
   getContainerNodeStyling,
   getHeadingNodeClassName,
@@ -191,12 +191,16 @@ describe('runtime node styling', () => {
   })
 
   it('returns compact stable classes for repeater pagination controls', () => {
-    expect(getRepeaterPaginationControlsClassName()).toBe('flex w-full flex-wrap items-center gap-3 pt-2')
-    expect(getRepeaterPaginationControlsClassName(4)).toBe('col-span-4 flex w-full flex-wrap items-center gap-3 pt-2')
+    expect(getRepeaterPaginationControlsClassName()).toBe('flex w-full flex-wrap items-center justify-center gap-3 pt-2')
+    expect(getRepeaterPaginationControlsClassName(4)).toBe(
+      'col-span-4 flex w-full flex-wrap items-center justify-center gap-3 pt-2',
+    )
     expect(getRepeaterPaginationButtonClassName()).toBe(
       'inline-flex items-center justify-center rounded-control border border-app-border-strong bg-white px-3.5 py-2 text-sm font-semibold leading-5 text-app-text-strong transition-colors hover:bg-app-surface-subtle disabled:cursor-not-allowed disabled:border-app-border-soft disabled:text-app-text-muted disabled:hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-app-accent',
     )
-    expect(getRepeaterPaginationIndicatorClassName()).toBe('text-sm font-medium leading-5 text-app-text-muted')
+    expect(getRepeaterPaginationCurrentButtonClassName()).toBe(
+      'inline-flex items-center justify-center rounded-control border border-app-accent bg-app-accent px-3.5 py-2 text-sm font-semibold leading-5 text-white transition-colors hover:bg-app-accent-strong disabled:cursor-not-allowed disabled:border-app-border-soft disabled:text-app-text-muted disabled:hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-app-accent',
+    )
   })
 
   it('supports an inline choice-group variant with wrap and without option card styling', () => {

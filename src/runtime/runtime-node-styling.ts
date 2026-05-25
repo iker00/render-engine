@@ -328,7 +328,7 @@ export function getSecondaryButtonNodeClassName() {
 }
 
 export function getRepeaterPaginationControlsClassName(parentGridColumns?: number | null) {
-  const classNames = ['flex', 'w-full', 'flex-wrap', 'items-center', 'gap-3', 'pt-2']
+  const classNames = ['flex', 'w-full', 'flex-wrap', 'items-center', 'justify-center', 'gap-3', 'pt-2']
   const spanClassName = getGridChildSpanClassName(parentGridColumns, parentGridColumns)
 
   if (spanClassName) {
@@ -366,8 +366,12 @@ export function getRepeaterPaginationButtonClassName() {
   ].join(' ')
 }
 
-export function getRepeaterPaginationIndicatorClassName() {
-  return 'text-sm font-medium leading-5 text-app-text-muted'
+export function getRepeaterPaginationCurrentButtonClassName() {
+  return getRepeaterPaginationButtonClassName()
+    .replace('border-app-border-strong', 'border-app-accent')
+    .replace('bg-white', 'bg-app-accent')
+    .replace('text-app-text-strong', 'text-white')
+    .replace('hover:bg-app-surface-subtle', 'hover:bg-app-accent-strong')
 }
 
 export function getFormNodeClassName() {

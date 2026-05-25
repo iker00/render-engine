@@ -3736,6 +3736,203 @@ describe('validateRuntimeConfig', () => {
       })
     })
 
+    it('accepts template strings in closed collection projection fields', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithFormLayout({
+          children: [
+            {
+              type: 'select',
+              props: {
+                fieldId: 'dynamicUser',
+                label: 'Dynamic user',
+                items: {
+                  source: 'queries.searchUsers.data.results',
+                  label: '{{item.code}} - {{item.profile.name}}',
+                  value: '{{item.type}}:{{item.id}}',
+                },
+              },
+            },
+            {
+              type: 'radioGroup',
+              props: {
+                fieldId: 'manualUser',
+                label: 'Manual user',
+                items: {
+                  values: [
+                    { id: 'user-1', type: 'admin', code: 'A1', profile: { name: 'Ada' } },
+                    { id: 'user-2', type: 'editor', code: 'G2', profile: { name: 'Grace' } },
+                  ],
+                  label: '{{item.code}} - {{item.profile.name}}',
+                  value: '{{item.type}}:{{item.id}}',
+                },
+              },
+            },
+            {
+              type: 'checkboxGroup',
+              props: {
+                fieldId: 'legacyUsers',
+                label: 'Legacy users',
+                items: [
+                  { label: '{{queries.user.data.name}}', value: '{{queries.user.data.id}}' },
+                  { label: 'Manual', value: 'manual' },
+                ],
+              },
+            },
+          ],
+        }, {
+          extraPages: [
+            {
+              id: 'catalog',
+              layout: [
+                {
+                  type: 'list',
+                  props: {
+                    items: {
+                      values: [
+                        { code: 'A1', title: 'Alpha' },
+                        { code: 'B2', title: 'Beta' },
+                      ],
+                      itemText: '{{item.code}} - {{item.title}}',
+                    },
+                  },
+                },
+                {
+                  type: 'list',
+                  props: {
+                    items: {
+                      source: 'queries.articles.data.results',
+                      itemText: '{{ item.code }} - {{item.title}}',
+                    },
+                  },
+                },
+              ],
+            },
+          ],
+        }),
+      )
+
+      expect(result.status).toBe('ready')
+    })
+
+    it('accepts unmatched template delimiters only in closed collection projection fields', () => {
+      expect(
+        validateRuntimeConfig(
+          createConfigWithFormLayout({
+            children: [
+              {
+                type: 'select',
+                props: {
+                  fieldId: 'dynamicUser',
+                  label: 'Dynamic user',
+                  items: {
+                    source: 'queries.searchUsers.data.results',
+                    label: 'Nombre }}',
+                    value: '{{item.id',
+                  },
+                },
+              },
+            ],
+          }, {
+            extraPages: [
+              {
+                id: 'catalog',
+                layout: [
+                  {
+                    type: 'list',
+                    props: {
+                      items: {
+                        values: [{ name: 'Ada' }],
+                        itemText: '{{item.name',
+                      },
+                    },
+                  },
+                ],
+              },
+            ],
+          }),
+        ).status,
+      ).toBe('ready')
+
+      expect(
+        validateRuntimeConfig(
+          createConfigWithLayout([
+            {
+              type: 'repeater',
+              props: {
+                items: {
+                  source: 'queries.posts.data.results',
+                  key: '{{item.id}}',
+                },
+                template: [],
+              },
+            },
+          ]),
+        ),
+      ).toEqual({
+        status: 'error',
+        error: {
+          code: 'invalid-layout',
+          displayMode: 'development-only',
+          message:
+            'Page "home" has an invalid layout at "layout[0].props.items.key": repeater item keys must use a non-empty relative item path.',
+        },
+      })
+
+      expect(
+        validateRuntimeConfig(
+          createConfigWithLayout([
+            {
+              type: 'list',
+              props: {
+                items: {
+                  source: '{{queries.searchUsers.data.results}}',
+                  itemType: 'scalar',
+                },
+              },
+            },
+          ]),
+        ),
+      ).toEqual({
+        status: 'error',
+        error: {
+          code: 'invalid-layout',
+          displayMode: 'development-only',
+          message:
+            'Page "home" has an invalid layout at "layout[0].props.items.source": collection sources must use queries.{queryName}.data, queries.{queryName}.data.* or item.*.',
+        },
+      })
+    })
+
+    it('keeps historical option value homogeneity when legacy options use template strings', () => {
+      expect(
+        validateRuntimeConfig(
+          createConfigWithFormLayout({
+            children: [
+              {
+                type: 'select',
+                props: {
+                  fieldId: 'role',
+                  label: 'Role',
+                  items: [
+                    { label: '{{queries.role.data.label}}', value: '{{queries.role.data.id}}' },
+                    { label: 'Editor', value: 2 },
+                  ],
+                },
+              },
+            ],
+          }),
+        ),
+      ).toEqual({
+        status: 'error',
+        error: {
+          code: 'invalid-layout',
+          displayMode: 'development-only',
+          message:
+            'Page "home" has an invalid layout at "layout[0].children[0].props.items": select item values must all be strings or all be numbers.',
+        },
+      })
+    })
+
     it('rejects manual object collections when required mappings are missing', () => {
       expect(
         validateRuntimeConfig(
@@ -6196,6 +6393,7 @@ describe('validateRuntimeConfig', () => {
         'navigation.currentPageId',
         'routeParams.userId',
         'params.filter',
+        '{{forms.profile.role}}',
         'queries.searchUsers.status.code',
         'queries.searchUsers.error.message',
       ]) {
@@ -6708,56 +6906,58 @@ describe('validateRuntimeConfig', () => {
       })
     })
 
-    it('rejects params references in dynamic collection sources before render', () => {
-      expect(
-        validateRuntimeConfig(
-          createConfigWithLayout([
-            {
-              type: 'list',
-              props: {
-                items: {
-                  source: 'params.userId',
-                  itemType: 'scalar',
+    it('rejects params references and templates in dynamic collection sources before render', () => {
+      for (const source of ['params.userId', '{{queries.searchUsers.data}}']) {
+        expect(
+          validateRuntimeConfig(
+            createConfigWithLayout([
+              {
+                type: 'list',
+                props: {
+                  items: {
+                    source,
+                    itemType: 'scalar',
+                  },
                 },
               },
-            },
-          ]),
-        ),
-      ).toEqual({
-        status: 'error',
-        error: {
-          code: 'invalid-layout',
-          displayMode: 'development-only',
-          message:
-            'Page "home" has an invalid layout at "layout[0].props.items.source": collection sources must use queries.{queryName}.data, queries.{queryName}.data.* or item.*.',
-        },
-      })
+            ]),
+          ),
+        ).toEqual({
+          status: 'error',
+          error: {
+            code: 'invalid-layout',
+            displayMode: 'development-only',
+            message:
+              'Page "home" has an invalid layout at "layout[0].props.items.source": collection sources must use queries.{queryName}.data, queries.{queryName}.data.* or item.*.',
+          },
+        })
 
-      expect(
-        validateRuntimeConfig(
-          createConfigWithLayout([
-            {
-              type: 'select',
-              props: {
-                fieldId: 'assignee',
-                label: 'Assignee',
-                items: {
-                  source: 'params.userId',
-                  itemType: 'scalar',
+        expect(
+          validateRuntimeConfig(
+            createConfigWithLayout([
+              {
+                type: 'select',
+                props: {
+                  fieldId: 'assignee',
+                  label: 'Assignee',
+                  items: {
+                    source,
+                    itemType: 'scalar',
+                  },
                 },
               },
-            },
-          ]),
-        ),
-      ).toEqual({
-        status: 'error',
-        error: {
-          code: 'invalid-layout',
-          displayMode: 'development-only',
-          message:
-            'Page "home" has an invalid layout at "layout[0].props.items.source": collection sources must use queries.{queryName}.data, queries.{queryName}.data.* or item.*.',
-        },
-      })
+            ]),
+          ),
+        ).toEqual({
+          status: 'error',
+          error: {
+            code: 'invalid-layout',
+            displayMode: 'development-only',
+            message:
+              'Page "home" has an invalid layout at "layout[0].props.items.source": collection sources must use queries.{queryName}.data, queries.{queryName}.data.* or item.*.',
+          },
+        })
+      }
     })
 
     it('accepts repeater nodes with query collection source, relative key path and template', () => {
@@ -6883,81 +7083,83 @@ describe('validateRuntimeConfig', () => {
       })
     })
 
-    it('accepts repeater pagination with the closed previousNext v1 contract', () => {
-      expect(
-        validateRuntimeConfig(
-          createConfigWithLayout([
-            createRepeaterNode({
-              queryStateFeedback: {
-                query: 'posts',
-              },
-              visibility: {
-                reference: 'queries.posts.status',
-                operator: 'equals',
-                value: 'success',
-              },
-              layout: {
-                span: 6,
-              },
-              props: {
-                items: {
-                  source: 'queries.posts.data.results',
-                  key: 'id',
+    it('accepts repeater pagination with the closed local controls variant catalog', () => {
+      for (const variant of ['previousNext', 'numbered', 'scroll']) {
+        expect(
+          validateRuntimeConfig(
+            createConfigWithLayout([
+              createRepeaterNode({
+                queryStateFeedback: {
+                  query: 'posts',
                 },
-                pagination: {
-                  enabled: true,
-                  pageSize: 10,
-                  controls: {
-                    variant: 'previousNext',
+                visibility: {
+                  reference: 'queries.posts.status',
+                  operator: 'equals',
+                  value: 'success',
+                },
+                layout: {
+                  span: 6,
+                },
+                props: {
+                  items: {
+                    source: 'queries.posts.data.results',
+                    key: 'id',
                   },
-                },
-                template: [
-                  {
-                    type: 'heading',
-                    props: {
-                      text: 'item.title',
-                      level: 2,
+                  pagination: {
+                    enabled: true,
+                    pageSize: 10,
+                    controls: {
+                      variant,
                     },
                   },
-                ],
-              },
-            }),
-          ]),
-        ),
-      ).toMatchObject({
-        status: 'ready',
-        page: {
-          layout: [
-            {
-              type: 'repeater',
-              queryStateFeedback: {
-                query: 'posts',
-              },
-              visibility: {
-                reference: 'queries.posts.status',
-                operator: 'equals',
-                value: 'success',
-              },
-              layout: {
-                span: 6,
-              },
-              props: {
-                items: {
-                  source: 'queries.posts.data.results',
-                  key: 'id',
+                  template: [
+                    {
+                      type: 'heading',
+                      props: {
+                        text: 'item.title',
+                        level: 2,
+                      },
+                    },
+                  ],
                 },
-                pagination: {
-                  enabled: true,
-                  pageSize: 10,
-                  controls: {
-                    variant: 'previousNext',
+              }),
+            ]),
+          ),
+        ).toMatchObject({
+          status: 'ready',
+          page: {
+            layout: [
+              {
+                type: 'repeater',
+                queryStateFeedback: {
+                  query: 'posts',
+                },
+                visibility: {
+                  reference: 'queries.posts.status',
+                  operator: 'equals',
+                  value: 'success',
+                },
+                layout: {
+                  span: 6,
+                },
+                props: {
+                  items: {
+                    source: 'queries.posts.data.results',
+                    key: 'id',
+                  },
+                  pagination: {
+                    enabled: true,
+                    pageSize: 10,
+                    controls: {
+                      variant,
+                    },
                   },
                 },
               },
-            },
-          ],
-        },
-      })
+            ],
+          },
+        })
+      }
     })
 
     it('accepts repeater pagination without controls or with empty controls for the runtime default', () => {
@@ -7016,9 +7218,39 @@ describe('validateRuntimeConfig', () => {
           path: 'props.pagination.controls.variant',
         },
         { pagination: { enabled: true, pageSize: 2, remote: true }, path: 'props.pagination.remote' },
+        { pagination: { enabled: true, pageSize: 2, cursor: 'next' }, path: 'props.pagination.cursor' },
+        { pagination: { enabled: true, pageSize: 2, total: 10 }, path: 'props.pagination.total' },
+        { pagination: { enabled: true, pageSize: 2, page: 1 }, path: 'props.pagination.page' },
+        { pagination: { enabled: true, pageSize: 2, limit: 2 }, path: 'props.pagination.limit' },
+        { pagination: { enabled: true, pageSize: 2, offset: 0 }, path: 'props.pagination.offset' },
+        { pagination: { enabled: true, pageSize: 2, hasNext: true }, path: 'props.pagination.hasNext' },
+        {
+          pagination: { enabled: true, pageSize: 2, controls: { remote: true } },
+          path: 'props.pagination.controls.remote',
+        },
         {
           pagination: { enabled: true, pageSize: 2, controls: { cursor: 'next' } },
           path: 'props.pagination.controls.cursor',
+        },
+        {
+          pagination: { enabled: true, pageSize: 2, controls: { total: 10 } },
+          path: 'props.pagination.controls.total',
+        },
+        {
+          pagination: { enabled: true, pageSize: 2, controls: { page: 1 } },
+          path: 'props.pagination.controls.page',
+        },
+        {
+          pagination: { enabled: true, pageSize: 2, controls: { limit: 2 } },
+          path: 'props.pagination.controls.limit',
+        },
+        {
+          pagination: { enabled: true, pageSize: 2, controls: { offset: 0 } },
+          path: 'props.pagination.controls.offset',
+        },
+        {
+          pagination: { enabled: true, pageSize: 2, controls: { hasNext: true } },
+          path: 'props.pagination.controls.hasNext',
         },
       ]
 
@@ -7076,7 +7308,7 @@ describe('validateRuntimeConfig', () => {
     })
 
     it('rejects repeater keys that are empty, global references or malformed relative paths', () => {
-      for (const key of ['', 'item.id', 'queries.posts.data.0.id', 'author..id']) {
+      for (const key of ['', 'item.id', '{{item.id}}', 'queries.posts.data.0.id', 'author..id']) {
         expect(
           validateRuntimeConfig(
             createConfigWithLayout([

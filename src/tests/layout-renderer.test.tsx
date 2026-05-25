@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
-import { useEffect } from 'react'
-import { describe, expect, it, vi } from 'vitest'
+import { act, useEffect } from 'react'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { RuntimeConfig, RuntimePageConfig } from '../config/runtime-config'
 import { RuntimePage } from '../runtime/runtime-page'
 import { RuntimeStateContext } from '../runtime/runtime-state/runtime-state-context'
@@ -44,6 +44,10 @@ const page: RuntimePageConfig = {
     },
   ],
 }
+
+afterEach(() => {
+  vi.unstubAllGlobals()
+})
 
 function renderRuntimePage(activePage: RuntimePageConfig) {
   const config: RuntimeConfig = {
@@ -410,6 +414,26 @@ function renderRuntimePageWithCollectionControls(activePage: RuntimePageConfig) 
   )
 }
 
+function renderRuntimePageWithCollectionControlsAndApi(activePage: RuntimePageConfig) {
+  const config: RuntimeConfig = {
+    api: {
+      submitProfile: {
+        method: 'POST',
+        endpoint: '/api/profile',
+      },
+    },
+    initialPage: activePage.id,
+    pages: [activePage],
+  }
+
+  return render(
+    <RuntimeStateProvider config={config}>
+      <CollectionSourceControls />
+      <RuntimePage />
+    </RuntimeStateProvider>,
+  )
+}
+
 describe('RuntimePage', () => {
   it('renders multiple root nodes in the declared order', () => {
     renderRuntimePage(page)
@@ -536,6 +560,112 @@ describe('RuntimePage', () => {
       'Manual Grace',
     ])
     expect(within(lists[1]).getAllByRole('listitem').map((item) => item.textContent)).toEqual(['Ada', 'Grace'])
+  })
+
+  it('interpolates direct list strings and object itemText projections with local item context', () => {
+    const activePage: RuntimePageConfig = {
+      id: 'interpolated-lists',
+      layout: [
+        {
+          type: 'list',
+          props: {
+            items: [
+              'Status {{queries.posts.status}}',
+              'Missing {{queries.posts.data.missing}} item',
+            ],
+          },
+        },
+        {
+          type: 'list',
+          props: {
+            items: {
+              values: [
+                {
+                  code: 'M1',
+                  title: 'Manual one',
+                },
+                {
+                  code: 'M2',
+                },
+              ],
+              itemText: '{{item.code}} - {{item.title}}',
+            },
+          },
+        },
+        {
+          type: 'list',
+          props: {
+            items: {
+              source: 'queries.posts.data.results',
+              itemText: '{{item.code}} - {{item.title}} ({{item.missing}})',
+            },
+          },
+        },
+        {
+          type: 'repeater',
+          props: {
+            items: {
+              source: 'queries.posts.data.results',
+              key: 'id',
+            },
+            template: [
+              {
+                type: 'list',
+                props: {
+                  items: ['Post {{item.id}}', 'Title {{item.title}}'],
+                },
+              },
+            ],
+          },
+        },
+      ],
+    }
+
+    renderRuntimePageWithState(
+      activePage,
+      createRuntimePageState(activePage, {
+        posts: {
+          status: 'success',
+          data: {
+            results: [
+              {
+                id: 'post-1',
+                code: 'P1',
+                title: 'First post',
+              },
+              {
+                id: 'post-2',
+                code: 'P2',
+              },
+            ],
+          },
+          error: null,
+          requestSignature: null,
+        },
+      }),
+    )
+
+    const lists = screen.getAllByRole('list')
+    expect(within(lists[0]).getAllByRole('listitem').map((item) => item.textContent)).toEqual([
+      'Status success',
+      'Missing  item',
+    ])
+    expect(within(lists[1]).getAllByRole('listitem').map((item) => item.textContent)).toEqual([
+      'M1 - Manual one',
+      'M2 - ',
+    ])
+    expect(within(lists[2]).getAllByRole('listitem').map((item) => item.textContent)).toEqual([
+      'P1 - First post ()',
+      'P2 -  ()',
+    ])
+    expect(within(lists[3]).getAllByRole('listitem').map((item) => item.textContent)).toEqual([
+      'Post post-1',
+      'Title First post',
+    ])
+    expect(within(lists[4]).getAllByRole('listitem').map((item) => item.textContent)).toEqual([
+      'Post post-2',
+      'Title ',
+    ])
   })
 
   it('degrades a valid dynamic source to an empty list when the query is absent or the resolved value is not a collection', () => {
@@ -1331,6 +1461,106 @@ describe('RuntimePage', () => {
     expect(screen.queryByRole('button', { name: 'Visible runtime button' })).not.toBeInTheDocument()
   })
 
+  it('compares visibility.value as a literal even when it contains template delimiters', async () => {
+    renderRuntimePage({
+      id: 'literal-visibility-value',
+      layout: [
+        {
+          type: 'form',
+          id: 'filters',
+          children: [
+            {
+              type: 'input',
+              props: {
+                fieldId: 'type',
+                label: 'Type',
+                defaultValue: 'open',
+              },
+            },
+            {
+              type: 'input',
+              props: {
+                fieldId: 'status',
+                label: 'Status',
+                defaultValue: 'case-{{forms.filters.type}}',
+              },
+            },
+          ],
+        },
+        {
+          type: 'paragraph',
+          visibility: {
+            reference: 'forms.filters.status',
+            operator: 'equals',
+            value: 'case-{{forms.filters.type}}',
+          },
+          props: {
+            text: 'Literal status match',
+          },
+        },
+      ],
+    })
+
+    await waitFor(() => expect(screen.getByText('Literal status match')).toBeInTheDocument())
+
+    fireEvent.change(screen.getByLabelText('Status'), { target: { value: 'case-open' } })
+
+    await waitFor(() => expect(screen.queryByText('Literal status match')).not.toBeInTheDocument())
+  })
+
+  it('treats queryStateFeedback.query as a literal query name instead of an interpolated template', () => {
+    const activePage: RuntimePageConfig = {
+      id: 'literal-query-feedback',
+      layout: [
+        {
+          type: 'paragraph',
+          queryStateFeedback: {
+            query: '{{forms.filters.queryName}}',
+          },
+          props: {
+            text: 'Literal query feedback node',
+          },
+        },
+      ],
+    }
+
+    renderRuntimePageWithState(
+      activePage,
+      {
+        ...createRuntimePageState(activePage, {
+          '{{forms.filters.queryName}}': {
+            status: 'success',
+            data: ['literal'],
+            error: null,
+            requestSignature: null,
+          },
+          searchUsers: {
+            status: 'error',
+            data: null,
+            error: {
+              code: 'network',
+              message: 'Could not load users.',
+            },
+            requestSignature: null,
+          },
+        }),
+        forms: {
+          filters: {
+            queryName: {
+              value: 'searchUsers',
+              error: null,
+              touched: false,
+              dirty: false,
+              defaultValue: 'searchUsers',
+            },
+          },
+        },
+      },
+    )
+
+    expect(screen.getByText('Literal query feedback node')).toBeInTheDocument()
+  })
+
   it('applies visibility rules inside queryStateFeedback fallback nodes without reopening the original node', async () => {
     renderRuntimePageWithQueryFeedback({
       id: 'home',
@@ -1667,6 +1897,37 @@ describe('RuntimePage', () => {
     expect(within(bodyRows[1]).getAllByRole('cell').map((cell) => cell.textContent)).toEqual(['Grace', 'false', '7'])
   })
 
+  it('keeps table headers literal when they contain template delimiters', () => {
+    const activePage: RuntimePageConfig = {
+      id: 'literal-table-headers',
+      layout: [
+        {
+          type: 'table',
+          props: {
+            headers: ['Name {{queries.searchUsers.status}}'],
+            rows: [['Ada']],
+          },
+        },
+      ],
+    }
+
+    renderRuntimePageWithState(
+      activePage,
+      createRuntimePageState(activePage, {
+        searchUsers: {
+          status: 'success',
+          data: ['Ada'],
+          error: null,
+          requestSignature: null,
+        },
+      }),
+    )
+
+    expect(within(screen.getByRole('table')).getByRole('columnheader')).toHaveTextContent(
+      'Name {{queries.searchUsers.status}}',
+    )
+  })
+
   it('renders dynamic tables from collection sources, preserves rows with partial items, and reuses global references per cell', () => {
     const activePage: RuntimePageConfig = {
       id: 'dynamic-table',
@@ -1946,6 +2207,129 @@ describe('RuntimePage', () => {
     expect(screen.getByText('true')).toBeInTheDocument()
   })
 
+  it('renders interpolated visible strings in heading, image attributes, and table cells', () => {
+    const activePage: RuntimePageConfig = {
+      id: 'interpolated-visible-strings',
+      layout: [
+        {
+          type: 'heading',
+          props: {
+            text: 'Hello {{queries.searchUsers.data.user.profile.name}} from {{params.mode}}',
+            level: 1,
+          },
+        },
+        {
+          type: 'paragraph',
+          props: {
+            text: '{{forms.userSearch.name}} sees {{queries.searchUsers.data.stats.total}} users',
+          },
+        },
+        {
+          type: 'image',
+          props: {
+            src: '/media/{{queries.searchUsers.data.user.profile.avatarFile}}',
+            alt: 'Avatar de {{queries.searchUsers.data.user.profile.name}} {{queries.searchUsers.data.user.profile.nickname}}',
+          },
+        },
+        {
+          type: 'table',
+          props: {
+            headers: ['Metric', 'Value'],
+            rows: [
+              ['Total {{queries.searchUsers.data.stats.total}}', '{{queries.searchUsers.data.stats.missing}}'],
+            ],
+          },
+        },
+        {
+          type: 'table',
+          props: {
+            headers: ['Code', 'Name'],
+            rows: {
+              source: 'queries.searchUsers.data.results',
+              cells: ['{{item.code}}', '{{item.name}} ({{item.status}})'],
+            },
+          },
+        },
+      ],
+    }
+    const navigation = {
+      currentPageId: activePage.id,
+      history: [
+        {
+          entryId: 0,
+          pageId: activePage.id,
+          params: {
+            mode: 'preview',
+          },
+        },
+      ],
+      currentEntryIndex: 0,
+      lastError: null,
+    } satisfies RuntimeState['navigation']
+    const state = createRuntimePageState(
+      activePage,
+      {
+        searchUsers: {
+          status: 'success',
+          data: {
+            user: {
+              profile: {
+                name: 'Ada',
+                avatarFile: 'ada.png',
+              },
+            },
+            stats: {
+              total: 2,
+            },
+            results: [
+              {
+                code: 'A1',
+                name: 'Ada',
+                status: 'active',
+              },
+              {
+                code: 'G2',
+                name: 'Grace',
+              },
+            ],
+          },
+          error: null,
+        },
+      },
+      navigation,
+    )
+
+    renderRuntimePageWithState(activePage, {
+      ...state,
+      forms: {
+        userSearch: {
+          name: {
+            value: 'Grace',
+            error: null,
+            touched: true,
+            dirty: true,
+          },
+        },
+      },
+    })
+
+    expect(screen.getByRole('heading', { name: 'Hello Ada from preview', level: 1 })).toBeInTheDocument()
+    expect(screen.getByText('Grace sees 2 users')).toBeInTheDocument()
+
+    const image = screen.getByRole('img', { name: 'Avatar de Ada' })
+    expect(image).toHaveAttribute('src', '/media/ada.png')
+    expect(image).toHaveAttribute('alt', 'Avatar de Ada ')
+
+    const [manualTable, dynamicTable] = screen.getAllByRole('table')
+    expect(within(manualTable).getAllByRole('cell').map((cell) => cell.textContent)).toEqual(['Total 2', ''])
+    expect(within(dynamicTable).getAllByRole('cell').map((cell) => cell.textContent)).toEqual([
+      'A1',
+      'Ada (active)',
+      'G2',
+      'Grace ()',
+    ])
+  })
+
   it('keeps static and partially interpolated text literal', () => {
     renderRuntimePageWithSeed({
       id: 'literal-text',
@@ -2197,6 +2581,248 @@ describe('RuntimePage', () => {
     expect(buttons[1]).toHaveClass('bg-app-accent', 'text-white', 'sm:px-3.5', 'sm:py-2.5')
     expect(buttons[0]).toHaveTextContent('Aux reset')
     expect(buttons[1]).toHaveTextContent('Submit profile')
+  })
+
+  it('renders interpolated button and form labels from current form state without changing controls', async () => {
+    renderRuntimeFormPage({
+      id: 'interpolated-form-labels',
+      layout: [
+        {
+          type: 'form',
+          id: 'profile-form',
+          children: [
+            {
+              type: 'input',
+              props: {
+                fieldId: 'type',
+                label: 'Type',
+                defaultValue: 'general',
+              },
+            },
+            {
+              type: 'input',
+              props: {
+                fieldId: 'name',
+                label: 'Name for {{forms.profile-form.type}}',
+              },
+            },
+            {
+              type: 'textarea',
+              props: {
+                fieldId: 'bio',
+                label: 'Bio for {{forms.profile-form.type}}',
+              },
+            },
+            {
+              type: 'select',
+              props: {
+                fieldId: 'role',
+                label: 'Role for {{forms.profile-form.type}}',
+                items: {
+                  values: ['admin', 'editor'],
+                },
+              },
+            },
+            {
+              type: 'radioGroup',
+              props: {
+                fieldId: 'contact',
+                label: 'Contact for {{forms.profile-form.type}}',
+                items: [
+                  { label: 'Email', value: 'email' },
+                  { label: 'Phone', value: 'phone' },
+                ],
+              },
+            },
+            {
+              type: 'checkboxGroup',
+              props: {
+                fieldId: 'teams',
+                label: 'Teams for {{forms.profile-form.missing}}',
+                items: {
+                  values: ['alpha', 'beta'],
+                },
+              },
+            },
+            {
+              type: 'button',
+              props: {
+                label: 'Reset {{forms.profile-form.type}}',
+                action: {
+                  type: 'resetForm',
+                  formId: 'profile-form',
+                },
+              },
+            },
+            {
+              type: 'button',
+              props: {
+                label: 'Save {{forms.profile-form.type}}',
+              },
+            },
+          ],
+        },
+      ],
+    })
+
+    const typeInput = await screen.findByLabelText('Type')
+    await waitFor(() => expect(screen.getByLabelText('Name for general')).toBeInTheDocument())
+
+    fireEvent.change(typeInput, { target: { value: 'urgent' } })
+
+    await waitFor(() => expect(screen.getByLabelText('Name for urgent')).toBeInTheDocument())
+    expect(screen.getByLabelText('Bio for urgent')).toBeInTheDocument()
+    expect(screen.getByRole('combobox', { name: 'Role for urgent' })).toHaveAttribute('aria-label', 'Role for urgent')
+    expect(screen.getByRole('group', { name: 'Contact for urgent' })).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: 'Teams for' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Reset urgent' })).toHaveAttribute('type', 'button')
+    expect(screen.getByRole('button', { name: 'Save urgent' })).toHaveAttribute('type', 'submit')
+  })
+
+  it('keeps partial template strings literal in form submitAction query body and headers', async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+
+    renderRuntimeFormPage({
+      id: 'literal-submit-templates',
+      layout: [
+        {
+          type: 'form',
+          id: 'profile-form',
+          submitAction: {
+            type: 'executeOperation',
+            operationName: 'submitProfile',
+            query: {
+              name: 'prefix-{{forms.profile-form.name}}',
+            },
+            headers: {
+              authorization: 'Bearer {{forms.profile-form.name}}',
+            },
+            body: {
+              name: 'prefix-{{forms.profile-form.name}}',
+            },
+          },
+          children: [
+            {
+              type: 'input',
+              props: {
+                fieldId: 'name',
+                label: 'Name',
+                defaultValue: 'Ada',
+              },
+            },
+            {
+              type: 'button',
+              props: {
+                label: 'Submit profile',
+              },
+            },
+          ],
+        },
+      ],
+    })
+
+    await waitFor(() => expect(screen.getByLabelText('Name')).toHaveValue('Ada'))
+    fireEvent.click(screen.getByRole('button', { name: 'Submit profile' }))
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+    expect(fetchMock.mock.calls[0]?.[0]).toBe('/api/profile?name=prefix-%7B%7Bforms.profile-form.name%7D%7D')
+    expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({
+      method: 'POST',
+      headers: {
+        authorization: 'Bearer {{forms.profile-form.name}}',
+        'content-type': 'application/json',
+      },
+    })
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toEqual({
+      name: 'prefix-{{forms.profile-form.name}}',
+    })
+  })
+
+  it('uses repeater item context for interpolated field and button labels', () => {
+    const activePage: RuntimePageConfig = {
+      id: 'interpolated-repeater-labels',
+      layout: [
+        {
+          type: 'button',
+          props: {
+            label: 'Outside {{item.id}}',
+            action: {
+              type: 'goBack',
+            },
+          },
+        },
+        {
+          type: 'form',
+          id: 'post-form',
+          children: [
+            {
+              type: 'repeater',
+              props: {
+                items: {
+                  source: 'queries.posts.data.results',
+                  key: 'id',
+                },
+                template: [
+                  {
+                    type: 'input',
+                    props: {
+                      fieldId: 'note',
+                      label: 'Note {{item.code}}',
+                    },
+                  },
+                  {
+                    type: 'button',
+                    props: {
+                      label: 'Review {{item.id}}',
+                      action: {
+                        type: 'resetForm',
+                        formId: 'post-form',
+                      },
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      ],
+    }
+
+    renderRuntimePageWithState(
+      activePage,
+      createRuntimePageState(activePage, {
+        posts: {
+          status: 'success',
+          data: {
+            results: [
+              {
+                id: 'post-1',
+                code: 'A1',
+              },
+              {
+                id: 'post-2',
+                code: 'G2',
+              },
+            ],
+          },
+          error: null,
+        },
+      }),
+    )
+
+    expect(screen.getByRole('button', { name: 'Outside' })).toHaveAttribute('type', 'button')
+    expect(screen.getByLabelText('Note A1')).toBeInTheDocument()
+    expect(screen.getByLabelText('Note G2')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Review post-1' })).toHaveAttribute('type', 'button')
+    expect(screen.getByRole('button', { name: 'Review post-2' })).toHaveAttribute('type', 'button')
   })
 
   it('keeps form section semantics when a container uses columns and direction together', () => {
@@ -2757,6 +3383,198 @@ describe('RuntimePage', () => {
     ).toEqual(['', 'Ada', 'Grace'])
   })
 
+  it('uses interpolated dynamic select option labels and values as stored and submitted strings', async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+
+    renderRuntimePageWithCollectionControlsAndApi({
+      id: 'dynamic-select-submit',
+      layout: [
+        {
+          type: 'form',
+          id: 'dynamic-choice-form',
+          submitAction: {
+            type: 'executeOperation',
+            operationName: 'submitProfile',
+            body: {
+              userKey: 'forms.dynamic-choice-form.userKey',
+            },
+          },
+          children: [
+            {
+              type: 'select',
+              props: {
+                fieldId: 'userKey',
+                label: 'User',
+                items: {
+                  source: 'queries.searchUsers.data.results',
+                  label: '{{item.id}} - {{item.profile.name}}',
+                  value: '{{item.meta.role}}:{{item.id}}',
+                },
+              },
+            },
+            {
+              type: 'button',
+              props: {
+                label: 'Submit choice',
+              },
+            },
+          ],
+        },
+      ],
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Seed object results' }))
+
+    const select = screen.getByRole('combobox', { name: 'User' })
+    expect(within(select).getAllByRole('option').map((option) => option.textContent)).toEqual([
+      '',
+      'user-1 - Ada',
+      'user-2 - Grace',
+    ])
+
+    fireEvent.change(select, { target: { value: 'Admin:user-1' } })
+    await waitFor(() => expect(select).toHaveValue('Admin:user-1'))
+
+    fireEvent.click(screen.getByRole('button', { name: 'Submit choice' }))
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+    expect(fetchMock.mock.calls[0]?.[0]).toBe('/api/profile')
+    expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({
+      method: 'POST',
+    })
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toEqual({
+      userKey: 'Admin:user-1',
+    })
+  })
+
+  it('updates interpolated option labels and clears invalid selections when forms or queries change', async () => {
+    renderRuntimePageWithCollectionControls({
+      id: 'dynamic-choice-cleanup',
+      layout: [
+        {
+          type: 'form',
+          id: 'option-form',
+          children: [
+            {
+              type: 'input',
+              props: {
+                fieldId: 'prefix',
+                label: 'Prefix',
+                defaultValue: 'A',
+              },
+            },
+            {
+              type: 'select',
+              props: {
+                fieldId: 'choice',
+                label: 'Choice',
+                items: {
+                  source: 'queries.searchUsers.data.results',
+                  label: '{{forms.option-form.prefix}} {{item.profile.name}}/{{item.meta.role}}',
+                  value: '{{forms.option-form.prefix}}:{{item.meta.role}}:{{item.id}}',
+                },
+              },
+            },
+          ],
+        },
+      ],
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Seed object results' }))
+
+    const prefixInput = await screen.findByLabelText('Prefix')
+    const select = screen.getByRole('combobox', { name: 'Choice' })
+
+    expect(within(select).getAllByRole('option').map((option) => option.textContent)).toEqual([
+      '',
+      'A Ada/Admin',
+      'A Grace/Editor',
+    ])
+
+    fireEvent.change(select, { target: { value: 'A:Admin:user-1' } })
+    await waitFor(() => expect(select).toHaveValue('A:Admin:user-1'))
+
+    fireEvent.change(prefixInput, { target: { value: 'B' } })
+
+    await waitFor(() => expect(select).toHaveValue(''))
+    expect(within(select).getAllByRole('option').map((option) => option.textContent)).toEqual([
+      '',
+      'B Ada/Admin',
+      'B Grace/Editor',
+    ])
+
+    fireEvent.change(select, { target: { value: 'B:Admin:user-1' } })
+    await waitFor(() => expect(select).toHaveValue('B:Admin:user-1'))
+
+    fireEvent.click(screen.getByRole('button', { name: 'Seed partial object results' }))
+
+    await waitFor(() => expect(select).toHaveValue(''))
+    expect(within(select).getAllByRole('option').map((option) => option.textContent)).toEqual([
+      '',
+      'B Ada/',
+      'B /',
+      'B Grace/',
+    ])
+  })
+
+  it('keeps historical option arrays stable while allowing interpolated labels and string values', async () => {
+    renderRuntimePage({
+      id: 'historical-choice-options',
+      layout: [
+        {
+          type: 'form',
+          id: 'choice-form',
+          children: [
+            {
+              type: 'input',
+              props: {
+                fieldId: 'prefix',
+                label: 'Prefix',
+                defaultValue: 'A',
+              },
+            },
+            {
+              type: 'select',
+              props: {
+                fieldId: 'legacy',
+                label: 'Legacy',
+                defaultValue: 7,
+                items: [
+                  { label: 'Number {{forms.choice-form.prefix}}', value: 7 },
+                  { label: 'Interpolated {{forms.choice-form.prefix}}', value: '{{forms.choice-form.prefix}}-{{forms.choice-form.missing}}' },
+                  { label: 'Empty {{forms.choice-form.missing}}', value: '{{forms.choice-form.missing}}' },
+                  { label: 'Duplicate one', value: 'dup' },
+                  { label: 'Duplicate two', value: 'dup' },
+                ],
+              },
+            },
+          ],
+        },
+      ],
+    })
+
+    const select = screen.getByRole('combobox', { name: 'Legacy' })
+    await waitFor(() => expect(select).toHaveValue('7'))
+
+    const options = within(select).getAllByRole('option')
+    expect(options.map((option) => option.textContent)).toEqual([
+      'Number A',
+      'Interpolated A',
+      'Empty ',
+      'Duplicate one',
+      'Duplicate two',
+    ])
+    expect(options.map((option) => option.getAttribute('value'))).toEqual(['7', 'A-', '', 'dup', 'dup'])
+  })
+
   it('renders radioGroup and checkboxGroup options from query-backed collections with the shared projection contract', () => {
     renderRuntimePageWithCollectionControls({
       id: 'dynamic-choice-fields',
@@ -2799,6 +3617,67 @@ describe('RuntimePage', () => {
     expect(screen.getAllByRole('radio').map((radio) => radio.getAttribute('value'))).toEqual(['user-1', 'user-2'])
     expect(screen.getAllByRole('radio').map((radio) => radio.parentElement?.textContent)).toEqual(['Ada', 'Grace'])
     expect(screen.getAllByRole('checkbox').map((checkbox) => checkbox.parentElement?.textContent)).toEqual(['Admin', 'Editor'])
+  })
+
+  it('applies interpolated labels and values consistently to radioGroup and checkboxGroup options', () => {
+    renderRuntimePage({
+      id: 'interpolated-choice-groups',
+      layout: [
+        {
+          type: 'form',
+          id: 'choice-groups-form',
+          children: [
+            {
+              type: 'radioGroup',
+              props: {
+                fieldId: 'flag',
+                label: 'Flag',
+                items: {
+                  values: [
+                    {
+                      name: 'Zero',
+                      value: 0,
+                    },
+                    {
+                      name: 'False',
+                      value: false,
+                    },
+                  ],
+                  label: '{{item.name}} {{item.value}}',
+                  value: '{{item.value}}',
+                },
+              },
+            },
+            {
+              type: 'checkboxGroup',
+              props: {
+                fieldId: 'flags',
+                label: 'Flags',
+                items: {
+                  values: [
+                    {
+                      name: 'Zero',
+                      value: 0,
+                    },
+                    {
+                      name: 'False',
+                      value: false,
+                    },
+                  ],
+                  label: '{{item.name}} {{item.value}}',
+                  value: '{{item.value}}',
+                },
+              },
+            },
+          ],
+        },
+      ],
+    })
+
+    expect(screen.getByRole('radio', { name: 'Zero 0' })).toHaveAttribute('value', '0')
+    expect(screen.getByRole('radio', { name: 'False false' })).toHaveAttribute('value', 'false')
+    expect(screen.getByRole('checkbox', { name: 'Zero 0' })).toHaveAttribute('value', '0')
+    expect(screen.getByRole('checkbox', { name: 'False false' })).toHaveAttribute('value', 'false')
   })
 
   it('renders inline choice groups from query-backed collections with the same semantic fieldset structure', () => {
@@ -3139,6 +4018,14 @@ describe('RuntimePage', () => {
               },
             },
             {
+              type: 'input',
+              props: {
+                fieldId: 'greeting',
+                label: 'Greeting',
+                defaultValue: 'Hello {{params.userId}}',
+              },
+            },
+            {
               type: 'select',
               props: {
                 fieldId: 'role',
@@ -3181,6 +4068,7 @@ describe('RuntimePage', () => {
     expect(screen.getByText('edit', { selector: 'p' })).toBeInTheDocument()
     expect(screen.getByLabelText('Nickname')).toHaveValue('user-7')
     expect(screen.getByLabelText('Bio')).toHaveValue('edit')
+    expect(screen.getByLabelText('Greeting')).toHaveValue('Hello {{params.userId}}')
     expect(screen.getByLabelText('Role')).toHaveValue('edit')
   })
 
@@ -3464,14 +4352,13 @@ describe('RuntimePage', () => {
     expect(nextButton).toHaveAttribute('type', 'button')
     expect(previousButton).toBeDisabled()
     expect(nextButton).toBeEnabled()
-    expect(screen.getByText('Página 1 de 3')).toBeInTheDocument()
+    expect(screen.queryByText(/Página/)).not.toBeInTheDocument()
     expect(screen.getAllByText(/First post|Second post/, { selector: 'p' }).map((item) => item.textContent)).toEqual([
       'First post',
       'Second post',
     ])
 
     fireEvent.click(nextButton)
-    expect(screen.getByText('Página 2 de 3')).toBeInTheDocument()
     expect(previousButton).toBeEnabled()
     expect(screen.getAllByText(/Third post|Fourth post/, { selector: 'p' }).map((item) => item.textContent)).toEqual([
       'Third post',
@@ -3479,23 +4366,24 @@ describe('RuntimePage', () => {
     ])
 
     fireEvent.click(nextButton)
-    expect(screen.getByText('Página 3 de 3')).toBeInTheDocument()
     expect(nextButton).toBeDisabled()
     expect(screen.getByText('Fifth post')).toBeInTheDocument()
 
     fireEvent.click(nextButton)
-    expect(screen.getByText('Página 3 de 3')).toBeInTheDocument()
+    expect(screen.getByText('Fifth post')).toBeInTheDocument()
 
     fireEvent.click(previousButton)
-    expect(screen.getByText('Página 2 de 3')).toBeInTheDocument()
     expect(screen.getAllByText(/Third post|Fourth post/, { selector: 'p' }).map((item) => item.textContent)).toEqual([
       'Third post',
       'Fourth post',
     ])
 
     fireEvent.click(previousButton)
-    expect(screen.getByText('Página 1 de 3')).toBeInTheDocument()
     expect(previousButton).toBeDisabled()
+    expect(screen.getAllByText(/First post|Second post/, { selector: 'p' }).map((item) => item.textContent)).toEqual([
+      'First post',
+      'Second post',
+    ])
   })
 
   it('hides repeater pagination controls when no navigation is useful', () => {
@@ -3543,6 +4431,358 @@ describe('RuntimePage', () => {
     expect(screen.queryByRole('button', { name: 'Anterior' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Siguiente' })).not.toBeInTheDocument()
     expect(screen.queryByText(/Página/)).not.toBeInTheDocument()
+  })
+
+  it('renders numbered repeater pagination and selects concrete pages', () => {
+    const activePage: RuntimePageConfig = {
+      id: 'posts',
+      layout: [
+        {
+          type: 'repeater',
+          props: {
+            items: {
+              source: 'queries.posts.data.results',
+              key: 'id',
+            },
+            pagination: {
+              enabled: true,
+              pageSize: 2,
+              controls: {
+                variant: 'numbered',
+              },
+            },
+            template: [
+              {
+                type: 'paragraph',
+                props: {
+                  text: 'item.title',
+                },
+              },
+            ],
+          },
+        },
+      ],
+    }
+
+    renderRuntimePageWithState(
+      activePage,
+      createRuntimePageState(activePage, {
+        posts: {
+          status: 'success',
+          data: {
+            results: [
+              { id: 'post-1', title: 'First post' },
+              { id: 'post-2', title: 'Second post' },
+              { id: 'post-3', title: 'Third post' },
+              { id: 'post-4', title: 'Fourth post' },
+              { id: 'post-5', title: 'Fifth post' },
+            ],
+          },
+          error: null,
+        },
+      }),
+    )
+
+    expect(screen.getByRole('button', { name: 'Primera' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Anterior' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: '1' })).toHaveAttribute('aria-current', 'page')
+    expect(screen.queryByText(/Página/)).not.toBeInTheDocument()
+    expect(screen.getAllByText(/First post|Second post/, { selector: 'p' }).map((item) => item.textContent)).toEqual([
+      'First post',
+      'Second post',
+    ])
+
+    fireEvent.click(screen.getByRole('button', { name: '2' }))
+    expect(screen.getByRole('button', { name: '2' })).toHaveAttribute('aria-current', 'page')
+    expect(screen.getAllByText(/Third post|Fourth post/, { selector: 'p' }).map((item) => item.textContent)).toEqual([
+      'Third post',
+      'Fourth post',
+    ])
+
+    fireEvent.click(screen.getByRole('button', { name: 'Última' }))
+    expect(screen.getByRole('button', { name: 'Siguiente' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Última' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: '3' })).toHaveAttribute('aria-current', 'page')
+    expect(screen.getByText('Fifth post')).toBeInTheDocument()
+    expect(screen.queryByText('Fourth post')).not.toBeInTheDocument()
+  })
+
+  it('hides numbered pagination controls when only one page is effective', () => {
+    const activePage: RuntimePageConfig = {
+      id: 'posts',
+      layout: [
+        {
+          type: 'repeater',
+          props: {
+            items: {
+              source: 'queries.posts.data.results',
+              key: 'id',
+            },
+            pagination: {
+              enabled: true,
+              pageSize: 5,
+              controls: {
+                variant: 'numbered',
+              },
+            },
+            template: [
+              {
+                type: 'paragraph',
+                props: {
+                  text: 'item.title',
+                },
+              },
+            ],
+          },
+        },
+      ],
+    }
+
+    renderRuntimePageWithState(
+      activePage,
+      createRuntimePageState(activePage, {
+        posts: {
+          status: 'success',
+          data: {
+            results: [{ id: 'post-1', title: 'First post' }],
+          },
+          error: null,
+        },
+      }),
+    )
+
+    expect(screen.getByText('First post')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Primera' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '1' })).not.toBeInTheDocument()
+    expect(screen.queryByText(/Página/)).not.toBeInTheDocument()
+  })
+
+  it('renders a compact numbered pagination window for more than five pages', () => {
+    const activePage: RuntimePageConfig = {
+      id: 'posts',
+      layout: [
+        {
+          type: 'repeater',
+          props: {
+            items: {
+              source: 'queries.posts.data.results',
+              key: 'id',
+            },
+            pagination: {
+              enabled: true,
+              pageSize: 1,
+              controls: {
+                variant: 'numbered',
+              },
+            },
+            template: [
+              {
+                type: 'paragraph',
+                props: {
+                  text: 'item.title',
+                },
+              },
+            ],
+          },
+        },
+      ],
+    }
+
+    renderRuntimePageWithState(
+      activePage,
+      createRuntimePageState(activePage, {
+        posts: {
+          status: 'success',
+          data: {
+            results: Array.from({ length: 8 }, (_, index) => ({
+              id: `post-${index + 1}`,
+              title: `Post ${index + 1}`,
+            })),
+          },
+          error: null,
+        },
+      }),
+    )
+
+    expect(screen.getAllByRole('button').map((button) => button.textContent)).toEqual([
+      'Primera',
+      'Anterior',
+      '1',
+      '2',
+      '3',
+      '4',
+      '5',
+      'Siguiente',
+      'Última',
+    ])
+
+    fireEvent.click(screen.getByRole('button', { name: 'Última' }))
+
+    expect(screen.getAllByRole('button').map((button) => button.textContent)).toEqual([
+      'Primera',
+      'Anterior',
+      '4',
+      '5',
+      '6',
+      '7',
+      '8',
+      'Siguiente',
+      'Última',
+    ])
+    expect(screen.getByText('Post 8')).toBeInTheDocument()
+  })
+
+  it('renders scroll pagination with a local fallback action when IntersectionObserver is unavailable', () => {
+    vi.stubGlobal('IntersectionObserver', undefined)
+    const activePage: RuntimePageConfig = {
+      id: 'posts',
+      layout: [
+        {
+          type: 'repeater',
+          props: {
+            items: {
+              source: 'queries.posts.data.results',
+              key: 'id',
+            },
+            pagination: {
+              enabled: true,
+              pageSize: 2,
+              controls: {
+                variant: 'scroll',
+              },
+            },
+            template: [
+              {
+                type: 'paragraph',
+                props: {
+                  text: 'item.title',
+                },
+              },
+            ],
+          },
+        },
+      ],
+    }
+
+    renderRuntimePageWithState(
+      activePage,
+      createRuntimePageState(activePage, {
+        posts: {
+          status: 'success',
+          data: {
+            results: [
+              { id: 'post-1', title: 'First post' },
+              { id: 'post-2', title: 'Second post' },
+              { id: 'post-3', title: 'Third post' },
+              { id: 'post-4', title: 'Fourth post' },
+              { id: 'post-5', title: 'Fifth post' },
+            ],
+          },
+          error: null,
+        },
+      }),
+    )
+
+    expect(screen.getAllByText(/First post|Second post/, { selector: 'p' }).map((item) => item.textContent)).toEqual([
+      'First post',
+      'Second post',
+    ])
+    expect(screen.queryByText('Third post')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Mostrar más' }))
+    expect(screen.getAllByText(/First post|Second post|Third post|Fourth post/, { selector: 'p' })).toHaveLength(4)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Mostrar más' }))
+    expect(screen.getByText('Fifth post')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Mostrar más' })).not.toBeInTheDocument()
+
+    vi.unstubAllGlobals()
+  })
+
+  it('advances scroll pagination through IntersectionObserver and removes the sentinel at the end', () => {
+    let observerCallback: IntersectionObserverCallback | null = null
+    const observe = vi.fn()
+    const disconnect = vi.fn()
+
+    vi.stubGlobal(
+      'IntersectionObserver',
+      vi.fn((callback: IntersectionObserverCallback) => {
+        observerCallback = callback
+
+        return {
+          observe,
+          disconnect,
+          unobserve: vi.fn(),
+          takeRecords: vi.fn(() => []),
+        }
+      }),
+    )
+
+    const activePage: RuntimePageConfig = {
+      id: 'posts',
+      layout: [
+        {
+          type: 'repeater',
+          props: {
+            items: {
+              source: 'queries.posts.data.results',
+              key: 'id',
+            },
+            pagination: {
+              enabled: true,
+              pageSize: 2,
+              controls: {
+                variant: 'scroll',
+              },
+            },
+            template: [
+              {
+                type: 'paragraph',
+                props: {
+                  text: 'item.title',
+                },
+              },
+            ],
+          },
+        },
+      ],
+    }
+
+    renderRuntimePageWithState(
+      activePage,
+      createRuntimePageState(activePage, {
+        posts: {
+          status: 'success',
+          data: {
+            results: [
+              { id: 'post-1', title: 'First post' },
+              { id: 'post-2', title: 'Second post' },
+              { id: 'post-3', title: 'Third post' },
+              { id: 'post-4', title: 'Fourth post' },
+              { id: 'post-5', title: 'Fifth post' },
+            ],
+          },
+          error: null,
+        },
+      }),
+    )
+
+    expect(observe).toHaveBeenCalled()
+    expect(document.querySelector('[data-layout-node="repeater-scroll-sentinel"]')).toBeInTheDocument()
+
+    act(() => {
+      observerCallback?.([{ isIntersecting: true } as IntersectionObserverEntry], {} as IntersectionObserver)
+    })
+    expect(screen.getAllByText(/First post|Second post|Third post|Fourth post/, { selector: 'p' })).toHaveLength(4)
+
+    act(() => {
+      observerCallback?.([{ isIntersecting: true } as IntersectionObserverEntry], {} as IntersectionObserver)
+    })
+    expect(screen.getByText('Fifth post')).toBeInTheDocument()
+    expect(document.querySelector('[data-layout-node="repeater-scroll-sentinel"]')).not.toBeInTheDocument()
+    expect(disconnect).toHaveBeenCalled()
+
+    vi.unstubAllGlobals()
   })
 
   it('renders repeater pagination controls as a full row inside effective grids', () => {
@@ -3655,7 +4895,6 @@ describe('RuntimePage', () => {
     const { rerender } = renderRuntimePageWithState(activePage, firstState)
 
     fireEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
-    expect(screen.getByText('Página 2 de 2')).toBeInTheDocument()
     expect(screen.getByText('Third post')).toBeInTheDocument()
 
     const replacementState = createRuntimePageState(activePage, {
@@ -3687,7 +4926,6 @@ describe('RuntimePage', () => {
       </RuntimeStateContext.Provider>,
     )
 
-    expect(screen.getByText('Página 1 de 2')).toBeInTheDocument()
     expect(screen.getByText('New first post')).toBeInTheDocument()
     expect(screen.getByText('New second post')).toBeInTheDocument()
     expect(screen.queryByText('New third post')).not.toBeInTheDocument()
@@ -3742,7 +4980,8 @@ describe('RuntimePage', () => {
     const { rerender } = renderRuntimePageWithState(initialPage, state)
 
     fireEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
-    expect(screen.getByText('Página 2 de 3')).toBeInTheDocument()
+    expect(screen.getByText('Third post')).toBeInTheDocument()
+    expect(screen.getByText('Fourth post')).toBeInTheDocument()
 
     const resizedPage = createPage(3)
     const resizedConfig: RuntimeConfig = {
@@ -3766,7 +5005,6 @@ describe('RuntimePage', () => {
       </RuntimeStateContext.Provider>,
     )
 
-    expect(screen.getByText('Página 1 de 2')).toBeInTheDocument()
     expect(screen.getAllByText(/First post|Second post|Third post/, { selector: 'p' }).map((item) => item.textContent)).toEqual([
       'First post',
       'Second post',
@@ -3852,8 +5090,7 @@ describe('RuntimePage', () => {
     expect(screen.getByText('Secondary one')).toBeInTheDocument()
     expect(screen.getByText('Secondary two')).toBeInTheDocument()
     expect(screen.queryByText('Secondary three')).not.toBeInTheDocument()
-    expect(screen.getAllByText('Página 1 de 2')).toHaveLength(1)
-    expect(screen.getAllByText('Página 2 de 2')).toHaveLength(1)
+    expect(screen.queryByText(/Página/)).not.toBeInTheDocument()
   })
 
   it('renders scalar repeater items and degrades to zero iterations for missing, failed, or non-array sources', () => {

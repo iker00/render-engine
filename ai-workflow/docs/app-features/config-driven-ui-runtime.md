@@ -1,7 +1,7 @@
 # Runtime UI configurable
 
 ## Objetivo
-Renderizar el runtime a partir de una configuración JSON validada, apoyado ya en un estado compartido por instancia para navegación, formularios y queries, con una frontera declarativa real para ejecutar operaciones remotas, dispararlas automáticamente al entrar en página, activarlas desde botones o desde submit de formularios, permitir request params por ejecución sobre una operación `api` base, transportar params de navegación interna por entrada, expandir subárboles completos con `repeater`, paginar localmente colecciones de `repeater`, mostrar imágenes simples y tablas básicas de lectura, y condicionar la salida visible de cada nodo tanto por estado de query como por valores ya presentes en el propio runtime sin acoplar la UI a HTTP. El catálogo estable de formularios ya cubre selección simple y múltiple sobre una semántica compartida de opciones y se apoya en una baseline institucional ya compactada para reducir densidad vertical sin reabrir el lenguaje visual base.
+Renderizar el runtime a partir de una configuración JSON validada, apoyado ya en un estado compartido por instancia para navegación, formularios y queries, con una frontera declarativa real para ejecutar operaciones remotas, dispararlas automáticamente al entrar en página, activarlas desde botones o desde submit de formularios, permitir request params por ejecución sobre una operación `api` base, transportar params de navegación interna por entrada, expandir subárboles completos con `repeater`, paginar localmente colecciones de `repeater` con variantes de controles, mostrar imágenes simples y tablas básicas de lectura, interpolar texto visible acotado con `{{...}}` y condicionar la salida visible de cada nodo tanto por estado de query como por valores ya presentes en el propio runtime sin acoplar la UI a HTTP. El catálogo estable de formularios ya cubre selección simple y múltiple sobre una semántica compartida de opciones y se apoya en una baseline institucional ya compactada para reducir densidad vertical sin reabrir el lenguaje visual base.
 
 ## Qué resuelve
 - Permite que la configuración declare varias páginas y resolver la visible desde el hash del navegador o, en ausencia de hash válido, desde `initialPage`.
@@ -11,15 +11,15 @@ Renderizar el runtime a partir de una configuración JSON validada, apoyado ya e
 - Sustituye el shell provisional por una página visible renderizada desde configuración.
 - Mantiene una estructura interna separada entre validación de configuración, render de colecciones y piezas concretas por nodo soportado.
 - Mantiene un store compartido por instancia para navegación, formularios y queries, con aislamiento entre runtimes montados a la vez.
-- Resuelve referencias dinámicas desde una capa central del runtime para las superficies textuales ya soportadas.
+- Resuelve referencias dinámicas e interpolación parcial `{{...}}` desde una capa central del runtime para las superficies visibles soportadas.
 - Ejecuta operaciones remotas declaradas en `api` mediante una capa dedicada en `src/queries/` y refleja sus resultados en `queries.{operationName}`.
 - Formaliza `api.headers` como parte estable del contrato declarativo y permite que cada ejecución añada `query`, `body` y `headers` sin redefinir otra operación `api`.
 - Permite que cada página declare `preloads` como requests declarativas por operación, las compare por firma efectiva y las dispare automáticamente al entrar, con un estado agregado `pageEntry` latest-only para la tanda activa y preparación previa de carga fresca solo para las queries realmente relanzadas.
 - Expone una capa común de acciones UI del runtime para que los nodos interactivos deleguen navegación, ejecución remota y reset de formularios sin lógica imperativa específica en el propio nodo visual.
 - Permite que `navigateTo` transporte params escalares por entrada, los refleje en el hash canónico del navegador, que `goBack` restaure esa entrada completa desde el historial real y que `preloads` dependan de la reentrada observable real y de su request efectiva, no solo del `pageId`, reaplicando su limpieza selectiva por firma en cada nueva `pageEntry`.
-- Añade `repeater` como nodo estructural para repetir un `template` completo por item de una colección `queries.*`, con identidad declarativa por `props.items.key`, paginación local opcional mediante `props.pagination` y degradación a cero iteraciones cuando la colección no está disponible o no es un array.
-- Añade `image` como nodo hoja para renderizar `<img>` con `src` y `alt` literales o resueltos desde referencias runtime completas, con degradación segura a no render cuando `src` no produce un string utilizable y fallback de `alt` a string vacío.
-- Añade `table` como nodo hoja para tablas semánticas de lectura con cabeceras ordenadas y filas manuales o dinámicas, reutilizando `queries.*` e `item.*` sin abrir plantillas ricas por celda y degradando a cero filas o a celdas vacías cuando faltan datos.
+- Añade `repeater` como nodo estructural para repetir un `template` completo por item de una colección `queries.*`, con identidad declarativa por `props.items.key`, paginación local opcional mediante `props.pagination`, variantes de controles `previousNext`, `numbered` y `scroll`, y degradación a cero iteraciones cuando la colección no está disponible o no es un array.
+- Añade `image` como nodo hoja para renderizar `<img>` con `src` y `alt` literales, resueltos desde referencias runtime completas o interpolados parcialmente, con degradación segura a no render cuando `src` no produce un string utilizable y fallback de `alt` a string vacío.
+- Añade `table` como nodo hoja para tablas semánticas de lectura con cabeceras ordenadas y filas manuales o dinámicas, reutilizando `queries.*` e `item.*` en referencias completas o placeholders visibles y degradando a cero filas o a celdas vacías cuando faltan datos.
 - Permite que cualquier nodo soportado declare `queryStateFeedback` para mostrarse, ocultarse o sustituirse por un fallback local según `idle | loading | error | empty | success`.
 - Permite que `item` e `item.*` existan solo dentro del subárbol iterado de un `repeater`, reutilizando la misma semántica de navegación segura por objetos y arrays ya fijada para `queries.{queryName}.data.*`.
 - Permite que cualquier nodo soportado declare `visibility` para mostrarse u ocultarse según valores de `forms.*`, `queries.*` y `item.*` cuando exista contexto de iteración, con una semántica compartida entre renderer y formularios.
@@ -70,10 +70,13 @@ Reglas funcionales vigentes:
 - Solo `container` admite `children`.
 - `container.props` soporta `direction`, `gap`, `columns`, `variant`, `align`, `justify` y `wrap`.
 - cualquier nodo soportado del árbol `layout` puede declarar `layout.span` como ocupación de grid transversal, pero solo tiene efecto visible dentro de un `container` cuyo layout efectivo use `columns`.
-- `repeater.props.items.source` solo admite `queries.{queryName}.data` o `queries.{queryName}.data.*`, `repeater.props.items.key` exige una ruta relativa no vacía al item actual, `repeater.props.pagination` puede activar paginación local en cliente y `repeater.props.template` reutiliza una colección `LayoutNode[]` sin `children`.
+- `repeater.props.items.source` solo admite `queries.{queryName}.data` o `queries.{queryName}.data.*`, `repeater.props.items.key` exige una ruta relativa no vacía al item actual, `repeater.props.pagination` puede activar paginación local en cliente con variantes cerradas de controles y `repeater.props.template` reutiliza una colección `LayoutNode[]` sin `children`.
 - `repeater` no paginado no introduce markup propio: expande su `template` como hermanos por iteración y omite cualquier item cuya key efectiva sea ausente, no escalar o duplicada, con diagnóstico en desarrollo.
-- `repeater` paginado aplica la paginación después de filtrar las iteraciones renderizables por key válida y única, mantiene `item.*` apuntando al item original visible, muestra controles mínimos `Anterior`/`Siguiente` con indicador `Página n de m` solo cuando hay más de una página, y conserva estado de página local e independiente por instancia.
-- La página activa de un `repeater` paginado vuelve a la primera página cuando cambia la colección resuelta o `pageSize`; navegar entre páginas no modifica `queries.*`, `pageEntry`, formularios, navegación ni dispara red.
+- `repeater` paginado aplica la paginación después de filtrar las iteraciones renderizables por key válida y única, mantiene `item.*` apuntando al item original visible y conserva estado local e independiente por instancia.
+- La variante `previousNext` es el default efectivo cuando `controls` o `controls.variant` se omiten y muestra controles mínimos `Anterior`/`Siguiente` cuando hay más de una página efectiva.
+- La variante `numbered` muestra `Primera`, `Anterior`, una ventana compacta de hasta cinco páginas numeradas, `Siguiente` y `Última`; la página activa queda identificada visualmente y con `aria-current="page"`, sin texto auxiliar de posición.
+- La variante `scroll` muestra inicialmente hasta `pageSize` items renderizables y amplía la ventana visible por bloques acumulados del mismo tamaño al alcanzar un sentinel observado; cuando el navegador no soporta `IntersectionObserver`, degrada a una acción local `Mostrar más`.
+- La página activa o cantidad visible de un `repeater` paginado vuelve a la posición inicial cuando cambia la colección resuelta, `pageSize` o la variante de controles; navegar o avanzar localmente no modifica `queries.*`, `pageEntry`, formularios, navegación ni dispara red.
 - Un `container` sin `gap` declarado usa `md` como separación visible por defecto.
 - Los alias estables de `container.props.gap` soportados hoy (`sm`, `md`, `lg`, `xl`, `2xl`) se resuelven a clases estables de `Tailwind`.
 - Un valor arbitrario de `container.props.gap` sigue siendo válido mediante una excepción acotada: clase `Tailwind` con variable CSS local, sin volver a estilos inline completos.
@@ -83,23 +86,23 @@ Reglas funcionales vigentes:
 - `container.props.wrap` solo aplica en modo lineal (`flex`); su default efectivo es `nowrap` y no se admite junto con `columns`.
 - Dentro de `form`, un `container` conserva la superficie visual de sección solo cuando actúa como bloque vertical por defecto o cuando declara `columns`; si declara `direction: row` sin `columns`, se mantiene como layout lineal `plain` sin sangrado lateral ni márgenes negativos implícitos, y si además declara `variant: card`, la tarjeta sustituye visualmente a esa superficie implícita para evitar doble marco.
 - `layout.span` se aplica desde el borde central del renderer con un wrapper ligero solo para nodos visibles distintos de `repeater`; fuera de un grid efectivo no produce efecto, y dentro de grid se clampa al número de columnas del padre antes de emitir `col-span-*`.
-- `heading.props` soporta `text` y `level`.
-- `paragraph.props` soporta `text`.
+- `heading.props` soporta `text` y `level`; `text` admite literal, referencia completa o interpolación parcial visible.
+- `paragraph.props` soporta `text`; `text` admite literal, referencia completa o interpolación parcial visible.
 - El shell visible del runtime mantiene el mismo marco institucional, pero con menos padding exterior e interior para que la página útil entre antes en pantalla.
 - `heading` y `paragraph` conservan su jerarquía semántica actual, pero con una escala tipográfica y un bloque introductorio más contenidos que en la baseline previa.
-- `list.props` soporta `items` como array histórico de strings o como origen declarativo manual/dinámico de colecciones escalares u objeto.
-- `image.props` soporta `src` y `alt` como strings obligatorios; ambos reutilizan la convención central de literal o referencia runtime completa, `src` solo renderiza la imagen cuando resuelve un string no vacío y `alt` degrada a string vacío si no hay valor textual visible.
-- `table.props` soporta `headers` como colección ordenada obligatoria y `rows` como unión exclusiva entre un modo manual `Array<Array<string | number | boolean>>` y un modo dinámico `{ source, cells }`; `source` reutiliza la misma familia de colecciones soportada por `list` y `select`, `cells` conserva el orden de columnas y cada celda string reutiliza la misma semántica visible compartida de literal o referencia completa.
-- `button.props` soporta `label` y `action`, con `navigateTo`, `goBack`, `executeOperation` y `resetForm` como acciones declarativas vigentes; `navigateTo` puede añadir `params` escalares por entrada y escribirlos en `#/pageId?...` o `#/?...` para la home funcional; `executeOperation` puede aportar `query`, `body` y `headers` por ejecución; dentro de un `form`, un botón sin `action` actúa como submit implícito.
+- `list.props` soporta `items` como array histórico de strings o como origen declarativo manual/dinámico de colecciones escalares u objeto; los strings visibles directos y `itemText` pueden interpolar placeholders.
+- `image.props` soporta `src` y `alt` como strings obligatorios; ambos reutilizan la convención central de literal, referencia runtime completa o interpolación parcial, `src` solo renderiza la imagen cuando resuelve un string no vacío y `alt` degrada a string vacío si no hay valor textual visible.
+- `table.props` soporta `headers` como colección ordenada obligatoria y `rows` como unión exclusiva entre un modo manual `Array<Array<string | number | boolean>>` y un modo dinámico `{ source, cells }`; `source` reutiliza la misma familia de colecciones soportada por `list` y `select`, `cells` conserva el orden de columnas y cada celda string reutiliza la misma semántica visible compartida de literal, referencia completa o interpolación parcial.
+- `button.props` soporta `label` y `action`; `label` admite literal, referencia completa o interpolación parcial visible, y `action` cubre `navigateTo`, `goBack`, `executeOperation` y `resetForm`; `navigateTo` puede añadir `params` escalares por entrada y escribirlos en `#/pageId?...` o `#/?...` para la home funcional; `executeOperation` puede aportar `query`, `body` y `headers` por ejecución; dentro de un `form`, un botón sin `action` actúa como submit implícito.
 - `form` renderiza un `<form>` real, hereda un contexto estable de `formId` a sus descendientes, inicializa solo los campos todavía ausentes en el store, elimina por defecto `forms.{formId}` al desmontarse realmente y puede ejecutar `submitAction.type: executeOperation` con `query`, `body` y `headers` por envío.
 - `form.persistOnUnmount: true` convierte esa limpieza por desmontaje en una excepción opt-in para conservar la persistencia histórica de un formulario concreto dentro de la misma instancia del runtime.
-- `input`, `textarea`, `select`, `radioGroup` y `checkboxGroup` leen y escriben exclusivamente en `forms.{formId}.{fieldId}` y comparten una base visual accesible con estado de error, foco por `ring` y sin sombra propia en los controles.
+- `input`, `textarea`, `select`, `radioGroup` y `checkboxGroup` leen y escriben exclusivamente en `forms.{formId}.{fieldId}`; sus labels admiten literal, referencia completa o interpolación parcial visible y comparten una base visual accesible con estado de error, foco por `ring` y sin sombra propia en los controles.
 - `input` ya soporta también `number`, `date` y `datetime-local` además del catálogo textual inicial.
-- `select` soporta items históricos estáticos y también orígenes declarativos manuales o dinámicos de escalares u objetos; normaliza internamente a string los valores efectivos y deja el valor vigente vacío cuando ya no coincide con ninguna opción disponible.
+- `select` soporta items históricos estáticos y también orígenes declarativos manuales o dinámicos de escalares u objetos; sus labels y values string de opción pueden interpolarse parcialmente, se normalizan internamente a string los valores efectivos y el valor vigente queda vacío cuando ya no coincide con ninguna opción disponible.
 - `select.props.multiple` activa una semántica de selección múltiple basada en `string[]`, con el mismo orden estable del catálogo efectivo visible y la misma limpieza automática de valores ya inválidos.
 - `radioGroup` reutiliza exactamente la misma semántica de opciones y selección simple que `select` simple.
 - `checkboxGroup` reutiliza exactamente la misma semántica de opciones y selección múltiple que `select.multiple`.
-- `list`, `select`, `radioGroup` y `checkboxGroup` pueden seguir leyendo colecciones desde `queries.*` y además aceptar `item.*` como `source` cuando están dentro de un `repeater`.
+- `list`, `select`, `radioGroup` y `checkboxGroup` pueden seguir leyendo colecciones desde `queries.*` y además aceptar `item.*` como `source` cuando están dentro de un `repeater`; en proyecciones por objeto, `item` e `item.*` apuntan al item local que se está materializando.
 - cualquier nodo soportado puede combinar `queryStateFeedback` y `visibility`; si ambos existen, el runtime resuelve primero `queryStateFeedback` y solo evalúa `visibility` cuando la rama principal sigue visible.
 - `heading`, `paragraph`, `list`, `image` y `table` usan clases base estables de `Tailwind` para mantener jerarquía, legibilidad y la baseline institucional compacta del runtime.
 - `button` se renderiza como control accesible y delega sus acciones al ejecutor común del runtime, manteniendo los efectos visibles dentro de los dominios compartidos de navegación, queries y formularios.
@@ -118,9 +121,9 @@ Reglas funcionales vigentes:
 - `src/queries/` concentra también la composición final entre la operación `api` base y los request params por ejecución, incluida la semántica estable de merge para `query`, `body` y `headers`.
 - `src/app/index.css` centraliza los tokens visuales globales del runtime con `@theme` de `Tailwind CSS v4`.
 - `src/runtime/runtime-node-styling.ts` centraliza la convención visual base, la selección entre modos `flex` y `grid`, la heurística `plain | form-section` para `container` dentro de `form`, la variante cerrada `card`, el mapeo de `columns`, `align`, `justify` y `wrap`, la compatibilidad acotada de `gap` y el cálculo de `col-span-*` con clamp seguro al grid padre.
-- `src/runtime/runtime-references/` centraliza parsing, resolución y diagnóstico de referencias string del runtime, incluido el namespace `item` limitado al contexto de iteración y la normalización visible compartida de `image` y celdas de `table`.
-- `src/runtime/runtime-collection-sources.ts` concentra la resolución compartida de colecciones efectivas para `list`, `select`, `radioGroup`, `checkboxGroup` y las filas dinámicas de `table`, incluyendo degradación a vacío, proyección declarativa por item, soporte de `item.*` dentro de `repeater` y normalización común de selección simple o múltiple.
-- `src/runtime/runtime-collection-pagination.ts` concentra la derivación reusable de paginación local de colecciones, incluyendo total de items, total de páginas, límites de anterior/siguiente, página visible normalizada y materialización de páginas por colección y `pageSize`.
+- `src/runtime/runtime-references/` centraliza parsing, interpolación parcial, resolución y diagnóstico de referencias string del runtime, incluido el namespace `item` limitado al contexto de iteración y la normalización visible compartida de textos, labels, `image`, `table` y proyecciones de colección.
+- `src/runtime/runtime-collection-sources.ts` concentra la resolución compartida de colecciones efectivas para `list`, `select`, `radioGroup`, `checkboxGroup` y las filas dinámicas de `table`, incluyendo degradación a vacío, proyección declarativa por item, soporte de `item.*` dentro de `repeater`, contexto `item` local para proyecciones interpoladas y normalización común de selección simple o múltiple.
+- `src/runtime/runtime-collection-pagination.ts` concentra la derivación reusable de paginación local de colecciones, incluyendo total de items, total de páginas, límites de anterior/siguiente, página visible normalizada, ventana numerada compacta, ventana incremental de scroll y materialización de páginas por colección y `pageSize`.
 - `src/queries/` concentra la construcción de requests, la ejecución contra `fetch` y la normalización de errores remotos.
 - `src/runtime/runtime-state/` concentra el provider, reducer, tipos, selectors y acciones del estado compartido del runtime.
 - `src/runtime/nodes/form-layout-node.tsx` fija hoy la frontera visible entre rerender, ocultación y desmontaje real del formulario, y usa el store compartido para distinguir entre resetear un formulario existente y eliminarlo completo.
@@ -129,9 +132,23 @@ Reglas funcionales vigentes:
 - `src/runtime/nodes/` contiene una pieza concreta por nodo soportado hoy: `container`, `repeater`, `heading`, `paragraph`, `list`, `image`, `table`, `button`, `form`, `input`, `textarea`, `select`, `radioGroup` y `checkboxGroup`.
 
 ## Referencias dinámicas ya activas
-El runtime resuelve hoy referencias completas en:
+El runtime resuelve hoy referencias completas o placeholders parciales `{{...}}` en:
 - `heading.props.text`
 - `paragraph.props.text`
+- `button.props.label`
+- `input.props.label`
+- `textarea.props.label`
+- `select.props.label`
+- `radioGroup.props.label`
+- `checkboxGroup.props.label`
+- strings visibles de `list.props.items`
+- `list.props.items.itemText`
+- `select.props.items.label`
+- `select.props.items.value`
+- `radioGroup.props.items.label`
+- `radioGroup.props.items.value`
+- `checkboxGroup.props.items.label`
+- `checkboxGroup.props.items.value`
 - `image.props.src`
 - `image.props.alt`
 - celdas string de `table` en modo manual o dinámico
@@ -148,9 +165,11 @@ Contrato visible vigente:
 - `queries.{queryName}.data.{segmentosAnidados}`
 
 Límites funcionales de esa capa:
-- no existe interpolación parcial dentro de strings
+- la interpolación parcial solo existe en el catálogo visible anterior y usa placeholders `{{referencia}}`
+- cada placeholder no resoluble, inválido, ausente o no renderizable se sustituye por string vacío, conservando el texto literal que lo rodea
+- `string`, `number`, `boolean`, `0` y `false` se convierten a texto visible; objetos, arrays, `null` y `undefined` no se renderizan dentro de placeholders
 - la navegación anidada solo se permite bajo `queries.{queryName}.data`
-- `item.*` solo existe dentro del subárbol iterado de un `repeater`
+- `item.*` existe dentro del subárbol iterado de un `repeater` y como contexto local de cada proyección interpolada de listas, opciones y filas dinámicas de tabla
 - objetos y arrays pueden recorrerse de izquierda a derecha con una única semántica central
 - `params.*` solo admite `params.{paramName}` y no abre navegación anidada adicional
 - cuando nace de la URL, `params.*` expone siempre strings ya normalizados desde el hash canónico
@@ -174,6 +193,8 @@ Además, el runtime reutiliza la misma convención de referencias completas en:
 - `repeater.props.items.key`
 - `visibility.reference`
 
+Estas superficies siguen fuera del catálogo de interpolación parcial: si declaran `prefix-{{params.userId}}`, se tratan como literales o como contratos inválidos según la semántica histórica de cada consumidor.
+
 ## Comportamiento de errores
 - Si `initialPage` no coincide con ninguna página declarada, el runtime muestra un error visible.
 - Si un botón `navigateTo` apunta a una página inexistente, el runtime rechaza el config antes del render con una ruta diagnóstica del árbol afectado.
@@ -194,7 +215,8 @@ Además, el runtime reutiliza la misma convención de referencias completas en:
 - El runtime sigue intencionadamente acotado a hash routing simple y no abre un router general por `pathname`, subrutas ni segmentos dinámicos.
 - El runtime no expone todavía theming ni personalización visual declarativa desde JSON; la capa estable actual se limita a tokens globales en CSS y a la gramática compartida codificada en el propio runtime.
 - `layout.span` sigue intencionadamente acotado a semántica de grid sobre `columns`; no existe soporte responsive por breakpoint, widths libres para layouts `flex` ni wrapper visible propio en `repeater`, salvo el bloque de controles de paginación que ocupa fila completa dentro de grids efectivos.
-- La paginación disponible es solo local para `repeater`; `table` no pagina todavía, no existe selector de tamaño, números de página, salto directo, infinite scroll, virtualización, metadatos remotos ni paginación por cursor.
+- La paginación disponible es solo local para `repeater`; `table` no pagina todavía, no existe selector de tamaño, salto directo, virtualización, metadatos remotos, paginación por cursor ni carga incremental remota.
+- La interpolación parcial no abre expresiones, operadores, filtros, formateadores, condicionales, i18n, pluralización ni escape propio para mostrar delimitadores `{{` o `}}`.
 
 ## Cómo ampliar contexto
 Esta ficha resume el runtime declarativo de forma global, pero no debe actuar como índice hacia todas las demás fichas.

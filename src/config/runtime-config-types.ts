@@ -112,7 +112,7 @@ export interface ContainerLayoutNode extends LayoutNodeFeedbackFields, LayoutNod
   children?: LayoutNode[]
 }
 
-export type RuntimeCollectionPaginationControlsVariant = 'previousNext'
+export type RuntimeCollectionPaginationControlsVariant = 'previousNext' | 'numbered' | 'scroll'
 
 export interface RuntimeCollectionPaginationControlsConfig {
   variant?: RuntimeCollectionPaginationControlsVariant

@@ -25,7 +25,7 @@ export const supportedContainerJustifyValues = ['start', 'center', 'end', 'betwe
 export const supportedContainerWrapValues = ['nowrap', 'wrap', 'wrap-reverse'] as const
 export const supportedContainerVariantValues = ['default', 'card'] as const
 export const supportedChoiceGroupOptionLayoutValues = ['vertical', 'inline'] as const
-export const supportedCollectionPaginationControlsVariants = ['previousNext'] as const
+export const supportedCollectionPaginationControlsVariants = ['previousNext', 'numbered', 'scroll'] as const
 
 const nonEmptyStringSchema = z.string().refine((value) => value.trim().length > 0)
 const nodeIdSchema = nonEmptyStringSchema

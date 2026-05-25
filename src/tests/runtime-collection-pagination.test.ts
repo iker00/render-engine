@@ -1,5 +1,9 @@
 import { describe, expect, it, vi } from 'vitest'
-import { createCollectionPaginationModel } from '../runtime/runtime-collection-pagination'
+import {
+  createCollectionPaginationModel,
+  createCollectionScrollWindow,
+  createNumberedPaginationWindow,
+} from '../runtime/runtime-collection-pagination'
 
 describe('createCollectionPaginationModel', () => {
   it('derives empty pagination state without navigable pages', () => {
@@ -89,6 +93,82 @@ describe('createCollectionPaginationModel', () => {
     const model = createCollectionPaginationModel(items, 2)
 
     expect(model.getPage(1).visibleItems).toEqual(['one', 'two'])
+    expect(items).toEqual(['one', 'two', 'three'])
+  })
+})
+
+describe('createNumberedPaginationWindow', () => {
+  it('returns every page when the total fits the compact window', () => {
+    expect(createNumberedPaginationWindow({ currentPage: 1, totalPages: 0 })).toEqual([])
+    expect(createNumberedPaginationWindow({ currentPage: 1, totalPages: 1 })).toEqual([1])
+    expect(createNumberedPaginationWindow({ currentPage: 3, totalPages: 5 })).toEqual([1, 2, 3, 4, 5])
+  })
+
+  it('returns a five-page window centered on the current page when possible', () => {
+    expect(createNumberedPaginationWindow({ currentPage: 6, totalPages: 12 })).toEqual([4, 5, 6, 7, 8])
+  })
+
+  it('clamps the five-page window near the start and end', () => {
+    expect(createNumberedPaginationWindow({ currentPage: 1, totalPages: 12 })).toEqual([1, 2, 3, 4, 5])
+    expect(createNumberedPaginationWindow({ currentPage: 2, totalPages: 12 })).toEqual([1, 2, 3, 4, 5])
+    expect(createNumberedPaginationWindow({ currentPage: 11, totalPages: 12 })).toEqual([8, 9, 10, 11, 12])
+    expect(createNumberedPaginationWindow({ currentPage: 12, totalPages: 12 })).toEqual([8, 9, 10, 11, 12])
+  })
+
+  it('normalizes requested pages outside the valid range before deriving the window', () => {
+    expect(createNumberedPaginationWindow({ currentPage: Number.NaN, totalPages: 8 })).toEqual([1, 2, 3, 4, 5])
+    expect(createNumberedPaginationWindow({ currentPage: -3, totalPages: 8 })).toEqual([1, 2, 3, 4, 5])
+    expect(createNumberedPaginationWindow({ currentPage: 99, totalPages: 8 })).toEqual([4, 5, 6, 7, 8])
+  })
+})
+
+describe('createCollectionScrollWindow', () => {
+  it('derives the initial local scroll window from pageSize', () => {
+    expect(createCollectionScrollWindow(['one', 'two', 'three', 'four', 'five'], 2, 2)).toEqual({
+      totalItems: 5,
+      pageSize: 2,
+      visibleCount: 2,
+      canShowMore: true,
+      visibleItems: ['one', 'two'],
+    })
+  })
+
+  it('derives accumulated increments by pageSize and clamps to the collection total', () => {
+    const items = ['one', 'two', 'three', 'four', 'five']
+
+    expect(createCollectionScrollWindow(items, 2, 4)).toMatchObject({
+      visibleCount: 4,
+      canShowMore: true,
+      visibleItems: ['one', 'two', 'three', 'four'],
+    })
+    expect(createCollectionScrollWindow(items, 2, 6)).toMatchObject({
+      visibleCount: 5,
+      canShowMore: false,
+      visibleItems: ['one', 'two', 'three', 'four', 'five'],
+    })
+  })
+
+  it('returns zero visible items for empty collections', () => {
+    expect(createCollectionScrollWindow([], 2, 2)).toEqual({
+      totalItems: 0,
+      pageSize: 2,
+      visibleCount: 0,
+      canShowMore: false,
+      visibleItems: [],
+    })
+  })
+
+  it('normalizes requested visible counts below pageSize to the first block', () => {
+    expect(createCollectionScrollWindow(['one', 'two', 'three'], 2, -1)).toMatchObject({
+      visibleCount: 2,
+      visibleItems: ['one', 'two'],
+    })
+  })
+
+  it('does not mutate the collection origin when deriving scroll windows', () => {
+    const items = ['one', 'two', 'three']
+
+    expect(createCollectionScrollWindow(items, 2, 4).visibleItems).toEqual(['one', 'two', 'three'])
     expect(items).toEqual(['one', 'two', 'three'])
   })
 })

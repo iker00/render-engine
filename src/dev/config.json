@@ -29,7 +29,7 @@
         {
           "type": "heading",
           "props": {
-            "text": "Solicitud general",
+            "text": "Título: {{queries.searchPosts.data.0.title}}",
             "level": 1
           }
         },
@@ -537,39 +537,66 @@
               "source": "queries.searchPosts.data",
               "key": "id"
             },
-              "pagination": {
-                "enabled": true,
-                "pageSize": 3,
-                "controls": {
-                  "variant": "previousNext"
-                }
-              },
+            "pagination": {
+              "enabled": true,
+              "pageSize": 5,
+              "controls": {
+                "variant": "numbered"
+              }
+            },
             "template": [
               {
-                "type": "heading",
+                "type": "container",
                 "props": {
-                  "text": "item.title",
-                  "level": 3
-                }
-              },
-              {
-                "type": "paragraph",
-                "props": {
-                  "text": "item.body"
-                }
-              },
-              {
-                "type": "button",
-                "props": {
-                  "label": "Editar",
-                  "action": {
-                    "type": "navigateTo",
-                    "pageId": "post-form",
-                    "params": {
-                      "postId": "item.id"
+                  "direction": "row",
+                  "gap": "lg",
+                  "variant": "card"
+                },
+                "children": [
+                  {
+                    "type": "image",
+                    "props": {
+                      "src": "https://picsum.photos/200/150?random={{item.id}}",
+                      "alt": "{{item.title}}",
+                      "width": "100%",
+                      "height": "auto"
                     }
+                  },
+                  {
+                    "type": "container",
+                    "props": {
+                      "gap": "sm"
+                    },
+                    "children": [
+                      {
+                        "type": "heading",
+                        "props": {
+                          "text": "item.title",
+                          "level": 3
+                        }
+                      },
+                      {
+                        "type": "paragraph",
+                        "props": {
+                          "text": "item.body"
+                        }
+                      },
+                      {
+                        "type": "button",
+                        "props": {
+                          "label": "Editar",
+                          "action": {
+                            "type": "navigateTo",
+                            "pageId": "post-form",
+                            "params": {
+                              "postId": "item.id"
+                            }
+                          }
+                        }
+                      }
+                    ]
                   }
-                }
+                ]
               }
             ]
           }

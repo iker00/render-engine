@@ -77,14 +77,14 @@ Nodos soportados hoy:
   - `props.pagination.enabled`: obligatorio y exactamente `true`
   - `props.pagination.pageSize`: obligatorio, entero, finito y mayor o igual que `1`
   - `props.pagination.controls`: opcional; si se omite, el runtime usa el default efectivo de controles anterior/siguiente
-  - `props.pagination.controls.variant`: opcional y limitado a `previousNext`
+  - `props.pagination.controls.variant`: opcional y limitado a `previousNext | numbered | scroll`
   - `props.template`: colección ordenada obligatoria de `LayoutNode[]`
   - no admite `children`
 - `heading`
-  - `props.text`: string obligatorio, literal o referencia dinámica completa soportada por el runtime
+  - `props.text`: string obligatorio, literal, referencia dinámica completa o string visible interpolado con `{{...}}`
   - `props.level`: número entero obligatorio
 - `paragraph`
-  - `props.text`: string obligatorio, literal o referencia dinámica completa soportada por el runtime
+  - `props.text`: string obligatorio, literal, referencia dinámica completa o string visible interpolado con `{{...}}`
 - `list`
   - `props.items`: obligatorio
   - shape histórico: array de strings
@@ -93,17 +93,17 @@ Nodos soportados hoy:
   - shape dinámico escalar: `{ source: 'queries.{queryName}.data' | 'queries.{queryName}.data.*' | 'item.*', itemType: 'scalar' }`
   - shape dinámico objeto: `{ source: 'queries.{queryName}.data' | 'queries.{queryName}.data.*' | 'item.*', itemText: string }`
 - `image`
-  - `props.src`: string obligatorio, literal o referencia dinámica completa soportada por el runtime
-  - `props.alt`: string obligatorio, literal o referencia dinámica completa soportada por el runtime
+  - `props.src`: string obligatorio, literal, referencia dinámica completa o string visible interpolado con `{{...}}`
+  - `props.alt`: string obligatorio, literal, referencia dinámica completa o string visible interpolado con `{{...}}`
 - `table`
   - `props.headers`: array ordenado obligatorio de strings no vacíos
   - `props.rows`: obligatorio y exclusivo entre:
     - modo manual: `Array<Array<string | number | boolean>>`
     - modo dinámico: `{ source: 'queries.{queryName}.data' | 'queries.{queryName}.data.*' | 'item.*', cells: string[] }`
   - cada fila manual y cada colección `cells` dinámica debe mantener correspondencia exacta con `headers`
-  - las celdas string reutilizan la misma semántica de literal o referencia dinámica completa soportada por el runtime
+  - las celdas string reutilizan la misma semántica de literal, referencia dinámica completa o string visible interpolado con `{{...}}`
 - `button`
-  - `props.label`: string obligatorio
+  - `props.label`: string obligatorio, literal, referencia dinámica completa o string visible interpolado con `{{...}}`
   - `props.action`: opcional; sin `action` solo es válido dentro del subárbol de un `form` y actúa como submit implícito
   - `props.action.type`: `navigateTo | goBack | executeOperation | resetForm`
   - `props.action.pageId`: string obligatorio y no vacío cuando `type` es `navigateTo`
@@ -125,7 +125,7 @@ Nodos soportados hoy:
   - `children`: colección ordenada con soporte para `input`, `textarea`, `select`, `radioGroup`, `checkboxGroup`, `button`, `heading`, `paragraph` y `container`
 - `input`
   - `props.fieldId`: string obligatorio y único dentro del `form` contenedor
-  - `props.label`: string obligatorio
+  - `props.label`: string obligatorio, literal, referencia dinámica completa o string visible interpolado con `{{...}}`
   - `props.validations`: objeto opcional y ordenado por declaración
   - `props.validations.required`: `true` o `{ value: true, message?: string }`
   - `props.validations.minLength`: número o `{ value: number, message?: string }`, solo para `input` textuales
@@ -136,7 +136,7 @@ Nodos soportados hoy:
   - `props.inputType`: `text | email | password | search | tel | url | number | date | datetime-local`
 - `textarea`
   - `props.fieldId`: string obligatorio y único dentro del `form` contenedor
-  - `props.label`: string obligatorio
+  - `props.label`: string obligatorio, literal, referencia dinámica completa o string visible interpolado con `{{...}}`
   - `props.validations`: objeto opcional y ordenado por declaración
   - `props.validations.required`: `true` o `{ value: true, message?: string }`
   - `props.validations.minLength`: número o `{ value: number, message?: string }`
@@ -144,7 +144,7 @@ Nodos soportados hoy:
   - `props.defaultValue`: literal JSON simple o referencia dinámica completa soportada por el runtime
 - `select`
   - `props.fieldId`: string obligatorio y único dentro del `form` contenedor
-  - `props.label`: string obligatorio
+  - `props.label`: string obligatorio, literal, referencia dinámica completa o string visible interpolado con `{{...}}`
   - `props.validations`: objeto opcional y ordenado por declaración
   - `props.validations.required`: `true` o `{ value: true, message?: string }`
   - `props.validations.minSelections`: número o `{ value: number, message?: string }`, solo cuando `props.multiple: true`
@@ -154,12 +154,12 @@ Nodos soportados hoy:
   - `props.multiple`: boolean opcional; cuando vale `true`, el valor efectivo del campo pasa a ser una colección ordenada
   - shape histórico: array de `{ label, value }`, con `value` homogéneo `string` o `number` dentro del mismo campo
   - shape manual escalar: `{ values: Array<string | number> }`
-  - shape manual objeto: `{ values: Array<object>, label: string, value: string }`
+  - shape manual objeto: `{ values: Array<object>, label: string, value: string }`, donde `label` y `value` aceptan ruta relativa histórica o interpolación parcial con `{{...}}`
   - shape dinámico escalar: `{ source: 'queries.{queryName}.data' | 'queries.{queryName}.data.*' | 'item.*', itemType: 'scalar' }`
-  - shape dinámico objeto: `{ source: 'queries.{queryName}.data' | 'queries.{queryName}.data.*' | 'item.*', label: string, value: string }`
+  - shape dinámico objeto: `{ source: 'queries.{queryName}.data' | 'queries.{queryName}.data.*' | 'item.*', label: string, value: string }`, donde `label` y `value` aceptan ruta relativa histórica o interpolación parcial con `{{...}}`
 - `radioGroup`
   - `props.fieldId`: string obligatorio y único dentro del `form` contenedor
-  - `props.label`: string obligatorio
+  - `props.label`: string obligatorio, literal, referencia dinámica completa o string visible interpolado con `{{...}}`
   - `props.optionLayout`: opcional, con catálogo cerrado `vertical | inline`; si no existe, el runtime conserva el layout vertical como default efectivo
   - `props.validations`: objeto opcional y ordenado por declaración
   - `props.validations.required`: `true` o `{ value: true, message?: string }`
@@ -167,7 +167,7 @@ Nodos soportados hoy:
   - `props.items`: obligatorio con exactamente los mismos shapes soportados por `select`
 - `checkboxGroup`
   - `props.fieldId`: string obligatorio y único dentro del `form` contenedor
-  - `props.label`: string obligatorio
+  - `props.label`: string obligatorio, literal, referencia dinámica completa o string visible interpolado con `{{...}}`
   - `props.optionLayout`: opcional, con catálogo cerrado `vertical | inline`; si no existe, el runtime conserva el layout vertical como default efectivo
   - `props.validations`: objeto opcional y ordenado por declaración
   - `props.validations.required`: `true` o `{ value: true, message?: string }`
@@ -179,7 +179,10 @@ Nodos soportados hoy:
 Reglas estructurales adicionales del catálogo actual:
 - `heading`, `paragraph`, `list`, `image`, `table` y `button` siguen tratándose como nodos hoja; si reciben `children`, esos datos no pasan al resultado normalizado.
 - `repeater` rechaza `children` y solo admite repetición a través de `props.template`.
-- `repeater.props.pagination` solo acepta la superficie local v1; claves extra dentro de `props.pagination` o `props.pagination.controls` se rechazan de forma explícita para no aceptar cursores, paginación remota o variantes de controles todavía no soportadas.
+- `repeater.props.pagination` solo acepta la superficie local v1; claves extra dentro de `props.pagination` o `props.pagination.controls` se rechazan de forma explícita para no aceptar cursores, paginación remota o metadatos de servidor.
+- `previousNext` conserva la paginación local por páginas con controles anterior/siguiente y es el default efectivo cuando `controls` o `controls.variant` no se declaran.
+- `numbered` conserva la misma semántica local por páginas, pero renderiza controles para primera página, página anterior, una ventana compacta de hasta cinco páginas concretas, página siguiente y última página.
+- `scroll` no define paginación remota: aplica una ventana incremental local sobre la colección ya cargada, muestra inicialmente hasta `pageSize` items y amplía la cantidad visible por bloques acumulados de `pageSize`.
 - La ausencia de `repeater.props.pagination` es el único modo soportado para no paginar; `enabled: false`, `pagination: {}` o paginación sin `pageSize` no son contratos válidos.
 - `input`, `textarea`, `select`, `radioGroup` y `checkboxGroup` solo son válidos como descendientes de un `form`.
 - `button` sin `action` solo es válido como descendiente de un `form`.
@@ -248,16 +251,47 @@ Reglas funcionales vigentes:
 - Si `initialPage` no existe dentro de `pages`, el arranque falla con un error explícito.
 
 ## Referencias dinámicas
-Las referencias dinámicas ya forman parte del contrato visible actual, pero con un alcance intencionadamente acotado:
-- solo se interpretan cuando el string completo de `heading.props.text`, `paragraph.props.text`, `image.props.src`, `image.props.alt` o una celda string de `table` coincide con una referencia soportada
-- el escape literal con `\` permite mostrar una referencia tal cual, por ejemplo `\queries.searchUsers.data.results.0.name`
-- no existe interpolación parcial dentro de strings
+Las referencias dinámicas ya forman parte del contrato visible actual, con dos formas acotadas:
+- referencia completa: el string completo coincide con una referencia soportada, por ejemplo `queries.searchUsers.data.results.0.name`
+- interpolación parcial visible: el string contiene uno o varios placeholders `{{referencia}}`, por ejemplo `Expediente {{params.caseId}}`
+
+El escape literal con `\` permite mostrar una referencia completa tal cual, por ejemplo `\queries.searchUsers.data.results.0.name`. No actúa como mecanismo de escape de delimitadores `{{` o `}}`.
+
+Superficies que admiten interpolación parcial:
+- `heading.props.text`
+- `paragraph.props.text`
+- `button.props.label`
+- `input.props.label`
+- `textarea.props.label`
+- `select.props.label`
+- `radioGroup.props.label`
+- `checkboxGroup.props.label`
+- `image.props.src`
+- `image.props.alt`
+- strings visibles de `list.props.items`
+- `list.props.items.itemText` en colecciones manuales o dinámicas de objetos
+- `select.props.items.label` y `select.props.items.value` en colecciones manuales o dinámicas de objetos
+- `radioGroup.props.items.label` y `radioGroup.props.items.value` en colecciones manuales o dinámicas de objetos
+- `checkboxGroup.props.items.label` y `checkboxGroup.props.items.value` en colecciones manuales o dinámicas de objetos
+- celdas string de `table` manual
+- `table.props.rows.cells` en modo dinámico
+
+Semántica de interpolación parcial:
+- cada placeholder se resuelve con la misma capa central que las referencias completas
+- espacios alrededor de la referencia dentro del placeholder se ignoran
+- `string`, `number`, `boolean`, `0` y `false` producen texto visible
+- objetos, arrays, `null`, `undefined`, referencias ausentes, inválidas, no soportadas o fuera de contrato producen string vacío solo para ese placeholder
+- delimitadores no emparejados no rompen el render y conservan una salida estable
+- `item` e `item.*` se resuelven contra la iteración de `repeater` cuando existe, o contra el item local de la proyección de colección que se está materializando
+- `params.*` conserva la frontera `params.{paramName}`; `params.user.id` queda fuera de contrato y produce string vacío dentro de un placeholder
 
 Además, la misma convención de referencias completas se reutiliza dentro de `api.query`, en cualquier hoja string de `api.body` y en `defaultValue` de `input`, `textarea`, `select`, `radioGroup` y `checkboxGroup`:
 - un string literal se conserva como literal
 - un string escapado con `\` se conserva sin el prefijo de escape
 - una referencia soportada se resuelve contra el estado actual del runtime en el momento de invocación
 - una referencia soportada pero sin valor disponible no invalida el config en bootstrap; produce un error de construcción del request al ejecutar la operación
+
+Estas superficies de request, navegación, valores iniciales y reglas no aplican interpolación parcial. Un string como `prefix-{{params.userId}}` se conserva como literal o queda sometido a la validación histórica del consumidor, pero no se reinterpreta como plantilla.
 
 Esa misma convención se reutiliza también en:
 - `api.headers`
@@ -297,15 +331,15 @@ Consumidores adicionales ya soportados con esa misma frontera:
 Frontera específica de `params.*`:
 - `params.{paramName}` solo admite un segmento dinámico después del namespace.
 - `params.userId` es válido; `params`, `params.user.id` y segmentos vacíos siguen siendo inválidos.
-- `params.*` puede usarse en `heading.props.text`, `paragraph.props.text`, `image.props.src`, `image.props.alt`, celdas string de `table`, `api.query`, `api.body`, `api.headers`, `button.props.action.query`, `button.props.action.body`, `button.props.action.headers`, `form.submitAction.query`, `form.submitAction.body`, `form.submitAction.headers` y `defaultValue` de `input`, `textarea`, `select`, `radioGroup` y `checkboxGroup`.
+- `params.*` puede usarse en las superficies visibles interpolables, `api.query`, `api.body`, `api.headers`, `button.props.action.query`, `button.props.action.body`, `button.props.action.headers`, `form.submitAction.query`, `form.submitAction.body`, `form.submitAction.headers` y `defaultValue` de `input`, `textarea`, `select`, `radioGroup` y `checkboxGroup`.
 - `params.*` también puede usarse como origen dentro de `navigateTo.params` para construir la siguiente navegación a partir de la entrada activa.
 - Cuando el runtime hidrata `params.*` desde la URL, todos sus valores llegan como string.
 - `params.*` sigue fuera de alcance en `visibility.reference`, `repeater.props.items.source`, `list.props.items.source`, `select.props.items.source`, `radioGroup.props.items.source` y `checkboxGroup.props.items.source`, aunque esas superficies reutilicen la misma familia general de referencias runtime.
 
 Frontera específica de `item.*`:
-- `item` e `item.*` solo son válidos cuando el consumidor vive dentro del subárbol iterado de un `repeater`.
+- `item` e `item.*` son válidos cuando el consumidor vive dentro del subárbol iterado de un `repeater` o cuando la referencia se evalúa como proyección local de un item de colección.
 - `item`, `item.slug`, `item.meta.author.name` o `item.tags.0` son ejemplos válidos dentro de ese contexto.
-- `item.*` puede usarse en `heading.props.text`, `paragraph.props.text`, `image.props.src`, `image.props.alt`, celdas string de `table`, `api.query`, `api.body`, `api.headers`, `button.props.action.query`, `button.props.action.body`, `button.props.action.headers`, `button.props.action.params`, `form.submitAction.query`, `form.submitAction.body`, `form.submitAction.headers`, `defaultValue` de campos, `visibility.reference`, `repeater.props.items.source`, `list.props.items.source`, `select.props.items.source`, `radioGroup.props.items.source` y `checkboxGroup.props.items.source`.
+- `item.*` puede usarse en las superficies visibles interpolables, `api.query`, `api.body`, `api.headers`, `button.props.action.query`, `button.props.action.body`, `button.props.action.headers`, `button.props.action.params`, `form.submitAction.query`, `form.submitAction.body`, `form.submitAction.headers`, `defaultValue` de campos, `visibility.reference`, `repeater.props.items.source`, `list.props.items.source`, `select.props.items.source`, `radioGroup.props.items.source` y `checkboxGroup.props.items.source`.
 - Fuera de un `repeater`, `item.*` no forma parte del contrato soportado aunque el shape del string siga siendo reconocible.
 
 Reglas funcionales vigentes:
@@ -327,7 +361,7 @@ Reglas funcionales vigentes:
 - Si un `repeater` omite `props.items.source`, `props.items.key` o `props.template`, el config completo se rechaza antes del render sobre la ruta exacta.
 - Si `repeater.props.items.key` está vacío, usa una referencia global como `item.id` o `queries.posts.data.0.id`, o contiene una ruta relativa mal formada, el config completo se rechaza antes del render.
 - Si `repeater.props.pagination` existe, debe declarar `enabled: true` y un `pageSize` entero, finito y mayor o igual que `1`; valores como `enabled: false`, `pageSize: 0`, decimales, infinitos o `pageSize` ausente se rechazan antes del render sobre la ruta exacta.
-- Si `repeater.props.pagination.controls.variant` existe, debe ser `previousNext`; cualquier otra variante se rechaza antes del render.
+- Si `repeater.props.pagination.controls.variant` existe, debe ser `previousNext`, `numbered` o `scroll`; cualquier otra variante se rechaza antes del render.
 - Si `repeater.props.pagination` o `repeater.props.pagination.controls` incluyen claves no soportadas, el config completo se rechaza antes del render sobre la ruta exacta de la clave extra.
 - Si `queryStateFeedback.states` contiene una clave fuera de `idle | loading | error | empty | success`, el config completo se rechaza con error de layout sobre esa ruta exacta.
 - Si una regla usa `mode: fallback` sin `fallback`, el config completo se rechaza antes del render.
@@ -364,8 +398,11 @@ Reglas funcionales vigentes:
 - Si `api.query`, `api.headers`, `button.props.action.query`, `button.props.action.headers`, `form.submitAction.query` o `form.submitAction.headers` contienen claves vacías, el config completo se rechaza antes del render.
 - Si `form.resetOnSuccess: true` aparece sin `submitAction`, el config completo se rechaza antes del render.
 - Si `select.props.items`, `radioGroup.props.items` o `checkboxGroup.props.items` mezclan `value` string y number dentro del mismo campo, el config completo se rechaza antes del render.
+- Si `list.props.items.itemText`, `select.props.items.label`, `select.props.items.value`, `radioGroup.props.items.label`, `radioGroup.props.items.value`, `checkboxGroup.props.items.label` o `checkboxGroup.props.items.value` contienen delimitadores `{{` o `}}`, la validación los acepta como proyecciones interpolables del catálogo cerrado y deja la degradación de placeholders al runtime.
+- Si esas mismas proyecciones no contienen delimitadores de plantilla, conservan la validación histórica de ruta relativa al item.
 - Si `repeater.props.items.source` declara un origen dinámico, este debe apuntar exactamente a `queries.{queryName}.data` o a una ruta anidada bajo `queries.{queryName}.data.*`.
 - Si `list.props.items`, `select.props.items`, `radioGroup.props.items` o `checkboxGroup.props.items` declaran un `source`, este debe apuntar exactamente a `queries.{queryName}.data`, a una ruta anidada bajo `queries.{queryName}.data.*` o a `item.*` cuando el nodo viva dentro de un `repeater`.
+- Si `repeater.props.items.key`, `props.items.source`, `visibility.reference`, `queryStateFeedback`, `navigateTo.params`, requests, `defaultValue` o cabeceras de `table` intentan usar templates parciales, no se amplía su contrato por esta capacidad.
 - Si `visibility.reference`, `repeater.props.items.source`, `list.props.items.source`, `select.props.items.source`, `radioGroup.props.items.source` o `checkboxGroup.props.items.source` intentan usar `params.*`, el config completo se rechaza antes del render porque esa familia sigue fuera de alcance en esas superficies.
 - Si `list.props.items`, `select.props.items`, `radioGroup.props.items` o `checkboxGroup.props.items` mezclan familias incompatibles de origen histórico, manual declarativo y dinámico, el config completo se rechaza antes del render.
 - Si un origen dinámico de escalares omite `itemType: 'scalar'`, el config completo se rechaza antes del render.
@@ -397,7 +434,7 @@ La frontera estable de esta validación queda organizada así:
 - `table` no acepta todavía `props.pagination`; la semántica local de paginación queda preparada como base reusable, pero solo `repeater` la expone en el contrato público actual.
 - No hay todavía validaciones declarativas avanzadas (`min`, `max`, patrones o validaciones cruzadas).
 - `preloads` ya puede declarar `query`, `body` y `headers` por entrada, pero no admite condiciones, prioridades, secuencialidad, dependencias, múltiples instancias simultáneas del mismo `operationName` ni una caché histórica reutilizable por firma.
-- No hay interpolación compleja dentro de strings.
+- No hay interpolación compleja dentro de strings: la v1 solo soporta placeholders visibles `{{referencia}}` en el catálogo cerrado anterior, sin expresiones, filtros, formateadores, condicionales, i18n ni escape específico de delimitadores.
 - No hay sistema de plugins para componentes externos.
 - No hay soporte para nodos distintos de `container`, `repeater`, `heading`, `paragraph`, `list`, `image`, `table`, `button`, `form`, `input`, `textarea`, `select`, `radioGroup` y `checkboxGroup`.
-- No hay consumidores declarativos de referencias fuera de `heading.props.text`, `paragraph.props.text`, `image.props.src`, `image.props.alt`, celdas string de `table`, `queryStateFeedback`, `visibility`, `api.query`, `api.body`, `defaultValue` de campos de formulario, `navigateTo.params`, `repeater.props.items.source` y `source` de colecciones para `list`, `select`, `radioGroup` y `checkboxGroup`.
+- No hay consumidores declarativos de referencias fuera de las superficies visibles interpolables, `queryStateFeedback`, `visibility`, `api.query`, `api.body`, `api.headers`, `defaultValue` de campos de formulario, `navigateTo.params`, `repeater.props.items.source` y `source` de colecciones para `list`, `select`, `radioGroup` y `checkboxGroup`.

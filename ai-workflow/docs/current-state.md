@@ -16,9 +16,10 @@ No debe funcionar como historico acumulado ni como sustituto de las fichas funci
 - `preloads` por entrada de pagina con reevaluacion selectiva por firma efectiva y proteccion latest-only del agregado `pageEntry`.
 - Acciones UI declarativas para `navigateTo`, `goBack`, `executeOperation` y `resetForm`.
 - Referencias declarativas soportadas para `forms.*`, `queries.*`, `queries.*.data.*`, `params.*` en superficies acotadas e `item.*` dentro de `repeater`.
+- Interpolacion parcial `{{...}}` en strings visibles y proyecciones cerradas de colecciones, reutilizando esas mismas referencias y vaciando placeholders no renderizables.
 - Nodos visibles soportados: `container`, `repeater`, `heading`, `paragraph`, `list`, `image`, `table`, `button`, `form`, `input`, `textarea`, `select`, `radioGroup` y `checkboxGroup`.
 - Formularios declarativos con estado por `formId.fieldId`, `defaultValue`, limpieza por desmontaje por defecto, persistencia opt-in, validaciones locales y submit via `executeOperation`.
-- Paginacion local opt-in en `repeater` sobre colecciones `queries.*`, con `pageSize` declarativo, controles anterior/siguiente, indicador de pagina, estado local independiente por instancia y reset al cambiar coleccion o configuracion efectiva.
+- Paginacion local opt-in en `repeater` sobre colecciones `queries.*`, con `pageSize` declarativo, variantes de controles `previousNext`, `numbered` y `scroll`, estado local independiente por instancia y reset al cambiar coleccion o configuracion efectiva.
 - Consumidores de colecciones manuales, `queries.*` e `item.*` en `list`, `select`, `radioGroup` y `checkboxGroup`.
 - Feedback visual por estado de query y reglas simples de `visibility`, reutilizadas tambien para excluir campos ocultos de la validacion.
 - Layout declarativo con `container` por direccion o grid, `gap`, `columns`, `align`, `justify`, `wrap`, variante `card` y `layout.span` dentro de grids efectivos.
@@ -31,9 +32,9 @@ No debe funcionar como historico acumulado ni como sustituto de las fichas funci
 - `pageEntry` no esta expuesto todavia como namespace de referencias declarativas.
 - No existen `routeParams.*` ni `navigation.*` como referencias soportadas.
 - `params.*` no aplica aun en `visibility` ni en fuentes dinamicas de coleccion.
-- No hay interpolacion parcial dentro de strings.
+- No hay interpolacion parcial en requests, `preloads`, `navigateTo.params`, `defaultValue`, `visibility`, fuentes de coleccion, keys de `repeater` ni cabeceras de `table`.
 - No hay validaciones remotas, validaciones cruzadas, `pattern` ni mensajes personalizados efectivos por regla.
-- No hay subida de archivos, busqueda remota de opciones, paginacion avanzada, paginacion en `table`, paginacion remota ni carga incremental de colecciones.
+- No hay subida de archivos, busqueda remota de opciones, paginacion en `table`, paginacion remota ni carga incremental remota de colecciones.
 - `visibility` sigue limitada a una unica condicion simple, sin composicion booleana ni fallback propio.
 - No existe theming declarativo desde JSON; la personalizacion visual sigue cerrada al baseline actual y a las props soportadas.
 
