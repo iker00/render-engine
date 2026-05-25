@@ -1,9 +1,12 @@
 import type { ButtonLayoutNode } from '../../config/runtime-config'
 import { useOptionalFormContext } from '../form-context'
-import type { RuntimeIterationContext } from '../runtime-references/runtime-reference-resolver'
+import {
+  resolveRuntimeTextReference,
+  type RuntimeIterationContext,
+} from '../runtime-references/runtime-reference-resolver'
 import { executeRuntimeUiAction } from '../runtime-actions/runtime-ui-action-executor'
 import { getPrimaryButtonNodeClassName, getSecondaryButtonNodeClassName } from '../runtime-node-styling'
-import { useRuntimeStateActions } from '../runtime-state/runtime-state-provider'
+import { useRuntimeState, useRuntimeStateActions } from '../runtime-state/runtime-state-provider'
 
 interface ButtonNodeProps {
   node: ButtonLayoutNode
@@ -11,11 +14,13 @@ interface ButtonNodeProps {
 }
 
 export function ButtonNode({ node, iterationContext }: ButtonNodeProps) {
+  const state = useRuntimeState()
   const { executeQueryOperation, goBackPage, navigateToPage, resetForm } = useRuntimeStateActions()
   const formContext = useOptionalFormContext()
   const action = node.props.action
   const isImplicitSubmit = action === undefined && formContext !== null
   const className = isImplicitSubmit ? getPrimaryButtonNodeClassName() : getSecondaryButtonNodeClassName()
+  const label = resolveRuntimeTextReference(node.props.label, state, 'button.props.label', { iterationContext })
 
   return (
     <button
@@ -34,7 +39,7 @@ export function ButtonNode({ node, iterationContext }: ButtonNodeProps) {
           : undefined
       }
     >
-      {node.props.label}
+      {label}
     </button>
   )
 }

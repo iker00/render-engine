@@ -83,6 +83,10 @@ export function parseRuntimeReference(value: string, options: ParseRuntimeRefere
   }
 }
 
+export function hasRuntimeTemplateDelimiter(value: string) {
+  return value.includes('{{') || value.includes('}}')
+}
+
 function hasRecognizedNamespace(value: string): boolean {
   const namespace = value.split('.')[0]
 

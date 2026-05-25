@@ -1,6 +1,9 @@
 import type { TextareaLayoutNode } from '../../config/runtime-config'
 import { useOptionalFormContext } from '../form-context'
-import type { RuntimeIterationContext } from '../runtime-references/runtime-reference-resolver'
+import {
+  resolveRuntimeTextReference,
+  type RuntimeIterationContext,
+} from '../runtime-references/runtime-reference-resolver'
 import { resolveResolvedFormFieldDefinition } from './form-layout-node'
 import {
   getFieldControlClassName,
@@ -28,6 +31,7 @@ export function TextareaNode({ node, iterationContext }: TextareaNodeProps) {
 
   const fieldState = selectFormFieldState(state, formContext.formId, node.props.fieldId)
   const fieldDefinition = resolveResolvedFormFieldDefinition(node, state, iterationContext)
+  const label = resolveRuntimeTextReference(node.props.label, state, 'textarea.props.label', { iterationContext })
   const defaultValue = fieldDefinition.defaultValue
   const value =
     typeof fieldState?.value === 'string'
@@ -39,7 +43,7 @@ export function TextareaNode({ node, iterationContext }: TextareaNodeProps) {
 
   return (
     <label className={getFieldWrapperClassName()} data-layout-node="textarea">
-      <span className={getFieldLabelClassName()}>{node.props.label}</span>
+      <span className={getFieldLabelClassName()}>{label}</span>
       <textarea
         className={`${getFieldControlClassName(error !== null)} min-h-28 resize-y sm:min-h-32`}
         value={value}

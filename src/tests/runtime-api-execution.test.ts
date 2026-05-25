@@ -455,6 +455,81 @@ describe('Runtime api execution', () => {
     })
   })
 
+  it('keeps partial template strings literal across api query body and headers while complete missing references still fail', () => {
+    const configWithPartialTemplates: RuntimeConfig = {
+      ...runtimeConfig,
+      api: {
+        ...runtimeConfig.api,
+        partialTemplatePayload: {
+          method: 'POST',
+          endpoint: '/api/templates',
+          query: {
+            search: 'prefix-{{forms.userSearch.term}}',
+          },
+          headers: {
+            authorization: 'Bearer {{forms.userSearch.term}}',
+          },
+          body: {
+            name: 'prefix-{{forms.userSearch.term}}',
+            profile: {
+              nickname: 'nick-{{queries.selectedUser.data.profile.nickname}}',
+            },
+          },
+        },
+        completeMissingReference: {
+          method: 'GET',
+          endpoint: '/api/templates',
+          query: {
+            search: 'forms.userSearch.missingField',
+          },
+        },
+      },
+    }
+
+    expect(
+      buildRuntimeApiRequest({
+        config: configWithPartialTemplates,
+        operationName: 'partialTemplatePayload',
+        state: runtimeState,
+      }),
+    ).toEqual({
+      status: 'ready',
+      request: {
+        operationName: 'partialTemplatePayload',
+        operation: configWithPartialTemplates.api.partialTemplatePayload,
+        url: '/api/templates?search=prefix-%7B%7Bforms.userSearch.term%7D%7D',
+        init: {
+          method: 'POST',
+          headers: {
+            authorization: 'Bearer {{forms.userSearch.term}}',
+            'content-type': 'application/json',
+          },
+          body: JSON.stringify({
+            name: 'prefix-{{forms.userSearch.term}}',
+            profile: {
+              nickname: 'nick-{{queries.selectedUser.data.profile.nickname}}',
+            },
+          }),
+        },
+      },
+    })
+
+    expect(
+      buildRuntimeApiRequest({
+        config: configWithPartialTemplates,
+        operationName: 'completeMissingReference',
+        state: runtimeState,
+      }),
+    ).toEqual({
+      status: 'error',
+      error: {
+        code: 'request-build-failed',
+        message:
+          'The api operation "completeMissingReference" could not resolve "forms.userSearch.missingField" for "query.search".',
+      },
+    })
+  })
+
   it('resolves item references in query, body, and headers when an iteration context is provided', () => {
     const configWithItemContext: RuntimeConfig = {
       ...runtimeConfig,

@@ -588,6 +588,86 @@ describe('Runtime button navigation', () => {
     ])
   })
 
+  it('keeps partial template strings literal in navigateTo params while resolving complete params references', async () => {
+    const configWithTemplatedParams: RuntimeConfig = {
+      api: {},
+      initialPage: 'home',
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'button',
+              props: {
+                label: 'Open details',
+                action: {
+                  type: 'navigateTo',
+                  pageId: 'details',
+                  params: {
+                    userId: 'forms.userSearch.name',
+                  },
+                },
+              },
+            },
+          ],
+        },
+        {
+          id: 'details',
+          layout: [
+            {
+              type: 'button',
+              props: {
+                label: 'Open templated summary',
+                action: {
+                  type: 'navigateTo',
+                  pageId: 'summary',
+                  params: {
+                    userId: 'params.userId',
+                    caseId: 'case-{{params.userId}}',
+                  },
+                },
+              },
+            },
+          ],
+        },
+        {
+          id: 'summary',
+          layout: [
+            {
+              type: 'heading',
+              props: {
+                text: 'params.userId',
+                level: 1,
+              },
+            },
+            {
+              type: 'paragraph',
+              props: {
+                text: 'params.caseId',
+              },
+            },
+          ],
+        },
+      ],
+    }
+
+    renderRuntimeWithStateSeed(configWithTemplatedParams)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open details' }))
+    await waitFor(() => expect(screen.getByTestId('runtime-page')).toHaveAttribute('data-runtime-page-id', 'details'))
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open templated summary' }))
+
+    await waitFor(() => expect(screen.getByTestId('runtime-page')).toHaveAttribute('data-runtime-page-id', 'summary'))
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Ada')
+    expect(screen.getByText('case-{{params.userId}}')).toBeInTheDocument()
+    expect(readRuntimeState().navigation.history).toEqual([
+      { entryId: 0, pageId: 'home', params: {} },
+      { entryId: 1, pageId: 'details', params: { userId: 'Ada' } },
+      { entryId: 2, pageId: 'summary', params: { userId: 'Ada', caseId: 'case-{{params.userId}}' } },
+    ])
+  })
+
   it('rebuilds params-based form defaults from the new navigation context after a real unmount', async () => {
     renderRuntime({
       api: {},
@@ -1062,6 +1142,62 @@ describe('Runtime button navigation', () => {
         },
       }),
     )
+  })
+
+  it('keeps partial template strings literal in button executeOperation query body and headers', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(createJsonResponse({ ok: true }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    renderRuntimeWithStateSeed({
+      api: {
+        searchUsers: {
+          method: 'POST',
+          endpoint: '/api/users',
+        },
+      },
+      initialPage: 'home',
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'button',
+              props: {
+                label: 'Search literal templates',
+                action: {
+                  type: 'executeOperation',
+                  operationName: 'searchUsers',
+                  query: {
+                    search: 'prefix-{{forms.userSearch.name}}',
+                  },
+                  headers: {
+                    authorization: 'Bearer {{forms.userSearch.name}}',
+                  },
+                  body: {
+                    name: 'prefix-{{forms.userSearch.name}}',
+                  },
+                },
+              },
+            },
+          ],
+        },
+      ],
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Search literal templates' }))
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+    expect(fetchMock.mock.calls[0]?.[0]).toBe('/api/users?search=prefix-%7B%7Bforms.userSearch.name%7D%7D')
+    expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({
+      method: 'POST',
+      headers: {
+        authorization: 'Bearer {{forms.userSearch.name}}',
+        'content-type': 'application/json',
+      },
+    })
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toEqual({
+      name: 'prefix-{{forms.userSearch.name}}',
+    })
   })
 
   it('keeps the last successful query data while a button-triggered executeOperation reload is in flight', async () => {

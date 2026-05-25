@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { parseRuntimeReference } from '../runtime/runtime-references/runtime-reference-parser'
 import {
   resolveRuntimeImageAlt,
@@ -95,6 +95,52 @@ const iterationContext = {
     },
     tags: ['news', 'featured'],
     stats: null,
+  },
+}
+
+const interpolationRuntimeState: RuntimeState = {
+  ...nestedQueryRuntimeState,
+  navigation: {
+    currentPageId: 'details',
+    history: [
+      {
+        entryId: 0,
+        pageId: 'details',
+        params: {
+          userId: '42',
+        },
+      },
+    ],
+    currentEntryIndex: 0,
+    lastError: null,
+  },
+  queries: {
+    ...nestedQueryRuntimeState.queries,
+    scalarValues: {
+      status: 'success',
+      data: {
+        text: 'Ada',
+        emptyText: '',
+        zero: 0,
+        falseValue: false,
+        objectValue: {
+          name: 'Ada',
+        },
+        arrayValue: ['Ada'],
+        nullValue: null,
+        undefinedValue: undefined,
+      },
+      error: null,
+    },
+  },
+  pageEntry: {
+    entryId: 0,
+    pageId: 'details',
+    params: {
+      userId: '42',
+    },
+    preloadNames: [],
+    status: 'idle',
   },
 }
 
@@ -726,6 +772,124 @@ describe('Runtime reference resolution', () => {
     it('keeps item context available to the shared visible value helper', () => {
       expect(resolveRuntimeVisibleValue('item.author.name', runtimeState, 'image.props.alt', { iterationContext })).toBe('Ada')
       expect(resolveRuntimeImageSource('item.slug', runtimeState, { iterationContext })).toBe('hello-world')
+    })
+  })
+
+  describe('T0040-01 visible string interpolation', () => {
+    it('interpolates one or more placeholders while preserving surrounding literal text', () => {
+      expect(
+        resolveRuntimeVisibleValue(
+          'Hola {{queries.scalarValues.data.text}}',
+          interpolationRuntimeState,
+          'heading.props.text',
+        ),
+      ).toBe('Hola Ada')
+      expect(
+        resolveRuntimeVisibleValue(
+          '{{queries.scalarValues.data.text}}:{{queries.scalarValues.data.zero}}:{{queries.scalarValues.data.falseValue}}',
+          interpolationRuntimeState,
+          'heading.props.text',
+        ),
+      ).toBe('Ada:0:false')
+      expect(
+        resolveRuntimeVisibleValue(
+          '{{ queries.scalarValues.data.text }} signed in as {{ forms.userSearch.name }} for {{ params.userId }}',
+          interpolationRuntimeState,
+          'paragraph.props.text',
+        ),
+      ).toBe('Ada signed in as Grace for 42')
+      expect(
+        resolveRuntimeVisibleValue(
+          'First {{queries.scalarValues.data.text}} last {{queries.scalarValues.data.zero}}',
+          interpolationRuntimeState,
+          'paragraph.props.text',
+        ),
+      ).toBe('First Ada last 0')
+    })
+
+    it('converts only scalar placeholder values to visible text and keeps empty strings explicit', () => {
+      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+      expect(
+        resolveRuntimeVisibleValue(
+          '{{queries.scalarValues.data.emptyText}}',
+          interpolationRuntimeState,
+          'heading.props.text',
+        ),
+      ).toBe('')
+      expect(
+        resolveRuntimeVisibleValue(
+          '{{queries.scalarValues.data.objectValue}}',
+          interpolationRuntimeState,
+          'heading.props.text',
+        ),
+      ).toBe('')
+      expect(
+        resolveRuntimeVisibleValue(
+          '{{queries.scalarValues.data.arrayValue}}',
+          interpolationRuntimeState,
+          'heading.props.text',
+        ),
+      ).toBe('')
+      expect(
+        resolveRuntimeVisibleValue(
+          '{{queries.scalarValues.data.nullValue}}',
+          interpolationRuntimeState,
+          'heading.props.text',
+        ),
+      ).toBe('')
+      expect(
+        resolveRuntimeVisibleValue(
+          '{{queries.scalarValues.data.undefinedValue}}',
+          interpolationRuntimeState,
+          'heading.props.text',
+        ),
+      ).toBe('')
+      expect(
+        resolveRuntimeVisibleValue(
+          '{{queries.scalarValues.data.missingValue}}',
+          interpolationRuntimeState,
+          'heading.props.text',
+        ),
+      ).toBe('')
+      expect(resolveRuntimeVisibleValue('{{params.user.id}}', interpolationRuntimeState, 'heading.props.text')).toBe('')
+      expect(resolveRuntimeVisibleValue('{{navigation.currentPageId}}', interpolationRuntimeState, 'heading.props.text')).toBe('')
+      expect(resolveRuntimeVisibleValue('{{foo.bar}}', interpolationRuntimeState, 'heading.props.text')).toBe('')
+      expect(resolveRuntimeVisibleValue('{{texto}}', interpolationRuntimeState, 'heading.props.text')).toBe('')
+      expect(resolveRuntimeVisibleValue('{{}}', interpolationRuntimeState, 'heading.props.text')).toBe('')
+
+      consoleWarnSpy.mockRestore()
+    })
+
+    it('resolves item placeholders only when an iteration context is available', () => {
+      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+      expect(
+        resolveRuntimeVisibleValue('Post {{item.id}} by {{item.author.name}}', runtimeState, 'heading.props.text', {
+          iterationContext,
+        }),
+      ).toBe('Post post-1 by Ada')
+      expect(resolveRuntimeVisibleValue('Post {{item.id}}', runtimeState, 'heading.props.text')).toBe('Post ')
+
+      consoleWarnSpy.mockRestore()
+    })
+
+    it('keeps strings without complete placeholders on the historical literal or full-reference path', () => {
+      expect(resolveRuntimeVisibleValue('queries.scalarValues.data.text', interpolationRuntimeState, 'heading.props.text')).toBe(
+        'Ada',
+      )
+      expect(resolveRuntimeVisibleValue('\\queries.scalarValues.data.text', interpolationRuntimeState, 'heading.props.text')).toBe(
+        'queries.scalarValues.data.text',
+      )
+      expect(
+        resolveRuntimeVisibleValue('User: queries.scalarValues.data.text', interpolationRuntimeState, 'heading.props.text'),
+      ).toBe('User: queries.scalarValues.data.text')
+      expect(
+        resolveRuntimeVisibleValue('Keep {{queries.scalarValues.data.text', interpolationRuntimeState, 'heading.props.text'),
+      ).toBe('Keep {{queries.scalarValues.data.text')
+      expect(
+        resolveRuntimeVisibleValue('Keep queries.scalarValues.data.text}}', interpolationRuntimeState, 'heading.props.text'),
+      ).toBe('Keep queries.scalarValues.data.text}}')
     })
   })
 })

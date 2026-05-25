@@ -6,8 +6,26 @@ import { ButtonNode } from '../runtime/nodes/button-layout-node'
 import * as runtimeUiActionExecutor from '../runtime/runtime-actions/runtime-ui-action-executor'
 
 const useRuntimeStateActionsMock = vi.fn()
+const runtimeStateMock = {
+  navigation: {
+    currentPageId: 'home',
+    history: [{ entryId: 0, pageId: 'home', params: {} }],
+    currentEntryIndex: 0,
+    lastError: null,
+  },
+  forms: {},
+  queries: {},
+  pageEntry: {
+    entryId: 0,
+    pageId: 'home',
+    params: {},
+    preloadNames: [],
+    status: 'idle',
+  },
+}
 
 vi.mock('../runtime/runtime-state/runtime-state-provider', () => ({
+  useRuntimeState: () => runtimeStateMock,
   useRuntimeStateActions: () => useRuntimeStateActionsMock(),
 }))
 

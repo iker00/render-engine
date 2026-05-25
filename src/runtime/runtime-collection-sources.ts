@@ -5,8 +5,13 @@ import type {
   RuntimeCollectionObjectItem,
   SelectLayoutNodeItems,
 } from '../config/runtime-config'
+import type { RuntimeReferenceSurface } from './runtime-references/runtime-reference-diagnostics'
+import { hasRuntimeTemplateDelimiter } from './runtime-references/runtime-reference-parser'
 import type { RuntimeIterationContext } from './runtime-references/runtime-reference-resolver'
-import { resolveRuntimeReference } from './runtime-references/runtime-reference-resolver'
+import {
+  resolveRuntimeReference,
+  resolveRuntimeVisibleValue,
+} from './runtime-references/runtime-reference-resolver'
 import type { RuntimeState } from './runtime-state/runtime-state-types'
 
 interface ResolvedCollectionSource {
@@ -24,6 +29,25 @@ type ChoiceCollectionItems =
   | SelectLayoutNodeItems
   | RadioGroupLayoutNode['props']['items']
   | CheckboxGroupLayoutNode['props']['items']
+type ChoiceProjectionSurface = {
+  label: RuntimeReferenceSurface
+  value: RuntimeReferenceSurface
+}
+
+const CHOICE_PROJECTION_SURFACES: Record<ChoiceCollectionSurface, ChoiceProjectionSurface> = {
+  'select.props.items': {
+    label: 'select.props.items.label',
+    value: 'select.props.items.value',
+  },
+  'radioGroup.props.items': {
+    label: 'radioGroup.props.items.label',
+    value: 'radioGroup.props.items.value',
+  },
+  'checkboxGroup.props.items': {
+    label: 'checkboxGroup.props.items.label',
+    value: 'checkboxGroup.props.items.value',
+  },
+}
 
 export function resolveListCollectionItems(items: ListLayoutNodeItems, state: RuntimeState) {
   return resolveListCollectionItemsWithOptions(items, state)
@@ -51,7 +75,11 @@ export function resolveListCollectionItemsWithOptions(
   options: { iterationContext?: RuntimeIterationContext } = {},
 ) {
   if (Array.isArray(items)) {
-    return items
+    return items.map((item) =>
+      resolveInterpolatedCollectionString(item, state, 'list.props.items', {
+        iterationContext: options.iterationContext,
+      }),
+    )
   }
 
   const collectionSource = resolveCollectionSource(items, state, 'list.props.items', options)
@@ -61,10 +89,13 @@ export function resolveListCollectionItemsWithOptions(
   }
 
   if ('itemText' in items && typeof items.itemText === 'string') {
-    return projectObjectCollectionToTextItems(collectionSource, items.itemText, 'list.props.items')
+    return projectObjectCollectionToTextItems(collectionSource, items.itemText, state, 'list.props.items')
   }
 
-  return projectScalarCollectionToTextItems(collectionSource)
+  return projectScalarCollectionToTextItems(collectionSource, state, 'list.props.items', {
+    interpolateStrings: 'values' in items,
+    iterationContext: options.iterationContext,
+  })
 }
 
 export function resolveSelectCollectionItems(
@@ -82,9 +113,18 @@ export function resolveChoiceCollectionItems(
   options: { iterationContext?: RuntimeIterationContext } = {},
 ) {
   if (Array.isArray(items)) {
+    const projectionSurfaces = CHOICE_PROJECTION_SURFACES[surface]
+
     return items.map((item) => ({
-      label: item.label,
-      value: String(item.value),
+      label: resolveInterpolatedCollectionString(item.label, state, projectionSurfaces.label, {
+        iterationContext: options.iterationContext,
+      }),
+      value:
+        typeof item.value === 'string'
+          ? resolveInterpolatedCollectionString(item.value, state, projectionSurfaces.value, {
+              iterationContext: options.iterationContext,
+            })
+          : String(item.value),
     }))
   }
 
@@ -95,7 +135,7 @@ export function resolveChoiceCollectionItems(
   }
 
   if ('label' in items && 'value' in items && typeof items.label === 'string' && typeof items.value === 'string') {
-    return projectObjectCollectionToSelectItems(collectionSource, items.label, items.value, surface)
+    return projectObjectCollectionToSelectItems(collectionSource, items.label, items.value, state, surface)
   }
 
   return projectScalarCollectionToSelectItems(collectionSource, surface)
@@ -145,11 +185,21 @@ function resolveCollectionSource(
   }
 }
 
-function projectScalarCollectionToTextItems(collectionSource: ResolvedCollectionSource) {
+function projectScalarCollectionToTextItems(
+  collectionSource: ResolvedCollectionSource,
+  state: RuntimeState,
+  surface: 'list.props.items',
+  options: { interpolateStrings: boolean; iterationContext?: RuntimeIterationContext },
+) {
   const items: string[] = []
 
   for (const item of collectionSource.items) {
-    const normalizedValue = normalizeTextValue(item)
+    const normalizedValue =
+      options.interpolateStrings && typeof item === 'string'
+        ? resolveInterpolatedCollectionString(item, state, surface, {
+            iterationContext: options.iterationContext,
+          })
+        : normalizeTextValue(item)
 
     if (normalizedValue !== null) {
       items.push(normalizedValue)
@@ -162,12 +212,24 @@ function projectScalarCollectionToTextItems(collectionSource: ResolvedCollection
 function projectObjectCollectionToTextItems(
   collectionSource: ResolvedCollectionSource,
   itemText: string,
+  state: RuntimeState,
   surface: 'list.props.items',
 ) {
   const items: string[] = []
+  const isInterpolatedProjection = hasRuntimeTemplateDelimiter(itemText)
 
   for (let index = 0; index < collectionSource.items.length; index += 1) {
     const item = collectionSource.items[index]
+
+    if (isInterpolatedProjection) {
+      items.push(resolveInterpolatedCollectionString(itemText, state, surface, {
+        iterationContext: {
+          item,
+        },
+      }))
+      continue
+    }
+
     const resolvedValue = resolveCollectionItemPath(item, itemText)
     const normalizedValue = resolvedValue.found ? normalizeTextValue(resolvedValue.value) : null
 
@@ -226,19 +288,49 @@ function projectObjectCollectionToSelectItems(
   collectionSource: ResolvedCollectionSource,
   labelPath: string,
   valuePath: string,
+  state: RuntimeState,
   surface: ChoiceCollectionSurface,
 ) {
   const items: ResolvedSelectCollectionItem[] = []
   let valueType: 'string' | 'number' | null = null
+  const projectionSurfaces = CHOICE_PROJECTION_SURFACES[surface]
+  const isInterpolatedLabel = hasRuntimeTemplateDelimiter(labelPath)
+  const isInterpolatedValue = hasRuntimeTemplateDelimiter(valuePath)
 
   for (let index = 0; index < collectionSource.items.length; index += 1) {
     const item = collectionSource.items[index]
-    const resolvedLabel = resolveCollectionItemPath(item, labelPath)
+    const normalizedLabel = isInterpolatedLabel
+      ? resolveInterpolatedCollectionString(labelPath, state, projectionSurfaces.label, {
+          iterationContext: {
+            item,
+          },
+        })
+      : normalizeCollectionItemPathText(item, labelPath)
+
+    if (normalizedLabel === null) {
+      reportCollectionItemDiagnostic({
+        itemPath: `${collectionSource.itemBasePath}[${index}]`,
+        surface,
+        projectionPath: `${labelPath}|${valuePath}`,
+      })
+      continue
+    }
+
+    if (isInterpolatedValue) {
+      items.push({
+        label: normalizedLabel,
+        value: resolveInterpolatedCollectionString(valuePath, state, projectionSurfaces.value, {
+          iterationContext: {
+            item,
+          },
+        }),
+      })
+      continue
+    }
+
     const resolvedValue = resolveCollectionItemPath(item, valuePath)
-    const normalizedLabel = resolvedLabel.found ? normalizeTextValue(resolvedLabel.value) : null
 
     if (
-      normalizedLabel === null ||
       !resolvedValue.found ||
       (typeof resolvedValue.value !== 'string' && typeof resolvedValue.value !== 'number')
     ) {
@@ -270,6 +362,28 @@ function projectObjectCollectionToSelectItems(
   }
 
   return items
+}
+
+function normalizeCollectionItemPathText(item: unknown, path: string) {
+  const resolvedValue = resolveCollectionItemPath(item, path)
+  return resolvedValue.found ? normalizeTextValue(resolvedValue.value) : null
+}
+
+function resolveInterpolatedCollectionString(
+  value: string,
+  state: RuntimeState,
+  surface: RuntimeReferenceSurface,
+  options: { iterationContext?: RuntimeIterationContext } = {},
+) {
+  if (!hasRuntimeTemplateDelimiter(value)) {
+    return value
+  }
+
+  return normalizeTextValue(
+    resolveRuntimeVisibleValue(value, state, surface, {
+      iterationContext: options.iterationContext,
+    }),
+  ) ?? ''
 }
 
 function resolveCollectionItemPath(item: unknown, path: string) {

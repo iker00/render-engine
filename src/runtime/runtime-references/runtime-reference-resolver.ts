@@ -23,6 +23,9 @@ interface ResolveRuntimeReferenceOptions {
   iterationContext?: RuntimeIterationContext
 }
 
+const RUNTIME_TEMPLATE_PLACEHOLDER_DETECTOR = /\{\{[\s\S]*?\}\}/
+const RUNTIME_TEMPLATE_PLACEHOLDER_PATTERN = /\{\{([\s\S]*?)\}\}/g
+
 export function resolveRuntimeReference(
   value: string,
   state?: RuntimeState,
@@ -74,7 +77,7 @@ export function resolveRuntimeReference(
 export function resolveRuntimeTextReference(
   value: string,
   state: RuntimeState,
-  surface: 'heading.props.text' | 'paragraph.props.text',
+  surface: RuntimeReferenceSurface,
   options: ResolveRuntimeReferenceOptions = {},
 ) {
   return normalizeRuntimeTextValue(resolveRuntimeVisibleValue(value, state, surface, options))
@@ -88,6 +91,10 @@ export function resolveRuntimeVisibleValue(
 ) {
   if (typeof value !== 'string') {
     return value
+  }
+
+  if (hasRuntimeVisibleStringInterpolation(value)) {
+    return resolveRuntimeInterpolatedVisibleValue(value, state, surface, options)
   }
 
   const result = resolveRuntimeReference(value, state, options)
@@ -106,6 +113,39 @@ export function resolveRuntimeVisibleValue(
   }
 
   return ''
+}
+
+function hasRuntimeVisibleStringInterpolation(value: string) {
+  return RUNTIME_TEMPLATE_PLACEHOLDER_DETECTOR.test(value)
+}
+
+function resolveRuntimeInterpolatedVisibleValue(
+  value: string,
+  state: RuntimeState,
+  surface: RuntimeReferenceSurface,
+  options: ResolveRuntimeReferenceOptions,
+) {
+  return value.replace(RUNTIME_TEMPLATE_PLACEHOLDER_PATTERN, (_placeholder, rawReference) => {
+    const referenceValue = rawReference.trim()
+
+    if (referenceValue.length === 0) {
+      return ''
+    }
+
+    const result = resolveRuntimeReference(referenceValue, state, options)
+
+    if (result.status === 'literal') {
+      return ''
+    }
+
+    reportRuntimeReferenceDiagnostic(result, surface)
+
+    if (result.status !== 'resolved') {
+      return ''
+    }
+
+    return normalizeRuntimeTextValue(result.value)
+  })
 }
 
 export function resolveRuntimeImageSource(

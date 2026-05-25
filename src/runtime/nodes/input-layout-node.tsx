@@ -1,6 +1,9 @@
 import type { InputLayoutNode } from '../../config/runtime-config'
 import { useOptionalFormContext } from '../form-context'
-import type { RuntimeIterationContext } from '../runtime-references/runtime-reference-resolver'
+import {
+  resolveRuntimeTextReference,
+  type RuntimeIterationContext,
+} from '../runtime-references/runtime-reference-resolver'
 import { resolveResolvedFormFieldDefinition } from './form-layout-node'
 import {
   getFieldControlClassName,
@@ -28,6 +31,7 @@ export function InputNode({ node, iterationContext }: InputNodeProps) {
 
   const fieldState = selectFormFieldState(state, formContext.formId, node.props.fieldId)
   const fieldDefinition = resolveResolvedFormFieldDefinition(node, state, iterationContext)
+  const label = resolveRuntimeTextReference(node.props.label, state, 'input.props.label', { iterationContext })
   const defaultValue = fieldDefinition.defaultValue
   const value =
     typeof fieldState?.value === 'string'
@@ -39,7 +43,7 @@ export function InputNode({ node, iterationContext }: InputNodeProps) {
 
   return (
     <label className={getFieldWrapperClassName()} data-layout-node="input">
-      <span className={getFieldLabelClassName()}>{node.props.label}</span>
+      <span className={getFieldLabelClassName()}>{label}</span>
       <input
         type={node.props.inputType ?? 'text'}
         className={getFieldControlClassName(error !== null)}

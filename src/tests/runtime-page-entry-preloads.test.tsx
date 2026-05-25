@@ -530,6 +530,56 @@ describe('Runtime page entry preloads integration', () => {
     })
   })
 
+  it('keeps partial template strings literal in page preload query body and headers', async () => {
+    const configWithTemplatePreload: RuntimeConfig = {
+      api: {
+        preloadProfile: {
+          method: 'POST',
+          endpoint: '/api/profile',
+        },
+      },
+      initialPage: 'profile',
+      pages: [
+        {
+          id: 'profile',
+          preloads: [
+            {
+              operationName: 'preloadProfile',
+              requestParams: {
+                query: {
+                  search: 'prefix-{{forms.userSearch.term}}',
+                },
+                headers: {
+                  authorization: 'Bearer {{forms.userSearch.term}}',
+                },
+                body: {
+                  name: 'prefix-{{forms.userSearch.term}}',
+                },
+              },
+            },
+          ],
+          layout: [],
+        },
+      ],
+    }
+    const fetchMock = vi.fn().mockResolvedValue(createJsonResponse({ ok: true }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    renderRuntimePageWithPreloads(configWithTemplatePreload)
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+    expect(fetchMock).toHaveBeenCalledWith('/api/profile?search=prefix-%7B%7Bforms.userSearch.term%7D%7D', {
+      method: 'POST',
+      headers: {
+        authorization: 'Bearer {{forms.userSearch.term}}',
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        name: 'prefix-{{forms.userSearch.term}}',
+      }),
+    })
+  })
+
   it('prepares a new preload entry directly in loading without exposing an idle commit for that entry', async () => {
     let resolveUsers: ((response: Response) => void) | null = null
     const fetchMock = vi.fn(() => new Promise<Response>((resolve) => {

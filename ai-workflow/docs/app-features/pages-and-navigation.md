@@ -51,6 +51,7 @@ Definir cómo se organiza el catálogo de páginas del runtime y cuál es el alc
 - El runtime sí expone parámetros de navegación mediante la familia `params.{paramName}`.
 - `params.*` representa los query params efectivos de la entrada activa normalizada, tanto si nacen de la URL directa como de una navegación declarativa interna.
 - La familia `params.*` puede reutilizarse en texto visible, requests declarativos, `defaultValue` de campos y nuevas navegaciones originadas desde una página ya parametrizada.
+- En texto visible puede usarse también dentro de placeholders `{{params.paramName}}`; en `navigateTo.params` sigue aplicando solo como referencia completa o literal escalar, sin interpolación parcial tipo `case-{{params.userId}}`.
 - Si una navegación desmonta un `form` y luego lo vuelve a montar en otra entrada, los `defaultValue` basados en `params.*` se recalculan por defecto contra los params vigentes de esa nueva entrada.
 - Si la nueva entrada además dispara `preloads`, cualquier `defaultValue` que dependa de esas queries precargadas se inicializa contra el estado limpio de la entrada nueva y ya no puede hidratarse con el dato de la visita anterior.
 - `params.*` no forma parte todavía de `visibility` ni de las fuentes dinámicas de colección para `list` y `select`.

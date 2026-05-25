@@ -1,7 +1,10 @@
 import type { SelectLayoutNode } from '../../config/runtime-config'
 import { useOptionalFormContext } from '../form-context'
 import { resolveResolvedFormFieldDefinition } from './form-layout-node'
-import type { RuntimeIterationContext } from '../runtime-references/runtime-reference-resolver'
+import {
+  resolveRuntimeTextReference,
+  type RuntimeIterationContext,
+} from '../runtime-references/runtime-reference-resolver'
 import { normalizeChoiceFieldValue, resolveSelectCollectionItems } from '../runtime-collection-sources'
 import {
   getFieldControlClassName,
@@ -29,6 +32,7 @@ export function SelectNode({ node, iterationContext }: SelectNodeProps) {
 
   const fieldState = selectFormFieldState(state, formContext.formId, node.props.fieldId)
   const fieldDefinition = resolveResolvedFormFieldDefinition(node, state, iterationContext)
+  const label = resolveRuntimeTextReference(node.props.label, state, 'select.props.label', { iterationContext })
   const defaultValue = fieldDefinition.defaultValue
   const resolvedItems = resolveSelectCollectionItems(node.props.items, state, { iterationContext })
   const isMultiple = node.props.multiple === true
@@ -52,10 +56,10 @@ export function SelectNode({ node, iterationContext }: SelectNodeProps) {
 
   return (
     <label className={getFieldWrapperClassName()} data-layout-node="select">
-      <span className={getFieldLabelClassName()}>{node.props.label}</span>
+      <span className={getFieldLabelClassName()}>{label}</span>
       <div className="relative">
         <select
-          aria-label={node.props.label}
+          aria-label={label}
           className={`${getFieldControlClassName(error !== null)} ${isMultiple ? 'min-h-32 sm:min-h-36' : 'appearance-none pr-12'}`.trim()}
           multiple={isMultiple}
           value={value}

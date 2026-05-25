@@ -43,13 +43,16 @@ Reglas estables del catálogo:
 - `input` cubre entrada de una sola línea con `inputType` acotado y ya soporta `text`, `email`, `password`, `search`, `tel`, `url`, `number`, `date` y `datetime-local`.
 - `textarea` cubre entrada multilínea.
 - `select` acepta tanto items históricos estáticos `{ label, value }` como colecciones manuales o dinámicas declaradas desde `queries.*`.
+- Los labels de `input`, `textarea`, `select`, `radioGroup` y `checkboxGroup` admiten interpolación parcial `{{...}}` con las referencias visibles soportadas, sin cambiar el estado ni la interacción del campo.
 - `select.props.multiple` convierte el campo en selección múltiple y hace que su valor efectivo sea `string[]`.
 - `radioGroup` acepta exactamente los mismos shapes de `items` que `select` y conserva una única selección efectiva como `string`.
 - `checkboxGroup` acepta exactamente los mismos shapes de `items` que `select` y conserva una selección múltiple efectiva como `string[]`.
 - `radioGroup` y `checkboxGroup` aceptan opcionalmente `props.optionLayout: 'vertical' | 'inline'` como decisión visual por nodo, sin alterar el shape de `items`, `defaultValue`, validación ni submit.
-- Dentro de un mismo `select`, todos los `value` efectivos deben ser homogéneos en origen (`string` o `number`) aunque en runtime se normalicen a string.
-- Dentro de un mismo `radioGroup` o `checkboxGroup`, todos los `value` efectivos también deben ser homogéneos en origen (`string` o `number`).
+- Los labels y values string de opciones en `select`, `radioGroup` y `checkboxGroup` pueden interpolarse parcialmente; en proyecciones por objeto, `item.*` apunta al item local que se está materializando.
+- Dentro de un mismo `select`, todos los `value` efectivos no interpolados deben ser homogéneos en origen (`string` o `number`) aunque en runtime se normalicen a string; cuando un `value` string se interpola, el resultado final entra como string efectivo.
+- Dentro de un mismo `radioGroup` o `checkboxGroup`, todos los `value` efectivos también siguen esa política.
 - Los valores numéricos de `select`, `radioGroup` y `checkboxGroup` se normalizan a string en runtime para compararse, almacenarse, renderizarse y enviarse.
+- Los valores interpolados de opción se normalizan como strings finales; `0` y `false` se conservan como `0` y `false`, y un placeholder no resoluble solo vacía su parte del string.
 - `select` simple y `radioGroup` comparten la misma semántica de valor vacío `''`.
 - `select.multiple` y `checkboxGroup` comparten la misma semántica de valor vacío `[]` y el mismo orden estable según el catálogo efectivo visible.
 - Las variantes multilínea y multiselección mantienen una altura mínima explícita para no volverse frágiles tras la compactación general del formulario.
@@ -60,6 +63,7 @@ Reglas estables del catálogo:
 - La familia `params.*` ya forma parte de las referencias dinámicas soportadas para `defaultValue`.
 - Dentro de un `repeater`, `defaultValue` también puede resolver `item.*` contra la iteración activa.
 - Si `defaultValue` es una referencia dinámica, se resuelve una sola vez en el momento de la primera inicialización efectiva del campo.
+- `defaultValue` no aplica interpolación parcial: puede ser literal o referencia completa soportada, pero un string como `Hola {{params.userId}}` se trata como literal.
 - Si esa referencia dinámica apunta a una query incluida en los `preloads` de una nueva `pageEntry`, la primera inicialización efectiva de esa reentrada ya ocurre contra la query limpia de la entrada activa, no contra el éxito conservado de una visita anterior.
 - Si el dato dinámico aparece más tarde mientras el formulario sigue montado, el runtime no rehidrata automáticamente el campo.
 - Excepción acotada ya implementada: si el campo sigue prístino y todavía no ha quedado hidratado efectivamente durante la nueva entrada, puede absorber el primer dato fresco que llegue desde esa tanda de `preloads` sin convertir `defaultValue` en una referencia reactiva general.
@@ -154,6 +158,7 @@ Semántica estable vigente del reset:
 - grupos `radioGroup` y `checkboxGroup` alimentados por colecciones manuales o por `queries.*`, compartiendo la misma semántica de opciones que `select`
 - grupos `radioGroup` y `checkboxGroup` dentro de `repeater` alimentados también por `item.*`, compartiendo la misma semántica de opciones que `select`
 - formularios que mezclan grupos `radioGroup` o `checkboxGroup` verticales e inline dentro de la misma pantalla, manteniendo la misma semántica de selección, validación y submit
+- formularios cuyos labels u opciones visibles combinan texto literal con `forms.*`, `queries.*`, `params.*` o `item.*` mediante placeholders `{{...}}`
 
 ## Límites actuales
 - No existen todavía subida de archivos ni otros tipos de campo fuera de `input`, `textarea`, `select`, `radioGroup` y `checkboxGroup`.
@@ -161,3 +166,4 @@ Semántica estable vigente del reset:
 - No existen todavía validaciones declarativas avanzadas, mensajes personalizados complejos ni validaciones cruzadas.
 - No existe todavía una política nueva de limpieza global de formularios al cambiar de página.
 - No existe rehidratación automática de campos ya montados cuando cambian `params.*`, `queries.*` u otros datos externos sin desmontaje real.
+- No hay interpolación parcial en `defaultValue`, `submitAction`, validaciones ni reglas de visibilidad.

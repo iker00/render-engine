@@ -78,7 +78,7 @@ import {
   checkboxGroupNodeSchema,
 } from './runtime-config-zod'
 import { initialPageNotFound, invalidLayout, unsupportedNodeType } from './runtime-config-validation-errors'
-import { parseRuntimeReference } from '../runtime/runtime-references/runtime-reference-parser'
+import { hasRuntimeTemplateDelimiter, parseRuntimeReference } from '../runtime/runtime-references/runtime-reference-parser'
 
 const collectionPathSegmentPattern = /^[A-Za-z0-9_-]+$/
 const visibilityComparisonOperators = new Set<RuntimeVisibilityOperator>(['equals', 'notEquals', 'greaterThan', 'lessThan'])
@@ -1287,7 +1287,7 @@ function validateListItems(
       return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.itemType".`)
     }
 
-    if (rawItems.itemText !== undefined && !isValidCollectionItemPath(rawItems.itemText)) {
+    if (rawItems.itemText !== undefined && !isValidCollectionProjectionPath(rawItems.itemText)) {
       return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.itemText".`)
     }
 
@@ -1329,7 +1329,7 @@ function validateListItems(
   }
 
   if (values.every((value) => isRecord(value))) {
-    if (!isValidCollectionItemPath(rawItems.itemText)) {
+    if (!isValidCollectionProjectionPath(rawItems.itemText)) {
       return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.itemText".`)
     }
 
@@ -2727,11 +2727,11 @@ function validateSelectItemsContract(
       }
     }
 
-    if (!isValidCollectionItemPath(rawItems.label)) {
+    if (!isValidCollectionProjectionPath(rawItems.label)) {
       return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.label".`)
     }
 
-    if (!isValidCollectionItemPath(rawItems.value)) {
+    if (!isValidCollectionProjectionPath(rawItems.value)) {
       return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.value".`)
     }
 
@@ -2775,15 +2775,17 @@ function validateSelectItemsContract(
   }
 
   if (values.every((value) => isRecord(value))) {
-    if (!isValidCollectionItemPath(rawItems.label)) {
+    if (!isValidCollectionProjectionPath(rawItems.label)) {
       return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.label".`)
     }
 
-    if (!isValidCollectionItemPath(rawItems.value)) {
+    if (!isValidCollectionProjectionPath(rawItems.value)) {
       return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.value".`)
     }
 
-    const projectedValueTypeIssue = validateManualSelectObjectValueTypes(values as RuntimeCollectionObjectItem[], rawItems.value, `${path}.values`, pageId)
+    const projectedValueTypeIssue = hasRuntimeTemplateDelimiter(rawItems.value)
+      ? null
+      : validateManualSelectObjectValueTypes(values as RuntimeCollectionObjectItem[], rawItems.value, `${path}.values`, pageId)
 
     if (projectedValueTypeIssue) {
       return projectedValueTypeIssue
@@ -3695,6 +3697,10 @@ function isValidCollectionItemPath(value: unknown): value is string {
   }
 
   return value.split('.').every(isValidCollectionPathSegment)
+}
+
+function isValidCollectionProjectionPath(value: unknown): value is string {
+  return isNonEmptyString(value) && (hasRuntimeTemplateDelimiter(value) || isValidCollectionItemPath(value))
 }
 
 function isValidRepeaterItemKeyPath(value: unknown): value is string {

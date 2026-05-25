@@ -1,6 +1,9 @@
 import type { RadioGroupLayoutNode } from '../../config/runtime-config'
 import { useOptionalFormContext } from '../form-context'
-import type { RuntimeIterationContext } from '../runtime-references/runtime-reference-resolver'
+import {
+  resolveRuntimeTextReference,
+  type RuntimeIterationContext,
+} from '../runtime-references/runtime-reference-resolver'
 import { resolveResolvedFormFieldDefinition } from './form-layout-node'
 import { normalizeChoiceFieldValue, resolveChoiceCollectionItems } from '../runtime-collection-sources'
 import {
@@ -30,6 +33,7 @@ export function RadioGroupNode({ node, iterationContext }: RadioGroupNodeProps) 
 
   const fieldState = selectFormFieldState(state, formContext.formId, node.props.fieldId)
   const fieldDefinition = resolveResolvedFormFieldDefinition(node, state, iterationContext)
+  const label = resolveRuntimeTextReference(node.props.label, state, 'radioGroup.props.label', { iterationContext })
   const defaultValue = fieldDefinition.defaultValue
   const items = resolveChoiceCollectionItems(node.props.items, state, 'radioGroup.props.items', { iterationContext })
   const value = normalizeChoiceFieldValue(node.props.items, state, fieldState?.value ?? defaultValue, {
@@ -42,7 +46,7 @@ export function RadioGroupNode({ node, iterationContext }: RadioGroupNodeProps) 
 
   return (
     <fieldset className={getFieldWrapperClassName()} data-layout-node="radio-group">
-      <legend className={getFieldLabelClassName()}>{node.props.label}</legend>
+      <legend className={getFieldLabelClassName()}>{label}</legend>
       <div className={getChoiceGroupClassName(optionLayout)}>
         {items.map((item, index) => (
           <label key={`${node.props.fieldId}-${index}-${item.value}`} className={getChoiceOptionClassName(optionLayout)}>
