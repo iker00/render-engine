@@ -208,7 +208,7 @@ function resolveJsonPayloadValue(
   value: RuntimeApiBodyValue,
   state: BuildRuntimeApiRequestOptions['state'],
   iterationContext: BuildRuntimeApiRequestOptions['iterationContext'],
-) {
+): { status: 'ready'; value: RuntimeApiBodyValue } | { status: 'error' } {
   if (value === null) {
     return {
       status: 'ready',
@@ -225,7 +225,10 @@ function resolveJsonPayloadValue(
       } as const
     }
 
-    return resolvedValue
+    return {
+      status: 'ready',
+      value: resolvedValue.value,
+    }
   }
 
   if (typeof value === 'number' || typeof value === 'boolean') {
@@ -245,7 +248,7 @@ function resolveJsonPayloadValue(
         return resolvedItem
       }
 
-      resolvedItems.push(resolvedItem.value as RuntimeApiBodyValue)
+      resolvedItems.push(resolvedItem.value)
     }
 
     return {
@@ -263,7 +266,7 @@ function resolveJsonPayloadValue(
       return resolvedChild
     }
 
-    resolvedObject[key] = resolvedChild.value as RuntimeApiBodyValue
+    resolvedObject[key] = resolvedChild.value
   }
 
   return {

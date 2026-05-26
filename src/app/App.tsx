@@ -5,9 +5,9 @@ import { readRuntimeConfig, type RuntimeConfig } from './bootstrap/read-runtime-
 const defaultDevConfig = devConfig as RuntimeConfig
 
 interface AppProps {
-  devConfigOverride: RuntimeConfig
-  isDevelopment: boolean
-  rootElement: HTMLElement | null
+  devConfigOverride?: RuntimeConfig
+  isDevelopment?: boolean
+  rootElement?: HTMLElement | null
 }
 
 export function App({

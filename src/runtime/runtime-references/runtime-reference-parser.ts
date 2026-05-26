@@ -6,8 +6,8 @@ import type {
   RuntimeUnsupportedReference,
 } from './runtime-reference-types'
 
-const SUPPORTED_NAMESPACES = new Set<RuntimeReferenceNamespace>(['forms', 'queries', 'params'])
-const RESERVED_NAMESPACES = new Set<RuntimeReferenceNamespace>(['navigation', 'routeParams'])
+const SUPPORTED_NAMESPACES = new Set(['forms', 'queries', 'params'] as const)
+const RESERVED_NAMESPACES = new Set(['navigation', 'routeParams'] as const)
 const REFERENCE_PATTERN = /^(item|forms|queries|navigation|routeParams|params)(\.[A-Za-z0-9_-]+)*$/
 const REFERENCE_SEGMENT_PATTERN = /^[A-Za-z0-9_-]+$/
 
@@ -57,7 +57,7 @@ export function parseRuntimeReference(value: string, options: ParseRuntimeRefere
     } satisfies RuntimeUnsupportedReference
   }
 
-  if (SUPPORTED_NAMESPACES.has(namespace)) {
+  if (isSupportedNamespace(namespace)) {
     return {
       kind: 'reference',
       status: 'supported',
@@ -67,7 +67,7 @@ export function parseRuntimeReference(value: string, options: ParseRuntimeRefere
     } satisfies RuntimeSupportedReference
   }
 
-  if (RESERVED_NAMESPACES.has(namespace)) {
+  if (isReservedNamespace(namespace)) {
     return {
       kind: 'reference',
       status: 'unsupported',
@@ -81,6 +81,14 @@ export function parseRuntimeReference(value: string, options: ParseRuntimeRefere
     kind: 'literal',
     value,
   }
+}
+
+function isSupportedNamespace(namespace: RuntimeReferenceNamespace): namespace is Exclude<RuntimeSupportedReference['namespace'], 'item'> {
+  return SUPPORTED_NAMESPACES.has(namespace as Exclude<RuntimeSupportedReference['namespace'], 'item'>)
+}
+
+function isReservedNamespace(namespace: RuntimeReferenceNamespace): namespace is 'navigation' | 'routeParams' {
+  return RESERVED_NAMESPACES.has(namespace as 'navigation' | 'routeParams')
 }
 
 export function hasRuntimeTemplateDelimiter(value: string) {

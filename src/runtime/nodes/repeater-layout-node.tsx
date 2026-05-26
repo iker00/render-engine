@@ -33,12 +33,44 @@ interface RepeaterIteration {
 export function RepeaterNode({ node }: RepeaterNodeProps) {
   const state = useRuntimeState()
   const { parentGridColumns } = useRuntimeLayoutContext()
-  const [activePage, setActivePage] = useState(1)
-  const [scrollVisibleCount, setScrollVisibleCount] = useState(node.props.pagination?.pageSize ?? 0)
   const items = resolveRepeaterItems(node.props.items.source, state)
   const pageSize = node.props.pagination?.pageSize
   const paginationControlsVariant = node.props.pagination?.controls?.variant ?? 'previousNext'
   const iterations = useMemo(() => resolveRepeaterIterations(node, items), [node, items])
+  const paginationStateKey = useMemo(
+    () => `${paginationControlsVariant}:${pageSize ?? 'all'}:${iterations.map((iteration) => iteration.key).join('|')}`,
+    [iterations, pageSize, paginationControlsVariant],
+  )
+
+  return (
+    <RepeaterNodeContent
+      key={paginationStateKey}
+      node={node}
+      iterations={iterations}
+      pageSize={pageSize}
+      paginationControlsVariant={paginationControlsVariant}
+      parentGridColumns={parentGridColumns}
+    />
+  )
+}
+
+interface RepeaterNodeContentProps {
+  node: RepeaterLayoutNode
+  iterations: RepeaterIteration[]
+  pageSize?: number
+  paginationControlsVariant: RuntimeCollectionPaginationControlsVariant
+  parentGridColumns?: RuntimeResponsiveLayoutValue | null
+}
+
+function RepeaterNodeContent({
+  node,
+  iterations,
+  pageSize,
+  paginationControlsVariant,
+  parentGridColumns,
+}: RepeaterNodeContentProps) {
+  const [activePage, setActivePage] = useState(1)
+  const [scrollVisibleCount, setScrollVisibleCount] = useState(pageSize ?? 0)
   const paginationModel = useMemo(
     () => (pageSize === undefined ? null : createCollectionPaginationModel(iterations, pageSize)),
     [iterations, pageSize],
@@ -49,11 +81,6 @@ export function RepeaterNode({ node }: RepeaterNodeProps) {
       ? createCollectionScrollWindow(iterations, pageSize, scrollVisibleCount)
       : null
   const visibleIterations = scrollWindow?.visibleItems ?? paginationPage?.visibleItems ?? iterations
-
-  useEffect(() => {
-    setActivePage(1)
-    setScrollVisibleCount(pageSize ?? 0)
-  }, [items, pageSize, paginationControlsVariant])
 
   if (visibleIterations.length === 0) {
     return null

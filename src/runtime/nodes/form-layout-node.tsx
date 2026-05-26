@@ -276,13 +276,19 @@ function isChoiceFieldNode(
 }
 
 function isMultipleChoiceFieldNode(
-  node: Pick<ResolvedFormFieldDefinition, 'type' | 'multiple'> | SelectLayoutNode | CheckboxGroupLayoutNode | RadioGroupLayoutNode,
+  node:
+    | Pick<ResolvedFormFieldDefinition, 'type' | 'multiple'>
+    | InputLayoutNode
+    | TextareaLayoutNode
+    | SelectLayoutNode
+    | CheckboxGroupLayoutNode
+    | RadioGroupLayoutNode,
 ) {
   if ('multiple' in node && typeof node.multiple === 'boolean') {
     return node.multiple
   }
 
-  return node.type === 'checkboxGroup' || (node.type === 'select' && node.props.multiple === true)
+  return node.type === 'checkboxGroup' || (node.type === 'select' && 'props' in node && node.props.multiple === true)
 }
 
 function getChoiceFieldSurface(type: ResolvedFormFieldDefinition['type']) {

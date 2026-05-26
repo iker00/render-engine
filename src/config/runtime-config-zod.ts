@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import type { RuntimeApiBodyValue } from './runtime-config-types'
 
 export const supportedNodeTypes = [
   'container',
@@ -65,7 +66,7 @@ export const runtimePageShellSchema = z
 export const runtimeApiQuerySchema = z.record(z.string(), z.union([z.string(), z.number(), z.boolean()]))
 export const runtimeApiHeadersSchema = z.record(z.string(), z.string())
 
-const runtimeApiBodySchema: z.ZodType<unknown> = z.lazy(() =>
+const runtimeApiBodySchema: z.ZodType<RuntimeApiBodyValue> = z.lazy(() =>
   z.union([z.string(), z.number(), z.boolean(), z.null(), z.array(runtimeApiBodySchema), z.record(z.string(), runtimeApiBodySchema)]),
 )
 

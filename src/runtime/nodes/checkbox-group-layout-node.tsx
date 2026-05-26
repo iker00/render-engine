@@ -57,9 +57,10 @@ export function CheckboxGroupNode({ node, iterationContext }: CheckboxGroupNodeP
               checked={selectedValues.has(item.value)}
               className="mt-1 h-4 w-4 rounded text-app-accent focus:ring-app-accent"
               onChange={(event) => {
+                const currentValue = Array.isArray(value) ? value : []
                 const nextUncheckedValues = event.currentTarget.checked
-                  ? [...value, item.value]
-                  : value.filter((entry) => entry !== item.value)
+                  ? [...currentValue, item.value]
+                  : currentValue.filter((entry) => entry !== item.value)
                 const nextValue = normalizeChoiceFieldValue(node.props.items, state, nextUncheckedValues, {
                   multiple: true,
                   surface: 'checkboxGroup.props.items',

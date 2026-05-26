@@ -33,6 +33,7 @@ import type {
   RuntimeApiOperation,
   RuntimeApiQuery,
   RuntimeApiRequestParams,
+  RuntimeConfigValue,
   RuntimeConfig,
   RuntimeConfigError,
   RuntimeUiAction,
@@ -2072,7 +2073,8 @@ function validateInputNode(
   return {
     status: 'ready',
     node: {
-      ...parseResult.data,
+      type: 'input',
+      layout: parseResult.data.layout,
       props: {
         ...parseResult.data.props,
         validations: validationsResult.validations,
@@ -2139,7 +2141,8 @@ function validateTextareaNode(
   return {
     status: 'ready',
     node: {
-      ...parseResult.data,
+      type: 'textarea',
+      layout: parseResult.data.layout,
       props: {
         ...parseResult.data.props,
         validations: validationsResult.validations,
@@ -2228,7 +2231,6 @@ function validateSelectNode(
   return {
     status: 'ready',
     node: {
-      id: parseResult.data.id,
       layout: parseResult.data.layout,
       type: 'select',
       queryStateFeedback: feedbackResult.queryStateFeedback,
@@ -2319,7 +2321,6 @@ function validateRadioGroupNode(
   return {
     status: 'ready',
     node: {
-      id: parseResult.data.id,
       layout: parseResult.data.layout,
       type: 'radioGroup',
       queryStateFeedback: feedbackResult.queryStateFeedback,
@@ -2410,7 +2411,6 @@ function validateCheckboxGroupNode(
   return {
     status: 'ready',
     node: {
-      id: parseResult.data.id,
       layout: parseResult.data.layout,
       type: 'checkboxGroup',
       queryStateFeedback: feedbackResult.queryStateFeedback,
@@ -3622,7 +3622,7 @@ function mapRequestBodyIssue(
   return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.body${formattedPath}".`)
 }
 
-function isRuntimeConfigValue(value: unknown): value is RuntimeVisibilityConfig['value'] {
+function isRuntimeConfigValue(value: unknown): value is RuntimeConfigValue {
   return value === null || typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean'
 }
 
@@ -3632,7 +3632,8 @@ function isTableCellValue(value: unknown): value is TableCellValue {
 
 function isValidVisibilityReference(reference: string): boolean {
   if (reference === 'item' || reference.startsWith('item.')) {
-    return parseRuntimeReference(reference, { allowItemReference: true }).status === 'supported'
+    const parsedReference = parseRuntimeReference(reference, { allowItemReference: true })
+    return parsedReference.kind === 'reference' && parsedReference.status === 'supported'
   }
 
   const segments = reference.split('.')
@@ -3675,7 +3676,8 @@ function isNonEmptyString(value: unknown): value is string {
 
 function isValidCollectionSourceReference(value: string, options: { allowItemReference?: boolean } = {}) {
   if (options.allowItemReference && (value === 'item' || value.startsWith('item.'))) {
-    return parseRuntimeReference(value, { allowItemReference: true }).status === 'supported'
+    const parsedReference = parseRuntimeReference(value, { allowItemReference: true })
+    return parsedReference.kind === 'reference' && parsedReference.status === 'supported'
   }
 
   return isValidQueryCollectionSource(value)

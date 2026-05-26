@@ -273,7 +273,7 @@ function resolveNestedReferenceValue(rootValue: unknown, path: string[]) {
     } as const
   }
 
-  let currentValue = rootValue
+  let currentValue: unknown = rootValue
 
   for (const segment of path) {
     if (currentValue == null) {

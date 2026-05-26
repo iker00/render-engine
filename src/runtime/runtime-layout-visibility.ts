@@ -88,7 +88,7 @@ export function matchesVisibilityRule(
 
   const comparableValue = normalizeComparableValue(resolvedReference.value)
 
-  if (comparableValue === null || visibility.value === undefined) {
+  if (comparableValue === null || typeof visibility.value !== 'number') {
     return false
   }
 

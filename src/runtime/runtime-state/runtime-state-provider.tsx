@@ -295,6 +295,20 @@ export function RuntimeStateProvider({ config, children }: RuntimeStateProviderP
         return
       }
 
+      if (preloadPlan.aggregateStatus === 'idle') {
+        dispatchAndSyncState({
+          type: 'page-entry/set-idle',
+          payload: {
+            entryId: activeNavigationEntry.entryId,
+            pageId: activePage.id,
+            params: activeNavigationEntry.params,
+            preloadNames,
+          },
+        })
+
+        return
+      }
+
       dispatchAndSyncState({
         type: 'page-entry/set-settled-entry',
         payload: {
@@ -405,7 +419,7 @@ export function useRuntimeState() {
 }
 
 export function useRuntimeStateActions() {
-  const { config, dispatch, dispatchAndSyncState, getLatestState, initialState } = useRuntimeStateContext()
+  const { config, dispatchAndSyncState, getLatestState, initialState } = useRuntimeStateContext()
 
   const navigateToPage = useCallback(
     (
@@ -561,7 +575,6 @@ export function useRuntimeStateActions() {
         type: 'queries/initialize',
         payload: {
           queryName,
-          requestSignature: null,
         },
       })
     },

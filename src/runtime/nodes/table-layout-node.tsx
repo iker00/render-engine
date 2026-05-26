@@ -1,4 +1,4 @@
-import type { TableCellValue, TableLayoutNode } from '../../config/runtime-config'
+import type { TableCellValue, TableDynamicRows, TableLayoutNode } from '../../config/runtime-config'
 import { resolveCollectionSourceItems } from '../runtime-collection-sources'
 import {
   resolveRuntimeVisibleValue,
@@ -54,7 +54,7 @@ function resolveTableRows(
   node: TableLayoutNode,
   state: ReturnType<typeof useRuntimeState>,
   iterationContext?: RuntimeIterationContext,
-) {
+): TableCellValue[][] {
   if (Array.isArray(node.props.rows)) {
     return node.props.rows.map((row) =>
       row.map((cell) => {
@@ -67,10 +67,11 @@ function resolveTableRows(
     )
   }
 
-  const items = resolveCollectionSourceItems(node.props.rows.source, state, { iterationContext })
+  const dynamicRows = node.props.rows as TableDynamicRows
+  const items = resolveCollectionSourceItems(dynamicRows.source, state, { iterationContext })
 
   return items.map((item) =>
-    node.props.rows.cells.map((cell) =>
+    dynamicRows.cells.map((cell) =>
       resolveRuntimeVisibleValue(cell, state, 'table.cell', {
         iterationContext: {
           item,

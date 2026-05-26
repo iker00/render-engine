@@ -389,7 +389,7 @@ export function getContainerNodeStyling({
     className: [...classNames, ...surfaceClassNames, 'gap-[var(--runtime-container-gap)]'].join(' '),
     style: {
       '--runtime-container-gap': effectiveGap,
-    } satisfies ContainerGapStyle,
+    } as ContainerGapStyle,
   }
 }
 

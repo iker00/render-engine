@@ -3,7 +3,7 @@ import type { RuntimeIterationContext } from './runtime-references/runtime-refer
 import { LayoutNodeRenderer } from './layout-node-renderer'
 
 export interface LayoutRendererProps {
-  nodes: LayoutNodeCollection
+  nodes: readonly LayoutNode[]
   iterationContext?: RuntimeIterationContext
 }
 
