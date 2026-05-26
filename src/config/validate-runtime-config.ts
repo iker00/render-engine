@@ -1351,6 +1351,12 @@ function mapLeafNodeIssue(
   path: string,
   issuePath: PropertyKey[],
 ): { status: 'error'; error: RuntimeConfigError } {
+  const layoutIssue = mapLayoutNodeIssue(pageId, path, issuePath)
+
+  if (layoutIssue) {
+    return layoutIssue
+  }
+
   if (issuePath[0] === 'id') {
     return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.id".`)
   }

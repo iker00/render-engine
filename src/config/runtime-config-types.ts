@@ -88,8 +88,12 @@ export interface LayoutNodeLayoutFields {
   layout?: LayoutNodeLayoutConfig
 }
 
+export type RuntimeResponsiveBreakpoint = 'base' | 'sm' | 'md' | 'lg' | 'xl' | '2xl'
+export type RuntimeResponsiveBoundedValue = Partial<Record<RuntimeResponsiveBreakpoint, number>>
+export type RuntimeResponsiveLayoutValue = number | RuntimeResponsiveBoundedValue
+
 export interface LayoutNodeLayoutConfig {
-  span?: number
+  span?: RuntimeResponsiveLayoutValue
 }
 
 export type ContainerAlign = 'start' | 'center' | 'end' | 'stretch'
@@ -103,7 +107,7 @@ export interface ContainerLayoutNode extends LayoutNodeFeedbackFields, LayoutNod
   props?: {
     direction?: string
     gap?: string
-    columns?: number
+    columns?: RuntimeResponsiveLayoutValue
     variant?: ContainerVariant
     align?: ContainerAlign
     justify?: ContainerJustify

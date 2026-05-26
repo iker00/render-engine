@@ -35,7 +35,7 @@ export function ContainerNode({ node, children }: ContainerLayoutNodeViewProps) 
     },
     <RuntimeLayoutContextProvider
       value={{
-        parentGridColumns: typeof node.props?.columns === 'number' ? node.props.columns : null,
+        parentGridColumns: node.props?.columns ?? null,
       }}
     >
       {children}

@@ -22,7 +22,7 @@ No debe funcionar como historico acumulado ni como sustituto de las fichas funci
 - Paginacion local opt-in en `repeater` sobre colecciones `queries.*`, con `pageSize` declarativo, variantes de controles `previousNext`, `numbered` y `scroll`, estado local independiente por instancia y reset al cambiar coleccion o configuracion efectiva.
 - Consumidores de colecciones manuales, `queries.*` e `item.*` en `list`, `select`, `radioGroup` y `checkboxGroup`.
 - Feedback visual por estado de query y reglas simples de `visibility`, reutilizadas tambien para excluir campos ocultos de la validacion.
-- Layout declarativo con `container` por direccion o grid, `gap`, `columns`, `align`, `justify`, `wrap`, variante `card` y `layout.span` dentro de grids efectivos.
+- Layout declarativo con `container` por direccion o grid, `gap`, `columns` fijo o responsive, `align`, `justify`, `wrap`, variante `card` y `layout.span` fijo o responsive dentro de grids efectivos.
 - Baseline visual institucional compacta basada en tokens globales CSS-first y utilidades de `Tailwind`.
 - Tests automatizados con gate de cobertura global sobre `src/`.
 
@@ -36,7 +36,7 @@ No debe funcionar como historico acumulado ni como sustituto de las fichas funci
 - No hay validaciones remotas, validaciones cruzadas, `pattern` ni mensajes personalizados efectivos por regla.
 - No hay subida de archivos, busqueda remota de opciones, paginacion en `table`, paginacion remota ni carga incremental remota de colecciones.
 - `visibility` sigue limitada a una unica condicion simple, sin composicion booleana ni fallback propio.
-- No existe theming declarativo desde JSON; la personalizacion visual sigue cerrada al baseline actual y a las props soportadas.
+- No existe theming declarativo desde JSON; la personalizacion visual sigue cerrada al baseline actual, a las props soportadas y a los breakpoints responsive cerrados de `columns` y `layout.span`.
 
 ## Mantenimiento
 - Actualizar este snapshot solo cuando cambie una capacidad vigente o un limite actual.

@@ -58,14 +58,14 @@ Reglas estructurales vigentes:
 - `layout` debe ser siempre un array.
 - `layout: []` es válido y produce una página sin contenido inventado.
 - El shape antiguo con `layout` como objeto único ya no forma parte del contrato estable y se rechaza como error de configuración.
-- el bloque opcional `node.layout` admite hoy `span` como entero entre `1` y `12`.
+- el bloque opcional `node.layout` admite hoy `span` como entero entre `1` y `12` o como mapa responsive cerrado por breakpoint.
 - `container.children` reutiliza el mismo modelo de colección ordenada y puede ser `[]` o no declararse.
 
 Nodos soportados hoy:
 - `container`
   - `props.direction`: string opcional, con soporte visual actual para `row` y fallback a columna cuando `columns` no está presente
   - `props.gap`: string opcional; la escala recomendada y estable hoy es `sm | md | lg | xl | 2xl`, pero cualquier valor CSS string sigue admitiéndose como compatibilidad heredada
-  - `props.columns`: entero opcional entre `1` y `12`
+  - `props.columns`: entero opcional entre `1` y `12`, o mapa responsive opcional con claves `base | sm | md | lg | xl | 2xl` y valores enteros entre `1` y `12`
   - `props.variant`: opcional, con catálogo cerrado `default | card`
   - `props.align`: opcional, con catálogo cerrado `start | center | end | stretch`
   - `props.justify`: opcional, con catálogo cerrado `start | center | end | between | around | evenly`
@@ -186,13 +186,17 @@ Reglas estructurales adicionales del catálogo actual:
 - La ausencia de `repeater.props.pagination` es el único modo soportado para no paginar; `enabled: false`, `pagination: {}` o paginación sin `pageSize` no son contratos válidos.
 - `input`, `textarea`, `select`, `radioGroup` y `checkboxGroup` solo son válidos como descendientes de un `form`.
 - `button` sin `action` solo es válido como descendiente de un `form`.
-- `container.props.columns` solo admite enteros entre `1` y `12`.
-- `node.layout.span` solo admite enteros entre `1` y `12`.
+- `container.props.columns` admite enteros entre `1` y `12` o mapas responsive cerrados con claves `base | sm | md | lg | xl | 2xl` y valores enteros entre `1` y `12`.
+- `node.layout.span` admite enteros entre `1` y `12` o el mismo shape de mapa responsive cerrado.
+- En mapas responsive, `base` representa la clase sin prefijo y actúa como fallback móvil recomendado; si se omite, el runtime degrada a una columna hasta que aplique el primer breakpoint declarado.
+- Los breakpoints omitidos heredan el valor efectivo anterior siguiendo la cascada de Tailwind.
+- Las claves de breakpoint desconocidas y los valores fuera de `1..12`, no enteros o no numéricos se rechazan antes del render con ruta diagnóstica explícita.
 - `container.props.align`, `container.props.justify` y `container.props.wrap` se validan contra catálogos cerrados y se rechazan con ruta diagnóstica explícita cuando reciben valores fuera de contrato.
 - `container.props.variant` se valida contra el catálogo cerrado `default | card` y se rechaza con ruta diagnóstica explícita cuando recibe otro valor.
-- `container.props.wrap` no puede coexistir con `container.props.columns`; esa combinación se rechaza antes del render.
+- `container.props.wrap` no puede coexistir con `container.props.columns`, tanto si `columns` es fijo como responsive; esa combinación se rechaza antes del render.
 - Si `container` declara `direction` y `columns` a la vez, ambas props siguen siendo válidas en el contrato, pero `columns` pasa a ser el modo de layout efectivo.
 - `node.layout.span` se valida solo por shape; el contrato no exige conocer el padre para aceptarlo y el runtime lo degrada sin efecto cuando no existe un grid efectivo donde aplicarlo.
+- Dentro de un grid efectivo, `layout.span` se calcula contra las columnas efectivas del padre y se clampa por breakpoint para no superar las columnas disponibles en cada tramo responsive.
 - `repeater` puede declarar `layout.span` porque la superficie es transversal, pero esa prop no genera wrapper propio ni ocupación visible sobre el `repeater`; si una repetición necesita ocupar columnas, el nodo raíz visible de `props.template` debe declarar su propio `layout.span`.
 - las claves extra no soportadas se descartan del objeto validado final sin convertir por sí solas la configuración en inválida.
 - `props.required` deja de formar parte del contrato soportado; la obligatoriedad solo se declara desde `props.validations.required`.

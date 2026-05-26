@@ -106,6 +106,31 @@ describe('runtime node styling', () => {
     })
   })
 
+  it('maps responsive container columns with a safe mobile fallback', () => {
+    expect(
+      getContainerNodeStyling({
+        columns: {
+          base: 1,
+          md: 2,
+          lg: 4,
+        },
+      }),
+    ).toEqual({
+      className: 'grid w-full grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5',
+    })
+
+    expect(
+      getContainerNodeStyling({
+        columns: {
+          md: 2,
+          lg: 4,
+        },
+      }),
+    ).toEqual({
+      className: 'grid w-full grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5',
+    })
+  })
+
   it('maps align justify and wrap in linear mode with nowrap as the default', () => {
     expect(
       getContainerNodeStyling({
@@ -167,6 +192,63 @@ describe('runtime node styling', () => {
     expect(getGridChildSpanClassName(5, 3)).toBe('col-span-3')
   })
 
+  it('maps responsive grid span wrappers and clamps each breakpoint independently', () => {
+    expect(
+      getGridChildSpanClassName(
+        {
+          base: 1,
+          md: 2,
+        },
+        {
+          base: 1,
+          md: 2,
+          lg: 4,
+        },
+      ),
+    ).toBe('col-span-1 md:col-span-2')
+
+    expect(
+      getGridChildSpanClassName(
+        {
+          base: 2,
+          lg: 4,
+        },
+        {
+          base: 1,
+          lg: 3,
+        },
+      ),
+    ).toBe('col-span-1 lg:col-span-3')
+  })
+
+  it('recalculates responsive spans when parent columns change at omitted child breakpoints', () => {
+    expect(
+      getGridChildSpanClassName(
+        {
+          md: 2,
+        },
+        {
+          base: 1,
+          lg: 3,
+        },
+      ),
+    ).toBe('col-span-1 lg:col-span-2')
+  })
+
+  it('clamps responsive spans when parent columns decrease at a larger breakpoint', () => {
+    expect(
+      getGridChildSpanClassName(
+        {
+          base: 4,
+        },
+        {
+          base: 4,
+          lg: 2,
+        },
+      ),
+    ).toBe('col-span-4 lg:col-span-2')
+  })
+
   it('keeps focus styling on controls without outline offset gaps', () => {
     expect(getFieldControlClassName(false)).toContain('focus-visible:ring-2')
     expect(getFieldControlClassName(false)).toContain('focus-visible:outline-none')
@@ -194,6 +276,9 @@ describe('runtime node styling', () => {
     expect(getRepeaterPaginationControlsClassName()).toBe('flex w-full flex-wrap items-center justify-center gap-3 pt-2')
     expect(getRepeaterPaginationControlsClassName(4)).toBe(
       'col-span-4 flex w-full flex-wrap items-center justify-center gap-3 pt-2',
+    )
+    expect(getRepeaterPaginationControlsClassName({ base: 1, md: 2, lg: 4 })).toBe(
+      'col-span-1 md:col-span-2 lg:col-span-4 flex w-full flex-wrap items-center justify-center gap-3 pt-2',
     )
     expect(getRepeaterPaginationButtonClassName()).toBe(
       'inline-flex items-center justify-center rounded-control border border-app-border-strong bg-white px-3.5 py-2 text-sm font-semibold leading-5 text-app-text-strong transition-colors hover:bg-app-surface-subtle disabled:cursor-not-allowed disabled:border-app-border-soft disabled:text-app-text-muted disabled:hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-app-accent',

@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Dispatch, SetStateAction } from 'react'
-import type { RepeaterLayoutNode, RuntimeCollectionPaginationControlsVariant } from '../../config/runtime-config'
+import type {
+  RepeaterLayoutNode,
+  RuntimeCollectionPaginationControlsVariant,
+  RuntimeResponsiveLayoutValue,
+} from '../../config/runtime-config'
 import { LayoutRenderer } from '../layout-renderer'
 import { useRuntimeLayoutContext } from '../runtime-layout-context'
 import {
@@ -90,7 +94,7 @@ interface RepeaterPaginationControlsProps {
   totalPages: number
   canGoPrevious: boolean
   canGoNext: boolean
-  parentGridColumns?: number | null
+  parentGridColumns?: RuntimeResponsiveLayoutValue | null
   setActivePage: Dispatch<SetStateAction<number>>
 }
 
@@ -179,7 +183,7 @@ function renderPaginationControls({
 
 interface RepeaterScrollControlsProps {
   pageSize: number
-  parentGridColumns?: number | null
+  parentGridColumns?: RuntimeResponsiveLayoutValue | null
   onShowMore: () => void
 }
 

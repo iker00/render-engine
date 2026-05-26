@@ -15,6 +15,9 @@ export type {
   RuntimeCollectionPaginationConfig,
   RuntimeCollectionPaginationControlsConfig,
   RuntimeCollectionPaginationControlsVariant,
+  RuntimeResponsiveBoundedValue,
+  RuntimeResponsiveBreakpoint,
+  RuntimeResponsiveLayoutValue,
   ContainerLayoutNode,
   ContainerAlign,
   ContainerJustify,
@@ -77,5 +80,6 @@ export type {
   RuntimeCollectionObjectValue,
   TextareaLayoutNode,
   CheckboxGroupLayoutNode,
+  ChoiceGroupOptionLayout,
 } from './runtime-config-types'
 export { validateRuntimeConfig } from './validate-runtime-config'

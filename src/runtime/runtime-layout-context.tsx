@@ -1,7 +1,8 @@
 import { createContext, useContext, type ReactNode } from 'react'
+import type { RuntimeResponsiveLayoutValue } from '../config/runtime-config'
 
 interface RuntimeLayoutContextValue {
-  parentGridColumns: number | null
+  parentGridColumns: RuntimeResponsiveLayoutValue | null
 }
 
 const RuntimeLayoutContext = createContext<RuntimeLayoutContextValue>({

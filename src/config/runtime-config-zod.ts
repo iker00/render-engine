@@ -26,12 +26,25 @@ export const supportedContainerWrapValues = ['nowrap', 'wrap', 'wrap-reverse'] a
 export const supportedContainerVariantValues = ['default', 'card'] as const
 export const supportedChoiceGroupOptionLayoutValues = ['vertical', 'inline'] as const
 export const supportedCollectionPaginationControlsVariants = ['previousNext', 'numbered', 'scroll'] as const
+export const supportedResponsiveBreakpoints = ['base', 'sm', 'md', 'lg', 'xl', '2xl'] as const
 
 const nonEmptyStringSchema = z.string().refine((value) => value.trim().length > 0)
 const nodeIdSchema = nonEmptyStringSchema
 const runtimeConfigValueSchema = z.union([z.string(), z.number(), z.boolean(), z.null()])
 const formFieldDefaultValueSchema = z.union([runtimeConfigValueSchema, z.array(z.unknown())])
 const formFieldValidationsSchema = z.record(z.string(), z.unknown())
+const boundedLayoutValueSchema = z.number().int().min(1).max(12)
+const responsiveBoundedLayoutValueSchema = z
+  .object({
+    base: boundedLayoutValueSchema.optional(),
+    sm: boundedLayoutValueSchema.optional(),
+    md: boundedLayoutValueSchema.optional(),
+    lg: boundedLayoutValueSchema.optional(),
+    xl: boundedLayoutValueSchema.optional(),
+    '2xl': boundedLayoutValueSchema.optional(),
+  })
+  .strict()
+const responsiveLayoutValueSchema = z.union([boundedLayoutValueSchema, responsiveBoundedLayoutValueSchema])
 
 export const runtimeConfigShellSchema = z
   .object({
@@ -126,7 +139,7 @@ const visibilitySchema = z
 
 const layoutNodeLayoutSchema = z
   .object({
-    span: z.number().int().min(1).max(12).optional(),
+    span: responsiveLayoutValueSchema.optional(),
   })
   .strip()
 
@@ -141,7 +154,7 @@ export const containerNodeSchema = z
       .object({
         direction: z.string().optional(),
         gap: z.string().optional(),
-        columns: z.number().int().min(1).max(12).optional(),
+        columns: responsiveLayoutValueSchema.optional(),
         variant: z.enum(supportedContainerVariantValues).optional(),
         align: z.enum(supportedContainerAlignValues).optional(),
         justify: z.enum(supportedContainerJustifyValues).optional(),
