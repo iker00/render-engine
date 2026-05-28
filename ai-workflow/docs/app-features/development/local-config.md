@@ -1,13 +1,17 @@
-# Desarrollo local del runtime
+> Cuándo leer: cargar configuración en desarrollo, prioridad de `data-config`, errores de bootstrap, ejemplos locales con `api`/`preloads`.
+> Tamaño: corto.
+> Relacionados: [[../config/structure.md]], [[../config/validation.md]].
+
+# Configuración local del runtime
 
 ## Objetivo
 Permitir iterar sobre la configuración JSON sin depender del backend real.
 
-## Soporte esperado en v1
+## Soporte vigente
 - un `config.json` local versionado para cargar la configuración en desarrollo
 - una frontera de arranque que también pueda leer `data-config` cuando el contenedor lo aporte
 
-## Qué debe permitir
+## Qué permite
 - cargar una configuración inicial desde `src/dev/config.json` en desarrollo
 - priorizar `data-config` cuando exista en el elemento root
 - detectar errores de bootstrap con mensajes comprensibles cuando el JSON sea inválido o falte la fuente esperada

@@ -1,10 +1,9 @@
-phase: discovery
+phase: spec
 risk_level: medium
 requires_design: false
 current_task_id: null
 blocked_by: []
 artifacts:
-  discovery: missing
   spec: missing
   design: not_required
   tasks: missing

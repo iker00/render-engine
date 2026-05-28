@@ -1,8 +1,7 @@
 ---
 name: implement-task-test-first
 description: Implementa una tarea planificada de este proyecto usando un enfoque tests-first. Úsala cuando `spec.md`, `tasks.md` y `test-plan.md` ya existan y el objetivo sea ejecutar una tarea de código de forma segura, dejando la actualización documental amplia para una skill posterior.
-preferred_profile: standard
-profile_rationale: Fase de ejecución con lectura de código, edición, tests y validación; necesita más contexto y fiabilidad que una fase solo documental.
+model: sonnet
 ---
 
 # Implementar tareas con enfoque tests-first

@@ -1,8 +1,7 @@
 ---
 name: generate-implementation-plan
 description: Genera el plan técnico de implementación para una feature de este proyecto una vez exista la spec funcional. Úsala para solicitudes de escritura de `tasks.md` y `test-plan.md`, incluyendo el impacto en código, tests y documentación de cada tarea.
-preferred_profile: heavy
-profile_rationale: La planificación debe cerrar partición, dependencias, validación e impacto con suficiente rigor para que distintos agentes implementen resultados funcionalmente equivalentes sin reinterpretar el alcance.
+model: opus
 ---
 
 # Generar plan de implementación
@@ -23,13 +22,13 @@ La calidad del plan debe ser suficientemente alta como para que dos agentes comp
 - `ai-workflow/docs/context.md`
 - `ai-workflow/docs/app-features/index.md`
 - solo las fichas de `ai-workflow/docs/app-features/` que el índice marque como relevantes para la feature
-- `ai-workflow/docs/architecture.md`
-- `ai-workflow/docs/conventions.md`
-- `ai-workflow/docs/current-state.md` si existe
 - `ai-workflow/standards/testing-rules.md`
 - `ai-workflow/standards/coding-style.md`
 
 ## Leer si aplica
+- `ai-workflow/docs/architecture.md` si la feature cruza fronteras de capa, modifica responsabilidades arquitectónicas o introduce puntos de extensión nuevos.
+- `ai-workflow/docs/conventions.md` si la feature toca naming, estructura de carpetas, estilos, errores, logs o convenciones de documentación.
+- `ai-workflow/docs/current-state.md` si hace falta confirmar el estado vigente o un límite actual.
 - Otros documentos de `ai-workflow/standards/` según el tipo de cambio: React, errores, seguridad u otras reglas de calidad afectadas.
 - `ai-workflow/features/index.md` si hace falta contexto histórico o coordinación con otras features.
 - Archivos relevantes de `ai-workflow/examples/` si existen ejemplos reales aplicables.
@@ -40,10 +39,17 @@ Escribir o refinar:
 - `features/NNNN-feature-name/tasks.md`
 - `features/NNNN-feature-name/test-plan.md`
 
-Y, cuando aplique por riesgo o complejidad, escribir o refinar:
-- `features/NNNN-feature-name/design.md`
-
 No implementar código en este paso.
+
+No escribir `design.md` desde esta skill. Si `status.yaml` marca `requires_design: true` y `artifacts.design` aún no es `ready`, detenerse y redirigir al usuario a `generate-feature-design`. La creación o refino de `design.md` corresponde a esa skill, no a esta.
+
+## Gate de entrada
+Antes de planificar, comprobar:
+- `spec.md` lista y `artifacts.spec: ready`
+- si `requires_design: true`, `design.md` listo y `artifacts.design: ready`
+- sin bloqueos activos en `status.yaml`
+
+Si el gate falla, detenerse y explicitar qué falta. Si lo bloqueante es el design, recomendar invocar `generate-feature-design` antes de volver a esta skill.
 
 ## Qué debe incluir `tasks.md`
 Cada tarea debe incluir como mínimo, usando una estructura estable:
@@ -109,9 +115,9 @@ También debe dejar claro qué comando o conjunto de comandos debería ejecutar 
 - Dejar claro cuál es la siguiente tarea que debería escogerse.
 - Respetar el gate de workflow: no dejar la feature lista para implementación si falta algún artefacto requerido por `status.yaml`.
 - Si `status.yaml` no existe, crearlo usando `ai-workflow/templates/status.yaml`.
-- Si el riesgo o la complejidad justifican `design.md`, marcar `requires_design: true` en `status.yaml` y producir ese artefacto en esta fase.
-- Si `requires_design: true` ya estaba marcado y `design.md` falta, no dejar la fase de planificación como cerrada.
-- Si `design.md` no aplica, dejar `artifacts.design: not_required` en `status.yaml`.
+- Si durante la planificación se descubre que el riesgo o la complejidad técnica justifican un `design.md` que no existía, no escribirlo aquí: marcar `requires_design: true`, dejar `artifacts.design: missing`, detener la planificación y redirigir a `generate-feature-design`.
+- Si `requires_design: true` ya estaba marcado y `design.md` no está listo, no avanzar la planificación.
+- Si `design.md` no aplica, mantener `artifacts.design: not_required` en `status.yaml`.
 - Actualizar `status.yaml` al terminar para reflejar:
   - `phase: planning` o `phase: implementation`
   - `artifacts.tasks: ready`
@@ -129,6 +135,19 @@ También debe dejar claro qué comando o conjunto de comandos debería ejecutar 
 - No esconder trabajo importante detrás de frases como "ajustes necesarios", "integración final" o "remates".
 - No dejar términos ambiguos que permitan dos interpretaciones funcionales distintas de la misma tarea.
 - No ocultar incertidumbre arquitectónica dentro de una tarea. Señálala explícitamente si la spec no está lista.
+- No crear ni refinar `design.md`. Si el plan requiere decisiones técnicas que aún no existen, devolver el control a `generate-feature-design`.
+
+## Encadenado con review
+Al cerrar la planificación con `artifacts.tasks: ready` y `artifacts.test_plan: ready`, lanzar automáticamente una revisión del plan usando un sub-agente con contexto limpio:
+
+- usar la herramienta `Agent` con `subagent_type: general-purpose`
+- el prompt del sub-agente debe replicar el contrato de `review-implementation-plan`, apuntando a la carpeta de la feature recién planificada
+- el sub-agente debe leer los artefactos generados (`spec.md`, `tasks.md`, `test-plan.md`, `design.md` si aplica, `status.yaml`) y devolver un veredicto explícito: plan aprobado o refinamientos concretos requeridos
+- el agente principal debe aplicar los refinamientos propuestos antes de cerrar la fase de planificación
+- si el sub-agente no detecta problemas, marcar `implementation.ready: true` en `status.yaml`
+- si el sub-agente detecta huecos bloqueantes, dejar `implementation.ready: false` y registrar los huecos en `blocked_by`
+
+El usuario puede invocar `review-implementation-plan` manualmente si quiere un segundo pase tras refinamientos.
 
 ## Terminado cuando
 - `tasks.md` es accionable tarea por tarea

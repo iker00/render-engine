@@ -7,20 +7,22 @@ Definir el flujo operativo estándar para trabajar una feature con IA en este re
 Cada feature vive en `ai-workflow/features/NNNN-feature-name/`.
 
 Artefactos posibles:
-- `discovery.md`: notas de exploración previas cuando todavía hay ambigüedad funcional o técnica.
 - `spec.md`: contrato funcional de producto y comportamiento.
-- `design.md`: documento técnico opcional para features con complejidad relevante.
+- `design.md`: documento técnico para features con complejidad o riesgo relevante.
 - `tasks.md`: contrato secuencial de ejecución.
 - `test-plan.md`: plan de verificación esperado.
 - `status.yaml`: estado estructurado y mínimo del workflow.
 - `notes.md`: notas puntuales de implementación o seguimiento, solo si aportan valor.
 
+Artefactos legacy:
+- `discovery.md`: usado en features antiguas como notas de exploración previa. En el flujo actual, la exploración previa se hace conversacionalmente vía `explore-feature-scope` sin generar artefacto. Las features históricas con `discovery.md` no necesitan migrarse retroactivamente.
+
 ## Cuándo usar cada artefacto
 
-### `discovery.md`
-Úsalo cuando todavía no convenga comprometer una `spec.md`.
+### Exploración previa
+Cuando todavía no convenga comprometer una `spec.md`, usar la skill conversacional `explore-feature-scope`. Esta fase ya no produce un artefacto: el diálogo cierra cuando el alcance está claro y el usuario decide invocar `generate-feature-spec`.
 
-Casos típicos:
+Casos típicos donde aplica:
 - alcance ambiguo
 - varias interpretaciones razonables del problema
 - dudas de producto que cambiarían la spec
@@ -45,6 +47,8 @@ Es opcional, pero pasa a ser obligatoria cuando la feature tenga al menos una de
 - varias estrategias técnicas razonables que puedan llevar a implementaciones divergentes
 
 Si no se cumple ninguna, `spec.md + tasks.md + test-plan.md` suelen bastar.
+
+Cuando `design.md` aplica, se produce desde una skill dedicada (`generate-feature-design`) entre spec y planning. No se escribe desde `generate-feature-spec` ni desde `generate-implementation-plan`.
 
 ### `tasks.md`
 Es obligatoria antes de implementar.
@@ -79,7 +83,7 @@ Debe describir:
 - qué comportamiento cubre cada grupo de tests
 
 ### `status.yaml`
-Es obligatorio desde que una feature entra en discovery o en planificación activa.
+Es obligatorio desde que una feature entra en planificación activa (al cerrar la primera versión de la spec).
 
 Es la fuente de verdad mínima para coordinación entre fases y agentes. Debe mantenerse corto, estable y fácil de leer.
 
@@ -88,13 +92,12 @@ Es la fuente de verdad mínima para coordinación entre fases y agentes. Debe ma
 Plantilla mínima recomendada:
 
 ```yaml
-phase: discovery
+phase: spec
 risk_level: medium
 requires_design: false
 current_task_id: null
 blocked_by: []
 artifacts:
-  discovery: missing
   spec: missing
   design: not_required
   tasks: missing
@@ -114,22 +117,37 @@ feature_status: drafting
 ```
 
 Valores orientativos:
-- `phase`: `discovery | spec | planning | implementation | documentation | complete | blocked`
+- `phase`: `spec | design | planning | implementation | documentation | complete | blocked`
 - `risk_level`: `low | medium | high`
 - `artifacts.*`: `missing | draft | ready | optional | not_required`
 - `feature_status`: `drafting | planned | implementing | implemented | documented | completed | blocked`
 
+Features históricas pueden conservar `artifacts.discovery` y `phase: discovery`; no es necesario migrarlas.
+
 ## Gates entre fases
 
-### Discovery → Spec
-Se puede pasar a `spec` cuando:
-- la exploración ya aclara el problema
+### Exploración → Spec
+La exploración previa es conversacional y no produce artefacto. Se puede pasar a `spec` cuando:
+- la conversación con `explore-feature-scope` deja claro el problema
 - las preguntas abiertas restantes no impiden fijar comportamiento
 
-### Spec → Planning
-Se puede pasar a `planning` cuando:
-- `spec.md` existe
+### Spec → Design (condicional)
+Se pasa a `design` cuando:
+- `spec.md` existe y está lista
+- `status.yaml` marca `requires_design: true`
+- `artifacts.design` no está `ready`
+
+### Spec → Planning (cuando design no aplica)
+Se puede pasar directamente a `planning` cuando:
+- `spec.md` existe y está lista
 - `status.yaml` marca `artifacts.spec: ready`
+- `requires_design: false` o `artifacts.design: not_required`
+
+### Design → Planning
+Se pasa a `planning` cuando:
+- `design.md` existe y está listo
+- `status.yaml` marca `artifacts.design: ready`
+- el resto de gates de Spec → Planning siguen cumpliéndose
 
 ### Planning → Implementation
 Se puede pasar a `implementation` solo cuando:
@@ -176,21 +194,22 @@ El riesgo debe influir en:
 - nivel de revisión del plan antes de implementar
 
 ## Orden de trabajo recomendado
-1. Discovery si todavía hay ambigüedad.
-2. `spec.md`
-3. `status.yaml` actualizado para marcar `spec` lista.
-4. `design.md` si aplica.
-5. `tasks.md` y `test-plan.md`
-6. Revisión del plan
-7. Implementación tarea a tarea
-8. Actualización documental y cierre final de la feature en `status.yaml`
+1. Exploración conversacional con `explore-feature-scope` si todavía hay ambigüedad.
+2. `spec.md` con `generate-feature-spec`.
+3. `status.yaml` actualizado para marcar `spec` lista y decidir `requires_design`.
+4. `design.md` con `generate-feature-design` si `requires_design: true`.
+5. `tasks.md` y `test-plan.md` con `generate-implementation-plan`.
+6. Revisión del plan vía `review-implementation-plan` (automática como sub-agente al final del paso 5, o manual si se quiere un segundo pase).
+7. Implementación tarea a tarea con `implement-task-test-first`.
+8. Actualización documental con `update-app-documentation` y cierre final de la feature en `status.yaml`.
 
 ## Reglas de mantenimiento
 - `status.yaml` debe mantenerse breve; no duplicar en él el contenido completo de `tasks.md`.
 - `status.yaml` no sustituye a `tasks.md`; solo coordina el estado global y el punto actual del flujo.
 - `notes.md` no es obligatoria ni debe usarse como cajón de sastre.
 - `design.md` no debe crearse por reflejo; solo cuando reduzca ambigüedad o riesgo real.
-- Las features históricas no necesitan migrarse retroactivamente salvo que se reabran.
+- `design.md` se produce desde `generate-feature-design`, no desde la skill de spec ni desde la skill de planning.
+- Las features históricas no necesitan migrarse retroactivamente salvo que se reabran. Esto incluye su `discovery.md` y su `phase: discovery` cuando aplique.
 - El cierre de una tarea de implementación exige tests relevantes en verde; no basta con que el código compile o “parezca correcto”.
 - El cierre de una pasada de implementación no debe declararse válido si rompe el umbral de cobertura exigido por el proyecto.
 - `status.yaml` debe guardar el estado del gate de validación, no el porcentaje exacto de cobertura.

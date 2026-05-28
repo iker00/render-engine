@@ -1,8 +1,7 @@
 ---
 name: update-app-documentation
 description: Actualiza la documentación funcional y operativa del proyecto después de una implementación ya realizada. Úsala cuando el código y los tests relevantes ya estén cerrados y quieras reflejar el comportamiento estable en `ai-workflow/docs/` y en el índice de features.
-preferred_profile: cheap
-profile_rationale: Fase documental posterior a la implementación; requiere leer contexto y cambios ya hechos, pero no programar ni depurar.
+model: haiku
 ---
 
 # Actualizar documentación de la app

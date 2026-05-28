@@ -1,8 +1,7 @@
 ---
 name: generate-feature-spec
 description: Genera o refina la spec funcional de una feature de este proyecto antes de la planificación de implementación. Úsala para solicitudes de escritura de `features/NNNN-feature-name/spec.md` a partir de los documentos de contexto del proyecto, manteniendo el resultado alineado, revisable e intencionadamente no técnico.
-preferred_profile: cheap
-profile_rationale: Fase documental y de alineamiento; debe priorizar bajo coste y suficiente claridad antes de planificar.
+model: haiku
 ---
 
 # Generar spec de feature
@@ -19,7 +18,6 @@ Esta skill debe comportarse como la fase de alineamiento de un flujo guiado por 
 - `ai-workflow/docs/architecture.md`
 - `ai-workflow/docs/conventions.md`
 - `ai-workflow/docs/current-state.md` si existe
-- `ai-workflow/features/NNNN-feature-name/discovery.md` si existe
 - `ai-workflow/features/NNNN-feature-name/status.yaml` si existe
 - `ai-workflow/features/NNNN-feature-name/spec.md` si ya existe
 
@@ -32,11 +30,11 @@ Cerrar las dudas mínimas necesarias de producto antes de escribir o refinar `fe
 
 El resultado debe mantenerse en el nivel de producto y comportamiento. No conviertas todavía la spec en tareas de implementación.
 
-Si durante este paso ya es necesario dejar decisiones de UX, estructura de pantallas, flujos o estados visuales para evitar ambigüedad funcional, también debe prepararse `design.md`.
+Si la feature requiere decisiones técnicas relevantes para su implementación (arquitectura, integración con runtime, migración, trade-offs técnicos), marcar `requires_design: true` en `status.yaml` y redirigir al usuario a `generate-feature-design` como siguiente paso. No escribir `design.md` desde esta skill.
 
 ## Fase obligatoria de aclaración
 Antes de generar o reescribir la spec:
-- revisa la sección `Riesgos o preguntas abiertas` de `discovery.md` o de la `spec.md` existente si las hubiera
+- revisa la sección `Riesgos o preguntas abiertas` de la `spec.md` existente si la hubiera
 - identifica solo las dudas que bloquean una spec cerrada y planificable
 - descarta preguntas cosméticas, duplicadas o que puedan resolverse razonablemente con el contexto existente
 - formula al usuario el número mínimo de preguntas necesarias
@@ -89,17 +87,16 @@ Estos son solo apoyos para el alineamiento. No son tareas de implementación.
 - Preferir comportamiento concreto y revisable frente a descripciones vagas de la feature.
 - Si la petición entra en conflicto con restricciones existentes del proyecto, reflejar el conflicto con claridad en la spec.
 - Si la spec necesita referenciar estado vigente, usar `ai-workflow/docs/current-state.md`; si necesita histórico reciente, usar `ai-workflow/features/index.md`. No ampliar `README.md` para ese propósito.
-- Si existe `discovery.md`, usarlo para resolver qué preguntas ya quedaron respondidas y cuáles siguen abiertas.
 - Si no existe `status.yaml`, crearlo usando `ai-workflow/templates/status.yaml`.
-- Si para cerrar la feature a nivel funcional hacen falta decisiones de interacción, flujos de pantalla, estados vacíos, validaciones visibles o jerarquía de información, crear o actualizar `design.md` en la misma feature.
+- No escribir `design.md` desde esta skill. Si la feature necesita decisiones técnicas explícitas antes de planificar (arquitectura, estrategia de cambio, trade-offs no triviales), marcar `requires_design: true` y delegar en `generate-feature-design`.
 - Tras cerrar la spec, actualizar `status.yaml` como mínimo para reflejar:
-  - `phase: spec` o `phase: planning` según el punto alcanzado
+  - `phase: spec`, o `phase: design` si `requires_design: true`, o `phase: planning` si no requiere design
   - `artifacts.spec: ready` cuando la spec ya esté lista
-  - `artifacts.design: missing | draft | ready | not_required` según corresponda
+  - `artifacts.design: not_required` cuando la feature no requiera design, o `missing` cuando sí lo requiera y aún no exista
   - `feature_status: drafting` o `planned` según corresponda
-  - `requires_design` si ya es evidente que la feature necesitará `design.md`
+  - `requires_design` con la decisión final tras cerrar la spec
   - `risk_level` con una valoración razonada `low | medium | high`
-- Si la feature sigue siendo demasiado ambigua para escribir una buena spec, detenerse y recomendar primero discovery en vez de inventar decisiones.
+- Si la feature sigue siendo demasiado ambigua para escribir una buena spec, detenerse y explicitar qué decisiones de producto faltan antes de comprometer la spec.
 
 ## Nivel de calidad esperado
 - La spec debe ser lo bastante concreta como para planificar la implementación.
@@ -107,13 +104,12 @@ Estos son solo apoyos para el alineamiento. No son tareas de implementación.
 - Los elementos fuera de alcance deben evitar ampliaciones accidentales del alcance.
 - Antes de cerrar la spec deben haberse hecho al usuario las preguntas mínimas imprescindibles para evitar dudas relevantes.
 - Las preguntas abiertas finales deben ser excepcionales: solo riesgos reales, decisiones externas pendientes o incertidumbres no resolubles en esta fase.
-- Si existe `design.md`, debe complementar la spec sin convertirla en un plan técnico.
 
 ## Terminado cuando
 - se han hecho y resuelto las preguntas mínimas necesarias, si existían
 - `spec.md` está actualizada
-- `design.md` está actualizado cuando la feature lo necesita para quedar cerrada funcionalmente
-- `status.yaml` existe y refleja el estado real tras esta fase
+- `status.yaml` existe y refleja el estado real tras esta fase, incluida la decisión sobre `requires_design`
 - la intención de la feature queda clara
 - la planificación técnica se deja intencionadamente para el siguiente paso
 - la spec es revisable sin necesitar detalles de código
+- la respuesta final indica explícitamente el siguiente paso: `generate-feature-design` si `requires_design: true`, o `generate-implementation-plan` en otro caso

@@ -1,13 +1,20 @@
 ---
 name: review-implementation-plan
 description: Revisa críticamente un plan de implementación antes de codificar. Úsala para validar que `tasks.md`, `test-plan.md`, `status.yaml` y `design.md` cuando aplique formen un contrato de ejecución claro, secuencial y sin ambigüedad peligrosa.
-preferred_profile: heavy
-profile_rationale: Fase de control de calidad del plan; debe detectar ambigüedad, huecos y riesgos antes de abrir código.
+model: opus
 ---
 
 # Revisar plan de implementación
 
 Usa esta skill cuando ya exista una spec y un plan preliminar, pero quieras comprobar si el contrato de ejecución está lo bastante cerrado como para implementar sin reinterpretaciones peligrosas.
+
+## Modos de invocación
+Esta skill puede ejecutarse de dos formas:
+
+- **Automático al final de `generate-implementation-plan`**: esa skill lanza un sub-agente con contexto limpio que aplica este contrato sobre los artefactos recién generados. Es el modo por defecto.
+- **Manual por el usuario**: cuando se quiera un segundo pase tras refinamientos, o cuando el plan se haya editado manualmente, o cuando se reabra una feature antigua.
+
+En ambos casos el contrato de la revisión es el mismo. La única diferencia es que, en modo sub-agente, el contexto del agente está limpio y la salida debe ser un veredicto explícito (plan aprobado o refinamientos concretos) que el agente principal pueda aplicar.
 
 ## Leer siempre
 - `ai-workflow/docs/workflow.md`
@@ -19,14 +26,14 @@ Usa esta skill cuando ya exista una spec y un plan preliminar, pero quieras comp
 - `ai-workflow/docs/context.md`
 - `ai-workflow/docs/app-features/index.md`
 - solo las fichas relevantes de `ai-workflow/docs/app-features/`
-- `ai-workflow/docs/architecture.md`
-- `ai-workflow/docs/conventions.md`
 - `ai-workflow/standards/testing-rules.md`
 - `ai-workflow/standards/coding-style.md`
 
 ## Leer si aplica
-- Otros documentos de `ai-workflow/standards/` según el tipo de riesgo que deba revisarse: React, errores, seguridad u otras reglas de calidad afectadas.
+- `ai-workflow/docs/architecture.md` si el plan cruza fronteras de capa o introduce puntos arquitectónicos nuevos.
+- `ai-workflow/docs/conventions.md` si el plan toca naming, estructura de carpetas, estilos, errores, logs o convenciones de documentación.
 - `ai-workflow/docs/current-state.md` si hace falta confirmar estado vigente o límites actuales.
+- Otros documentos de `ai-workflow/standards/` según el tipo de riesgo que deba revisarse: React, errores, seguridad u otras reglas de calidad afectadas.
 - `ai-workflow/features/index.md` si hace falta contexto histórico o coordinación con otras features.
 - `ai-workflow/docs/index.md` solo como mapa documental auxiliar si no está claro qué contexto adicional seleccionar.
 
@@ -50,16 +57,24 @@ No implementar código.
 - gates de implementación en `status.yaml`
 
 ## Reglas de trabajo
-- Priorizar detectar riesgos y ambigüedad antes que “aprobar” el plan rápido.
+- Priorizar detectar riesgos y ambigüedad antes que "aprobar" el plan rápido.
 - Si una tarea admite dos interpretaciones funcionalmente distintas, pedir refino.
 - Si una tarea es demasiado grande para un cambio seguro, dividirla.
-- Si el riesgo o la complejidad justifican `design.md`, exigirla y marcar `requires_design: true` en `status.yaml`.
+- Si el riesgo o la complejidad justifican `design.md` y no existe, marcar `requires_design: true` y `artifacts.design: missing` en `status.yaml`, dejar `implementation.ready: false` y redirigir a `generate-feature-design`. No escribir `design.md` desde esta skill.
 - Si el plan ya es suficientemente bueno, dejarlo explícito y marcar en `status.yaml` que la implementación está habilitada.
 - Actualizar `status.yaml` al terminar para reflejar:
   - `phase: planning`
   - `blocked_by` si existen huecos reales
   - `implementation.ready: true | false`
   - `feature_status: planned` solo si el plan queda listo
+
+## Salida esperada en modo sub-agente
+Cuando esta skill se invoca desde `generate-implementation-plan` como sub-agente, la respuesta final debe estructurarse para que el agente principal pueda actuar sin reinterpretar:
+
+- veredicto explícito: `aprobado` o `requiere refinamiento`
+- lista numerada de refinamientos concretos cuando aplique, cada uno apuntando al artefacto y la sección afectada
+- estado sugerido para `implementation.ready` y `blocked_by`
+- sin prosa adicional fuera de lo anterior
 
 ## Terminado cuando
 - queda claro si la feature está lista o no para implementación

@@ -5,12 +5,13 @@
 ## Workflow actual
 
 Cada feature nueva debería usar, cuando aplique:
-- `discovery.md` para exploración previa
 - `spec.md` como contrato funcional
 - `design.md` para cambios con complejidad o riesgo relevante
 - `tasks.md` como contrato de ejecución
 - `test-plan.md` como contrato de verificación
 - `status.yaml` como estado estructurado del workflow
+
+La exploración previa, cuando hace falta, se hace conversacionalmente con `explore-feature-scope` y no produce artefacto. Features históricas pueden conservar `discovery.md` sin migración.
 
 La política completa está definida en el documento de workflow del proyecto.
 
