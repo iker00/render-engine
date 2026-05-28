@@ -21,7 +21,7 @@ Permitir que una aplicación legacy o de negocio pueda describir pantallas y flu
 - La navegación visible del runtime se sincroniza con el hash del navegador usando una convención simple `#/pageId` y `#/` para la home funcional.
 - La configuración usa referencias string por convención, por ejemplo `queries.searchUsers.data` o `forms.user.name`, para reducir fricción con el backend legacy.
 - Mientras no exista un sistema de theming definido, los estilos del runtime deben implementarse con utilidades de `Tailwind CSS` en lugar de estilos inline u otra capa visual paralela.
-- La primera versión deja fuera autenticación, permisos, subida de archivos, tablas avanzadas y plantillas de texto interpolado complejas.
+- La primera versión deja fuera autenticación, permisos, subida de archivos, procesamiento remoto de tablas, edición avanzada de tablas y plantillas de texto interpolado complejas.
 
 ## Propiedad de datos
 - La configuración JSON es global para la instancia renderizada del componente.

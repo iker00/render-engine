@@ -29,8 +29,18 @@ import {
   getTableBodyRowClassName,
   getTableCellClassName,
   getTableContainerClassName,
+  getTableFilterControlsClassName,
+  getTableFilterFieldClassName,
+  getTableFilterInputClassName,
+  getTableFilterLabelClassName,
+  getTableFilterResetButtonClassName,
   getTableHeaderCellClassName,
   getTableNodeClassName,
+  getTablePaginationButtonClassName,
+  getTablePaginationControlsClassName,
+  getTablePaginationCurrentButtonClassName,
+  getTableScrollContainerClassName,
+  getTableSortButtonClassName,
 } from '../runtime/runtime-node-styling'
 
 describe('runtime node styling', () => {
@@ -288,6 +298,35 @@ describe('runtime node styling', () => {
     )
   })
 
+  it('returns compact stable classes for table controls', () => {
+    expect(getTableContainerClassName()).toBe('rounded-card border border-app-border-soft bg-white')
+    expect(getTableScrollContainerClassName()).toBe('overflow-x-auto')
+    expect(getTableFilterControlsClassName()).toBe(
+      'flex w-full flex-wrap items-end justify-start gap-3 border-b border-app-border-soft bg-white px-4 py-3',
+    )
+    expect(getTableFilterFieldClassName()).toBe('flex min-w-40 flex-col gap-1')
+    expect(getTableFilterLabelClassName()).toBe('sr-only')
+    expect(getTableFilterInputClassName()).toBe(
+      'w-full min-w-40 rounded-control border border-app-border-soft bg-white px-3 py-2 text-sm leading-5 text-app-text placeholder:text-app-text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:border-app-accent focus-visible:ring-app-accent',
+    )
+    expect(getTableFilterResetButtonClassName()).toBe(
+      'inline-flex items-center justify-center self-end rounded-control border border-app-border-strong bg-white px-3.5 py-2 text-sm font-semibold leading-5 text-app-text-strong transition-colors hover:bg-app-surface-subtle focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-app-accent',
+    )
+    expect(getTableSortButtonClassName(false)).toBe(
+      'inline-flex w-full items-center justify-between gap-2 text-left text-xs font-semibold uppercase tracking-[0.16em] text-app-text-strong transition-colors hover:text-app-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-app-accent',
+    )
+    expect(getTableSortButtonClassName(true)).toBe(
+      'inline-flex w-full items-center justify-between gap-2 text-left text-xs font-semibold uppercase tracking-[0.16em] text-app-accent transition-colors hover:text-app-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-app-accent',
+    )
+    expect(getTablePaginationControlsClassName()).toBe('flex w-full flex-wrap items-center justify-center gap-3 border-t border-app-border-soft px-4 py-3')
+    expect(getTablePaginationButtonClassName()).toBe(
+      'inline-flex items-center justify-center rounded-control border border-app-border-strong bg-white px-3.5 py-2 text-sm font-semibold leading-5 text-app-text-strong transition-colors hover:bg-app-surface-subtle disabled:cursor-not-allowed disabled:border-app-border-soft disabled:text-app-text-muted disabled:hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-app-accent',
+    )
+    expect(getTablePaginationCurrentButtonClassName()).toBe(
+      'inline-flex items-center justify-center rounded-control border border-app-accent bg-app-accent px-3.5 py-2 text-sm font-semibold leading-5 text-white transition-colors hover:bg-app-accent-strong disabled:cursor-not-allowed disabled:border-app-border-soft disabled:text-app-text-muted disabled:hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-app-accent',
+    )
+  })
+
   it('supports an inline choice-group variant with wrap and without option card styling', () => {
     expect(getChoiceGroupClassName('inline')).toBe('flex flex-wrap gap-x-4 gap-y-2.5')
     expect(getChoiceGroupClassName('vertical')).toBe('grid gap-2.5')
@@ -312,7 +351,7 @@ describe('runtime node styling', () => {
     expect(getImageNodeClassName()).toBe(
       'block max-w-full rounded-card border border-app-border-soft bg-app-surface-subtle object-cover',
     )
-    expect(getTableContainerClassName()).toBe('overflow-x-auto rounded-card border border-app-border-soft bg-white')
+    expect(getTableContainerClassName()).toBe('rounded-card border border-app-border-soft bg-white')
     expect(getTableNodeClassName()).toBe('min-w-full border-collapse text-left text-sm leading-6 text-app-text')
     expect(getTableHeaderCellClassName()).toBe(
       'border-b border-app-border-soft bg-app-surface-subtle px-4 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-app-text-strong',

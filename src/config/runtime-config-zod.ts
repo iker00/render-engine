@@ -181,6 +181,15 @@ const collectionPaginationSchema = z
   })
   .strict()
 
+const tableColumnConfigSchema = z
+  .object({
+    id: nonEmptyStringSchema,
+    filterable: z.literal(true).optional(),
+    filterPlaceholder: nonEmptyStringSchema.optional(),
+    sortable: z.literal(true).optional(),
+  })
+  .strict()
+
 export const headingNodeSchema = z
   .object({
     type: z.literal('heading'),
@@ -276,7 +285,9 @@ export const tableNodeSchema = z
     props: z
       .object({
         headers: z.array(z.string()),
+        columns: z.array(tableColumnConfigSchema).optional(),
         rows: z.unknown(),
+        pagination: collectionPaginationSchema.optional(),
       })
       .strip(),
   })

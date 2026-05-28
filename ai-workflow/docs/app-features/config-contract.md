@@ -97,9 +97,19 @@ Nodos soportados hoy:
   - `props.alt`: string obligatorio, literal, referencia dinámica completa o string visible interpolado con `{{...}}`
 - `table`
   - `props.headers`: array ordenado obligatorio de strings no vacíos
+  - `props.columns`: array opcional y parcial de columnas configuradas por `id`; las columnas ausentes siguen siendo pasivas
+    - `id`: string no vacío que debe coincidir exactamente con una cabecera visible de `props.headers`
+    - `filterable`: opcional y válido solo como `true`
+    - `filterPlaceholder`: string no vacío opcional, válido solo cuando la misma columna declara `filterable: true`
+    - `sortable`: opcional y válido solo como `true`
   - `props.rows`: obligatorio y exclusivo entre:
     - modo manual: `Array<Array<string | number | boolean>>`
     - modo dinámico: `{ source: 'queries.{queryName}.data' | 'queries.{queryName}.data.*' | 'item.*', cells: string[] }`
+  - `props.pagination`: opcional; cuando existe activa paginación local en cliente con el mismo shape cerrado de `repeater`
+  - `props.pagination.enabled`: obligatorio y exactamente `true`
+  - `props.pagination.pageSize`: obligatorio, entero, finito y mayor o igual que `1`
+  - `props.pagination.controls`: opcional; si se omite, el runtime usa el default efectivo de controles anterior/siguiente
+  - `props.pagination.controls.variant`: opcional y limitado a `previousNext | numbered | scroll`
   - cada fila manual y cada colección `cells` dinámica debe mantener correspondencia exacta con `headers`
   - las celdas string reutilizan la misma semántica de literal, referencia dinámica completa o string visible interpolado con `{{...}}`
 - `button`
@@ -179,11 +189,16 @@ Nodos soportados hoy:
 Reglas estructurales adicionales del catálogo actual:
 - `heading`, `paragraph`, `list`, `image`, `table` y `button` siguen tratándose como nodos hoja; si reciben `children`, esos datos no pasan al resultado normalizado.
 - `repeater` rechaza `children` y solo admite repetición a través de `props.template`.
-- `repeater.props.pagination` solo acepta la superficie local v1; claves extra dentro de `props.pagination` o `props.pagination.controls` se rechazan de forma explícita para no aceptar cursores, paginación remota o metadatos de servidor.
+- `repeater.props.pagination` y `table.props.pagination` solo aceptan la superficie local v1; claves extra dentro de `props.pagination` o `props.pagination.controls` se rechazan de forma explícita para no aceptar cursores, paginación remota o metadatos de servidor.
+- `table.props.columns`, cuando existe, se interpreta como lista parcial por `id` contra `props.headers`; cada `id` debe existir una sola vez en `headers`, no puede duplicarse dentro de `columns` y debe activar al menos una capacidad con `filterable: true` o `sortable: true`.
+- `table.props.columns[].filterable` y `table.props.columns[].sortable` solo aceptan el literal `true`; la ausencia desactiva esa capacidad y valores como `false` se rechazan.
+- `table.props.columns[].filterPlaceholder` solo es válido en columnas filtrables y debe ser un string no vacío.
+- `table.props.columns[]` no acepta claves extra, incluidas claves con apariencia remota como `mode`, `remote`, `query`, `params`, `request`, `sort`, `order`, `filters`, `total`, `cursor`, `limit`, `offset`, `page` o `hasNext`.
+- Los filtros, la ordenación y la paginación de `table` son siempre locales: operan sobre las filas ya resueltas y los valores visibles finales, en el orden filas -> filtros -> ordenación -> paginación, sin ejecutar operaciones remotas ni modificar `queries.*`.
 - `previousNext` conserva la paginación local por páginas con controles anterior/siguiente y es el default efectivo cuando `controls` o `controls.variant` no se declaran.
 - `numbered` conserva la misma semántica local por páginas, pero renderiza controles para primera página, página anterior, una ventana compacta de hasta cinco páginas concretas, página siguiente y última página.
 - `scroll` no define paginación remota: aplica una ventana incremental local sobre la colección ya cargada, muestra inicialmente hasta `pageSize` items y amplía la cantidad visible por bloques acumulados de `pageSize`.
-- La ausencia de `repeater.props.pagination` es el único modo soportado para no paginar; `enabled: false`, `pagination: {}` o paginación sin `pageSize` no son contratos válidos.
+- La ausencia de `repeater.props.pagination` o `table.props.pagination` es el único modo soportado para no paginar en cada nodo; `enabled: false`, `pagination: {}` o paginación sin `pageSize` no son contratos válidos.
 - `input`, `textarea`, `select`, `radioGroup` y `checkboxGroup` solo son válidos como descendientes de un `form`.
 - `button` sin `action` solo es válido como descendiente de un `form`.
 - `container.props.columns` admite enteros entre `1` y `12` o mapas responsive cerrados con claves `base | sm | md | lg | xl | 2xl` y valores enteros entre `1` y `12`.
@@ -362,6 +377,11 @@ Reglas funcionales vigentes:
 - Si aparece un nodo no soportado en la raíz o dentro de `children`, el runtime lo trata como error de configuración y no lo reinterpreta.
 - Si un nodo `image` omite `props.src` o `props.alt`, el config completo se rechaza antes del render sobre la ruta exacta.
 - Si un nodo `table` omite `headers` o `rows`, mezcla modo manual y dinámico, usa celdas manuales fuera de `string | number | boolean`, declara un `source` fuera de `queries.{queryName}.data`, `queries.{queryName}.data.*` o `item.*`, o rompe la correspondencia exacta entre `headers` y celdas, el config completo se rechaza antes del render sobre la ruta exacta.
+- Si `table.props.columns` existe, ids vacíos, inexistentes, duplicados, ambiguos por cabeceras repetidas, entradas sin `filterable: true` ni `sortable: true`, flags distintos de `true`, `filterPlaceholder` vacío o `filterPlaceholder` en una columna no filtrable se rechazan antes del render sobre la ruta exacta.
+- Si `table.props.columns[]` incluye claves extra, incluidas claves con apariencia remota, el config completo se rechaza antes del render sobre la ruta exacta de la clave extra.
+- Si `table.props.pagination` existe, debe declarar `enabled: true` y un `pageSize` entero, finito y mayor o igual que `1`; valores como `enabled: false`, `pageSize: 0`, decimales, infinitos o `pageSize` ausente se rechazan antes del render sobre la ruta exacta.
+- Si `table.props.pagination.controls.variant` existe, debe ser `previousNext`, `numbered` o `scroll`; cualquier otra variante se rechaza antes del render.
+- Si `table.props.pagination` o `table.props.pagination.controls` incluyen claves no soportadas, el config completo se rechaza antes del render sobre la ruta exacta de la clave extra.
 - Si un `repeater` omite `props.items.source`, `props.items.key` o `props.template`, el config completo se rechaza antes del render sobre la ruta exacta.
 - Si `repeater.props.items.key` está vacío, usa una referencia global como `item.id` o `queries.posts.data.0.id`, o contiene una ruta relativa mal formada, el config completo se rechaza antes del render.
 - Si `repeater.props.pagination` existe, debe declarar `enabled: true` y un `pageSize` entero, finito y mayor o igual que `1`; valores como `enabled: false`, `pageSize: 0`, decimales, infinitos o `pageSize` ausente se rechazan antes del render sobre la ruta exacta.
@@ -435,7 +455,7 @@ La frontera estable de esta validación queda organizada así:
 - Los formularios declarativos ya soportan `form`, `input`, `textarea`, `select`, `radioGroup` y `checkboxGroup`, con validación local declarativa ya ampliada a `required`, `minLength`, `maxLength`, `min`, `max`, `minSelections` y `maxSelections`.
 - `visibility` ya cubre show/hide simple por valor runtime, incluido `item.*` dentro de `repeater`, pero no abre branching, `fallback`, arrays de reglas ni expresiones compuestas.
 - `list`, `select`, `radioGroup` y `checkboxGroup` ya pueden reutilizar datos de `queries.*` y, dentro de `repeater`, datos de `item.*` como colecciones, pero siguen fuera de alcance filtros cliente, ordenación declarativa, transformaciones arbitrarias, búsqueda remota, paginación y carga incremental.
-- `table` no acepta todavía `props.pagination`; la semántica local de paginación queda preparada como base reusable, pero solo `repeater` la expone en el contrato público actual.
+- `table` ya acepta filtros por columna, ordenación local de una sola columna y paginación local, pero siguen fuera de contrato el procesamiento remoto, cursores, totales de servidor, filtros globales, filtros por tipo/rango/operador, multiselección de filtros, ordenación múltiple, comparadores configurables, selector de tamaño de página, salto directo, selección de filas, acciones por fila, edición inline, agrupación y virtualización.
 - No hay todavía validaciones declarativas avanzadas (`min`, `max`, patrones o validaciones cruzadas).
 - `preloads` ya puede declarar `query`, `body` y `headers` por entrada, pero no admite condiciones, prioridades, secuencialidad, dependencias, múltiples instancias simultáneas del mismo `operationName` ni una caché histórica reutilizable por firma.
 - No hay interpolación compleja dentro de strings: la v1 solo soporta placeholders visibles `{{referencia}}` en el catálogo cerrado anterior, sin expresiones, filtros, formateadores, condicionales, i18n ni escape específico de delimitadores.

@@ -8,6 +8,10 @@
       "method": "GET",
       "endpoint": "https://jsonplaceholder.typicode.com/posts"
     },
+    "searchPosts2": {
+      "method": "GET",
+      "endpoint": "https://jsonplaceholder.typicode.com/posts"
+    },
     "getPost": {
       "method": "GET",
       "endpoint": "https://jsonplaceholder.typicode.com/posts"
@@ -22,14 +26,14 @@
       "id": "bootstrap-home",
       "preloads": [
         {
-          "searchPosts": {}
+          "searchPosts2": {}
         }
       ],
       "layout": [
         {
           "type": "heading",
           "props": {
-            "text": "Título: {{queries.searchPosts.data.0.title}}",
+            "text": "queries.searchPosts2.data.0.title",
             "level": 1
           }
         },
@@ -92,6 +96,27 @@
         {
           "type": "table",
           "props": {
+            "columns": [
+              {
+                "id": "userId",
+                "filterable": true,
+                "sortable": true,
+                "filterPlaceholder": "Filtrar por userId"
+              },
+              {
+                "id": "title",
+                "filterable": true,
+                "sortable": true,
+                "filterPlaceholder": "Filtrar por título"
+              }
+            ],
+            "pagination": {
+              "enabled": true,
+              "pageSize": 5,
+              "controls": {
+                "variant": "numbered"
+              }
+            },
             "headers": [
               "ID",
               "title",
@@ -99,7 +124,7 @@
               "userId"
             ],
             "rows": {
-              "source": "queries.searchPosts.data",
+              "source": "queries.searchPosts2.data",
               "cells": [
                 "item.id",
                 "item.title",
@@ -108,7 +133,7 @@
               ]
             },
             "queryStateFeedback": {
-              "query": "searchPosts",
+              "query": "searchPosts2",
               "states": {
                 "loading": {
                   "mode": "fallback",
@@ -171,7 +196,7 @@
                 {
                   "type": "heading",
                   "props": {
-                    "text": "Detalle de la solicitud",
+                    "text": "Detalle de la solicitud de {{forms.generalRequestForm.fullName}}",
                     "level": 2
                   }
                 },

@@ -72,6 +72,7 @@ export type {
   SelectManualObjectItemsSource,
   SelectManualScalarItemsSource,
   TableCellValue,
+  TableColumnConfig,
   TableDynamicRows,
   TableLayoutNode,
   TableManualRows,

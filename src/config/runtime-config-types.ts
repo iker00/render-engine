@@ -190,12 +190,21 @@ export interface TableDynamicRows {
 
 export type TableRows = TableManualRows | TableDynamicRows
 
+export interface TableColumnConfig {
+  id: string
+  filterable?: true
+  filterPlaceholder?: string
+  sortable?: true
+}
+
 export interface TableLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayoutFields {
   type: 'table'
   id?: string
   props: {
     headers: string[]
+    columns?: TableColumnConfig[]
     rows: TableRows
+    pagination?: RuntimeCollectionPaginationConfig
   }
   children?: unknown
 }

@@ -20,6 +20,7 @@ No debe funcionar como historico acumulado ni como sustituto de las fichas funci
 - Nodos visibles soportados: `container`, `repeater`, `heading`, `paragraph`, `list`, `image`, `table`, `button`, `form`, `input`, `textarea`, `select`, `radioGroup` y `checkboxGroup`.
 - Formularios declarativos con estado por `formId.fieldId`, `defaultValue`, limpieza por desmontaje por defecto, persistencia opt-in, validaciones locales y submit via `executeOperation`.
 - Paginacion local opt-in en `repeater` sobre colecciones `queries.*`, con `pageSize` declarativo, variantes de controles `previousNext`, `numbered` y `scroll`, estado local independiente por instancia y reset al cambiar coleccion o configuracion efectiva.
+- Filtros locales por columna, ordenacion local por una unica columna y paginacion local opt-in en `table`, aplicados sobre filas manuales o dinamicas ya resueltas y sin modificar `queries.*`.
 - Consumidores de colecciones manuales, `queries.*` e `item.*` en `list`, `select`, `radioGroup` y `checkboxGroup`.
 - Feedback visual por estado de query y reglas simples de `visibility`, reutilizadas tambien para excluir campos ocultos de la validacion.
 - Layout declarativo con `container` por direccion o grid, `gap`, `columns` fijo o responsive, `align`, `justify`, `wrap`, variante `card` y `layout.span` fijo o responsive dentro de grids efectivos.
@@ -34,7 +35,8 @@ No debe funcionar como historico acumulado ni como sustituto de las fichas funci
 - `params.*` no aplica aun en `visibility` ni en fuentes dinamicas de coleccion.
 - No hay interpolacion parcial en requests, `preloads`, `navigateTo.params`, `defaultValue`, `visibility`, fuentes de coleccion, keys de `repeater` ni cabeceras de `table`.
 - No hay validaciones remotas, validaciones cruzadas, `pattern` ni mensajes personalizados efectivos por regla.
-- No hay subida de archivos, busqueda remota de opciones, paginacion en `table`, paginacion remota ni carga incremental remota de colecciones.
+- No hay subida de archivos, busqueda remota de opciones, paginacion remota, filtrado u ordenacion remotos ni carga incremental remota de colecciones.
+- `table` no soporta filtros avanzados por tipo, rangos u operadores, ordenacion multiple, selector de tamano de pagina, salto directo, seleccion de filas, acciones por fila, edicion inline, agrupacion ni virtualizacion.
 - `visibility` sigue limitada a una unica condicion simple, sin composicion booleana ni fallback propio.
 - No existe theming declarativo desde JSON; la personalizacion visual sigue cerrada al baseline actual, a las props soportadas y a los breakpoints responsive cerrados de `columns` y `layout.span`.
 

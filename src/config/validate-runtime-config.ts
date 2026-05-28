@@ -43,6 +43,7 @@ import type {
   RuntimeNumericValidationRule,
   RuntimeRequiredValidationRule,
   TableCellValue,
+  TableColumnConfig,
   TableDynamicRows,
   TableLayoutNode,
   RuntimeConfigValidationResult,
@@ -839,7 +840,7 @@ function validateRepeaterNode(
       )
     }
 
-    const paginationIssue = mapRepeaterPaginationIssue(pageId, path, issue)
+    const paginationIssue = mapCollectionPaginationIssue(pageId, path, issue)
 
     if (paginationIssue) {
       return paginationIssue
@@ -910,7 +911,7 @@ function validateRepeaterNode(
   }
 }
 
-function mapRepeaterPaginationIssue(
+function mapCollectionPaginationIssue(
   pageId: string,
   path: string,
   issue: { path: PropertyKey[]; code?: string; keys?: string[] },
@@ -958,19 +959,20 @@ function validateHeadingNode(
   const parseResult = headingNodeSchema.safeParse(rawNode)
 
   if (!parseResult.success) {
-    const feedbackIssue = mapQueryStateFeedbackIssue(pageId, path, parseResult.error.issues[0])
+    const issue = parseResult.error.issues[0]
+    const feedbackIssue = mapQueryStateFeedbackIssue(pageId, path, issue)
 
     if (feedbackIssue) {
       return feedbackIssue
     }
 
-    const visibilityIssue = mapVisibilityIssue(pageId, path, parseResult.error.issues[0])
+    const visibilityIssue = mapVisibilityIssue(pageId, path, issue)
 
     if (visibilityIssue) {
       return visibilityIssue
     }
 
-    return mapLeafNodeIssue(pageId, path, parseResult.error.issues[0]?.path ?? [])
+    return mapLeafNodeIssue(pageId, path, issue?.path ?? [])
   }
 
   const feedbackResult = validateQueryStateFeedback(
@@ -1181,19 +1183,32 @@ function validateTableNode(
   const parseResult = tableNodeSchema.safeParse(rawNode)
 
   if (!parseResult.success) {
-    const feedbackIssue = mapQueryStateFeedbackIssue(pageId, path, parseResult.error.issues[0])
+    const issue = parseResult.error.issues[0]
+    const feedbackIssue = mapQueryStateFeedbackIssue(pageId, path, issue)
 
     if (feedbackIssue) {
       return feedbackIssue
     }
 
-    const visibilityIssue = mapVisibilityIssue(pageId, path, parseResult.error.issues[0])
+    const visibilityIssue = mapVisibilityIssue(pageId, path, issue)
 
     if (visibilityIssue) {
       return visibilityIssue
     }
 
-    return mapLeafNodeIssue(pageId, path, parseResult.error.issues[0]?.path ?? [])
+    const columnsIssue = mapTableColumnsIssue(pageId, path, issue)
+
+    if (columnsIssue) {
+      return columnsIssue
+    }
+
+    const paginationIssue = mapCollectionPaginationIssue(pageId, path, issue)
+
+    if (paginationIssue) {
+      return paginationIssue
+    }
+
+    return mapLeafNodeIssue(pageId, path, issue?.path ?? [])
   }
 
   const feedbackResult = validateQueryStateFeedback(
@@ -1228,6 +1243,30 @@ function validateTableNode(
     return rowsResult
   }
 
+  const columnsResult = validateTableColumns(
+    parseResult.data.props.columns as TableColumnConfig[] | undefined,
+    headersResult.headers,
+    `${path}.props.columns`,
+    pageId,
+  )
+
+  if (columnsResult.status === 'error') {
+    return columnsResult
+  }
+
+  const props: TableLayoutNode['props'] = {
+    headers: headersResult.headers,
+    rows: rowsResult.rows,
+  }
+
+  if (columnsResult.columns !== undefined) {
+    props.columns = columnsResult.columns
+  }
+
+  if (parseResult.data.props.pagination !== undefined) {
+    props.pagination = parseResult.data.props.pagination as RuntimeCollectionPaginationConfig
+  }
+
   return {
     status: 'ready',
     node: {
@@ -1236,12 +1275,48 @@ function validateTableNode(
       queryStateFeedback: feedbackResult.queryStateFeedback,
       visibility: visibilityResult.visibility,
       layout: parseResult.data.layout,
-      props: {
-        headers: headersResult.headers,
-        rows: rowsResult.rows,
-      },
+      props,
     },
   }
+}
+
+function mapTableColumnsIssue(
+  pageId: string,
+  path: string,
+  issue: { path: PropertyKey[]; code?: string; keys?: string[] } | undefined,
+): { status: 'error'; error: RuntimeConfigError } | null {
+  const issuePath = issue?.path ?? []
+
+  if (issuePath[0] !== 'props' || issuePath[1] !== 'columns') {
+    return null
+  }
+
+  const issueKeys = issue?.code === 'unrecognized_keys' && Array.isArray(issue.keys) ? issue.keys : []
+
+  if (issueKeys.length > 0) {
+    if (typeof issuePath[2] === 'number') {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.columns[${issuePath[2]}].${issueKeys[0]}".`)
+    }
+
+    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.columns.${issueKeys[0]}".`)
+  }
+
+  if (typeof issuePath[2] === 'number') {
+    const columnPath = `${path}.props.columns[${issuePath[2]}]`
+
+    if (
+      issuePath[3] === 'id' ||
+      issuePath[3] === 'filterable' ||
+      issuePath[3] === 'filterPlaceholder' ||
+      issuePath[3] === 'sortable'
+    ) {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${columnPath}.${String(issuePath[3])}".`)
+    }
+
+    return invalidLayout(`Page "${pageId}" has an invalid layout at "${columnPath}".`)
+  }
+
+  return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.columns".`)
 }
 
 function validateListItems(
@@ -1504,6 +1579,51 @@ function validateTableHeaders(
   return {
     status: 'ready',
     headers,
+  }
+}
+
+function validateTableColumns(
+  columns: TableColumnConfig[] | undefined,
+  headers: string[],
+  path: string,
+  pageId: string,
+): { status: 'ready'; columns?: TableColumnConfig[] } | { status: 'error'; error: RuntimeConfigError } {
+  if (columns === undefined) {
+    return {
+      status: 'ready',
+    }
+  }
+
+  const seenColumnIds = new Set<string>()
+
+  for (let index = 0; index < columns.length; index += 1) {
+    const column = columns[index]
+    const columnPath = `${path}[${index}]`
+
+    if (seenColumnIds.has(column.id)) {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${columnPath}.id".`)
+    }
+
+    seenColumnIds.add(column.id)
+
+    const matchingHeaders = headers.filter((header) => header === column.id)
+
+    if (matchingHeaders.length !== 1) {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${columnPath}.id".`)
+    }
+
+    if (column.filterable !== true && column.sortable !== true) {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${columnPath}".`)
+    }
+
+    if (column.filterPlaceholder !== undefined && column.filterable !== true) {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${columnPath}.filterPlaceholder".`)
+    }
+  }
+
+  return {
+    status: 'ready',
+    columns,
   }
 }
 

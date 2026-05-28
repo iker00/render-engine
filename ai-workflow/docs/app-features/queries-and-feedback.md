@@ -53,7 +53,7 @@ Semántica estable:
 - en `repeater` paginado, la colección completa ya resuelta desde `queries.*` se pagina en cliente después de aplicar la política de keys válidas y únicas; cambiar de página, seleccionar una página numerada o ampliar la ventana visible de `scroll` solo cambia estado local del consumidor y no ejecuta ni limpia queries
 - en `list`, `select`, `radioGroup` y `checkboxGroup`, una referencia válida cuyo valor runtime actual no es una colección utilizable degrada a colección vacía en vez de romper render, validación o submit
 - en proyecciones interpoladas de colecciones, `item.*` apunta al item local de cada entrada, opción o fila, y `queries.*` puede combinarse con ese contexto dentro del mismo string visible
-- en `table`, `props.rows.source` degrada a cero filas cuando la colección no existe o no es array, y cada celda string reutiliza la misma normalización visible de `heading`, `paragraph` e `image`, vaciándose sin romper la fila cuando el valor no es renderizable
+- en `table`, `props.rows.source` degrada a cero filas cuando la colección no existe o no es array, cada celda string reutiliza la misma normalización visible de `heading`, `paragraph` e `image`, y los filtros, la ordenación y la paginación locales procesan solo esas filas ya resueltas sin ejecutar red ni modificar `queries.*`
 - cuando la colección contiene objetos y algún item no resuelve los datos mínimos requeridos por el consumidor, el runtime degrada solo ese item y conserva el resto de la colección
 - en `visibility`, `queries.{queryName}` y `queries.{queryName}.error` pueden evaluarse con `isTruthy` e `isFalsy`; `queries.{queryName}.status` y las rutas anidadas bajo `data` también pueden usarse con comparaciones literales o numéricas según el operador
 
@@ -161,6 +161,7 @@ No se consideran `empty`:
 - hacer que varios nodos reaccionen de forma distinta al mismo `queryName`
 - renderizar una `image` cuyo `src` o `alt` depende de `queries.*`, también dentro de `repeater`
 - renderizar una `table` dinámica desde `queries.*`, conservando filas parciales y vaciando solo las celdas sin dato visible
+- filtrar, ordenar y paginar localmente una `table` alimentada por `queries.*`, sin cambiar el estado de la query ni el feedback de `idle | loading | error | empty | success`
 - reutilizar una misma query para alimentar a la vez varios `list` o `select` con proyecciones distintas por item
 - combinar datos de `queries.*` con texto literal en headings, párrafos, botones, labels, imágenes, listas, opciones y celdas mediante placeholders visibles `{{...}}`
 - mostrar u ocultar nodos o campos según `queries.{queryName}.status`, `queries.{queryName}.error` o una ruta anidada de `queries.{queryName}.data.*` sin lógica imperativa por pantalla

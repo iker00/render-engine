@@ -8551,6 +8551,226 @@ describe('validateRuntimeConfig', () => {
       })
     })
 
+    it('accepts table columns as partial local capability metadata without changing passive headers', () => {
+      const columns = [
+        { id: 'Name', filterable: true, filterPlaceholder: 'Buscar nombre' },
+        { id: 'Role', sortable: true },
+        { id: 'Visits', filterable: true, sortable: true },
+      ]
+      const result = validateRuntimeConfig(
+        createConfigWithLayout([
+          {
+            type: 'table',
+            props: {
+              headers: ['Name', 'Role', 'Visits', 'Active'],
+              columns,
+              rows: [
+                ['Ada', 'Admin', 12, true],
+                ['Grace', 'Editor', 7, false],
+              ],
+            },
+          },
+        ]),
+      )
+
+      expect(result).toMatchObject({
+        status: 'ready',
+        page: {
+          layout: [
+            {
+              type: 'table',
+              props: {
+                headers: ['Name', 'Role', 'Visits', 'Active'],
+                columns,
+                rows: [
+                  ['Ada', 'Admin', 12, true],
+                  ['Grace', 'Editor', 7, false],
+                ],
+              },
+            },
+          ],
+        },
+      })
+    })
+
+    it('rejects invalid table column local capability metadata with focused diagnostic paths', () => {
+      const cases: Array<{ headers?: string[]; columns: unknown; path: string }> = [
+        { columns: [{ id: '', filterable: true }], path: 'props.columns[0].id' },
+        { columns: [{ id: 'Missing', filterable: true }], path: 'props.columns[0].id' },
+        { columns: [{ id: 'Name', filterable: true }, { id: 'Name', sortable: true }], path: 'props.columns[1].id' },
+        {
+          headers: ['Name', 'Name'],
+          columns: [{ id: 'Name', filterable: true }],
+          path: 'props.columns[0].id',
+        },
+        { columns: [{ id: 'Name', filterable: false }], path: 'props.columns[0].filterable' },
+        { columns: [{ id: 'Name', filterable: true, filterPlaceholder: '' }], path: 'props.columns[0].filterPlaceholder' },
+        { columns: [{ id: 'Name', sortable: true, filterPlaceholder: 'Buscar nombre' }], path: 'props.columns[0].filterPlaceholder' },
+        { columns: [{ id: 'Name', sortable: false }], path: 'props.columns[0].sortable' },
+        { columns: [{ id: 'Name' }], path: 'props.columns[0]' },
+      ]
+
+      for (const { headers = ['Name', 'Role'], columns, path } of cases) {
+
+        expect(
+          validateRuntimeConfig(
+            createConfigWithLayout([
+              {
+                type: 'table',
+                props: {
+                  headers,
+                  columns,
+                  rows: [['Ada', 'Admin']],
+                },
+              },
+            ]),
+          ),
+        ).toEqual({
+          status: 'error',
+          error: {
+            code: 'invalid-layout',
+            displayMode: 'development-only',
+            message: `Page "home" has an invalid layout at "layout[0].${path}".`,
+          },
+        })
+      }
+
+      for (const key of ['mode', 'remote', 'query', 'params', 'request', 'sort', 'order', 'filters', 'total', 'cursor', 'limit', 'offset', 'page', 'hasNext']) {
+        expect(
+          validateRuntimeConfig(
+            createConfigWithLayout([
+              {
+                type: 'table',
+                props: {
+                  headers: ['Name'],
+                  columns: [{ id: 'Name', filterable: true, [key]: true }],
+                  rows: [['Ada']],
+                },
+              },
+            ]),
+          ),
+        ).toEqual({
+          status: 'error',
+          error: {
+            code: 'invalid-layout',
+            displayMode: 'development-only',
+            message: `Page "home" has an invalid layout at "layout[0].props.columns[0].${key}".`,
+          },
+        })
+      }
+    })
+
+    it('accepts table pagination with the local collection pagination variants and defaults', () => {
+      for (const pagination of [
+        { enabled: true, pageSize: 2, controls: { variant: 'previousNext' } },
+        { enabled: true, pageSize: 2, controls: { variant: 'numbered' } },
+        { enabled: true, pageSize: 2, controls: { variant: 'scroll' } },
+        { enabled: true, pageSize: 2 },
+        { enabled: true, pageSize: 2, controls: {} },
+      ]) {
+        expect(
+          validateRuntimeConfig(
+            createConfigWithLayout([
+              {
+                type: 'table',
+                props: {
+                  headers: ['Name'],
+                  rows: [['Ada']],
+                  pagination,
+                },
+              },
+            ]),
+          ),
+        ).toMatchObject({
+          status: 'ready',
+          page: {
+            layout: [
+              {
+                type: 'table',
+                props: {
+                  pagination,
+                },
+              },
+            ],
+          },
+        })
+      }
+    })
+
+    it('rejects invalid table pagination values with focused diagnostic paths', () => {
+      const cases: Array<{ pagination: unknown; path: string }> = [
+        { pagination: { enabled: false, pageSize: 2 }, path: 'props.pagination.enabled' },
+        { pagination: { pageSize: 2 }, path: 'props.pagination.enabled' },
+        { pagination: { enabled: true }, path: 'props.pagination.pageSize' },
+        { pagination: { enabled: true, pageSize: 1.5 }, path: 'props.pagination.pageSize' },
+        { pagination: { enabled: true, pageSize: 0 }, path: 'props.pagination.pageSize' },
+        { pagination: { enabled: true, pageSize: Number.POSITIVE_INFINITY }, path: 'props.pagination.pageSize' },
+        {
+          pagination: { enabled: true, pageSize: 2, controls: { variant: 'numbers' } },
+          path: 'props.pagination.controls.variant',
+        },
+        { pagination: { enabled: true, pageSize: 2, remote: true }, path: 'props.pagination.remote' },
+        { pagination: { enabled: true, pageSize: 2, cursor: 'next' }, path: 'props.pagination.cursor' },
+        { pagination: { enabled: true, pageSize: 2, total: 10 }, path: 'props.pagination.total' },
+        { pagination: { enabled: true, pageSize: 2, page: 1 }, path: 'props.pagination.page' },
+        { pagination: { enabled: true, pageSize: 2, limit: 2 }, path: 'props.pagination.limit' },
+        { pagination: { enabled: true, pageSize: 2, offset: 0 }, path: 'props.pagination.offset' },
+        { pagination: { enabled: true, pageSize: 2, hasNext: true }, path: 'props.pagination.hasNext' },
+        {
+          pagination: { enabled: true, pageSize: 2, controls: { remote: true } },
+          path: 'props.pagination.controls.remote',
+        },
+        {
+          pagination: { enabled: true, pageSize: 2, controls: { cursor: 'next' } },
+          path: 'props.pagination.controls.cursor',
+        },
+        {
+          pagination: { enabled: true, pageSize: 2, controls: { total: 10 } },
+          path: 'props.pagination.controls.total',
+        },
+        {
+          pagination: { enabled: true, pageSize: 2, controls: { page: 1 } },
+          path: 'props.pagination.controls.page',
+        },
+        {
+          pagination: { enabled: true, pageSize: 2, controls: { limit: 2 } },
+          path: 'props.pagination.controls.limit',
+        },
+        {
+          pagination: { enabled: true, pageSize: 2, controls: { offset: 0 } },
+          path: 'props.pagination.controls.offset',
+        },
+        {
+          pagination: { enabled: true, pageSize: 2, controls: { hasNext: true } },
+          path: 'props.pagination.controls.hasNext',
+        },
+      ]
+
+      for (const { pagination, path } of cases) {
+        expect(
+          validateRuntimeConfig(
+            createConfigWithLayout([
+              {
+                type: 'table',
+                props: {
+                  headers: ['Name'],
+                  rows: [['Ada']],
+                  pagination,
+                },
+              },
+            ]),
+          ),
+        ).toEqual({
+          status: 'error',
+          error: {
+            code: 'invalid-layout',
+            displayMode: 'development-only',
+            message: `Page "home" has an invalid layout at "layout[0].${path}".`,
+          },
+        })
+      }
+    })
+
     it('rejects image nodes without src or alt', () => {
       expect(
         validateRuntimeConfig(
