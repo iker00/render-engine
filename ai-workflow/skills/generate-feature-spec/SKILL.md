@@ -1,7 +1,7 @@
 ---
 name: generate-feature-spec
 description: Genera o refina la spec funcional de una feature de este proyecto antes de la planificación de implementación. Úsala para solicitudes de escritura de `features/NNNN-feature-name/spec.md` a partir de los documentos de contexto del proyecto, manteniendo el resultado alineado, revisable e intencionadamente no técnico.
-model: haiku
+model: sonnet
 ---
 
 # Generar spec de feature

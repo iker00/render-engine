@@ -33,7 +33,7 @@
         {
           "type": "heading",
           "props": {
-            "text": "queries.searchPosts2.data.0.title",
+            "text": "Título {{queries.searchPosts2.data.0.title}} cuerpo: {{queries.searchPosts2.data.0.body}}",
             "level": 1
           }
         },

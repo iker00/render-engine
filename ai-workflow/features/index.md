@@ -16,7 +16,7 @@ La exploración previa, cuando hace falta, se hace conversacionalmente con `expl
 La política completa está definida en el documento de workflow del proyecto.
 
 ## Planificadas
-- Ninguna.
+- `0043-dev-mode-live-config-editor`: wrapper opt-in sobre el runtime que añade un editor Monaco en panel lateral para editar el JSON de configuración en vivo, validarlo con la fachada actual y aplicarlo preservando estado compatible. Plan de implementación listo; pendiente de implementación.
 
 ## Archivadas
 - `0035-image-node-api-source`: archivada. Se descarta por ahora porque el caso de imágenes privadas encaja mejor con URLs protegidas o firmadas desde backend que con una carga remota específica integrada en el nodo `image`.

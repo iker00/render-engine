@@ -1,0 +1,184 @@
+import { useRef, useState } from 'react'
+import { flushSync } from 'react-dom'
+import devConfigJson from '../dev/config.json'
+import { AppShell } from '../app/app-shell'
+import { readRuntimeConfig, type RuntimeConfig } from '../app/bootstrap/read-runtime-config'
+import { validateRuntimeConfig } from '../config/runtime-config'
+import { RuntimeStateProvider } from '../runtime/runtime-state/runtime-state-provider'
+import { RuntimePage } from '../runtime/runtime-page'
+import {
+  getAppShellClassName,
+  getAppShellContentClassName,
+  getAppShellFrameClassName,
+} from '../runtime/runtime-node-styling'
+import { DevRuntimeStateBridge } from './dev-runtime-state-bridge'
+import type { DevRuntimeStateBridgeHandle } from './dev-runtime-state-bridge'
+import { DevRuntimeMonacoEditor } from './dev-runtime-monaco-editor'
+import { DevRuntimeToggleButton } from './dev-runtime-toggle-button'
+import { DevRuntimeDrawer } from './dev-runtime-drawer'
+import { useDevRuntimeKeyboard } from './dev-runtime-keyboard'
+import { migrateRuntimeStateAcrossConfig } from './dev-runtime-state-migration'
+import type { RuntimeConfigError } from '../config/runtime-config'
+
+interface DevRuntimeProps {
+  rootElement?: HTMLElement | null
+}
+
+const defaultDevConfig = devConfigJson as unknown as RuntimeConfig
+const defaultDevConfigText = JSON.stringify(devConfigJson, null, 2)
+
+export function DevRuntime({ rootElement = document.getElementById('root') }: DevRuntimeProps) {
+  // Capture the raw text before validation so the editor shows the original format.
+  // The validator normalizes preloads from { "opName": {} } to { operationName, requestParams },
+  // so re-serializing the normalized config would break re-validation.
+  const rawConfigText = rootElement?.dataset.config ?? defaultDevConfigText
+
+  const bootstrapResult = readRuntimeConfig({
+    devConfig: defaultDevConfig,
+    isDevelopment: true,
+    rootElement,
+  })
+
+  if (bootstrapResult.status === 'error') {
+    return <AppShell isDevelopment={true} runtimeConfig={bootstrapResult} />
+  }
+
+  return <DevRuntimeReady initialConfig={bootstrapResult.config} initialConfigText={rawConfigText} />
+}
+
+interface DevRuntimeReadyProps {
+  initialConfig: RuntimeConfig
+  initialConfigText: string
+}
+
+function DevRuntimeReady({ initialConfig, initialConfigText }: DevRuntimeReadyProps) {
+  const [currentConfig, setCurrentConfig] = useState<RuntimeConfig>(initialConfig)
+  const [editorOpen, setEditorOpen] = useState(false)
+  const [editorBuffer, setEditorBuffer] = useState<string | null>(null)
+  const [hasPendingChanges, setHasPendingChanges] = useState(false)
+  const [validationError, setValidationError] = useState<RuntimeConfigError | null>(null)
+  const [parseError, setParseError] = useState<{ code: string; message: string } | null>(null)
+
+  const bridgeRef = useRef<DevRuntimeStateBridgeHandle>(null)
+
+  const currentError = parseError ?? validationError
+
+  function handleToggle() {
+    setEditorOpen((prev) => {
+      if (!prev && editorBuffer === null) {
+        // First open: show the original raw text, not the re-serialized normalized config.
+        setEditorBuffer(initialConfigText)
+      }
+      return !prev
+    })
+  }
+
+  function handleClose() {
+    setEditorOpen(false)
+  }
+
+  function handleEditorChange(value: string) {
+    setEditorBuffer(value)
+    setHasPendingChanges(true)
+    setParseError(null)
+    setValidationError(null)
+  }
+
+  function handleApply() {
+    const text = editorBuffer ?? initialConfigText
+
+    let parsed: unknown
+    try {
+      parsed = JSON.parse(text)
+    } catch (err) {
+      const msg = err instanceof SyntaxError ? err.message : 'Invalid JSON'
+      setParseError({ code: 'invalid-json', message: msg })
+      return
+    }
+
+    const validation = validateRuntimeConfig(parsed)
+    if (validation.status === 'error') {
+      setValidationError(validation.error)
+      return
+    }
+
+    const prevState = bridgeRef.current?.getLatestState()
+    const nextState = prevState
+      ? migrateRuntimeStateAcrossConfig(prevState, currentConfig, validation.config)
+      : undefined
+
+    // Dispatch the state reset BEFORE updating currentConfig so the provider's
+    // layoutEffects (triggered by the new config prop) see the migrated state,
+    // not the stale one. flushSync then commits both atomically.
+    if (nextState && bridgeRef.current) {
+      bridgeRef.current.dispatchAndSyncState({ type: 'runtime/reset', payload: { state: nextState } })
+    }
+
+    flushSync(() => {
+      setCurrentConfig(validation.config)
+      setParseError(null)
+      setValidationError(null)
+      setHasPendingChanges(false)
+      // Keep editorBuffer as-is: it's the text that just validated.
+      // Re-serializing validation.config would produce the normalized format
+      // (e.g. preloads as { operationName, requestParams }) which the validator
+      // expects in raw format ({ "opName": {} }) — breaking a second apply.
+    })
+  }
+
+  async function handleCopy() {
+    const text = editorBuffer ?? initialConfigText
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text)
+    } else {
+      const textarea = document.createElement('textarea')
+      textarea.value = text
+      textarea.style.position = 'fixed'
+      textarea.style.opacity = '0'
+      document.body.appendChild(textarea)
+      textarea.select()
+      document.execCommand('copy')
+      document.body.removeChild(textarea)
+    }
+  }
+
+  useDevRuntimeKeyboard({
+    isOpen: editorOpen,
+    onToggle: handleToggle,
+    onClose: handleClose,
+  })
+
+  return (
+    <>
+      <main className={getAppShellClassName()} data-testid="runtime-app">
+        <section className={`${getAppShellContentClassName()} items-center`} data-testid="runtime-shell-content">
+          <div className={getAppShellFrameClassName()} data-testid="runtime-shell-frame">
+            <RuntimeStateProvider config={currentConfig}>
+              <DevRuntimeStateBridge ref={bridgeRef} />
+              <RuntimePage />
+            </RuntimeStateProvider>
+          </div>
+        </section>
+      </main>
+
+      <DevRuntimeToggleButton onToggle={handleToggle} />
+
+      <DevRuntimeDrawer
+        open={editorOpen}
+        onClose={handleClose}
+        onApply={handleApply}
+        onCopy={handleCopy}
+        pendingChanges={hasPendingChanges}
+        errors={currentError}
+      >
+        {editorBuffer !== null && (
+          <DevRuntimeMonacoEditor
+            value={editorBuffer}
+            onChange={handleEditorChange}
+            onMount={() => {}}
+          />
+        )}
+      </DevRuntimeDrawer>
+    </>
+  )
+}
