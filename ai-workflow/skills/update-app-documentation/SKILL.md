@@ -14,7 +14,6 @@ Esta skill debe comportarse como una fase documental posterior al código: revis
 - `ai-workflow/docs/workflow.md`
 - `ai-workflow/features/NNNN-feature-name/spec.md`
 - `ai-workflow/features/NNNN-feature-name/tasks.md`
-- `ai-workflow/features/NNNN-feature-name/test-plan.md`
 - `ai-workflow/features/NNNN-feature-name/status.yaml`
 - `ai-workflow/features/NNNN-feature-name/notes.md` si existe
 - `ai-workflow/docs/context.md`

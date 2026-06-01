@@ -1,6 +1,6 @@
 ---
 name: generate-implementation-plan
-description: Genera el plan técnico de implementación para una feature de este proyecto una vez exista la spec funcional. Úsala para solicitudes de escritura de `tasks.md` y `test-plan.md`, incluyendo el impacto en código, tests y documentación de cada tarea.
+description: Genera el plan técnico de implementación para una feature de este proyecto una vez exista la spec funcional. Úsala para solicitudes de escritura de `tasks.md`, incluyendo el impacto en código, el contrato de tests por tarea y la documentación afectada.
 model: claude-opus-4-7
 ---
 
@@ -18,7 +18,6 @@ La calidad del plan debe ser suficientemente alta como para que dos agentes comp
 - `ai-workflow/features/NNNN-feature-name/status.yaml`
 - `ai-workflow/features/NNNN-feature-name/design.md` si existe o si `status.yaml` marca `requires_design: true`
 - `ai-workflow/features/NNNN-feature-name/tasks.md` si existe
-- `ai-workflow/features/NNNN-feature-name/test-plan.md` si existe
 - `ai-workflow/docs/context.md`
 - `ai-workflow/docs/app-features/index.md`
 - solo las fichas de `ai-workflow/docs/app-features/` que el índice marque como relevantes para la feature
@@ -37,8 +36,7 @@ La calidad del plan debe ser suficientemente alta como para que dos agentes comp
 
 ## Objetivo
 Escribir o refinar:
-- `features/NNNN-feature-name/tasks.md`
-- `features/NNNN-feature-name/test-plan.md`
+- `features/NNNN-feature-name/tasks.md` (incluye el contrato de tests por tarea como sub-bloque)
 
 No implementar código en este paso.
 
@@ -60,7 +58,7 @@ Cada tarea debe incluir como mínimo, usando una estructura estable:
 - fuera de alcance
 - dependencias
 - impacto esperado en archivos
-- tests requeridos
+- tests (sub-bloque estable; ver más abajo)
 - documentación afectada
 - criterios de finalización
 - cierre de implementación
@@ -85,14 +83,17 @@ En el bloque `Impacto esperado en archivos`, cada tarea debe identificar:
 
 Si la ruta exacta todavía no se conoce, sé lo más concreto posible sobre el módulo o área que cambiará.
 
-## Qué debe incluir `test-plan.md`
-- unit tests esperados
-- integration tests esperados
-- tests e2e si de verdad aplican
-- qué comportamiento valida cada bloque de tests
+### Sub-bloque `tests` de cada tarea
+El contrato de verificación de cada tarea vive dentro de la propia tarea. Debe incluir cuatro subsecciones estables, en este orden:
 
-El plan de tests debe hacer evidente el paso posterior de implementación con enfoque tests-first.
-También debe dejar claro qué comando o conjunto de comandos debería ejecutar la skill de implementación para validar cada bloque relevante y qué umbral de cobertura del proyecto sigue aplicando al cierre de la pasada.
+- **Ficheros de test**: lista de rutas `src/tests/<área>/<módulo>-<área>.test.ts(x)` con su rol explícito: `(nuevo)` si lo crea esta tarea o `(ampliación)` si ya existe y se añaden casos. Cuando un fichero aparece en varias tareas, cada tarea declara su rol y delimita qué casos aporta.
+- **Comportamiento cubierto**: lista en bullets de los comportamientos observables que validan los tests de esta tarea. Cada bullet debe ser lo bastante específico para que el subagente de implementación pueda traducirlo a un test concreto sin reinterpretar.
+- **Comandos durante la implementación**: comandos exactos `pnpm test --run <ruta>` por cada fichero de test de la tarea. El subagente los usa para iterar el ciclo tests-first sin reabrir la planificación.
+- **Restricciones** (opcional): decisiones específicas de esta tarea que limitan cómo se escriben los tests (p. ej. "reusar el harness de X", "no añadir snapshots"). Las reglas universales viven en `ai-workflow/standards/testing-rules.md` y no se repiten aquí.
+
+El sub-bloque `tests` de cada tarea debe ser suficiente para que un subagente con contexto limpio implemente la tarea con enfoque tests-first sin necesidad de inferir qué tests escribir. El umbral de cobertura del proyecto (`pnpm test`) sigue siendo gate de cierre de la pasada de implementación, pero no se repite por tarea: es regla global recogida en `testing-rules.md`.
+
+Si una tarea no requiere tests propios (refactor puro, doc-only), el sub-bloque debe existir igual con `ficheros: ninguno; cubierto por: <ID de otra tarea o suite existente>`. No omitir el sub-bloque.
 
 ## Reglas de planificación
 - Dividir el trabajo en tareas pequeñas, atómicas y secuenciales que puedan implementarse, probarse y revisarse con seguridad en un cambio acotado.
@@ -122,7 +123,6 @@ También debe dejar claro qué comando o conjunto de comandos debería ejecutar 
 - Actualizar `status.yaml` al terminar para reflejar:
   - `phase: planning` o `phase: implementation`
   - `artifacts.tasks: ready`
-  - `artifacts.test_plan: ready`
   - `artifacts.design: ready | not_required`
   - `implementation.ready: true` solo si se cumplen todos los gates de entrada a implementación
   - `feature_status: planned` cuando el contrato de ejecución ya sea usable
@@ -139,11 +139,11 @@ También debe dejar claro qué comando o conjunto de comandos debería ejecutar 
 - No crear ni refinar `design.md`. Si el plan requiere decisiones técnicas que aún no existen, devolver el control a `generate-feature-design`.
 
 ## Encadenado con review
-Al cerrar la planificación con `artifacts.tasks: ready` y `artifacts.test_plan: ready`, lanzar automáticamente una revisión del plan usando un sub-agente con contexto limpio:
+Al cerrar la planificación con `artifacts.tasks: ready`, lanzar automáticamente una revisión del plan usando un sub-agente con contexto limpio:
 
 - usar la herramienta `Agent` con `subagent_type: general-purpose`
-- el prompt del sub-agente debe replicar el contrato de `review-implementation-plan`, apuntando a la carpeta de la feature recién planificada
-- el sub-agente debe leer los artefactos generados (`spec.md`, `tasks.md`, `test-plan.md`, `design.md` si aplica, `status.yaml`) y devolver un veredicto explícito: plan aprobado o refinamientos concretos requeridos
+- el prompt del sub-agente debe ser corto y autosuficiente: identidad (ruta absoluta a la carpeta de la feature recién planificada) e instrucción de leer y aplicar literalmente el contrato en `ai-workflow/skills/review-implementation-plan/SKILL.md` en su modo sub-agente
+- la salida esperada del sub-agente es la que ya define ese contrato: veredicto explícito (`aprobado` o `requiere refinamiento`), refinamientos numerados si aplica, y estado sugerido para `implementation.ready` y `blocked_by`
 - el agente principal debe aplicar los refinamientos propuestos antes de cerrar la fase de planificación
 - si el sub-agente no detecta problemas, marcar `implementation.ready: true` en `status.yaml`
 - si el sub-agente detecta huecos bloqueantes, dejar `implementation.ready: false` y registrar los huecos en `blocked_by`
@@ -155,8 +155,8 @@ El usuario puede invocar `review-implementation-plan` manualmente si quiere un s
 - `tasks.md` funciona como contrato de ejecución y no como lista orientativa
 - cada tarea sigue una estructura estable y fácil de revisar
 - dos agentes competentes distintos podrían seguir el plan e implementar un resultado funcionalmente equivalente sin reinterpretar la feature
-- `test-plan.md` cubre la verificación prevista
-- `test-plan.md` deja claro qué tests relevantes deben ejecutarse durante la implementación y que el umbral de cobertura del proyecto sigue siendo un gate de cierre
+- cada tarea incluye su sub-bloque `tests` con las cuatro subsecciones (ficheros, comportamiento cubierto, comandos, restricciones si aplica)
+- el sub-bloque `tests` de cada tarea es lo bastante literal como para que un subagente con contexto limpio implemente la tarea sin reinterpretar el alcance
 - `design.md` existe cuando el riesgo o la complejidad lo piden
 - `status.yaml` refleja correctamente si la feature está lista o no para implementación
 - cada tarea identifica el impacto en código, tests y documentación

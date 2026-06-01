@@ -39,7 +39,7 @@ Al cerrar la conversación, la skill debe terminar con una recomendación explí
 ## Reglas de trabajo
 - No crear ni modificar ficheros bajo `ai-workflow/features/`.
 - No tocar `status.yaml`.
-- No escribir `discovery.md`, `spec.md`, `design.md`, `tasks.md` ni `test-plan.md`.
+- No escribir `discovery.md`, `spec.md`, `design.md` ni `tasks.md`.
 - No proponer cambios de código durante esta fase.
 - No reservar todavía un identificador `NNNN-feature-name`; eso lo hace `generate-feature-spec` cuando el usuario decida pasar a esa fase.
 - Hacer preguntas concretas cuando detectes ambigüedad funcional bloqueante; siempre con una sugerencia explícita acompañando cada pregunta.

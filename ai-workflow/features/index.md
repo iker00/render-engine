@@ -8,7 +8,6 @@ Cada feature nueva debería usar, cuando aplique:
 - `spec.md` como contrato funcional
 - `design.md` para cambios con complejidad o riesgo relevante
 - `tasks.md` como contrato de ejecución
-- `test-plan.md` como contrato de verificación
 - `status.yaml` como estado estructurado del workflow
 
 La exploración previa, cuando hace falta, se hace conversacionalmente con `explore-feature-scope` y no produce artefacto. Features históricas pueden conservar `discovery.md` sin migración.

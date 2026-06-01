@@ -1,124 +1,92 @@
 ---
 name: implement-task-test-first
-description: Implementa una tarea planificada de este proyecto usando un enfoque tests-first. Úsala cuando `spec.md`, `tasks.md` y `test-plan.md` ya existan y el objetivo sea ejecutar una tarea de código de forma segura, dejando la actualización documental amplia para una skill posterior.
+description: Implementa las tareas planificadas de una feature de este proyecto orquestando un subagente con contexto limpio por cada tarea. Úsala cuando `spec.md` y `tasks.md` ya existan y el objetivo sea ejecutar tareas de código de forma segura con enfoque tests-first, dejando la actualización documental amplia para una skill posterior.
 model: sonnet
 ---
 
 # Implementar tareas con enfoque tests-first
 
-Usa esta skill cuando la feature ya esté especificada y planificada, y el objetivo sea ejecutar sus tareas en orden.
+Esta skill actúa como **orquestador**: lanza un subagente con contexto limpio por cada tarea, recibe un resultado estructurado y avanza solo cuando la tarea queda cerrada con validación real. La actualización documental amplia se delega a una skill posterior.
 
-Esta skill debe comportarse como la fase de ejecución de un flujo guiado por specs, pero centrada en código y validación: implementar las tareas de la feature de manera consecutiva, aplicar tests-first cuando sea práctico, y no pasar a la siguiente tarea hasta que la actual quede terminada con sus tests. La actualización documental amplia se delega a una skill posterior.
+El orquestador no implementa código por sí mismo. El contrato completo del subagente vive en `subagent-prompt.md`, dentro de esta misma skill, y el subagente lo lee al arrancar.
 
-## Leer siempre
+## Leer siempre (orquestador)
+Lo mínimo para decidir qué tarea toca y mantener el estado:
 - `ai-workflow/docs/workflow.md`
-- `ai-workflow/features/NNNN-feature-name/spec.md`
 - `ai-workflow/features/NNNN-feature-name/tasks.md`
-- `ai-workflow/features/NNNN-feature-name/test-plan.md`
 - `ai-workflow/features/NNNN-feature-name/status.yaml`
-- `ai-workflow/features/NNNN-feature-name/design.md` si existe o si `status.yaml` marca `requires_design: true`
-- `ai-workflow/features/NNNN-feature-name/notes.md` si existe
-- `ai-workflow/docs/architecture.md`
-- `ai-workflow/docs/conventions.md`
-- `ai-workflow/standards/testing-rules.md`
-- `ai-workflow/docs/test-index.md`
-- `ai-workflow/standards/coding-style.md`
-- código y tests relevantes para la tarea seleccionada
 
-## Leer si aplica
-- `ai-workflow/docs/context.md` si `tasks.md` no basta para entender el comportamiento esperado.
-- `ai-workflow/docs/app-features/index.md` y solo las fichas relevantes si la tarea remite a una feature funcional o cambia comportamiento estable.
-- `ai-workflow/docs/current-state.md` si hay dudas sobre el estado vigente.
-- `ai-workflow/features/index.md` si hace falta contexto adicional sobre el mapa de features.
-- Otros documentos de `ai-workflow/standards/` según el tipo de cambio: React, errores, seguridad u otras reglas de calidad afectadas.
-- `ai-workflow/docs/index.md` solo como mapa documental auxiliar si no está claro qué contexto adicional seleccionar.
+El contexto funcional amplio (spec, design, architecture, conventions, código relevante) lo lee el subagente. El orquestador no debe acumular ese contexto entre tareas.
 
 ## Objetivo
-Implementar las tareas planificadas de la feature en orden usando un flujo tests-first.
+Implementar las tareas planificadas de la feature en orden, una por una, lanzando un subagente por tarea hasta agotar el alcance solicitado o encontrar un bloqueo.
 
-Antes de empezar, comprobar el gate de implementación:
+## Gate de implementación
+Antes de empezar la pasada, comprobar:
 - `spec.md` lista
 - `tasks.md` lista
-- `test-plan.md` listo
 - `design.md` lista si `status.yaml` marca `requires_design: true`
-- sin bloqueos activos en `status.yaml`
-- existe un plan claro de tests relevantes para la tarea actual
+- `status.yaml` sin bloqueos activos en `blocked_by`
+- `implementation.ready: true`
 
 Si el gate falla, detenerse y explicitar qué artefacto o estado falta.
 
-## Flujo de ejecución
-1. Seleccionar la primera tarea pendiente de `tasks.md`.
-1.1. Confirmar en `status.yaml` que la feature está habilitada para implementación.
-1.2. Al iniciar una nueva pasada de implementación o una nueva tarea, resetear en `status.yaml` los flags de validación a un estado no cerrado hasta que vuelvan a ejecutarse las validaciones finales:
-  - `validation.tests_green: false`
-  - `validation.coverage_gate_passed: false`
-2. Confirmar que la tarea es lo bastante clara como para ejecutarse sin reabrir la planificación de la feature.
-3. Identificar el comportamiento requerido y los tests que deberían existir antes de la implementación o junto a ella.
-4. Añadir o actualizar tests antes de la implementación cuando sea factible y útil.
-5. Implementar el mínimo código necesario para satisfacer el comportamiento planificado.
-6. Refactorizar solo si mejora la claridad o reduce duplicación real sin ampliar el alcance.
-7. Ejecutar los tests relevantes mientras avanzas y repetirlos tantas veces como haga falta hasta cerrar la tarea con validación real.
-7.1. Antes de dar por cerrada la tarea actual, ejecutar la validación final relevante para esa tarea.
-7.2. Antes de dar por cerrada la pasada, ejecutar también la validación necesaria para confirmar que el umbral de cobertura exigido por el proyecto sigue cumpliéndose.
-8. Registrar notas de implementación útiles en `features/NNNN-feature-name/notes.md` solo si aportan valor para pasos posteriores o para la futura actualización documental.
-9. Actualizar el estado de la tarea en `tasks.md` si el formato de la tarea lo permite.
-9.1. Actualizar `status.yaml` con la tarea en curso o completada:
-  - `current_task_id`
-  - `implementation.in_progress_task_id`
-  - `implementation.completed_task_ids`
-  - `validation.tests_green`
-  - `validation.coverage_gate_passed`
-10. Señalar explícitamente qué documentación debería revisar después la skill documental si el cambio afecta comportamiento estable.
-11. Solo cuando la tarea actual esté terminada y validada, pasar a la siguiente tarea pendiente de `tasks.md`.
-12. Repetir el ciclo hasta completar todas las tareas que entren en el alcance solicitado por el usuario o hasta encontrar un bloqueo que exija detenerse.
+## Flujo del orquestador
+1. Seleccionar la primera tarea pendiente de `tasks.md` que no esté en `implementation.completed_task_ids` y que entre en el alcance solicitado por el usuario. Si no queda ninguna tarea pendiente en alcance, saltar al paso 8.
+2. Resetear en `status.yaml` los flags de validación de la pasada anterior:
+   - `validation.tests_green: false`
+   - `validation.coverage_gate_passed: false`
+3. Marcar la tarea seleccionada en `status.yaml`:
+   - `implementation.in_progress_task_id: <ID>`
+4. Lanzar un subagente para esa tarea con la herramienta `Agent` (ver "Lanzamiento del subagente").
+5. Recibir el texto final del subagente y parsearlo como JSON. Tolerar `\`\`\`json` y `\`\`\`` envolventes si el subagente los añade. Si el JSON no se puede parsear o falta algún campo obligatorio, tratarlo como `status: "failed"` con `blocker_reason` describiendo el problema de protocolo y continuar por la rama de fallo del paso 6.
+6. Según el `status` devuelto:
+   - `completed`: actualizar `tasks.md` (marcar la tarea como cerrada si el formato lo permite) y `status.yaml` (mover el ID de `in_progress_task_id` a `completed_task_ids`, limpiar `in_progress_task_id`). Pasar a la siguiente tarea.
+   - `blocked` o `failed`: detener la pasada, dejar la tarea en `in_progress_task_id`, registrar el motivo en `status.yaml.blocked_by` y saltar al paso 8.
+7. Repetir desde el paso 1.
+8. Ejecutar la validación final de cobertura del proyecto (`pnpm test`). Si no se implementó ninguna tarea en esta pasada (gate fallido o bloqueo temprano sin código nuevo), se puede omitir y dejar los flags de validación en `false`.
+9. Actualizar `status.yaml`:
+   - `validation.tests_green: true | false`
+   - `validation.coverage_gate_passed: true | false`
+10. Emitir la respuesta final con dos checklists (tareas implementadas en la pasada y tareas pendientes de la feature) y las notas documentales agregadas que devolvieron los subagentes.
 
-## Reglas de trabajo
+## Lanzamiento del subagente
+- Usar la herramienta `Agent` con `subagent_type: general-purpose`.
+- El prompt del subagente debe ser corto y autosuficiente: identidad de la tarea (`task_id`, ruta absoluta a `tasks.md` y a la carpeta de la feature) e instrucción de leer y aplicar literalmente `ai-workflow/skills/implement-task-test-first/subagent-prompt.md`.
+- Esperar como única salida un JSON con la forma documentada en `subagent-prompt.md`. Sus campos relevantes para el orquestador:
+  - `task_id`
+  - `status` (`completed | blocked | failed`)
+  - `tests_green`
+  - `files_created`, `files_modified`, `tests_added_or_updated`
+  - `notes_for_documentation`
+  - `blocker_reason`
+
+## Reglas de trabajo (orquestador)
+- Mantener el orden definido por `tasks.md`. No reordenar ni fusionar tareas.
+- Lanzar un único subagente por tarea. No agrupar tareas en un mismo subagente aunque compartan ficheros.
+- No avanzar a la siguiente tarea si la anterior devolvió `blocked` o `failed`.
+- Centralizar la escritura de `tasks.md` y `status.yaml`: solo el orquestador los modifica.
+- No reutilizar `validation.tests_green: true` o `validation.coverage_gate_passed: true` de pasadas anteriores como si siguieran siendo válidos tras nuevos cambios.
+- Ejecutar la validación de cobertura una sola vez al final de la pasada, no por tarea.
 - Tratar `tasks.md` como contrato de ejecución, no como guía orientativa.
-- Implementar las tareas en el orden definido por `tasks.md`.
-- No pasar a la siguiente tarea mientras la actual no esté implementada y verificada.
-- Mantener los cambios alineados con el impacto previsto en archivos descrito en `tasks.md`.
-- No ampliar, fusionar, reordenar ni reinterpretar tareas por iniciativa propia.
-- Asumir que un buen `tasks.md` debería llevar a cualquier agente competente al mismo resultado funcional; si la tarea admite varias lecturas funcionales, detenerse.
-- No cargar contexto funcional extra por defecto si el contrato de ejecución ya es suficiente.
-- Respetar los límites arquitectónicos y las convenciones del proyecto.
-- No asumir que esta skill cierra la documentación funcional; ese trabajo corresponde a `update-app-documentation`.
-- No empezar a implementar si `status.yaml` indica `blocked_by` no vacío o si `implementation.ready` es falso por falta de artefactos.
-- No reutilizar un `validation.tests_green: true` o `validation.coverage_gate_passed: true` de una pasada anterior como si siguiera siendo válido tras nuevos cambios.
-- No considerar una tarea cerrada mientras los tests relevantes de esa tarea no estén en verde.
-- No considerar una pasada de implementación cerrada si la validación final rompe el umbral de cobertura exigido por el proyecto.
-- Tras la validación final, dejar `status.yaml` actualizado con el estado real de tests y coverage; no dejar esos campos implícitos.
-- Solo escribir `notes.md` cuando haga falta conservar contexto útil para la skill documental posterior o para pasos siguientes.
-- Si la implementación revela una discrepancia válida con la spec, señalarla explícitamente y dejar preparada la posterior actualización documental en vez de desviarse en silencio.
-- Preferir el cambio más pequeño que satisfaga el comportamiento planificado.
-- La respuesta final debe incluir siempre una lista de checks con las tareas implementadas en esa pasada.
-- La respuesta final debe incluir también una lista de checks con las tareas de la feature que siguen pendientes.
-- Si no se implementó ninguna tarea por bloqueo o replanificación, la lista de checks de tareas implementadas debe indicarlo explícitamente.
-
-## Nivel mínimo de tests-first
-- Definir la verificación antes de dar la implementación por terminada.
-- Empezar desde un test ausente o en fallo cuando sea práctico, pero no forzar unit tests artificiales si un integration test es el punto de entrada correcto.
-- El estado final debe incluir tests en verde para el comportamiento implementado.
-- La skill debe ejecutar tests durante la implementación, no solo al final como formalidad.
-- El cierre de la pasada debe respetar el umbral de cobertura del proyecto (`pnpm test` o el comando equivalente que lo haga cumplir).
-- Evitar escribir tests que solo reflejen detalles de implementación.
+- Si una tarea revela una discrepancia válida con la spec, señalarla en la respuesta final y dejar la actualización documental marcada para la skill posterior, sin desviarse en silencio.
+- La respuesta final debe incluir siempre:
+  - lista de checks con las tareas implementadas en la pasada
+  - lista de checks con las tareas de la feature que siguen pendientes
+  - bloqueos registrados, si los hay
+  - notas documentales consolidadas (`notes_for_documentation` por tarea) para que `update-app-documentation` tenga un punto de partida
+- Si no se implementó ninguna tarea (bloqueo temprano o gate fallido), las listas de checks deben indicarlo explícitamente.
 
 ## Detente y señala un problema cuando
-- la tarea esté insuficientemente especificada
-- la tarea entre en conflicto con `spec.md`
-- `tasks.md` no ofrezca un contrato suficientemente claro para ejecutar la tarea sin reinterpretarla
-- la tarea requiera un cambio arquitectónico más amplio de lo planificado
-- el impacto documental requerido revele que en realidad la tarea no estaba bien acotada o requiere replanificación
-- la implementación revele que el siguiente paso seguro es replanificar en vez de seguir programando
-- una tarea falle sus validaciones y no pueda cerrarse con seguridad antes de avanzar a la siguiente
+- el gate de implementación falla por artefacto o estado bloqueante
+- un subagente devuelve `status: "blocked"` o `status: "failed"`
+- la validación final de cobertura rompe el umbral del proyecto al cierre de la pasada
 
 ## Terminado cuando
-- cada tarea ejecutada en la pasada está implementada
-- los tests relevantes de cada tarea ejecutada pasan
-- la validación final de la pasada mantiene el umbral de cobertura exigido por el proyecto
-- ninguna tarea posterior se ha empezado antes de cerrar correctamente la anterior
-- las tareas ejecutadas quedan en un estado revisable y sin trabajo posterior oculto
-- `status.yaml` deja claro qué tarea queda en curso, cuáles se cerraron y si la documentación ya puede empezar
-- `status.yaml` deja explícito si `validation.tests_green` y `validation.coverage_gate_passed` quedaron en `true`
-- la respuesta final deja claro qué documentación debería actualizar la skill documental posterior
+- cada tarea ejecutada en la pasada está implementada y sus tests propios pasan
+- la validación final (`pnpm test`) mantiene el umbral de cobertura exigido por el proyecto
+- ninguna tarea posterior se empezó antes de cerrar correctamente la anterior
+- `status.yaml` refleja qué tareas se cerraron, cuál quedó en curso si la pasada se detuvo, y si `validation.tests_green` y `validation.coverage_gate_passed` quedaron en `true`
 - la respuesta final enumera en formato checklist las tareas implementadas en la pasada
 - la respuesta final enumera en formato checklist las tareas pendientes de la feature
+- la respuesta final consolida las notas documentales pendientes para la skill posterior

@@ -112,6 +112,9 @@ Los ficheros de test están un nivel más profundo que `src/tests/`, por lo que 
 - Helper de la misma carpeta: `import { bar } from './helpers'`
 - Mock con ruta relativa: `vi.mock('../../runtime/foo', ...)`
 
+### Reuso antes de inventar
+Antes de crear un harness, helper o fixture nuevo en una carpeta, revisar los `*.test.ts(x)` existentes de esa carpeta y reusar el patrón ya establecido. La duplicación de utilidades de test es una causa recurrente de divergencia entre ficheros y rompe el principio de "un fichero por área funcional".
+
 ### Cuándo dividir un fichero existente
 - Cuando supere ~500 líneas y agrupe más de un dominio funcional.
 - Cuando tenga múltiples `describe` de alto nivel que puedan leerse de forma independiente.

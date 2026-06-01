@@ -1,6 +1,6 @@
 ---
 name: review-implementation-plan
-description: Revisa críticamente un plan de implementación antes de codificar. Úsala para validar que `tasks.md`, `test-plan.md`, `status.yaml` y `design.md` cuando aplique formen un contrato de ejecución claro, secuencial y sin ambigüedad peligrosa.
+description: Revisa críticamente un plan de implementación antes de codificar. Úsala para validar que `tasks.md`, `status.yaml` y `design.md` cuando aplique formen un contrato de ejecución claro, secuencial y sin ambigüedad peligrosa, incluyendo el sub-bloque de tests de cada tarea.
 model: claude-opus-4-7
 ---
 
@@ -20,7 +20,6 @@ En ambos casos el contrato de la revisión es el mismo. La única diferencia es 
 - `ai-workflow/docs/workflow.md`
 - `ai-workflow/features/NNNN-feature-name/spec.md`
 - `ai-workflow/features/NNNN-feature-name/tasks.md`
-- `ai-workflow/features/NNNN-feature-name/test-plan.md`
 - `ai-workflow/features/NNNN-feature-name/status.yaml`
 - `ai-workflow/features/NNNN-feature-name/design.md` si existe o si `status.yaml` marca `requires_design: true`
 - `ai-workflow/docs/context.md`
@@ -39,8 +38,7 @@ En ambos casos el contrato de la revisión es el mismo. La única diferencia es 
 
 ## Objetivo
 Revisar si el plan está realmente listo para implementación y, si hace falta, refinar:
-- `ai-workflow/features/NNNN-feature-name/tasks.md`
-- `ai-workflow/features/NNNN-feature-name/test-plan.md`
+- `ai-workflow/features/NNNN-feature-name/tasks.md` (incluye el sub-bloque `tests` de cada tarea)
 - `ai-workflow/features/NNNN-feature-name/design.md`
 - `ai-workflow/features/NNNN-feature-name/status.yaml`
 
@@ -51,15 +49,24 @@ No implementar código.
 - tareas demasiado grandes o mezcladas
 - dependencias mal ordenadas
 - impacto en archivos poco claro
-- huecos de tests relevantes
+- sub-bloque `tests` ausente, incompleto o no literal en alguna tarea
 - impacto documental no explicitado
 - necesidad real de `design.md`
 - gates de implementación en `status.yaml`
+
+### Verificaciones específicas del sub-bloque `tests` por tarea
+- Cada tarea de `tasks.md` incluye su sub-bloque `tests` con las cuatro subsecciones estables: `Ficheros de test`, `Comportamiento cubierto`, `Comandos durante la implementación`, `Restricciones` (esta última puede estar vacía).
+- Cada fichero de test del sub-bloque está anotado con su rol explícito: `(nuevo)` o `(ampliación)`. Cuando un fichero aparece en varias tareas, cada tarea acota los casos que aporta y declara su rol.
+- Los bullets de `Comportamiento cubierto` son lo bastante concretos como para que un subagente de implementación con contexto limpio pueda traducir cada bullet a un test sin reinterpretar el alcance.
+- Los `Comandos durante la implementación` contienen comandos exactos `pnpm test --run <ruta>` por cada fichero de test de la tarea.
+- Las `Restricciones` de la tarea no repiten reglas universales que ya viven en `ai-workflow/standards/testing-rules.md`.
+- Tareas sin tests propios (refactor puro, doc-only) declaran su sub-bloque con `ficheros: ninguno; cubierto por: <ID o suite>` y no lo omiten.
 
 ## Reglas de trabajo
 - Priorizar detectar riesgos y ambigüedad antes que "aprobar" el plan rápido.
 - Si una tarea admite dos interpretaciones funcionalmente distintas, pedir refino.
 - Si una tarea es demasiado grande para un cambio seguro, dividirla.
+- Si el sub-bloque `tests` de una tarea falta o no es lo bastante literal para que un subagente con contexto limpio pueda implementarlo sin reinterpretar, marcar refinamiento y devolver el control a `generate-implementation-plan`. No reescribir el sub-bloque desde esta skill.
 - Si el riesgo o la complejidad justifican `design.md` y no existe, marcar `requires_design: true` y `artifacts.design: missing` en `status.yaml`, dejar `implementation.ready: false` y redirigir a `generate-feature-design`. No escribir `design.md` desde esta skill.
 - Si el plan ya es suficientemente bueno, dejarlo explícito y marcar en `status.yaml` que la implementación está habilitada.
 - Actualizar `status.yaml` al terminar para reflejar:
@@ -78,6 +85,6 @@ Cuando esta skill se invoca desde `generate-implementation-plan` como sub-agente
 
 ## Terminado cuando
 - queda claro si la feature está lista o no para implementación
-- `tasks.md` y `test-plan.md` quedan refinados si hacía falta
+- `tasks.md` queda refinado si hacía falta, incluyendo el sub-bloque `tests` de cada tarea afectada
 - `design.md` queda exigida o descartada con criterio explícito
 - `status.yaml` refleja el resultado real de la revisión

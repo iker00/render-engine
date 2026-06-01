@@ -1,13 +1,11 @@
 phase: spec
 risk_level: medium
 requires_design: false
-current_task_id: null
 blocked_by: []
 artifacts:
   spec: missing
   design: not_required
   tasks: missing
-  test_plan: missing
   notes: optional
 implementation:
   ready: false

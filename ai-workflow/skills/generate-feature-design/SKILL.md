@@ -42,7 +42,7 @@ Si `requires_design` es `false` o `artifacts.design` ya es `ready`, esta skill n
 ## Objetivo
 Escribir o refinar `features/NNNN-feature-name/design.md` usando `ai-workflow/templates/design.md` como punto de partida.
 
-No trocear todavía la feature en tareas. No escribir `tasks.md` ni `test-plan.md`. No implementar código.
+No trocear todavía la feature en tareas. No escribir `tasks.md`. No implementar código.
 
 ## Qué debe incluir `design.md`
 Como mínimo, siguiendo el template del proyecto:
@@ -101,7 +101,7 @@ Si no quedan decisiones técnicas bloqueantes, no hagas preguntas y genera el de
 
 ## Restricciones
 - No escribir código.
-- No escribir `tasks.md` ni `test-plan.md`.
+- No escribir `tasks.md`.
 - No modificar `spec.md` salvo para reflejar una preguntas abierta que el design resolvió.
 - No convertir el design en una repetición de la spec.
 - No dejar decisiones implícitas dentro de prosa larga; cada decisión debe quedar identificable.

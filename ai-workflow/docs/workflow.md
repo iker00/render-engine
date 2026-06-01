@@ -9,8 +9,7 @@ Cada feature vive en `ai-workflow/features/NNNN-feature-name/`.
 Artefactos posibles:
 - `spec.md`: contrato funcional de producto y comportamiento.
 - `design.md`: documento técnico para features con complejidad o riesgo relevante.
-- `tasks.md`: contrato secuencial de ejecución.
-- `test-plan.md`: plan de verificación esperado.
+- `tasks.md`: contrato secuencial de ejecución, incluye el contrato de tests por tarea.
 - `status.yaml`: estado estructurado y mínimo del workflow.
 - `notes.md`: notas puntuales de implementación o seguimiento, solo si aportan valor.
 
@@ -46,7 +45,7 @@ Es opcional, pero pasa a ser obligatoria cuando la feature tenga al menos una de
 - riesgo medio/alto que merezca decisiones explícitas antes de programar
 - varias estrategias técnicas razonables que puedan llevar a implementaciones divergentes
 
-Si no se cumple ninguna, `spec.md + tasks.md + test-plan.md` suelen bastar.
+Si no se cumple ninguna, `spec.md + tasks.md` suelen bastar.
 
 Cuando `design.md` aplica, se produce desde una skill dedicada (`generate-feature-design`) entre spec y planning. No se escribe desde `generate-feature-spec` ni desde `generate-implementation-plan`.
 
@@ -67,20 +66,15 @@ Cada tarea debería mantener una estructura fija:
 - fuera de alcance
 - dependencias
 - impacto esperado en archivos
-- tests requeridos
+- tests (sub-bloque estable):
+  - ficheros de test, cada uno anotado con su rol (`nuevo` o `ampliación`)
+  - comportamiento cubierto, en bullets explícitos
+  - comandos `pnpm test --run …` para iterar la tarea
+  - restricciones específicas de la tarea (opcional)
 - documentación afectada
 - criterios de finalización
 - cierre de implementación
 - cierre documental
-
-### `test-plan.md`
-Es obligatorio antes de implementar.
-
-Debe describir:
-- qué bloques se validarán con unit tests
-- qué bloques se validarán con integration tests
-- cuándo aplican tests e2e
-- qué comportamiento cubre cada grupo de tests
 
 ### `status.yaml`
 Es obligatorio desde que una feature entra en planificación activa (al cerrar la primera versión de la spec).
@@ -95,13 +89,11 @@ Plantilla mínima recomendada:
 phase: spec
 risk_level: medium
 requires_design: false
-current_task_id: null
 blocked_by: []
 artifacts:
   spec: missing
   design: not_required
   tasks: missing
-  test_plan: missing
   notes: optional
 implementation:
   ready: false
@@ -153,10 +145,9 @@ Se pasa a `planning` cuando:
 Se puede pasar a `implementation` solo cuando:
 - `spec.md` existe y está lista
 - `tasks.md` existe y está listo
-- `test-plan.md` existe y está listo
 - si `requires_design: true`, `design.md` existe y está listo
 - no hay bloqueos abiertos en `blocked_by`
-- el plan deja claro qué tests deben ejecutarse para cada tarea o grupo de tareas
+- cada tarea de `tasks.md` deja claro su contrato de tests en el sub-bloque `tests`
 
 ### Implementation → Documentation
 Se puede pasar a `documentation` solo cuando:
@@ -198,7 +189,7 @@ El riesgo debe influir en:
 2. `spec.md` con `generate-feature-spec`.
 3. `status.yaml` actualizado para marcar `spec` lista y decidir `requires_design`.
 4. `design.md` con `generate-feature-design` si `requires_design: true`.
-5. `tasks.md` y `test-plan.md` con `generate-implementation-plan`.
+5. `tasks.md` con `generate-implementation-plan`.
 6. Revisión del plan vía `review-implementation-plan` (automática como sub-agente al final del paso 5, o manual si se quiere un segundo pase).
 7. Implementación tarea a tarea con `implement-task-test-first`.
 8. Actualización documental con `update-app-documentation` y cierre final de la feature en `status.yaml`.
