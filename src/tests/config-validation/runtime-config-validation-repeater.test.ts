@@ -382,6 +382,75 @@ describe('validateRuntimeConfig', () => {
       }
     })
 
+    it('accepts the reserved literal "$key" as a valid value for props.items.key', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithLayout([
+          createRepeaterNode({
+            props: {
+              items: {
+                source: 'queries.posts.data',
+                key: '$key',
+              },
+              template: [
+                {
+                  type: 'heading',
+                  props: {
+                    text: 'item.title',
+                    level: 2,
+                  },
+                },
+              ],
+            },
+          }),
+        ]),
+      )
+
+      expect(result).toMatchObject({
+        status: 'ready',
+        page: {
+          layout: [
+            {
+              type: 'repeater',
+              props: {
+                items: {
+                  source: 'queries.posts.data',
+                  key: '$key',
+                },
+              },
+            },
+          ],
+        },
+      })
+    })
+
+    it('rejects "$"-prefixed key values other than the exact literal "$key"', () => {
+      for (const key of ['$key.id', '$key.$key', 'meta.$key', '$other', '$']) {
+        expect(
+          validateRuntimeConfig(
+            createConfigWithLayout([
+              createRepeaterNode({
+                props: {
+                  items: {
+                    source: 'queries.posts.data',
+                    key,
+                  },
+                  template: [],
+                },
+              }),
+            ]),
+          ),
+        ).toEqual({
+          status: 'error',
+          error: {
+            code: 'invalid-layout',
+            displayMode: 'development-only',
+            message:
+              'Page "home" has an invalid layout at "layout[0].props.items.key": repeater item keys must use a non-empty relative item path.',
+          },
+        })
+      }
+    })
+
     it('rejects repeater nodes without template, with non-array template, or with children', () => {
       expect(
         validateRuntimeConfig(

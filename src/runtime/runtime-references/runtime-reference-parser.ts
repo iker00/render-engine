@@ -10,6 +10,7 @@ const SUPPORTED_NAMESPACES = new Set(['forms', 'queries', 'params'] as const)
 const RESERVED_NAMESPACES = new Set(['navigation', 'routeParams'] as const)
 const REFERENCE_PATTERN = /^(item|forms|queries|navigation|routeParams|params)(\.[A-Za-z0-9_-]+)*$/
 const REFERENCE_SEGMENT_PATTERN = /^[A-Za-z0-9_-]+$/
+const ITEM_KEY_SYNTHETIC_SEGMENT = '$key'
 
 interface ParseRuntimeReferenceOptions {
   allowItemReference?: boolean
@@ -109,6 +110,10 @@ function hasRecognizedNamespace(value: string): boolean {
 }
 
 function hasValidReferenceShape(namespace: RuntimeReferenceNamespace, path: string[]) {
+  if (namespace === 'item' && path.length === 1 && path[0] === ITEM_KEY_SYNTHETIC_SEGMENT) {
+    return true
+  }
+
   if (path.some((segment) => segment.length === 0 || !REFERENCE_SEGMENT_PATTERN.test(segment))) {
     return false
   }

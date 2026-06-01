@@ -400,6 +400,216 @@ describe('RuntimePage', () => {
     expect(screen.queryByText('alpha', { selector: 'p' })).not.toBeInTheDocument()
   })
 
+  describe('T0045-03 object source: pagination and reset', () => {
+    it('applies pageSize over object entries and shows the first page', () => {
+      const activePage: RuntimePageConfig = {
+        id: 'sources',
+        layout: [
+          {
+            type: 'repeater',
+            props: {
+              items: {
+                source: 'queries.results.data',
+                key: '$key',
+              },
+              pagination: {
+                enabled: true,
+                pageSize: 2,
+              },
+              template: [
+                {
+                  type: 'paragraph',
+                  props: {
+                    text: '{{item.$key}}',
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      }
+
+      renderRuntimePageWithState(
+        activePage,
+        createRuntimePageState(activePage, {
+          results: {
+            status: 'success',
+            data: {
+              alpha: { label: 'A' },
+              beta: { label: 'B' },
+              gamma: { label: 'C' },
+              delta: { label: 'D' },
+            },
+            error: null,
+          },
+        }),
+      )
+
+      expect(screen.getAllByRole('paragraph').map((p) => p.textContent)).toEqual(['alpha', 'beta'])
+      expect(screen.queryByText('gamma')).not.toBeInTheDocument()
+      expect(screen.queryByText('delta')).not.toBeInTheDocument()
+    })
+
+    it('resets to first page when the object source changes to another object', () => {
+      const activePage: RuntimePageConfig = {
+        id: 'sources',
+        layout: [
+          {
+            type: 'repeater',
+            props: {
+              items: {
+                source: 'queries.results.data',
+                key: '$key',
+              },
+              pagination: {
+                enabled: true,
+                pageSize: 2,
+              },
+              template: [
+                {
+                  type: 'paragraph',
+                  props: {
+                    text: '{{item.$key}}',
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      }
+
+      const config: RuntimeConfig = {
+        api: {},
+        initialPage: activePage.id,
+        pages: [activePage],
+      }
+
+      const firstState = createRuntimePageState(activePage, {
+        results: {
+          status: 'success',
+          data: { alpha: {}, beta: {}, gamma: {}, delta: {} },
+          error: null,
+        },
+      })
+
+      const { rerender } = renderRuntimePageWithState(activePage, firstState)
+
+      fireEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
+      expect(screen.getByText('gamma')).toBeInTheDocument()
+
+      const secondState = createRuntimePageState(activePage, {
+        results: {
+          status: 'success',
+          data: { uno: {}, dos: {}, tres: {} },
+          error: null,
+        },
+      })
+
+      rerender(
+        <RuntimeStateContext.Provider
+          value={{
+            config,
+            initialState: secondState,
+            state: secondState,
+            dispatch: vi.fn<(action: RuntimeStateAction) => void>(),
+            dispatchAndSyncState: vi.fn<(action: RuntimeStateAction) => void>(),
+            getLatestState: () => secondState,
+          }}
+        >
+          <RuntimePage />
+        </RuntimeStateContext.Provider>,
+      )
+
+      expect(screen.getByText('uno')).toBeInTheDocument()
+      expect(screen.getByText('dos')).toBeInTheDocument()
+      expect(screen.queryByText('tres')).not.toBeInTheDocument()
+    })
+
+    it('resets to first page when the source changes from object to array', () => {
+      const activePage: RuntimePageConfig = {
+        id: 'sources',
+        layout: [
+          {
+            type: 'repeater',
+            props: {
+              items: {
+                source: 'queries.results.data',
+                key: 'id',
+              },
+              pagination: {
+                enabled: true,
+                pageSize: 2,
+              },
+              template: [
+                {
+                  type: 'paragraph',
+                  props: {
+                    text: 'item.label',
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      }
+
+      const config: RuntimeConfig = {
+        api: {},
+        initialPage: activePage.id,
+        pages: [activePage],
+      }
+
+      const objectState = createRuntimePageState(activePage, {
+        results: {
+          status: 'success',
+          data: {
+            a: { id: 'a', label: 'A label' },
+            b: { id: 'b', label: 'B label' },
+            c: { id: 'c', label: 'C label' },
+            d: { id: 'd', label: 'D label' },
+          },
+          error: null,
+        },
+      })
+
+      const { rerender } = renderRuntimePageWithState(activePage, objectState)
+
+      fireEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
+      expect(screen.getByText('C label')).toBeInTheDocument()
+
+      const arrayState = createRuntimePageState(activePage, {
+        results: {
+          status: 'success',
+          data: [
+            { id: 'x1', label: 'X one' },
+            { id: 'x2', label: 'X two' },
+            { id: 'x3', label: 'X three' },
+          ],
+          error: null,
+        },
+      })
+
+      rerender(
+        <RuntimeStateContext.Provider
+          value={{
+            config,
+            initialState: arrayState,
+            state: arrayState,
+            dispatch: vi.fn<(action: RuntimeStateAction) => void>(),
+            dispatchAndSyncState: vi.fn<(action: RuntimeStateAction) => void>(),
+            getLatestState: () => arrayState,
+          }}
+        >
+          <RuntimePage />
+        </RuntimeStateContext.Provider>,
+      )
+
+      expect(screen.getByText('X one')).toBeInTheDocument()
+      expect(screen.getByText('X two')).toBeInTheDocument()
+      expect(screen.queryByText('X three')).not.toBeInTheDocument()
+    })
+  })
+
   it('keeps queryStateFeedback and visibility behavior on repeater and skips invalid iteration keys with diagnostics', () => {
     const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
     const activePage: RuntimePageConfig = {

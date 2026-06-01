@@ -1,12 +1,12 @@
 {
   "api": {
     "buscarPersona": {
-      "endpoint": "http://localhost:3000/api/personas/12345678A/global",
-      "method": "GET"
+      "endpoint": "http://localhost:3000/api/personas/global",
+      "method": "POST"
     },
     "buscarVehiculo": {
-      "endpoint": "http://localhost:3000/api/vehiculos/1234ABC/global",
-      "method": "GET"
+      "endpoint": "http://localhost:3000/api/vehiculos/global",
+      "method": "POST"
     }
   },
   "pages": [
@@ -31,7 +31,7 @@
             {
               "type": "button",
               "props": {
-                "label": "Consultar personas 123",
+                "label": "Consultar personas",
                 "action": {
                   "type": "navigateTo",
                   "pageId": "persona"
@@ -46,21 +46,6 @@
                   "type": "navigateTo",
                   "pageId": "vehiculo"
                 }
-              }
-            }
-          ]
-        },
-        {
-          "type": "container",
-          "props": {
-            "direction": "column"
-          },
-          "children": [
-            {
-              "type": "heading",
-              "props": {
-                "text": "Notas",
-                "level": 2
               }
             }
           ]
@@ -82,7 +67,11 @@
           "id": "persona-form",
           "submitAction": {
             "type": "executeOperation",
-            "operationName": "buscarPersona"
+            "operationName": "buscarPersona",
+            "body": {
+              "dni": "forms.persona-form.documentacion",
+              "fuentes": "forms.persona-form.fuentes"
+            }
           },
           "children": [
             {
@@ -287,36 +276,34 @@
                   ]
                 },
                 {
-                  "id": "contadores",
-                  "type": "container",
+                  "type": "repeater",
                   "props": {
-                    "columns": 12
-                  },
-                  "layout": {
-                    "span": 12
-                  },
-                  "children": [
-                    {
-                      "type": "container",
-                      "props": {
-                        "columns": 12,
-                        "gap": "sm",
-                        "variant": "card"
-                      },
-                      "children": [
-                        {
-                          "type": "paragraph",
-                          "props": {
-                            "text": "Vinfopol: {{queries.buscarPersona.data.resumen.resumenEstadistico.atestadosJudicialesVinfopol}}"
+                    "items": {
+                      "source": "queries.buscarPersona.data.resultados",
+                      "key": "fuente.id"
+                    },
+                    "template": [
+                      {
+                        "type": "container",
+                        "props": {
+                          "columns": 12,
+                          "gap": "sm",
+                          "variant": "card"
+                        },
+                        "layout": {
+                          "span": 3
+                        },
+                        "children": [
+                          {
+                            "type": "paragraph",
+                            "props": {
+                              "text": "{{item.fuente.nombre}}: {{item.total}}"
+                            }
                           }
-                        }
-                      ],
-                      "layout": {
-                        "span": 3
+                        ]
                       }
-                    }
-
-                  ]
+                    ]
+                  }
                 }
               ]
             },
@@ -339,6 +326,301 @@
               ]
             }
           ]
+        },
+        {
+          "type": "table",
+          "visibility": {
+            "reference": "queries.buscarPersona.data.resultados.vinfopol.datos",
+            "operator": "greaterThan",
+            "value": 0
+          },
+          "props": {
+            "headers": [
+              "Ano",
+              "Número",
+              "Fecha",
+              "Clase",
+              "Tipo de Atestado",
+              "Resultado",
+              "Implicados",
+              "Vehículos",
+              "Personas",
+              "Más info"
+            ],
+            "rows": {
+              "source": "queries.buscarPersona.data.resultados.vinfopol.datos",
+              "cells": [
+                "item.anio",
+                "item.numero",
+                "item.fechaHora",
+                "item.clase",
+                "item.tipoAtestado",
+                "item.resultado",
+                "item.implicados",
+                "item.vehiculos",
+                "item.personas",
+                "AÑADIR BOTÓN"
+              ]
+            },
+            "pagination": {
+              "enabled": true,
+              "pageSize": 2,
+              "controls": {
+                "variant": "numbered"
+              }
+            }
+          }
+        },
+
+        {
+          "type": "table",
+          "visibility": {
+            "reference": "queries.buscarPersona.data.resultados.bites.datos",
+            "operator": "greaterThan",
+            "value": 0
+          },
+          "props": {
+            "headers": [
+              "Nº Denuncia",
+              "Fecha",
+              "Matrícula",
+              "Normativa",
+              "Artículo",
+              "Clasificación",
+              "Hecho",
+              "Ubicación",
+              "Descripción",
+              "Más info"
+            ],
+            "rows": {
+              "source": "queries.buscarPersona.data.resultados.bites.datos",
+              "cells": [
+                "item.numeroDenuncia",
+                "item.fechaHora",
+                "item.matricula",
+                "item.normativa",
+                "item.articulo",
+                "item.clasificacion",
+                "item.tipoHecho",
+                "item.ubicacion",
+                "item.descripcion",
+                "AÑADIR BOTÓN"
+              ]
+            },
+            "pagination": {
+              "enabled": true,
+              "pageSize": 2,
+              "controls": {
+                "variant": "numbered"
+              }
+            }
+          }
+        },
+        {
+          "type": "table",
+          "visibility": {
+            "reference": "queries.buscarPersona.data.resultados.multas.datos",
+            "operator": "greaterThan",
+            "value": 0
+          },
+          "props": {
+            "headers": [
+              "Expediente",
+              "Fecha",
+              "Matrícula",
+              "Importe",
+              "Estado",
+              "Hecho",
+              "Ubicación",
+              "Desc",
+              "Más info"
+            ],
+            "rows": {
+              "source": "queries.buscarPersona.data.resultados.multas.datos",
+              "cells": [
+                "item.expediente",
+                "item.fechaHora",
+                "item.matricula",
+                "item.importe",
+                "item.estado",
+                "item.tipoHecho",
+                "item.ubicacion",
+                "item.descripcion",
+                "AÑADIR BOTÓN"
+              ]
+            },
+            "pagination": {
+              "enabled": true,
+              "pageSize": 2,
+              "controls": {
+                "variant": "numbered"
+              }
+            }
+          }
+        },
+        {
+          "type": "table",
+          "visibility": {
+            "reference": "queries.buscarPersona.data.resultados.ade.datos",
+            "operator": "greaterThan",
+            "value": 0
+          },
+          "props": {
+            "headers": [
+              "Expediente",
+              "Fecha",
+              "Matrícula",
+              "Estado",
+              "Organismo",
+              "Hecho",
+              "Ubicación",
+              "Descripción",
+              "Más info"
+            ],
+            "rows": {
+              "source": "queries.buscarPersona.data.resultados.ade.datos",
+              "cells": [
+                "item.expediente",
+                "item.fechaHora",
+                "item.matricula",
+                "item.estado",
+                "item.organismo",
+                "item.tipoHecho",
+                "item.ubicacion",
+                "item.descripcion",
+                "AÑADIR BOTÓN"
+              ]
+            },
+            "pagination": {
+              "enabled": true,
+              "pageSize": 2,
+              "controls": {
+                "variant": "numbered"
+              }
+            }
+          }
+        },
+        {
+          "type": "table",
+          "visibility": {
+            "reference": "queries.buscarPersona.data.resultados.camaras.datos",
+            "operator": "greaterThan",
+            "value": 0
+          },
+          "props": {
+            "headers": [
+              "Fecha",
+              "Matrícula",
+              "Cámara",
+              "Ubicación",
+              "Dirección",
+              "Confianza",
+              "Hecho",
+              "Más info"
+            ],
+            "rows": {
+              "source": "queries.buscarPersona.data.resultados.camaras.datos",
+              "cells": [
+                "item.fechaHora",
+                "item.matricula",
+                "item.camara",
+                "item.ubicacion",
+                "item.direccionMarcha",
+                "item.confianza",
+                "item.tipoHecho",
+                "AÑADIR BOTÓN"
+              ]
+            },
+            "pagination": {
+              "enabled": true,
+              "pageSize": 2,
+              "controls": {
+                "variant": "numbered"
+              }
+            }
+          }
+        },
+        {
+          "type": "table",
+          "visibility": {
+            "reference": "queries.buscarPersona.data.resultados.fichero-intercambio.datos",
+            "operator": "greaterThan",
+            "value": 0
+          },
+          "props": {
+            "headers": [
+              "Referencia externa",
+              "Fecha",
+              "Origen",
+              "Matrícula",
+              "Hecho",
+              "Descripción",
+              "Más info"
+            ],
+            "rows": {
+              "source": "queries.buscarPersona.data.resultados.fichero-intercambio.datos",
+              "cells": [
+                "item.referenciaExterna",
+                "item.fechaHora",
+                "item.origen",
+                "item.matricula",
+                "item.tipoHecho",
+                "item.descripcion",
+                "AÑADIR BOTÓN"
+              ]
+            },
+            "pagination": {
+              "enabled": true,
+              "pageSize": 2,
+              "controls": {
+                "variant": "numbered"
+              }
+            }
+          }
+        },
+        {
+          "type": "table",
+          "visibility": {
+            "reference": "queries.buscarPersona.data.resultados.circulacion.datos",
+            "operator": "greaterThan",
+            "value": 0
+          },
+          "props": {
+            "headers": [
+              "Matrícula",
+              "Marca",
+              "Modelo",
+              "Bastidor",
+              "Propietario",
+              "Fecha alta",
+              "Ejercicio",
+              "Estado impuesto",
+              "Importe",
+              "Más info"
+            ],
+            "rows": {
+              "source": "queries.buscarPersona.data.resultados.circulacion.datos",
+              "cells": [
+                "item.matricula",
+                "item.marca",
+                "item.modelo",
+                "item.bastidor",
+                "item.propietarioNombreApellidos",
+                "item.fechaAlta",
+                "item.impuestoCirculacion.ejercicio",
+                "item.impuestoCirculacion.estado",
+                "item.impuestoCirculacion.importe",
+                "AÑADIR BOTÓN"
+              ]
+            },
+            "pagination": {
+              "enabled": true,
+              "pageSize": 2,
+              "controls": {
+                "variant": "numbered"
+              }
+            }
+          }
         }
       ]
     },

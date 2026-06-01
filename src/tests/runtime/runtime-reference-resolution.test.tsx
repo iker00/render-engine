@@ -892,4 +892,124 @@ describe('Runtime reference resolution', () => {
       ).toBe('Keep queries.scalarValues.data.text}}')
     })
   })
+
+  describe('T0045-01 item.$key parser and resolver contract', () => {
+    it('classifies item.$key as a supported reference when iteration context is enabled', () => {
+      expect(parseRuntimeReference('item.$key', { allowItemReference: true })).toMatchObject({
+        kind: 'reference',
+        status: 'supported',
+        namespace: 'item',
+        path: ['$key'],
+      })
+    })
+
+    it('classifies item.$key as unsupported outside explicit iteration context', () => {
+      expect(parseRuntimeReference('item.$key')).toMatchObject({
+        kind: 'reference',
+        status: 'unsupported',
+        namespace: 'item',
+        path: ['$key'],
+      })
+    })
+
+    it('keeps forms with $ other than the exact item.$key literal as invalid', () => {
+      expect(parseRuntimeReference('item.$key.algo', { allowItemReference: true })).toMatchObject({
+        kind: 'reference',
+        status: 'invalid',
+        namespace: 'item',
+      })
+
+      expect(parseRuntimeReference('item.algo.$key', { allowItemReference: true })).toMatchObject({
+        kind: 'reference',
+        status: 'invalid',
+        namespace: 'item',
+      })
+
+      expect(parseRuntimeReference('item.$other', { allowItemReference: true })).toMatchObject({
+        kind: 'reference',
+        status: 'invalid',
+        namespace: 'item',
+      })
+
+      expect(parseRuntimeReference('item.$key2', { allowItemReference: true })).toMatchObject({
+        kind: 'reference',
+        status: 'invalid',
+        namespace: 'item',
+      })
+    })
+
+    it('resolves item.$key to the dictionary key when the iteration context provides itemKey', () => {
+      const iterationContextWithKey = { item: { name: 'Ada' }, key: 'entry-1', itemKey: 'vinfopol' }
+
+      expect(resolveRuntimeReference('item.$key', runtimeState, { iterationContext: iterationContextWithKey })).toEqual({
+        status: 'resolved',
+        value: 'vinfopol',
+        reference: parseRuntimeReference('item.$key', { allowItemReference: true }),
+      })
+    })
+
+    it('resolves item.$key as missing when iteration context does not provide itemKey (array source)', () => {
+      const iterationContextWithoutKey = { item: { name: 'Ada' }, key: 'entry-1' }
+
+      expect(resolveRuntimeReference('item.$key', runtimeState, { iterationContext: iterationContextWithoutKey })).toEqual({
+        status: 'missing',
+        reference: parseRuntimeReference('item.$key', { allowItemReference: true }),
+      })
+    })
+
+    it('resolves item.$key as unsupported when evaluated outside an iteration context', () => {
+      expect(resolveRuntimeReference('item.$key', runtimeState)).toEqual({
+        status: 'unsupported',
+        reference: parseRuntimeReference('item.$key'),
+      })
+    })
+
+    it('degrades item.$key to empty string in text surfaces when itemKey is absent', () => {
+      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+      const iterationContextWithoutKey = { item: { name: 'Ada' }, key: 'entry-1' }
+
+      expect(
+        resolveRuntimeVisibleValue('item.$key', runtimeState, 'heading.props.text', {
+          iterationContext: iterationContextWithoutKey,
+        }),
+      ).toBe('')
+
+      consoleWarnSpy.mockRestore()
+    })
+
+    it('resolves {{item.$key}} interpolated as the dictionary key string', () => {
+      const iterationContextWithKey = { item: { name: 'Ada' }, key: 'entry-1', itemKey: 'vinfopol' }
+
+      expect(
+        resolveRuntimeVisibleValue('Source: {{item.$key}}', runtimeState, 'heading.props.text', {
+          iterationContext: iterationContextWithKey,
+        }),
+      ).toBe('Source: vinfopol')
+    })
+
+    it('keeps item.{ruta} navigation within the item value unaffected, including a value with a literal $key property', () => {
+      const iterationContextWithKey = {
+        item: { name: 'Ada', $key: 'internal-value' },
+        key: 'entry-1',
+        itemKey: 'vinfopol',
+      }
+
+      expect(
+        resolveRuntimeReference('item.name', runtimeState, { iterationContext: iterationContextWithKey }),
+      ).toEqual({
+        status: 'resolved',
+        value: 'Ada',
+        reference: parseRuntimeReference('item.name', { allowItemReference: true }),
+      })
+
+      // item.$key always resolves to itemKey (synthetic), not the internal $key property of the item value
+      expect(
+        resolveRuntimeReference('item.$key', runtimeState, { iterationContext: iterationContextWithKey }),
+      ).toEqual({
+        status: 'resolved',
+        value: 'vinfopol',
+        reference: parseRuntimeReference('item.$key', { allowItemReference: true }),
+      })
+    })
+  })
 })

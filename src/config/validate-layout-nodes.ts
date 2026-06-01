@@ -1391,6 +1391,10 @@ function isValidCollectionProjectionPath(value: unknown): value is string {
 }
 
 function isValidRepeaterItemKeyPath(value: unknown): value is string {
+  if (value === '$key') {
+    return true
+  }
+
   if (!isValidCollectionItemPath(value)) {
     return false
   }

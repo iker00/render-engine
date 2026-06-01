@@ -18,6 +18,7 @@ import type {
 export interface RuntimeIterationContext {
   item: unknown
   key: string
+  itemKey?: string
 }
 
 interface ResolveRuntimeReferenceOptions {
@@ -209,6 +210,19 @@ function resolveSupportedReferenceValue(
   iterationContext?: RuntimeIterationContext,
 ) {
   if (reference.namespace === 'item') {
+    if (reference.path.length === 1 && reference.path[0] === '$key') {
+      if (iterationContext?.itemKey !== undefined) {
+        return {
+          found: true,
+          value: iterationContext.itemKey,
+        } as const
+      }
+
+      return {
+        found: false,
+      } as const
+    }
+
     return resolveNestedReferenceValue(iterationContext?.item, reference.path)
   }
 

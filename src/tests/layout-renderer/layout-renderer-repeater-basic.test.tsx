@@ -199,6 +199,330 @@ describe('RuntimePage', () => {
     expect(screen.queryByText('Lin')).not.toBeInTheDocument()
   })
 
+  describe('T0045-03 object source iteration', () => {
+    it('renders one expansion per own enumerable key in natural insertion order', () => {
+      const activePage: RuntimePageConfig = {
+        id: 'sources',
+        layout: [
+          {
+            type: 'repeater',
+            props: {
+              items: {
+                source: 'queries.results.data',
+                key: '$key',
+              },
+              template: [
+                {
+                  type: 'paragraph',
+                  props: {
+                    text: '{{item.$key}}',
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      }
+
+      renderRuntimePageWithState(
+        activePage,
+        createRuntimePageState(activePage, {
+          results: {
+            status: 'success',
+            data: {
+              vinfopol: { label: 'Vinfopol' },
+              bites: { label: 'Bites' },
+              multas: { label: 'Multas' },
+            },
+            error: null,
+          },
+        }),
+      )
+
+      expect(screen.getAllByRole('paragraph').map((p) => p.textContent)).toEqual(['vinfopol', 'bites', 'multas'])
+    })
+
+    it('uses the dictionary key as React key and renders item.$key as the key string with key: "$key"', () => {
+      const activePage: RuntimePageConfig = {
+        id: 'sources',
+        layout: [
+          {
+            type: 'repeater',
+            props: {
+              items: {
+                source: 'queries.results.data',
+                key: '$key',
+              },
+              template: [
+                {
+                  type: 'paragraph',
+                  props: {
+                    text: '{{item.$key}}: {{item.label}}',
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      }
+
+      renderRuntimePageWithState(
+        activePage,
+        createRuntimePageState(activePage, {
+          results: {
+            status: 'success',
+            data: {
+              vinfopol: { label: 'Resultado A' },
+              bites: { label: 'Resultado B' },
+            },
+            error: null,
+          },
+        }),
+      )
+
+      expect(screen.getAllByRole('paragraph').map((p) => p.textContent)).toEqual([
+        'vinfopol: Resultado A',
+        'bites: Resultado B',
+      ])
+    })
+
+    it('navigates a relative key path within the entry value when key is a conventional path', () => {
+      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+      const activePage: RuntimePageConfig = {
+        id: 'sources',
+        layout: [
+          {
+            type: 'repeater',
+            props: {
+              items: {
+                source: 'queries.results.data',
+                key: 'id',
+              },
+              template: [
+                {
+                  type: 'paragraph',
+                  props: {
+                    text: 'item.label',
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      }
+
+      renderRuntimePageWithState(
+        activePage,
+        createRuntimePageState(activePage, {
+          results: {
+            status: 'success',
+            data: {
+              alpha: { id: 'id-alpha', label: 'Alpha label' },
+              beta: { id: 'id-beta', label: 'Beta label' },
+              noId: { label: 'No key, skipped' },
+            },
+            error: null,
+          },
+        }),
+      )
+
+      expect(screen.getAllByRole('paragraph').map((p) => p.textContent)).toEqual(['Alpha label', 'Beta label'])
+      expect(screen.queryByText('No key, skipped')).not.toBeInTheDocument()
+      expect(consoleWarnSpy).toHaveBeenCalled()
+
+      consoleWarnSpy.mockRestore()
+    })
+
+    it('omits all iterations and emits diagnostics when key is "$key" and source is an array', () => {
+      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+      const activePage: RuntimePageConfig = {
+        id: 'sources',
+        layout: [
+          {
+            type: 'repeater',
+            props: {
+              items: {
+                source: 'queries.results.data',
+                key: '$key',
+              },
+              template: [
+                {
+                  type: 'paragraph',
+                  props: {
+                    text: 'item.label',
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      }
+
+      renderRuntimePageWithState(
+        activePage,
+        createRuntimePageState(activePage, {
+          results: {
+            status: 'success',
+            data: [{ label: 'Item one' }, { label: 'Item two' }],
+            error: null,
+          },
+        }),
+      )
+
+      expect(screen.queryByText('Item one')).not.toBeInTheDocument()
+      expect(screen.queryByText('Item two')).not.toBeInTheDocument()
+      expect(consoleWarnSpy).toHaveBeenCalled()
+
+      consoleWarnSpy.mockRestore()
+    })
+
+    it('renders zero iterations for null, undefined, number, string and empty object sources without errors', () => {
+      function createPage(queryData: unknown): RuntimePageConfig {
+        return {
+          id: 'sources',
+          layout: [
+            {
+              type: 'repeater',
+              props: {
+                items: {
+                  source: 'queries.results.data',
+                  key: '$key',
+                },
+                template: [
+                  {
+                    type: 'paragraph',
+                    props: {
+                      text: 'item.label',
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+        }
+      }
+
+      const config: RuntimeConfig = {
+        api: {},
+        initialPage: 'sources',
+        pages: [createPage(null)],
+      }
+
+      for (const badData of [null, undefined, 42, 'a string', {}]) {
+        const page = createPage(badData)
+        const state = createRuntimePageState(page, {
+          results: {
+            status: 'success',
+            data: badData as never,
+            error: null,
+          },
+        })
+
+        const { unmount } = render(
+          <RuntimeStateContext.Provider
+            value={{
+              config,
+              initialState: state,
+              state,
+              dispatch: vi.fn<(action: RuntimeStateAction) => void>(),
+              dispatchAndSyncState: vi.fn<(action: RuntimeStateAction) => void>(),
+              getLatestState: () => state,
+            }}
+          >
+            <RuntimePage />
+          </RuntimeStateContext.Provider>,
+        )
+
+        expect(screen.queryByText('item.label')).not.toBeInTheDocument()
+        unmount()
+      }
+    })
+
+    it('resolves item.$key as the dictionary key even when item value contains a literal $key property', () => {
+      const activePage: RuntimePageConfig = {
+        id: 'sources',
+        layout: [
+          {
+            type: 'repeater',
+            props: {
+              items: {
+                source: 'queries.results.data',
+                key: '$key',
+              },
+              template: [
+                {
+                  type: 'paragraph',
+                  props: {
+                    text: '{{item.$key}}',
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      }
+
+      renderRuntimePageWithState(
+        activePage,
+        createRuntimePageState(activePage, {
+          results: {
+            status: 'success',
+            data: {
+              dictkey: { $key: 'internal-value', label: 'Entry' },
+            },
+            error: null,
+          },
+        }),
+      )
+
+      // item.$key must resolve to the dictionary key 'dictkey', not the internal '$key' property
+      expect(screen.getByRole('paragraph').textContent).toBe('dictkey')
+    })
+
+    it('resolves item.{ruta} to navigate inside the entry value, not the $key synthetic property', () => {
+      const activePage: RuntimePageConfig = {
+        id: 'sources',
+        layout: [
+          {
+            type: 'repeater',
+            props: {
+              items: {
+                source: 'queries.results.data',
+                key: '$key',
+              },
+              template: [
+                {
+                  type: 'paragraph',
+                  props: {
+                    text: '{{item.label}}',
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      }
+
+      renderRuntimePageWithState(
+        activePage,
+        createRuntimePageState(activePage, {
+          results: {
+            status: 'success',
+            data: {
+              alpha: { label: 'Alpha content' },
+              beta: { label: 'Beta content' },
+            },
+            error: null,
+          },
+        }),
+      )
+
+      expect(screen.getAllByRole('paragraph').map((p) => p.textContent)).toEqual(['Alpha content', 'Beta content'])
+    })
+  })
+
   it('paginates only renderable repeater items after applying key diagnostics', () => {
     const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
     const activePage: RuntimePageConfig = {

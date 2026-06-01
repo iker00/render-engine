@@ -30,16 +30,17 @@ interface RepeaterNodeProps {
 interface RepeaterIteration {
   key: string
   item: unknown
+  itemKey?: string
 }
 
 export function RepeaterNode({ node }: RepeaterNodeProps) {
   const state = useRuntimeState()
   const { closeModal } = useRuntimeStateActions()
   const { parentGridColumns } = useRuntimeLayoutContext()
-  const items = resolveRepeaterItems(node.props.items.source, state)
+  const sourceItems = resolveRepeaterSourceItems(node.props.items.source, state)
   const pageSize = node.props.pagination?.pageSize
   const paginationControlsVariant = node.props.pagination?.controls?.variant ?? 'previousNext'
-  const iterations = useMemo(() => resolveRepeaterIterations(node, items), [node, items])
+  const iterations = useMemo(() => resolveRepeaterIterations(node, sourceItems), [node, sourceItems])
   const templateModalIds = useMemo(() => collectModalIdsFromTemplate(node.props.template), [node.props.template])
   const paginationStateKey = useMemo(
     () => `${paginationControlsVariant}:${pageSize ?? 'all'}:${iterations.map((iteration) => iteration.key).join('|')}`,
@@ -105,7 +106,11 @@ function RepeaterNodeContent({
   return (
     <>
       {visibleIterations.map((iteration) => {
-        const iterationContext: RuntimeIterationContext = { item: iteration.item, key: iteration.key }
+        const iterationContext: RuntimeIterationContext = {
+          item: iteration.item,
+          key: iteration.key,
+          itemKey: iteration.itemKey,
+        }
 
         return <LayoutRenderer key={iteration.key} nodes={node.props.template} iterationContext={iterationContext} />
       })}
@@ -279,20 +284,59 @@ function RepeaterScrollControls({ pageSize, parentGridColumns, onShowMore }: Rep
   )
 }
 
-function resolveRepeaterIterations(node: RepeaterLayoutNode, items: unknown[]): RepeaterIteration[] {
+interface RepeaterSourceItems {
+  entries: Array<{ value: unknown; dictKey?: string }>
+}
+
+function resolveRepeaterSourceItems(source: string, state: ReturnType<typeof useRuntimeState>): RepeaterSourceItems {
+  const result = resolveRuntimeReference(source, state)
+
+  if (result.status !== 'resolved') {
+    return { entries: [] }
+  }
+
+  if (Array.isArray(result.value)) {
+    return { entries: result.value.map((value) => ({ value })) }
+  }
+
+  if (result.value !== null && typeof result.value === 'object') {
+    return {
+      entries: Object.keys(result.value as Record<string, unknown>).map((dictKey) => ({
+        value: (result.value as Record<string, unknown>)[dictKey],
+        dictKey,
+      })),
+    }
+  }
+
+  return { entries: [] }
+}
+
+function resolveRepeaterIterations(node: RepeaterLayoutNode, sourceItems: RepeaterSourceItems): RepeaterIteration[] {
   const seenKeys = new Set<string>()
   const iterations: RepeaterIteration[] = []
+  const keyPath = node.props.items.key
 
-  for (let index = 0; index < items.length; index += 1) {
-    const item = items[index]
-    const resolvedKey = resolveRepeaterItemKey(item, node.props.items.key)
+  for (let index = 0; index < sourceItems.entries.length; index += 1) {
+    const entry = sourceItems.entries[index]
+    let effectiveKey: string | null = null
 
-    if (resolvedKey === null) {
-      reportRepeaterKeyDiagnostic(node, index, 'invalid')
-      continue
+    if (keyPath === '$key') {
+      if (entry.dictKey === undefined) {
+        reportRepeaterKeyDiagnostic(node, index, 'invalid')
+        continue
+      }
+
+      effectiveKey = entry.dictKey
+    } else {
+      const resolvedKey = resolveRepeaterItemKey(entry.value, keyPath)
+
+      if (resolvedKey === null) {
+        reportRepeaterKeyDiagnostic(node, index, 'invalid')
+        continue
+      }
+
+      effectiveKey = String(resolvedKey)
     }
-
-    const effectiveKey = String(resolvedKey)
 
     if (seenKeys.has(effectiveKey)) {
       reportRepeaterKeyDiagnostic(node, index, 'duplicate', effectiveKey)
@@ -302,21 +346,12 @@ function resolveRepeaterIterations(node: RepeaterLayoutNode, items: unknown[]): 
     seenKeys.add(effectiveKey)
     iterations.push({
       key: effectiveKey,
-      item,
+      item: entry.value,
+      itemKey: entry.dictKey,
     })
   }
 
   return iterations
-}
-
-function resolveRepeaterItems(source: string, state: ReturnType<typeof useRuntimeState>) {
-  const result = resolveRuntimeReference(source, state)
-
-  if (result.status !== 'resolved' || !Array.isArray(result.value)) {
-    return []
-  }
-
-  return result.value
 }
 
 function resolveRepeaterItemKey(item: unknown, path: string): string | number | null {

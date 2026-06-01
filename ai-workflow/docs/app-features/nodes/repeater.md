@@ -1,4 +1,4 @@
-> Cuándo leer: estructura de `repeater`, `props.items.source`, `props.items.key`, `props.template`, paginación local con variantes `previousNext`/`numbered`/`scroll`, comportamiento dentro de `pageEntry`.
+> Cuándo leer: estructura de `repeater`, `props.items.source`, `props.items.key`, `props.template`, iteración sobre array y objeto plano, paginación local con variantes `previousNext`/`numbered`/`scroll`, comportamiento dentro de `pageEntry`.
 > Tamaño: medio.
 > Relacionados: [[../queries/state-model.md]], [[../references/reference-resolution.md]].
 
@@ -6,7 +6,7 @@
 
 ## Contrato (`props`)
 - `props.items.source`: obligatorio y limitado a `queries.{queryName}.data` o `queries.{queryName}.data.*`.
-- `props.items.key`: obligatorio; ruta relativa no vacía al item actual, por ejemplo `id` o `meta.slug`.
+- `props.items.key`: obligatorio; ruta relativa no vacía al item actual (por ejemplo `id` o `meta.slug`) o el literal reservado `"$key"` para usar la clave del diccionario cuando la fuente es objeto plano.
 - `props.pagination`: opcional; cuando existe activa paginación local en cliente con el shape cerrado de v1.
 - `props.pagination.enabled`: obligatorio y exactamente `true`.
 - `props.pagination.pageSize`: obligatorio, entero, finito y mayor o igual que `1`.
@@ -15,14 +15,25 @@
 - `props.template`: colección ordenada obligatoria de `LayoutNode[]`.
 - no admite `children`.
 
+## Detección del shape de la fuente
+El repeater detecta automáticamente si la fuente resuelta es array u objeto plano:
+- **Array**: comportamiento actual sin cambios. `item.*` navega dentro de cada elemento del array.
+- **Objeto plano** (no array, no `null`): itera las entradas propias y enumerables del objeto en el orden natural de inserción, equivalente a `Object.keys`. Dentro del subárbol, `item.*` navega dentro del valor de la entrada y `item.$key` expone la clave del diccionario como string.
+- **Cualquier otro valor** (`null`, `undefined`, número, string, `{}`): cero iteraciones de forma silenciosa, sin diagnóstico específico.
+
 ## Reglas de render
 - `repeater.props.items.source` solo admite `queries.{queryName}.data` o `queries.{queryName}.data.*`.
-- `repeater.props.items.key` exige una ruta relativa no vacía al item actual.
+- `repeater.props.items.key` exige una ruta relativa no vacía al item actual, o el literal reservado `"$key"`.
 - `repeater.props.pagination` puede activar paginación local en cliente con variantes cerradas de controles.
 - `repeater.props.template` reutiliza una colección `LayoutNode[]` sin `children`.
 - `repeater` no paginado no introduce markup propio: expande su `template` como hermanos por iteración y omite cualquier item cuya key efectiva sea ausente, no escalar o duplicada, con diagnóstico en desarrollo.
 - `repeater` paginado aplica la paginación después de filtrar las iteraciones renderizables por key válida y única, mantiene `item.*` apuntando al item original visible y conserva estado local e independiente por instancia.
-- La página activa o cantidad visible de un `repeater` paginado vuelve a la posición inicial cuando cambia la colección resuelta, `pageSize` o la variante de controles; navegar o avanzar localmente no modifica `queries.*`, `pageEntry`, formularios, navegación ni dispara red.
+- La página activa o cantidad visible de un `repeater` paginado vuelve a la posición inicial cuando cambia la colección resuelta (incluyendo cambio de shape array/objeto), `pageSize` o la variante de controles; navegar o avanzar localmente no modifica `queries.*`, `pageEntry`, formularios, navegación ni dispara red.
+
+## Literal reservado `"$key"` en `props.items.key`
+- Cuando `props.items.key` es `"$key"` y la fuente resuelta es **objeto plano**, la clave del diccionario se usa directamente como React key por cada entrada. La duplicidad es imposible en un objeto plano, pero cualquier clave no escalar se omite con el diagnóstico actual.
+- Cuando `props.items.key` es `"$key"` y la fuente resuelta es **array**, no existe clave de diccionario disponible: todas las iteraciones se omiten y se emite el diagnóstico actual de key no válida en desarrollo.
+- Cuando `props.items.key` es una ruta relativa convencional (por ejemplo `id`) y la fuente es objeto plano, la ruta se navega dentro del valor de cada entrada exactamente como hoy se navega dentro de cada item de array.
 
 ## Variantes de controles
 - La variante `previousNext` es el default efectivo cuando `controls` o `controls.variant` se omiten y muestra controles mínimos `Anterior`/`Siguiente` cuando hay más de una página efectiva.

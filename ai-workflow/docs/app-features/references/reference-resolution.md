@@ -14,6 +14,7 @@ El escape literal con `\` permite mostrar una referencia completa tal cual, por 
 ## Catálogo de referencias soportadas
 - `item`
 - `item.{segmentosAnidados}`
+- `item.$key`
 - `forms.{formId}.{fieldId}`
 - `params.{paramName}`
 - `queries.{queryName}`
@@ -74,3 +75,10 @@ Estas superficies siguen fuera del catálogo de interpolación parcial: si decla
 - `item`, `item.slug`, `item.meta.author.name` o `item.tags.0` son ejemplos válidos dentro de ese contexto.
 - `item.*` puede usarse en las superficies visibles interpolables, `api.query`, `api.body`, `api.headers`, `button.props.action.query`, `button.props.action.body`, `button.props.action.headers`, `button.props.action.params`, `form.submitAction.query`, `form.submitAction.body`, `form.submitAction.headers`, `defaultValue` de campos, `visibility.reference`, `repeater.props.items.source`, `list.props.items.source`, `select.props.items.source`, `radioGroup.props.items.source` y `checkboxGroup.props.items.source`.
 - Fuera de un `repeater`, `item.*` no forma parte del contrato soportado aunque el shape del string siga siendo reconocible.
+
+## Frontera específica de `item.$key`
+- `item.$key` es una referencia sintética soportada, distinta de la navegación genérica `item.{ruta}`. Expone la clave del diccionario de la entrada actual cuando el `repeater` itera un objeto plano.
+- Solo está disponible dentro del subárbol iterado de un `repeater` cuya fuente resuelta es un objeto plano. En cualquier otro contexto (fuente array, fuera de un repeater) `item.$key` no forma parte del contrato soportado y degrada a string vacío en superficies textuales.
+- `item.$key` es la forma exacta soportada. Variantes como `item.$key.algo`, `item.algo.$key`, `item.$key.$key` u otras formas con `$` distintas del literal exacto son rutas inválidas.
+- Cuando el valor de la entrada contiene una propiedad literal `$key`, `item.$key` devuelve siempre la clave del diccionario, nunca esa propiedad interna: la propiedad sintética tiene precedencia sobre la navegación dentro del valor.
+- Las mismas superficies donde aplica `item.*` admiten también `item.$key`.
