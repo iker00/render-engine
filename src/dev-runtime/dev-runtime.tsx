@@ -27,6 +27,20 @@ interface DevRuntimeProps {
 const defaultDevConfig = devConfigJson as unknown as RuntimeConfig
 const defaultDevConfigText = JSON.stringify(devConfigJson, null, 2)
 
+let activeConfigHmrApply: ((nextConfig: unknown) => void) | null = null
+
+if (import.meta.hot) {
+  // Fast Refresh re-evaluates this module on config.json HMR but preserves
+  // DevRuntimeReady's state, so the new config never reaches `currentConfig`
+  // through the initialConfig prop. Forward the update directly to the mounted
+  // component so it can re-apply via the same migration path as the drawer.
+  import.meta.hot.accept('../dev/config.json', (newModule) => {
+    if (newModule && activeConfigHmrApply) {
+      activeConfigHmrApply((newModule as unknown as { default: unknown }).default)
+    }
+  })
+}
+
 export function DevRuntime({ rootElement = document.getElementById('root') }: DevRuntimeProps) {
   // Capture the raw text before validation so the editor shows the original format.
   // The validator normalizes preloads from { "opName": {} } to { operationName, requestParams },
@@ -86,6 +100,45 @@ function DevRuntimeReady({ initialConfig, initialConfigText }: DevRuntimeReadyPr
     setValidationError(null)
     setHasPendingChanges(false)
   }, [initialConfig])
+
+  const hasPendingChangesRef = useRef(hasPendingChanges)
+  hasPendingChangesRef.current = hasPendingChanges
+
+  useEffect(() => {
+    if (!import.meta.hot) return
+
+    activeConfigHmrApply = (nextConfig) => {
+      const validation = validateRuntimeConfig(nextConfig)
+      if (validation.status === 'error') {
+        setValidationError(validation.error)
+        return
+      }
+
+      const prevState = bridgeRef.current?.getLatestState()
+      const nextState = prevState
+        ? migrateRuntimeStateAcrossConfig(prevState, currentConfigRef.current, validation.config)
+        : undefined
+
+      if (nextState && bridgeRef.current) {
+        bridgeRef.current.dispatchAndSyncState({ type: 'runtime/reset', payload: { state: nextState } })
+      }
+
+      flushSync(() => {
+        setCurrentConfig(validation.config)
+        setParseError(null)
+        setValidationError(null)
+        // Sync the drawer's editor buffer to the new disk content, but only when
+        // the user has no unsaved in-browser edits — never clobber pending work.
+        if (!hasPendingChangesRef.current) {
+          setEditorBuffer(JSON.stringify(nextConfig, null, 2))
+        }
+      })
+    }
+
+    return () => {
+      activeConfigHmrApply = null
+    }
+  }, [])
 
   const currentError = parseError ?? validationError
 
