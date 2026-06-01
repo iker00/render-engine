@@ -11,3 +11,4 @@ Documentación del modo de desarrollo local del runtime y sus fronteras de boots
 | Documento | Cuándo leerlo |
 |---|---|
 | [local-config.md](./local-config.md) | Cargar config local, prioridad `data-config`, ejemplos sin backend, límites del modo dev. |
+| [dev-mode-editor.md](./dev-mode-editor.md) | Editor Monaco en vivo, drawer lateral, acción Aplicar, preservación de estado, HMR automático, autocompletado JSON Schema. |

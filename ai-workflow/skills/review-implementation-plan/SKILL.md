@@ -1,7 +1,7 @@
 ---
 name: review-implementation-plan
 description: Revisa críticamente un plan de implementación antes de codificar. Úsala para validar que `tasks.md`, `test-plan.md`, `status.yaml` y `design.md` cuando aplique formen un contrato de ejecución claro, secuencial y sin ambigüedad peligrosa.
-model: opus
+model: claude-opus-4-7
 ---
 
 # Revisar plan de implementación

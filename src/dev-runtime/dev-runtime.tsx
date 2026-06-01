@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import devConfigJson from '../dev/config.json'
 import { AppShell } from '../app/app-shell'
@@ -60,6 +60,32 @@ function DevRuntimeReady({ initialConfig, initialConfigText }: DevRuntimeReadyPr
   const [parseError, setParseError] = useState<{ code: string; message: string } | null>(null)
 
   const bridgeRef = useRef<DevRuntimeStateBridgeHandle>(null)
+
+  // Track the current applied config in a ref so the HMR effect below can read
+  // the latest value without adding it to deps (which would cause infinite loops).
+  const currentConfigRef = useRef<RuntimeConfig>(currentConfig)
+  currentConfigRef.current = currentConfig
+
+  const prevInitialConfigRef = useRef(initialConfig)
+  useEffect(() => {
+    if (prevInitialConfigRef.current === initialConfig) return
+    prevInitialConfigRef.current = initialConfig
+
+    const prevState = bridgeRef.current?.getLatestState()
+    const nextState = prevState
+      ? migrateRuntimeStateAcrossConfig(prevState, currentConfigRef.current, initialConfig)
+      : undefined
+
+    if (nextState && bridgeRef.current) {
+      bridgeRef.current.dispatchAndSyncState({ type: 'runtime/reset', payload: { state: nextState } })
+    }
+
+    setCurrentConfig(initialConfig)
+    setEditorBuffer(null)
+    setParseError(null)
+    setValidationError(null)
+    setHasPendingChanges(false)
+  }, [initialConfig])
 
   const currentError = parseError ?? validationError
 

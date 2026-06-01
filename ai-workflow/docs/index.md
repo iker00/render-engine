@@ -17,6 +17,7 @@ No sustituye a los artefactos obligatorios de cada fase ni a los indices especia
 ## Indices especializados
 - `app-features/index.md`: puerta de entrada al comportamiento funcional estable del runtime. Usar para seleccionar solo las fichas funcionales relevantes.
   No leerlo si la tarea no afecta comportamiento de producto, contrato JSON, runtime visible, formularios, queries, navegacion o modo de desarrollo local.
+- `test-index.md`: mapa de todos los ficheros de test en `src/tests/` organizados por carpeta temática. Leer siempre que se planifiquen, escriban o muevan tests, para saber en qué carpeta colocar nuevos ficheros y qué cobertura existe en cada área.
 
 ## Estandares
 Los documentos de `ai-workflow/standards/` se seleccionan segun el tipo de trabajo:

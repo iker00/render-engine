@@ -1,7 +1,7 @@
 ---
 name: generate-implementation-plan
 description: Genera el plan técnico de implementación para una feature de este proyecto una vez exista la spec funcional. Úsala para solicitudes de escritura de `tasks.md` y `test-plan.md`, incluyendo el impacto en código, tests y documentación de cada tarea.
-model: opus
+model: claude-opus-4-7
 ---
 
 # Generar plan de implementación
@@ -23,6 +23,7 @@ La calidad del plan debe ser suficientemente alta como para que dos agentes comp
 - `ai-workflow/docs/app-features/index.md`
 - solo las fichas de `ai-workflow/docs/app-features/` que el índice marque como relevantes para la feature
 - `ai-workflow/standards/testing-rules.md`
+- `ai-workflow/docs/test-index.md`
 - `ai-workflow/standards/coding-style.md`
 
 ## Leer si aplica

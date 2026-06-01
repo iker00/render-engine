@@ -26,5 +26,5 @@ Permitir iterar sobre la configuración JSON sin depender del backend real.
 
 ## Límites de v1
 - no sustituye la integración real con backend
-- no incluye todavía panel editable en vivo
-- no incluye todavía herramientas avanzadas de inspección, edición en vivo o exportación del config
+- no incluye herramientas avanzadas de inspección ni exportación del config
+- el panel editable en vivo existe; véase [[dev-mode-editor.md]]

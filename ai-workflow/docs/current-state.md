@@ -16,7 +16,7 @@ No es histórico acumulado ni sustituto de las fichas funcionales. El detalle es
 | Formularios y validación | estable | [forms/](./app-features/forms/index.md) | `0036` |
 | Queries, preloads y feedback | estable | [queries/](./app-features/queries/index.md) | `0031` |
 | Navegación y páginas | estable | [navigation/](./app-features/navigation/index.md) | `0029` |
-| Desarrollo local | estable | [development/](./app-features/development/index.md) | `0026` |
+| Desarrollo local | estable | [development/](./app-features/development/index.md) | `0043` |
 | Theming declarativo | fuera de v1 | — | — |
 | Autenticación y permisos | fuera de v1 | — | — |
 | Subida de archivos | fuera de v1 | — | — |

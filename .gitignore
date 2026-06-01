@@ -4,3 +4,5 @@ coverage
 .idea
 *.tsbuildinfo
 .DS_Store
+
+next.md

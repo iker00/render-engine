@@ -1,7 +1,7 @@
 ---
 name: generate-feature-design
 description: Genera el design técnico de una feature de este proyecto cuando la spec ya está cerrada pero todavía hace falta decidir trade-offs técnicos, arquitectura o estrategia de cambio antes de planificar. Úsala para escribir `features/NNNN-feature-name/design.md` y dejar la feature lista para `generate-implementation-plan`.
-model: opus
+model: claude-opus-4-7
 ---
 
 # Generar design de feature

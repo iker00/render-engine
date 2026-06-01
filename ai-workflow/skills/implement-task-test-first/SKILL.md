@@ -21,6 +21,7 @@ Esta skill debe comportarse como la fase de ejecución de un flujo guiado por sp
 - `ai-workflow/docs/architecture.md`
 - `ai-workflow/docs/conventions.md`
 - `ai-workflow/standards/testing-rules.md`
+- `ai-workflow/docs/test-index.md`
 - `ai-workflow/standards/coding-style.md`
 - código y tests relevantes para la tarea seleccionada
 

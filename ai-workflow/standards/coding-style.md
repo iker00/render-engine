@@ -51,3 +51,26 @@ Mantener un código claro, predecible y fácil de modificar, priorizando la simp
 - Refactorizar cuando mejore claridad o reduzca duplicación real.
 - No mezclar un refactor amplio con una feature pequeña si aumenta el riesgo de revisión.
 - Mantener los cambios acotados y fáciles de comprobar.
+
+## Tamaño de ficheros
+
+### Límites orientativos
+- Ficheros de código fuente: máximo ~400 líneas.
+- Ficheros de test: máximo ~500 líneas.
+
+Estos límites son orientativos, no absolutos. Un fichero de 520 líneas bien cohesionado es preferible a una división artificial que rompa la lectura del flujo.
+
+### Cuándo dividir
+- Cuando un fichero agrupa comportamientos de varios dominios funcionales distintos que podrían leerse y modificarse de forma independiente.
+- Cuando añadir un test o una función obliga a navegar cientos de líneas para entender el contexto local.
+- No dividir solo por tamaño si el contenido es un único flujo cohesionado.
+
+### Criterio de división para tests
+- Un fichero de test por área funcional o dominio de comportamiento.
+- Si un fichero de test cubre múltiples `describe` de alto nivel independientes, cada `describe` es candidato a fichero propio.
+- El nombre del fichero debe identificar el módulo y el área: `<módulo>-<área>.test.ts`.
+  - Ejemplo: `runtime-config-validation-api.test.ts`, `layout-renderer-table.test.tsx`.
+
+### Criterio de división para código fuente
+- Dividir cuando un fichero mezcla validadores, transformadores o lógica de dominios distintos que no se invocan siempre juntos.
+- El nombre del fichero resultante debe reflejar su responsabilidad concreta, no el módulo padre genérico.

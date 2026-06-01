@@ -5,11 +5,11 @@ Este documento resume la arquitectura estable que deben respetar las features nu
 
 ## Capas principales
 - `src/app/`: arranque de la aplicacion, lectura de configuracion desde `data-config` o `src/dev/config.json`, composicion raiz y superficie de errores de bootstrap.
-- `src/config/`: contrato del runtime config, tipos publicos, esquemas internos `Zod`, adaptacion de errores y validaciones cruzadas previas al render.
+- `src/config/`: contrato del runtime config, tipos publicos, esquemas internos `Zod`, adaptacion de errores y validaciones cruzadas previas al render. La logica de validacion esta partida en modulos por dominio: `validate-preloads`, `validate-api-config`, `validate-layout-nodes`, `validate-actions-visibility`, `validate-form-nodes`; el punto de entrada es `validate-runtime-config`.
 - `src/runtime/`: interpretacion del JSON ya validado, render de nodos, estado compartido por instancia, referencias declarativas, acciones UI, formularios, feedback de queries, visibilidad y layout.
 - `src/queries/`: frontera remota del runtime: composicion de requests, resolucion de parametros, ejecucion via `fetch`, firma efectiva y normalizacion de errores.
 - `src/dev/`: configuracion local versionada para iterar sin backend.
-- `src/tests/`: validacion automatizada del contrato, bootstrap, renderer y comportamiento del runtime.
+- `src/tests/`: validacion automatizada del contrato, bootstrap, renderer y comportamiento del runtime. Cada fichero de test cubre un único dominio funcional; el mapa de ficheros vive en `ai-workflow/docs/test-index.md`.
 
 ## Responsabilidades del runtime
 - `layout-renderer` y `layout-node-renderer` forman el borde central de render: deciden que nodo se materializa, aplican visibilidad, feedback por query, expansion estructural de `repeater` y wrappers transversales como `layout.span`.

@@ -27,6 +27,7 @@ Esta skill debe comportarse como una fase documental posterior al código: revis
 ## Leer si aplica
 - `ai-workflow/docs/architecture.md` si la implementación consolidó una decisión arquitectónica estable.
 - `ai-workflow/docs/conventions.md` si la implementación consolidó una convención repetible.
+- `ai-workflow/docs/test-index.md` si la implementación añadió, movió o eliminó ficheros de test.
 - `README.md` si hace falta ajustar información breve de entrada.
 - `ai-workflow/docs/index.md` solo como mapa documental auxiliar si no está claro qué contexto adicional seleccionar.
 
@@ -45,6 +46,7 @@ Antes de empezar, comprobar el gate documental:
 - `ai-workflow/docs/context.md` solo si cambia el marco general del producto
 - `ai-workflow/docs/architecture.md` si la implementación consolidó una decisión arquitectónica estable
 - `ai-workflow/docs/conventions.md` si la implementación consolidó una convención repetible
+- `ai-workflow/docs/test-index.md` si la implementación añadió, movió o eliminó ficheros de test
 - `ai-workflow/features/index.md` si conviene afinar el mapa de features entregadas
 - `README.md` solo si hace falta ajustar información breve de entrada
 

@@ -1,802 +1,90 @@
 {
   "api": {
-    "searchUsers": {
-      "method": "GET",
-      "endpoint": "https://jsonplaceholder.typicode.com/users"
+    "buscarPersona": {
+      "endpoint": "http://localhost:3000/api/personas/12345678A/global",
+      "method": "GET"
     },
-    "searchPosts": {
-      "method": "GET",
-      "endpoint": "https://jsonplaceholder.typicode.com/posts"
-    },
-    "searchPosts2": {
-      "method": "GET",
-      "endpoint": "https://jsonplaceholder.typicode.com/posts"
-    },
-    "getPost": {
-      "method": "GET",
-      "endpoint": "https://jsonplaceholder.typicode.com/posts"
-    },
-    "getComments": {
-      "method": "GET",
-      "endpoint": "https://jsonplaceholder.typicode.com/todos"
+    "buscarVehiculo": {
+      "endpoint": "http://localhost:3000/api/vehiculos/1234ABC/global",
+      "method": "GET"
     }
   },
   "pages": [
     {
-      "id": "bootstrap-home",
-      "preloads": [
-        {
-          "searchPosts2": {}
-        }
-      ],
+      "id": "home",
       "layout": [
         {
           "type": "heading",
           "props": {
-            "text": "Título {{queries.searchPosts2.data.0.title}} cuerpo: {{queries.searchPosts2.data.0.body}}",
-            "level": 1
-          }
-        },
-        {
-          "type": "paragraph",
-          "props": {
-            "text": "Utiliza este formulario para presentar una solicitud general y dirigirla al área competente sin salir del runtime declarativo."
-          }
-        },
-        {
-          "type": "image",
-          "props": {
-            "src": "https://picsum.photos/seed/picsum/1920/1080",
-            "alt": "Imagen de ejemplo"
-          }
-        },
-        {
-          "type": "table",
-          "props": {
-            "headers": [
-              "ID",
-              "title",
-              "body",
-              "userId"
-            ],
-            "rows": [
-              [
-                15,
-                "Lorem ipsum dolor sit amet",
-                "consectetur adipiscing elit",
-                1
-              ],
-              [
-                16,
-                "Sed do eiusmod tempor incididunt",
-                "ut labore et dolore magna aliqua",
-                2
-              ],
-              [
-                17,
-                "Ut enim ad minim veniam",
-                "quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat",
-                3
-              ],
-              [
-                18,
-                "Duis aute irure dolor in reprehenderit",
-                "in voluptate velit esse cillum dolore eu fugiat nulla pariatur",
-                4
-              ],
-              [
-                19,
-                "Excepteur sint occaecat cupidatat non",
-                "proident, sunt in culpa qui officia deserunt mollit anim id est laborum proident, sunt in culpa qui officia deserunt mollit anim id est laborum proident, sunt in culpa qui officia deserunt mollit anim id est laborum proident, sunt in culpa qui officia deserunt mollit anim id est laborum",
-                5
-              ]
-            ]
-          }
-        },
-        {
-          "type": "table",
-          "props": {
-            "columns": [
-              {
-                "id": "userId",
-                "filterable": true,
-                "sortable": true,
-                "filterPlaceholder": "Filtrar por userId"
-              },
-              {
-                "id": "title",
-                "filterable": true,
-                "sortable": true,
-                "filterPlaceholder": "Filtrar por título"
-              }
-            ],
-            "pagination": {
-              "enabled": true,
-              "pageSize": 5,
-              "controls": {
-                "variant": "numbered"
-              }
-            },
-            "headers": [
-              "ID",
-              "title",
-              "body",
-              "userId"
-            ],
-            "rows": {
-              "source": "queries.searchPosts2.data",
-              "cells": [
-                "item.id",
-                "item.title",
-                "item.body",
-                "item.userId"
-              ]
-            },
-            "queryStateFeedback": {
-              "query": "searchPosts2",
-              "states": {
-                "loading": {
-                  "mode": "fallback",
-                  "fallback": [
-                    {
-                      "type": "paragraph",
-                      "props": {
-                        "text": "Loading posts..."
-                      }
-                    }
-                  ]
-                }
-              }
-            }
-          }
-        },
-        {
-          "type": "form",
-          "id": "generalRequestForm",
-          "persistOnUnmount": true,
-          "children": [
-            {
-              "type": "container",
-              "props": {
-                "gap": "md"
-              },
-              "children": [
-                {
-                  "type": "heading",
-                  "props": {
-                    "text": "Datos de la persona interesada",
-                    "level": 2
-                  }
-                },
-                {
-                  "type": "input",
-                  "props": {
-                    "fieldId": "fullName",
-                    "label": "Nombre y apellidos",
-                    "defaultValue": "Ada Lovelace"
-                  }
-                },
-                {
-                  "type": "input",
-                  "props": {
-                    "inputType": "email",
-                    "fieldId": "email",
-                    "label": "Correo electrónico",
-                    "defaultValue": "ada@example.com"
-                  }
-                }
-              ]
-            },
-            {
-              "type": "container",
-              "props": {
-                "gap": "md"
-              },
-              "children": [
-                {
-                  "type": "heading",
-                  "props": {
-                    "text": "Detalle de la solicitud de {{forms.generalRequestForm.fullName}}",
-                    "level": 2
-                  }
-                },
-                {
-                  "type": "select",
-                  "props": {
-                    "fieldId": "topic",
-                    "label": "Área destinataria",
-                    "defaultValue": "registro",
-                    "items": [
-                      {
-                        "label": "Registro general",
-                        "value": "registro"
-                      },
-                      {
-                        "label": "Atención ciudadana",
-                        "value": "atencion"
-                      },
-                      {
-                        "label": "Urbanismo",
-                        "value": "urbanismo"
-                      }
-                    ]
-                  }
-                },
-                {
-                  "type": "textarea",
-                  "props": {
-                    "fieldId": "summary",
-                    "label": "Expone / Solicita",
-                    "defaultValue": "Solicito información sobre el estado de mi expediente."
-                  }
-                }
-              ]
-            },
-            {
-              "type": "container",
-              "props": {
-                "direction": "row",
-                "gap": "sm"
-              },
-              "children": [
-                {
-                  "type": "button",
-                  "props": {
-                    "label": "Limpiar formulario",
-                    "action": {
-                      "type": "resetForm",
-                      "formId": "generalRequestForm"
-                    }
-                  }
-                },
-                {
-                  "type": "button",
-                  "props": {
-                    "label": "Continuar"
-                  }
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "type": "container",
-          "props": {
-            "gap": "sm",
-            "direction": "row"
-          },
-          "children": [
-            {
-              "type": "button",
-              "props": {
-                "label": "Ver detalles",
-                "action": {
-                  "type": "navigateTo",
-                  "pageId": "details-page"
-                }
-              }
-            },
-            {
-              "type": "button",
-              "props": {
-                "label": "Buscar posts",
-                "action": {
-                  "type": "navigateTo",
-                  "pageId": "search-posts"
-                }
-              }
-            },
-            {
-              "type": "button",
-              "props": {
-                "label": "Formulario dinámico",
-                "action": {
-                  "type": "navigateTo",
-                  "pageId": "dynamic-form"
-                }
-              }
-            },
-            {
-              "type": "button",
-              "props": {
-                "label": "Contenedores",
-                "action": {
-                  "type": "navigateTo",
-                  "pageId": "containers-example"
-                }
-              }
-            },
-            {
-              "type": "button",
-              "props": {
-                "label": "Demo",
-                "action": {
-                  "type": "navigateTo",
-                  "pageId": "demo"
-                }
-              }
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "details-page",
-      "layout": [
-        {
-          "type": "heading",
-          "props": {
-            "text": "Details Page",
-            "level": 2
-          }
-        },
-        {
-          "type": "paragraph",
-          "props": {
-            "text": "Esta página sirve para probar la navegación declarativa desde el config."
-          }
-        },
-        {
-          "type": "container",
-          "props": {
-            "gap": "sm",
-            "direction": "row"
-          },
-          "children": [
-            {
-              "type": "button",
-              "props": {
-                "label": "Volver",
-                "action": {
-                  "type": "goBack"
-                }
-              }
-            },
-            {
-              "type": "button",
-              "props": {
-                "label": "Ir a ayuda",
-                "action": {
-                  "type": "navigateTo",
-                  "pageId": "help-page"
-                }
-              }
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "help-page",
-      "layout": [
-        {
-          "type": "heading",
-          "props": {
-            "text": "Help Page",
-            "level": 2
-          }
-        },
-        {
-          "type": "paragraph",
-          "props": {
-            "text": "Puedes usar estos botones para moverte entre páginas sin cambiar la URL."
-          }
-        },
-        {
-          "type": "container",
-          "props": {
-            "gap": "sm"
-          },
-          "children": [
-            {
-              "type": "button",
-              "props": {
-                "label": "Volver",
-                "action": {
-                  "type": "goBack"
-                }
-              }
-            },
-            {
-              "type": "button",
-              "props": {
-                "label": "Ir al inicio",
-                "action": {
-                  "type": "navigateTo",
-                  "pageId": "bootstrap-home"
-                }
-              }
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "search-posts",
-      "preloads": [
-        {
-          "searchUsers": {}
-        }
-      ],
-      "layout": [
-        {
-          "type": "button",
-          "props": {
-            "label": "Volver",
-            "action": {
-              "type": "goBack"
-            }
-          }
-        },
-        {
-          "type": "heading",
-          "props": {
-            "text": "Search Posts",
-            "level": 2
-          }
-        },
-        {
-          "type": "form",
-          "id": "postForm",
-          "submitAction": {
-            "type": "executeOperation",
-            "operationName": "searchPosts",
-            "query": {
-              "userId": "forms.postForm.authorId"
-            }
-          },
-          "persistOnUnmount": true,
-          "resetOnSuccess": false,
-          "children": [
-            {
-              "type": "select",
-              "props": {
-                "fieldId": "authorId",
-                "label": "Autor",
-                "items": {
-                  "source": "queries.searchUsers.data",
-                  "label": "name",
-                  "value": "id"
-                }
-              },
-              "queryStateFeedback": {
-                "query": "searchUsers",
-                "states": {
-                  "idle": {
-                    "mode": "hide"
-                  },
-                  "loading": {
-                    "mode": "fallback",
-                    "fallback": [
-                      {
-                        "type": "paragraph",
-                        "props": {
-                          "text": "Obteniendo autores..."
-                        }
-                      }
-                    ]
-                  }
-                }
-              }
-            },
-            {
-              "type": "container",
-              "props": {
-                "direction": "row",
-                "gap": "sm"
-              },
-              "children": [
-                {
-                  "type": "button",
-                  "props": {
-                    "label": "Limpiar",
-                    "action": {
-                      "type": "resetForm",
-                      "formId": "postForm"
-                    }
-                  }
-                },
-                {
-                  "type": "button",
-                  "props": {
-                    "label": "Enviar"
-                  }
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "type": "repeater",
-          "queryStateFeedback": {
-            "query": "searchPosts",
-            "states": {
-              "idle": {
-                "mode": "fallback",
-                "fallback": [
-                  {
-                    "type": "paragraph",
-                    "props": {
-                      "text": "No se ha realizado ninguna búsqueda"
-                    }
-                  }
-                ]
-              },
-              "loading": {
-                "mode": "fallback",
-                "fallback": [
-                  {
-                    "type": "paragraph",
-                    "props": {
-                      "text": "Cargando..."
-                    }
-                  }
-                ]
-              },
-              "empty": {
-                "mode": "fallback",
-                "fallback": [
-                  {
-                    "type": "paragraph",
-                    "props": {
-                      "text": "No se han encontrado posts"
-                    }
-                  }
-                ]
-              },
-              "error": {
-                "mode": "fallback",
-                "fallback": [
-                  {
-                    "type": "paragraph",
-                    "props": {
-                      "text": "Ha ocurrido un error al buscar posts"
-                    }
-                  }
-                ]
-              }
-            }
-          },
-          "props": {
-            "items": {
-              "source": "queries.searchPosts.data",
-              "key": "id"
-            },
-            "pagination": {
-              "enabled": true,
-              "pageSize": 5,
-              "controls": {
-                "variant": "numbered"
-              }
-            },
-            "template": [
-              {
-                "type": "container",
-                "props": {
-                  "direction": "row",
-                  "gap": "lg",
-                  "variant": "card"
-                },
-                "children": [
-                  {
-                    "type": "image",
-                    "props": {
-                      "src": "https://picsum.photos/200/150?random={{item.id}}",
-                      "alt": "{{item.title}}",
-                      "width": "100%",
-                      "height": "auto"
-                    }
-                  },
-                  {
-                    "type": "container",
-                    "props": {
-                      "gap": "sm"
-                    },
-                    "children": [
-                      {
-                        "type": "heading",
-                        "props": {
-                          "text": "item.title",
-                          "level": 3
-                        }
-                      },
-                      {
-                        "type": "paragraph",
-                        "props": {
-                          "text": "item.body"
-                        }
-                      },
-                      {
-                        "type": "button",
-                        "props": {
-                          "label": "Editar",
-                          "action": {
-                            "type": "navigateTo",
-                            "pageId": "post-form",
-                            "params": {
-                              "postId": "item.id"
-                            }
-                          }
-                        }
-                      }
-                    ]
-                  }
-                ]
-              }
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "id": "post-form",
-      "preloads": [
-        {
-          "getPost": {
-            "query": {
-              "id": "params.postId"
-            }
-          }
-        },
-        {
-          "searchUsers": {}
-        }
-      ],
-      "layout": [
-        {
-          "type": "button",
-          "props": {
-            "label": "Volver",
-            "action": {
-              "type": "navigateTo",
-              "pageId": "search-posts"
-            }
-          }
-        },
-        {
-          "type": "heading",
-          "props": {
-            "text": "Edit",
+            "text": "Punto de encuentro policial",
             "level": 1
           }
         },
         {
           "type": "container",
           "props": {
-            "gap": "sm"
-          },
-          "queryStateFeedback": {
-            "query": "searchUsers",
-            "states": {
-              "loading": {
-                "mode": "fallback",
-                "fallback": [
-                  {
-                    "type": "paragraph",
-                    "props": {
-                      "text": "Loading author options..."
-                    }
-                  }
-                ]
-              }
-            }
-          },
-          "children": [
-            {
-              "type": "form",
-              "id": "editPost",
-              "persistOnUnmount": false,
-              "resetOnSuccess": false,
-              "queryStateFeedback": {
-                "query": "getPost",
-                "states": {
-                  "loading": {
-                    "mode": "fallback",
-                    "fallback": [
-                      {
-                        "type": "paragraph",
-                        "props": {
-                          "text": "Loading post data..."
-                        }
-                      }
-                    ]
-                  }
-                }
-              },
-              "children": [
-                {
-                  "type": "input",
-                  "props": {
-                    "fieldId": "title",
-                    "label": "Title",
-                    "defaultValue": "queries.getPost.data.0.title"
-                  }
-                },
-                {
-                  "type": "input",
-                  "props": {
-                    "fieldId": "body",
-                    "label": "Body",
-                    "defaultValue": "queries.getPost.data.0.body"
-                  }
-                },
-                {
-                  "type": "select",
-                  "props": {
-                    "fieldId": "userId",
-                    "label": "Author",
-                    "items": {
-                      "source": "queries.searchUsers.data",
-                      "label": "name",
-                      "value": "id"
-                    },
-                    "defaultValue": "queries.getPost.data.0.userId"
-                  }
-                },
-                {
-                  "type": "button",
-                  "props": {
-                    "label": "Submit"
-                  }
-                }
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "dynamic-form",
-      "layout": [
-        {
-          "type": "container",
-          "props": {
+            "justify": "center",
             "direction": "row",
-            "justify": "between"
+            "align": "center"
           },
           "children": [
             {
-              "type": "heading",
+              "type": "button",
               "props": {
-                "text": "Dynamic form example",
-                "level": 1
+                "label": "Consultar personas 123",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "persona"
+                }
               }
             },
             {
               "type": "button",
               "props": {
-                "label": "Volver",
+                "label": "Consultar vehículos",
                 "action": {
-                  "type": "goBack"
+                  "type": "navigateTo",
+                  "pageId": "vehiculo"
                 }
               }
             }
           ]
         },
         {
-          "type": "form",
-          "id": "dynamicForm",
-          "submitAction": {
-            "type": "executeOperation",
-            "operationName": "searchPosts",
-            "query": {
-              "valorfijo": "123",
-              "name": "forms.dynamicForm.name",
-              "clientType": "forms.dynamicForm.clientType",
-              "personal_dni": "forms.dynamicForm.personal_dni",
-              "personal_nacimiento": "forms.dynamicForm.personal_nacimiento",
-              "personal_estadoCivil": "forms.dynamicForm.personal_estadoCivil",
-              "company_cif": "forms.dynamicForm.company_cif"
-            }
+          "type": "container",
+          "props": {
+            "direction": "column"
           },
           "children": [
             {
               "type": "heading",
               "props": {
-                "text": "Datos del cliente",
+                "text": "Notas",
                 "level": 2
               }
-            },
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "persona",
+      "layout": [
+        {
+          "type": "heading",
+          "props": {
+            "text": "Consultar personas",
+            "level": 1
+          }
+        },
+        {
+          "type": "form",
+          "id": "persona-form",
+          "submitAction": {
+            "type": "executeOperation",
+            "operationName": "buscarPersona"
+          },
+          "children": [
             {
               "type": "container",
               "props": {
@@ -806,28 +94,8 @@
                 {
                   "type": "input",
                   "props": {
-                    "fieldId": "name",
-                    "label": "Name",
-                    "validations": {
-                      "required": true,
-                      "minLength": 3,
-                      "maxLength": 10
-                    }
-                  },
-                  "layout": {
-                    "span": 4
-                  }
-                },
-                {
-                  "type": "input",
-                  "props": {
-                    "inputType": "email",
-                    "fieldId": "email",
-                    "label": "Email",
-                    "validations": {
-                      "required": true,
-                      "maxLength": 15
-                    }
+                    "fieldId": "documentacion",
+                    "label": "Identificación persona"
                   },
                   "layout": {
                     "span": 6
@@ -836,1896 +104,256 @@
                 {
                   "type": "input",
                   "props": {
-                    "inputType": "number",
-                    "fieldId": "number",
-                    "label": "Número",
-                    "validations": {
-                      "required": true,
-                      "min": 1,
-                      "max": 100
-                    }
+                    "inputType": "date",
+                    "fieldId": "from",
+                    "label": "Desde"
                   },
                   "layout": {
-                    "span": 12
-                  }
-                }
-              ]
-            },
-            {
-              "type": "checkboxGroup",
-              "props": {
-                "fieldId": "checkboxExample",
-                "label": "Prueba checkbox",
-                "optionLayout": "inline",
-                "items": [
-                  {
-                    "label": "Item 1",
-                    "value": "item1"
-                  },
-                  {
-                    "label": "Item 2",
-                    "value": "item2"
-                  },
-                  {
-                    "label": "Item 3",
-                    "value": "item3"
-                  },
-                  {
-                    "label": "Item 4",
-                    "value": "item4"
-                  },
-                  {
-                    "label": "Item 5",
-                    "value": "item5"
-                  },
-                  {
-                    "label": "Item 6",
-                    "value": "item6"
-                  }
-                ],
-                "defaultValue": [
-                  "item1",
-                  "item2"
-                ],
-                "validations": {
-                  "required": true,
-                  "minSelections": 2,
-                  "maxSelections": 3
-                }
-              }
-            },
-            {
-              "type": "radioGroup",
-              "props": {
-                "fieldId": "clientType",
-                "label": "Tipo de cliente",
-                "items": [
-                  {
-                    "label": "Particular",
-                    "value": "particular"
-                  },
-                  {
-                    "label": "Empresa",
-                    "value": "empresa"
-                  }
-                ],
-                "defaultValue": "particular"
-              }
-            },
-            {
-              "type": "container",
-              "props": {
-                "direction": "column",
-                "gap": "sm"
-              },
-              "visibility": {
-                "reference": "forms.dynamicForm.clientType",
-                "operator": "equals",
-                "value": "particular"
-              },
-              "children": [
-                {
-                  "type": "heading",
-                  "props": {
-                    "text": "Datos personales",
-                    "level": 2
-                  }
-                },
-                {
-                  "type": "input",
-                  "props": {
-                    "fieldId": "personal_dni",
-                    "label": "DNI"
+                    "span": 3
                   }
                 },
                 {
                   "type": "input",
                   "props": {
                     "inputType": "date",
-                    "fieldId": "personal_nacimiento",
-                    "label": "Fecha de nacimiento"
+                    "fieldId": "to",
+                    "label": "Hasta"
+                  },
+                  "layout": {
+                    "span": 3
                   }
                 },
                 {
-                  "type": "select",
+                  "type": "checkboxGroup",
                   "props": {
-                    "fieldId": "personal_estadoCivil",
-                    "label": "Estado civil",
+                    "optionLayout": "inline",
+                    "fieldId": "fuentes",
+                    "label": "Fuentes",
                     "items": [
                       {
-                        "label": "Soltero",
-                        "value": "soltero"
+                        "value": "vinfopol",
+                        "label": "vinfopol"
                       },
                       {
-                        "label": "Casado",
-                        "value": "casado"
+                        "value": "bites",
+                        "label": "bites"
                       },
                       {
-                        "label": "Divorciado",
-                        "value": "divorciado"
+                        "value": "multas",
+                        "label": "multas"
+                      },
+                      {
+                        "value": "ade",
+                        "label": "ade"
+                      },
+                      {
+                        "value": "camaras",
+                        "label": "camaras"
+                      },
+                      {
+                        "value": "fichero-intercambio",
+                        "label": "fichero-intercambio"
+                      },
+                      {
+                        "value": "circulacion",
+                        "label": "circulacion"
                       }
                     ]
-                  }
-                }
-              ]
-            },
-            {
-              "type": "container",
-              "props": {
-                "direction": "column",
-                "gap": "sm"
-              },
-              "visibility": {
-                "reference": "forms.dynamicForm.clientType",
-                "operator": "equals",
-                "value": "empresa"
-              },
-              "children": [
-                {
-                  "type": "heading",
-                  "props": {
-                    "text": "Datos de la empresa",
-                    "level": 2
+                  },
+                  "layout": {
+                    "span": 12
                   }
                 },
                 {
-                  "type": "input",
+                  "type": "button",
                   "props": {
-                    "fieldId": "company_cif",
-                    "label": "CIF",
-                    "validations": {
-                      "required": true,
-                      "minLength": 9,
-                      "maxLength": 9
-                    }
+                    "label": "Consultar"
+                  },
+                  "layout": {
+                    "span": 2
                   }
                 }
               ]
-            },
-            {
-              "type": "button",
-              "props": {
-                "label": "Submit"
-              }
             }
           ]
-        }
-      ]
-    },
-    {
-      "id": "containers-example",
-      "layout": [
-        {
-          "type": "container",
-          "props": {
-            "direction": "row",
-            "align": "start",
-            "justify": "end",
-            "wrap": "wrap"
-          },
-          "children": [
-            {
-              "type": "button",
-              "props": {
-                "label": "Volver",
-                "action": {
-                  "type": "goBack"
-                }
-              }
-            }
-          ]
-        },
-        {
-          "type": "heading",
-          "props": {
-            "text": "Containers example",
-            "level": 1
-          }
-        },
-        {
-          "type": "heading",
-          "props": {
-            "text": "Columnas",
-            "level": 2
-          }
-        },
-        {
-          "type": "paragraph",
-          "props": {
-            "text": "El contenedor entre 1 y 12 columnas."
-          }
-        },
-        {
-          "type": "heading",
-          "props": {
-            "text": "12 columnas",
-            "level": 3
-          }
-        },
-        {
-          "type": "paragraph",
-          "props": {
-            "text": "{\"props\": \"columns\": 12}"
-          }
         },
         {
           "type": "container",
           "props": {
             "columns": 12
           },
-          "children": [
-            {
-              "type": "button",
-              "props": {
-                "label": "Button",
-                "action": {
-                  "type": "navigateTo",
-                  "pageId": "bootstrap-home"
-                }
+          "queryStateFeedback": {
+            "query": "buscarPersona",
+            "states": {
+              "idle": {
+                "mode": "hide"
               }
-            },
-            {
-              "type": "button",
-              "props": {
-                "label": "Button",
-                "action": {
-                  "type": "navigateTo",
-                  "pageId": "bootstrap-home"
-                }
-              }
-            },
-            {
-              "type": "button",
-              "props": {
-                "label": "Button",
-                "action": {
-                  "type": "navigateTo",
-                  "pageId": "bootstrap-home"
-                }
-              }
-            },
-            {
-              "type": "button",
-              "props": {
-                "label": "Button",
-                "action": {
-                  "type": "navigateTo",
-                  "pageId": "bootstrap-home"
-                }
-              }
-            },
-            {
-              "type": "button",
-              "props": {
-                "label": "Button",
-                "action": {
-                  "type": "navigateTo",
-                  "pageId": "bootstrap-home"
-                }
-              }
-            },
-            {
-              "type": "button",
-              "props": {
-                "label": "Button",
-                "action": {
-                  "type": "navigateTo",
-                  "pageId": "bootstrap-home"
-                }
-              }
-            },
-            {
-              "type": "button",
-              "props": {
-                "label": "Button",
-                "action": {
-                  "type": "navigateTo",
-                  "pageId": "bootstrap-home"
-                }
-              }
-            },
-            {
-              "type": "button",
-              "props": {
-                "label": "Button",
-                "action": {
-                  "type": "navigateTo",
-                  "pageId": "bootstrap-home"
-                }
-              }
-            },
-            {
-              "type": "button",
-              "props": {
-                "label": "Button",
-                "action": {
-                  "type": "navigateTo",
-                  "pageId": "bootstrap-home"
-                }
-              }
-            },
-            {
-              "type": "button",
-              "props": {
-                "label": "Button",
-                "action": {
-                  "type": "navigateTo",
-                  "pageId": "bootstrap-home"
-                }
-              }
-            },
-            {
-              "type": "button",
-              "props": {
-                "label": "Button",
-                "action": {
-                  "type": "navigateTo",
-                  "pageId": "bootstrap-home"
-                }
-              }
-            },
-            {
-              "type": "button",
-              "props": {
-                "label": "Button",
-                "action": {
-                  "type": "navigateTo",
-                  "pageId": "bootstrap-home"
-                }
-              }
-            },
-            {
-              "type": "button",
-              "props": {
-                "label": "Button",
-                "action": {
-                  "type": "navigateTo",
-                  "pageId": "bootstrap-home"
-                }
-              }
-            },
-            {
-              "type": "button",
-              "props": {
-                "label": "Button",
-                "action": {
-                  "type": "navigateTo",
-                  "pageId": "bootstrap-home"
-                }
-              }
-            },
-            {
-              "type": "button",
-              "props": {
-                "label": "Button",
-                "action": {
-                  "type": "navigateTo",
-                  "pageId": "bootstrap-home"
-                }
-              }
-            }
-          ]
-        },
-        {
-          "type": "heading",
-          "props": {
-            "text": "4 columnas",
-            "level": 3
-          }
-        },
-        {
-          "type": "paragraph",
-          "props": {
-            "text": "{\"props\": \"columns\": 4}"
-          }
-        },
-        {
-          "type": "container",
-          "props": {
-            "columns": 4
-          },
-          "children": [
-            {
-              "type": "button",
-              "props": {
-                "label": "Button",
-                "action": {
-                  "type": "navigateTo",
-                  "pageId": "bootstrap-home"
-                }
-              }
-            },
-            {
-              "type": "button",
-              "props": {
-                "label": "Button",
-                "action": {
-                  "type": "navigateTo",
-                  "pageId": "bootstrap-home"
-                }
-              }
-            },
-            {
-              "type": "button",
-              "props": {
-                "label": "Button",
-                "action": {
-                  "type": "navigateTo",
-                  "pageId": "bootstrap-home"
-                }
-              }
-            },
-            {
-              "type": "button",
-              "props": {
-                "label": "Button",
-                "action": {
-                  "type": "navigateTo",
-                  "pageId": "bootstrap-home"
-                }
-              }
-            },
-            {
-              "type": "button",
-              "props": {
-                "label": "Button",
-                "action": {
-                  "type": "navigateTo",
-                  "pageId": "bootstrap-home"
-                }
-              }
-            },
-            {
-              "type": "button",
-              "props": {
-                "label": "Button",
-                "action": {
-                  "type": "navigateTo",
-                  "pageId": "bootstrap-home"
-                }
-              }
-            },
-            {
-              "type": "button",
-              "props": {
-                "label": "Button",
-                "action": {
-                  "type": "navigateTo",
-                  "pageId": "bootstrap-home"
-                }
-              }
-            },
-            {
-              "type": "button",
-              "props": {
-                "label": "Button",
-                "action": {
-                  "type": "navigateTo",
-                  "pageId": "bootstrap-home"
-                }
-              }
-            }
-          ]
-        },
-        {
-          "type": "heading",
-          "props": {
-            "text": "Columnas responsive",
-            "level": 3
-          }
-        },
-        {
-          "type": "container",
-          "props": {
-            "columns": {
-              "base": 1,
-              "sm": 2,
-              "md": 3,
-              "lg": 6,
-              "xl": 12
             }
           },
           "children": [
             {
-              "type": "button",
+              "id": "columnaIzquierda",
+              "type": "container",
               "props": {
-                "label": "Button",
-                "action": {
-                  "type": "navigateTo",
-                  "pageId": "bootstrap-home"
+                "columns": 12
+              },
+              "layout": {
+                "span": 7
+              },
+              "children": [
+                {
+                  "id": "foto-estado",
+                  "type": "container",
+                  "props": {
+                    "columns": 1,
+                    "gap": "sm"
+                  },
+                  "layout": {
+                    "span": 3
+                  },
+                  "children": [
+                    {
+                      "type": "image",
+                      "props": {
+                        "src": "https://picsum.photos/seed/person/300/400",
+                        "alt": "Google logo"
+                      }
+                    },
+                    {
+                      "type": "paragraph",
+                      "props": {
+                        "text": "Busca y captura"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "id": "columna-datos-persona",
+                  "type": "container",
+                  "props": {
+                    "columns": 12,
+                    "gap": "sm"
+                  },
+                  "layout": {
+                    "span": 9
+                  },
+                  "children": [
+                    {
+                      "type": "heading",
+                      "props": {
+                        "level": 2,
+                        "text": "queries.buscarPersona.data.persona.nombreApellidos"
+                      },
+                      "layout": {
+                        "span": 12
+                      }
+                    },
+                    {
+                      "type": "paragraph",
+                      "props": {
+                        "text": "Documento {{queries.buscarPersona.data.persona.documento}}"
+                      },
+                      "layout": {
+                        "span": 6
+                      }
+                    },
+                    {
+                      "type": "paragraph",
+                      "props": {
+                        "text": "Nacionalidad {{queries.buscarPersona.data.persona.nacionalidad}}"
+                      },
+                      "layout": {
+                        "span": 6
+                      }
+                    },
+                    {
+                      "type": "paragraph",
+                      "props": {
+                        "text": "Fecha de nacimiento ?????"
+                      },
+                      "layout": {
+                        "span": 6
+                      }
+                    },
+                    {
+                      "type": "paragraph",
+                      "props": {
+                        "text": "Domicilio {{queries.buscarPersona.data.persona.direccionActualPadron}}"
+                      },
+                      "layout": {
+                        "span": 6
+                      }
+                    }
+                  ]
+                },
+                {
+                  "id": "contadores",
+                  "type": "container",
+                  "props": {
+                    "columns": 12
+                  },
+                  "layout": {
+                    "span": 12
+                  },
+                  "children": [
+                    {
+                      "type": "container",
+                      "props": {
+                        "columns": 12,
+                        "gap": "sm",
+                        "variant": "card"
+                      },
+                      "children": [
+                        {
+                          "type": "paragraph",
+                          "props": {
+                            "text": "Vinfopol: {{queries.buscarPersona.data.resumen.resumenEstadistico.atestadosJudicialesVinfopol}}"
+                          }
+                        }
+                      ],
+                      "layout": {
+                        "span": 3
+                      }
+                    }
+
+                  ]
                 }
-              }
-            },
-            {
-              "type": "button",
-              "props": {
-                "label": "Button",
-                "action": {
-                  "type": "navigateTo",
-                  "pageId": "bootstrap-home"
-                }
-              }
-            },
-            {
-              "type": "button",
-              "props": {
-                "label": "Button",
-                "action": {
-                  "type": "navigateTo",
-                  "pageId": "bootstrap-home"
-                }
-              }
-            },
-            {
-              "type": "button",
-              "props": {
-                "label": "Button",
-                "action": {
-                  "type": "navigateTo",
-                  "pageId": "bootstrap-home"
-                }
-              }
-            },
-            {
-              "type": "button",
-              "props": {
-                "label": "Button",
-                "action": {
-                  "type": "navigateTo",
-                  "pageId": "bootstrap-home"
-                }
-              }
-            },
-            {
-              "type": "button",
-              "props": {
-                "label": "Button",
-                "action": {
-                  "type": "navigateTo",
-                  "pageId": "bootstrap-home"
-                }
-              }
-            },
-            {
-              "type": "button",
-              "props": {
-                "label": "Button",
-                "action": {
-                  "type": "navigateTo",
-                  "pageId": "bootstrap-home"
-                }
-              }
-            },
-            {
-              "type": "button",
-              "props": {
-                "label": "Button",
-                "action": {
-                  "type": "navigateTo",
-                  "pageId": "bootstrap-home"
-                }
-              }
-            },
-            {
-              "type": "button",
-              "props": {
-                "label": "Button",
-                "action": {
-                  "type": "navigateTo",
-                  "pageId": "bootstrap-home"
-                }
-              }
-            },
-            {
-              "type": "button",
-              "props": {
-                "label": "Button",
-                "action": {
-                  "type": "navigateTo",
-                  "pageId": "bootstrap-home"
-                }
-              }
-            },
-            {
-              "type": "button",
-              "props": {
-                "label": "Button",
-                "action": {
-                  "type": "navigateTo",
-                  "pageId": "bootstrap-home"
-                }
-              }
-            },
-            {
-              "type": "button",
-              "props": {
-                "label": "Button",
-                "action": {
-                  "type": "navigateTo",
-                  "pageId": "bootstrap-home"
-                }
-              }
-            }
-          ]
-        },
-        {
-          "type": "heading",
-          "props": {
-            "text": "Flex layout",
-            "level": 2
-          }
-        },
-        {
-          "type": "heading",
-          "props": {
-            "text": "Justify content: start",
-            "level": 3
-          }
-        },
-        {
-          "type": "paragraph",
-          "props": {
-            "text": "{\"props\": \"direction\": \"row\", \"align\": \"start\", \"justify\": \"start\", \"wrap\": \"wrap\"}"
-          }
-        },
-        {
-          "type": "container",
-          "props": {
-            "direction": "row",
-            "align": "start",
-            "justify": "start",
-            "wrap": "wrap"
-          },
-          "children": [
-            {
-              "type": "button",
-              "props": {
-                "label": "Button",
-                "action": {
-                  "type": "navigateTo",
-                  "pageId": "bootstrap-home"
-                }
-              }
-            },
-            {
-              "type": "button",
-              "props": {
-                "label": "Button",
-                "action": {
-                  "type": "navigateTo",
-                  "pageId": "bootstrap-home"
-                }
-              }
-            },
-            {
-              "type": "button",
-              "props": {
-                "label": "Button",
-                "action": {
-                  "type": "navigateTo",
-                  "pageId": "bootstrap-home"
-                }
-              }
-            },
-            {
-              "type": "button",
-              "props": {
-                "label": "Button",
-                "action": {
-                  "type": "navigateTo",
-                  "pageId": "bootstrap-home"
-                }
-              }
-            },
-            {
-              "type": "button",
-              "props": {
-                "label": "Button",
-                "action": {
-                  "type": "navigateTo",
-                  "pageId": "bootstrap-home"
-                }
-              }
-            }
-          ]
-        },
-        {
-          "type": "heading",
-          "props": {
-            "text": "Justify content: center",
-            "level": 3
-          }
-        },
-        {
-          "type": "paragraph",
-          "props": {
-            "text": "{\"props\": \"direction\": \"row\", \"align\": \"start\", \"justify\": \"center\", \"wrap\": \"wrap\"}"
-          }
-        },
-        {
-          "type": "container",
-          "props": {
-            "direction": "row",
-            "align": "center",
-            "justify": "center",
-            "wrap": "wrap"
-          },
-          "children": [
-            {
-              "type": "button",
-              "props": {
-                "label": "Button",
-                "action": {
-                  "type": "navigateTo",
-                  "pageId": "bootstrap-home"
-                }
-              }
-            },
-            {
-              "type": "button",
-              "props": {
-                "label": "Button",
-                "action": {
-                  "type": "navigateTo",
-                  "pageId": "bootstrap-home"
-                }
-              }
-            },
-            {
-              "type": "button",
-              "props": {
-                "label": "Button",
-                "action": {
-                  "type": "navigateTo",
-                  "pageId": "bootstrap-home"
-                }
-              }
-            },
-            {
-              "type": "button",
-              "props": {
-                "label": "Button",
-                "action": {
-                  "type": "navigateTo",
-                  "pageId": "bootstrap-home"
-                }
-              }
-            },
-            {
-              "type": "button",
-              "props": {
-                "label": "Button",
-                "action": {
-                  "type": "navigateTo",
-                  "pageId": "bootstrap-home"
-                }
-              }
-            }
-          ]
-        },
-        {
-          "type": "heading",
-          "props": {
-            "text": "Justify content: end",
-            "level": 3
-          }
-        },
-        {
-          "type": "paragraph",
-          "props": {
-            "text": "{\"props\": \"direction\": \"row\", \"align\": \"start\", \"justify\": \"end\", \"wrap\": \"wrap\"}"
-          }
-        },
-        {
-          "type": "container",
-          "props": {
-            "direction": "row",
-            "align": "start",
-            "justify": "end",
-            "wrap": "wrap"
-          },
-          "children": [
-            {
-              "type": "button",
-              "props": {
-                "label": "Button",
-                "action": {
-                  "type": "navigateTo",
-                  "pageId": "bootstrap-home"
-                }
-              }
-            },
-            {
-              "type": "button",
-              "props": {
-                "label": "Button",
-                "action": {
-                  "type": "navigateTo",
-                  "pageId": "bootstrap-home"
-                }
-              }
-            },
-            {
-              "type": "button",
-              "props": {
-                "label": "Button",
-                "action": {
-                  "type": "navigateTo",
-                  "pageId": "bootstrap-home"
-                }
-              }
-            },
-            {
-              "type": "button",
-              "props": {
-                "label": "Button",
-                "action": {
-                  "type": "navigateTo",
-                  "pageId": "bootstrap-home"
-                }
-              }
-            },
-            {
-              "type": "button",
-              "props": {
-                "label": "Button",
-                "action": {
-                  "type": "navigateTo",
-                  "pageId": "bootstrap-home"
-                }
-              }
-            }
-          ]
-        },
-        {
-          "type": "heading",
-          "props": {
-            "text": "Justify content: between",
-            "level": 3
-          }
-        },
-        {
-          "type": "paragraph",
-          "props": {
-            "text": "Los elementos se reparten de forma uniforme dentro del contenedor, siguiendo la dirección principal.\n\nEl espacio entre cada elemento y el siguiente es siempre el mismo.\n\nEl primer elemento queda pegado al borde inicial, y el último queda pegado al borde final."
-          }
-        },
-        {
-          "type": "paragraph",
-          "props": {
-            "text": "{\"props\": \"direction\": \"row\", \"align\": \"start\", \"justify\": \"between\", \"wrap\": \"wrap\"}"
-          }
-        },
-        {
-          "type": "container",
-          "props": {
-            "direction": "row",
-            "align": "start",
-            "justify": "between",
-            "wrap": "wrap"
-          },
-          "children": [
-            {
-              "type": "button",
-              "props": {
-                "label": "Button",
-                "action": {
-                  "type": "navigateTo",
-                  "pageId": "bootstrap-home"
-                }
-              }
-            },
-            {
-              "type": "button",
-              "props": {
-                "label": "Button",
-                "action": {
-                  "type": "navigateTo",
-                  "pageId": "bootstrap-home"
-                }
-              }
-            }
-          ]
-        },
-        {
-          "type": "heading",
-          "props": {
-            "text": "Justify content: around",
-            "level": 3
-          }
-        },
-        {
-          "type": "paragraph",
-          "props": {
-            "text": "Los elementos se reparten de forma uniforme dentro del contenedor, siguiendo la dirección principal.\n\nEl espacio entre cada elemento y el siguiente es siempre el mismo.\n\nEl espacio vacío antes del primer elemento y después del último equivale a la mitad del espacio que hay entre dos elementos.\n\nSi solo hay un elemento, queda centrado."
-          }
-        },
-        {
-          "type": "paragraph",
-          "props": {
-            "text": "{\"props\": \"direction\": \"row\", \"align\": \"start\", \"justify\": \"around\", \"wrap\": \"wrap\"}"
-          }
-        },
-        {
-          "type": "container",
-          "props": {
-            "direction": "row",
-            "align": "start",
-            "justify": "around",
-            "wrap": "wrap"
-          },
-          "children": [
-            {
-              "type": "button",
-              "props": {
-                "label": "Button",
-                "action": {
-                  "type": "navigateTo",
-                  "pageId": "bootstrap-home"
-                }
-              }
-            },
-            {
-              "type": "button",
-              "props": {
-                "label": "Button",
-                "action": {
-                  "type": "navigateTo",
-                  "pageId": "bootstrap-home"
-                }
-              }
-            }
-          ]
-        },
-        {
-          "type": "heading",
-          "props": {
-            "text": "Justify content: evenly",
-            "level": 3
-          }
-        },
-        {
-          "type": "paragraph",
-          "props": {
-            "text": "Los elementos se reparten de forma uniforme dentro del contenedor, siguiendo la dirección principal.\n\nEl espacio entre cada elemento y el siguiente es exactamente el mismo que el espacio entre el primer elemento y el borde inicial, y entre el último elemento y el borde final."
-          }
-        },
-        {
-          "type": "paragraph",
-          "props": {
-            "text": "{\"props\": \"direction\": \"row\", \"align\": \"start\", \"justify\": \"evenly\", \"wrap\": \"wrap\"}"
-          }
-        },
-        {
-          "type": "container",
-          "props": {
-            "direction": "row",
-            "align": "start",
-            "justify": "evenly",
-            "wrap": "wrap"
-          },
-          "children": [
-            {
-              "type": "button",
-              "props": {
-                "label": "Button",
-                "action": {
-                  "type": "navigateTo",
-                  "pageId": "bootstrap-home"
-                }
-              }
-            },
-            {
-              "type": "button",
-              "props": {
-                "label": "Button",
-                "action": {
-                  "type": "navigateTo",
-                  "pageId": "bootstrap-home"
-                }
-              }
-            }
-          ]
-        },
-        {
-          "type": "heading",
-          "props": {
-            "text": "Align items",
-            "level": 2
-          }
-        },
-        {
-          "type": "heading",
-          "props": {
-            "text": "Align items: start",
-            "level": 3
-          }
-        },
-        {
-          "type": "container",
-          "props": {
-            "direction": "row",
-            "align": "start",
-            "justify": "start",
-            "wrap": "nowrap"
-          },
-          "children": [
-            {
-              "type": "paragraph",
-              "props": {
-                "text": "Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."
-              }
+              ]
             },
             {
               "type": "container",
               "props": {
-                "direction": "column",
-                "align": "start",
-                "justify": "start",
-                "wrap": "wrap"
+                "columns": 1
+              },
+              "layout": {
+                "span": 5
               },
               "children": [
                 {
-                  "type": "paragraph",
+                  "type": "image",
                   "props": {
-                    "text": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."
+                    "src": "https://picsum.photos/seed/xxxx/700/450",
+                    "alt": "Placeholder image"
                   }
                 }
               ]
-            }
-          ]
-        },
-        {
-          "type": "heading",
-          "props": {
-            "text": "Align items: center",
-            "level": 3
-          }
-        },
-        {
-          "type": "container",
-          "props": {
-            "direction": "row",
-            "align": "center",
-            "justify": "start",
-            "wrap": "nowrap"
-          },
-          "children": [
-            {
-              "type": "paragraph",
-              "props": {
-                "text": "Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."
-              }
-            },
-            {
-              "type": "container",
-              "props": {
-                "direction": "column",
-                "align": "start",
-                "justify": "start",
-                "wrap": "wrap"
-              },
-              "children": [
-                {
-                  "type": "paragraph",
-                  "props": {
-                    "text": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."
-                  }
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "type": "heading",
-          "props": {
-            "text": "Align items: end",
-            "level": 3
-          }
-        },
-        {
-          "type": "container",
-          "props": {
-            "direction": "row",
-            "align": "end",
-            "justify": "start",
-            "wrap": "nowrap"
-          },
-          "children": [
-            {
-              "type": "paragraph",
-              "props": {
-                "text": "Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."
-              }
-            },
-            {
-              "type": "container",
-              "props": {
-                "direction": "column",
-                "align": "start",
-                "justify": "start",
-                "wrap": "wrap"
-              },
-              "children": [
-                {
-                  "type": "paragraph",
-                  "props": {
-                    "text": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."
-                  }
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "type": "heading",
-          "props": {
-            "text": "Gap",
-            "level": 2
-          }
-        },
-        {
-          "type": "paragraph",
-          "props": {
-            "text": "El espacio entre los elementos puede ser sm, md (valor por defecto), lg, xl y 2xl."
-          }
-        },
-        {
-          "type": "heading",
-          "props": {
-            "text": "Gap sm",
-            "level": 3
-          }
-        },
-        {
-          "type": "container",
-          "props": {
-            "columns": 4,
-            "gap": "sm"
-          },
-          "children": [
-            {
-              "type": "button",
-              "props": {
-                "label": "Button",
-                "action": {
-                  "type": "navigateTo",
-                  "pageId": "bootstrap-home"
-                }
-              }
-            },
-            {
-              "type": "button",
-              "props": {
-                "label": "Button",
-                "action": {
-                  "type": "navigateTo",
-                  "pageId": "bootstrap-home"
-                }
-              }
-            },
-            {
-              "type": "button",
-              "props": {
-                "label": "Button",
-                "action": {
-                  "type": "navigateTo",
-                  "pageId": "bootstrap-home"
-                }
-              }
-            },
-            {
-              "type": "button",
-              "props": {
-                "label": "Button",
-                "action": {
-                  "type": "navigateTo",
-                  "pageId": "bootstrap-home"
-                }
-              }
-            }
-          ]
-        },
-        {
-          "type": "heading",
-          "props": {
-            "text": "Gap md",
-            "level": 3
-          }
-        },
-        {
-          "type": "container",
-          "props": {
-            "columns": 4,
-            "gap": "md"
-          },
-          "children": [
-            {
-              "type": "button",
-              "props": {
-                "label": "Button",
-                "action": {
-                  "type": "navigateTo",
-                  "pageId": "bootstrap-home"
-                }
-              }
-            },
-            {
-              "type": "button",
-              "props": {
-                "label": "Button",
-                "action": {
-                  "type": "navigateTo",
-                  "pageId": "bootstrap-home"
-                }
-              }
-            },
-            {
-              "type": "button",
-              "props": {
-                "label": "Button",
-                "action": {
-                  "type": "navigateTo",
-                  "pageId": "bootstrap-home"
-                }
-              }
-            },
-            {
-              "type": "button",
-              "props": {
-                "label": "Button",
-                "action": {
-                  "type": "navigateTo",
-                  "pageId": "bootstrap-home"
-                }
-              }
-            }
-          ]
-        },
-        {
-          "type": "heading",
-          "props": {
-            "text": "Gap lg",
-            "level": 3
-          }
-        },
-        {
-          "type": "container",
-          "props": {
-            "columns": 4,
-            "gap": "lg"
-          },
-          "children": [
-            {
-              "type": "button",
-              "props": {
-                "label": "Button",
-                "action": {
-                  "type": "navigateTo",
-                  "pageId": "bootstrap-home"
-                }
-              }
-            },
-            {
-              "type": "button",
-              "props": {
-                "label": "Button",
-                "action": {
-                  "type": "navigateTo",
-                  "pageId": "bootstrap-home"
-                }
-              }
-            },
-            {
-              "type": "button",
-              "props": {
-                "label": "Button",
-                "action": {
-                  "type": "navigateTo",
-                  "pageId": "bootstrap-home"
-                }
-              }
-            },
-            {
-              "type": "button",
-              "props": {
-                "label": "Button",
-                "action": {
-                  "type": "navigateTo",
-                  "pageId": "bootstrap-home"
-                }
-              }
-            }
-          ]
-        },
-        {
-          "type": "heading",
-          "props": {
-            "text": "Gap xl",
-            "level": 3
-          }
-        },
-        {
-          "type": "container",
-          "props": {
-            "columns": 4,
-            "gap": "xl"
-          },
-          "children": [
-            {
-              "type": "button",
-              "props": {
-                "label": "Button",
-                "action": {
-                  "type": "navigateTo",
-                  "pageId": "bootstrap-home"
-                }
-              }
-            },
-            {
-              "type": "button",
-              "props": {
-                "label": "Button",
-                "action": {
-                  "type": "navigateTo",
-                  "pageId": "bootstrap-home"
-                }
-              }
-            },
-            {
-              "type": "button",
-              "props": {
-                "label": "Button",
-                "action": {
-                  "type": "navigateTo",
-                  "pageId": "bootstrap-home"
-                }
-              }
-            },
-            {
-              "type": "button",
-              "props": {
-                "label": "Button",
-                "action": {
-                  "type": "navigateTo",
-                  "pageId": "bootstrap-home"
-                }
-              }
-            }
-          ]
-        },
-        {
-          "type": "heading",
-          "props": {
-            "text": "Gap 2xl",
-            "level": 3
-          }
-        },
-        {
-          "type": "container",
-          "props": {
-            "columns": 4,
-            "gap": "2xl"
-          },
-          "children": [
-            {
-              "type": "button",
-              "props": {
-                "label": "Button",
-                "action": {
-                  "type": "navigateTo",
-                  "pageId": "bootstrap-home"
-                }
-              }
-            },
-            {
-              "type": "button",
-              "props": {
-                "label": "Button",
-                "action": {
-                  "type": "navigateTo",
-                  "pageId": "bootstrap-home"
-                }
-              }
-            },
-            {
-              "type": "button",
-              "props": {
-                "label": "Button",
-                "action": {
-                  "type": "navigateTo",
-                  "pageId": "bootstrap-home"
-                }
-              }
-            },
-            {
-              "type": "button",
-              "props": {
-                "label": "Button",
-                "action": {
-                  "type": "navigateTo",
-                  "pageId": "bootstrap-home"
-                }
-              }
             }
           ]
         }
       ]
     },
     {
-      "id": "demo",
+      "id": "vehiculo",
       "layout": [
         {
-          "type": "container",
+          "type": "heading",
           "props": {
-            "direction": "row",
-            "align": "start",
-            "justify": "between",
-            "wrap": "wrap"
-          },
-          "children": [
-            {
-              "type": "button",
-              "props": {
-                "label": "<",
-                "action": {
-                  "type": "navigateTo",
-                  "pageId": "bootstrap-home"
-                }
-              }
-            },
-            {
-              "type": "heading",
-              "props": {
-                "text": "Perfil",
-                "level": 1
-              }
-            },
-            {
-              "type": "button",
-              "props": {
-                "label": "...",
-                "action": {
-                  "type": "navigateTo",
-                  "pageId": "bootstrap-home"
-                }
-              }
-            },
-            {
-              "type": "container",
-              "props": {
-                "columns": 12,
-                "variant": "card"
-              },
-              "children": [
-                {
-                  "type": "image",
-                  "props": {
-                    "src": "https://picsum.photos/250/250",
-                    "alt": "Imagen de perfil",
-                    "width": "",
-                    "height": ""
-                  },
-                  "layout": {
-                    "span": 4
-                  }
-                },
-                {
-                  "type": "container",
-                  "props": {
-                    "direction": "column",
-                    "align": "start",
-                    "justify": "start",
-                    "wrap": "wrap",
-                    "gap": "sm"
-                  },
-                  "layout": {
-                    "span": 8
-                  },
-                  "children": [
-                    {
-                      "type": "heading",
-                      "props": {
-                        "text": "Alex Rivera",
-                        "level": 2
-                      }
-                    },
-                    {
-                      "type": "paragraph",
-                      "props": {
-                        "text": "Calle Luna 45, Madrid"
-                      }
-                    },
-                    {
-                      "type": "paragraph",
-                      "props": {
-                        "text": "+34 612 345 678"
-                      }
-                    },
-                    {
-                      "type": "paragraph",
-                      "props": {
-                        "text": "14/06/1995"
-                      }
-                    }
-                  ]
-                }
-              ]
-            },
-            {
-              "type": "container",
-              "props": {
-                "columns": 3
-              },
-              "children": [
-                {
-                  "type": "button",
-                  "props": {
-                    "label": "Personal",
-                    "action": {
-                      "type": "navigateTo",
-                      "pageId": "bootstrap-home"
-                    }
-                  }
-                },
-                {
-                  "type": "button",
-                  "props": {
-                    "label": "Mapa",
-                    "action": {
-                      "type": "navigateTo",
-                      "pageId": "bootstrap-home"
-                    }
-                  }
-                },
-                {
-                  "type": "button",
-                  "props": {
-                    "label": "Hechos",
-                    "action": {
-                      "type": "navigateTo",
-                      "pageId": "bootstrap-home"
-                    }
-                  }
-                }
-              ]
-            },
-            {
-              "type": "heading",
-              "props": {
-                "text": "Personas relacionadas",
-                "level": 2
-              }
-            },
-            {
-              "type": "container",
-              "props": {
-                "columns": 4
-              },
-              "children": [
-                {
-                  "type": "container",
-                  "props": {
-                    "direction": "column",
-                    "align": "start",
-                    "justify": "start",
-                    "wrap": "wrap"
-                  },
-                  "children": [
-                    {
-                      "type": "image",
-                      "props": {
-                        "src": "https://picsum.photos/seed/picsum/200/200",
-                        "alt": "Imagen de perfil",
-                        "width": "",
-                        "height": ""
-                      }
-                    },
-                    {
-                      "type": "paragraph",
-                      "props": {
-                        "text": "Lorem"
-                      }
-                    }
-                  ]
-                },
-                {
-                  "type": "container",
-                  "props": {
-                    "direction": "column",
-                    "align": "start",
-                    "justify": "start",
-                    "wrap": "wrap"
-                  },
-                  "children": [
-                    {
-                      "type": "image",
-                      "props": {
-                        "src": "https://picsum.photos/seed/1/200/200",
-                        "alt": "Imagen de perfil",
-                        "width": "",
-                        "height": ""
-                      }
-                    },
-                    {
-                      "type": "paragraph",
-                      "props": {
-                        "text": "Lorem"
-                      }
-                    }
-                  ]
-                },
-                {
-                  "type": "container",
-                  "props": {
-                    "direction": "column",
-                    "align": "start",
-                    "justify": "start",
-                    "wrap": "wrap"
-                  },
-                  "children": [
-                    {
-                      "type": "image",
-                      "props": {
-                        "src": "https://picsum.photos/seed/2/200/200",
-                        "alt": "Imagen de perfil",
-                        "width": "",
-                        "height": ""
-                      }
-                    },
-                    {
-                      "type": "paragraph",
-                      "props": {
-                        "text": "Lorem"
-                      }
-                    }
-                  ]
-                },
-                {
-                  "type": "container",
-                  "props": {
-                    "direction": "column",
-                    "align": "start",
-                    "justify": "start",
-                    "wrap": "wrap"
-                  },
-                  "children": [
-                    {
-                      "type": "image",
-                      "props": {
-                        "src": "https://picsum.photos/seed/3/200/200",
-                        "alt": "Imagen de perfil",
-                        "width": "",
-                        "height": ""
-                      }
-                    },
-                    {
-                      "type": "paragraph",
-                      "props": {
-                        "text": "Lorem"
-                      }
-                    }
-                  ]
-                },
-                {
-                  "type": "heading",
-                  "props": {
-                    "text": "Incidentes",
-                    "level": 3
-                  }
-                }
-              ]
-            },
-            {
-              "type": "container",
-              "props": {
-                "columns": 12,
-                "variant": "card",
-                "gap": "sm"
-              },
-              "children": [
-                {
-                  "type": "paragraph",
-                  "props": {
-                    "text": "Incidente #1"
-                  },
-                  "layout": {
-                    "span": 12
-                  }
-                },
-                {
-                  "type": "image",
-                  "props": {
-                    "src": "https://picsum.photos/seed/8/200/200",
-                    "alt": "Imagen de perfil",
-                    "width": "",
-                    "height": ""
-                  },
-                  "layout": {
-                    "span": 4
-                  }
-                },
-                {
-                  "type": "container",
-                  "props": {
-                    "direction": "column",
-                    "align": "start",
-                    "justify": "between",
-                    "wrap": "wrap"
-                  },
-                  "layout": {
-                    "span": 8
-                  },
-                  "children": [
-                    {
-                      "type": "heading",
-                      "props": {
-                        "text": "Robo reportado en la plaza durante la noche",
-                        "level": 4
-                      }
-                    },
-                    {
-                      "type": "button",
-                      "props": {
-                        "label": "Detalles",
-                        "action": {
-                          "type": "navigateTo",
-                          "pageId": "bootstrap-home"
-                        }
-                      }
-                    }
-                  ]
-                }
-              ]
-            },
-            {
-              "type": "container",
-              "props": {
-                "columns": 12,
-                "variant": "card",
-                "gap": "sm"
-              },
-              "children": [
-                {
-                  "type": "paragraph",
-                  "props": {
-                    "text": "Incidente #1"
-                  },
-                  "layout": {
-                    "span": 12
-                  }
-                },
-                {
-                  "type": "image",
-                  "props": {
-                    "src": "https://picsum.photos/seed/8/200/200",
-                    "alt": "Imagen de perfil",
-                    "width": "",
-                    "height": ""
-                  },
-                  "layout": {
-                    "span": 4
-                  }
-                },
-                {
-                  "type": "container",
-                  "props": {
-                    "direction": "column",
-                    "align": "start",
-                    "justify": "between",
-                    "wrap": "wrap"
-                  },
-                  "layout": {
-                    "span": 8
-                  },
-                  "children": [
-                    {
-                      "type": "heading",
-                      "props": {
-                        "text": "Robo reportado en la plaza durante la noche",
-                        "level": 4
-                      }
-                    },
-                    {
-                      "type": "button",
-                      "props": {
-                        "label": "Detalles",
-                        "action": {
-                          "type": "navigateTo",
-                          "pageId": "bootstrap-home"
-                        }
-                      }
-                    }
-                  ]
-                }
-              ]
-            },
-            {
-              "type": "container",
-              "props": {
-                "columns": 12,
-                "variant": "card",
-                "gap": "sm"
-              },
-              "children": [
-                {
-                  "type": "paragraph",
-                  "props": {
-                    "text": "Incidente #1"
-                  },
-                  "layout": {
-                    "span": 12
-                  }
-                },
-                {
-                  "type": "image",
-                  "props": {
-                    "src": "https://picsum.photos/seed/8/200/200",
-                    "alt": "Imagen de perfil",
-                    "width": "",
-                    "height": ""
-                  },
-                  "layout": {
-                    "span": 4
-                  }
-                },
-                {
-                  "type": "container",
-                  "props": {
-                    "direction": "column",
-                    "align": "start",
-                    "justify": "between",
-                    "wrap": "wrap"
-                  },
-                  "layout": {
-                    "span": 8
-                  },
-                  "children": [
-                    {
-                      "type": "heading",
-                      "props": {
-                        "text": "Robo reportado en la plaza durante la noche",
-                        "level": 4
-                      }
-                    },
-                    {
-                      "type": "button",
-                      "props": {
-                        "label": "Detalles",
-                        "action": {
-                          "type": "navigateTo",
-                          "pageId": "bootstrap-home"
-                        }
-                      }
-                    }
-                  ]
-                }
-              ]
-            }
-          ]
+            "text": "Consultar vehículos",
+            "level": 1
+          }
         }
       ]
     }
   ],
-  "initialPage": "bootstrap-home"
+  "initialPage": "home"
 }
