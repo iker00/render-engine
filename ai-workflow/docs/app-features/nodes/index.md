@@ -22,7 +22,13 @@ Los conceptos transversales (`visibility`, `queryStateFeedback`, referencias din
 | [heading-paragraph-list.md](./heading-paragraph-list.md) | `heading`, `paragraph`, `list` — nodos visuales simples con texto e items. |
 | [image.md](./image.md) | `<img>` declarativo, degradación cuando `src` o `alt` no resuelven. |
 | [table.md](./table.md) | Tablas semánticas de lectura, `headers`/`rows`/`columns`, filtros locales por columna, ordenación local, paginación local. |
-| [button.md](./button.md) | `button` y catálogo de acciones (`navigateTo`, `goBack`, `executeOperation`, `resetForm`). |
+| [button.md](./button.md) | `button` y catálogo de acciones (`navigateTo`, `goBack`, `executeOperation`, `resetForm`, `openModal`, `closeModal`). |
+
+## Nodos modales
+
+| Nodo | Cuándo leer la ficha |
+|---|---|
+| [modal.md](./modal.md) | `modal` como ventana flotante, `props.size`, `props.defaultOpen`, acciones `openModal`/`closeModal`, comportamiento en `repeater.props.template`. |
 
 ## Nodos de formulario
 

@@ -8,6 +8,7 @@ import {
   imageNodeSchema,
   inputNodeSchema,
   listNodeSchema,
+  modalNodeSchema,
   paragraphNodeSchema,
   radioGroupNodeSchema,
   repeaterNodeSchema,
@@ -23,6 +24,7 @@ const layoutNodeSchema: z.ZodType<unknown> = z.lazy(() =>
     containerNodeLooseSchema,
     repeaterNodeLooseSchema,
     formNodeLooseSchema,
+    modalNodeLooseSchema,
     headingNodeSchema,
     paragraphNodeSchema,
     listNodeSchema,
@@ -43,6 +45,10 @@ const containerNodeLooseSchema = containerNodeSchema.extend({
 })
 
 const formNodeLooseSchema = formNodeSchema.extend({
+  children: z.array(layoutNodeSchema).optional(),
+})
+
+const modalNodeLooseSchema = modalNodeSchema.extend({
   children: z.array(layoutNodeSchema).optional(),
 })
 

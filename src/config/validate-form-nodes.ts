@@ -1155,6 +1155,16 @@ function validateFormNodesInCollection(
       continue
     }
 
+    if (node.type === 'modal' && node.children) {
+      const childrenError = validateFormNodesInCollection(node.children, `${nodePath}.children`, pageId, context)
+
+      if (childrenError) {
+        return childrenError
+      }
+
+      continue
+    }
+
     if (node.type === 'repeater') {
       const templateError = validateFormNodesInCollection(node.props.template, `${nodePath}.props.template`, pageId, context)
 
@@ -1353,7 +1363,7 @@ function validateExecutionRequestParamsInCollection(
       }
     }
 
-    if ((node.type === 'container' || node.type === 'form') && node.children) {
+    if ((node.type === 'container' || node.type === 'form' || node.type === 'modal') && node.children) {
       const childError = validateExecutionRequestParamsInCollection(node.children, `${nodePath}.children`, pageId, api)
 
       if (childError) {

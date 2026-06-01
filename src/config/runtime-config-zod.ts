@@ -16,6 +16,7 @@ export const supportedNodeTypes = [
   'select',
   'radioGroup',
   'checkboxGroup',
+  'modal',
 ] as const
 export const supportedApiMethods = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'] as const
 export const supportedQueryStateFeedbackStates = ['idle', 'loading', 'error', 'empty', 'success'] as const
@@ -28,6 +29,7 @@ export const supportedContainerVariantValues = ['default', 'card'] as const
 export const supportedChoiceGroupOptionLayoutValues = ['vertical', 'inline'] as const
 export const supportedCollectionPaginationControlsVariants = ['previousNext', 'numbered', 'scroll'] as const
 export const supportedResponsiveBreakpoints = ['base', 'sm', 'md', 'lg', 'xl', '2xl'] as const
+export const supportedModalSizeValues = ['sm', 'md', 'lg'] as const
 
 const nonEmptyStringSchema = z.string().refine((value) => value.trim().length > 0)
 const nodeIdSchema = nonEmptyStringSchema
@@ -436,5 +438,37 @@ export const checkboxGroupNodeSchema = z
         optionLayout: z.enum(supportedChoiceGroupOptionLayoutValues).optional(),
       })
       .strip(),
+  })
+  .strip()
+
+export const modalNodeSchema = z
+  .object({
+    type: z.literal('modal'),
+    id: nodeIdSchema,
+    queryStateFeedback: queryStateFeedbackSchema.optional(),
+    visibility: visibilitySchema.optional(),
+    layout: layoutNodeLayoutSchema.optional(),
+    props: z
+      .object({
+        size: z.enum(supportedModalSizeValues).optional(),
+        defaultOpen: z.boolean().optional(),
+      })
+      .strip()
+      .optional(),
+    children: z.array(z.unknown()).optional(),
+  })
+  .strip()
+
+export const openModalRuntimeUiActionSchema = z
+  .object({
+    type: z.literal('openModal'),
+    modalId: nonEmptyStringSchema,
+  })
+  .strip()
+
+export const closeModalRuntimeUiActionSchema = z
+  .object({
+    type: z.literal('closeModal'),
+    modalId: nonEmptyStringSchema,
   })
   .strip()

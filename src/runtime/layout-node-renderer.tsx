@@ -14,6 +14,7 @@ import { HeadingNode } from './nodes/heading-layout-node'
 import { ImageNode } from './nodes/image-layout-node'
 import { InputNode } from './nodes/input-layout-node'
 import { ListNode } from './nodes/list-layout-node'
+import { ModalNode } from './nodes/modal-layout-node'
 import { ParagraphNode } from './nodes/paragraph-layout-node'
 import { RadioGroupNode } from './nodes/radio-group-layout-node'
 import { RepeaterNode } from './nodes/repeater-layout-node'
@@ -67,6 +68,9 @@ export function LayoutNodeRenderer({ node, renderedChildren, iterationContext }:
     case 'button':
       renderedNode = <ButtonNode node={node} iterationContext={iterationContext} />
       break
+    case 'modal':
+      renderedNode = <ModalNode node={node} iterationContext={iterationContext}>{renderedChildren}</ModalNode>
+      break
     case 'form':
       renderedNode = <FormNode node={node} iterationContext={iterationContext}>{renderedChildren}</FormNode>
       break
@@ -88,7 +92,7 @@ export function LayoutNodeRenderer({ node, renderedChildren, iterationContext }:
   }
 
   const gridChildSpanClassName =
-    node.type === 'repeater'
+    node.type === 'repeater' || node.type === 'modal'
       ? null
       : getGridChildSpanClassName(node.layout?.span, parentGridColumns)
 

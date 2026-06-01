@@ -17,6 +17,7 @@ import type {
 
 export interface RuntimeIterationContext {
   item: unknown
+  key: string
 }
 
 interface ResolveRuntimeReferenceOptions {

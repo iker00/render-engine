@@ -8,6 +8,7 @@ import type {
   LayoutNodeFeedbackFields,
   LayoutNodeType,
   ListLayoutNode,
+  ModalLayoutNode,
   ParagraphLayoutNode,
   QueryStateFeedbackConfig,
   QueryStateFeedbackFallbackRule,
@@ -30,6 +31,7 @@ import {
   headingNodeSchema,
   imageNodeSchema,
   listNodeSchema,
+  modalNodeSchema,
   paragraphNodeSchema,
   repeaterNodeSchema,
   supportedNodeTypes,
@@ -54,6 +56,7 @@ import {
 } from './validate-form-nodes'
 
 const collectionPathSegmentPattern = /^[A-Za-z0-9_-]+$/
+const modalAllowedChildTypes = new Set(['container', 'form', 'heading', 'paragraph', 'list', 'image', 'table', 'button', 'repeater'])
 
 export function validateLayoutCollection(
   rawNodes: unknown,
@@ -128,6 +131,8 @@ export function validateLayoutNode(
       return validateRadioGroupNode(rawNode, path, pageId)
     case 'checkboxGroup':
       return validateCheckboxGroupNode(rawNode, path, pageId)
+    case 'modal':
+      return validateModalNode(rawNode, path, pageId)
   }
 
   return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.type".`)
@@ -987,6 +992,90 @@ export function mapLayoutNodeIssue(
   }
 
   return null
+}
+
+function validateModalNode(
+  rawNode: Record<string, unknown>,
+  path: string,
+  pageId: string,
+): { status: 'ready'; node: ModalLayoutNode } | { status: 'error'; error: RuntimeConfigError } {
+  const parseResult = modalNodeSchema.safeParse(rawNode)
+
+  if (!parseResult.success) {
+    const issue = parseResult.error.issues[0]
+    const issuePath = issue?.path ?? []
+
+    const feedbackIssue = mapQueryStateFeedbackIssue(pageId, path, issue)
+    if (feedbackIssue) return feedbackIssue
+
+    const visibilityIssue = mapVisibilityIssue(pageId, path, issue)
+    if (visibilityIssue) return visibilityIssue
+
+    if (issuePath[0] === 'id') {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.id".`)
+    }
+
+    if (issuePath[0] === 'props' && issuePath[1] === 'size') {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.size".`)
+    }
+
+    if (issuePath[0] === 'props' && issuePath[1] === 'defaultOpen') {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.defaultOpen".`)
+    }
+
+    const layoutIssue = mapLayoutNodeIssue(pageId, path, issuePath)
+    if (layoutIssue) return layoutIssue
+
+    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}".`)
+  }
+
+  const feedbackResult = validateQueryStateFeedback(
+    parseResult.data.queryStateFeedback as LayoutNodeFeedbackFields['queryStateFeedback'],
+    `${path}.queryStateFeedback`,
+    pageId,
+  )
+
+  if (feedbackResult.status === 'error') return feedbackResult
+
+  const visibilityResult = validateVisibility(
+    parseResult.data.visibility as LayoutNodeFeedbackFields['visibility'],
+    `${path}.visibility`,
+    pageId,
+  )
+
+  if (visibilityResult.status === 'error') return visibilityResult
+
+  let children: LayoutNodeCollection | undefined
+
+  if (parseResult.data.children !== undefined) {
+    for (let i = 0; i < parseResult.data.children.length; i += 1) {
+      const child = parseResult.data.children[i]
+      const childType = isRecord(child) ? String(child.type) : undefined
+
+      if (!childType || !modalAllowedChildTypes.has(childType)) {
+        return invalidLayout(
+          `Page "${pageId}" has an invalid layout at "${path}.children[${i}]": modal children may only be container, form, heading, paragraph, list, image, table, button or repeater nodes.`,
+        )
+      }
+    }
+
+    const childrenResult = validateLayoutCollection(parseResult.data.children, `${path}.children`, pageId)
+    if (childrenResult.status === 'error') return childrenResult
+    children = childrenResult.nodes
+  }
+
+  return {
+    status: 'ready',
+    node: {
+      type: 'modal',
+      id: parseResult.data.id,
+      queryStateFeedback: feedbackResult.queryStateFeedback,
+      visibility: visibilityResult.visibility,
+      layout: parseResult.data.layout,
+      props: parseResult.data.props,
+      children,
+    },
+  }
 }
 
 function validateButtonNode(

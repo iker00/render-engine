@@ -31,17 +31,29 @@ export function createRuntimeState(config: RuntimeConfig): RuntimeState {
       preloadNames: initialPage?.preloads?.map((preload) => preload.operationName) ?? [],
       status: 'idle',
     }),
+    modal: {
+      activeModalId: null,
+      activeIterationKey: null,
+    },
   }
 }
 
-export function runtimeStateReducer(state: RuntimeState, action: RuntimeStateAction): RuntimeState {
+const closedModalState = { activeModalId: null, activeIterationKey: null } as const
+
+export function runtimeStateReducer(stateIn: RuntimeState, action: RuntimeStateAction): RuntimeState {
+  // Normalize state that predates the modal domain (e.g. preserved across a dev HMR reload)
+  const state: RuntimeState = stateIn.modal == null ? { ...stateIn, modal: closedModalState } : stateIn
   switch (action.type) {
     case 'runtime/reset':
       return action.payload.state
-    case 'navigation/sync-from-browser':
-      return synchronizeNavigationWithEntry(state, action.payload.pageId, action.payload.params)
-    case 'navigation/navigate':
-      return appendNavigationEntry(state, action.payload.pageId, action.payload.params)
+    case 'navigation/sync-from-browser': {
+      const next = synchronizeNavigationWithEntry(state, action.payload.pageId, action.payload.params)
+      return { ...next, modal: closedModalState }
+    }
+    case 'navigation/navigate': {
+      const next = appendNavigationEntry(state, action.payload.pageId, action.payload.params)
+      return { ...next, modal: closedModalState }
+    }
     case 'navigation/go-back': {
       if (state.navigation.currentEntryIndex < 1) {
         return {
@@ -83,6 +95,7 @@ export function runtimeStateReducer(state: RuntimeState, action: RuntimeStateAct
           preloadNames: action.payload.preloadNames,
           status: 'idle',
         }),
+        modal: closedModalState,
       }
     case 'page-entry/start-preload-batch':
       return {
@@ -98,6 +111,7 @@ export function runtimeStateReducer(state: RuntimeState, action: RuntimeStateAct
           preloadNames: action.payload.preloadNames,
           status: 'loading',
         }),
+        modal: closedModalState,
       }
     case 'page-entry/set-loading':
       return {
@@ -242,6 +256,36 @@ export function runtimeStateReducer(state: RuntimeState, action: RuntimeStateAct
         queries: {
           ...state.queries,
           [action.payload.queryName]: createRuntimeQueryState(),
+        },
+      }
+    case 'modal/open':
+      return {
+        ...state,
+        modal: {
+          activeModalId: action.payload.modalId,
+          activeIterationKey: action.payload.iterationKey ?? null,
+        },
+      }
+    case 'modal/close':
+      if (
+        state.modal.activeModalId === action.payload.modalId &&
+        state.modal.activeIterationKey === (action.payload.iterationKey ?? null)
+      ) {
+        return {
+          ...state,
+          modal: {
+            activeModalId: null,
+            activeIterationKey: null,
+          },
+        }
+      }
+      return state
+    case 'modal/close-all':
+      return {
+        ...state,
+        modal: {
+          activeModalId: null,
+          activeIterationKey: null,
         },
       }
     default:

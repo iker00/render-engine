@@ -13,6 +13,7 @@ export type LayoutNodeType =
   | 'select'
   | 'radioGroup'
   | 'checkboxGroup'
+  | 'modal'
 export type RuntimeApiMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
 export type RuntimeApiQueryValue = string | number | boolean
 export type RuntimeApiQuery = Record<string, RuntimeApiQueryValue>
@@ -351,6 +352,20 @@ export interface CheckboxGroupLayoutNode extends LayoutNodeFeedbackFields, Layou
   children?: unknown
 }
 
+export type ModalSize = 'sm' | 'md' | 'lg'
+
+export interface ModalLayoutNodeProps {
+  size?: ModalSize
+  defaultOpen?: boolean
+}
+
+export interface ModalLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayoutFields {
+  type: 'modal'
+  id: string
+  props?: ModalLayoutNodeProps
+  children?: LayoutNode[]
+}
+
 export interface NavigateToRuntimeUiAction {
   type: 'navigateTo'
   pageId: string
@@ -371,11 +386,25 @@ export interface ResetFormRuntimeUiAction {
   formId: string
 }
 
+export interface OpenModalRuntimeUiAction {
+  type: 'openModal'
+  modalId: string
+}
+
+export interface CloseModalRuntimeUiAction {
+  type: 'closeModal'
+  modalId: string
+}
+
+export type RuntimeUiActionType = 'navigateTo' | 'goBack' | 'executeOperation' | 'resetForm' | 'openModal' | 'closeModal'
+
 export type RuntimeUiAction =
   | NavigateToRuntimeUiAction
   | GoBackRuntimeUiAction
   | ExecuteOperationRuntimeUiAction
   | ResetFormRuntimeUiAction
+  | OpenModalRuntimeUiAction
+  | CloseModalRuntimeUiAction
 
 export type NavigateToButtonAction = NavigateToRuntimeUiAction
 export type GoBackButtonAction = GoBackRuntimeUiAction
@@ -406,6 +435,7 @@ export type LayoutNode =
   | SelectLayoutNode
   | RadioGroupLayoutNode
   | CheckboxGroupLayoutNode
+  | ModalLayoutNode
 
 export type LayoutNodeCollection = LayoutNode[]
 

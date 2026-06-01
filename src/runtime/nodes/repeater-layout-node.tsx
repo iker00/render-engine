@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Dispatch, SetStateAction } from 'react'
 import type {
+  LayoutNode,
   RepeaterLayoutNode,
   RuntimeCollectionPaginationControlsVariant,
   RuntimeResponsiveLayoutValue,
@@ -19,7 +20,8 @@ import {
 } from '../runtime-node-styling'
 import type { RuntimeIterationContext } from '../runtime-references/runtime-reference-resolver'
 import { resolveRuntimeReference } from '../runtime-references/runtime-reference-resolver'
-import { useRuntimeState } from '../runtime-state/runtime-state-provider'
+import { useRuntimeState, useRuntimeStateActions } from '../runtime-state/runtime-state-provider'
+import { selectActiveModal } from '../runtime-state/runtime-state-selectors'
 
 interface RepeaterNodeProps {
   node: RepeaterLayoutNode
@@ -32,15 +34,29 @@ interface RepeaterIteration {
 
 export function RepeaterNode({ node }: RepeaterNodeProps) {
   const state = useRuntimeState()
+  const { closeModal } = useRuntimeStateActions()
   const { parentGridColumns } = useRuntimeLayoutContext()
   const items = resolveRepeaterItems(node.props.items.source, state)
   const pageSize = node.props.pagination?.pageSize
   const paginationControlsVariant = node.props.pagination?.controls?.variant ?? 'previousNext'
   const iterations = useMemo(() => resolveRepeaterIterations(node, items), [node, items])
+  const templateModalIds = useMemo(() => collectModalIdsFromTemplate(node.props.template), [node.props.template])
   const paginationStateKey = useMemo(
     () => `${paginationControlsVariant}:${pageSize ?? 'all'}:${iterations.map((iteration) => iteration.key).join('|')}`,
     [iterations, pageSize, paginationControlsVariant],
   )
+  const activeModal = selectActiveModal(state)
+
+  useEffect(() => {
+    if (!activeModal.activeModalId || !activeModal.activeIterationKey) return
+    if (!templateModalIds.has(activeModal.activeModalId)) return
+    const iterationKeys = new Set(iterations.map((iter) => iter.key))
+    if (!iterationKeys.has(activeModal.activeIterationKey)) {
+      closeModal(activeModal.activeModalId, {
+        iterationContext: { item: null, key: activeModal.activeIterationKey },
+      })
+    }
+  }, [iterations, activeModal, closeModal, templateModalIds])
 
   return (
     <RepeaterNodeContent
@@ -89,7 +105,7 @@ function RepeaterNodeContent({
   return (
     <>
       {visibleIterations.map((iteration) => {
-        const iterationContext: RuntimeIterationContext = { item: iteration.item }
+        const iterationContext: RuntimeIterationContext = { item: iteration.item, key: iteration.key }
 
         return <LayoutRenderer key={iteration.key} nodes={node.props.template} iterationContext={iterationContext} />
       })}
@@ -335,6 +351,26 @@ function resolveRepeaterItemKey(item: unknown, path: string): string | number | 
   }
 
   return typeof currentValue === 'string' || typeof currentValue === 'number' ? currentValue : null
+}
+
+function collectModalIdsFromTemplate(template: readonly LayoutNode[]): Set<string> {
+  const ids = new Set<string>()
+  for (const node of template) {
+    if (node.type === 'modal') {
+      ids.add(node.id)
+    }
+    if ('children' in node && Array.isArray(node.children)) {
+      for (const id of collectModalIdsFromTemplate(node.children as LayoutNode[])) {
+        ids.add(id)
+      }
+    }
+    if (node.type === 'repeater') {
+      for (const id of collectModalIdsFromTemplate(node.props.template)) {
+        ids.add(id)
+      }
+    }
+  }
+  return ids
 }
 
 function reportRepeaterKeyDiagnostic(

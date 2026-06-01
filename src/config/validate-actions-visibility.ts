@@ -1,7 +1,9 @@
 import type {
+  CloseModalRuntimeUiAction,
   ExecuteOperationRuntimeUiAction,
   GoBackButtonAction,
   NavigateToButtonAction,
+  OpenModalRuntimeUiAction,
   ResetFormRuntimeUiAction,
   RuntimeApiConfig,
   RuntimeApiHeaders,
@@ -18,9 +20,11 @@ import type {
   LayoutNodeFeedbackFields,
 } from './runtime-config-types'
 import {
+  closeModalRuntimeUiActionSchema,
   executeOperationRuntimeUiActionSchema,
   goBackButtonActionSchema,
   navigateToButtonActionSchema,
+  openModalRuntimeUiActionSchema,
   resetFormRuntimeUiActionSchema,
   runtimeApiQuerySchema,
   runtimeApiHeadersSchema,
@@ -46,7 +50,9 @@ export function validateRuntimeUiAction(
     rawAction.type !== 'navigateTo' &&
     rawAction.type !== 'goBack' &&
     rawAction.type !== 'executeOperation' &&
-    rawAction.type !== 'resetForm'
+    rawAction.type !== 'resetForm' &&
+    rawAction.type !== 'openModal' &&
+    rawAction.type !== 'closeModal'
   ) {
     return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.type".`)
   }
@@ -125,13 +131,43 @@ export function validateRuntimeUiAction(
     }
   }
 
-  const resetFormParseResult = resetFormRuntimeUiActionSchema.safeParse(rawAction)
+  if (rawAction.type === 'resetForm') {
+    const resetFormParseResult = resetFormRuntimeUiActionSchema.safeParse(rawAction)
 
-  if (!resetFormParseResult.success) {
-    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.formId".`)
+    if (!resetFormParseResult.success) {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.formId".`)
+    }
+
+    const action: ResetFormRuntimeUiAction = resetFormParseResult.data
+
+    return {
+      status: 'ready',
+      action,
+    }
   }
 
-  const action: ResetFormRuntimeUiAction = resetFormParseResult.data
+  if (rawAction.type === 'openModal') {
+    const parseResult = openModalRuntimeUiActionSchema.safeParse(rawAction)
+
+    if (!parseResult.success) {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.modalId".`)
+    }
+
+    const action: OpenModalRuntimeUiAction = parseResult.data
+
+    return {
+      status: 'ready',
+      action,
+    }
+  }
+
+  const closeModalParseResult = closeModalRuntimeUiActionSchema.safeParse(rawAction)
+
+  if (!closeModalParseResult.success) {
+    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.modalId".`)
+  }
+
+  const action: CloseModalRuntimeUiAction = closeModalParseResult.data
 
   return {
     status: 'ready',
@@ -532,7 +568,7 @@ function findInvalidActionTarget(
       }
     }
 
-    if ((node.type === 'container' || node.type === 'form') && node.children) {
+    if ((node.type === 'container' || node.type === 'form' || node.type === 'modal') && node.children) {
       const childResult = findInvalidActionTarget(node.children, `${nodePath}.children`, pageIds, operationNames)
 
       if (childResult) {

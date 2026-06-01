@@ -12,6 +12,8 @@ export interface RuntimeUiActionHandlers {
     params?: NavigateToRuntimeUiAction['params'],
     options?: { iterationContext?: RuntimeIterationContext },
   ) => void
+  openModal: (modalId: string, options?: { iterationContext?: RuntimeIterationContext }) => void
+  closeModal: (modalId: string, options?: { iterationContext?: RuntimeIterationContext }) => void
   resetForm: (formId: string) => void
 }
 
@@ -38,6 +40,12 @@ export function executeRuntimeUiAction(
         },
         iterationContext: options?.iterationContext,
       })
+      return
+    case 'openModal':
+      handlers.openModal(action.modalId, { iterationContext: options?.iterationContext })
+      return
+    case 'closeModal':
+      handlers.closeModal(action.modalId, { iterationContext: options?.iterationContext })
       return
     case 'resetForm':
       handlers.resetForm(action.formId)

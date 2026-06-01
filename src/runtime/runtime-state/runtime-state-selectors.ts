@@ -139,6 +139,19 @@ export function selectNestedQueryDataValue(state: RuntimeState, queryName: strin
   } as const
 }
 
+export function selectActiveModal(state: RuntimeState) {
+  return state.modal ?? { activeModalId: null, activeIterationKey: null }
+}
+
+export function isModalOpen(state: RuntimeState, modalId: string, iterationKey?: string): boolean {
+  const modal = state.modal
+  if (modal == null) return false
+  return (
+    modal.activeModalId === modalId &&
+    modal.activeIterationKey === (iterationKey ?? null)
+  )
+}
+
 function isArrayIndexSegment(segment: string) {
   return /^(0|[1-9]\d*)$/.test(segment)
 }

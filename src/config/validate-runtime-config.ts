@@ -1,4 +1,5 @@
 import type {
+  LayoutNode,
   LayoutNodeCollection,
   RuntimeConfig,
   RuntimeConfigError,
@@ -147,11 +148,163 @@ export function validateRuntimeConfig(rawConfig: unknown): RuntimeConfigValidati
     return requestParamsError
   }
 
+  const modalRefsError = validateModalReferences(config)
+
+  if (modalRefsError) {
+    return modalRefsError
+  }
+
   return {
     status: 'ready',
     config,
     page,
   }
+}
+
+function validateModalReferences(
+  config: RuntimeConfig,
+): { status: 'error'; error: RuntimeConfigError } | null {
+  const seenModalIds = new Map<string, string>()
+
+  for (const page of config.pages) {
+    const error = collectModalIds(page.layout, 'layout', page.id, seenModalIds)
+    if (error) return error
+  }
+
+  for (const page of config.pages) {
+    const error = checkModalRefs(page.layout, 'layout', page.id, seenModalIds, false)
+    if (error) return error
+  }
+
+  return null
+}
+
+function collectModalIds(
+  nodes: LayoutNodeCollection,
+  path: string,
+  pageId: string,
+  seenModalIds: Map<string, string>,
+): { status: 'error'; error: RuntimeConfigError } | null {
+  for (let i = 0; i < nodes.length; i += 1) {
+    const node = nodes[i]
+    const nodePath = `${path}[${i}]`
+
+    const fallbackError = collectModalIdsInFallbacks(node, nodePath, seenModalIds)
+    if (fallbackError) return fallbackError
+
+    if (node.type === 'modal') {
+      if (seenModalIds.has(node.id)) {
+        return invalidLayout(`Page "${pageId}" has an invalid layout at "${nodePath}.id": duplicate modal id "${node.id}".`)
+      }
+      seenModalIds.set(node.id, nodePath)
+
+      if (node.children) {
+        const error = collectModalIds(node.children, `${nodePath}.children`, pageId, seenModalIds)
+        if (error) return error
+      }
+    } else if ((node.type === 'container' || node.type === 'form') && node.children) {
+      const error = collectModalIds(node.children, `${nodePath}.children`, pageId, seenModalIds)
+      if (error) return error
+    } else if (node.type === 'repeater') {
+      const error = collectModalIds(node.props.template, `${nodePath}.props.template`, pageId, seenModalIds)
+      if (error) return error
+    }
+  }
+
+  return null
+}
+
+function collectModalIdsInFallbacks(
+  node: LayoutNode,
+  nodePath: string,
+  seenModalIds: Map<string, string>,
+): { status: 'error'; error: RuntimeConfigError } | null {
+  if (!node.queryStateFeedback?.states) return null
+
+  for (const [stateName, rule] of Object.entries(node.queryStateFeedback.states)) {
+    if (!rule || rule.mode !== 'fallback') continue
+
+    const error = collectModalIds(
+      [...rule.fallback],
+      `${nodePath}.queryStateFeedback.states.${stateName}.fallback`,
+      nodePath,
+      seenModalIds,
+    )
+    if (error) return error
+  }
+
+  return null
+}
+
+function checkModalRefs(
+  nodes: LayoutNodeCollection,
+  path: string,
+  pageId: string,
+  modalIds: Map<string, string>,
+  insideRepeaterTemplate: boolean,
+): { status: 'error'; error: RuntimeConfigError } | null {
+  for (let i = 0; i < nodes.length; i += 1) {
+    const node = nodes[i]
+    const nodePath = `${path}[${i}]`
+
+    const fallbackError = checkModalRefsInFallbacks(node, nodePath, pageId, modalIds, insideRepeaterTemplate)
+    if (fallbackError) return fallbackError
+
+    if (node.type === 'button' && node.props.action) {
+      const { action } = node.props
+      if ((action.type === 'openModal' || action.type === 'closeModal') && !modalIds.has(action.modalId)) {
+        return invalidLayout(
+          `Page "${pageId}" has an invalid layout at "${nodePath}.props.action.modalId": unknown modal "${action.modalId}".`,
+        )
+      }
+    }
+
+    if (node.type === 'modal') {
+      if (insideRepeaterTemplate && node.props?.defaultOpen === true) {
+        return invalidLayout(
+          `Page "${pageId}" has an invalid layout at "${nodePath}.props.defaultOpen": modal defaultOpen is not supported inside a repeater template.`,
+        )
+      }
+
+      if (node.children) {
+        const error = checkModalRefs(node.children, `${nodePath}.children`, pageId, modalIds, insideRepeaterTemplate)
+        if (error) return error
+      }
+    } else if ((node.type === 'container' || node.type === 'form') && node.children) {
+      const error = checkModalRefs(node.children, `${nodePath}.children`, pageId, modalIds, insideRepeaterTemplate)
+      if (error) return error
+    } else if (node.type === 'repeater') {
+      const error = checkModalRefs(node.props.template, `${nodePath}.props.template`, pageId, modalIds, true)
+      if (error) return error
+    }
+  }
+
+  return null
+}
+
+function checkModalRefsInFallbacks(
+  node: LayoutNode,
+  nodePath: string,
+  pageId: string,
+  modalIds: Map<string, string>,
+  insideRepeaterTemplate: boolean,
+): { status: 'error'; error: RuntimeConfigError } | null {
+  if (!node.queryStateFeedback?.states) return null
+
+  for (const [stateName, rule] of Object.entries(node.queryStateFeedback.states)) {
+    if (!rule || rule.mode !== 'fallback') continue
+
+    const error = checkModalRefs(
+      [...rule.fallback],
+      `${nodePath}.queryStateFeedback.states.${stateName}.fallback`,
+      pageId,
+      modalIds,
+      insideRepeaterTemplate,
+    )
+    if (error) return error
+  }
+
+  return null
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

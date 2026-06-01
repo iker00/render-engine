@@ -566,7 +566,59 @@ describe('validateRuntimeConfig', () => {
         message: 'Page "home" has an invalid layout at "layout[0].props.action.type".',
       },
     })
+  })
 
+  it('accepts a button with an openModal action referencing a declared modal', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithPages([
+        {
+          id: 'home',
+          layout: [
+            { type: 'modal', id: 'dialog' },
+            {
+              type: 'button',
+              props: { label: 'Open', action: { type: 'openModal', modalId: 'dialog' } },
+            },
+          ],
+        },
+      ]),
+    )
+    expect(result.status).toBe('ready')
+    if (result.status === 'ready') {
+      const button = result.config.pages[0].layout[1]
+      expect(button).toEqual({
+        type: 'button',
+        props: { label: 'Open', action: { type: 'openModal', modalId: 'dialog' } },
+      })
+    }
+  })
+
+  it('accepts a button with a closeModal action referencing a declared modal', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithPages([
+        {
+          id: 'home',
+          layout: [
+            { type: 'modal', id: 'dialog' },
+            {
+              type: 'button',
+              props: { label: 'Close', action: { type: 'closeModal', modalId: 'dialog' } },
+            },
+          ],
+        },
+      ]),
+    )
+    expect(result.status).toBe('ready')
+    if (result.status === 'ready') {
+      const button = result.config.pages[0].layout[1]
+      expect(button).toEqual({
+        type: 'button',
+        props: { label: 'Close', action: { type: 'closeModal', modalId: 'dialog' } },
+      })
+    }
+  })
+
+  it('rejects openModal action without modalId', () => {
     expect(
       validateRuntimeConfig(
         createConfigWithPages([
@@ -575,12 +627,7 @@ describe('validateRuntimeConfig', () => {
             layout: [
               {
                 type: 'button',
-                props: {
-                  label: 'Broken',
-                  action: {
-                    type: 'openModal',
-                  },
-                },
+                props: { label: 'Broken', action: { type: 'openModal' } },
               },
             ],
           },
@@ -591,7 +638,82 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].props.action.type".',
+        message: 'Page "home" has an invalid layout at "layout[0].props.action.modalId".',
+      },
+    })
+  })
+
+  it('rejects openModal action with empty modalId', () => {
+    expect(
+      validateRuntimeConfig(
+        createConfigWithPages([
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'button',
+                props: { label: 'Broken', action: { type: 'openModal', modalId: '   ' } },
+              },
+            ],
+          },
+        ]),
+      ),
+    ).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message: 'Page "home" has an invalid layout at "layout[0].props.action.modalId".',
+      },
+    })
+  })
+
+  it('rejects closeModal action without modalId', () => {
+    expect(
+      validateRuntimeConfig(
+        createConfigWithPages([
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'button',
+                props: { label: 'Broken', action: { type: 'closeModal' } },
+              },
+            ],
+          },
+        ]),
+      ),
+    ).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message: 'Page "home" has an invalid layout at "layout[0].props.action.modalId".',
+      },
+    })
+  })
+
+  it('rejects closeModal action with empty modalId', () => {
+    expect(
+      validateRuntimeConfig(
+        createConfigWithPages([
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'button',
+                props: { label: 'Broken', action: { type: 'closeModal', modalId: '' } },
+              },
+            ],
+          },
+        ]),
+      ),
+    ).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message: 'Page "home" has an invalid layout at "layout[0].props.action.modalId".',
       },
     })
   })

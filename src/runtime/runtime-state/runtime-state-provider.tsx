@@ -545,6 +545,32 @@ export function useRuntimeStateActions() {
     [dispatchAndSyncState],
   )
 
+  const openModal = useCallback(
+    (modalId: string, options?: { iterationContext?: RuntimeIterationContext }) => {
+      dispatchAndSyncState({
+        type: 'modal/open',
+        payload: {
+          modalId,
+          iterationKey: options?.iterationContext?.key,
+        },
+      })
+    },
+    [dispatchAndSyncState],
+  )
+
+  const closeModal = useCallback(
+    (modalId: string, options?: { iterationContext?: RuntimeIterationContext }) => {
+      dispatchAndSyncState({
+        type: 'modal/close',
+        payload: {
+          modalId,
+          iterationKey: options?.iterationContext?.key,
+        },
+      })
+    },
+    [dispatchAndSyncState],
+  )
+
   const resetForm = useCallback(
     (formId: string) => {
       dispatchAndSyncState({
@@ -663,6 +689,8 @@ export function useRuntimeStateActions() {
       initializeForm,
       initializeQuery,
       navigateToPage,
+      openModal,
+      closeModal,
       removeForm,
       resetQuery,
       resetForm,
@@ -691,6 +719,8 @@ export function useRuntimeStateActions() {
       initializeForm,
       initializeQuery,
       navigateToPage,
+      openModal,
+      closeModal,
       removeForm,
       resetForm,
       resetQuery,

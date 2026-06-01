@@ -41,6 +41,7 @@ src/tests/
 - `runtime-config-validation-repeater.test.ts` — nodo repeater: fuente, key, template, paginación (~390 líneas)
 - `runtime-config-validation-containers.test.ts` — contrato de layout de contenedores (~959 líneas)
 - `runtime-config-validation-image-table.test.ts` — validación de nodos image y table (~635 líneas)
+- `runtime-config-validation-modal.test.ts` — validación de nodo modal: shape, children permitidos, unicidad de id, referencias modalId, prohibición de defaultOpen en repeater (~700 líneas)
 
 ## layout-renderer/
 
@@ -56,6 +57,8 @@ src/tests/
 - `layout-renderer-repeater-basic.test.tsx` — iteraciones, orden de colección, resolución item.*, key diagnostics (~230 líneas)
 - `layout-renderer-repeater-pagination.test.tsx` — controles previousNext, numbered, scroll, grid row (~530 líneas)
 - `layout-renderer-repeater-state.test.tsx` — resets por colección/pageSize, repeaters independientes, scalar items, qsf+visibility (~400 líneas)
+- `layout-renderer-modal.test.tsx` — render condicional del modal, apertura/cierre por botón/ESC/overlay, tamaños, defaultOpen, visibility, focus trap (~500 líneas)
+- `layout-renderer-modal-repeater.test.tsx` — modal dentro de repeater.props.template, identidad por iteración, item.* en modal, cierre global uno a la vez (~400 líneas)
 
 ## runtime-state/
 
@@ -68,6 +71,7 @@ src/tests/
 - `runtime-state-validations-visibility.test.tsx` — campos requeridos ocultos por visibility/qsf/container/repeater (~490 líneas)
 - `runtime-state-validations-rules.test.tsx` — reglas avanzadas: length/number/multiselect, inicialización lazy, revalidación en edición (~520 líneas)
 - `runtime-state-validations-dynamic-select.test.tsx` — select dinámico: limpieza de valor, submit con empty, formularios declarativos (~270 líneas)
+- `runtime-state-modal.test.tsx` — estado del modal, acción open/close, regla uno a la vez, cierre por navegación/page-entry, identidad por iteración (~350 líneas)
 
 ## runtime/
 

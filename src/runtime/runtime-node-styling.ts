@@ -747,3 +747,28 @@ export function getChoiceOptionClassName(optionLayout: ChoiceGroupOptionLayout =
     ? 'flex max-w-full items-start gap-2.5 text-sm leading-5 text-app-text'
     : 'flex items-start gap-2.5 text-sm leading-5 text-app-text'
 }
+
+export function getModalOverlayClassName() {
+  return 'fixed inset-0 z-50 flex items-center justify-center bg-black/50'
+}
+
+const modalPanelSizeClassMap: Record<string, string> = {
+  sm: 'max-w-sm',
+  md: 'max-w-md',
+  lg: 'max-w-lg',
+}
+
+export function getModalPanelClassName(size: 'sm' | 'md' | 'lg' = 'md') {
+  return [
+    'relative',
+    'w-full',
+    modalPanelSizeClassMap[size] ?? modalPanelSizeClassMap.md,
+    'rounded-card',
+    'border',
+    'border-app-border-soft',
+    'bg-white',
+    'p-6',
+    'shadow-shell',
+    'sm:p-8',
+  ].join(' ')
+}

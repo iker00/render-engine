@@ -15,7 +15,7 @@ interface ButtonNodeProps {
 
 export function ButtonNode({ node, iterationContext }: ButtonNodeProps) {
   const state = useRuntimeState()
-  const { executeQueryOperation, goBackPage, navigateToPage, resetForm } = useRuntimeStateActions()
+  const { executeQueryOperation, goBackPage, navigateToPage, openModal, closeModal, resetForm } = useRuntimeStateActions()
   const formContext = useOptionalFormContext()
   const action = node.props.action
   const isImplicitSubmit = action === undefined && formContext !== null
@@ -34,6 +34,8 @@ export function ButtonNode({ node, iterationContext }: ButtonNodeProps) {
                 executeQueryOperation,
                 goBackPage,
                 navigateToPage,
+                openModal,
+                closeModal,
                 resetForm,
               }, { iterationContext })
           : undefined

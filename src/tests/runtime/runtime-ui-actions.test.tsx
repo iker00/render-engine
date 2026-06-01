@@ -22,6 +22,10 @@ const runtimeStateMock = {
     preloadNames: [],
     status: 'idle',
   },
+  modal: {
+    activeModalId: null,
+    activeIterationKey: null,
+  },
 }
 
 vi.mock('../../runtime/runtime-state/runtime-state-provider', () => ({
@@ -39,6 +43,8 @@ describe('executeRuntimeUiAction', () => {
       executeQueryOperation: vi.fn(),
       goBackPage: vi.fn(),
       navigateToPage: vi.fn(),
+      openModal: vi.fn(),
+      closeModal: vi.fn(),
       resetForm: vi.fn(),
     }
   }
@@ -161,6 +167,80 @@ describe('executeRuntimeUiAction', () => {
     expect(handlers.goBackPage).not.toHaveBeenCalled()
     expect(handlers.executeQueryOperation).not.toHaveBeenCalled()
   })
+
+  it('maps openModal to openModal handler only', () => {
+    const handlers = createHandlers()
+
+    runtimeUiActionExecutor.executeRuntimeUiAction(
+      {
+        type: 'openModal',
+        modalId: 'my-modal',
+      },
+      handlers,
+    )
+
+    expect(handlers.openModal).toHaveBeenCalledWith('my-modal', {
+      iterationContext: undefined,
+    })
+    expect(handlers.closeModal).not.toHaveBeenCalled()
+    expect(handlers.navigateToPage).not.toHaveBeenCalled()
+    expect(handlers.goBackPage).not.toHaveBeenCalled()
+    expect(handlers.executeQueryOperation).not.toHaveBeenCalled()
+    expect(handlers.resetForm).not.toHaveBeenCalled()
+  })
+
+  it('maps closeModal to closeModal handler only', () => {
+    const handlers = createHandlers()
+
+    runtimeUiActionExecutor.executeRuntimeUiAction(
+      {
+        type: 'closeModal',
+        modalId: 'my-modal',
+      },
+      handlers,
+    )
+
+    expect(handlers.closeModal).toHaveBeenCalledWith('my-modal', {
+      iterationContext: undefined,
+    })
+    expect(handlers.openModal).not.toHaveBeenCalled()
+    expect(handlers.navigateToPage).not.toHaveBeenCalled()
+    expect(handlers.goBackPage).not.toHaveBeenCalled()
+    expect(handlers.executeQueryOperation).not.toHaveBeenCalled()
+    expect(handlers.resetForm).not.toHaveBeenCalled()
+  })
+
+  it('propagates iterationContext to openModal', () => {
+    const handlers = createHandlers()
+    const iterationContext = { item: { id: 'row-1' }, key: 'row-1' }
+
+    runtimeUiActionExecutor.executeRuntimeUiAction(
+      {
+        type: 'openModal',
+        modalId: 'my-modal',
+      },
+      handlers,
+      { iterationContext },
+    )
+
+    expect(handlers.openModal).toHaveBeenCalledWith('my-modal', { iterationContext })
+  })
+
+  it('propagates iterationContext to closeModal', () => {
+    const handlers = createHandlers()
+    const iterationContext = { item: { id: 'row-2' }, key: 'row-2' }
+
+    runtimeUiActionExecutor.executeRuntimeUiAction(
+      {
+        type: 'closeModal',
+        modalId: 'my-modal',
+      },
+      handlers,
+      { iterationContext },
+    )
+
+    expect(handlers.closeModal).toHaveBeenCalledWith('my-modal', { iterationContext })
+  })
 })
 
 describe('ButtonNode', () => {
@@ -180,6 +260,8 @@ describe('ButtonNode', () => {
       executeQueryOperation: vi.fn(),
       goBackPage: vi.fn(),
       navigateToPage: vi.fn(),
+      openModal: vi.fn(),
+      closeModal: vi.fn(),
       resetForm: vi.fn(),
     }
 
@@ -220,6 +302,8 @@ describe('ButtonNode', () => {
       executeQueryOperation: vi.fn(),
       goBackPage: vi.fn(),
       navigateToPage: vi.fn(),
+      openModal: vi.fn(),
+      closeModal: vi.fn(),
       resetForm: vi.fn(),
     }
 

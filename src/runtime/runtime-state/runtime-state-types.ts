@@ -58,11 +58,17 @@ export interface RuntimePageEntryState {
   status: RuntimePageEntryStatus
 }
 
+export interface RuntimeModalState {
+  activeModalId: string | null
+  activeIterationKey: string | null
+}
+
 export interface RuntimeState {
   navigation: RuntimeNavigationState
   forms: Record<string, RuntimeFormState>
   queries: Record<string, RuntimeQueryState>
   pageEntry: RuntimePageEntryState
+  modal: RuntimeModalState
 }
 
 export type RuntimeStateAction =
@@ -107,6 +113,9 @@ export type RuntimeStateAction =
   | { type: 'queries/set-success'; payload: { queryName: string; data: unknown; requestSignature?: string | null } }
   | { type: 'queries/set-error'; payload: { queryName: string; error: RuntimeQueryError; requestSignature?: string | null } }
   | { type: 'queries/reset'; payload: { queryName: string } }
+  | { type: 'modal/open'; payload: { modalId: string; iterationKey?: string } }
+  | { type: 'modal/close'; payload: { modalId: string; iterationKey?: string } }
+  | { type: 'modal/close-all' }
 
 export interface RuntimeStateContextValue {
   config: RuntimeConfig
