@@ -233,10 +233,10 @@ describe('RuntimePage', () => {
     )
     expect(screen.getByLabelText('Name')).not.toHaveClass('shadow-sm')
     expect(screen.getByLabelText('Bio')).toHaveValue('Runtime builder')
-    expect(screen.getByLabelText('Role')).toHaveValue('2')
+    expect(screen.getByRole('combobox', { name: 'Role' })).toHaveValue('2')
     expect(screen.getByLabelText('Bio')).toHaveClass('rounded-control', 'bg-white', 'min-h-28', 'sm:min-h-32')
     expect(screen.getByLabelText('Bio')).not.toHaveClass('shadow-sm')
-    expect(screen.getByLabelText('Role')).toHaveClass(
+    expect(screen.getByRole('combobox', { name: 'Role' })).toHaveClass(
       'rounded-control',
       'bg-white',
       'appearance-none',
@@ -244,7 +244,7 @@ describe('RuntimePage', () => {
       'sm:px-3.5',
       'sm:py-2.5',
     )
-    expect(screen.getByLabelText('Role')).not.toHaveClass('shadow-sm')
+    expect(screen.getByRole('combobox', { name: 'Role' })).not.toHaveClass('shadow-sm')
     expect(buttons[0]).toHaveClass('bg-white', 'text-app-text-strong', 'sm:px-3.5', 'sm:py-2.5')
     expect(buttons[1]).toHaveClass('bg-app-accent', 'text-white', 'sm:px-3.5', 'sm:py-2.5')
     expect(buttons[0]).toHaveTextContent('Aux reset')
@@ -340,7 +340,8 @@ describe('RuntimePage', () => {
 
     await waitFor(() => expect(screen.getByLabelText('Name for urgent')).toBeInTheDocument())
     expect(screen.getByLabelText('Bio for urgent')).toBeInTheDocument()
-    expect(screen.getByRole('combobox', { name: 'Role for urgent' })).toHaveAttribute('aria-label', 'Role for urgent')
+    expect(screen.getByRole('combobox', { name: 'Role for urgent' })).not.toHaveAttribute('aria-label')
+    expect(screen.getByRole('combobox', { name: 'Role for urgent' })).toBeInTheDocument()
     expect(screen.getByRole('group', { name: 'Contact for urgent' })).toBeInTheDocument()
     expect(screen.getByRole('group', { name: 'Teams for' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Reset urgent' })).toHaveAttribute('type', 'button')
@@ -555,7 +556,7 @@ describe('RuntimePage', () => {
     expect(container).not.toHaveClass('-mx-5', 'sm:-mx-6')
     expect(container).not.toHaveClass('flex-row')
     expect(screen.getByLabelText('Bio')).toHaveValue('Runtime builder')
-    expect(screen.getByLabelText('Role')).toHaveValue('admin')
+    expect(screen.getByRole('combobox', { name: 'Role' })).toHaveValue('admin')
   })
 
   it('keeps row containers inside forms as plain linear layout without section bleed', () => {

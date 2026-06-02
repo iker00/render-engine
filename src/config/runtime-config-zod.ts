@@ -452,6 +452,7 @@ export const modalNodeSchema = z
       .object({
         size: z.enum(supportedModalSizeValues).optional(),
         defaultOpen: z.boolean().optional(),
+        label: z.string().optional(),
       })
       .strip()
       .optional(),

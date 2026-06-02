@@ -23,6 +23,7 @@ Cargar el contexto mínimo necesario para entender la tarea y respetar el estilo
 - `ai-workflow/docs/conventions.md`
 - `ai-workflow/standards/testing-rules.md`
 - `ai-workflow/standards/coding-style.md`
+- `ai-workflow/standards/accessibility.md`
 - `ai-workflow/docs/test-index.md`
 - código y tests del área que toca la tarea según su `Impacto esperado en archivos` y su sub-bloque `tests`
 

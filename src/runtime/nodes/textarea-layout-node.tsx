@@ -45,7 +45,9 @@ export function TextareaNode({ node, iterationContext }: TextareaNodeProps) {
     <label className={getFieldWrapperClassName()} data-layout-node="textarea">
       <span className={getFieldLabelClassName()}>{label}</span>
       <textarea
+        id={`${formContext.formId}-${node.props.fieldId}`}
         className={`${getFieldControlClassName(error !== null)} min-h-28 resize-y sm:min-h-32`}
+        aria-describedby={error !== null ? `${formContext.formId}-${node.props.fieldId}-error` : undefined}
         value={value}
         onChange={(event) => {
           const nextValue = event.currentTarget.value
@@ -66,7 +68,7 @@ export function TextareaNode({ node, iterationContext }: TextareaNodeProps) {
           }
         }}
       />
-      {error ? <span className={getFieldErrorClassName()}>{error}</span> : null}
+      {error ? <span id={`${formContext.formId}-${node.props.fieldId}-error`} className={getFieldErrorClassName()}>{error}</span> : null}
     </label>
   )
 }

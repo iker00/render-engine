@@ -188,6 +188,7 @@ describe('Runtime layout visibility', () => {
     ).toEqual({
       mode: 'fallback',
       fallback,
+      visibleState: 'idle',
     })
   })
 

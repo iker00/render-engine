@@ -731,6 +731,256 @@ describe('RuntimePage', () => {
     expect(screen.getByText('Literal query feedback node')).toBeInTheDocument()
   })
 
+  it('wraps loading fallback nodes inside an element with role="status"', () => {
+    renderRuntimePageWithQueryFeedback({
+      id: 'home',
+      layout: [
+        {
+          type: 'paragraph',
+          queryStateFeedback: {
+            query: 'searchUsers',
+            states: {
+              loading: {
+                mode: 'fallback',
+                fallback: [
+                  {
+                    type: 'paragraph',
+                    props: {
+                      text: 'Loading users...',
+                    },
+                  },
+                ],
+              },
+            },
+          },
+          props: {
+            text: 'Loaded users',
+          },
+        },
+      ],
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Set loading' }))
+
+    const statusEl = screen.getByRole('status')
+    expect(statusEl).toBeInTheDocument()
+    expect(statusEl).toHaveTextContent('Loading users...')
+  })
+
+  it('wraps error fallback nodes inside an element with role="alert"', () => {
+    renderRuntimePageWithQueryFeedback({
+      id: 'home',
+      layout: [
+        {
+          type: 'heading',
+          queryStateFeedback: {
+            query: 'searchUsers',
+            states: {
+              error: {
+                mode: 'fallback',
+                fallback: [
+                  {
+                    type: 'paragraph',
+                    props: {
+                      text: 'Could not load users.',
+                    },
+                  },
+                ],
+              },
+            },
+          },
+          props: {
+            text: 'Users loaded',
+            level: 2,
+          },
+        },
+      ],
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Set error' }))
+
+    const alertEl = screen.getByRole('alert')
+    expect(alertEl).toBeInTheDocument()
+    expect(alertEl).toHaveTextContent('Could not load users.')
+  })
+
+  it('does not add role="status" or role="alert" wrapper for idle fallback', () => {
+    renderRuntimePageWithQueryFeedback({
+      id: 'home',
+      layout: [
+        {
+          type: 'paragraph',
+          queryStateFeedback: {
+            query: 'searchUsers',
+            states: {
+              idle: {
+                mode: 'fallback',
+                fallback: [
+                  {
+                    type: 'paragraph',
+                    props: {
+                      text: 'Run a search first',
+                    },
+                  },
+                ],
+              },
+            },
+          },
+          props: {
+            text: 'Loaded users',
+          },
+        },
+      ],
+    })
+
+    expect(screen.getByText('Run a search first')).toBeInTheDocument()
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('does not add role="status" or role="alert" wrapper for empty fallback', () => {
+    renderRuntimePageWithQueryFeedback({
+      id: 'home',
+      layout: [
+        {
+          type: 'paragraph',
+          queryStateFeedback: {
+            query: 'searchUsers',
+            states: {
+              empty: {
+                mode: 'fallback',
+                fallback: [
+                  {
+                    type: 'paragraph',
+                    props: {
+                      text: 'No users found',
+                    },
+                  },
+                ],
+              },
+            },
+          },
+          props: {
+            text: 'Users available',
+          },
+        },
+      ],
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Set success empty list' }))
+
+    expect(screen.getByText('No users found')).toBeInTheDocument()
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('does not add role="status" or role="alert" wrapper for success fallback', () => {
+    renderRuntimePageWithQueryFeedback({
+      id: 'home',
+      layout: [
+        {
+          type: 'paragraph',
+          queryStateFeedback: {
+            query: 'searchUsers',
+            states: {
+              success: {
+                mode: 'fallback',
+                fallback: [
+                  {
+                    type: 'paragraph',
+                    props: {
+                      text: 'Users loaded successfully',
+                    },
+                  },
+                ],
+              },
+            },
+          },
+          props: {
+            text: 'Users available',
+          },
+        },
+      ],
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Set success list' }))
+
+    expect(screen.getByText('Users loaded successfully')).toBeInTheDocument()
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('uses a single role="status" wrapper for a loading fallback with multiple children', () => {
+    renderRuntimePageWithQueryFeedback({
+      id: 'home',
+      layout: [
+        {
+          type: 'paragraph',
+          queryStateFeedback: {
+            query: 'searchUsers',
+            states: {
+              loading: {
+                mode: 'fallback',
+                fallback: [
+                  {
+                    type: 'paragraph',
+                    props: {
+                      text: 'Loading line 1',
+                    },
+                  },
+                  {
+                    type: 'paragraph',
+                    props: {
+                      text: 'Loading line 2',
+                    },
+                  },
+                ],
+              },
+            },
+          },
+          props: {
+            text: 'Loaded users',
+          },
+        },
+      ],
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Set loading' }))
+
+    const statusElements = screen.getAllByRole('status')
+    expect(statusElements).toHaveLength(1)
+    expect(statusElements[0]).toHaveTextContent('Loading line 1')
+    expect(statusElements[0]).toHaveTextContent('Loading line 2')
+  })
+
+  it('keeps role="status" wrapper valid when loading fallback is an empty array', () => {
+    renderRuntimePageWithQueryFeedback({
+      id: 'home',
+      layout: [
+        {
+          type: 'paragraph',
+          queryStateFeedback: {
+            query: 'searchUsers',
+            states: {
+              loading: {
+                mode: 'fallback',
+                fallback: [],
+              },
+            },
+          },
+          props: {
+            text: 'Loaded users',
+          },
+        },
+      ],
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Set loading' }))
+
+    expect(screen.getByRole('status')).toBeInTheDocument()
+    expect(screen.queryByText('Loaded users')).not.toBeInTheDocument()
+  })
+
   it('applies visibility rules inside queryStateFeedback fallback nodes without reopening the original node', async () => {
     renderRuntimePageWithQueryFeedback({
       id: 'home',

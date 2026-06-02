@@ -357,6 +357,7 @@ export type ModalSize = 'sm' | 'md' | 'lg'
 export interface ModalLayoutNodeProps {
   size?: ModalSize
   defaultOpen?: boolean
+  label?: string
 }
 
 export interface ModalLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayoutFields {

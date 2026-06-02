@@ -10,6 +10,19 @@ Usa esta skill cuando la tarea sea definir una feature antes de planificar su im
 
 Esta skill debe comportarse como la fase de alineamiento de un flujo guiado por specs: acordar qué se va a construir antes de planificar cambios de código.
 
+## Cuándo usar esta skill
+
+**Úsala cuando:**
+- El usuario pide escribir o refinar `spec.md` para una feature concreta
+- La feature está en fase de definición y aún no hay spec cerrada
+- `status.yaml` no existe o marca `phase: idea` / `phase: exploration`
+- Frases típicas: "escribe la spec de X", "define la feature Y", "qué debería hacer Z", "crea la spec para NNNN"
+
+**No la uses cuando:**
+- Ya existe una `spec.md` cerrada y el siguiente paso es planificación → `generate-implementation-plan`
+- El usuario quiere explorar sin comprometerse a una spec → `explore-feature-scope`
+- La feature requiere decisiones técnicas antes de especificar → `generate-feature-design`
+
 ## Leer siempre
 - `ai-workflow/docs/workflow.md`
 - `ai-workflow/docs/context.md`

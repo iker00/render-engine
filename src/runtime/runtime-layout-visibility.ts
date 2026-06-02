@@ -3,6 +3,7 @@ import type { RuntimeIterationContext } from './runtime-references/runtime-refer
 import { resolveRuntimeReference } from './runtime-references/runtime-reference-resolver'
 import type { RuntimeState } from './runtime-state/runtime-state-types'
 import { resolveLayoutNodeFeedback } from './runtime-query-state-feedback'
+import type { RuntimeQueryVisibleState } from './runtime-query-state-feedback'
 
 export type ResolvedLayoutNodeVisibility =
   | {
@@ -14,6 +15,7 @@ export type ResolvedLayoutNodeVisibility =
   | {
       mode: 'fallback'
       fallback: readonly LayoutNode[]
+      visibleState: RuntimeQueryVisibleState
     }
 
 export function resolveLayoutNodeVisibility(
@@ -33,6 +35,7 @@ export function resolveLayoutNodeVisibility(
     return {
       mode: 'fallback',
       fallback: resolvedFeedback.fallback,
+      visibleState: resolvedFeedback.visibleState,
     }
   }
 

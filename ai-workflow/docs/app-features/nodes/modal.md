@@ -8,6 +8,7 @@
 - `id`: string obligatorio, único en toda la configuración.
 - `props.size`: string opcional con catálogo cerrado `sm | md | lg`; valor default `md` cuando no se declara.
 - `props.defaultOpen`: boolean opcional; cuando `true`, el modal se abre al entrar a la página que lo contiene; default `false`.
+- `props.label`: string opcional. Si se declara, se aplica como `aria-label` del panel del diálogo; si no se declara, el panel recibe el fallback literal `aria-label="Diálogo"`.
 - `children`: colección ordenada de nodos hijos; admite `container`, `form`, `heading`, `paragraph`, `list`, `image`, `table`, `button` y `repeater`.
 
 ## Reglas de render
@@ -20,6 +21,7 @@
 - El foco se atrapa dentro del panel mientras está abierto; al cerrar, se restaura el foco al elemento que lo tenía antes de abrir.
 - El contenido de fondo queda bloqueado de interacción mientras el modal está abierto.
 - `modal` soporta `node.visibility` y `node.queryStateFeedback` con la misma semántica que el resto de nodos. Si queda oculto, no se renderiza ni puede abrirse.
+- El panel del modal renderiza `role="dialog"` y `aria-modal="true"` para comunicar a los lectores de pantalla que se trata de un diálogo modal. El nombre accesible se obtiene de `props.label` cuando está declarado; si no, se aplica el fallback `aria-label="Diálogo"`. El valor de `props.label` es un string literal (no admite interpolación dinámica).
 
 ## Comportamiento en `repeater.props.template`
 - Cada iteración del repeater genera su propia instancia de modal con estado de apertura independiente.
@@ -33,6 +35,7 @@
 - Si `modal.id` se repite en cualquier página o en la misma página, el config completo se rechaza antes del render.
 - Si `props.size` recibe un valor fuera de `sm | md | lg`, el config completo se rechaza antes del render.
 - Si `props.defaultOpen` recibe un valor no booleano, el config completo se rechaza antes del render.
+- Si `props.label` recibe un valor no string (número, boolean, objeto), el config completo se rechaza antes del render.
 - Una acción `openModal.modalId` o `closeModal.modalId` que apunta a un `id` inexistente rechaza el config completo antes del render.
 - `props.defaultOpen: true` dentro de `repeater.props.template` (a cualquier profundidad) rechaza el config completo antes del render.
 - Si `modal.children` contiene nodos no permitidos, el config completo se rechaza antes del render.
@@ -48,3 +51,5 @@
 - **Botón fuera del modal que cierra ese modal**: válido; la acción `closeModal` funciona desde cualquier ubicación.
 - **`form` con `persistOnUnmount: false` dentro de `modal`**: al cerrar el modal el formulario mantiene su estado si el nodo modal sigue en el árbol; al navegar a otra página el formulario pierde estado según el comportamiento habitual.
 - **Navegar a otra página**: todos los modales se cierran automáticamente.
+- **Modal sin `props.label` y sin heading hijo**: el fallback `aria-label="Diálogo"` garantiza nombre accesible siempre.
+- **Modal dentro de `repeater`**: cada instancia de modal tiene su propio panel con `role="dialog"` y el mismo `aria-label` derivado de `props.label` o del fallback.

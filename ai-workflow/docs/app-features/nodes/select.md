@@ -27,6 +27,7 @@
 - `select.props.multiple` activa una semántica de selección múltiple basada en `string[]`, con el mismo orden estable del catálogo efectivo visible y la misma limpieza automática de valores ya inválidos.
 - `select.props.multiple` mantiene una altura mínima suficiente para uso real, pero también más contenida que en la baseline previa.
 - Sus labels y values string de opción pueden interpolarse parcialmente, se normalizan internamente a string los valores efectivos y el valor vigente queda vacío cuando ya no coincide con ninguna opción disponible.
+- El control `<select>` renderiza un `id` estable con el patrón `${formId}-${fieldId}`. La asociación label↔control se realiza vía `<label>` wrapper implícito; el `<select>` no incluye `aria-label` redundante. Cuando hay error activo, incluye `aria-describedby="${formId}-${fieldId}-error"` apuntando al span de error, que lleva el mismo `id`. Cuando no hay error, el atributo `aria-describedby` no está presente.
 
 ## Semántica de valores
 - Dentro de un mismo `select`, todos los `value` efectivos no interpolados deben ser homogéneos en origen (`string` o `number`) aunque en runtime se normalicen a string; cuando un `value` string se interpola, el resultado final entra como string efectivo.

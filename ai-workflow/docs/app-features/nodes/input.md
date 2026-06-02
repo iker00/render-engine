@@ -20,6 +20,7 @@
 - `input` cubre entrada de una sola línea con `inputType` acotado y ya soporta `text`, `email`, `password`, `search`, `tel`, `url`, `number`, `date` y `datetime-local`.
 - `input` lee y escribe exclusivamente en `forms.{formId}.{fieldId}`; su label admite literal, referencia completa o interpolación parcial visible.
 - `input` comparte borde sobrio, fondo blanco, foco por `ring` sobre el propio borde y ausencia de sombra propia en reposo, con padding y altura percibida más contenidos.
+- El control `<input>` renderiza un `id` estable con el patrón `${formId}-${fieldId}`. Cuando hay error activo, incluye `aria-describedby="${formId}-${fieldId}-error"` apuntando al span de error, que lleva el mismo `id`. Cuando no hay error, el atributo `aria-describedby` no está presente.
 
 ## Comportamiento por validación
 - `input` y `textarea` `required` consideran inválidos `''` y strings compuestos solo por espacios.

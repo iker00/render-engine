@@ -10,6 +10,13 @@ Usa esta skill cuando una implementación ya está hecha y validada, y ahora toc
 
 Esta skill debe comportarse como una fase documental posterior al código: revisar qué cambió realmente, decidir qué documentos quedan afectados y actualizarlos sin reabrir la implementación.
 
+## Cuándo NO usar esta skill
+
+- El código de la feature todavía está en curso o tiene tareas sin cerrar → terminar la implementación primero
+- Los tests relevantes fallan o están incompletos → resolver antes de documentar
+- `status.yaml` tiene bloqueos abiertos que invaliden el cierre documental → resolver el bloqueo primero
+- La implementación contradice materialmente la `spec.md` → realinear spec e implementación antes de documentar
+
 ## Leer siempre
 - `ai-workflow/docs/workflow.md`
 - `ai-workflow/features/NNNN-feature-name/spec.md`

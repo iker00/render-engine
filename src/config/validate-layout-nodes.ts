@@ -1023,6 +1023,10 @@ function validateModalNode(
       return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.defaultOpen".`)
     }
 
+    if (issuePath[0] === 'props' && issuePath[1] === 'label') {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.label".`)
+    }
+
     const layoutIssue = mapLayoutNodeIssue(pageId, path, issuePath)
     if (layoutIssue) return layoutIssue
 

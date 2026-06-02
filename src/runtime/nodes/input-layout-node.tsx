@@ -45,8 +45,10 @@ export function InputNode({ node, iterationContext }: InputNodeProps) {
     <label className={getFieldWrapperClassName()} data-layout-node="input">
       <span className={getFieldLabelClassName()}>{label}</span>
       <input
+        id={`${formContext.formId}-${node.props.fieldId}`}
         type={node.props.inputType ?? 'text'}
         className={getFieldControlClassName(error !== null)}
+        aria-describedby={error !== null ? `${formContext.formId}-${node.props.fieldId}-error` : undefined}
         value={value}
         onChange={(event) => {
           const nextValue = event.currentTarget.value
@@ -67,7 +69,7 @@ export function InputNode({ node, iterationContext }: InputNodeProps) {
           }
         }}
       />
-      {error ? <span className={getFieldErrorClassName()}>{error}</span> : null}
+      {error ? <span id={`${formContext.formId}-${node.props.fieldId}-error`} className={getFieldErrorClassName()}>{error}</span> : null}
     </label>
   )
 }

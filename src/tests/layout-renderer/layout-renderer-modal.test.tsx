@@ -503,6 +503,165 @@ describe('ModalNode', () => {
     })
   })
 
+  describe('ARIA attributes', () => {
+    it('renders modal panel with role="dialog" and aria-modal="true" when open', () => {
+      const page: RuntimePageConfig = {
+        id: 'home',
+        layout: [
+          {
+            type: 'button',
+            props: { label: 'Open', action: { type: 'openModal', modalId: 'aria-modal' } },
+          },
+          {
+            type: 'modal',
+            id: 'aria-modal',
+            children: [{ type: 'heading', props: { level: 2, text: 'Content' } }],
+          },
+        ],
+      }
+
+      renderRuntimePage(page)
+      fireEvent.click(screen.getByRole('button', { name: 'Open' }))
+
+      const panel = screen.getByTestId('modal-panel')
+      expect(panel).toHaveAttribute('role', 'dialog')
+      expect(panel).toHaveAttribute('aria-modal', 'true')
+    })
+
+    it('renders panel with aria-label="Diálogo" when props.label is not set', () => {
+      const page: RuntimePageConfig = {
+        id: 'home',
+        layout: [
+          {
+            type: 'button',
+            props: { label: 'Open', action: { type: 'openModal', modalId: 'no-label-modal' } },
+          },
+          {
+            type: 'modal',
+            id: 'no-label-modal',
+          },
+        ],
+      }
+
+      renderRuntimePage(page)
+      fireEvent.click(screen.getByRole('button', { name: 'Open' }))
+
+      const panel = screen.getByTestId('modal-panel')
+      expect(panel).toHaveAttribute('aria-label', 'Diálogo')
+    })
+
+    it('renders panel with aria-label matching props.label when set', () => {
+      const page: RuntimePageConfig = {
+        id: 'home',
+        layout: [
+          {
+            type: 'button',
+            props: { label: 'Open', action: { type: 'openModal', modalId: 'labeled-modal' } },
+          },
+          {
+            type: 'modal',
+            id: 'labeled-modal',
+            props: { label: 'Confirmar eliminación' },
+          },
+        ],
+      }
+
+      renderRuntimePage(page)
+      fireEvent.click(screen.getByRole('button', { name: 'Open' }))
+
+      const panel = screen.getByTestId('modal-panel')
+      expect(panel).toHaveAttribute('aria-label', 'Confirmar eliminación')
+    })
+
+    it('panel is locatable via getByRole("dialog") when open', () => {
+      const page: RuntimePageConfig = {
+        id: 'home',
+        layout: [
+          {
+            type: 'button',
+            props: { label: 'Open', action: { type: 'openModal', modalId: 'role-modal' } },
+          },
+          {
+            type: 'modal',
+            id: 'role-modal',
+            children: [{ type: 'heading', props: { level: 2, text: 'Dialog content' } }],
+          },
+        ],
+      }
+
+      renderRuntimePage(page)
+      fireEvent.click(screen.getByRole('button', { name: 'Open' }))
+
+      expect(screen.getByRole('dialog')).toBeInTheDocument()
+    })
+
+    it('modal inside repeater template applies aria-label to the opened instance', () => {
+      const page: RuntimePageConfig = {
+        id: 'home',
+        layout: [
+          {
+            type: 'repeater',
+            props: {
+              items: { source: 'queries.list.data', key: 'id' },
+              template: [
+                {
+                  type: 'button',
+                  props: { label: 'Open item modal', action: { type: 'openModal', modalId: 'item-modal' } },
+                },
+                {
+                  type: 'modal',
+                  id: 'item-modal',
+                  props: { label: 'Item dialog' },
+                  children: [{ type: 'heading', props: { level: 2, text: 'Item content' } }],
+                },
+              ],
+            },
+          },
+        ],
+      }
+
+      const config: RuntimeConfig = {
+        api: {},
+        initialPage: page.id,
+        pages: [page],
+      }
+
+      const state: RuntimeState = {
+        ...createRuntimeState(config),
+        queries: {
+          list: {
+            status: 'success',
+            data: [{ id: 'a' }],
+            error: null,
+            requestSignature: null,
+          },
+        },
+        modal: {
+          activeModalId: 'item-modal',
+          activeIterationKey: 'a',
+        },
+      }
+
+      render(
+        <RuntimeStateContext.Provider
+          value={{
+            config,
+            initialState: state,
+            state,
+            dispatch: vi.fn(),
+            dispatchAndSyncState: vi.fn(),
+            getLatestState: () => state,
+          }}
+        >
+          <RuntimePage />
+        </RuntimeStateContext.Provider>,
+      )
+
+      const panel = screen.getByTestId('modal-panel')
+      expect(panel).toHaveAttribute('aria-label', 'Item dialog')
+    })
+  })
+
   describe('focus management', () => {
     it('moves focus to the first focusable element inside the panel when opened', () => {
       const page: RuntimePageConfig = {

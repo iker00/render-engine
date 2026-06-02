@@ -16,3 +16,8 @@
 - El runtime entra en esa página al arrancar.
 - Si la página inicial declara `preloads`, el runtime dispara automáticamente esa tanda al montar la instancia.
 - Si `initialPage` no coincide con ningún `id`, el arranque falla con un error claro.
+
+## Foco al navegar
+- El `<section>` contenedor de la página renderizada lleva `tabIndex={-1}` para ser focalizable programáticamente sin entrar en el orden de tabulación natural.
+- Cada vez que el runtime cambia de página (cambio de `pageId`) o genera una nueva `pageEntry` sobre la misma página (reentrada, params distintos, preloads), el `<section>` activo recibe foco programático automáticamente.
+- El `<section>` vacío del caso `page === null` no incluye `tabIndex` ni recibe foco.

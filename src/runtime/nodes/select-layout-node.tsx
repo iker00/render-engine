@@ -59,9 +59,10 @@ export function SelectNode({ node, iterationContext }: SelectNodeProps) {
       <span className={getFieldLabelClassName()}>{label}</span>
       <div className="relative">
         <select
-          aria-label={label}
+          id={`${formContext.formId}-${node.props.fieldId}`}
           className={`${getFieldControlClassName(error !== null)} ${isMultiple ? 'min-h-32 sm:min-h-36' : 'appearance-none pr-12'}`.trim()}
           multiple={isMultiple}
+          aria-describedby={error !== null ? `${formContext.formId}-${node.props.fieldId}-error` : undefined}
           value={value}
           onChange={(event) => {
             const nextValue = isMultiple
@@ -99,7 +100,7 @@ export function SelectNode({ node, iterationContext }: SelectNodeProps) {
           </span>
         )}
       </div>
-      {error ? <span className={getFieldErrorClassName()}>{error}</span> : null}
+      {error ? <span id={`${formContext.formId}-${node.props.fieldId}-error`} className={getFieldErrorClassName()}>{error}</span> : null}
     </label>
   )
 }

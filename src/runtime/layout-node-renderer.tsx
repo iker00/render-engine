@@ -38,7 +38,17 @@ export function LayoutNodeRenderer({ node, renderedChildren, iterationContext }:
   }
 
   if (resolvedVisibility.mode === 'fallback') {
-    return <LayoutRenderer nodes={resolvedVisibility.fallback} iterationContext={iterationContext} />
+    const fallbackContent = <LayoutRenderer nodes={resolvedVisibility.fallback} iterationContext={iterationContext} />
+
+    if (resolvedVisibility.visibleState === 'loading') {
+      return <div role="status">{fallbackContent}</div>
+    }
+
+    if (resolvedVisibility.visibleState === 'error') {
+      return <div role="alert">{fallbackContent}</div>
+    }
+
+    return fallbackContent
   }
 
   let renderedNode: ReactNode

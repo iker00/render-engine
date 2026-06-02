@@ -44,8 +44,14 @@ export function RadioGroupNode({ node, iterationContext }: RadioGroupNodeProps) 
   const error = fieldState?.error ?? null
   const optionLayout = node.props.optionLayout ?? 'vertical'
 
+  const errorId = `${formContext.formId}-${node.props.fieldId}-error`
+
   return (
-    <fieldset className={getFieldWrapperClassName()} data-layout-node="radio-group">
+    <fieldset
+      className={getFieldWrapperClassName()}
+      data-layout-node="radio-group"
+      aria-describedby={error !== null ? errorId : undefined}
+    >
       <legend className={getFieldLabelClassName()}>{label}</legend>
       <div className={getChoiceGroupClassName(optionLayout)}>
         {items.map((item, index) => (
@@ -79,7 +85,7 @@ export function RadioGroupNode({ node, iterationContext }: RadioGroupNodeProps) 
           </label>
         ))}
       </div>
-      {error ? <span className={getFieldErrorClassName()}>{error}</span> : null}
+      {error ? <span id={errorId} className={getFieldErrorClassName()}>{error}</span> : null}
     </fieldset>
   )
 }

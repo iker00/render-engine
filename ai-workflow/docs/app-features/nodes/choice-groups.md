@@ -18,6 +18,7 @@
 ### Reglas
 - `radioGroup` reutiliza exactamente la misma semántica de opciones y selección simple que `select` simple.
 - `radioGroup` `required` considera inválido `''`.
+- El `<fieldset>` del grupo ya incluye `<legend>` con el texto del label. Cuando hay error activo, el `<fieldset>` incluye `aria-describedby="${formId}-${fieldId}-error"` apuntando al span de error, que lleva el mismo `id`. Cuando no hay error, el atributo `aria-describedby` no está presente.
 
 ## `checkboxGroup` (selección múltiple)
 
@@ -36,6 +37,7 @@
 - `checkboxGroup` reutiliza exactamente la misma semántica de opciones y selección múltiple que `select.multiple`.
 - `checkboxGroup` `required` considera inválido `[]`.
 - `minSelections` y `maxSelections` aplican contando la selección efectiva después de normalizar el catálogo visible.
+- El `<fieldset>` del grupo ya incluye `<legend>` con el texto del label. Cuando hay error activo, el `<fieldset>` incluye `aria-describedby="${formId}-${fieldId}-error"` apuntando al span de error, que lleva el mismo `id`. Cuando no hay error, el atributo `aria-describedby` no está presente.
 
 ## `optionLayout`
 - `radioGroup.props.optionLayout` y `checkboxGroup.props.optionLayout` permiten declarar `vertical | inline` como decisión visual por nodo, sin alterar el shape de `items`, `defaultValue`, validación ni submit.

@@ -99,6 +99,9 @@ export function ModalNode({ node, children, iterationContext }: ModalNodeProps) 
     >
       <div
         ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={node.props?.label && node.props.label.length > 0 ? node.props.label : 'Diálogo'}
         data-testid="modal-panel"
         className={getModalPanelClassName(node.props?.size ?? 'md')}
       >

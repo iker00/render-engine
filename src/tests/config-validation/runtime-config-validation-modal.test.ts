@@ -52,6 +52,56 @@ describe('validateRuntimeConfig — modal node shape', () => {
     expect(result.status).toBe('ready')
   })
 
+  it('accepts a modal with props.label as a non-empty string', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithLayout([createModalNode({ props: { label: 'Confirmar eliminación' } })]),
+    )
+    expect(result.status).toBe('ready')
+    if (result.status === 'ready') {
+      const modal = result.config.pages[0].layout[0] as { props?: { label?: string } }
+      expect(modal.props?.label).toBe('Confirmar eliminación')
+    }
+  })
+
+  it('accepts a modal without props.label and does not add the field', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithLayout([createModalNode({ props: { size: 'md' } })]),
+    )
+    expect(result.status).toBe('ready')
+    if (result.status === 'ready') {
+      const modal = result.config.pages[0].layout[0] as { props?: { label?: string } }
+      expect(modal.props?.label).toBeUndefined()
+    }
+  })
+
+  it('rejects a modal with props.label as a number', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithLayout([createModalNode({ props: { label: 42 } })]),
+    )
+    expect(result).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message: 'Page "home" has an invalid layout at "layout[0].props.label".',
+      },
+    })
+  })
+
+  it('rejects a modal with props.label as a boolean', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithLayout([createModalNode({ props: { label: true } })]),
+    )
+    expect(result).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message: 'Page "home" has an invalid layout at "layout[0].props.label".',
+      },
+    })
+  })
+
   it('accepts a modal with size sm, md and lg', () => {
     for (const size of ['sm', 'md', 'lg']) {
       const result = validateRuntimeConfig(createConfigWithLayout([createModalNode({ props: { size } })]))

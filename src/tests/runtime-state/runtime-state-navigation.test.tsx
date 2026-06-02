@@ -580,4 +580,119 @@ describe('Runtime shared state store', () => {
       params: { userId: '42' },
     })
   })
+
+  it('renders the initial page section with tabIndex={-1} and moves focus to it on mount', async () => {
+    render(
+      <RuntimeStateProvider config={runtimeConfig}>
+        <RuntimePage />
+      </RuntimeStateProvider>,
+    )
+
+    const section = screen.getByTestId('runtime-page')
+    expect(section).toHaveAttribute('tabindex', '-1')
+    await waitFor(() => expect(section).toHaveFocus())
+  })
+
+  it('moves focus to the new section after navigating to a different page', async () => {
+    render(
+      <RuntimeStateProvider config={runtimeConfig}>
+        <NavigationControls />
+        <RuntimePage />
+      </RuntimeStateProvider>,
+    )
+
+    const homeSection = screen.getByTestId('runtime-page')
+    await waitFor(() => expect(homeSection).toHaveFocus())
+
+    fireEvent.click(screen.getByRole('button', { name: 'Navigate to details' }))
+
+    await waitFor(() =>
+      expect(screen.getByTestId('runtime-page')).toHaveAttribute('data-runtime-page-id', 'details'),
+    )
+
+    const detailsSection = screen.getByTestId('runtime-page')
+    await waitFor(() => expect(detailsSection).toHaveFocus())
+    expect(detailsSection).toHaveAttribute('tabindex', '-1')
+  })
+
+  it('moves focus to the section again when navigating to the same page with different params (new pageEntry)', async () => {
+    render(
+      <RuntimeStateProvider config={runtimeConfig}>
+        <NavigationControls />
+        <RuntimePage />
+      </RuntimeStateProvider>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Navigate to details with params' }))
+
+    await waitFor(() =>
+      expect(screen.getByTestId('runtime-page')).toHaveAttribute('data-runtime-page-id', 'details'),
+    )
+
+    const detailsSectionFirst = screen.getByTestId('runtime-page')
+    await waitFor(() => expect(detailsSectionFirst).toHaveFocus())
+
+    fireEvent.click(screen.getByRole('button', { name: 'Navigate to details with other params' }))
+
+    await waitFor(() => {
+      const section = screen.getByTestId('runtime-page')
+      expect(section).toHaveFocus()
+    })
+  })
+
+  it('does not add tabIndex to the empty section when page is null', () => {
+    const configWithNullPage: RuntimeConfig = {
+      api: {},
+      initialPage: 'missing-page',
+      pages: [
+        {
+          id: 'home',
+          layout: [],
+        },
+      ],
+    }
+
+    render(
+      <RuntimeStateProvider config={configWithNullPage}>
+        <RuntimePage />
+      </RuntimeStateProvider>,
+    )
+
+    const section = screen.getByTestId('runtime-page')
+    expect(section).not.toHaveAttribute('tabindex')
+  })
+
+  it('shows expected page content after navigation without regression', async () => {
+    const configWithContent: RuntimeConfig = {
+      api: {},
+      initialPage: 'home',
+      pages: [
+        {
+          id: 'home',
+          layout: [{ id: 'home-heading', type: 'heading', props: { text: 'Home page', level: 1 } }],
+        },
+        {
+          id: 'details',
+          layout: [{ id: 'details-heading', type: 'heading', props: { text: 'Details page', level: 1 } }],
+        },
+      ],
+    }
+
+    render(
+      <RuntimeStateProvider config={configWithContent}>
+        <NavigationControls />
+        <RuntimePage />
+      </RuntimeStateProvider>,
+    )
+
+    expect(screen.getByRole('heading', { name: 'Home page' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Navigate to details' }))
+
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'Details page' })).toBeInTheDocument())
+    expect(screen.queryByRole('heading', { name: 'Home page' })).not.toBeInTheDocument()
+
+    const detailsSection = screen.getByTestId('runtime-page')
+    await waitFor(() => expect(detailsSection).toHaveFocus())
+  })
 })

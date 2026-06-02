@@ -45,8 +45,14 @@ export function CheckboxGroupNode({ node, iterationContext }: CheckboxGroupNodeP
   const error = fieldState?.error ?? null
   const optionLayout = node.props.optionLayout ?? 'vertical'
 
+  const errorId = `${formContext.formId}-${node.props.fieldId}-error`
+
   return (
-    <fieldset className={getFieldWrapperClassName()} data-layout-node="checkbox-group">
+    <fieldset
+      className={getFieldWrapperClassName()}
+      data-layout-node="checkbox-group"
+      aria-describedby={error !== null ? errorId : undefined}
+    >
       <legend className={getFieldLabelClassName()}>{label}</legend>
       <div className={getChoiceGroupClassName(optionLayout)}>
         {items.map((item, index) => (
@@ -88,7 +94,7 @@ export function CheckboxGroupNode({ node, iterationContext }: CheckboxGroupNodeP
           </label>
         ))}
       </div>
-      {error ? <span className={getFieldErrorClassName()}>{error}</span> : null}
+      {error ? <span id={errorId} className={getFieldErrorClassName()}>{error}</span> : null}
     </fieldset>
   )
 }

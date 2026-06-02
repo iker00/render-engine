@@ -1230,7 +1230,7 @@ describe('RuntimePage', () => {
     expect(screen.getByLabelText('Nickname')).toHaveValue('user-7')
     expect(screen.getByLabelText('Bio')).toHaveValue('edit')
     expect(screen.getByLabelText('Greeting')).toHaveValue('Hello {{params.userId}}')
-    expect(screen.getByLabelText('Role')).toHaveValue('edit')
+    expect(screen.getByRole('combobox', { name: 'Role' })).toHaveValue('edit')
   })
 
   it('reports unresolved visible references in development with the source path and surface name', () => {
@@ -1263,5 +1263,548 @@ describe('RuntimePage', () => {
     )
 
     consoleWarnSpy.mockRestore()
+  })
+
+  it('renders input with stable id and no aria-describedby when there is no error', () => {
+    renderRuntimeFormPage({
+      id: 'aria-input-no-error',
+      layout: [
+        {
+          type: 'form',
+          id: 'test-form',
+          children: [
+            {
+              type: 'input',
+              props: {
+                fieldId: 'name',
+                label: 'Name',
+                defaultValue: 'Ada',
+              },
+            },
+          ],
+        },
+      ],
+    })
+
+    const input = screen.getByLabelText('Name')
+    expect(input).toHaveAttribute('id', 'test-form-name')
+    expect(input).not.toHaveAttribute('aria-describedby')
+  })
+
+  it('renders input with aria-describedby linked to the error span when there is an active error', async () => {
+    renderRuntimeFormPage({
+      id: 'aria-input-with-error',
+      layout: [
+        {
+          type: 'form',
+          id: 'test-form',
+          submitAction: {
+            type: 'executeOperation',
+            operationName: 'submitProfile',
+          },
+          children: [
+            {
+              type: 'input',
+              props: {
+                fieldId: 'name',
+                label: 'Name',
+                defaultValue: '',
+                validations: {
+                  required: { value: true },
+                },
+              },
+            },
+            {
+              type: 'button',
+              props: { label: 'Submit' },
+            },
+          ],
+        },
+      ],
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Submit' }))
+
+    await waitFor(() => {
+      const input = document.getElementById('test-form-name')
+      expect(input).toHaveAttribute('aria-describedby', 'test-form-name-error')
+      expect(document.getElementById('test-form-name-error')).toBeInTheDocument()
+    })
+  })
+
+  it('removes aria-describedby from input and error span when error is cleared by typing a valid value', async () => {
+    renderRuntimeFormPage({
+      id: 'aria-input-error-clear',
+      layout: [
+        {
+          type: 'form',
+          id: 'test-form',
+          submitAction: {
+            type: 'executeOperation',
+            operationName: 'submitProfile',
+          },
+          children: [
+            {
+              type: 'input',
+              props: {
+                fieldId: 'username',
+                label: 'Username',
+                defaultValue: '',
+                validations: {
+                  required: { value: true },
+                },
+              },
+            },
+            {
+              type: 'button',
+              props: { label: 'Submit' },
+            },
+          ],
+        },
+      ],
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Submit' }))
+
+    await waitFor(() => {
+      expect(document.getElementById('test-form-username')).toHaveAttribute('aria-describedby', 'test-form-username-error')
+    })
+
+    const usernameInput = document.getElementById('test-form-username')
+    fireEvent.change(usernameInput!, { target: { value: 'valid-value' } })
+
+    await waitFor(() => {
+      expect(document.getElementById('test-form-username')).not.toHaveAttribute('aria-describedby')
+      expect(document.getElementById('test-form-username-error')).not.toBeInTheDocument()
+    })
+  })
+
+  it('renders textarea with stable id and no aria-describedby when there is no error', () => {
+    renderRuntimeFormPage({
+      id: 'aria-textarea-no-error',
+      layout: [
+        {
+          type: 'form',
+          id: 'bio-form',
+          children: [
+            {
+              type: 'textarea',
+              props: {
+                fieldId: 'bio',
+                label: 'Bio',
+                defaultValue: 'some text',
+              },
+            },
+          ],
+        },
+      ],
+    })
+
+    const textarea = document.getElementById('bio-form-bio')
+    expect(textarea).not.toBeNull()
+    expect(textarea).not.toHaveAttribute('aria-describedby')
+  })
+
+  it('renders textarea with aria-describedby linked to the error span and removes it when error clears', async () => {
+    renderRuntimeFormPage({
+      id: 'aria-textarea-with-error',
+      layout: [
+        {
+          type: 'form',
+          id: 'bio-form',
+          submitAction: {
+            type: 'executeOperation',
+            operationName: 'submitProfile',
+          },
+          children: [
+            {
+              type: 'textarea',
+              props: {
+                fieldId: 'bio',
+                label: 'Bio',
+                defaultValue: '',
+                validations: {
+                  required: { value: true },
+                },
+              },
+            },
+            {
+              type: 'button',
+              props: { label: 'Submit' },
+            },
+          ],
+        },
+      ],
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Submit' }))
+
+    await waitFor(() => {
+      expect(document.getElementById('bio-form-bio')).toHaveAttribute('aria-describedby', 'bio-form-bio-error')
+      expect(document.getElementById('bio-form-bio-error')).toBeInTheDocument()
+    })
+
+    const bioTextarea = document.getElementById('bio-form-bio')
+    fireEvent.change(bioTextarea!, { target: { value: 'valid text' } })
+
+    await waitFor(() => {
+      expect(document.getElementById('bio-form-bio')).not.toHaveAttribute('aria-describedby')
+      expect(document.getElementById('bio-form-bio-error')).not.toBeInTheDocument()
+    })
+  })
+
+  it('renders select with stable id, no aria-label, and no aria-describedby when there is no error', () => {
+    renderRuntimeFormPage({
+      id: 'aria-select-no-error',
+      layout: [
+        {
+          type: 'form',
+          id: 'role-form',
+          children: [
+            {
+              type: 'select',
+              props: {
+                fieldId: 'role',
+                label: 'Role',
+                items: [
+                  { label: 'Admin', value: 'admin' },
+                  { label: 'Editor', value: 'editor' },
+                ],
+              },
+            },
+          ],
+        },
+      ],
+    })
+
+    const select = document.getElementById('role-form-role')
+    expect(select).not.toBeNull()
+    expect(select).not.toHaveAttribute('aria-label')
+    expect(select).not.toHaveAttribute('aria-describedby')
+  })
+
+  it('renders select accessible via getByRole after removing redundant aria-label', () => {
+    renderRuntimeFormPage({
+      id: 'aria-select-accessible',
+      layout: [
+        {
+          type: 'form',
+          id: 'role-form',
+          children: [
+            {
+              type: 'select',
+              props: {
+                fieldId: 'role',
+                label: 'Role',
+                items: [
+                  { label: 'Admin', value: 'admin' },
+                  { label: 'Editor', value: 'editor' },
+                ],
+              },
+            },
+          ],
+        },
+      ],
+    })
+
+    expect(screen.getByRole('combobox', { name: 'Role' })).toBeInTheDocument()
+    expect(screen.getByRole('combobox', { name: 'Role' })).not.toHaveAttribute('aria-label')
+  })
+
+  it('renders select with aria-describedby linked to error span and removes it when error clears', async () => {
+    renderRuntimeFormPage({
+      id: 'aria-select-with-error',
+      layout: [
+        {
+          type: 'form',
+          id: 'role-form',
+          submitAction: {
+            type: 'executeOperation',
+            operationName: 'submitProfile',
+          },
+          children: [
+            {
+              type: 'select',
+              props: {
+                fieldId: 'role',
+                label: 'Role',
+                items: [
+                  { label: '', value: '' },
+                  { label: 'Admin', value: 'admin' },
+                  { label: 'Editor', value: 'editor' },
+                ],
+                validations: {
+                  required: { value: true },
+                },
+              },
+            },
+            {
+              type: 'button',
+              props: { label: 'Submit' },
+            },
+          ],
+        },
+      ],
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Submit' }))
+
+    await waitFor(() => {
+      expect(document.getElementById('role-form-role')).toHaveAttribute('aria-describedby', 'role-form-role-error')
+      expect(document.getElementById('role-form-role-error')).toBeInTheDocument()
+    })
+
+    fireEvent.change(screen.getByRole('combobox', { name: /Role/ }), { target: { value: 'admin' } })
+
+    await waitFor(() => {
+      expect(document.getElementById('role-form-role')).not.toHaveAttribute('aria-describedby')
+      expect(document.getElementById('role-form-role-error')).not.toBeInTheDocument()
+    })
+  })
+
+  it('renders radioGroup fieldset without aria-describedby when there is no error', () => {
+    renderRuntimeFormPage({
+      id: 'aria-radiogroup-no-error',
+      layout: [
+        {
+          type: 'form',
+          id: 'choice-form',
+          children: [
+            {
+              type: 'radioGroup',
+              props: {
+                fieldId: 'role',
+                label: 'Role',
+                items: [
+                  { label: 'Admin', value: 'admin' },
+                  { label: 'Editor', value: 'editor' },
+                ],
+              },
+            },
+          ],
+        },
+      ],
+    })
+
+    const fieldset = screen.getByRole('group', { name: 'Role' })
+    expect(fieldset).toBeInTheDocument()
+    expect(fieldset).not.toHaveAttribute('aria-describedby')
+    expect(document.getElementById('choice-form-role-error')).not.toBeInTheDocument()
+  })
+
+  it('renders radioGroup fieldset with aria-describedby linked to error span when there is an active error', async () => {
+    renderRuntimeFormPage({
+      id: 'aria-radiogroup-with-error',
+      layout: [
+        {
+          type: 'form',
+          id: 'choice-form',
+          submitAction: {
+            type: 'executeOperation',
+            operationName: 'submitProfile',
+          },
+          children: [
+            {
+              type: 'radioGroup',
+              props: {
+                fieldId: 'role',
+                label: 'Role',
+                items: [
+                  { label: 'Admin', value: 'admin' },
+                  { label: 'Editor', value: 'editor' },
+                ],
+                validations: {
+                  required: { value: true },
+                },
+              },
+            },
+            {
+              type: 'button',
+              props: { label: 'Submit' },
+            },
+          ],
+        },
+      ],
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Submit' }))
+
+    await waitFor(() => {
+      const fieldset = screen.getByRole('group', { name: 'Role' })
+      expect(fieldset).toHaveAttribute('aria-describedby', 'choice-form-role-error')
+      expect(document.getElementById('choice-form-role-error')).toBeInTheDocument()
+    })
+  })
+
+  it('removes aria-describedby from radioGroup fieldset and error span when error is cleared by selecting a valid value', async () => {
+    renderRuntimeFormPage({
+      id: 'aria-radiogroup-error-clear',
+      layout: [
+        {
+          type: 'form',
+          id: 'choice-form',
+          submitAction: {
+            type: 'executeOperation',
+            operationName: 'submitProfile',
+          },
+          children: [
+            {
+              type: 'radioGroup',
+              props: {
+                fieldId: 'role',
+                label: 'Role',
+                items: [
+                  { label: 'Admin', value: 'admin' },
+                  { label: 'Editor', value: 'editor' },
+                ],
+                validations: {
+                  required: { value: true },
+                },
+              },
+            },
+            {
+              type: 'button',
+              props: { label: 'Submit' },
+            },
+          ],
+        },
+      ],
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Submit' }))
+
+    await waitFor(() => {
+      expect(screen.getByRole('group', { name: 'Role' })).toHaveAttribute('aria-describedby', 'choice-form-role-error')
+    })
+
+    fireEvent.click(screen.getByRole('radio', { name: 'Admin' }))
+
+    await waitFor(() => {
+      expect(screen.getByRole('group', { name: 'Role' })).not.toHaveAttribute('aria-describedby')
+      expect(document.getElementById('choice-form-role-error')).not.toBeInTheDocument()
+    })
+  })
+
+  it('renders checkboxGroup fieldset without aria-describedby when there is no error', () => {
+    renderRuntimeFormPage({
+      id: 'aria-checkboxgroup-no-error',
+      layout: [
+        {
+          type: 'form',
+          id: 'choice-form',
+          children: [
+            {
+              type: 'checkboxGroup',
+              props: {
+                fieldId: 'teams',
+                label: 'Teams',
+                items: [
+                  { label: 'Alpha', value: 'alpha' },
+                  { label: 'Beta', value: 'beta' },
+                ],
+              },
+            },
+          ],
+        },
+      ],
+    })
+
+    const fieldset = screen.getByRole('group', { name: 'Teams' })
+    expect(fieldset).toBeInTheDocument()
+    expect(fieldset).not.toHaveAttribute('aria-describedby')
+    expect(document.getElementById('choice-form-teams-error')).not.toBeInTheDocument()
+  })
+
+  it('renders checkboxGroup fieldset with aria-describedby linked to error span when there is an active error', async () => {
+    renderRuntimeFormPage({
+      id: 'aria-checkboxgroup-with-error',
+      layout: [
+        {
+          type: 'form',
+          id: 'choice-form',
+          submitAction: {
+            type: 'executeOperation',
+            operationName: 'submitProfile',
+          },
+          children: [
+            {
+              type: 'checkboxGroup',
+              props: {
+                fieldId: 'teams',
+                label: 'Teams',
+                items: [
+                  { label: 'Alpha', value: 'alpha' },
+                  { label: 'Beta', value: 'beta' },
+                ],
+                validations: {
+                  required: { value: true },
+                },
+              },
+            },
+            {
+              type: 'button',
+              props: { label: 'Submit' },
+            },
+          ],
+        },
+      ],
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Submit' }))
+
+    await waitFor(() => {
+      const fieldset = screen.getByRole('group', { name: 'Teams' })
+      expect(fieldset).toHaveAttribute('aria-describedby', 'choice-form-teams-error')
+      expect(document.getElementById('choice-form-teams-error')).toBeInTheDocument()
+    })
+  })
+
+  it('removes aria-describedby from checkboxGroup fieldset and error span when error is cleared by selecting a valid value', async () => {
+    renderRuntimeFormPage({
+      id: 'aria-checkboxgroup-error-clear',
+      layout: [
+        {
+          type: 'form',
+          id: 'choice-form',
+          submitAction: {
+            type: 'executeOperation',
+            operationName: 'submitProfile',
+          },
+          children: [
+            {
+              type: 'checkboxGroup',
+              props: {
+                fieldId: 'teams',
+                label: 'Teams',
+                items: [
+                  { label: 'Alpha', value: 'alpha' },
+                  { label: 'Beta', value: 'beta' },
+                ],
+                validations: {
+                  required: { value: true },
+                },
+              },
+            },
+            {
+              type: 'button',
+              props: { label: 'Submit' },
+            },
+          ],
+        },
+      ],
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Submit' }))
+
+    await waitFor(() => {
+      expect(screen.getByRole('group', { name: 'Teams' })).toHaveAttribute('aria-describedby', 'choice-form-teams-error')
+    })
+
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Alpha' }))
+
+    await waitFor(() => {
+      expect(screen.getByRole('group', { name: 'Teams' })).not.toHaveAttribute('aria-describedby')
+      expect(document.getElementById('choice-form-teams-error')).not.toBeInTheDocument()
+    })
   })
 })

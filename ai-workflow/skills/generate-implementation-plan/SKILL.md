@@ -62,11 +62,11 @@ Cada tarea debe incluir como mínimo, usando una estructura estable:
 - documentación afectada
 - criterios de finalización
 - cierre de implementación
-- cierre documental
 
-Los criterios de finalización deben separar dos estados explícitos:
+Los criterios de finalización describen un único estado:
 - cierre de implementación: código y tests de la tarea completos y validados
-- cierre documental: documentación afectada revisada y actualizada en una pasada posterior
+
+El campo `documentación afectada` declara qué fichas se verán afectadas como referencia para cuando el usuario invoque `update-app-documentation` manualmente. No añadir un campo `cierre documental` ni crear tareas puramente documentales en `tasks.md`.
 
 Cada tarea debe quedar definida de forma contractual:
 - debe describir una única unidad de avance
@@ -108,11 +108,8 @@ Si una tarea no requiere tests propios (refactor puro, doc-only), el sub-bloque 
 - Cada tarea debe dejar claro cuándo se considera cerrada su implementación y cuándo se considera cerrado su estado documental.
 - Reflejar los límites arquitectónicos de `architecture.md`.
 - Reflejar los estándares de código, testing y manejo de errores definidos en `standards/`.
-- Marcar explícitamente el impacto en documentación para cada tarea, aunque el resultado sea `ninguno`.
-- Si una tarea no requiere documentación, dejar explícito que su cierre documental es `ninguno`.
-- Tratar `README.md` como documento de entrada breve; evitar planificar cambios que lo conviertan en historial largo o changelog acumulativo.
-- Cuando una tarea afecte al estado vigente o al mapa de features, preferir `ai-workflow/docs/current-state.md` y `ai-workflow/features/index.md` como destinos documentales.
-- Si la feature cambia comportamiento funcional de producto, planificar la actualización de la ficha correspondiente en `ai-workflow/docs/app-features/` además del contexto global si hace falta.
+- Marcar explícitamente el impacto en documentación para cada tarea en el campo `documentación afectada`, aunque el resultado sea `ninguno`.
+- Tratar `README.md` como documento de entrada breve; no incluirlo como documentación afectada salvo cambio de contrato público.
 - Preferir tareas que puedan completarse de principio a fin en una sola pasada de implementación.
 - Dejar claro cuál es la siguiente tarea que debería escogerse.
 - Respetar el gate de workflow: no dejar la feature lista para implementación si falta algún artefacto requerido por `status.yaml`.
@@ -130,6 +127,7 @@ Si una tarea no requiere tests propios (refactor puro, doc-only), el sub-bloque 
 ## Restricciones
 - No implementar código.
 - No dejar implícito el impacto en archivos.
+- No crear tareas puramente documentales; la actualización de documentación no es parte de `tasks.md`.
 - No dejar tareas con estructura libre que omitan bloques contractuales esenciales.
 - No crear tareas vagas como "build UI" o "wire backend" sin un alcance más estrecho.
 - No escribir tareas que obliguen a la skill de implementación a decidir arquitectura, alcance o partición de trabajo sobre la marcha.
@@ -159,6 +157,6 @@ El usuario puede invocar `review-implementation-plan` manualmente si quiere un s
 - el sub-bloque `tests` de cada tarea es lo bastante literal como para que un subagente con contexto limpio implemente la tarea sin reinterpretar el alcance
 - `design.md` existe cuando el riesgo o la complejidad lo piden
 - `status.yaml` refleja correctamente si la feature está lista o no para implementación
-- cada tarea identifica el impacto en código, tests y documentación
-- cada tarea deja explícitos su cierre de implementación y su cierre documental
+- cada tarea identifica el impacto en código, tests y documentación afectada
+- cada tarea deja explícito su cierre de implementación
 - el paso de implementación puede tomar una tarea y ejecutarla con seguridad sin replantear toda la feature

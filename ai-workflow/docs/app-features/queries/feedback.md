@@ -24,6 +24,10 @@ El layout ya puede declarar feedback visual local por nodo mediante `queryStateF
 - una recarga que vuelve a `loading` con `data` previo conservado reactiva igualmente la rama `loading`
 - en `preloads`, una reentrada o reevaluación automática limpia antes el `data` previo solo para la query afectada cuyo preload relanza, por lo que la rama `loading` se evalúa contra un estado vacío de esa request nueva
 - tras una respuesta `success` vacía, el runtime entra en `empty` y no vuelve a tratar ese caso como `idle`
+- cuando el renderer sustituye un nodo por su fallback de estado `loading`, envuelve el contenido del fallback en un elemento contenedor con `role="status"`, de modo que los lectores de pantalla anuncien la carga en curso
+- cuando el renderer sustituye un nodo por su fallback de estado `error`, envuelve el contenido del fallback en un elemento contenedor con `role="alert"`, de modo que sea anunciado automáticamente
+- los estados `idle`, `empty` y `success` con modo `fallback` renderizan el contenido sin envoltorio ARIA adicional
+- si el fallback de `loading` o `error` es una colección vacía (`fallback: []`), el wrapper con el rol correspondiente puede quedar vacío; esto es válido y no produce error
 
 ## Heurística común de `empty`
 Se considera `empty`:
