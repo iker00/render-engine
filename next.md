@@ -1,27 +1,9 @@
-## Accesibilidad
-
-- (🚨 high - 🧠 high) Revisar e implementar accesibilidad en todos los nodos según `ai-workflow/standards/accessibility.md`:
-  - Auditar cada nodo (`button`, `text`, `input`, `select`, `image`, `link`, `list`, `modal`, estados de query) y verificar que cumple las reglas del estándar.
-  - Corregir elementos semánticos incorrectos (divs con onClick, labels faltantes, headings sin jerarquía).
-  - Implementar focus trap y gestión de foco en `modal`.
-  - Gestionar foco al navegar entre páginas del runtime.
-  - Añadir anuncios accesibles para estados `loading` y `error` de queries.
-  - Cubrir cada corrección con tests de rol y texto accesible (`getByRole`, `aria-describedby`).
-
 ## General
 
 - (🚨 low - 🧠 easy) Añadir iconos en títulos, inputs, botones y párrafos (https://lucide.dev/guide/react/)
 - (🚨 high - 🧠 medium) Nuevo nodo `modal` para mostrar contenido en ventana flotante
   (Quique necesita un botón `más info` en las tablas de datos para mostrar el resto de datos que no aparecen en las
-  tablas) *Decisiones de alcance acordadas:*
-  - `modalId` fuera de `props` (consistente con `formId` en `form`).
-  - Estructura libre con `children` (opción A, como `container`).
-  - Abierto por botones con nueva acción `openModal` / cerrado con acción `closeModal`.
-  - Soporte `defaultOpen: true` para que el modal cargue ya abierto (permite combinarlo con `queryStateFeedback` y condiciones de navegación).
-  - Solo 1 modal abierto a la vez.
-  - Cierre: ESC, click fuera del modal, y acción explícita `closeModal` en botón.
-  - Sin integración con hash de navegación.
-  - Estado local puro dentro del runtime.
+  tablas)
 - (🚨 medium - 🧠 medium) Componente tabs
 - (🚨 medium - 🧠 medium) Componente accordion
 - (🚨 medium - 🧠 easy) Componente enlace
@@ -34,7 +16,6 @@
 - Hacer que el editor guarde los cambios en el local storage por si hay un reinicio involuntario o bloquear la recarga de la página si el JSON ha sido modificado (bloquear preguntando si se quiere reiniciar de verdad)
 
 ## Llamadas a APIs
-
 - (🚨 high - 🧠 medium) Permitir indicar cuando una respuesta a API es incorrecta ya que algunos endpoints de la sede no van a devolver error
   4xx o 5xx si no un json con un mensaje de error
 - (🚨 high - 🧠 high) Permitir ejecutar múltiples queries en un solo envío de formulario o acción de botón

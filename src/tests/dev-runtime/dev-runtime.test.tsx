@@ -266,3 +266,54 @@ describe('DevRuntime no-regression', () => {
     expect(screen.getByText('Hello World')).toBeInTheDocument()
   })
 })
+
+const listConfig = {
+  api: {},
+  pages: [
+    {
+      id: 'home',
+      layout: [
+        {
+          type: 'repeater',
+          props: {
+            items: {
+              source: 'queries.searchUsers.data',
+              key: 'id',
+            },
+            template: [
+              {
+                type: 'paragraph',
+                props: {
+                  text: 'item.name',
+                },
+              },
+            ],
+          },
+        },
+      ],
+    },
+  ],
+  initialPage: 'home',
+}
+
+describe('DevRuntime data-values pre-seeding', () => {
+  it('pre-seeds queries from devDataValuesJson import when data-values attribute is absent', () => {
+    vi.mock('../../dev/data-values.json', () => ({
+      default: { searchUsers: [{ id: '1', name: 'Juan' }] },
+    }))
+
+    render(<DevRuntime rootElement={makeRootElement(listConfig)} />)
+
+    expect(screen.getByText('Juan')).toBeInTheDocument()
+  })
+
+  it('shows bootstrap error when data-values attribute contains invalid JSON', () => {
+    const el = document.createElement('div')
+    el.dataset.config = JSON.stringify(minimalConfig)
+    el.dataset.values = '{invalid-json'
+
+    render(<DevRuntime rootElement={el} />)
+
+    expect(screen.getByTestId('runtime-error-message')).toBeInTheDocument()
+  })
+})

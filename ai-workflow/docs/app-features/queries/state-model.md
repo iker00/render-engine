@@ -18,6 +18,17 @@ Cada query expone en v1:
 - un cambio de página no limpia por defecto el estado de queries
 - excepción estable: cuando una nueva `pageEntry` arranca una tanda automática de `preloads`, solo las queries cuyos preloads realmente relanzan se resetean primero a `data: null`, `error: null`, `status: loading` y su nueva `requestSignature`
 
+## Pre-carga de queries vía `data-values`
+
+El runtime puede inicializar queries con datos fijos antes del primer render usando el mecanismo `data-values`:
+
+- en producción: si el elemento raíz tiene el atributo `data-values`, el runtime parsea su contenido como un JSON de objeto plano, donde cada clave es un nombre de query
+- en desarrollo: si no hay atributo `data-values`, el arranque carga automáticamente `src/dev/data-values.json` (si existe y contiene datos)
+- cada entrada pre-cargada crea en `queries.{nombre}` el estado `{ status: 'success', data: <valor>, error: null, requestSignature: null }` antes del primer render
+- el dato pre-cargado es inmediatamente consumible desde el layout sin esperar ninguna llamada API
+- cualquier ejecución posterior de una operación con el mismo nombre (preload, `executeOperation`, acción de botón, submit) transita la query a `loading` y luego al resultado real, sobreescribiendo el dato pre-cargado siguiendo la semántica habitual
+- las pre-cargas no afectan a queries que no están en el JSON de `data-values`; esas comienzan en `idle` como siempre
+
 ## Lectura desde el layout
 Superficies del runtime que ya leen estado de queries directamente:
 - `heading.props.text`

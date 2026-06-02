@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import devConfigJson from '../dev/config.json'
+import devDataValuesJson from '../dev/data-values.json'
 import { AppShell } from '../app/app-shell'
 import { readRuntimeConfig, type RuntimeConfig } from '../app/bootstrap/read-runtime-config'
+import { readRuntimeDataValues } from '../app/bootstrap/read-runtime-data-values'
 import { validateRuntimeConfig } from '../config/runtime-config'
 import { RuntimeStateProvider } from '../runtime/runtime-state/runtime-state-provider'
 import { RuntimePage } from '../runtime/runtime-page'
@@ -26,6 +28,7 @@ interface DevRuntimeProps {
 
 const defaultDevConfig = devConfigJson as unknown as RuntimeConfig
 const defaultDevConfigText = JSON.stringify(devConfigJson, null, 2)
+const defaultDevDataValues = devDataValuesJson as Record<string, unknown>
 
 let activeConfigHmrApply: ((nextConfig: unknown) => void) | null = null
 
@@ -57,15 +60,38 @@ export function DevRuntime({ rootElement = document.getElementById('root') }: De
     return <AppShell isDevelopment={true} runtimeConfig={bootstrapResult} />
   }
 
-  return <DevRuntimeReady initialConfig={bootstrapResult.config} initialConfigText={rawConfigText} />
+  const dataValuesResult = readRuntimeDataValues({
+    devDataValues: defaultDevDataValues,
+    isDevelopment: true,
+    rootElement,
+  })
+
+  if (dataValuesResult.status === 'error') {
+    return (
+      <AppShell
+        isDevelopment={true}
+        runtimeConfig={bootstrapResult}
+        dataValuesError={dataValuesResult.error}
+      />
+    )
+  }
+
+  return (
+    <DevRuntimeReady
+      initialConfig={bootstrapResult.config}
+      initialConfigText={rawConfigText}
+      dataValues={dataValuesResult.dataValues}
+    />
+  )
 }
 
 interface DevRuntimeReadyProps {
   initialConfig: RuntimeConfig
   initialConfigText: string
+  dataValues?: Record<string, unknown>
 }
 
-function DevRuntimeReady({ initialConfig, initialConfigText }: DevRuntimeReadyProps) {
+function DevRuntimeReady({ initialConfig, initialConfigText, dataValues }: DevRuntimeReadyProps) {
   const [currentConfig, setCurrentConfig] = useState<RuntimeConfig>(initialConfig)
   const [editorOpen, setEditorOpen] = useState(false)
   const [editorBuffer, setEditorBuffer] = useState<string | null>(null)
@@ -87,7 +113,7 @@ function DevRuntimeReady({ initialConfig, initialConfigText }: DevRuntimeReadyPr
 
     const prevState = bridgeRef.current?.getLatestState()
     const nextState = prevState
-      ? migrateRuntimeStateAcrossConfig(prevState, currentConfigRef.current, initialConfig)
+      ? migrateRuntimeStateAcrossConfig(prevState, currentConfigRef.current, initialConfig, { dataValues })
       : undefined
 
     if (nextState && bridgeRef.current) {
@@ -116,7 +142,7 @@ function DevRuntimeReady({ initialConfig, initialConfigText }: DevRuntimeReadyPr
 
       const prevState = bridgeRef.current?.getLatestState()
       const nextState = prevState
-        ? migrateRuntimeStateAcrossConfig(prevState, currentConfigRef.current, validation.config)
+        ? migrateRuntimeStateAcrossConfig(prevState, currentConfigRef.current, validation.config, { dataValues })
         : undefined
 
       if (nextState && bridgeRef.current) {
@@ -183,7 +209,7 @@ function DevRuntimeReady({ initialConfig, initialConfigText }: DevRuntimeReadyPr
 
     const prevState = bridgeRef.current?.getLatestState()
     const nextState = prevState
-      ? migrateRuntimeStateAcrossConfig(prevState, currentConfig, validation.config)
+      ? migrateRuntimeStateAcrossConfig(prevState, currentConfig, validation.config, { dataValues })
       : undefined
 
     // Dispatch the state reset BEFORE updating currentConfig so the provider's
@@ -232,7 +258,7 @@ function DevRuntimeReady({ initialConfig, initialConfigText }: DevRuntimeReadyPr
       <main className={getAppShellClassName()} data-testid="runtime-app">
         <section className={`${getAppShellContentClassName()} items-center`} data-testid="runtime-shell-content">
           <div className={getAppShellFrameClassName()} data-testid="runtime-shell-frame">
-            <RuntimeStateProvider config={currentConfig}>
+            <RuntimeStateProvider config={currentConfig} dataValues={dataValues}>
               <DevRuntimeStateBridge ref={bridgeRef} />
               <RuntimePage />
             </RuntimeStateProvider>

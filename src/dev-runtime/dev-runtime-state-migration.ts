@@ -7,12 +7,13 @@ export function migrateRuntimeStateAcrossConfig(
   prevState: RuntimeState,
   prevConfig: RuntimeConfig,
   nextConfig: RuntimeConfig,
+  options?: { dataValues?: Record<string, unknown> },
 ): RuntimeState {
   void prevConfig // prevState drives state; prevConfig is reserved for future use
 
   const formFieldMap = buildFormFieldMap(nextConfig)
   const nextForms = migrateForms(prevState.forms, formFieldMap)
-  const nextQueries = migrateQueries(prevState.queries, nextConfig)
+  const nextQueries = migrateQueries(prevState.queries, nextConfig, options?.dataValues)
   const { navigation: nextNavigation, resolvedPageId, resolvedParams } = migrateNavigation(
     prevState.navigation.currentPageId,
     prevState.navigation.history[prevState.navigation.currentEntryIndex]?.params ?? {},
@@ -94,12 +95,20 @@ function migrateForms(
 function migrateQueries(
   prevQueries: RuntimeState['queries'],
   nextConfig: RuntimeConfig,
+  dataValues?: Record<string, unknown>,
 ): RuntimeState['queries'] {
   const nextQueries: RuntimeState['queries'] = {}
   const apiKeys = new Set(Object.keys(nextConfig.api))
   for (const [queryName, queryState] of Object.entries(prevQueries)) {
     if (apiKeys.has(queryName)) {
       nextQueries[queryName] = queryState
+    }
+  }
+  if (dataValues) {
+    for (const [queryName, data] of Object.entries(dataValues)) {
+      if (!(queryName in nextQueries)) {
+        nextQueries[queryName] = { status: 'success', data, error: null, requestSignature: null }
+      }
     }
   }
   return nextQueries

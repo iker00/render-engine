@@ -219,6 +219,44 @@ describe('migrateRuntimeStateAcrossConfig', () => {
 
       expect(result.queries['removedQuery']).toBeUndefined()
     })
+
+    it('re-seeds a data-values query not in nextConfig.api when dataValues is provided', () => {
+      const seed = [{ id: '1', name: 'Juan' }]
+      const prevState = makeState({
+        queries: { staticData: { status: 'success', data: seed, error: null, requestSignature: null } },
+      })
+      const prevConfig = makeConfig({ api: {} } as unknown as Partial<RuntimeConfig>)
+      const nextConfig = makeConfig({ api: {} } as unknown as Partial<RuntimeConfig>)
+
+      const result = migrateRuntimeStateAcrossConfig(prevState, prevConfig, nextConfig, { dataValues: { staticData: seed } })
+
+      expect(result.queries['staticData']).toEqual({ status: 'success', data: seed, error: null, requestSignature: null })
+    })
+
+    it('does not override an already-migrated API query with the data-values seed', () => {
+      const realData = [{ id: '2', name: 'Real' }]
+      const seedData = [{ id: '1', name: 'Seed' }]
+      const queryState = { status: 'success' as const, data: realData, error: null, requestSignature: 'sig-real' }
+      const prevState = makeState({ queries: { getUsers: queryState } })
+      const prevConfig = makeConfig({ api: { getUsers: { method: 'GET', endpoint: '/users' } } } as unknown as Partial<RuntimeConfig>)
+      const nextConfig = makeConfig({ api: { getUsers: { method: 'GET', endpoint: '/users' } } } as unknown as Partial<RuntimeConfig>)
+
+      const result = migrateRuntimeStateAcrossConfig(prevState, prevConfig, nextConfig, { dataValues: { getUsers: seedData } })
+
+      expect(result.queries['getUsers']).toEqual(queryState)
+    })
+
+    it('re-seeds a data-values query with null value', () => {
+      const prevState = makeState({
+        queries: { nullQuery: { status: 'success', data: null, error: null, requestSignature: null } },
+      })
+      const prevConfig = makeConfig({ api: {} } as unknown as Partial<RuntimeConfig>)
+      const nextConfig = makeConfig({ api: {} } as unknown as Partial<RuntimeConfig>)
+
+      const result = migrateRuntimeStateAcrossConfig(prevState, prevConfig, nextConfig, { dataValues: { nullQuery: null } })
+
+      expect(result.queries['nullQuery']).toEqual({ status: 'success', data: null, error: null, requestSignature: null })
+    })
   })
 
   describe('navigation', () => {

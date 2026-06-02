@@ -11,9 +11,20 @@ import type {
   RuntimeStateAction,
 } from './runtime-state-types'
 
-export function createRuntimeState(config: RuntimeConfig): RuntimeState {
+export function createRuntimeState(config: RuntimeConfig, options?: { dataValues?: Record<string, unknown> }): RuntimeState {
   const initialPage = config.pages.find((page) => page.id === config.initialPage)
   const initialEntry = createNavigationHistoryEntry(0, config.initialPage, {})
+
+  const dataValues = options?.dataValues
+  const queries: RuntimeState['queries'] =
+    dataValues && Object.keys(dataValues).length > 0
+      ? Object.fromEntries(
+          Object.entries(dataValues).map(([queryName, data]) => [
+            queryName,
+            { status: 'success' as const, data, error: null, requestSignature: null },
+          ]),
+        )
+      : {}
 
   return {
     navigation: {
@@ -23,7 +34,7 @@ export function createRuntimeState(config: RuntimeConfig): RuntimeState {
       lastError: null,
     },
     forms: {},
-    queries: {},
+    queries,
     pageEntry: createRuntimePageEntryState({
       entryId: 0,
       pageId: config.initialPage,

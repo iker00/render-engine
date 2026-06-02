@@ -1,4 +1,5 @@
 import type { RuntimeConfigResult } from './bootstrap/read-runtime-config'
+import type { RuntimeDataValuesError } from './bootstrap/read-runtime-data-values'
 import { RuntimePage } from '../runtime/runtime-page'
 import {
   getAppShellClassName,
@@ -13,36 +14,46 @@ import { RuntimeStateProvider } from '../runtime/runtime-state/runtime-state-pro
 interface AppShellProps {
   isDevelopment: boolean
   runtimeConfig: RuntimeConfigResult
+  dataValues?: Record<string, unknown>
+  dataValuesError?: RuntimeDataValuesError
 }
 
-export function AppShell({ isDevelopment, runtimeConfig }: AppShellProps) {
-  if (runtimeConfig.status === 'error') {
-    if (runtimeConfig.error.displayMode === 'development-only' && !isDevelopment) {
-      return <main className={getAppShellClassName()} data-testid="runtime-app" />
-    }
+function renderErrorBlock(message: string, displayMode: string, isDevelopment: boolean) {
+  if (displayMode === 'development-only' && !isDevelopment) {
+    return <main className={getAppShellClassName()} data-testid="runtime-app" />
+  }
 
-    return (
-      <main className={getAppShellClassName()} data-testid="runtime-app">
-        <section className={`${getAppShellContentClassName()} flex-col justify-center`} data-testid="runtime-shell-content">
-          <div className={`${getAppShellFrameClassName()} grid gap-6`} data-testid="runtime-shell-frame">
-            <p className={getAppShellErrorEyebrowClassName()} data-testid="runtime-error-eyebrow">
-            Runtime config error
-            </p>
-            <h1 className={getAppShellErrorTitleClassName()}>Runtime configuration could not be loaded.</h1>
-            <p className={getAppShellErrorBodyClassName()} data-testid="runtime-error-message">
-              {runtimeConfig.error.message}
-            </p>
-          </div>
-        </section>
-      </main>
-    )
+  return (
+    <main className={getAppShellClassName()} data-testid="runtime-app">
+      <section className={`${getAppShellContentClassName()} flex-col justify-center`} data-testid="runtime-shell-content">
+        <div className={`${getAppShellFrameClassName()} grid gap-6`} data-testid="runtime-shell-frame">
+          <p className={getAppShellErrorEyebrowClassName()} data-testid="runtime-error-eyebrow">
+          Runtime config error
+          </p>
+          <h1 className={getAppShellErrorTitleClassName()}>Runtime configuration could not be loaded.</h1>
+          <p className={getAppShellErrorBodyClassName()} data-testid="runtime-error-message">
+            {message}
+          </p>
+        </div>
+      </section>
+    </main>
+  )
+}
+
+export function AppShell({ isDevelopment, runtimeConfig, dataValues, dataValuesError }: AppShellProps) {
+  if (runtimeConfig.status === 'error') {
+    return renderErrorBlock(runtimeConfig.error.message, runtimeConfig.error.displayMode, isDevelopment)
+  }
+
+  if (dataValuesError) {
+    return renderErrorBlock(dataValuesError.message, dataValuesError.displayMode, isDevelopment)
   }
 
   return (
     <main className={getAppShellClassName()} data-testid="runtime-app">
       <section className={`${getAppShellContentClassName()} items-center`} data-testid="runtime-shell-content">
         <div className={getAppShellFrameClassName()} data-testid="runtime-shell-frame">
-          <RuntimeStateProvider config={runtimeConfig.config}>
+          <RuntimeStateProvider config={runtimeConfig.config} dataValues={dataValues}>
             <RuntimePage />
           </RuntimeStateProvider>
         </div>
