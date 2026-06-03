@@ -5,6 +5,7 @@ import {
   openModalRuntimeUiActionSchema,
   closeModalRuntimeUiActionSchema,
   tabsNodeSchema,
+  accordionNodeSchema,
   supportedNodeTypes,
 } from '../../config/runtime-config-zod'
 import { validateRuntimeConfig } from '../../config/runtime-config'
@@ -320,6 +321,33 @@ describe('tabsNodeSchema', () => {
 
   it("has 'tabs' present in supportedNodeTypes", () => {
     expect(supportedNodeTypes).toContain('tabs')
+  })
+})
+
+describe('accordionNodeSchema', () => {
+  it('accepts a minimal accordion node with props.label', () => {
+    const result = accordionNodeSchema.safeParse({ type: 'accordion', props: { label: 'Sección' } })
+    expect(result.success).toBe(true)
+  })
+
+  it("has 'accordion' present in supportedNodeTypes", () => {
+    expect(supportedNodeTypes).toContain('accordion')
+  })
+})
+
+describe('runtimeConfigRootSchema — accordion node smoke test', () => {
+  it('accepts a node with type accordion and props.label inside layout', () => {
+    const result = runtimeConfigRootSchema.safeParse({
+      api: {},
+      pages: [
+        {
+          id: 'home',
+          layout: [{ type: 'accordion', props: { label: 'Sección' } }],
+        },
+      ],
+      initialPage: 'home',
+    })
+    expect(result.success).toBe(true)
   })
 })
 

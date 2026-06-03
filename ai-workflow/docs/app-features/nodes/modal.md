@@ -9,7 +9,7 @@
 - `props.size`: string opcional con catálogo cerrado `sm | md | lg`; valor default `md` cuando no se declara.
 - `props.defaultOpen`: boolean opcional; cuando `true`, el modal se abre al entrar a la página que lo contiene; default `false`.
 - `props.label`: string opcional. Si se declara, se aplica como `aria-label` del panel del diálogo; si no se declara, el panel recibe el fallback literal `aria-label="Diálogo"`.
-- `children`: colección ordenada de nodos hijos; admite `container`, `form`, `heading`, `paragraph`, `list`, `image`, `table`, `button` y `repeater`.
+- `children`: colección ordenada de nodos hijos; admite `container`, `form`, `heading`, `paragraph`, `list`, `image`, `table`, `button`, `repeater` y `accordion`.
 
 ## Reglas de render
 - `modal` renderiza un overlay semitransparente que cubre el viewport y un panel flotante centrado superpuesto al contenido de fondo.
@@ -38,7 +38,7 @@
 - Si `props.label` recibe un valor no string (número, boolean, objeto), el config completo se rechaza antes del render.
 - Una acción `openModal.modalId` o `closeModal.modalId` que apunta a un `id` inexistente rechaza el config completo antes del render.
 - `props.defaultOpen: true` dentro de `repeater.props.template` (a cualquier profundidad) rechaza el config completo antes del render.
-- Si `modal.children` contiene nodos no permitidos, el config completo se rechaza antes del render.
+- Si `modal.children` contiene nodos fuera de `container`, `form`, `heading`, `paragraph`, `list`, `image`, `table`, `button`, `repeater` y `accordion`, el config completo se rechaza antes del render.
 
 ## Acciones de botón relacionadas
 - [[button.md#openmodal]] — abre el modal referenciado por `modalId`.

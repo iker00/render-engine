@@ -18,6 +18,7 @@ export const supportedNodeTypes = [
   'checkboxGroup',
   'modal',
   'tabs',
+  'accordion',
 ] as const
 
 export const tableCellAllowedNodeTypes = ['image', 'list', 'button', 'container', 'heading', 'paragraph'] as const
@@ -523,3 +524,21 @@ const nonEmptyLangSlugSchema = z.string().refine((value) => value.length > 0, {
 export const runtimeTranslationsLangMapSchema = z.record(nonEmptyLangSlugSchema, z.string())
 
 export const runtimeTranslationsSchema = z.record(z.string(), runtimeTranslationsLangMapSchema)
+
+export const accordionNodeSchema = z
+  .object({
+    type: z.literal('accordion'),
+    id: nodeIdSchema.optional(),
+    queryStateFeedback: queryStateFeedbackSchema.optional(),
+    visibility: visibilitySchema.optional(),
+    layout: layoutNodeLayoutSchema.optional(),
+    props: z
+      .object({
+        label: nonEmptyStringSchema,
+        defaultOpen: z.boolean().optional(),
+        groupId: z.string().optional(),
+      })
+      .strip(),
+    children: z.array(z.unknown()).optional(),
+  })
+  .strip()

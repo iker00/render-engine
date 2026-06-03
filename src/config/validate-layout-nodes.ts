@@ -1,4 +1,5 @@
 import type {
+  AccordionLayoutNode,
   ButtonLayoutNode,
   ContainerLayoutNode,
   HeadingLayoutNode,
@@ -28,6 +29,7 @@ import type {
   TabsLayoutNode,
 } from './runtime-config-types'
 import {
+  accordionNodeSchema,
   buttonNodeSchema,
   containerNodeSchema,
   headingNodeSchema,
@@ -60,7 +62,7 @@ import {
 } from './validate-form-nodes'
 
 const collectionPathSegmentPattern = /^[A-Za-z0-9_-]+$/
-const modalAllowedChildTypes = new Set(['container', 'form', 'heading', 'paragraph', 'list', 'image', 'table', 'button', 'repeater'])
+const modalAllowedChildTypes = new Set(['container', 'form', 'heading', 'paragraph', 'list', 'image', 'table', 'button', 'repeater', 'accordion'])
 
 export function validateLayoutCollection(
   rawNodes: unknown,
@@ -139,6 +141,8 @@ export function validateLayoutNode(
       return validateModalNode(rawNode, path, pageId)
     case 'tabs':
       return validateTabsNode(rawNode, path, pageId)
+    case 'accordion':
+      return validateAccordionNode(rawNode, path, pageId)
   }
 
   return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.type".`)
@@ -1600,6 +1604,93 @@ function validateTableDynamicRows(
     rows: {
       source: sourceResult.source,
       cells,
+    },
+  }
+}
+
+function validateAccordionNode(
+  rawNode: Record<string, unknown>,
+  path: string,
+  pageId: string,
+): { status: 'ready'; node: AccordionLayoutNode } | { status: 'error'; error: RuntimeConfigError } {
+  const parseResult = accordionNodeSchema.safeParse(rawNode)
+
+  if (!parseResult.success) {
+    const issue = parseResult.error.issues[0]
+    const issuePath = issue?.path ?? []
+
+    const feedbackIssue = mapQueryStateFeedbackIssue(pageId, path, issue)
+    if (feedbackIssue) return feedbackIssue
+
+    const visibilityIssue = mapVisibilityIssue(pageId, path, issue)
+    if (visibilityIssue) return visibilityIssue
+
+    const layoutIssue = mapLayoutNodeIssue(pageId, path, issuePath)
+    if (layoutIssue) return layoutIssue
+
+    if (issuePath[0] === 'id') {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.id".`)
+    }
+
+    if (issuePath[0] === 'props' && issuePath[1] === 'label') {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.label".`)
+    }
+
+    if (issuePath[0] === 'props' && issuePath[1] === 'defaultOpen') {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.defaultOpen".`)
+    }
+
+    if (issuePath[0] === 'props' && issuePath[1] === 'groupId') {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.groupId".`)
+    }
+
+    if (issuePath[0] === 'props') {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props".`)
+    }
+
+    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}".`)
+  }
+
+  const feedbackResult = validateQueryStateFeedback(
+    parseResult.data.queryStateFeedback as LayoutNodeFeedbackFields['queryStateFeedback'],
+    `${path}.queryStateFeedback`,
+    pageId,
+  )
+
+  if (feedbackResult.status === 'error') return feedbackResult
+
+  const visibilityResult = validateVisibility(
+    parseResult.data.visibility as LayoutNodeFeedbackFields['visibility'],
+    `${path}.visibility`,
+    pageId,
+  )
+
+  if (visibilityResult.status === 'error') return visibilityResult
+
+  let children: LayoutNodeCollection | undefined
+
+  if (parseResult.data.children !== undefined) {
+    const childrenResult = validateLayoutCollection(parseResult.data.children, `${path}.children`, pageId)
+
+    if (childrenResult.status === 'error') return childrenResult
+
+    children = childrenResult.nodes
+  }
+
+  return {
+    status: 'ready',
+    node: {
+      type: 'accordion',
+      id: parseResult.data.id,
+      queryStateFeedback: feedbackResult.queryStateFeedback,
+      visibility: visibilityResult.visibility,
+      layout: parseResult.data.layout,
+      props: {
+        label: parseResult.data.props.label,
+        defaultOpen: parseResult.data.props.defaultOpen,
+        groupId: parseResult.data.props.groupId,
+      },
+      children,
     },
   }
 }

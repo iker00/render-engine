@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import {
+  accordionNodeSchema,
   buttonNodeSchema,
   checkboxGroupNodeSchema,
   containerNodeSchema,
@@ -27,6 +28,7 @@ const layoutNodeSchema: z.ZodType<unknown> = z.lazy(() =>
     formNodeLooseSchema,
     modalNodeLooseSchema,
     tabsNodeLooseSchema,
+    accordionNodeLooseSchema,
     headingNodeSchema,
     paragraphNodeSchema,
     listNodeSchema,
@@ -72,6 +74,10 @@ const tabsNodeLooseSchema = tabsNodeSchema.extend({
         .min(1),
     })
     .strip(),
+})
+
+const accordionNodeLooseSchema = accordionNodeSchema.extend({
+  children: z.array(layoutNodeSchema).optional(),
 })
 
 // repeater.props.template is overridden directly; items/pagination keep the original shape

@@ -1255,14 +1255,25 @@ function validateFormChildren(
       node.type !== 'paragraph' &&
       node.type !== 'image' &&
       node.type !== 'table' &&
-      node.type !== 'container'
+      node.type !== 'container' &&
+      node.type !== 'accordion'
     ) {
       return invalidLayout(
-        `Page "${pageId}" has an invalid layout at "${nodePath}": form nodes only accept input, textarea, select, radioGroup, checkboxGroup, button, heading, paragraph, image, table and container descendants.`,
+        `Page "${pageId}" has an invalid layout at "${nodePath}": form nodes only accept input, textarea, select, radioGroup, checkboxGroup, button, heading, paragraph, image, table, container and accordion descendants.`,
       )
     }
 
     if (node.type === 'container' && node.children) {
+      const childrenError = validateFormChildren(node.children, `${nodePath}.children`, pageId, context)
+
+      if (childrenError) {
+        return childrenError
+      }
+
+      continue
+    }
+
+    if (node.type === 'accordion' && node.children) {
       const childrenError = validateFormChildren(node.children, `${nodePath}.children`, pageId, context)
 
       if (childrenError) {

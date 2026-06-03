@@ -15,6 +15,7 @@ export type LayoutNodeType =
   | 'checkboxGroup'
   | 'modal'
   | 'tabs'
+  | 'accordion'
 export type RuntimeApiMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
 export type RuntimeApiQueryValue = string | number | boolean
 export type RuntimeApiQuery = Record<string, RuntimeApiQueryValue>
@@ -398,6 +399,17 @@ export interface TabsLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayo
   children?: never
 }
 
+export interface AccordionLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayoutFields {
+  type: 'accordion'
+  id?: string
+  props: {
+    label: string
+    defaultOpen?: boolean
+    groupId?: string
+  }
+  children?: LayoutNode[]
+}
+
 export interface NavigateToRuntimeUiAction {
   type: 'navigateTo'
   pageId: string
@@ -469,6 +481,7 @@ export type LayoutNode =
   | CheckboxGroupLayoutNode
   | ModalLayoutNode
   | TabsLayoutNode
+  | AccordionLayoutNode
 
 export type LayoutNodeCollection = LayoutNode[]
 

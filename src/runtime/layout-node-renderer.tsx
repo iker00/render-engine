@@ -6,6 +6,7 @@ import { useRuntimeLayoutContext } from './runtime-layout-context'
 import { getGridChildSpanClassName } from './runtime-node-styling'
 import { useRuntimeState } from './runtime-state/runtime-state-provider'
 import { LayoutRenderer } from './layout-renderer'
+import { AccordionNode } from './nodes/accordion-layout-node'
 import { ButtonNode } from './nodes/button-layout-node'
 import { CheckboxGroupNode } from './nodes/checkbox-group-layout-node'
 import { ContainerNode } from './nodes/container-layout-node'
@@ -102,6 +103,9 @@ export function LayoutNodeRenderer({ node, renderedChildren, iterationContext }:
       break
     case 'tabs':
       renderedNode = <TabsNode node={node} iterationContext={iterationContext} />
+      break
+    case 'accordion':
+      renderedNode = <AccordionNode node={node} iterationContext={iterationContext} />
       break
   }
 
