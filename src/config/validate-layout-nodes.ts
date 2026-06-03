@@ -663,19 +663,21 @@ function validateImageNode(
   const parseResult = imageNodeSchema.safeParse(rawNode)
 
   if (!parseResult.success) {
-    const feedbackIssue = mapQueryStateFeedbackIssue(pageId, path, parseResult.error.issues[0])
+    const issue = parseResult.error.issues[0]
+
+    const feedbackIssue = mapQueryStateFeedbackIssue(pageId, path, issue)
 
     if (feedbackIssue) {
       return feedbackIssue
     }
 
-    const visibilityIssue = mapVisibilityIssue(pageId, path, parseResult.error.issues[0])
+    const visibilityIssue = mapVisibilityIssue(pageId, path, issue)
 
     if (visibilityIssue) {
       return visibilityIssue
     }
 
-    return mapLeafNodeIssue(pageId, path, parseResult.error.issues[0]?.path ?? [])
+    return mapLeafNodeIssue(pageId, path, issue?.path ?? [])
   }
 
   const feedbackResult = validateQueryStateFeedback(
@@ -698,10 +700,45 @@ function validateImageNode(
     return visibilityResult
   }
 
+  const parsedProps = parseResult.data.props as { src?: string; fetch?: { url: string; method?: string; headers?: Record<string, string>; body?: unknown }; alt: string }
+  const hasSrc = parsedProps.src !== undefined
+  const hasFetch = parsedProps.fetch !== undefined
+
+  // Mutual exclusion: src and fetch cannot both be present
+  if (hasSrc && hasFetch) {
+    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props".`)
+  }
+
+  // At least one of src or fetch must be present
+  if (!hasSrc && !hasFetch) {
+    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.src".`)
+  }
+
+  // fetch mode: validate that fetch.url is present (should already be validated by schema, but alt check)
+  if (hasFetch) {
+    return {
+      status: 'ready',
+      node: {
+        ...parseResult.data,
+        props: {
+          fetch: parsedProps.fetch!,
+          alt: parsedProps.alt,
+        } as ImageLayoutNode['props'],
+        queryStateFeedback: feedbackResult.queryStateFeedback,
+        visibility: visibilityResult.visibility,
+      },
+    }
+  }
+
+  // src mode
   return {
     status: 'ready',
     node: {
       ...parseResult.data,
+      props: {
+        src: parsedProps.src!,
+        alt: parsedProps.alt,
+      } as ImageLayoutNode['props'],
       queryStateFeedback: feedbackResult.queryStateFeedback,
       visibility: visibilityResult.visibility,
     },

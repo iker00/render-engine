@@ -171,13 +171,17 @@ export interface ListLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayo
   children?: unknown
 }
 
+export interface ImageFetchConfig {
+  url: string
+  method?: RuntimeApiMethod
+  headers?: RuntimeApiHeaders
+  body?: RuntimeApiBodyValue | null
+}
+
 export interface ImageLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayoutFields {
   type: 'image'
   id?: string
-  props: {
-    src: string
-    alt: string
-  }
+  props: { src: string; alt: string } | { fetch: ImageFetchConfig; alt: string }
   children?: unknown
 }
 

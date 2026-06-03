@@ -1,17 +1,20 @@
 import type {
-  RuntimeApiBodyValue,
-  RuntimeApiHeaders,
   RuntimeApiOperation,
   RuntimeApiQuery,
   RuntimeApiRequestParams,
 } from '../config/runtime-config'
-import { resolveRuntimeReference } from '../runtime/runtime-references/runtime-reference-resolver'
 import type {
   BuildRuntimeApiRequestOptions,
   RuntimeApiRequest,
   RuntimeApiRequestDescriptor,
   RuntimeApiRequestBuildResult,
 } from './runtime-api-types'
+import {
+  resolvePayloadValue,
+  resolveHeaders,
+  resolveBody,
+  isPlainObject,
+} from './runtime-api-payload-resolver'
 
 export function buildRuntimeApiRequest({
   config,
@@ -33,20 +36,22 @@ export function buildRuntimeApiRequest({
   }
 
   const effectiveRequestParams = mergeRuntimeApiRequestParams(operation, requestParams)
+  const resolveOptions = { state, iterationContext }
+  const messagePrefix = `The api operation "${operationName}"`
 
-  const queryResult = resolveQuery(operationName, effectiveRequestParams.query, state, iterationContext)
+  const queryResult = resolveQuery(operationName, effectiveRequestParams.query, resolveOptions)
 
   if (queryResult.status === 'error') {
     return queryResult
   }
 
-  const bodyResult = resolveBody(operationName, effectiveRequestParams.body, state, iterationContext)
+  const bodyResult = resolveBody(effectiveRequestParams.body, messagePrefix, resolveOptions)
 
   if (bodyResult.status === 'error') {
     return bodyResult
   }
 
-  const headersResult = resolveHeaders(operationName, effectiveRequestParams.headers, state, iterationContext)
+  const headersResult = resolveHeaders(effectiveRequestParams.headers, messagePrefix, resolveOptions)
 
   if (headersResult.status === 'error') {
     return headersResult
@@ -72,8 +77,7 @@ export function buildRuntimeApiRequest({
 function resolveQuery(
   operationName: string,
   queryDefinition: RuntimeApiQuery | undefined,
-  state: BuildRuntimeApiRequestOptions['state'],
-  iterationContext: BuildRuntimeApiRequestOptions['iterationContext'],
+  resolveOptions: Parameters<typeof resolvePayloadValue>[1],
 ) {
   if (!queryDefinition) {
     return {
@@ -84,7 +88,7 @@ function resolveQuery(
   const query: RuntimeApiQuery = {}
 
   for (const [key, rawValue] of Object.entries(queryDefinition)) {
-    const resolvedValue = resolvePayloadValue(rawValue, state, iterationContext)
+    const resolvedValue = resolvePayloadValue(rawValue, resolveOptions)
 
     if (resolvedValue.status === 'error') {
       return {
@@ -116,224 +120,6 @@ function resolveQuery(
   return {
     status: 'ready',
     query,
-  } as const
-}
-
-function resolveBody(
-  operationName: string,
-  bodyDefinition: RuntimeApiBodyValue | undefined,
-  state: BuildRuntimeApiRequestOptions['state'],
-  iterationContext: BuildRuntimeApiRequestOptions['iterationContext'],
-) {
-  if (bodyDefinition === undefined) {
-    return {
-      status: 'ready',
-      body: undefined,
-    } as const
-  }
-
-  if (bodyDefinition === null) {
-    return {
-      status: 'ready',
-      body: null,
-    } as const
-  }
-
-  const resolvedBody = resolveJsonPayloadValue(bodyDefinition, state, iterationContext)
-
-  if (resolvedBody.status === 'error') {
-    return {
-      status: 'error',
-      error: {
-        code: 'request-build-failed',
-        message: `The api operation "${operationName}" could not build its JSON body.`,
-      },
-    } as const
-  }
-
-  return {
-    status: 'ready',
-    body: resolvedBody.value,
-  } as const
-}
-
-function resolveHeaders(
-  operationName: string,
-  headersDefinition: RuntimeApiHeaders | undefined,
-  state: BuildRuntimeApiRequestOptions['state'],
-  iterationContext: BuildRuntimeApiRequestOptions['iterationContext'],
-) {
-  if (!headersDefinition) {
-    return {
-      status: 'ready',
-      headers: undefined,
-    } as const
-  }
-
-  const headers: RuntimeApiHeaders = {}
-
-  for (const [key, rawValue] of Object.entries(headersDefinition)) {
-    const resolvedValue = resolvePayloadValue(rawValue, state, iterationContext)
-
-    if (resolvedValue.status === 'error') {
-      return {
-        status: 'error',
-        error: {
-          code: 'request-build-failed',
-          message: `The api operation "${operationName}" could not resolve "${rawValue}" for "headers.${key}".`,
-        },
-      } as const
-    }
-
-    if (typeof resolvedValue.value !== 'string') {
-      return {
-        status: 'error',
-        error: {
-          code: 'request-build-failed',
-          message: `The api operation "${operationName}" resolved "headers.${key}" to an unsupported header value.`,
-        },
-      } as const
-    }
-
-    headers[key] = resolvedValue.value
-  }
-
-  return {
-    status: 'ready',
-    headers,
-  } as const
-}
-
-function resolveJsonPayloadValue(
-  value: RuntimeApiBodyValue,
-  state: BuildRuntimeApiRequestOptions['state'],
-  iterationContext: BuildRuntimeApiRequestOptions['iterationContext'],
-): { status: 'ready'; value: RuntimeApiBodyValue } | { status: 'error' } {
-  if (value === null) {
-    return {
-      status: 'ready',
-      value: null,
-    } as const
-  }
-
-  if (typeof value === 'string') {
-    const resolvedValue = resolvePayloadValue(value, state, iterationContext)
-
-    if (resolvedValue.status === 'error' || !isRuntimeApiBodyRuntimeValue(resolvedValue.value)) {
-      return {
-        status: 'error',
-      } as const
-    }
-
-    return {
-      status: 'ready',
-      value: resolvedValue.value,
-    }
-  }
-
-  if (typeof value === 'number' || typeof value === 'boolean') {
-    return {
-      status: 'ready',
-      value,
-    } as const
-  }
-
-  if (Array.isArray(value)) {
-    const resolvedItems: RuntimeApiBodyValue[] = []
-
-    for (const item of value) {
-      const resolvedItem = resolveJsonPayloadValue(item, state, iterationContext)
-
-      if (resolvedItem.status === 'error') {
-        return resolvedItem
-      }
-
-      resolvedItems.push(resolvedItem.value)
-    }
-
-    return {
-      status: 'ready',
-      value: resolvedItems,
-    } as const
-  }
-
-  const resolvedObject: Record<string, RuntimeApiBodyValue> = {}
-
-  for (const [key, childValue] of Object.entries(value)) {
-    const resolvedChild = resolveJsonPayloadValue(childValue, state, iterationContext)
-
-    if (resolvedChild.status === 'error') {
-      return resolvedChild
-    }
-
-    resolvedObject[key] = resolvedChild.value
-  }
-
-  return {
-    status: 'ready',
-    value: resolvedObject,
-  } as const
-}
-
-function isRuntimeApiBodyRuntimeValue(value: unknown): value is RuntimeApiBodyValue {
-  if (value === null) {
-    return true
-  }
-
-  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
-    return true
-  }
-
-  if (Array.isArray(value)) {
-    return value.every((item) => isRuntimeApiBodyRuntimeValue(item))
-  }
-
-  if (!isPlainObject(value)) {
-    return false
-  }
-
-  return Object.values(value).every((item) => isRuntimeApiBodyRuntimeValue(item))
-}
-
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
-    return false
-  }
-
-  const prototype = Object.getPrototypeOf(value)
-  return prototype === Object.prototype || prototype === null
-}
-
-function resolvePayloadValue(
-  value: string | number | boolean,
-  state: BuildRuntimeApiRequestOptions['state'],
-  iterationContext: BuildRuntimeApiRequestOptions['iterationContext'],
-) {
-  if (typeof value !== 'string') {
-    return {
-      status: 'ready',
-      value,
-    } as const
-  }
-
-  const resolvedReference = resolveRuntimeReference(value, state, { iterationContext })
-
-  if (resolvedReference.status === 'literal') {
-    return {
-      status: 'ready',
-      value: resolvedReference.value,
-    } as const
-  }
-
-  if (resolvedReference.status === 'resolved') {
-    return {
-      status: 'ready',
-      value: resolvedReference.value,
-    } as const
-  }
-
-  return {
-    status: 'error',
   } as const
 }
 

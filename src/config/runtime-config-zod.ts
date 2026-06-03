@@ -261,6 +261,25 @@ export const listNodeSchema = z
   })
   .strip()
 
+export const imageFetchSchema = z
+  .object({
+    url: nonEmptyStringSchema,
+    method: z.enum(supportedApiMethods).optional(),
+    headers: runtimeApiHeadersSchema.optional(),
+    body: runtimeApiBodySchema.optional().nullable(),
+  })
+  .strip()
+
+// Flexible props schema that accepts either src or fetch branches (plus alt and any extra stripped keys).
+// Mutual exclusion (src XOR fetch) is enforced by validateImageNode after parsing.
+const imagePropsSchema = z
+  .object({
+    src: nonEmptyStringSchema.optional(),
+    fetch: imageFetchSchema.optional(),
+    alt: nonEmptyStringSchema,
+  })
+  .strip()
+
 export const imageNodeSchema = z
   .object({
     type: z.literal('image'),
@@ -268,12 +287,7 @@ export const imageNodeSchema = z
     queryStateFeedback: queryStateFeedbackSchema.optional(),
     visibility: visibilitySchema.optional(),
     layout: layoutNodeLayoutSchema.optional(),
-    props: z
-      .object({
-        src: nonEmptyStringSchema,
-        alt: nonEmptyStringSchema,
-      })
-      .strip(),
+    props: imagePropsSchema,
   })
   .strip()
 
