@@ -185,12 +185,20 @@ export interface ImageLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLay
   children?: unknown
 }
 
-export type TableCellValue = string | number | boolean
+export type TableCellPrimitive = string | number | boolean
+export type TableCellNode =
+  | ImageLayoutNode
+  | ListLayoutNode
+  | ButtonLayoutNode
+  | ContainerLayoutNode
+  | HeadingLayoutNode
+  | ParagraphLayoutNode
+export type TableCellValue = TableCellPrimitive | TableCellNode
 export type TableManualRows = TableCellValue[][]
 
 export interface TableDynamicRows {
   source: string
-  cells: string[]
+  cells: (string | TableCellNode)[]
 }
 
 export type TableRows = TableManualRows | TableDynamicRows

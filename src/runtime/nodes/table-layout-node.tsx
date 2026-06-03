@@ -2,6 +2,7 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import type { ChangeEvent, Dispatch, SetStateAction } from 'react'
 import type {
   RuntimeCollectionPaginationControlsVariant,
+  TableCellNode,
   TableDynamicRows,
   TableLayoutNode,
 } from '../../config/runtime-config'
@@ -42,6 +43,8 @@ import {
   getTableSortButtonClassName,
 } from '../runtime-node-styling'
 import { useRuntimeState } from '../runtime-state/runtime-state-provider'
+import { LayoutNodeRenderer } from '../layout-node-renderer'
+import { LayoutRenderer } from '../layout-renderer'
 
 interface TableNodeProps {
   node: TableLayoutNode
@@ -57,7 +60,7 @@ interface TablePaginationState {
 export function TableNode({ node, iterationContext }: TableNodeProps) {
   const state = useRuntimeState()
   const tableInstanceId = useId()
-  const rows = resolveTableRows(node, state, iterationContext)
+  const { rows, rowItemMap } = resolveTableRows(node, state, iterationContext)
   const [filterValues, setFilterValues] = useState<TableFilterValues>({})
   const [sortState, setSortState] = useState<TableSortState | null>(null)
   const pageSize = node.props.pagination?.pageSize
@@ -173,15 +176,33 @@ export function TableNode({ node, iterationContext }: TableNodeProps) {
             </tr>
           </thead>
           <tbody>
-            {visibleRows.map((row, rowIndex) => (
-              <tr key={`row-${rowIndex}`} className={getTableBodyRowClassName()}>
-                {row.map((cell, cellIndex) => (
-                  <td key={`cell-${cellIndex}`} className={getTableCellClassName()}>
-                    {cell}
-                  </td>
-                ))}
-              </tr>
-            ))}
+            {visibleRows.map((row, rowIndex) => {
+              const rowItem = rowItemMap.get(row)
+              const rowIterationContext: RuntimeIterationContext | undefined =
+                rowItem !== undefined ? { item: rowItem, key: String(rowIndex) } : undefined
+
+              return (
+                <tr key={`row-${rowIndex}`} className={getTableBodyRowClassName()}>
+                  {row.map((cell, cellIndex) => (
+                    <td key={`cell-${cellIndex}`} className={getTableCellClassName()}>
+                      {isTableCellNode(cell) ? (
+                        <LayoutNodeRenderer
+                          node={cell}
+                          iterationContext={rowIterationContext}
+                          renderedChildren={
+                            cell.type === 'container' && cell.children && cell.children.length > 0
+                              ? <LayoutRenderer nodes={cell.children} iterationContext={rowIterationContext} />
+                              : undefined
+                          }
+                        />
+                      ) : (
+                        cell
+                      )}
+                    </td>
+                  ))}
+                </tr>
+              )
+            })}
           </tbody>
         </table>
       </div>
@@ -437,37 +458,66 @@ function createRowsStateKey(rows: readonly TableVisibleRow[]) {
   return JSON.stringify(rows)
 }
 
+function isTableCellNode(cell: unknown): cell is TableCellNode {
+  return typeof cell === 'object' && cell !== null && !Array.isArray(cell)
+}
+
+interface ResolvedTableRowsResult {
+  rows: TableVisibleRow[]
+  rowItemMap: Map<TableVisibleRow, unknown>
+}
+
 function resolveTableRows(
   node: TableLayoutNode,
   state: ReturnType<typeof useRuntimeState>,
   iterationContext?: RuntimeIterationContext,
-): TableVisibleRow[] {
+): ResolvedTableRowsResult {
+  const rowItemMap = new Map<TableVisibleRow, unknown>()
+
   if (Array.isArray(node.props.rows)) {
-    return node.props.rows.map((row) =>
+    const rows = node.props.rows.map((row) =>
       row.map((cell) => {
-        if (typeof cell !== 'string') {
-          return normalizeTableCellValue(cell)
+        // NodeObject: pass through as-is (TableCellNode)
+        if (isTableCellNode(cell)) {
+          return cell
         }
 
-        return normalizeTableCellValue(resolveRuntimeVisibleValue(cell, state, 'table.cell', { iterationContext }))
+        // Primitive: resolve references (string may contain references, numbers/booleans normalize directly)
+        if (typeof cell === 'string') {
+          return normalizeTableCellValue(resolveRuntimeVisibleValue(cell, state, 'table.cell', { iterationContext }))
+        }
+
+        return normalizeTableCellValue(cell)
       }),
     )
+
+    return { rows, rowItemMap }
   }
 
   const dynamicRows = node.props.rows as TableDynamicRows
   const items = resolveCollectionSourceItems(dynamicRows.source, state, { iterationContext })
 
-  return items.map((item) =>
-    dynamicRows.cells.map((cell) =>
-      normalizeTableCellValue(
+  const rows = items.map((item) => {
+    const row: (string | TableCellNode)[] = dynamicRows.cells.map((cell) => {
+      // NodeObject: pass through as-is (TableCellNode), item context applied at render time
+      if (isTableCellNode(cell)) {
+        return cell
+      }
+
+      return normalizeTableCellValue(
         resolveRuntimeVisibleValue(cell, state, 'table.cell', {
           iterationContext: {
             item,
           },
         }),
-      ),
-    ),
-  )
+      )
+    })
+
+    rowItemMap.set(row as unknown as TableVisibleRow, item)
+    return row as unknown as TableVisibleRow
+  })
+
+  return { rows, rowItemMap }
 }
 
 function normalizeTableCellValue(value: string | number | boolean) {

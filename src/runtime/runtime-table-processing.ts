@@ -1,7 +1,7 @@
-import type { TableColumnConfig } from '../config/runtime-config'
+import type { TableCellNode, TableColumnConfig } from '../config/runtime-config'
 
 export type TableSortDirection = 'ascending' | 'descending'
-export type TableVisibleRow = readonly string[]
+export type TableVisibleRow = readonly (string | TableCellNode)[]
 
 export interface ResolvedTableColumnConfig {
   id: string
@@ -72,7 +72,11 @@ export function filterTableRows(
   }
 
   return rows.filter((row) =>
-    activeFilters.every(({ column, value }) => normalizeTableSearchText(row[column.index] ?? '').includes(value)),
+    activeFilters.every(({ column, value }) => {
+      const cell = row[column.index]
+      const cellText = typeof cell === 'string' ? cell : ''
+      return normalizeTableSearchText(cellText).includes(value)
+    }),
   )
 }
 
@@ -96,8 +100,10 @@ export function sortTableRows(
   return rows
     .map((row, index) => ({ row, index }))
     .sort((left, right) => {
-      const leftValue = normalizeTableSearchText(left.row[sortColumn.index] ?? '')
-      const rightValue = normalizeTableSearchText(right.row[sortColumn.index] ?? '')
+      const leftCell = left.row[sortColumn.index]
+      const rightCell = right.row[sortColumn.index]
+      const leftValue = normalizeTableSearchText(typeof leftCell === 'string' ? leftCell : '')
+      const rightValue = normalizeTableSearchText(typeof rightCell === 'string' ? rightCell : '')
       const comparison = leftValue.localeCompare(rightValue)
 
       if (comparison !== 0) {

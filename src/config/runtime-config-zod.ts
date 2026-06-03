@@ -18,6 +18,8 @@ export const supportedNodeTypes = [
   'checkboxGroup',
   'modal',
 ] as const
+
+export const tableCellAllowedNodeTypes = ['image', 'list', 'button', 'container', 'heading', 'paragraph'] as const
 export const supportedApiMethods = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'] as const
 export const supportedQueryStateFeedbackStates = ['idle', 'loading', 'error', 'empty', 'success'] as const
 export const supportedVisibilityOperators = ['equals', 'notEquals', 'isTruthy', 'isFalsy', 'greaterThan', 'lessThan'] as const

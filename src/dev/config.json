@@ -63,6 +63,16 @@
           }
         },
         {
+          "type": "paragraph",
+          "props": {
+            "text": "No se han encontrado resultados"
+          },
+          "visibility": {
+            "reference": "queries.buscarPersona.error",
+            "operator": "isTruthy"
+          }
+        },
+        {
           "type": "form",
           "id": "persona-form",
           "submitAction": {
@@ -358,11 +368,56 @@
                 "item.fechaHora",
                 "item.clase",
                 "item.tipoAtestado",
-                "item.resultado",
-                "item.implicados",
-                "item.vehiculos",
-                "item.personas",
-                "AÑADIR BOTÓN"
+                {
+                  "type": "list",
+                  "props": {
+                    "items": {
+                      "source": "item.resultado",
+                      "itemText": "({{item.codigo}}) {{item.descripcion}}"
+                    }
+                  }
+                },
+                {
+                  "type": "list",
+                  "props": {
+                    "items": {
+                      "source": "item.implicados",
+                      "itemText": "({{item.documento}}) {{item.nombreApellidos}}"
+                    }
+                  }
+                },
+                {
+                  "type": "list",
+                  "props": {
+                    "items": {
+                      "source": "item.vehiculos",
+                      "itemText": "{{item.marca}} - {{item.modelo}} ({{item.matricula}})"
+                    }
+                  }
+                },
+                {
+                  "type": "list",
+                  "props": {
+                    "items": {
+                      "source": "item.personas",
+                      "itemText": "({{item.documento}}) {{item.nombreApellidos}}"
+                    }
+                  }
+                },
+                {
+                  "type": "container",
+                  "props": {
+                    "direction": "row"
+                  },
+                  "children": [
+                    {
+                      "type": "button",
+                      "props": {
+                        "label": "Ver más"
+                      }
+                    }
+                  ]
+                }
               ]
             },
             "pagination": {

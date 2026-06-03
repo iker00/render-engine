@@ -576,7 +576,7 @@ describe('validateRuntimeConfig', () => {
         error: {
           code: 'invalid-layout',
           displayMode: 'development-only',
-          message: 'Page "home" has an invalid layout at "layout[0].props.rows[0][0]": table cells only accept string, number or boolean values.',
+          message: 'Page "home" has an invalid layout at "layout[0].props.rows[0][0].type".',
         },
       })
 
@@ -629,6 +629,739 @@ describe('validateRuntimeConfig', () => {
           displayMode: 'development-only',
           message: 'Page "home" has an invalid layout at "layout[0].props.rows.cells": table dynamic cells must have exactly 2 entries to match headers.',
         },
+      })
+    })
+
+    describe('manual rows with NodeObject cells', () => {
+      it('accepts a manual row with a valid image NodeObject in one cell and primitives in the rest', () => {
+        const result = validateRuntimeConfig(
+          createConfigWithLayout([
+            {
+              type: 'table',
+              props: {
+                headers: ['Avatar', 'Name'],
+                rows: [
+                  [
+                    { type: 'image', props: { src: 'item.avatar', alt: 'item.name' } },
+                    'Ada',
+                  ],
+                ],
+              },
+            },
+          ]),
+        )
+
+        expect(result).toMatchObject({
+          status: 'ready',
+          page: {
+            layout: [
+              {
+                type: 'table',
+                props: {
+                  headers: ['Avatar', 'Name'],
+                  rows: [
+                    [
+                      { type: 'image', props: { src: 'item.avatar', alt: 'item.name' } },
+                      'Ada',
+                    ],
+                  ],
+                },
+              },
+            ],
+          },
+        })
+      })
+
+      it('accepts a manual row with a valid button NodeObject using navigateTo action', () => {
+        const result = validateRuntimeConfig(
+          createConfigWithLayout([
+            {
+              type: 'table',
+              props: {
+                headers: ['Name', 'Action'],
+                rows: [
+                  [
+                    'Ada',
+                    {
+                      type: 'button',
+                      props: {
+                        label: 'Ver',
+                        action: { type: 'navigateTo', pageId: 'detail', params: { id: 'item.id' } },
+                      },
+                    },
+                  ],
+                ],
+              },
+            },
+            { type: 'heading', props: { text: 'Detail', level: 1 } },
+          ]),
+        )
+
+        expect(result).toMatchObject({ status: 'ready' })
+      })
+
+      it('accepts a manual row with a container NodeObject whose children are in the allowed subset (including nested container)', () => {
+        const result = validateRuntimeConfig(
+          createConfigWithLayout([
+            {
+              type: 'table',
+              props: {
+                headers: ['Content'],
+                rows: [
+                  [
+                    {
+                      type: 'container',
+                      props: {},
+                      children: [
+                        { type: 'image', props: { src: '/img.png', alt: 'img' } },
+                        {
+                          type: 'container',
+                          props: {},
+                          children: [
+                            { type: 'paragraph', props: { text: 'nested' } },
+                          ],
+                        },
+                      ],
+                    },
+                  ],
+                ],
+              },
+            },
+          ]),
+        )
+
+        expect(result).toMatchObject({ status: 'ready' })
+      })
+
+      it('accepts mixed rows with both primitives and NodeObjects in different columns', () => {
+        const result = validateRuntimeConfig(
+          createConfigWithLayout([
+            {
+              type: 'table',
+              props: {
+                headers: ['Name', 'Avatar', 'Active'],
+                rows: [
+                  [
+                    'Ada',
+                    { type: 'image', props: { src: '/ada.png', alt: 'Ada' } },
+                    true,
+                  ],
+                  [
+                    'Grace',
+                    { type: 'image', props: { src: '/grace.png', alt: 'Grace' } },
+                    false,
+                  ],
+                ],
+              },
+            },
+          ]),
+        )
+
+        expect(result).toMatchObject({ status: 'ready' })
+      })
+
+      it('rejects a manual cell with { type: "modal", ... } with diagnostic at rows[r][c].type', () => {
+        expect(
+          validateRuntimeConfig(
+            createConfigWithLayout([
+              {
+                type: 'table',
+                props: {
+                  headers: ['Name', 'Cell'],
+                  rows: [
+                    ['Ada', { type: 'modal', id: 'my-modal', props: {} }],
+                  ],
+                },
+              },
+            ]),
+          ),
+        ).toEqual({
+          status: 'error',
+          error: {
+            code: 'invalid-layout',
+            displayMode: 'development-only',
+            message: 'Page "home" has an invalid layout at "layout[0].props.rows[0][1].type".',
+          },
+        })
+      })
+
+      it('rejects a manual cell with { type: "input", ... } with diagnostic at rows[r][c].type', () => {
+        expect(
+          validateRuntimeConfig(
+            createConfigWithLayout([
+              {
+                type: 'table',
+                props: {
+                  headers: ['Name', 'Cell'],
+                  rows: [
+                    [
+                      'Ada',
+                      { type: 'input', props: { fieldId: 'name', label: 'Name' } },
+                    ],
+                  ],
+                },
+              },
+            ]),
+          ),
+        ).toEqual({
+          status: 'error',
+          error: {
+            code: 'invalid-layout',
+            displayMode: 'development-only',
+            message: 'Page "home" has an invalid layout at "layout[0].props.rows[0][1].type".',
+          },
+        })
+      })
+
+      it('rejects a manual cell with { type: "repeater", ... } and { type: "table", ... }', () => {
+        for (const forbiddenType of ['repeater', 'table']) {
+          expect(
+            validateRuntimeConfig(
+              createConfigWithLayout([
+                {
+                  type: 'table',
+                  props: {
+                    headers: ['Cell'],
+                    rows: [[{ type: forbiddenType, props: {} }]],
+                  },
+                },
+              ]),
+            ),
+          ).toEqual({
+            status: 'error',
+            error: {
+              code: 'invalid-layout',
+              displayMode: 'development-only',
+              message: `Page "home" has an invalid layout at "layout[0].props.rows[0][0].type".`,
+            },
+          })
+        }
+      })
+
+      it('rejects a manual cell with { type: "form", ... }', () => {
+        expect(
+          validateRuntimeConfig(
+            createConfigWithLayout([
+              {
+                type: 'table',
+                props: {
+                  headers: ['Cell'],
+                  rows: [[{ type: 'form', id: 'my-form' }]],
+                },
+              },
+            ]),
+          ),
+        ).toEqual({
+          status: 'error',
+          error: {
+            code: 'invalid-layout',
+            displayMode: 'development-only',
+            message: 'Page "home" has an invalid layout at "layout[0].props.rows[0][0].type".',
+          },
+        })
+      })
+
+      it('rejects a manual cell with empty or absent type', () => {
+        expect(
+          validateRuntimeConfig(
+            createConfigWithLayout([
+              {
+                type: 'table',
+                props: {
+                  headers: ['Cell'],
+                  rows: [[{ type: '', props: {} }]],
+                },
+              },
+            ]),
+          ),
+        ).toEqual({
+          status: 'error',
+          error: {
+            code: 'invalid-layout',
+            displayMode: 'development-only',
+            message: 'Page "home" has an invalid layout at "layout[0].props.rows[0][0].type".',
+          },
+        })
+
+        expect(
+          validateRuntimeConfig(
+            createConfigWithLayout([
+              {
+                type: 'table',
+                props: {
+                  headers: ['Cell'],
+                  rows: [[{ props: {} }]],
+                },
+              },
+            ]),
+          ),
+        ).toEqual({
+          status: 'error',
+          error: {
+            code: 'invalid-layout',
+            displayMode: 'development-only',
+            message: 'Page "home" has an invalid layout at "layout[0].props.rows[0][0].type".',
+          },
+        })
+      })
+
+      it('rejects a container cell whose children[i] declares a type outside the allowed subset', () => {
+        expect(
+          validateRuntimeConfig(
+            createConfigWithLayout([
+              {
+                type: 'table',
+                props: {
+                  headers: ['Cell'],
+                  rows: [
+                    [
+                      {
+                        type: 'container',
+                        props: {},
+                        children: [
+                          { type: 'modal', id: 'bad', props: {} },
+                        ],
+                      },
+                    ],
+                  ],
+                },
+              },
+            ]),
+          ),
+        ).toEqual({
+          status: 'error',
+          error: {
+            code: 'invalid-layout',
+            displayMode: 'development-only',
+            message: 'Page "home" has an invalid layout at "layout[0].props.rows[0][0].children[0].type".',
+          },
+        })
+      })
+
+      it('rejects a container cell with deeply nested children that break the allowed subset', () => {
+        expect(
+          validateRuntimeConfig(
+            createConfigWithLayout([
+              {
+                type: 'table',
+                props: {
+                  headers: ['Cell'],
+                  rows: [
+                    [
+                      {
+                        type: 'container',
+                        props: {},
+                        children: [
+                          {
+                            type: 'container',
+                            props: {},
+                            children: [
+                              { type: 'input', props: { fieldId: 'f', label: 'F' } },
+                            ],
+                          },
+                        ],
+                      },
+                    ],
+                  ],
+                },
+              },
+            ]),
+          ),
+        ).toEqual({
+          status: 'error',
+          error: {
+            code: 'invalid-layout',
+            displayMode: 'development-only',
+            message: 'Page "home" has an invalid layout at "layout[0].props.rows[0][0].children[0].children[0].type".',
+          },
+        })
+      })
+
+      it('rejects a manual cell NodeObject that breaks the contract of its own node type (image without src or fetch)', () => {
+        expect(
+          validateRuntimeConfig(
+            createConfigWithLayout([
+              {
+                type: 'table',
+                props: {
+                  headers: ['Cell'],
+                  rows: [
+                    [
+                      { type: 'image', props: { alt: 'missing src' } },
+                    ],
+                  ],
+                },
+              },
+            ]),
+          ),
+        ).toEqual({
+          status: 'error',
+          error: {
+            code: 'invalid-layout',
+            displayMode: 'development-only',
+            message: 'Page "home" has an invalid layout at "layout[0].props.rows[0][0].props.src".',
+          },
+        })
+      })
+
+      it('rejects a manual row whose number of cells (primitives + nodes) does not match headers', () => {
+        expect(
+          validateRuntimeConfig(
+            createConfigWithLayout([
+              {
+                type: 'table',
+                props: {
+                  headers: ['Name', 'Avatar', 'Active'],
+                  rows: [
+                    [
+                      'Ada',
+                      { type: 'image', props: { src: '/ada.png', alt: 'Ada' } },
+                    ],
+                  ],
+                },
+              },
+            ]),
+          ),
+        ).toEqual({
+          status: 'error',
+          error: {
+            code: 'invalid-layout',
+            displayMode: 'development-only',
+            message: 'Page "home" has an invalid layout at "layout[0].props.rows[0]": table rows must have exactly 3 cells to match headers.',
+          },
+        })
+      })
+    })
+
+    describe('dynamic rows with NodeObject cells', () => {
+      it('accepts cells with a NodeObject image whose src is item.avatar mixed with string reference cells', () => {
+        const result = validateRuntimeConfig(
+          createConfigWithLayout([
+            {
+              type: 'table',
+              props: {
+                headers: ['Avatar', 'Name'],
+                rows: {
+                  source: 'queries.users.data.items',
+                  cells: [
+                    { type: 'image', props: { src: 'item.avatar', alt: 'item.name' } },
+                    'item.name',
+                  ],
+                },
+              },
+            },
+          ]),
+        )
+
+        expect(result).toMatchObject({
+          status: 'ready',
+          page: {
+            layout: [
+              {
+                type: 'table',
+                props: {
+                  headers: ['Avatar', 'Name'],
+                  rows: {
+                    source: 'queries.users.data.items',
+                    cells: [
+                      { type: 'image', props: { src: 'item.avatar', alt: 'item.name' } },
+                      'item.name',
+                    ],
+                  },
+                },
+              },
+            ],
+          },
+        })
+      })
+
+      it('accepts dynamic cells with a NodeObject button whose action.navigateTo.params.id references item.id', () => {
+        const result = validateRuntimeConfig(
+          createConfigWithLayout([
+            {
+              type: 'table',
+              props: {
+                headers: ['Name', 'Action'],
+                rows: {
+                  source: 'queries.users.data.items',
+                  cells: [
+                    'item.name',
+                    {
+                      type: 'button',
+                      props: {
+                        label: 'Ver',
+                        action: { type: 'navigateTo', pageId: 'detail', params: { id: 'item.id' } },
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+            { type: 'heading', props: { text: 'Detail', level: 1 } },
+          ]),
+        )
+
+        expect(result).toMatchObject({ status: 'ready' })
+      })
+
+      it('accepts dynamic cells with a NodeObject container whose children declare only allowed subset types', () => {
+        const result = validateRuntimeConfig(
+          createConfigWithLayout([
+            {
+              type: 'table',
+              props: {
+                headers: ['Content', 'Name'],
+                rows: {
+                  source: 'queries.users.data.items',
+                  cells: [
+                    {
+                      type: 'container',
+                      props: {},
+                      children: [
+                        { type: 'image', props: { src: 'item.avatar', alt: 'item.name' } },
+                        { type: 'paragraph', props: { text: 'item.role' } },
+                      ],
+                    },
+                    'item.name',
+                  ],
+                },
+              },
+            },
+          ]),
+        )
+
+        expect(result).toMatchObject({ status: 'ready' })
+      })
+
+      it('rejects dynamic cells with a NodeObject modal with diagnostic at rows.cells[i].type', () => {
+        expect(
+          validateRuntimeConfig(
+            createConfigWithLayout([
+              {
+                type: 'table',
+                props: {
+                  headers: ['Name', 'Cell'],
+                  rows: {
+                    source: 'queries.users.data.items',
+                    cells: [
+                      'item.name',
+                      { type: 'modal', id: 'my-modal', props: {} },
+                    ],
+                  },
+                },
+              },
+            ]),
+          ),
+        ).toEqual({
+          status: 'error',
+          error: {
+            code: 'invalid-layout',
+            displayMode: 'development-only',
+            message: 'Page "home" has an invalid layout at "layout[0].props.rows.cells[1].type".',
+          },
+        })
+      })
+
+      it('rejects dynamic cells with a NodeObject input with diagnostic at rows.cells[i].type', () => {
+        expect(
+          validateRuntimeConfig(
+            createConfigWithLayout([
+              {
+                type: 'table',
+                props: {
+                  headers: ['Name', 'Cell'],
+                  rows: {
+                    source: 'queries.users.data.items',
+                    cells: [
+                      'item.name',
+                      { type: 'input', props: { fieldId: 'name', label: 'Name' } },
+                    ],
+                  },
+                },
+              },
+            ]),
+          ),
+        ).toEqual({
+          status: 'error',
+          error: {
+            code: 'invalid-layout',
+            displayMode: 'development-only',
+            message: 'Page "home" has an invalid layout at "layout[0].props.rows.cells[1].type".',
+          },
+        })
+      })
+
+      it('rejects dynamic cells with NodeObject repeater and NodeObject table', () => {
+        for (const forbiddenType of ['repeater', 'table']) {
+          expect(
+            validateRuntimeConfig(
+              createConfigWithLayout([
+                {
+                  type: 'table',
+                  props: {
+                    headers: ['Cell'],
+                    rows: {
+                      source: 'queries.users.data.items',
+                      cells: [{ type: forbiddenType, props: {} }],
+                    },
+                  },
+                },
+              ]),
+            ),
+          ).toEqual({
+            status: 'error',
+            error: {
+              code: 'invalid-layout',
+              displayMode: 'development-only',
+              message: `Page "home" has an invalid layout at "layout[0].props.rows.cells[0].type".`,
+            },
+          })
+        }
+      })
+
+      it('rejects dynamic cells with a NodeObject whose type is empty string or absent', () => {
+        expect(
+          validateRuntimeConfig(
+            createConfigWithLayout([
+              {
+                type: 'table',
+                props: {
+                  headers: ['Cell'],
+                  rows: {
+                    source: 'queries.users.data.items',
+                    cells: [{ type: '', props: {} }],
+                  },
+                },
+              },
+            ]),
+          ),
+        ).toEqual({
+          status: 'error',
+          error: {
+            code: 'invalid-layout',
+            displayMode: 'development-only',
+            message: 'Page "home" has an invalid layout at "layout[0].props.rows.cells[0].type".',
+          },
+        })
+
+        expect(
+          validateRuntimeConfig(
+            createConfigWithLayout([
+              {
+                type: 'table',
+                props: {
+                  headers: ['Cell'],
+                  rows: {
+                    source: 'queries.users.data.items',
+                    cells: [{ props: {} }],
+                  },
+                },
+              },
+            ]),
+          ),
+        ).toEqual({
+          status: 'error',
+          error: {
+            code: 'invalid-layout',
+            displayMode: 'development-only',
+            message: 'Page "home" has an invalid layout at "layout[0].props.rows.cells[0].type".',
+          },
+        })
+      })
+
+      it('rejects dynamic cells with an empty string entry (regression: current contract)', () => {
+        expect(
+          validateRuntimeConfig(
+            createConfigWithLayout([
+              {
+                type: 'table',
+                props: {
+                  headers: ['Name', 'Cell'],
+                  rows: {
+                    source: 'queries.users.data.items',
+                    cells: ['item.name', ''],
+                  },
+                },
+              },
+            ]),
+          ),
+        ).toEqual({
+          status: 'error',
+          error: {
+            code: 'invalid-layout',
+            displayMode: 'development-only',
+            message: 'Page "home" has an invalid layout at "layout[0].props.rows.cells[1]".',
+          },
+        })
+      })
+
+      it('rejects dynamic cells whose total count (strings + NodeObjects) does not match headers', () => {
+        expect(
+          validateRuntimeConfig(
+            createConfigWithLayout([
+              {
+                type: 'table',
+                props: {
+                  headers: ['Name', 'Avatar', 'Role'],
+                  rows: {
+                    source: 'queries.users.data.items',
+                    cells: [
+                      'item.name',
+                      { type: 'image', props: { src: 'item.avatar', alt: 'item.name' } },
+                    ],
+                  },
+                },
+              },
+            ]),
+          ),
+        ).toEqual({
+          status: 'error',
+          error: {
+            code: 'invalid-layout',
+            displayMode: 'development-only',
+            message: 'Page "home" has an invalid layout at "layout[0].props.rows.cells": table dynamic cells must have exactly 3 entries to match headers.',
+          },
+        })
+      })
+
+      it('rejects dynamic cells where a container NodeObject has children outside the subset at any depth', () => {
+        expect(
+          validateRuntimeConfig(
+            createConfigWithLayout([
+              {
+                type: 'table',
+                props: {
+                  headers: ['Cell'],
+                  rows: {
+                    source: 'queries.users.data.items',
+                    cells: [
+                      {
+                        type: 'container',
+                        props: {},
+                        children: [
+                          {
+                            type: 'container',
+                            props: {},
+                            children: [
+                              { type: 'input', props: { fieldId: 'f', label: 'F' } },
+                            ],
+                          },
+                        ],
+                      },
+                    ],
+                  },
+                },
+              },
+            ]),
+          ),
+        ).toEqual({
+          status: 'error',
+          error: {
+            code: 'invalid-layout',
+            displayMode: 'development-only',
+            message: 'Page "home" has an invalid layout at "layout[0].props.rows.cells[0].children[0].children[0].type".',
+          },
+        })
       })
     })
   })

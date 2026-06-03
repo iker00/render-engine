@@ -20,6 +20,7 @@ import type {
   RuntimeConfigError,
   RuntimeUiAction,
   RuntimeVisibilityConfig,
+  TableCellNode,
   TableCellValue,
   TableColumnConfig,
   TableDynamicRows,
@@ -35,6 +36,7 @@ import {
   paragraphNodeSchema,
   repeaterNodeSchema,
   supportedNodeTypes,
+  tableCellAllowedNodeTypes,
   tableNodeSchema,
 } from './runtime-config-zod'
 import { invalidLayout, unsupportedNodeType } from './runtime-config-validation-errors'
@@ -1302,6 +1304,79 @@ function validateTableRows(
   return validateTableDynamicRows(rawRows, headersLength, path, pageId)
 }
 
+export function validateTableCellNode(
+  rawCell: unknown,
+  path: string,
+  pageId: string,
+): { status: 'ready'; node: TableCellNode } | { status: 'error'; error: RuntimeConfigError } {
+  if (!isRecord(rawCell)) {
+    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.type".`)
+  }
+
+  const cellType = rawCell.type
+
+  // Step 1: validate type is a non-empty string within the allowed subset
+  if (typeof cellType !== 'string' || cellType.trim().length === 0 || !(tableCellAllowedNodeTypes as readonly string[]).includes(cellType)) {
+    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.type".`)
+  }
+
+  // Step 2: if container, recursively check all descendants for allowed subset before delegating to validateLayoutNode
+  if (cellType === 'container') {
+    const childrenCheck = checkContainerChildrenSubset(rawCell.children, `${path}.children`, pageId)
+
+    if (childrenCheck !== null) {
+      return childrenCheck
+    }
+  }
+
+  // Step 3: delegate to validateLayoutNode for full contract validation (props, visibility, queryStateFeedback, layout)
+  const nodeResult = validateLayoutNode(rawCell, path, pageId)
+
+  if (nodeResult.status === 'error') {
+    return nodeResult
+  }
+
+  return {
+    status: 'ready',
+    node: nodeResult.node as TableCellNode,
+  }
+}
+
+function checkContainerChildrenSubset(
+  children: unknown,
+  path: string,
+  pageId: string,
+): { status: 'error'; error: RuntimeConfigError } | null {
+  if (!Array.isArray(children)) {
+    return null
+  }
+
+  for (let i = 0; i < children.length; i += 1) {
+    const child = children[i]
+
+    if (!isRecord(child)) {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}[${i}].type".`)
+    }
+
+    const childType = child.type
+
+    if (typeof childType !== 'string' || childType.trim().length === 0 || !(tableCellAllowedNodeTypes as readonly string[]).includes(childType)) {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}[${i}].type".`)
+    }
+
+    // Recurse into nested containers
+    if (childType === 'container') {
+      const nestedCheck = checkContainerChildrenSubset(child.children, `${path}[${i}].children`, pageId)
+
+      if (nestedCheck !== null) {
+        return nestedCheck
+      }
+    }
+  }
+
+  return null
+}
+
 function validateTableManualRows(
   rawRows: unknown[],
   headersLength: number,
@@ -1326,13 +1401,24 @@ function validateTableManualRows(
     const row: TableCellValue[] = []
 
     for (let cellIndex = 0; cellIndex < rawRow.length; cellIndex += 1) {
-      if (!isTableCellValue(rawRow[cellIndex])) {
+      const rawCell = rawRow[cellIndex]
+      const cellPath = `${path}[${rowIndex}][${cellIndex}]`
+
+      if (isTableCellPrimitive(rawCell)) {
+        row.push(rawCell)
+      } else if (isRecord(rawCell)) {
+        const cellResult = validateTableCellNode(rawCell, cellPath, pageId)
+
+        if (cellResult.status === 'error') {
+          return cellResult
+        }
+
+        row.push(cellResult.node)
+      } else {
         return invalidLayout(
-          `Page "${pageId}" has an invalid layout at "${path}[${rowIndex}][${cellIndex}]": table cells only accept string, number or boolean values.`,
+          `Page "${pageId}" has an invalid layout at "${cellPath}": table cells only accept string, number, boolean or node values.`,
         )
       }
-
-      row.push(rawRow[cellIndex])
     }
 
     rows.push(row)
@@ -1375,14 +1461,27 @@ function validateTableDynamicRows(
     )
   }
 
-  const cells: string[] = []
+  const cells: (string | TableCellNode)[] = []
 
   for (let index = 0; index < rawRows.cells.length; index += 1) {
-    if (!isNonEmptyString(rawRows.cells[index])) {
-      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.cells[${index}]".`)
-    }
+    const rawCell = rawRows.cells[index]
+    const cellPath = `${path}.cells[${index}]`
 
-    cells.push(rawRows.cells[index])
+    if (isRecord(rawCell)) {
+      const cellResult = validateTableCellNode(rawCell, cellPath, pageId)
+
+      if (cellResult.status === 'error') {
+        return cellResult
+      }
+
+      cells.push(cellResult.node)
+    } else {
+      if (!isNonEmptyString(rawCell)) {
+        return invalidLayout(`Page "${pageId}" has an invalid layout at "${cellPath}".`)
+      }
+
+      cells.push(rawCell)
+    }
   }
 
   return {
@@ -1402,7 +1501,7 @@ function formatPathSegment(segment: PropertyKey): string {
   return `.${String(segment)}`
 }
 
-function isTableCellValue(value: unknown): value is TableCellValue {
+function isTableCellPrimitive(value: unknown): value is string | number | boolean {
   return typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean'
 }
 

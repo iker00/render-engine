@@ -50,6 +50,7 @@ src/tests/
 - `layout-renderer-state-feedback.test.tsx` — queryStateFeedback (todos los estados) + visibility rules (~760 líneas)
 - `layout-renderer-image-table.test.tsx` — image nodes + tables manual/dynamic/filterable/sortable (~580 líneas)
 - `layout-renderer-table-pagination.test.tsx` — paginación de tabla (previousNext, numbered, scroll, IntersectionObserver) (~620 líneas)
+- `layout-renderer-table-rich-cells.test.tsx` — celdas ricas en tabla: image/button/container/heading/paragraph, item.* en dinámico, visibility/qsf, filtros/ordenación con nodos (~400 líneas)
 - `layout-renderer-buttons-text.test.tsx` — button nodes, navegación declarativa, interpolación de texto y referencias (~500 líneas)
 - `layout-renderer-forms.test.tsx` — forms declarativos, orden de campos, labels interpolados, semántica de secciones (~640 líneas)
 - `layout-renderer-grid-spans.test.tsx` — layout.span, columnas responsive, span clamping, fallbacks móvil (~550 líneas)
