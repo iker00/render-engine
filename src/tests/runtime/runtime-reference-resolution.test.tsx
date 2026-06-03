@@ -1012,4 +1012,237 @@ describe('Runtime reference resolution', () => {
       })
     })
   })
+
+  describe('T0050-03 translations reference parser contract', () => {
+    it('classifies translations.{key} with exactly one segment as a supported reference', () => {
+      expect(parseRuntimeReference('translations.confirmBtn')).toMatchObject({
+        kind: 'reference',
+        status: 'supported',
+        namespace: 'translations',
+        path: ['confirmBtn'],
+      })
+    })
+
+    it('classifies translations without any segment as invalid', () => {
+      expect(parseRuntimeReference('translations')).toMatchObject({
+        kind: 'reference',
+        status: 'invalid',
+        namespace: 'translations',
+      })
+    })
+
+    it('classifies translations.group.key with two segments as invalid', () => {
+      expect(parseRuntimeReference('translations.group.key')).toMatchObject({
+        kind: 'reference',
+        status: 'invalid',
+        namespace: 'translations',
+      })
+    })
+
+    it('classifies translations.with.too.many.segments as invalid', () => {
+      expect(parseRuntimeReference('translations.with.too.many.segments')).toMatchObject({
+        kind: 'reference',
+        status: 'invalid',
+        namespace: 'translations',
+      })
+    })
+
+    it('classifies translations.confirm-btn with hyphens as valid (one segment)', () => {
+      expect(parseRuntimeReference('translations.confirm-btn')).toMatchObject({
+        kind: 'reference',
+        status: 'supported',
+        namespace: 'translations',
+        path: ['confirm-btn'],
+      })
+    })
+
+    it('classifies translations. with empty segment as invalid', () => {
+      expect(parseRuntimeReference('translations.')).toMatchObject({
+        kind: 'reference',
+        status: 'invalid',
+        namespace: 'translations',
+      })
+    })
+
+    it('treats escaped translations.confirmBtn as a visible literal string', () => {
+      expect(parseRuntimeReference('\\translations.confirmBtn')).toEqual({
+        kind: 'literal',
+        value: 'translations.confirmBtn',
+      })
+    })
+
+    it('keeps translations.confirmBtn with trailing whitespace as invalid (segment contains space)', () => {
+      expect(parseRuntimeReference('translations.confirmBtn ')).toMatchObject({
+        kind: 'reference',
+        status: 'invalid',
+        namespace: 'translations',
+      })
+    })
+  })
+
+  describe('T0050-04 translations resolver with fallback chain', () => {
+    const translationsState: RuntimeState = {
+      ...runtimeState,
+      modal: {
+        activeModalId: null,
+        activeIterationKey: null,
+      },
+      i18n: {
+        translations: {
+          confirmBtn: { es: 'Confirmar', en: 'Confirm' },
+          onlyEn: { en: 'Only English' },
+          onlyEs: { es: 'Solo español' },
+        },
+        activeLanguage: 'en',
+      },
+    }
+
+    const translationsStateEs: RuntimeState = {
+      ...translationsState,
+      i18n: {
+        ...translationsState.i18n,
+        activeLanguage: 'es',
+      },
+    }
+
+    const translationsStateFr: RuntimeState = {
+      ...translationsState,
+      i18n: {
+        ...translationsState.i18n,
+        activeLanguage: 'fr',
+      },
+    }
+
+    const emptyTranslationsState: RuntimeState = {
+      ...translationsState,
+      i18n: {
+        translations: {},
+        activeLanguage: 'en',
+      },
+    }
+
+    it('resolves translations.confirmBtn to the active language value when the key exists', () => {
+      expect(resolveRuntimeReference('translations.confirmBtn', translationsState)).toEqual({
+        status: 'resolved',
+        value: 'Confirm',
+        reference: parseRuntimeReference('translations.confirmBtn'),
+      })
+
+      expect(resolveRuntimeReference('translations.confirmBtn', translationsStateEs)).toEqual({
+        status: 'resolved',
+        value: 'Confirmar',
+        reference: parseRuntimeReference('translations.confirmBtn'),
+      })
+    })
+
+    it('falls back to the default language (es) when the active language lacks the key', () => {
+      const stateFrWithOnlyEs: RuntimeState = {
+        ...translationsState,
+        i18n: {
+          translations: { confirmBtn: { es: 'Confirmar', en: 'Confirm' } },
+          activeLanguage: 'fr',
+        },
+      }
+
+      expect(resolveRuntimeReference('translations.confirmBtn', stateFrWithOnlyEs)).toEqual({
+        status: 'resolved',
+        value: 'Confirmar',
+        reference: parseRuntimeReference('translations.confirmBtn'),
+      })
+    })
+
+    it('falls back to the default language (es) when activeLanguage is fr and only es and en exist', () => {
+      expect(resolveRuntimeReference('translations.confirmBtn', translationsStateFr)).toEqual({
+        status: 'resolved',
+        value: 'Confirmar',
+        reference: parseRuntimeReference('translations.confirmBtn'),
+      })
+    })
+
+    it('skips to fallback when activeLanguage is es but the key only has en', () => {
+      const stateEsOnlyEn: RuntimeState = {
+        ...translationsState,
+        i18n: {
+          translations: { onlyEn: { en: 'Only English' } },
+          activeLanguage: 'es',
+        },
+      }
+
+      // In dev (Vitest default), fallback returns the key name
+      expect(resolveRuntimeReference('translations.onlyEn', stateEsOnlyEn)).toEqual({
+        status: 'resolved',
+        value: 'onlyEn',
+        reference: parseRuntimeReference('translations.onlyEn'),
+      })
+    })
+
+    it('returns the key name in dev when the key does not exist in any language', () => {
+      expect(resolveRuntimeReference('translations.missing', translationsState)).toEqual({
+        status: 'resolved',
+        value: 'missing',
+        reference: parseRuntimeReference('translations.missing'),
+      })
+    })
+
+    it('returns empty string in prod when the key does not exist in any language', () => {
+      vi.stubEnv('DEV', false)
+
+      try {
+        expect(resolveRuntimeReference('translations.missing', translationsState)).toEqual({
+          status: 'resolved',
+          value: '',
+          reference: parseRuntimeReference('translations.missing'),
+        })
+      } finally {
+        vi.unstubAllEnvs()
+      }
+    })
+
+    it('returns the key name in dev when translations is empty', () => {
+      expect(resolveRuntimeReference('translations.confirmBtn', emptyTranslationsState)).toEqual({
+        status: 'resolved',
+        value: 'confirmBtn',
+        reference: parseRuntimeReference('translations.confirmBtn'),
+      })
+    })
+
+    it('returns empty string in prod when translations is empty', () => {
+      vi.stubEnv('DEV', false)
+
+      try {
+        expect(resolveRuntimeReference('translations.confirmBtn', emptyTranslationsState)).toEqual({
+          status: 'resolved',
+          value: '',
+          reference: parseRuntimeReference('translations.confirmBtn'),
+        })
+      } finally {
+        vi.unstubAllEnvs()
+      }
+    })
+
+    it('resolves {{translations.confirmBtn}} interpolated inside a larger string', () => {
+      expect(
+        resolveRuntimeVisibleValue('Texto: {{translations.confirmBtn}}', translationsStateEs, 'heading.props.text'),
+      ).toBe('Texto: Confirmar')
+
+      expect(
+        resolveRuntimeVisibleValue('Texto: {{translations.confirmBtn}}', translationsState, 'heading.props.text'),
+      ).toBe('Texto: Confirm')
+    })
+
+    it('keeps an invalid shape (translations.group.key) as invalid and degrades to empty string in visible value', () => {
+      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+      expect(resolveRuntimeReference('translations.group.key', translationsState)).toEqual({
+        status: 'invalid',
+        reference: parseRuntimeReference('translations.group.key'),
+      })
+
+      expect(
+        resolveRuntimeVisibleValue('translations.group.key', translationsState, 'heading.props.text'),
+      ).toBe('')
+
+      consoleWarnSpy.mockRestore()
+    })
+  })
 })

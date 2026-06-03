@@ -10,6 +10,9 @@ La configuración parte de tres bloques principales:
 - `pages`: array requerido de páginas declaradas.
 - `initialPage`: identificador requerido de la página de entrada.
 
+Bloques opcionales:
+- `translations`: objeto opcional que define un catálogo de traducciones por idioma. Su estructura es un mapa cuyas claves son strings arbitrarios (claves de traducción) y cuyos valores son mapas idioma-string. Véase [[../references/reference-resolution.md]] para superficies admitidas y semántica de fallback.
+
 ## Modelo de página
 Cada página debe incluir:
 - `id`: string no vacío y único dentro de `pages`.

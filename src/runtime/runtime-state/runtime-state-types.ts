@@ -1,5 +1,5 @@
 import type { Dispatch } from 'react'
-import type { RuntimeConfig, RuntimeConfigValue } from '../../config/runtime-config'
+import type { RuntimeConfig, RuntimeConfigValue, RuntimeTranslationsConfig } from '../../config/runtime-config'
 
 export interface RuntimeNavigationError {
   code: 'page-not-found'
@@ -63,12 +63,18 @@ export interface RuntimeModalState {
   activeIterationKey: string | null
 }
 
+export interface RuntimeI18nState {
+  translations: RuntimeTranslationsConfig
+  activeLanguage: string
+}
+
 export interface RuntimeState {
   navigation: RuntimeNavigationState
   forms: Record<string, RuntimeFormState>
   queries: Record<string, RuntimeQueryState>
   pageEntry: RuntimePageEntryState
   modal: RuntimeModalState
+  i18n: RuntimeI18nState
 }
 
 export type RuntimeStateAction =

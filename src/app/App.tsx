@@ -1,6 +1,7 @@
 import devConfig from '../dev/config.json'
 import devDataValues from '../dev/data-values.json'
 import { AppShell } from './app-shell'
+import { readRuntimeActiveLanguage } from './bootstrap/read-runtime-active-language'
 import { readRuntimeConfig, type RuntimeConfig } from './bootstrap/read-runtime-config'
 import { readRuntimeDataValues } from './bootstrap/read-runtime-data-values'
 
@@ -32,12 +33,15 @@ export function App({
     rootElement,
   })
 
+  const activeLanguage = readRuntimeActiveLanguage({ rootElement })
+
   return (
     <AppShell
       isDevelopment={isDevelopment}
       runtimeConfig={runtimeConfig}
       dataValues={dataValuesResult.status === 'ready' ? dataValuesResult.dataValues : undefined}
       dataValuesError={dataValuesResult.status === 'error' ? dataValuesResult.error : undefined}
+      activeLanguage={activeLanguage}
     />
   )
 }

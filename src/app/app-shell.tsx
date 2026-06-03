@@ -16,6 +16,7 @@ interface AppShellProps {
   runtimeConfig: RuntimeConfigResult
   dataValues?: Record<string, unknown>
   dataValuesError?: RuntimeDataValuesError
+  activeLanguage?: string
 }
 
 function renderErrorBlock(message: string, displayMode: string, isDevelopment: boolean) {
@@ -40,7 +41,7 @@ function renderErrorBlock(message: string, displayMode: string, isDevelopment: b
   )
 }
 
-export function AppShell({ isDevelopment, runtimeConfig, dataValues, dataValuesError }: AppShellProps) {
+export function AppShell({ isDevelopment, runtimeConfig, dataValues, dataValuesError, activeLanguage }: AppShellProps) {
   if (runtimeConfig.status === 'error') {
     return renderErrorBlock(runtimeConfig.error.message, runtimeConfig.error.displayMode, isDevelopment)
   }
@@ -53,7 +54,7 @@ export function AppShell({ isDevelopment, runtimeConfig, dataValues, dataValuesE
     <main className={getAppShellClassName()} data-testid="runtime-app">
       <section className={`${getAppShellContentClassName()} items-center`} data-testid="runtime-shell-content">
         <div className={getAppShellFrameClassName()} data-testid="runtime-shell-frame">
-          <RuntimeStateProvider config={runtimeConfig.config} dataValues={dataValues}>
+          <RuntimeStateProvider config={runtimeConfig.config} dataValues={dataValues} activeLanguage={activeLanguage}>
             <RuntimePage />
           </RuntimeStateProvider>
         </div>

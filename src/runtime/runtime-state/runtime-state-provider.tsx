@@ -25,6 +25,7 @@ import type { RuntimeFormFieldDefinition, RuntimePageParams, RuntimeQueryError, 
 interface RuntimeStateProviderProps {
   config: RuntimeConfig
   dataValues?: Record<string, unknown>
+  activeLanguage?: string
   children: ReactNode
 }
 
@@ -124,8 +125,8 @@ async function executeQueryOperationWithSnapshot({
   return result
 }
 
-export function RuntimeStateProvider({ config, dataValues, children }: RuntimeStateProviderProps) {
-  const [initialState] = useState(() => createRuntimeStateFromBrowserHash(config, dataValues))
+export function RuntimeStateProvider({ config, dataValues, activeLanguage, children }: RuntimeStateProviderProps) {
+  const [initialState] = useState(() => createRuntimeStateFromBrowserHash(config, dataValues, activeLanguage))
   const [state, dispatch] = useReducer(runtimeStateReducer, initialState)
   const activePreloadBatchSignatureRef = useRef<string | null>(null)
   const completedPreloadEntryIdRef = useRef<number | null>(null)
@@ -980,12 +981,16 @@ function isRuntimePageParamValue(value: unknown): value is RuntimeConfigValue {
   return value === null || typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean'
 }
 
-function createRuntimeStateFromBrowserHash(config: RuntimeConfig, dataValues?: Record<string, unknown>) {
+function createRuntimeStateFromBrowserHash(
+  config: RuntimeConfig,
+  dataValues?: Record<string, unknown>,
+  activeLanguage?: string,
+) {
   const parsedHash = parseBrowserHashNavigationHash(window.location.hash, {
     initialPageId: config.initialPage,
     knownPageIds: config.pages.map((page) => page.id),
   })
-  const initialState = createRuntimeState(config, { dataValues })
+  const initialState = createRuntimeState(config, { dataValues, activeLanguage })
   const initialPage = config.pages.find((page) => page.id === parsedHash.entry.pageId)
 
   return {

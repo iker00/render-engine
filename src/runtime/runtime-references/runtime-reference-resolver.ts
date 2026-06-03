@@ -209,6 +209,25 @@ function resolveSupportedReferenceValue(
   state: RuntimeState,
   iterationContext?: RuntimeIterationContext,
 ) {
+  if (reference.namespace === 'translations') {
+    const key = reference.path[0]
+    const { translations, activeLanguage } = state.i18n
+    const entry = translations[key]
+
+    if (entry) {
+      if (typeof entry[activeLanguage] === 'string') {
+        return { found: true, value: entry[activeLanguage] } as const
+      }
+
+      if (activeLanguage !== 'es' && typeof entry['es'] === 'string') {
+        return { found: true, value: entry['es'] } as const
+      }
+    }
+
+    const fallbackValue = import.meta.env.DEV ? key : ''
+    return { found: true, value: fallbackValue } as const
+  }
+
   if (reference.namespace === 'item') {
     if (reference.path.length === 1 && reference.path[0] === '$key') {
       if (iterationContext?.itemKey !== undefined) {

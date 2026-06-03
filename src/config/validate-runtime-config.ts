@@ -17,8 +17,20 @@ import { validatePagePreloads } from './validate-preloads'
 import { validateRuntimeApiRequestParams, validateActionTargets } from './validate-actions-visibility'
 import { validateLayoutCollection } from './validate-layout-nodes'
 import { validateFormSemantics, validateExecutionRequestParams } from './validate-form-nodes'
+import { validateTranslations } from './validate-translations'
 
 export function validateRuntimeConfig(rawConfig: unknown): RuntimeConfigValidationResult {
+  // Extract and validate the optional translations block before the shell schema strips it
+  let validatedTranslations: ReturnType<typeof validateTranslations> | null = null
+
+  if (isRecord(rawConfig) && 'translations' in rawConfig && rawConfig.translations !== undefined) {
+    validatedTranslations = validateTranslations(rawConfig.translations)
+
+    if (validatedTranslations.status === 'error') {
+      return { status: 'error', error: validatedTranslations.error }
+    }
+  }
+
   const configShellResult = runtimeConfigShellSchema.safeParse(rawConfig)
 
   if (!configShellResult.success) {
@@ -122,6 +134,10 @@ export function validateRuntimeConfig(rawConfig: unknown): RuntimeConfigValidati
     api: apiResult.api,
     pages,
     initialPage: configShellResult.data.initialPage,
+  }
+
+  if (validatedTranslations !== null && validatedTranslations.status === 'ok') {
+    config.translations = validatedTranslations.translations
   }
 
   const page = config.pages.find((entry) => entry.id === config.initialPage)

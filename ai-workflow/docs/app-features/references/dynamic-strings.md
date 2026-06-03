@@ -31,6 +31,7 @@
 - delimitadores no emparejados no rompen el render y conservan una salida estable
 - `item` e `item.*` se resuelven contra la iteración de `repeater` cuando existe, o contra el item local de la proyección de colección que se está materializando
 - `params.*` conserva la frontera `params.{paramName}`; `params.user.id` queda fuera de contrato y produce string vacío dentro de un placeholder
+- `translations.{key}` se resuelve aplicando la cadena de fallback del catálogo según el idioma activo declarado en `data-lang`
 
 ## Superficies fuera de interpolación parcial
 Las siguientes superficies usan solo referencias completas o literales y NO aplican interpolación parcial. Un string como `prefix-{{params.userId}}` se conserva como literal o queda sometido a la validación histórica del consumidor, pero no se reinterpreta como plantilla:

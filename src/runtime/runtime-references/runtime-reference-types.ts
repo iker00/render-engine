@@ -5,6 +5,7 @@ export type RuntimeReferenceNamespace =
   | 'navigation'
   | 'routeParams'
   | 'params'
+  | 'translations'
 
 export type RuntimeReferenceParseResult =
   | RuntimeLiteralReference
@@ -20,7 +21,7 @@ export interface RuntimeLiteralReference {
 export interface RuntimeSupportedReference {
   kind: 'reference'
   status: 'supported'
-  namespace: 'item' | 'forms' | 'queries' | 'params'
+  namespace: 'item' | 'forms' | 'queries' | 'params' | 'translations'
   path: string[]
   source: string
 }

@@ -22,6 +22,7 @@ El escape literal con `\` permite mostrar una referencia completa tal cual, por 
 - `queries.{queryName}.status`
 - `queries.{queryName}.error`
 - `queries.{queryName}.data.{segmentosAnidados}`
+- `translations.{key}`
 
 ## Reglas funcionales generales
 - la navegación anidada adicional solo se admite bajo `queries.{queryName}.data`
@@ -82,3 +83,11 @@ Estas superficies siguen fuera del catálogo de interpolación parcial: si decla
 - `item.$key` es la forma exacta soportada. Variantes como `item.$key.algo`, `item.algo.$key`, `item.$key.$key` u otras formas con `$` distintas del literal exacto son rutas inválidas.
 - Cuando el valor de la entrada contiene una propiedad literal `$key`, `item.$key` devuelve siempre la clave del diccionario, nunca esa propiedad interna: la propiedad sintética tiene precedencia sobre la navegación dentro del valor.
 - Las mismas superficies donde aplica `item.*` admiten también `item.$key`.
+
+## Frontera específica de `translations.*`
+- `translations.{key}` resuelve valores desde el catálogo de traducciones declarado en la raíz del JSON de configuración, aplicando una cadena de fallback por idioma.
+- El idioma activo se declara mediante el atributo `data-lang` del elemento raíz; si no está presente o es vacío, el runtime usa `"es"` por defecto.
+- `translations.{key}` admite exactamente un segmento dinámico tras el namespace. `translations.group.key` (dos segmentos) no se reconoce como referencia válida.
+- La cadena de fallback es: idioma activo → idioma por defecto (`"es"`) → en desarrollo: nombre de la clave; en producción: string vacío.
+- `translations.{key}` puede usarse en todas las superficies visibles interpolables que ya admiten referencias completas: `heading.props.text`, `paragraph.props.text`, `button.props.label`, `input.props.label`, `input.props.placeholder`, `textarea.props.label`, `textarea.props.placeholder`, `select.props.label`, `radioGroup.props.label`, `checkboxGroup.props.label`, elementos de `list.props.items`, celdas de `table`, `image.props.alt`, y dentro de placeholders `{{translations.key}}` en cualquiera de las anteriores.
+- `translations.*` queda fuera de alcance en `api.query`, `api.body`, `api.headers`, `visibility.reference`, orígenes de colección (`repeater.props.items.source`, `list.props.items.source`, `select.props.items.source`, `radioGroup.props.items.source`, `checkboxGroup.props.items.source`) y en `defaultValue` de campos de formulario; en esas superficies se trata como string literal.

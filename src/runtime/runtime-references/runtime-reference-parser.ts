@@ -6,9 +6,9 @@ import type {
   RuntimeUnsupportedReference,
 } from './runtime-reference-types'
 
-const SUPPORTED_NAMESPACES = new Set(['forms', 'queries', 'params'] as const)
+const SUPPORTED_NAMESPACES = new Set(['forms', 'queries', 'params', 'translations'] as const)
 const RESERVED_NAMESPACES = new Set(['navigation', 'routeParams'] as const)
-const REFERENCE_PATTERN = /^(item|forms|queries|navigation|routeParams|params)(\.[A-Za-z0-9_-]+)*$/
+const REFERENCE_PATTERN = /^(item|forms|queries|navigation|routeParams|params|translations)(\.[A-Za-z0-9_-]+)*$/
 const REFERENCE_SEGMENT_PATTERN = /^[A-Za-z0-9_-]+$/
 const ITEM_KEY_SYNTHETIC_SEGMENT = '$key'
 
@@ -105,7 +105,8 @@ function hasRecognizedNamespace(value: string): boolean {
     namespace === 'queries' ||
     namespace === 'navigation' ||
     namespace === 'routeParams' ||
-    namespace === 'params'
+    namespace === 'params' ||
+    namespace === 'translations'
   )
 }
 
@@ -138,6 +139,8 @@ function hasValidReferenceShape(namespace: RuntimeReferenceNamespace, path: stri
         return false
       }
 
+      return path.length === 1
+    case 'translations':
       return path.length === 1
     case 'navigation':
     case 'routeParams':

@@ -11,7 +11,10 @@ import type {
   RuntimeStateAction,
 } from './runtime-state-types'
 
-export function createRuntimeState(config: RuntimeConfig, options?: { dataValues?: Record<string, unknown> }): RuntimeState {
+export function createRuntimeState(
+  config: RuntimeConfig,
+  options?: { dataValues?: Record<string, unknown>; activeLanguage?: string },
+): RuntimeState {
   const initialPage = config.pages.find((page) => page.id === config.initialPage)
   const initialEntry = createNavigationHistoryEntry(0, config.initialPage, {})
 
@@ -45,6 +48,10 @@ export function createRuntimeState(config: RuntimeConfig, options?: { dataValues
     modal: {
       activeModalId: null,
       activeIterationKey: null,
+    },
+    i18n: {
+      translations: config.translations ?? {},
+      activeLanguage: options?.activeLanguage ?? 'es',
     },
   }
 }

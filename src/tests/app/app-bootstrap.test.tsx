@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { App } from '../../app/App'
 import type { RuntimeConfig } from '../../app/bootstrap/read-runtime-config'
+import { readRuntimeActiveLanguage } from '../../app/bootstrap/read-runtime-active-language'
 
 const devConfig: RuntimeConfig = {
   api: {},
@@ -406,5 +407,58 @@ describe('App bootstrap — data-values pre-seeding', () => {
 
     expect(screen.getByText('Grace')).toBeInTheDocument()
     expect(screen.queryByText('Juan')).not.toBeInTheDocument()
+  })
+})
+
+describe('App bootstrap — data-lang active language reading', () => {
+  it('reads "en" from data-lang attribute when present', () => {
+    const rootElement = document.createElement('div')
+    rootElement.dataset.lang = 'en'
+
+    expect(readRuntimeActiveLanguage({ rootElement })).toBe('en')
+  })
+
+  it('defaults to "es" when data-lang attribute is absent', () => {
+    const rootElement = document.createElement('div')
+
+    expect(readRuntimeActiveLanguage({ rootElement })).toBe('es')
+  })
+
+  it('defaults to "es" when data-lang is an empty string', () => {
+    const rootElement = document.createElement('div')
+    rootElement.dataset.lang = ''
+
+    expect(readRuntimeActiveLanguage({ rootElement })).toBe('es')
+  })
+
+  it('propagates an arbitrary lang slug without modification', () => {
+    const rootElement = document.createElement('div')
+    rootElement.dataset.lang = 'fr'
+
+    expect(readRuntimeActiveLanguage({ rootElement })).toBe('fr')
+  })
+
+  it('defaults to "es" when rootElement is null', () => {
+    expect(readRuntimeActiveLanguage({ rootElement: null })).toBe('es')
+  })
+
+  it('renders the app without error when data-lang is set to a known lang', () => {
+    const rootElement = document.createElement('div')
+    rootElement.dataset.lang = 'en'
+
+    render(<App devConfigOverride={devConfig} isDevelopment rootElement={rootElement} />)
+
+    expect(screen.queryByTestId('runtime-error-message')).not.toBeInTheDocument()
+    expect(screen.getByText('Dev Home')).toBeInTheDocument()
+  })
+
+  it('renders the app without error when data-lang is set to an unknown lang', () => {
+    const rootElement = document.createElement('div')
+    rootElement.dataset.lang = 'fr'
+
+    render(<App devConfigOverride={devConfig} isDevelopment rootElement={rootElement} />)
+
+    expect(screen.queryByTestId('runtime-error-message')).not.toBeInTheDocument()
+    expect(screen.getByText('Dev Home')).toBeInTheDocument()
   })
 })

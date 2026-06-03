@@ -11,6 +11,7 @@ Permitir iterar sobre la configuración JSON sin depender del backend real.
 - un `config.json` local versionado para cargar la configuración en desarrollo
 - una frontera de arranque que también pueda leer `data-config` cuando el contenedor lo aporte
 - un `data-values.json` local para pre-cargar datos iniciales en queries sin necesidad de API real
+- un atributo `data-lang` en el elemento raíz para declarar el idioma activo (default: `"es"`), que se propaga al resolver referencias `translations.*`
 
 ## Qué permite
 - cargar una configuración inicial desde `src/dev/config.json` en desarrollo

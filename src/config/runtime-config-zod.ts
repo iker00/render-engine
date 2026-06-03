@@ -489,3 +489,11 @@ export const closeModalRuntimeUiActionSchema = z
     modalId: nonEmptyStringSchema,
   })
   .strip()
+
+const nonEmptyLangSlugSchema = z.string().refine((value) => value.length > 0, {
+  message: 'Language slug must not be empty',
+})
+
+export const runtimeTranslationsLangMapSchema = z.record(nonEmptyLangSlugSchema, z.string())
+
+export const runtimeTranslationsSchema = z.record(z.string(), runtimeTranslationsLangMapSchema)

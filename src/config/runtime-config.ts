@@ -89,4 +89,5 @@ export type {
   CheckboxGroupLayoutNode,
   ChoiceGroupOptionLayout,
 } from './runtime-config-types'
+export type { RuntimeTranslationsConfig, RuntimeTranslationsLangMap } from './runtime-config-types'
 export { validateRuntimeConfig } from './validate-runtime-config'

@@ -458,10 +458,14 @@ export interface RuntimePageConfig {
   layout: LayoutNodeCollection
 }
 
+export type RuntimeTranslationsLangMap = Record<string, string>
+export type RuntimeTranslationsConfig = Record<string, RuntimeTranslationsLangMap>
+
 export interface RuntimeConfig {
   api: RuntimeApiConfig
   pages: RuntimePageConfig[]
   initialPage: string
+  translations?: RuntimeTranslationsConfig
 }
 
 export interface RuntimeConfigError {
