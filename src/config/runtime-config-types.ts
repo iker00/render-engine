@@ -14,6 +14,7 @@ export type LayoutNodeType =
   | 'radioGroup'
   | 'checkboxGroup'
   | 'modal'
+  | 'tabs'
 export type RuntimeApiMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
 export type RuntimeApiQueryValue = string | number | boolean
 export type RuntimeApiQuery = Record<string, RuntimeApiQueryValue>
@@ -379,6 +380,24 @@ export interface ModalLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLay
   children?: LayoutNode[]
 }
 
+export type TabsOrientation = 'horizontal' | 'vertical'
+
+export interface TabsItem {
+  label: string
+  children?: LayoutNode[]
+}
+
+export interface TabsLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayoutFields {
+  type: 'tabs'
+  id?: string
+  props: {
+    orientation?: TabsOrientation
+    defaultTab?: number
+    items: TabsItem[]
+  }
+  children?: never
+}
+
 export interface NavigateToRuntimeUiAction {
   type: 'navigateTo'
   pageId: string
@@ -449,6 +468,7 @@ export type LayoutNode =
   | RadioGroupLayoutNode
   | CheckboxGroupLayoutNode
   | ModalLayoutNode
+  | TabsLayoutNode
 
 export type LayoutNodeCollection = LayoutNode[]
 

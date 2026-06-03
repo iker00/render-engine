@@ -20,6 +20,7 @@ import { RadioGroupNode } from './nodes/radio-group-layout-node'
 import { RepeaterNode } from './nodes/repeater-layout-node'
 import { SelectNode } from './nodes/select-layout-node'
 import { TableNode } from './nodes/table-layout-node'
+import { TabsNode } from './nodes/tabs-layout-node'
 import { TextareaNode } from './nodes/textarea-layout-node'
 
 export interface LayoutNodeRendererProps {
@@ -98,6 +99,9 @@ export function LayoutNodeRenderer({ node, renderedChildren, iterationContext }:
       break
     case 'checkboxGroup':
       renderedNode = <CheckboxGroupNode node={node} iterationContext={iterationContext} />
+      break
+    case 'tabs':
+      renderedNode = <TabsNode node={node} iterationContext={iterationContext} />
       break
   }
 

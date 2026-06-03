@@ -17,6 +17,7 @@ export const supportedNodeTypes = [
   'radioGroup',
   'checkboxGroup',
   'modal',
+  'tabs',
 ] as const
 
 export const tableCellAllowedNodeTypes = ['image', 'list', 'button', 'container', 'heading', 'paragraph'] as const
@@ -487,6 +488,31 @@ export const closeModalRuntimeUiActionSchema = z
   .object({
     type: z.literal('closeModal'),
     modalId: nonEmptyStringSchema,
+  })
+  .strip()
+
+export const tabsItemSchema = z
+  .object({
+    label: z.string(),
+    children: z.array(z.unknown()).optional(),
+  })
+  .strip()
+
+export const tabsNodeSchema = z
+  .object({
+    type: z.literal('tabs'),
+    id: nodeIdSchema.optional(),
+    queryStateFeedback: queryStateFeedbackSchema.optional(),
+    visibility: visibilitySchema.optional(),
+    layout: layoutNodeLayoutSchema.optional(),
+    props: z
+      .object({
+        orientation: z.enum(['horizontal', 'vertical']).optional(),
+        defaultTab: z.number().int().min(0).optional(),
+        items: z.array(tabsItemSchema).min(1),
+      })
+      .strip(),
+    children: z.never().optional(),
   })
   .strip()
 

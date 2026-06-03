@@ -14,6 +14,7 @@ Los conceptos transversales (`visibility`, `queryStateFeedback`, referencias din
 |---|---|
 | [container.md](./container.md) | Layouts con `direction`, `gap`, `columns` fijo o responsive, `variant: card`, `align`, `justify`, `wrap`, `layout.span`. |
 | [repeater.md](./repeater.md) | Repetición de subárbol por item de colección, `props.items.source`, `props.items.key`, paginación local con variantes `previousNext`/`numbered`/`scroll`. |
+| [tabs.md](./tabs.md) | Paneles navegables por pestañas, `props.items` (label + children), `props.orientation` (`horizontal\|vertical`), `props.defaultTab`, estado local del tab activo. |
 
 ## Nodos hoja visibles
 

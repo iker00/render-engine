@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import devConfig from '../../dev/config.json'
 import { runtimeConfigRootSchema } from '../../config/runtime-config-root-zod'
-import { openModalRuntimeUiActionSchema, closeModalRuntimeUiActionSchema } from '../../config/runtime-config-zod'
+import {
+  openModalRuntimeUiActionSchema,
+  closeModalRuntimeUiActionSchema,
+  tabsNodeSchema,
+  supportedNodeTypes,
+} from '../../config/runtime-config-zod'
 import { validateRuntimeConfig } from '../../config/runtime-config'
 
 describe('runtimeConfigRootSchema', () => {
@@ -265,6 +270,56 @@ describe('closeModalRuntimeUiActionSchema', () => {
   it('rejects closeModal with modalId as non-string', () => {
     const result = closeModalRuntimeUiActionSchema.safeParse({ type: 'closeModal', modalId: null })
     expect(result.success).toBe(false)
+  })
+})
+
+describe('tabsNodeSchema', () => {
+  it('accepts a minimal valid tabs node with one item', () => {
+    const result = tabsNodeSchema.safeParse({ type: 'tabs', props: { items: [{ label: 'Tab 1', children: [] }] } })
+    expect(result.success).toBe(true)
+  })
+
+  it('accepts tabs node with orientation horizontal and defaultTab', () => {
+    const result = tabsNodeSchema.safeParse({
+      type: 'tabs',
+      props: { items: [{ label: 'Tab 1', children: [] }], orientation: 'horizontal', defaultTab: 0 },
+    })
+    expect(result.success).toBe(true)
+  })
+
+  it('accepts tabs node with orientation vertical', () => {
+    const result = tabsNodeSchema.safeParse({
+      type: 'tabs',
+      props: { items: [{ label: 'Tab 1', children: [] }], orientation: 'vertical' },
+    })
+    expect(result.success).toBe(true)
+  })
+
+  it('rejects tabs node without props.items', () => {
+    const result = tabsNodeSchema.safeParse({ type: 'tabs', props: {} })
+    expect(result.success).toBe(false)
+  })
+
+  it('rejects tabs node with props.items as empty array', () => {
+    const result = tabsNodeSchema.safeParse({ type: 'tabs', props: { items: [] } })
+    expect(result.success).toBe(false)
+  })
+
+  it('rejects an item without label', () => {
+    const result = tabsNodeSchema.safeParse({ type: 'tabs', props: { items: [{ children: [] }] } })
+    expect(result.success).toBe(false)
+  })
+
+  it('rejects orientation with a value outside the catalog', () => {
+    const result = tabsNodeSchema.safeParse({
+      type: 'tabs',
+      props: { items: [{ label: 'Tab 1', children: [] }], orientation: 'diagonal' },
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it("has 'tabs' present in supportedNodeTypes", () => {
+    expect(supportedNodeTypes).toContain('tabs')
   })
 })
 

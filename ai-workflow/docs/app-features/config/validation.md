@@ -66,6 +66,15 @@
 - Si un campo de selección simple (`select` simple o `radioGroup`) declara un `defaultValue` literal array, el config completo se rechaza antes del render.
 - Si un `defaultValue` literal múltiple contiene miembros no escalares o mezcla strings y números, el config completo se rechaza antes del render.
 
+## Reglas del nodo `tabs`
+
+- `props.items` es obligatorio y debe ser un array con al menos un elemento; si está ausente o vacío, el config completo se rechaza con código `invalid-layout` y ruta que incluye `props.items`.
+- Cada item de `props.items` debe declarar `label` como string; si falta, el config se rechaza con código `invalid-layout` y ruta que incluye el índice del item y `.label` (p. ej. `props.items[0].label`).
+- `props.orientation` solo acepta `"horizontal"` o `"vertical"` si se declara; cualquier otro valor rechaza el config con código `invalid-layout` y ruta que incluye `props.orientation`.
+- Los `children` de cada item se validan recursivamente como colección de nodos del catálogo, con la misma semántica que los `children` de `container`: tipos desconocidos producen `unsupported-node-type`; contratos inválidos producen `invalid-layout`.
+- No existe un allowlist de tipos de `children` para `tabs`: admite cualquier nodo válido del catálogo, incluidos `form`, `repeater`, `container` y todos los nodos hoja.
+- La ruta diagnóstica de errores dentro de los `children` sigue el patrón `props.items[N].children`.
+
 ## Política de errores
 - Los errores estructurales conservan la semántica pública actual (`invalid-layout` o `unsupported-node-type`) y ahora incluyen rutas canónicas del JSON cuando aplica, por ejemplo `layout[0].props.items[1]` o `searchUsers.query.filters`.
 - En desarrollo, los errores de configuración deben ser diagnósticos y visibles.

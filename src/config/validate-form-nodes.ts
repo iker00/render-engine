@@ -1175,6 +1175,26 @@ function validateFormNodesInCollection(
       continue
     }
 
+    if (node.type === 'tabs') {
+      for (let itemIndex = 0; itemIndex < node.props.items.length; itemIndex += 1) {
+        const item = node.props.items[itemIndex]
+        if (item.children && item.children.length > 0) {
+          const itemChildrenError = validateFormNodesInCollection(
+            item.children,
+            `${nodePath}.props.items[${itemIndex}].children`,
+            pageId,
+            context,
+          )
+
+          if (itemChildrenError) {
+            return itemChildrenError
+          }
+        }
+      }
+
+      continue
+    }
+
     if (
       node.type === 'input' ||
       node.type === 'textarea' ||

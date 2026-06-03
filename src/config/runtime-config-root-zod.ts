@@ -14,6 +14,7 @@ import {
   repeaterNodeSchema,
   runtimeApiOperationShellSchema,
   selectNodeSchema,
+  tabsNodeSchema,
   tableNodeSchema,
   textareaNodeSchema,
 } from './runtime-config-zod'
@@ -25,6 +26,7 @@ const layoutNodeSchema: z.ZodType<unknown> = z.lazy(() =>
     repeaterNodeLooseSchema,
     formNodeLooseSchema,
     modalNodeLooseSchema,
+    tabsNodeLooseSchema,
     headingNodeSchema,
     paragraphNodeSchema,
     listNodeSchema,
@@ -50,6 +52,26 @@ const formNodeLooseSchema = formNodeSchema.extend({
 
 const modalNodeLooseSchema = modalNodeSchema.extend({
   children: z.array(layoutNodeSchema).optional(),
+})
+
+// tabs items children are overridden to use recursive layoutNodeSchema
+const tabsNodeLooseSchema = tabsNodeSchema.extend({
+  props: z
+    .object({
+      orientation: z.enum(['horizontal', 'vertical']).optional(),
+      defaultTab: z.number().int().min(0).optional(),
+      items: z
+        .array(
+          z
+            .object({
+              label: z.string(),
+              children: z.array(layoutNodeSchema).optional(),
+            })
+            .strip(),
+        )
+        .min(1),
+    })
+    .strip(),
 })
 
 // repeater.props.template is overridden directly; items/pagination keep the original shape
