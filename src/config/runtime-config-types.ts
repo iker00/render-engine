@@ -20,6 +20,7 @@ export type LayoutNodeType =
   | 'badge'
   | 'alert'
   | 'stat'
+  | 'divider'
 export type RuntimeApiMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
 export type RuntimeApiQueryValue = string | number | boolean
 export type RuntimeApiQuery = Record<string, RuntimeApiQueryValue>
@@ -456,6 +457,15 @@ export interface StatLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayo
   children?: unknown
 }
 
+export type DividerVariant = 'solid' | 'dashed' | 'dotted' | 'invisible'
+
+export interface DividerLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayoutFields {
+  type: 'divider'
+  id?: string
+  props?: { variant?: DividerVariant }
+  children?: never
+}
+
 export interface NavigateToRuntimeUiAction {
   type: 'navigateTo'
   pageId: string
@@ -545,6 +555,7 @@ export type LayoutNode =
   | BadgeLayoutNode
   | AlertLayoutNode
   | StatLayoutNode
+  | DividerLayoutNode
 
 export type LayoutNodeCollection = LayoutNode[]
 

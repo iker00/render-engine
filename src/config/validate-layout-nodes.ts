@@ -3,6 +3,7 @@ import type {
   AlertLayoutNode,
   BadgeLayoutNode,
   StatLayoutNode,
+  DividerLayoutNode,
   ButtonLayoutNode,
   ContainerLayoutNode,
   HeadingLayoutNode,
@@ -37,6 +38,7 @@ import {
   alertNodeSchema,
   badgeNodeSchema,
   statNodeSchema,
+  dividerNodeSchema,
   buttonNodeSchema,
   containerNodeSchema,
   headingNodeSchema,
@@ -159,6 +161,8 @@ export function validateLayoutNode(
       return validateAlertNode(rawNode, path, pageId)
     case 'stat':
       return validateStatNode(rawNode, path, pageId)
+    case 'divider':
+      return validateDividerNode(rawNode, path, pageId)
   }
 
   return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.type".`)
@@ -2059,6 +2063,66 @@ function validateStatNode(
         variant: parseResult.data.props.variant,
         color: parseResult.data.props.color,
       },
+    },
+  }
+}
+
+function validateDividerNode(
+  rawNode: Record<string, unknown>,
+  path: string,
+  pageId: string,
+): { status: 'ready'; node: DividerLayoutNode } | { status: 'error'; error: RuntimeConfigError } {
+  const parseResult = dividerNodeSchema.safeParse(rawNode)
+
+  if (!parseResult.success) {
+    const issue = parseResult.error.issues[0]
+    const issuePath = issue?.path ?? []
+
+    const feedbackIssue = mapQueryStateFeedbackIssue(pageId, path, issue)
+    if (feedbackIssue) return feedbackIssue
+
+    const visibilityIssue = mapVisibilityIssue(pageId, path, issue)
+    if (visibilityIssue) return visibilityIssue
+
+    const layoutIssue = mapLayoutNodeIssue(pageId, path, issuePath)
+    if (layoutIssue) return layoutIssue
+
+    if (issuePath[0] === 'id') {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.id".`)
+    }
+
+    if (issuePath[0] === 'props' && issuePath[1] === 'variant') {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.variant".`)
+    }
+
+    return mapLeafNodeIssue(pageId, path, issuePath)
+  }
+
+  const feedbackResult = validateQueryStateFeedback(
+    parseResult.data.queryStateFeedback as LayoutNodeFeedbackFields['queryStateFeedback'],
+    `${path}.queryStateFeedback`,
+    pageId,
+  )
+
+  if (feedbackResult.status === 'error') return feedbackResult
+
+  const visibilityResult = validateVisibility(
+    parseResult.data.visibility as LayoutNodeFeedbackFields['visibility'],
+    `${path}.visibility`,
+    pageId,
+  )
+
+  if (visibilityResult.status === 'error') return visibilityResult
+
+  return {
+    status: 'ready',
+    node: {
+      type: 'divider',
+      id: parseResult.data.id,
+      queryStateFeedback: feedbackResult.queryStateFeedback,
+      visibility: visibilityResult.visibility,
+      layout: parseResult.data.layout,
+      props: parseResult.data.props,
     },
   }
 }

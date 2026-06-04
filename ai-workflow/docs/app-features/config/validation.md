@@ -19,7 +19,7 @@
 ## Validación estructural global
 - Si `layout` no es un array válido, el arranque falla con un error explícito sobre la ruta afectada.
 - Si aparece un nodo no soportado en la raíz o dentro de `children`, el runtime lo trata como error de configuración y no lo reinterpreta.
-- Si `form.children` contiene nodos fuera de `input`, `textarea`, `select`, `radioGroup`, `checkboxGroup`, `button`, `heading`, `paragraph`, `image`, `table` y `container`, el config completo se rechaza antes del render.
+- Si `form.children` contiene nodos fuera de `input`, `textarea`, `select`, `radioGroup`, `checkboxGroup`, `button`, `heading`, `paragraph`, `image`, `table`, `container`, `accordion` y `divider`, el config completo se rechaza antes del render.
 - Si `input`, `textarea`, `select`, `radioGroup` o `checkboxGroup` aparecen fuera de un subárbol `form`, el config completo se rechaza antes del render.
 - Si un `button` sin `action` aparece fuera de un subárbol `form`, el config completo se rechaza antes del render.
 
@@ -109,6 +109,12 @@
 - `props.variant` solo acepta `"accent"` o `"tinted"` si se declara; cualquier otro valor rechaza el config con `invalid-layout` y diagnóstico de ruta `{path}.props.variant`.
 - `props.color` solo acepta `"neutral"`, `"primary"`, `"success"`, `"warning"`, `"danger"` o `"info"` si se declara; cualquier otro valor rechaza el config con `invalid-layout` y diagnóstico de ruta `{path}.props.color`.
 - `stat` no acepta `children`; si se declaran, no pasan al resultado normalizado (nodo hoja).
+- `visibility`, `queryStateFeedback` y `layout.span` siguen el contrato transversal estándar.
+
+## Reglas del nodo `divider`
+
+- `props.variant` solo acepta `"solid"`, `"dashed"`, `"dotted"` o `"invisible"` si se declara; cualquier otro valor rechaza el config con `invalid-layout` y diagnóstico de ruta `{path}.props.variant`.
+- `divider` no acepta `children`; si se declaran, no pasan al resultado normalizado (nodo hoja, descarte silencioso).
 - `visibility`, `queryStateFeedback` y `layout.span` siguen el contrato transversal estándar.
 
 ## Política de errores

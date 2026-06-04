@@ -44,6 +44,7 @@ src/tests/
 - `runtime-config-validation-modal.test.ts` — validación de nodo modal: shape, children permitidos, unicidad de id, referencias modalId, prohibición de defaultOpen en repeater (~700 líneas)
 - `runtime-config-validation-alert.test.ts` — validación del nodo `alert`: aceptación con type/message/title/transversales, rechazo de message ausente o no string, type inválido, title no string (~nuevo)
 - `runtime-config-validation-stat.test.ts` — validación del nodo `stat`: aceptación con label/value/variant/color/transversales/children ignorados, rechazo de label ausente o no string, value ausente o no string, variant inválido, color inválido, layout.span inválido (~nuevo)
+- `runtime-config-validation-divider.test.ts` — validación del nodo `divider`: aceptación sin props, con todas las variantes, con transversales (visibility/queryStateFeedback/layout.span), con children silenciosamente descartados, dentro de container; rechazo de variant inválido y layout.span fuera de rango (~nuevo)
 
 ## layout-renderer/
 
@@ -64,6 +65,7 @@ src/tests/
 - `layout-renderer-modal-repeater.test.tsx` — modal dentro de repeater.props.template, identidad por iteración, item.* en modal, cierre global uno a la vez (~400 líneas)
 - `layout-renderer-alert.test.tsx` — render básico del nodo `alert`: colores por tipo, icono placeholder, title/message, interpolación, transversales, integración repeater y form (~nuevo)
 - `layout-renderer-stat.test.tsx` — render del nodo `stat`: variantes accent/tinted, paleta de seis colores (borde y fondo/texto), label/value visibles, interpolación, transversales (visibility/queryStateFeedback/layout.span), integración repeater con item.* y form (~nuevo)
+- `layout-renderer-divider.test.tsx` — render del nodo `divider`: data-layout-node, variantes solid/dashed/dotted/invisible (clases Tailwind), visibility (visible/oculto), layout.span dentro de container con columns, repetición en repeater, ausencia de children en el DOM (~nuevo)
 
 ## runtime-state/
 

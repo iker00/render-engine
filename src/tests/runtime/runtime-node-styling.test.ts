@@ -170,18 +170,24 @@ describe('runtime node styling', () => {
     })
   })
 
-  it('keeps form sections aligned to the form width while preserving their divider', () => {
+  it('does not add border-t to form-section containers (separator is now an explicit divider node)', () => {
     expect(getContainerNodeStyling({ surface: 'form-section' })).toEqual({
-      className: 'flex w-full flex-col flex-nowrap border-t border-app-border-soft pt-5 sm:pt-6 gap-5',
+      className: 'flex w-full flex-col flex-nowrap gap-5',
     })
+    expect(getContainerNodeStyling({ surface: 'form-section' })).not.toEqual(
+      expect.objectContaining({ className: expect.stringContaining('border-t') }),
+    )
+    expect(getContainerNodeStyling({ surface: 'form-section' })).not.toEqual(
+      expect.objectContaining({ className: expect.stringContaining('pt-5') }),
+    )
   })
 
-  it('keeps row containers inside forms plain unless columns force the section surface', () => {
+  it('keeps row containers inside forms plain and form-section with columns also has no border-t', () => {
     expect(getContainerNodeStyling({ direction: 'row' })).toEqual({
       className: 'flex w-full flex-row flex-nowrap gap-5',
     })
     expect(getContainerNodeStyling({ direction: 'row', columns: 2, surface: 'form-section' })).toEqual({
-      className: 'grid w-full grid-cols-2 border-t border-app-border-soft pt-5 sm:pt-6 gap-5',
+      className: 'grid w-full grid-cols-2 gap-5',
     })
   })
 

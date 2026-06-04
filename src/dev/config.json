@@ -85,6 +85,9 @@
           },
           "children": [
             {
+              "type": "divider"
+            },
+            {
               "type": "container",
               "props": {
                 "columns": 12
@@ -244,7 +247,7 @@
                       "type": "heading",
                       "props": {
                         "level": 2,
-                        "text": "queries.buscarPersona.data.persona.nombreApellidos"
+                        "text": "{{translations.prueba}}: {{queries.buscarPersona.data.persona.nombreApellidos}}"
                       },
                       "layout": {
                         "span": 12
@@ -297,23 +300,13 @@
                     },
                     "template": [
                       {
-                        "type": "container",
+                        "type": "stat",
                         "props": {
-                          "columns": 12,
-                          "gap": "sm",
-                          "variant": "card"
-                        },
-                        "layout": {
-                          "span": 3
-                        },
-                        "children": [
-                          {
-                            "type": "paragraph",
-                            "props": {
-                              "text": "{{item.fuente.nombre}}: {{item.total}}"
-                            }
-                          }
-                        ]
+                          "label": "{{item.fuente.nombre}}",
+                          "value": "{{item.total}}",
+                          "variant": "tinted",
+                          "color": "primary"
+                        }
                       }
                     ]
                   }
@@ -694,5 +687,11 @@
       ]
     }
   ],
-  "initialPage": "home"
+  "initialPage": "home",
+  "translations": {
+    "prueba": {
+      "es": "Prueba",
+      "eu": "prueba euskera"
+    }
+  }
 }

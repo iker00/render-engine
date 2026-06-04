@@ -360,9 +360,7 @@ export function getContainerNodeStyling({
   const surfaceClassNames =
     variant === 'card'
       ? ['rounded-section', 'border', 'border-app-border-soft', 'bg-white', 'p-4', 'shadow-section', 'sm:p-5']
-      : surface === 'form-section'
-        ? ['border-t', 'border-app-border-soft', 'pt-5', 'sm:pt-6']
-        : []
+      : []
 
   if (align) {
     classNames.push(containerAlignClassMap[align])

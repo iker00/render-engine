@@ -1256,10 +1256,11 @@ function validateFormChildren(
       node.type !== 'image' &&
       node.type !== 'table' &&
       node.type !== 'container' &&
-      node.type !== 'accordion'
+      node.type !== 'accordion' &&
+      node.type !== 'divider'
     ) {
       return invalidLayout(
-        `Page "${pageId}" has an invalid layout at "${nodePath}": form nodes only accept input, textarea, select, radioGroup, checkboxGroup, button, heading, paragraph, image, table, container and accordion descendants.`,
+        `Page "${pageId}" has an invalid layout at "${nodePath}": form nodes only accept input, textarea, select, radioGroup, checkboxGroup, button, heading, paragraph, image, table, container, accordion and divider descendants.`,
       )
     }
 

@@ -23,6 +23,7 @@ export const supportedNodeTypes = [
   'badge',
   'alert',
   'stat',
+  'divider',
 ] as const
 
 export const tableCellAllowedNodeTypes = ['image', 'list', 'button', 'container', 'heading', 'paragraph'] as const
@@ -623,5 +624,23 @@ export const statNodeSchema = z
         color: z.enum(supportedStatColors).optional(),
       })
       .strip(),
+  })
+  .strip()
+
+export const supportedDividerVariants = ['solid', 'dashed', 'dotted', 'invisible'] as const
+
+export const dividerNodeSchema = z
+  .object({
+    type: z.literal('divider'),
+    id: nodeIdSchema.optional(),
+    queryStateFeedback: queryStateFeedbackSchema.optional(),
+    visibility: visibilitySchema.optional(),
+    layout: layoutNodeLayoutSchema.optional(),
+    props: z
+      .object({
+        variant: z.enum(supportedDividerVariants).optional(),
+      })
+      .strip()
+      .optional(),
   })
   .strip()

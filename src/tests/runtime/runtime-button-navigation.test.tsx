@@ -1331,13 +1331,10 @@ describe('Runtime button navigation', () => {
       'flex-col',
       'flex-nowrap',
       'gap-5',
-      'border-t',
-      'border-app-border-soft',
-      'pt-5',
     )
     expect(
       screen.getByRole('button', { name: 'Submit profile' }).closest('[data-layout-node="container"]'),
-    ).not.toHaveClass('-mx-5', 'sm:-mx-6')
+    ).not.toHaveClass('border-t', 'pt-5', '-mx-5', 'sm:-mx-6')
 
     fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Grace' } })
     fireEvent.click(screen.getByRole('button', { name: 'Submit profile' }))

@@ -8,6 +8,8 @@ export type {
   StatLayoutNode,
   StatVariant,
   StatColor,
+  DividerLayoutNode,
+  DividerVariant,
   ButtonAction,
   ButtonLayoutNode,
   LinkLayoutNode,

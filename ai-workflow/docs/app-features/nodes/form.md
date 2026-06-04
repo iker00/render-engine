@@ -13,7 +13,7 @@
 - `submitAction.body`: payload JSON opcional.
 - `submitAction.headers`: objeto plano opcional con valores string.
 - `resetOnSuccess`: boolean opcional, válido solo cuando existe `submitAction`.
-- `children`: colección ordenada con soporte para `input`, `textarea`, `select`, `radioGroup`, `checkboxGroup`, `button`, `heading`, `paragraph`, `image`, `table`, `container` y `accordion`.
+- `children`: colección ordenada con soporte para `input`, `textarea`, `select`, `radioGroup`, `checkboxGroup`, `button`, `heading`, `paragraph`, `image`, `table`, `container`, `accordion` y `divider`.
 
 ## Reglas de render
 - `form` renderiza un `<form>` real, hereda un contexto estable de `formId` a sus descendientes, inicializa solo los campos todavía ausentes en el store, elimina por defecto `forms.{formId}` al desmontarse realmente y puede ejecutar `submitAction.type: executeOperation` con `query`, `body` y `headers` por envío.
@@ -23,6 +23,7 @@
 - `form` funciona hoy como layout principal del trámite, no como una tarjeta adicional que envuelva otras tarjetas internas.
 - La baseline visual vigente del formulario es deliberadamente compacta: el bloque introductorio, las secciones, los campos y el cierre de acciones ocupan menos altura total que en la baseline institucional inicial, sin abandonar su gramática administrativa.
 - La jerarquía visual de acciones sigue distinguiendo CTA principal y acciones secundarias sin alterar su semántica funcional actual, pero ambas reducen padding y altura percibida respecto a la baseline previa.
+- A partir de la feature `0057`, los `container` dentro de `form` con `surface: form-section` ya **no** reciben automáticamente el separador superior `border-t`. La separación visual entre secciones de formulario debe declararse explícitamente con un nodo `{ "type": "divider" }` antes del `container` que actúa como sección. Los JSON de configuración que dependieran del separador automático deben actualizarse añadiendo nodos `divider` explícitos.
 
 ## Validación específica
 - `form.persistOnUnmount` sigue siendo opcional; si aparece con un valor no booleano, el config completo se rechaza antes del render sobre la ruta exacta.
@@ -30,7 +31,7 @@
 - Si un `fieldId` se repite dentro del mismo `form`, el config completo se rechaza antes del render.
 - Si `form.submitAction.operationName` apunta a una operación inexistente en `api`, el config completo se rechaza antes del render.
 - Si `form.resetOnSuccess: true` aparece sin `submitAction`, el config completo se rechaza antes del render.
-- Si un `form.children` contiene nodos fuera de `input`, `textarea`, `select`, `radioGroup`, `checkboxGroup`, `button`, `heading`, `paragraph`, `image`, `table`, `container` y `accordion`, el config completo se rechaza antes del render.
+- Si un `form.children` contiene nodos fuera de `input`, `textarea`, `select`, `radioGroup`, `checkboxGroup`, `button`, `heading`, `paragraph`, `image`, `table`, `container`, `accordion` y `divider`, el config completo se rechaza antes del render.
 
 ## Sub-temas relacionados
 El ciclo de vida del estado, la validación de los campos hijos, los valores por defecto y la semántica de submit/reset viven en [`../forms/`](../forms/index.md):

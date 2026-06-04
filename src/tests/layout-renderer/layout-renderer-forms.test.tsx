@@ -212,11 +212,13 @@ describe('RuntimePage', () => {
       'flex-col',
       'flex-nowrap',
       'gap-5',
-      'border-t',
-      'border-app-border-soft',
-      'pt-5',
     )
-    expect(screen.getByLabelText('Bio').closest('[data-layout-node="container"]')).not.toHaveClass('-mx-5', 'sm:-mx-6')
+    expect(screen.getByLabelText('Bio').closest('[data-layout-node="container"]')).not.toHaveClass(
+      'border-t',
+      'pt-5',
+      '-mx-5',
+      'sm:-mx-6',
+    )
     expect(screen.getByRole('heading', { name: 'Profile form', level: 2 })).toBeInTheDocument()
     expect(screen.getByText('Name').closest('[data-layout-node="input"]')).toHaveClass('grid', 'gap-2')
     expect(screen.getByText('Name')).toHaveClass('text-sm', 'font-semibold', 'leading-5', 'text-app-text-strong')
@@ -549,11 +551,8 @@ describe('RuntimePage', () => {
       'items-center',
       'justify-between',
       'gap-10',
-      'border-t',
-      'border-app-border-soft',
-      'pt-5',
     )
-    expect(container).not.toHaveClass('-mx-5', 'sm:-mx-6')
+    expect(container).not.toHaveClass('border-t', 'pt-5', '-mx-5', 'sm:-mx-6')
     expect(container).not.toHaveClass('flex-row')
     expect(screen.getByLabelText('Bio')).toHaveValue('Runtime builder')
     expect(screen.getByRole('combobox', { name: 'Role' })).toHaveValue('admin')
