@@ -2,6 +2,7 @@ import type {
   AccordionLayoutNode,
   AlertLayoutNode,
   BadgeLayoutNode,
+  StatLayoutNode,
   ButtonLayoutNode,
   ContainerLayoutNode,
   HeadingLayoutNode,
@@ -35,6 +36,7 @@ import {
   accordionNodeSchema,
   alertNodeSchema,
   badgeNodeSchema,
+  statNodeSchema,
   buttonNodeSchema,
   containerNodeSchema,
   headingNodeSchema,
@@ -155,6 +157,8 @@ export function validateLayoutNode(
       return validateBadgeNode(rawNode, path, pageId)
     case 'alert':
       return validateAlertNode(rawNode, path, pageId)
+    case 'stat':
+      return validateStatNode(rawNode, path, pageId)
   }
 
   return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.type".`)
@@ -1977,6 +1981,83 @@ function validateAlertNode(
         message: parseResult.data.props.message,
         type: parseResult.data.props.type,
         title: parseResult.data.props.title,
+      },
+    },
+  }
+}
+
+function validateStatNode(
+  rawNode: Record<string, unknown>,
+  path: string,
+  pageId: string,
+): { status: 'ready'; node: StatLayoutNode } | { status: 'error'; error: RuntimeConfigError } {
+  const parseResult = statNodeSchema.safeParse(rawNode)
+
+  if (!parseResult.success) {
+    const issue = parseResult.error.issues[0]
+    const issuePath = issue?.path ?? []
+
+    const feedbackIssue = mapQueryStateFeedbackIssue(pageId, path, issue)
+    if (feedbackIssue) return feedbackIssue
+
+    const visibilityIssue = mapVisibilityIssue(pageId, path, issue)
+    if (visibilityIssue) return visibilityIssue
+
+    const layoutIssue = mapLayoutNodeIssue(pageId, path, issuePath)
+    if (layoutIssue) return layoutIssue
+
+    if (issuePath[0] === 'id') {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.id".`)
+    }
+
+    if (issuePath[0] === 'props' && issuePath[1] === 'label') {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.label".`)
+    }
+
+    if (issuePath[0] === 'props' && issuePath[1] === 'value') {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.value".`)
+    }
+
+    if (issuePath[0] === 'props' && issuePath[1] === 'variant') {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.variant".`)
+    }
+
+    if (issuePath[0] === 'props' && issuePath[1] === 'color') {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.color".`)
+    }
+
+    return mapLeafNodeIssue(pageId, path, issuePath)
+  }
+
+  const feedbackResult = validateQueryStateFeedback(
+    parseResult.data.queryStateFeedback as LayoutNodeFeedbackFields['queryStateFeedback'],
+    `${path}.queryStateFeedback`,
+    pageId,
+  )
+
+  if (feedbackResult.status === 'error') return feedbackResult
+
+  const visibilityResult = validateVisibility(
+    parseResult.data.visibility as LayoutNodeFeedbackFields['visibility'],
+    `${path}.visibility`,
+    pageId,
+  )
+
+  if (visibilityResult.status === 'error') return visibilityResult
+
+  return {
+    status: 'ready',
+    node: {
+      type: 'stat',
+      id: parseResult.data.id,
+      queryStateFeedback: feedbackResult.queryStateFeedback,
+      visibility: visibilityResult.visibility,
+      layout: parseResult.data.layout,
+      props: {
+        label: parseResult.data.props.label,
+        value: parseResult.data.props.value,
+        variant: parseResult.data.props.variant,
+        color: parseResult.data.props.color,
       },
     },
   }

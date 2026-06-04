@@ -19,6 +19,7 @@ export type LayoutNodeType =
   | 'accordion'
   | 'badge'
   | 'alert'
+  | 'stat'
 export type RuntimeApiMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
 export type RuntimeApiQueryValue = string | number | boolean
 export type RuntimeApiQuery = Record<string, RuntimeApiQueryValue>
@@ -440,6 +441,21 @@ export interface AlertLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLay
   children?: never
 }
 
+export type StatVariant = 'accent' | 'tinted'
+export type StatColor = 'neutral' | 'primary' | 'success' | 'warning' | 'danger' | 'info'
+
+export interface StatLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayoutFields {
+  type: 'stat'
+  id?: string
+  props: {
+    label: string
+    value: string
+    variant?: StatVariant
+    color?: StatColor
+  }
+  children?: unknown
+}
+
 export interface NavigateToRuntimeUiAction {
   type: 'navigateTo'
   pageId: string
@@ -528,6 +544,7 @@ export type LayoutNode =
   | AccordionLayoutNode
   | BadgeLayoutNode
   | AlertLayoutNode
+  | StatLayoutNode
 
 export type LayoutNodeCollection = LayoutNode[]
 
