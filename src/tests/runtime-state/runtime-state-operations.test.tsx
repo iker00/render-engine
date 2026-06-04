@@ -204,7 +204,7 @@ describe('Runtime shared state store', () => {
     )
   })
 
-  it('stores stable query errors without dropping the last successful data', async () => {
+  it('clears data to null when an operation transitions to http-error after having successful data', async () => {
     render(
       <RuntimeStateProvider config={runtimeApiConfig}>
         <QueryOperationFixture
@@ -227,7 +227,7 @@ describe('Runtime shared state store', () => {
     await waitFor(() =>
       expect(readRuntimeStateSnapshot('runtime-state').queries.searchUsers).toMatchObject({
         status: 'error',
-        data: ['Ada'],
+        data: null,
         error: {
           code: 'http-error',
           message: 'The api operation "searchUsers" failed with HTTP status 500.',
@@ -316,6 +316,101 @@ describe('Runtime shared state store', () => {
     )
     expect(readRuntimeStateSnapshot('runtime-state').queries.clearUsers.requestSignature).toBe(
       '{"endpoint":"/api/users","method":"DELETE","operationName":"clearUsers"}',
+    )
+  })
+
+  it('clears data to null when an operation fails with network-error after having successful data', async () => {
+    render(
+      <RuntimeStateProvider config={runtimeApiConfig}>
+        <QueryOperationFixture
+          operationName="searchUsers"
+          fetchMock={vi.fn().mockRejectedValue(new Error('socket hang up'))}
+        />
+      </RuntimeStateProvider>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Seed prior query success' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Execute operation' }))
+
+    await waitFor(() =>
+      expect(readRuntimeStateSnapshot('runtime-state').queries.searchUsers).toMatchObject({
+        status: 'error',
+        data: null,
+        error: {
+          code: 'network-error',
+        },
+      }),
+    )
+  })
+
+  it('clears data to null when an operation fails with invalid-json-response after having successful data', async () => {
+    render(
+      <RuntimeStateProvider config={runtimeApiConfig}>
+        <QueryOperationFixture
+          operationName="searchUsers"
+          fetchMock={vi.fn().mockResolvedValue(
+            new Response('{"broken"', {
+              status: 200,
+              headers: {
+                'content-type': 'application/json',
+              },
+            }),
+          )}
+        />
+      </RuntimeStateProvider>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Seed prior query success' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Execute operation' }))
+
+    await waitFor(() =>
+      expect(readRuntimeStateSnapshot('runtime-state').queries.searchUsers).toMatchObject({
+        status: 'error',
+        data: null,
+        error: {
+          code: 'invalid-json-response',
+        },
+      }),
+    )
+  })
+
+  it('clears data to null when an operation fails with operation-not-found after having successful data', async () => {
+    render(
+      <RuntimeStateProvider config={runtimeApiConfig}>
+        <QueryOperationFixture operationName="missingOperation" fetchMock={vi.fn()} />
+      </RuntimeStateProvider>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Execute operation' }))
+
+    await waitFor(() =>
+      expect(readRuntimeStateSnapshot('runtime-state').queries.missingOperation).toMatchObject({
+        status: 'error',
+        data: null,
+        error: {
+          code: 'operation-not-found',
+        },
+      }),
+    )
+  })
+
+  it('clears data to null when an operation fails with request-build-failed after having successful data', async () => {
+    render(
+      <RuntimeStateProvider config={runtimeApiConfig}>
+        <QueryOperationFixture operationName="invalidSearch" fetchMock={vi.fn()} />
+      </RuntimeStateProvider>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Execute operation' }))
+
+    await waitFor(() =>
+      expect(readRuntimeStateSnapshot('runtime-state').queries.invalidSearch).toMatchObject({
+        status: 'error',
+        data: null,
+        error: {
+          code: 'request-build-failed',
+        },
+      }),
     )
   })
 

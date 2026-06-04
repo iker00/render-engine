@@ -22,7 +22,9 @@
 - si la llamada falla por red, el runtime usa `code: network-error`
 - si la respuesta HTTP no es `ok`, el runtime usa `code: http-error`
 - si la respuesta satisfactoria trae JSON inválido, el runtime usa `code: invalid-json-response`
+- si la respuesta es 200 con JSON válido pero `errorCondition` se cumple, el runtime usa `code: business-error-condition` (o el extraído de `errorCodePath`), y la query transita a `status: error` con `data: null`
 - si la respuesta es satisfactoria pero no trae body consumible, incluido `204 No Content`, el runtime guarda `data: null`
+- cuando una query transita a `status: error` por cualquier motivo, `data` se fija a `null`, incluso si existía un dato válido del ciclo anterior
 
 ## Composición y merge
 - la composición final del request vive solo en `src/queries/`, no en botones, formularios ni otros nodos visuales

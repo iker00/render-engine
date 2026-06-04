@@ -734,6 +734,72 @@ describe('Runtime shared state store', () => {
     })
   })
 
+  it('clears data to null when a query transitions to error after having successful data', () => {
+    render(
+      <RuntimeStateProvider config={runtimeConfig}>
+        <QueriesFixture />
+        <RuntimeStateSnapshot testId="runtime-state" />
+      </RuntimeStateProvider>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Store query success' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Store query error' }))
+
+    expect(screen.getByTestId('runtime-state')).toHaveTextContent(
+      '"queries":{"searchUsers":{"status":"error","data":null,"error":{"code":"network","message":"Could not load users."},"requestSignature":null}}',
+    )
+  })
+
+  it('clears data to null when a query transitions to error from loading with stale data', () => {
+    render(
+      <RuntimeStateProvider config={runtimeConfig}>
+        <QueriesFixture />
+        <RuntimeStateSnapshot testId="runtime-state" />
+      </RuntimeStateProvider>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Store query success' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Reload query' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Store query error' }))
+
+    expect(screen.getByTestId('runtime-state')).toHaveTextContent(
+      '"queries":{"searchUsers":{"status":"error","data":null,"error":{"code":"network","message":"Could not load users."},"requestSignature":null}}',
+    )
+  })
+
+  it('rehidrates data normally when set-success is dispatched after a set-error transition', () => {
+    render(
+      <RuntimeStateProvider config={runtimeConfig}>
+        <QueriesFixture />
+        <RuntimeStateSnapshot testId="runtime-state" />
+      </RuntimeStateProvider>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Store query success' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Store query error' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Store query success' }))
+
+    expect(screen.getByTestId('runtime-state')).toHaveTextContent(
+      '"queries":{"searchUsers":{"status":"success","data":["Ada","Grace"],"error":null,"requestSignature":null}}',
+    )
+  })
+
+  it('keeps the last successful query data while the same query reloads (set-loading does not clear data)', () => {
+    render(
+      <RuntimeStateProvider config={runtimeConfig}>
+        <QueriesFixture />
+        <RuntimeStateSnapshot testId="runtime-state" />
+      </RuntimeStateProvider>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Store query success' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Reload query' }))
+
+    expect(screen.getByTestId('runtime-state')).toHaveTextContent(
+      '"queries":{"searchUsers":{"status":"loading","data":["Ada","Grace"],"error":null,"requestSignature":null}}',
+    )
+  })
+
   it('keeps query state across page changes inside the same runtime instance', async () => {
     render(
       <RuntimeStateProvider config={runtimeConfig}>

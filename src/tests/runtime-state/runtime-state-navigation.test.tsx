@@ -372,7 +372,7 @@ describe('Runtime shared state store', () => {
 
     expect(errorState.queries.searchUsers).toEqual({
       status: 'error',
-      data: ['Ada'],
+      data: null,
       error: {
         code: 'network',
         message: 'Could not load users.',

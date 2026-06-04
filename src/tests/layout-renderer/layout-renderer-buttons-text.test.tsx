@@ -642,7 +642,7 @@ describe('RuntimePage', () => {
   })
 
   it('renders nested query data values inside heading and paragraph text when they resolve to text-compatible scalars', () => {
-    renderRuntimePageWithSeed({
+    const activePage: RuntimePageConfig = {
       id: 'nested-dynamic-text',
       layout: [
         {
@@ -665,7 +665,30 @@ describe('RuntimePage', () => {
           },
         },
       ],
+    }
+    const state = createRuntimePageState(activePage, {
+      searchUsers: {
+        status: 'success',
+        data: {
+          user: {
+            profile: {
+              name: 'Ada',
+              active: true,
+            },
+          },
+          results: [
+            { id: 'user-1', name: 'Ada' },
+            { id: 'user-2', name: 'Grace' },
+          ],
+          stats: {
+            total: 2,
+          },
+        },
+        error: null,
+        requestSignature: null,
+      },
     })
+    renderRuntimePageWithState(activePage, state)
 
     expect(screen.getByRole('heading', { name: 'Grace', level: 2 })).toBeInTheDocument()
     expect(screen.getByText('2')).toBeInTheDocument()

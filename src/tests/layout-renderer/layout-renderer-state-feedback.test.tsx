@@ -1054,4 +1054,144 @@ describe('RuntimePage', () => {
     expect(screen.queryByText('Always idle fallback')).not.toBeInTheDocument()
     expect(screen.queryByText('Admin-only idle fallback')).not.toBeInTheDocument()
   })
+
+  it('renders error.message interpolation with the actual error message when the query is in error', () => {
+    renderRuntimePageWithState(
+      {
+        id: 'home',
+        layout: [
+          {
+            type: 'heading',
+            props: {
+              text: '{{queries.searchUsers.error.message}}',
+              level: 2,
+            },
+          },
+        ],
+      },
+      createRuntimePageState(
+        {
+          id: 'home',
+          layout: [],
+        },
+        {
+          searchUsers: {
+            status: 'error',
+            data: null,
+            error: {
+              code: 'http-error',
+              message: 'No autorizado',
+            },
+            requestSignature: null,
+          },
+        },
+      ),
+    )
+
+    expect(screen.getByRole('heading', { level: 2, name: 'No autorizado' })).toBeInTheDocument()
+  })
+
+  it('renders error.code interpolation with the error code string when the query is in error', () => {
+    renderRuntimePageWithState(
+      {
+        id: 'home',
+        layout: [
+          {
+            type: 'paragraph',
+            props: {
+              text: '{{queries.searchUsers.error.code}}',
+            },
+          },
+        ],
+      },
+      createRuntimePageState(
+        {
+          id: 'home',
+          layout: [],
+        },
+        {
+          searchUsers: {
+            status: 'error',
+            data: null,
+            error: {
+              code: 'UNAUTHORIZED',
+              message: 'Not authorized',
+            },
+            requestSignature: null,
+          },
+        },
+      ),
+    )
+
+    expect(screen.getByText('UNAUTHORIZED')).toBeInTheDocument()
+  })
+
+  it('renders error.message interpolation as empty string when the query is in success', () => {
+    renderRuntimePageWithState(
+      {
+        id: 'home',
+        layout: [
+          {
+            type: 'heading',
+            props: {
+              text: 'Error: {{queries.searchUsers.error.message}}',
+              level: 2,
+            },
+          },
+        ],
+      },
+      createRuntimePageState(
+        {
+          id: 'home',
+          layout: [],
+        },
+        {
+          searchUsers: {
+            status: 'success',
+            data: ['Ada'],
+            error: null,
+            requestSignature: null,
+          },
+        },
+      ),
+    )
+
+    expect(screen.getByRole('heading', { level: 2, name: 'Error:' })).toBeInTheDocument()
+  })
+
+  it('renders error.message as the full reference value when used without interpolation delimiters', () => {
+    renderRuntimePageWithState(
+      {
+        id: 'home',
+        layout: [
+          {
+            type: 'heading',
+            props: {
+              text: 'queries.searchUsers.error.message',
+              level: 2,
+            },
+          },
+        ],
+      },
+      createRuntimePageState(
+        {
+          id: 'home',
+          layout: [],
+        },
+        {
+          searchUsers: {
+            status: 'error',
+            data: null,
+            error: {
+              code: 'http-error',
+              message: 'Could not connect',
+            },
+            requestSignature: null,
+          },
+        },
+      ),
+    )
+
+    expect(screen.getByRole('heading', { level: 2, name: 'Could not connect' })).toBeInTheDocument()
+  })
 })

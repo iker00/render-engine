@@ -1866,3 +1866,761 @@ describe('Runtime api endpoint interpolation', () => {
     })
   })
 })
+
+describe('Runtime api errorCondition evaluation', () => {
+  it('returns success with parsed data when no errorCondition is declared (regression)', async () => {
+    await expect(
+      executeRuntimeApiOperation({
+        config: runtimeConfig,
+        operationName: 'searchUsers',
+        state: runtimeState,
+        fetch: vi.fn().mockResolvedValue(
+          new Response(JSON.stringify({ ok: true }), {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+          }),
+        ),
+      }),
+    ).resolves.toEqual({
+      status: 'success',
+      data: { ok: true },
+    })
+  })
+
+  it('triggers error when notEquals condition is met and extracts message and code from body', async () => {
+    const config: RuntimeConfig = {
+      ...runtimeConfig,
+      api: {
+        checkStatus: {
+          method: 'GET',
+          endpoint: '/api/check',
+          errorCondition: { path: 'code', notEquals: 200 },
+          errorMessagePath: 'message',
+          errorCodePath: 'code',
+        },
+      },
+    }
+
+    await expect(
+      executeRuntimeApiOperation({
+        config,
+        operationName: 'checkStatus',
+        state: runtimeState,
+        fetch: vi.fn().mockResolvedValue(
+          new Response(JSON.stringify({ code: 500, message: 'Error interno' }), {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+          }),
+        ),
+      }),
+    ).resolves.toEqual({
+      status: 'error',
+      error: { code: '500', message: 'Error interno' },
+    })
+  })
+
+  it('triggers error when equals condition is met with nested errorMessagePath and errorCodePath', async () => {
+    const config: RuntimeConfig = {
+      ...runtimeConfig,
+      api: {
+        search: {
+          method: 'POST',
+          endpoint: '/api/search',
+          errorCondition: { path: 'success', equals: false },
+          errorMessagePath: 'error.message',
+          errorCodePath: 'error.code',
+        },
+      },
+    }
+
+    await expect(
+      executeRuntimeApiOperation({
+        config,
+        operationName: 'search',
+        state: runtimeState,
+        fetch: vi.fn().mockResolvedValue(
+          new Response(JSON.stringify({ success: false, error: { message: 'No autorizado', code: 'UNAUTHORIZED' } }), {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+          }),
+        ),
+      }),
+    ).resolves.toEqual({
+      status: 'error',
+      error: { code: 'UNAUTHORIZED', message: 'No autorizado' },
+    })
+  })
+
+  it('triggers error when equals null condition is met and uses defaults when paths are absent', async () => {
+    const config: RuntimeConfig = {
+      ...runtimeConfig,
+      api: {
+        checkNull: {
+          method: 'GET',
+          endpoint: '/api/check',
+          errorCondition: { path: 'code', equals: null },
+        },
+      },
+    }
+
+    await expect(
+      executeRuntimeApiOperation({
+        config,
+        operationName: 'checkNull',
+        state: runtimeState,
+        fetch: vi.fn().mockResolvedValue(
+          new Response(JSON.stringify({ code: null }), {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+          }),
+        ),
+      }),
+    ).resolves.toEqual({
+      status: 'error',
+      error: { code: 'business-error-condition', message: 'Error en la respuesta del servidor' },
+    })
+  })
+
+  it('triggers error when truthiness condition is met with truthy value', async () => {
+    const config: RuntimeConfig = {
+      ...runtimeConfig,
+      api: {
+        checkOk: {
+          method: 'GET',
+          endpoint: '/api/check',
+          errorCondition: { path: 'ok' },
+        },
+      },
+    }
+
+    await expect(
+      executeRuntimeApiOperation({
+        config,
+        operationName: 'checkOk',
+        state: runtimeState,
+        fetch: vi.fn().mockResolvedValue(
+          new Response(JSON.stringify({ ok: true }), {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+          }),
+        ),
+      }),
+    ).resolves.toEqual({
+      status: 'error',
+      error: { code: 'business-error-condition', message: 'Error en la respuesta del servidor' },
+    })
+  })
+
+  it('returns success when truthiness condition is not met with false value', async () => {
+    const config: RuntimeConfig = {
+      ...runtimeConfig,
+      api: {
+        checkOk: {
+          method: 'GET',
+          endpoint: '/api/check',
+          errorCondition: { path: 'ok' },
+        },
+      },
+    }
+
+    await expect(
+      executeRuntimeApiOperation({
+        config,
+        operationName: 'checkOk',
+        state: runtimeState,
+        fetch: vi.fn().mockResolvedValue(
+          new Response(JSON.stringify({ ok: false }), {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+          }),
+        ),
+      }),
+    ).resolves.toEqual({
+      status: 'success',
+      data: { ok: false },
+    })
+  })
+
+  it('returns success when truthiness condition is not met with 0', async () => {
+    const config: RuntimeConfig = {
+      ...runtimeConfig,
+      api: {
+        checkOk: {
+          method: 'GET',
+          endpoint: '/api/check',
+          errorCondition: { path: 'ok' },
+        },
+      },
+    }
+
+    await expect(
+      executeRuntimeApiOperation({
+        config,
+        operationName: 'checkOk',
+        state: runtimeState,
+        fetch: vi.fn().mockResolvedValue(
+          new Response(JSON.stringify({ ok: 0 }), {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+          }),
+        ),
+      }),
+    ).resolves.toEqual({
+      status: 'success',
+      data: { ok: 0 },
+    })
+  })
+
+  it('returns success when truthiness condition is not met with empty string', async () => {
+    const config: RuntimeConfig = {
+      ...runtimeConfig,
+      api: {
+        checkOk: {
+          method: 'GET',
+          endpoint: '/api/check',
+          errorCondition: { path: 'ok' },
+        },
+      },
+    }
+
+    await expect(
+      executeRuntimeApiOperation({
+        config,
+        operationName: 'checkOk',
+        state: runtimeState,
+        fetch: vi.fn().mockResolvedValue(
+          new Response(JSON.stringify({ ok: '' }), {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+          }),
+        ),
+      }),
+    ).resolves.toEqual({
+      status: 'success',
+      data: { ok: '' },
+    })
+  })
+
+  it('triggers error when deeply nested path condition is met', async () => {
+    const config: RuntimeConfig = {
+      ...runtimeConfig,
+      api: {
+        checkDeep: {
+          method: 'GET',
+          endpoint: '/api/check',
+          errorCondition: { path: 'deeply.nested.flag', equals: true },
+        },
+      },
+    }
+
+    await expect(
+      executeRuntimeApiOperation({
+        config,
+        operationName: 'checkDeep',
+        state: runtimeState,
+        fetch: vi.fn().mockResolvedValue(
+          new Response(JSON.stringify({ deeply: { nested: { flag: true } } }), {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+          }),
+        ),
+      }),
+    ).resolves.toEqual({
+      status: 'error',
+      error: { code: 'business-error-condition', message: 'Error en la respuesta del servidor' },
+    })
+  })
+
+  it('triggers error when array index path condition is met', async () => {
+    const config: RuntimeConfig = {
+      ...runtimeConfig,
+      api: {
+        checkItems: {
+          method: 'GET',
+          endpoint: '/api/check',
+          errorCondition: { path: 'items.0.broken', equals: true },
+        },
+      },
+    }
+
+    await expect(
+      executeRuntimeApiOperation({
+        config,
+        operationName: 'checkItems',
+        state: runtimeState,
+        fetch: vi.fn().mockResolvedValue(
+          new Response(JSON.stringify({ items: [{ broken: true }] }), {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+          }),
+        ),
+      }),
+    ).resolves.toEqual({
+      status: 'error',
+      error: { code: 'business-error-condition', message: 'Error en la respuesta del servidor' },
+    })
+  })
+
+  it('returns success when path is missing in body (condition not met)', async () => {
+    const config: RuntimeConfig = {
+      ...runtimeConfig,
+      api: {
+        checkMissing: {
+          method: 'GET',
+          endpoint: '/api/check',
+          errorCondition: { path: 'missing.deep' },
+        },
+      },
+    }
+
+    await expect(
+      executeRuntimeApiOperation({
+        config,
+        operationName: 'checkMissing',
+        state: runtimeState,
+        fetch: vi.fn().mockResolvedValue(
+          new Response(JSON.stringify({}), {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+          }),
+        ),
+      }),
+    ).resolves.toEqual({
+      status: 'success',
+      data: {},
+    })
+  })
+
+  it('returns success when notEquals condition is not met', async () => {
+    const config: RuntimeConfig = {
+      ...runtimeConfig,
+      api: {
+        checkCode: {
+          method: 'GET',
+          endpoint: '/api/check',
+          errorCondition: { path: 'code', notEquals: 200 },
+        },
+      },
+    }
+
+    await expect(
+      executeRuntimeApiOperation({
+        config,
+        operationName: 'checkCode',
+        state: runtimeState,
+        fetch: vi.fn().mockResolvedValue(
+          new Response(JSON.stringify({ code: 200 }), {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+          }),
+        ),
+      }),
+    ).resolves.toEqual({
+      status: 'success',
+      data: { code: 200 },
+    })
+  })
+
+  it('uses default error message when errorMessagePath is absent and condition is met', async () => {
+    const config: RuntimeConfig = {
+      ...runtimeConfig,
+      api: {
+        checkCode: {
+          method: 'GET',
+          endpoint: '/api/check',
+          errorCondition: { path: 'code', notEquals: 200 },
+        },
+      },
+    }
+
+    const result = await executeRuntimeApiOperation({
+      config,
+      operationName: 'checkCode',
+      state: runtimeState,
+      fetch: vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ code: 500 }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        }),
+      ),
+    })
+
+    expect(result).toEqual({
+      status: 'error',
+      error: { code: 'business-error-condition', message: 'Error en la respuesta del servidor' },
+    })
+  })
+
+  it('uses default error message when errorMessagePath field is absent in body', async () => {
+    const config: RuntimeConfig = {
+      ...runtimeConfig,
+      api: {
+        checkCode: {
+          method: 'GET',
+          endpoint: '/api/check',
+          errorCondition: { path: 'code', notEquals: 200 },
+          errorMessagePath: 'message',
+        },
+      },
+    }
+
+    const result = await executeRuntimeApiOperation({
+      config,
+      operationName: 'checkCode',
+      state: runtimeState,
+      fetch: vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ code: 500 }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        }),
+      ),
+    })
+
+    expect(result).toEqual({
+      status: 'error',
+      error: { code: 'business-error-condition', message: 'Error en la respuesta del servidor' },
+    })
+  })
+
+  it('uses default error message when errorMessagePath resolves to empty string', async () => {
+    const config: RuntimeConfig = {
+      ...runtimeConfig,
+      api: {
+        checkCode: {
+          method: 'GET',
+          endpoint: '/api/check',
+          errorCondition: { path: 'code', notEquals: 200 },
+          errorMessagePath: 'message',
+        },
+      },
+    }
+
+    const result = await executeRuntimeApiOperation({
+      config,
+      operationName: 'checkCode',
+      state: runtimeState,
+      fetch: vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ code: 500, message: '' }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        }),
+      ),
+    })
+
+    expect(result).toEqual({
+      status: 'error',
+      error: { code: 'business-error-condition', message: 'Error en la respuesta del servidor' },
+    })
+  })
+
+  it('uses default error message when errorMessagePath resolves to a non-string value', async () => {
+    const config: RuntimeConfig = {
+      ...runtimeConfig,
+      api: {
+        checkCode: {
+          method: 'GET',
+          endpoint: '/api/check',
+          errorCondition: { path: 'code', notEquals: 200 },
+          errorMessagePath: 'message',
+        },
+      },
+    }
+
+    const result = await executeRuntimeApiOperation({
+      config,
+      operationName: 'checkCode',
+      state: runtimeState,
+      fetch: vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ code: 500, message: 42 }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        }),
+      ),
+    })
+
+    expect(result).toEqual({
+      status: 'error',
+      error: { code: 'business-error-condition', message: 'Error en la respuesta del servidor' },
+    })
+  })
+
+  it('coerces numeric errorCodePath value to string', async () => {
+    const config: RuntimeConfig = {
+      ...runtimeConfig,
+      api: {
+        checkCode: {
+          method: 'GET',
+          endpoint: '/api/check',
+          errorCondition: { path: 'code', notEquals: 200 },
+          errorCodePath: 'code',
+        },
+      },
+    }
+
+    const result = await executeRuntimeApiOperation({
+      config,
+      operationName: 'checkCode',
+      state: runtimeState,
+      fetch: vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ code: 500 }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        }),
+      ),
+    })
+
+    expect(result).toEqual({
+      status: 'error',
+      error: { code: '500', message: 'Error en la respuesta del servidor' },
+    })
+  })
+
+  it('uses default error code when errorCodePath is absent in body', async () => {
+    const config: RuntimeConfig = {
+      ...runtimeConfig,
+      api: {
+        checkCode: {
+          method: 'GET',
+          endpoint: '/api/check',
+          errorCondition: { path: 'code', notEquals: 200 },
+          errorCodePath: 'missing',
+        },
+      },
+    }
+
+    const result = await executeRuntimeApiOperation({
+      config,
+      operationName: 'checkCode',
+      state: runtimeState,
+      fetch: vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ code: 500 }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        }),
+      ),
+    })
+
+    expect(result).toEqual({
+      status: 'error',
+      error: { code: 'business-error-condition', message: 'Error en la respuesta del servidor' },
+    })
+  })
+
+  it('uses default error code when errorCodePath resolves to a non-string non-number value', async () => {
+    const config: RuntimeConfig = {
+      ...runtimeConfig,
+      api: {
+        checkCode: {
+          method: 'GET',
+          endpoint: '/api/check',
+          errorCondition: { path: 'code', notEquals: 200 },
+          errorCodePath: 'customCode',
+        },
+      },
+    }
+
+    const result = await executeRuntimeApiOperation({
+      config,
+      operationName: 'checkCode',
+      state: runtimeState,
+      fetch: vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ code: 500, customCode: { nested: true } }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        }),
+      ),
+    })
+
+    expect(result).toEqual({
+      status: 'error',
+      error: { code: 'business-error-condition', message: 'Error en la respuesta del servidor' },
+    })
+  })
+
+  it('uses default error code when errorCodePath is not declared', async () => {
+    const config: RuntimeConfig = {
+      ...runtimeConfig,
+      api: {
+        checkCode: {
+          method: 'GET',
+          endpoint: '/api/check',
+          errorCondition: { path: 'code', notEquals: 200 },
+        },
+      },
+    }
+
+    const result = await executeRuntimeApiOperation({
+      config,
+      operationName: 'checkCode',
+      state: runtimeState,
+      fetch: vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ code: 500 }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        }),
+      ),
+    })
+
+    expect(result).toEqual({
+      status: 'error',
+      error: { code: 'business-error-condition', message: 'Error en la respuesta del servidor' },
+    })
+  })
+
+  it('still produces http-error when response is not ok even if errorCondition is declared', async () => {
+    const config: RuntimeConfig = {
+      ...runtimeConfig,
+      api: {
+        checkCode: {
+          method: 'GET',
+          endpoint: '/api/check',
+          errorCondition: { path: 'code', notEquals: 200 },
+          errorMessagePath: 'message',
+          errorCodePath: 'code',
+        },
+      },
+    }
+
+    await expect(
+      executeRuntimeApiOperation({
+        config,
+        operationName: 'checkCode',
+        state: runtimeState,
+        fetch: vi.fn().mockResolvedValue(
+          new Response(JSON.stringify({ code: 500, message: 'Server error' }), {
+            status: 500,
+            headers: { 'content-type': 'application/json' },
+          }),
+        ),
+      }),
+    ).resolves.toEqual({
+      status: 'error',
+      error: {
+        code: 'http-error',
+        message: 'The api operation "checkCode" failed with HTTP status 500.',
+      },
+    })
+  })
+
+  it('returns success with null data for 204 response even if errorCondition is declared', async () => {
+    const config: RuntimeConfig = {
+      ...runtimeConfig,
+      api: {
+        deleteItem: {
+          method: 'DELETE',
+          endpoint: '/api/items',
+          errorCondition: { path: 'code', notEquals: 200 },
+        },
+      },
+    }
+
+    await expect(
+      executeRuntimeApiOperation({
+        config,
+        operationName: 'deleteItem',
+        state: runtimeState,
+        fetch: vi.fn().mockResolvedValue(
+          new Response(null, { status: 204 }),
+        ),
+      }),
+    ).resolves.toEqual({
+      status: 'success',
+      data: null,
+    })
+  })
+
+  it('returns success with null data for empty body even if errorCondition is declared', async () => {
+    const config: RuntimeConfig = {
+      ...runtimeConfig,
+      api: {
+        emptyResponse: {
+          method: 'GET',
+          endpoint: '/api/empty',
+          errorCondition: { path: 'code', notEquals: 200 },
+        },
+      },
+    }
+
+    await expect(
+      executeRuntimeApiOperation({
+        config,
+        operationName: 'emptyResponse',
+        state: runtimeState,
+        fetch: vi.fn().mockResolvedValue(
+          new Response('', { status: 200 }),
+        ),
+      }),
+    ).resolves.toEqual({
+      status: 'success',
+      data: null,
+    })
+  })
+
+  it('still produces invalid-json-response when json is invalid even if errorCondition is declared', async () => {
+    const config: RuntimeConfig = {
+      ...runtimeConfig,
+      api: {
+        brokenJson: {
+          method: 'GET',
+          endpoint: '/api/broken',
+          errorCondition: { path: 'code', notEquals: 200 },
+        },
+      },
+    }
+
+    await expect(
+      executeRuntimeApiOperation({
+        config,
+        operationName: 'brokenJson',
+        state: runtimeState,
+        fetch: vi.fn().mockResolvedValue(
+          new Response('{"broken"', {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+          }),
+        ),
+      }),
+    ).resolves.toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-json-response',
+        message: 'The api operation "brokenJson" returned invalid JSON.',
+      },
+    })
+  })
+
+  it('leaves data null after errorCondition triggers error (T04 integration)', async () => {
+    const config: RuntimeConfig = {
+      ...runtimeConfig,
+      api: {
+        searchUsers: {
+          method: 'GET',
+          endpoint: '/api/users',
+          query: {
+            search: 'forms.userSearch.term',
+          },
+          errorCondition: { path: 'ok', equals: false },
+          errorMessagePath: 'msg',
+          errorCodePath: 'errCode',
+        },
+      },
+    }
+
+    const result = await executeRuntimeApiOperation({
+      config,
+      operationName: 'searchUsers',
+      state: runtimeState,
+      fetch: vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ ok: false, msg: 'Fallo', errCode: 'FAIL' }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        }),
+      ),
+    })
+
+    expect(result).toEqual({
+      status: 'error',
+      error: { code: 'FAIL', message: 'Fallo' },
+    })
+  })
+})

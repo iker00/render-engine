@@ -234,7 +234,7 @@ describe('validateRuntimeConfig', () => {
           code: 'invalid-layout',
           displayMode: 'development-only',
           message:
-            'Page "home" has an invalid layout at "layout[0].visibility.reference": visibility references must use item, item.*, forms.{formId}.{fieldId}, queries.{queryName}, queries.{queryName}.data, queries.{queryName}.data.*, queries.{queryName}.status or queries.{queryName}.error.',
+            'Page "home" has an invalid layout at "layout[0].visibility.reference": visibility references must use item, item.*, forms.{formId}.{fieldId}, queries.{queryName}, queries.{queryName}.data, queries.{queryName}.data.*, queries.{queryName}.status, queries.{queryName}.error, queries.{queryName}.error.message or queries.{queryName}.error.code.',
         },
       })
     })

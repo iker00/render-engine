@@ -51,14 +51,19 @@ Superficies del runtime que ya leen estado de queries directamente:
 - `queries.{queryName}.data`
 - `queries.{queryName}.status`
 - `queries.{queryName}.error`
+- `queries.{queryName}.error.message`
+- `queries.{queryName}.error.code`
 - `queries.{queryName}.data.{segmentosAnidados}`
 
 ## Semántica estable de navegación anidada y degradación
-- la navegación anidada solo se abre bajo `data`
+- la navegación anidada solo se abre bajo `data` y bajo `error`
 - una subruta puede alternar objetos y arrays dentro del valor actual de `data`
 - los segmentos numéricos actúan como índice solo cuando el valor actual es un array
 - si la query no existe, `data` todavía no está disponible, falta una clave, el índice queda fuera de rango o se intenta profundizar dentro de un primitivo, la referencia se trata como dato ausente
-- `status` y `error` no admiten navegación adicional; rutas como `queries.searchUsers.error.message` siguen siendo inválidas
+- `status` admite solo nivel top; `queries.{queryName}.status.*` es inválido
+- `error` admite navegación limitada a `.message` y `.code`; rutas como `queries.searchUsers.error.token` siguen siendo inválidas
+- cuando una query está en `error`, `error.message` contiene el texto del error y `error.code` su identificador tipado (`http-error`, `network-error`, `business-error-condition`, etc.). Si la query no está en error, ambos campos degradan a valor ausente
+- `data` siempre es `null` cuando la query está en `error`, independientemente del ciclo anterior
 - en superficies visibles interpolables, un string puede combinar literal y placeholders `{{queries.*}}`; solo los resultados escalares compatibles con texto (`string`, `number`, `boolean`) se muestran de forma visible, y objetos, arrays, `null`, `undefined` o referencias no resolubles degradan a string vacío solo para el placeholder afectado
 - en `image`, `src` solo produce render cuando la resolución final es un string no vacío; referencias ausentes, no resolubles o con valor final no textual degradan a no render, y `alt` degrada a string vacío si no hay valor visible
 - en `repeater`, una referencia válida cuyo valor runtime actual no es una colección utilizable degrada a cero iteraciones en vez de romper el render
@@ -67,4 +72,4 @@ Superficies del runtime que ya leen estado de queries directamente:
 - en proyecciones interpoladas de colecciones, `item.*` apunta al item local de cada entrada, opción o fila, y `queries.*` puede combinarse con ese contexto dentro del mismo string visible
 - en `table`, `props.rows.source` degrada a cero filas cuando la colección no existe o no es array, cada celda string reutiliza la misma normalización visible de `heading`, `paragraph` e `image`, y los filtros, la ordenación y la paginación locales procesan solo esas filas ya resueltas sin ejecutar red ni modificar `queries.*`
 - cuando la colección contiene objetos y algún item no resuelve los datos mínimos requeridos por el consumidor, el runtime degrada solo ese item y conserva el resto de la colección
-- en `visibility`, `queries.{queryName}` y `queries.{queryName}.error` pueden evaluarse con `isTruthy` e `isFalsy`; `queries.{queryName}.status` y las rutas anidadas bajo `data` también pueden usarse con comparaciones literales o numéricas según el operador
+- en `visibility`, `queries.{queryName}` y `queries.{queryName}.error` pueden evaluarse con `isTruthy` e `isFalsy`; `queries.{queryName}.error.message` y `queries.{queryName}.error.code` admiten comparaciones literales; `queries.{queryName}.status` y las rutas anidadas bajo `data` también pueden usarse con comparaciones literales o numéricas según el operador

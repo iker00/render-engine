@@ -299,7 +299,9 @@ describe('validateRuntimeConfig', () => {
         'params.filter',
         '{{forms.profile.role}}',
         'queries.searchUsers.status.code',
-        'queries.searchUsers.error.message',
+        'queries.searchUsers.error.token',
+        'queries.searchUsers.error.message.foo',
+        'queries.searchUsers.error.code.bar',
       ]) {
         expect(
           validateRuntimeConfig(
@@ -321,10 +323,100 @@ describe('validateRuntimeConfig', () => {
           error: {
             code: 'invalid-layout',
             displayMode: 'development-only',
-            message: 'Page "home" has an invalid layout at "layout[0].visibility.reference": visibility references must use item, item.*, forms.{formId}.{fieldId}, queries.{queryName}, queries.{queryName}.data, queries.{queryName}.data.*, queries.{queryName}.status or queries.{queryName}.error.',
+            message: expect.stringContaining('error.message'),
           },
         })
       }
+    })
+
+    it('accepts error.message and error.code as valid visibility references', () => {
+      const resultMessage = validateRuntimeConfig(
+        createConfigWithLayout([
+          {
+            type: 'heading',
+            visibility: createVisibilityRule({
+              reference: 'queries.searchUsers.error.message',
+              operator: 'isTruthy',
+            }),
+            props: {
+              text: 'Welcome',
+              level: 1,
+            },
+          },
+        ]),
+      )
+      expect(resultMessage.status).toBe('ready')
+
+      const resultCode = validateRuntimeConfig(
+        createConfigWithLayout([
+          {
+            type: 'heading',
+            visibility: {
+              reference: 'queries.searchUsers.error.code',
+              operator: 'equals',
+              value: 'UNAUTHORIZED',
+            },
+            props: {
+              text: 'Welcome',
+              level: 1,
+            },
+          },
+        ]),
+      )
+      expect(resultCode.status).toBe('ready')
+    })
+
+    it('keeps error root and data references accepted as before (regression)', () => {
+      const resultError = validateRuntimeConfig(
+        createConfigWithLayout([
+          {
+            type: 'heading',
+            visibility: createVisibilityRule({
+              reference: 'queries.searchUsers.error',
+              operator: 'isFalsy',
+            }),
+            props: {
+              text: 'Welcome',
+              level: 1,
+            },
+          },
+        ]),
+      )
+      expect(resultError.status).toBe('ready')
+
+      const resultStatus = validateRuntimeConfig(
+        createConfigWithLayout([
+          {
+            type: 'heading',
+            visibility: createVisibilityRule({
+              reference: 'queries.searchUsers.status',
+              operator: 'isTruthy',
+            }),
+            props: {
+              text: 'Welcome',
+              level: 1,
+            },
+          },
+        ]),
+      )
+      expect(resultStatus.status).toBe('ready')
+
+      const resultData = validateRuntimeConfig(
+        createConfigWithLayout([
+          {
+            type: 'heading',
+            visibility: createVisibilityRule({
+              reference: 'queries.searchUsers.data.foo',
+              operator: 'isTruthy',
+            }),
+            props: {
+              text: 'Welcome',
+              level: 1,
+            },
+          },
+        ]),
+      )
+      expect(resultData.status).toBe('ready')
     })
 
     it('requires value only for comparison operators and rejects it for truthy operators', () => {

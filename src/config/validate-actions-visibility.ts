@@ -283,7 +283,7 @@ export function validateVisibility(
 
   if (!isValidVisibilityReference(rawVisibility.reference)) {
     return invalidLayout(
-      `Page "${pageId}" has an invalid layout at "${path}.reference": visibility references must use item, item.*, forms.{formId}.{fieldId}, queries.{queryName}, queries.{queryName}.data, queries.{queryName}.data.*, queries.{queryName}.status or queries.{queryName}.error.`,
+      `Page "${pageId}" has an invalid layout at "${path}.reference": visibility references must use item, item.*, forms.{formId}.{fieldId}, queries.{queryName}, queries.{queryName}.data, queries.{queryName}.data.*, queries.{queryName}.status, queries.{queryName}.error, queries.{queryName}.error.message or queries.{queryName}.error.code.`,
     )
   }
 
@@ -720,8 +720,20 @@ function isValidVisibilityReference(reference: string): boolean {
     return true
   }
 
-  if (segments[2] === 'status' || segments[2] === 'error') {
+  if (segments[2] === 'status') {
     return segments.length === 3
+  }
+
+  if (segments[2] === 'error') {
+    if (segments.length === 3) {
+      return true
+    }
+
+    if (segments.length === 4 && (segments[3] === 'message' || segments[3] === 'code')) {
+      return true
+    }
+
+    return false
   }
 
   if (segments[2] !== 'data') {

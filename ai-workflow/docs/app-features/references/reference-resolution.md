@@ -21,14 +21,17 @@ El escape literal con `\` permite mostrar una referencia completa tal cual, por 
 - `queries.{queryName}.data`
 - `queries.{queryName}.status`
 - `queries.{queryName}.error`
+- `queries.{queryName}.error.message`
+- `queries.{queryName}.error.code`
 - `queries.{queryName}.data.{segmentosAnidados}`
 - `translations.{key}`
 
 ## Reglas funcionales generales
-- la navegación anidada adicional solo se admite bajo `queries.{queryName}.data`
+- la navegación anidada adicional solo se admite bajo `queries.{queryName}.data` y bajo `queries.{queryName}.error` (limitada a `.message` y `.code`)
 - los segmentos anidados pueden recorrer objetos y arrays
 - un segmento numérico se interpreta como índice solo cuando el valor actual es un array; sobre objetos se trata como clave literal
-- `queries.{queryName}.status.*` y `queries.{queryName}.error.*` siguen fuera del contrato y se consideran rutas inválidas
+- `queries.{queryName}.status.*` siguen fuera del contrato y se consideran rutas inválidas
+- `queries.{queryName}.error.{segmento}` solo es válido cuando `{segmento}` es exactamente `message` o `code`; otras subrutas bajo `.error` siguen siendo inválidas
 - `routeParams.*` y `navigation.*` siguen reservadas pero no soportadas
 - una referencia bien formada cuyo dato no existe todavía se degrada según la política visible del consumidor; en superficies textuales actuales eso significa string vacío
 

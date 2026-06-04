@@ -4,6 +4,7 @@ import type {
   ExecuteRuntimeApiOperationOptions,
   RuntimeApiExecutionResult,
 } from './runtime-api-types'
+import type { RuntimeApiOperation } from '../config/runtime-config'
 
 export { buildRuntimeApiRequest } from './runtime-api-request'
 export type {
@@ -86,10 +87,8 @@ export async function executeBuiltRuntimeApiRequest({
   }
 
   try {
-    return {
-      status: 'success',
-      data: JSON.parse(responseText) as unknown,
-    }
+    const parsed = JSON.parse(responseText) as unknown
+    return evaluateErrorCondition(request.operation, parsed)
   } catch {
     return {
       status: 'error',
@@ -98,5 +97,91 @@ export async function executeBuiltRuntimeApiRequest({
         message: `The api operation "${request.operationName}" returned invalid JSON.`,
       },
     }
+  }
+}
+
+function resolveBodyPath(body: unknown, dotPath: string): { found: true; value: unknown } | { found: false } {
+  const segments = dotPath.split('.')
+  let current: unknown = body
+
+  for (const segment of segments) {
+    if (current == null) {
+      return { found: false }
+    }
+
+    if (Array.isArray(current)) {
+      if (!/^(0|[1-9]\d*)$/.test(segment)) {
+        return { found: false }
+      }
+      const next = current[Number(segment)]
+      if (typeof next === 'undefined') {
+        return { found: false }
+      }
+      current = next
+      continue
+    }
+
+    if (typeof current !== 'object') {
+      return { found: false }
+    }
+
+    const obj = current as Record<string, unknown>
+    if (!Object.hasOwn(obj, segment)) {
+      return { found: false }
+    }
+    current = obj[segment]
+  }
+
+  return { found: true, value: current }
+}
+
+function evaluateErrorCondition(operation: RuntimeApiOperation, parsed: unknown): RuntimeApiExecutionResult {
+  const { errorCondition } = operation
+
+  if (errorCondition === undefined) {
+    return { status: 'success', data: parsed }
+  }
+
+  const valueAtPath = resolveBodyPath(parsed, errorCondition.path)
+
+  if (!valueAtPath.found) {
+    return { status: 'success', data: parsed }
+  }
+
+  let conditionMet: boolean
+
+  if (errorCondition.equals !== undefined) {
+    conditionMet = valueAtPath.value === errorCondition.equals
+  } else if (errorCondition.notEquals !== undefined) {
+    conditionMet = valueAtPath.value !== errorCondition.notEquals
+  } else {
+    conditionMet = Boolean(valueAtPath.value)
+  }
+
+  if (!conditionMet) {
+    return { status: 'success', data: parsed }
+  }
+
+  let message = 'Error en la respuesta del servidor'
+
+  if (operation.errorMessagePath !== undefined) {
+    const messageResult = resolveBodyPath(parsed, operation.errorMessagePath)
+    if (messageResult.found && typeof messageResult.value === 'string' && messageResult.value.length > 0) {
+      message = messageResult.value
+    }
+  }
+
+  let code = 'business-error-condition'
+
+  if (operation.errorCodePath !== undefined) {
+    const codeResult = resolveBodyPath(parsed, operation.errorCodePath)
+    if (codeResult.found && (typeof codeResult.value === 'string' || typeof codeResult.value === 'number')) {
+      code = String(codeResult.value)
+    }
+  }
+
+  return {
+    status: 'error',
+    error: { code, message },
   }
 }

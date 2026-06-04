@@ -224,12 +224,6 @@ describe('Runtime reference resolution', () => {
         namespace: 'queries',
       })
 
-      expect(parseRuntimeReference('queries.searchUsers.error.message')).toMatchObject({
-        kind: 'reference',
-        status: 'invalid',
-        namespace: 'queries',
-      })
-
       expect(parseRuntimeReference('forms.user Search.name')).toMatchObject({
         kind: 'reference',
         status: 'invalid',
@@ -303,14 +297,56 @@ describe('Runtime reference resolution', () => {
       })
     })
 
-    it('keeps status and error branches closed to additional navigation', () => {
+    it('classifies error.message and error.code as supported sub-paths', () => {
       expect(parseRuntimeReference('queries.searchUsers.error.message')).toMatchObject({
+        kind: 'reference',
+        status: 'supported',
+        namespace: 'queries',
+        path: ['searchUsers', 'error', 'message'],
+      })
+
+      expect(parseRuntimeReference('queries.searchUsers.error.code')).toMatchObject({
+        kind: 'reference',
+        status: 'supported',
+        namespace: 'queries',
+        path: ['searchUsers', 'error', 'code'],
+      })
+    })
+
+    it('keeps status branch and unlisted error sub-paths closed to additional navigation', () => {
+      expect(parseRuntimeReference('queries.searchUsers.status.label')).toMatchObject({
         kind: 'reference',
         status: 'invalid',
         namespace: 'queries',
       })
 
-      expect(parseRuntimeReference('queries.searchUsers.status.label')).toMatchObject({
+      expect(parseRuntimeReference('queries.searchUsers.error.token')).toMatchObject({
+        kind: 'reference',
+        status: 'invalid',
+        namespace: 'queries',
+      })
+
+      expect(parseRuntimeReference('queries.searchUsers.error.message.foo')).toMatchObject({
+        kind: 'reference',
+        status: 'invalid',
+        namespace: 'queries',
+      })
+
+      expect(parseRuntimeReference('queries.searchUsers.error.code.bar')).toMatchObject({
+        kind: 'reference',
+        status: 'invalid',
+        namespace: 'queries',
+      })
+    })
+
+    it('keeps error references with empty segments as invalid', () => {
+      expect(parseRuntimeReference('queries.searchUsers.error.')).toMatchObject({
+        kind: 'reference',
+        status: 'invalid',
+        namespace: 'queries',
+      })
+
+      expect(parseRuntimeReference('queries.searchUsers.error..message')).toMatchObject({
         kind: 'reference',
         status: 'invalid',
         namespace: 'queries',
@@ -677,6 +713,95 @@ describe('Runtime reference resolution', () => {
       expect(resolveRuntimeReference('queries.searchUsers.error', nestedQueryRuntimeState)).toEqual({
         status: 'resolved',
         value: nestedQueryRuntimeState.queries.searchUsers.error,
+        reference: parseRuntimeReference('queries.searchUsers.error'),
+      })
+    })
+  })
+
+  describe('T0060-03 error.message and error.code resolution', () => {
+    const stateWithActiveError: RuntimeState = {
+      ...runtimeState,
+      queries: {
+        ...runtimeState.queries,
+        searchUsers: {
+          status: 'error',
+          data: null,
+          error: {
+            code: 'http-error',
+            message: 'HTTP 500',
+          },
+        },
+      },
+    }
+
+    const stateWithNullError: RuntimeState = {
+      ...runtimeState,
+      queries: {
+        ...runtimeState.queries,
+        searchUsers: {
+          status: 'success',
+          data: ['Ada'],
+          error: null,
+        },
+      },
+    }
+
+    it('resolves error.message to the message string when the query has an active error', () => {
+      expect(resolveRuntimeReference('queries.searchUsers.error.message', stateWithActiveError)).toEqual({
+        status: 'resolved',
+        value: 'HTTP 500',
+        reference: parseRuntimeReference('queries.searchUsers.error.message'),
+      })
+    })
+
+    it('resolves error.code to the code string when the query has an active error', () => {
+      expect(resolveRuntimeReference('queries.searchUsers.error.code', stateWithActiveError)).toEqual({
+        status: 'resolved',
+        value: 'http-error',
+        reference: parseRuntimeReference('queries.searchUsers.error.code'),
+      })
+    })
+
+    it('returns missing for error.message when the query has no active error (error is null)', () => {
+      expect(resolveRuntimeReference('queries.searchUsers.error.message', stateWithNullError)).toEqual({
+        status: 'missing',
+        reference: parseRuntimeReference('queries.searchUsers.error.message'),
+      })
+    })
+
+    it('returns missing for error.code when the query does not exist in the store', () => {
+      expect(resolveRuntimeReference('queries.nonExistent.error.code', runtimeState)).toEqual({
+        status: 'missing',
+        reference: parseRuntimeReference('queries.nonExistent.error.code'),
+      })
+    })
+
+    it('returns missing when error.code is undefined (optional field)', () => {
+      const stateWithErrorWithoutCode: RuntimeState = {
+        ...runtimeState,
+        queries: {
+          ...runtimeState.queries,
+          searchUsers: {
+            status: 'error',
+            data: null,
+            error: {
+              code: undefined as unknown as string,
+              message: 'Some error',
+            },
+          },
+        },
+      }
+
+      expect(resolveRuntimeReference('queries.searchUsers.error.code', stateWithErrorWithoutCode)).toEqual({
+        status: 'missing',
+        reference: parseRuntimeReference('queries.searchUsers.error.code'),
+      })
+    })
+
+    it('keeps error root reference resolved as the full error object (regression)', () => {
+      expect(resolveRuntimeReference('queries.searchUsers.error', stateWithActiveError)).toEqual({
+        status: 'resolved',
+        value: stateWithActiveError.queries.searchUsers.error,
         reference: parseRuntimeReference('queries.searchUsers.error'),
       })
     })

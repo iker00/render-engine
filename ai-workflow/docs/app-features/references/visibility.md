@@ -19,6 +19,8 @@ Cualquier nodo soportado hoy puede declarar opcionalmente:
 - `queries.{queryName}.data.{segmentosAnidados}`
 - `queries.{queryName}.status`
 - `queries.{queryName}.error`
+- `queries.{queryName}.error.message`
+- `queries.{queryName}.error.code`
 
 ## Reglas funcionales
 - `visibility` es transversal a `container`, `heading`, `paragraph`, `list`, `image`, `table`, `button`, `form`, `input`, `textarea`, `select`, `radioGroup` y `checkboxGroup`.

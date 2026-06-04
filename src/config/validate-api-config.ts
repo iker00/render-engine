@@ -4,6 +4,7 @@ import type {
   RuntimeApiMethod,
   RuntimeApiBodyValue,
   RuntimeApiHeaders,
+  RuntimeApiErrorCondition,
   RuntimeConfigError,
 } from './runtime-config-types'
 import {
@@ -68,6 +69,32 @@ function validateApiOperation(
       return mapApiHeadersIssue(operationName, rawOperation.headers, issue.path)
     }
 
+    if (path === 'errorCondition') {
+      const subPath = issue?.path[1]
+
+      if (subPath === 'path') {
+        return invalidLayout(`The api operation "${operationName}.errorCondition.path" must be a non-empty string.`)
+      }
+
+      if (subPath === 'equals') {
+        return invalidLayout(`The api operation "${operationName}.errorCondition.equals" must be a string, number, boolean or null.`)
+      }
+
+      if (subPath === 'notEquals') {
+        return invalidLayout(`The api operation "${operationName}.errorCondition.notEquals" must be a string, number, boolean or null.`)
+      }
+
+      return invalidLayout(`The api operation "${operationName}.errorCondition" must be an object with a non-empty "path".`)
+    }
+
+    if (path === 'errorMessagePath') {
+      return invalidLayout(`The api operation "${operationName}.errorMessagePath" must be a non-empty string.`)
+    }
+
+    if (path === 'errorCodePath') {
+      return invalidLayout(`The api operation "${operationName}.errorCodePath" must be a non-empty string.`)
+    }
+
     return invalidLayout(`The api operation "${operationName}" must be an object.`)
   }
 
@@ -91,6 +118,14 @@ function validateApiOperation(
     }
   }
 
+  if (
+    shellResult.data.errorCondition !== undefined &&
+    shellResult.data.errorCondition.equals !== undefined &&
+    shellResult.data.errorCondition.notEquals !== undefined
+  ) {
+    return invalidLayout(`The api operation "${operationName}.errorCondition" cannot declare both "equals" and "notEquals".`)
+  }
+
   const operation: RuntimeApiOperation = {
     method: shellResult.data.method as RuntimeApiMethod,
     endpoint: shellResult.data.endpoint,
@@ -106,6 +141,18 @@ function validateApiOperation(
 
   if (shellResult.data.headers !== undefined) {
     operation.headers = shellResult.data.headers as RuntimeApiHeaders
+  }
+
+  if (shellResult.data.errorCondition !== undefined) {
+    operation.errorCondition = shellResult.data.errorCondition as RuntimeApiErrorCondition
+  }
+
+  if (shellResult.data.errorMessagePath !== undefined) {
+    operation.errorMessagePath = shellResult.data.errorMessagePath
+  }
+
+  if (shellResult.data.errorCodePath !== undefined) {
+    operation.errorCodePath = shellResult.data.errorCodePath
   }
 
   return {

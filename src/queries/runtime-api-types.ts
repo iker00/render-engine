@@ -42,6 +42,7 @@ export interface RuntimeApiError {
     | 'network-error'
     | 'http-error'
     | 'invalid-json-response'
+    | 'business-error-condition'
   message: string
 }
 

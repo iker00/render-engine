@@ -38,9 +38,18 @@ export interface RuntimeApiRequestParams {
   headers?: RuntimeApiHeaders
 }
 
+export interface RuntimeApiErrorCondition {
+  path: string
+  equals?: RuntimeConfigValue
+  notEquals?: RuntimeConfigValue
+}
+
 export interface RuntimeApiOperation extends RuntimeApiRequestParams {
   method: RuntimeApiMethod
   endpoint: string
+  errorCondition?: RuntimeApiErrorCondition
+  errorMessagePath?: string
+  errorCodePath?: string
 }
 
 export interface RuntimePreloadConfig {

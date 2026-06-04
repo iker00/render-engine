@@ -165,6 +165,10 @@ function hasValidQueryReferencePath(path: string[]) {
     return isSupportedQueryProperty(path[1])
   }
 
+  if (path.length === 3 && path[1] === 'error') {
+    return path[2] === 'message' || path[2] === 'code'
+  }
+
   return path[1] === 'data'
 }
 

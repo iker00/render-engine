@@ -261,8 +261,8 @@ export function runtimeStateReducer(stateIn: RuntimeState, action: RuntimeStateA
         queries: {
           ...state.queries,
           [action.payload.queryName]: {
-            ...getRuntimeQueryState(state.queries[action.payload.queryName]),
             status: 'error',
+            data: null,
             error: action.payload.error,
             requestSignature: action.payload.requestSignature ?? null,
           },

@@ -789,5 +789,422 @@ describe('validateRuntimeConfig', () => {
         },
       })
     })
+
+    describe('errorCondition, errorMessagePath and errorCodePath validation', () => {
+      it('accepts an operation without errorCondition, errorMessagePath or errorCodePath (regression)', () => {
+        const result = validateRuntimeConfig(
+          createConfigWithApi({
+            getUser: {
+              method: 'GET',
+              endpoint: '/api/user',
+            },
+          }),
+        )
+
+        expect(result.status).toBe('ready')
+      })
+
+      it('accepts errorCondition with only path (truthiness mode)', () => {
+        const result = validateRuntimeConfig(
+          createConfigWithApi({
+            getUser: {
+              method: 'GET',
+              endpoint: '/api/user',
+              errorCondition: { path: 'code' },
+            },
+          }),
+        )
+
+        expect(result.status).toBe('ready')
+      })
+
+      it('accepts errorCondition with path and equals and propagates to normalized operation', () => {
+        const result = validateRuntimeConfig(
+          createConfigWithApi({
+            getUser: {
+              method: 'GET',
+              endpoint: '/api/user',
+              errorCondition: { path: 'code', equals: 200 },
+            },
+          }),
+        )
+
+        expect(result.status).toBe('ready')
+
+        if (result.status !== 'ready') {
+          throw new Error('Expected ready result')
+        }
+
+        expect(result.config.api.getUser).toMatchObject({
+          errorCondition: { path: 'code', equals: 200 },
+        })
+      })
+
+      it('accepts errorCondition with path and notEquals and propagates to normalized operation', () => {
+        const result = validateRuntimeConfig(
+          createConfigWithApi({
+            getUser: {
+              method: 'GET',
+              endpoint: '/api/user',
+              errorCondition: { path: 'code', notEquals: 200 },
+            },
+          }),
+        )
+
+        expect(result.status).toBe('ready')
+
+        if (result.status !== 'ready') {
+          throw new Error('Expected ready result')
+        }
+
+        expect(result.config.api.getUser).toMatchObject({
+          errorCondition: { path: 'code', notEquals: 200 },
+        })
+      })
+
+      it('accepts errorCondition with all four scalar equals types', () => {
+        expect(
+          validateRuntimeConfig(
+            createConfigWithApi({
+              a: { method: 'GET', endpoint: '/api/a', errorCondition: { path: 'ok', equals: true } },
+            }),
+          ).status,
+        ).toBe('ready')
+
+        expect(
+          validateRuntimeConfig(
+            createConfigWithApi({
+              b: { method: 'GET', endpoint: '/api/b', errorCondition: { path: 'ok', equals: false } },
+            }),
+          ).status,
+        ).toBe('ready')
+
+        expect(
+          validateRuntimeConfig(
+            createConfigWithApi({
+              c: { method: 'GET', endpoint: '/api/c', errorCondition: { path: 'ok', equals: null } },
+            }),
+          ).status,
+        ).toBe('ready')
+
+        expect(
+          validateRuntimeConfig(
+            createConfigWithApi({
+              d: { method: 'GET', endpoint: '/api/d', errorCondition: { path: 'msg', equals: 'FATAL' } },
+            }),
+          ).status,
+        ).toBe('ready')
+      })
+
+      it('rejects errorCondition when both equals and notEquals are declared', () => {
+        expect(
+          validateRuntimeConfig(
+            createConfigWithApi({
+              getUser: {
+                method: 'GET',
+                endpoint: '/api/user',
+                errorCondition: { path: 'code', equals: 200, notEquals: 500 },
+              },
+            }),
+          ),
+        ).toEqual({
+          status: 'error',
+          error: {
+            code: 'invalid-layout',
+            displayMode: 'development-only',
+            message: 'The api operation "getUser.errorCondition" cannot declare both "equals" and "notEquals".',
+          },
+        })
+      })
+
+      it('rejects errorCondition with missing path', () => {
+        expect(
+          validateRuntimeConfig(
+            createConfigWithApi({
+              getUser: {
+                method: 'GET',
+                endpoint: '/api/user',
+                errorCondition: {},
+              },
+            }),
+          ),
+        ).toEqual({
+          status: 'error',
+          error: {
+            code: 'invalid-layout',
+            displayMode: 'development-only',
+            message: 'The api operation "getUser.errorCondition.path" must be a non-empty string.',
+          },
+        })
+      })
+
+      it('rejects errorCondition with empty path', () => {
+        expect(
+          validateRuntimeConfig(
+            createConfigWithApi({
+              getUser: {
+                method: 'GET',
+                endpoint: '/api/user',
+                errorCondition: { path: '' },
+              },
+            }),
+          ),
+        ).toEqual({
+          status: 'error',
+          error: {
+            code: 'invalid-layout',
+            displayMode: 'development-only',
+            message: 'The api operation "getUser.errorCondition.path" must be a non-empty string.',
+          },
+        })
+      })
+
+      it('rejects errorCondition with invalid equals type (object)', () => {
+        expect(
+          validateRuntimeConfig(
+            createConfigWithApi({
+              getUser: {
+                method: 'GET',
+                endpoint: '/api/user',
+                errorCondition: { path: 'code', equals: { nested: true } },
+              },
+            }),
+          ),
+        ).toEqual({
+          status: 'error',
+          error: {
+            code: 'invalid-layout',
+            displayMode: 'development-only',
+            message: 'The api operation "getUser.errorCondition.equals" must be a string, number, boolean or null.',
+          },
+        })
+      })
+
+      it('rejects errorCondition with invalid notEquals type (array)', () => {
+        expect(
+          validateRuntimeConfig(
+            createConfigWithApi({
+              getUser: {
+                method: 'GET',
+                endpoint: '/api/user',
+                errorCondition: { path: 'code', notEquals: [1, 2] },
+              },
+            }),
+          ),
+        ).toEqual({
+          status: 'error',
+          error: {
+            code: 'invalid-layout',
+            displayMode: 'development-only',
+            message: 'The api operation "getUser.errorCondition.notEquals" must be a string, number, boolean or null.',
+          },
+        })
+      })
+
+      it('rejects errorCondition declared as non-object (string, array, null)', () => {
+        expect(
+          validateRuntimeConfig(
+            createConfigWithApi({
+              getUser: {
+                method: 'GET',
+                endpoint: '/api/user',
+                errorCondition: 'not-an-object',
+              },
+            }),
+          ),
+        ).toMatchObject({
+          status: 'error',
+          error: {
+            code: 'invalid-layout',
+            message: expect.stringContaining('errorCondition'),
+          },
+        })
+
+        expect(
+          validateRuntimeConfig(
+            createConfigWithApi({
+              getUser: {
+                method: 'GET',
+                endpoint: '/api/user',
+                errorCondition: ['path', 'code'],
+              },
+            }),
+          ),
+        ).toMatchObject({
+          status: 'error',
+          error: {
+            code: 'invalid-layout',
+            message: expect.stringContaining('errorCondition'),
+          },
+        })
+
+        expect(
+          validateRuntimeConfig(
+            createConfigWithApi({
+              getUser: {
+                method: 'GET',
+                endpoint: '/api/user',
+                errorCondition: null,
+              },
+            }),
+          ),
+        ).toMatchObject({
+          status: 'error',
+          error: {
+            code: 'invalid-layout',
+            message: expect.stringContaining('errorCondition'),
+          },
+        })
+      })
+
+      it('accepts both errorMessagePath and errorCodePath as valid non-empty strings and propagates them', () => {
+        const result = validateRuntimeConfig(
+          createConfigWithApi({
+            getUser: {
+              method: 'GET',
+              endpoint: '/api/user',
+              errorCondition: { path: 'code', notEquals: 200 },
+              errorMessagePath: 'message',
+              errorCodePath: 'code',
+            },
+          }),
+        )
+
+        expect(result.status).toBe('ready')
+
+        if (result.status !== 'ready') {
+          throw new Error('Expected ready result')
+        }
+
+        expect(result.config.api.getUser).toMatchObject({
+          errorCondition: { path: 'code', notEquals: 200 },
+          errorMessagePath: 'message',
+          errorCodePath: 'code',
+        })
+      })
+
+      it('rejects errorMessagePath as empty string', () => {
+        expect(
+          validateRuntimeConfig(
+            createConfigWithApi({
+              getUser: {
+                method: 'GET',
+                endpoint: '/api/user',
+                errorMessagePath: '',
+              },
+            }),
+          ),
+        ).toEqual({
+          status: 'error',
+          error: {
+            code: 'invalid-layout',
+            displayMode: 'development-only',
+            message: 'The api operation "getUser.errorMessagePath" must be a non-empty string.',
+          },
+        })
+      })
+
+      it('rejects errorCodePath as empty string', () => {
+        expect(
+          validateRuntimeConfig(
+            createConfigWithApi({
+              getUser: {
+                method: 'GET',
+                endpoint: '/api/user',
+                errorCodePath: '',
+              },
+            }),
+          ),
+        ).toEqual({
+          status: 'error',
+          error: {
+            code: 'invalid-layout',
+            displayMode: 'development-only',
+            message: 'The api operation "getUser.errorCodePath" must be a non-empty string.',
+          },
+        })
+      })
+
+      it('rejects errorMessagePath as non-string (number)', () => {
+        expect(
+          validateRuntimeConfig(
+            createConfigWithApi({
+              getUser: {
+                method: 'GET',
+                endpoint: '/api/user',
+                errorMessagePath: 123,
+              },
+            }),
+          ),
+        ).toEqual({
+          status: 'error',
+          error: {
+            code: 'invalid-layout',
+            displayMode: 'development-only',
+            message: 'The api operation "getUser.errorMessagePath" must be a non-empty string.',
+          },
+        })
+      })
+
+      it('rejects errorCodePath as non-string (object)', () => {
+        expect(
+          validateRuntimeConfig(
+            createConfigWithApi({
+              getUser: {
+                method: 'GET',
+                endpoint: '/api/user',
+                errorCodePath: { nested: true },
+              },
+            }),
+          ),
+        ).toEqual({
+          status: 'error',
+          error: {
+            code: 'invalid-layout',
+            displayMode: 'development-only',
+            message: 'The api operation "getUser.errorCodePath" must be a non-empty string.',
+          },
+        })
+      })
+
+      it('accepts errorMessagePath and errorCodePath without errorCondition', () => {
+        const result = validateRuntimeConfig(
+          createConfigWithApi({
+            getUser: {
+              method: 'GET',
+              endpoint: '/api/user',
+              errorMessagePath: 'message',
+              errorCodePath: 'code',
+            },
+          }),
+        )
+
+        expect(result.status).toBe('ready')
+      })
+
+      it('discards extra keys inside errorCondition silently', () => {
+        const result = validateRuntimeConfig(
+          createConfigWithApi({
+            getUser: {
+              method: 'GET',
+              endpoint: '/api/user',
+              errorCondition: { path: 'code', equals: 200, extraKey: 'ignored' },
+            },
+          }),
+        )
+
+        expect(result.status).toBe('ready')
+
+        if (result.status !== 'ready') {
+          throw new Error('Expected ready result')
+        }
+
+        expect(result.config.api.getUser).toEqual({
+          method: 'GET',
+          endpoint: '/api/user',
+          errorCondition: { path: 'code', equals: 200 },
+        })
+      })
+    })
   })
 })

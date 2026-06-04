@@ -294,6 +294,22 @@ function resolveSupportedReferenceValue(
     return selectNestedQueryDataValue(state, queryName, nestedDataPath)
   }
 
+  if (property === 'error' && nestedDataPath.length === 1 && (nestedDataPath[0] === 'message' || nestedDataPath[0] === 'code')) {
+    const errorState = queryState.error
+
+    if (errorState === null) {
+      return { found: false } as const
+    }
+
+    const subValue = errorState[nestedDataPath[0] as 'message' | 'code']
+
+    if (typeof subValue !== 'string') {
+      return { found: false } as const
+    }
+
+    return { found: true, value: subValue } as const
+  }
+
   return {
     found: true,
     value: selectQueryReferenceValue(state, queryName, property),

@@ -448,4 +448,163 @@ describe('Runtime layout visibility', () => {
       mode: 'hide',
     })
   })
+
+  it('evaluates error.code equality when the query has an active error with matching code', () => {
+    const stateWithUnauthorizedError: RuntimeState = {
+      ...runtimeState,
+      queries: {
+        ...runtimeState.queries,
+        searchUsers: {
+          status: 'error',
+          data: null,
+          error: {
+            code: 'UNAUTHORIZED',
+            message: 'Not authorized',
+          },
+        },
+      },
+    }
+
+    expect(
+      matchesVisibilityRule(
+        {
+          reference: 'queries.searchUsers.error.code',
+          operator: 'equals',
+          value: 'UNAUTHORIZED',
+        },
+        stateWithUnauthorizedError,
+      ),
+    ).toBe(true)
+  })
+
+  it('evaluates error.code equality as false when the error code does not match', () => {
+    const stateWithHttpError: RuntimeState = {
+      ...runtimeState,
+      queries: {
+        ...runtimeState.queries,
+        searchUsers: {
+          status: 'error',
+          data: null,
+          error: {
+            code: 'http-error',
+            message: 'HTTP error',
+          },
+        },
+      },
+    }
+
+    expect(
+      matchesVisibilityRule(
+        {
+          reference: 'queries.searchUsers.error.code',
+          operator: 'equals',
+          value: 'UNAUTHORIZED',
+        },
+        stateWithHttpError,
+      ),
+    ).toBe(false)
+  })
+
+  it('evaluates error.code equals as false when the query has no active error', () => {
+    const stateWithSuccess: RuntimeState = {
+      ...runtimeState,
+      queries: {
+        ...runtimeState.queries,
+        searchUsers: {
+          status: 'success',
+          data: ['Ada'],
+          error: null,
+        },
+      },
+    }
+
+    expect(
+      matchesVisibilityRule(
+        {
+          reference: 'queries.searchUsers.error.code',
+          operator: 'equals',
+          value: 'UNAUTHORIZED',
+        },
+        stateWithSuccess,
+      ),
+    ).toBe(false)
+  })
+
+  it('evaluates error.code isFalsy as true when the query has no active error', () => {
+    const stateWithIdle: RuntimeState = {
+      ...runtimeState,
+      queries: {
+        ...runtimeState.queries,
+        searchUsers: {
+          status: 'idle',
+          data: null,
+          error: null,
+        },
+      },
+    }
+
+    expect(
+      matchesVisibilityRule(
+        {
+          reference: 'queries.searchUsers.error.code',
+          operator: 'isFalsy',
+        },
+        stateWithIdle,
+      ),
+    ).toBe(true)
+  })
+
+  it('evaluates error.code isTruthy as true when error has business-error-condition code', () => {
+    const stateWithBusinessError: RuntimeState = {
+      ...runtimeState,
+      queries: {
+        ...runtimeState.queries,
+        searchUsers: {
+          status: 'error',
+          data: null,
+          error: {
+            code: 'business-error-condition',
+            message: 'Error en la respuesta del servidor',
+          },
+        },
+      },
+    }
+
+    expect(
+      matchesVisibilityRule(
+        {
+          reference: 'queries.searchUsers.error.code',
+          operator: 'isTruthy',
+        },
+        stateWithBusinessError,
+      ),
+    ).toBe(true)
+  })
+
+  it('evaluates error.message isTruthy as true when the query has an active error with non-empty message', () => {
+    const stateWithActiveError: RuntimeState = {
+      ...runtimeState,
+      queries: {
+        ...runtimeState.queries,
+        searchUsers: {
+          status: 'error',
+          data: null,
+          error: {
+            code: 'http-error',
+            message: 'Could not connect',
+          },
+        },
+      },
+    }
+
+    expect(
+      matchesVisibilityRule(
+        {
+          reference: 'queries.searchUsers.error.message',
+          operator: 'isTruthy',
+        },
+        stateWithActiveError,
+      ),
+    ).toBe(true)
+  })
 })

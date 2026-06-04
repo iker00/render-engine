@@ -89,6 +89,16 @@ export const runtimeApiRequestParamsSchema = z
   })
   .strip()
 
+const runtimeApiErrorConditionEqualsSchema = z.union([z.string(), z.number(), z.boolean(), z.null()])
+
+const runtimeApiErrorConditionSchema = z
+  .object({
+    path: nonEmptyStringSchema,
+    equals: runtimeApiErrorConditionEqualsSchema.optional(),
+    notEquals: runtimeApiErrorConditionEqualsSchema.optional(),
+  })
+  .strip()
+
 export const runtimeApiOperationShellSchema = z
   .object({
     method: z.enum(supportedApiMethods),
@@ -96,6 +106,9 @@ export const runtimeApiOperationShellSchema = z
     query: runtimeApiQuerySchema.optional(),
     body: runtimeApiBodySchema.optional(),
     headers: runtimeApiHeadersSchema.optional(),
+    errorCondition: runtimeApiErrorConditionSchema.optional(),
+    errorMessagePath: nonEmptyStringSchema.optional(),
+    errorCodePath: nonEmptyStringSchema.optional(),
   })
   .strip()
 
