@@ -241,6 +241,142 @@ describe('executeRuntimeUiAction', () => {
 
     expect(handlers.closeModal).toHaveBeenCalledWith('my-modal', { iterationContext })
   })
+
+  it('calls executeQueryOperation once per entry when executeOperations has two entries in the same tick', () => {
+    const handlers = createHandlers()
+    handlers.executeQueryOperation.mockResolvedValue(undefined)
+
+    runtimeUiActionExecutor.executeRuntimeUiAction(
+      {
+        type: 'executeOperations',
+        operations: [
+          { operationName: 'op1', query: { page: 1 } },
+          { operationName: 'op2', body: { id: 'item-1' } },
+        ],
+      },
+      handlers,
+    )
+
+    expect(handlers.executeQueryOperation).toHaveBeenCalledTimes(2)
+    expect(handlers.executeQueryOperation).toHaveBeenNthCalledWith(1, 'op1', {
+      requestParams: { query: { page: 1 }, body: undefined, headers: undefined },
+      iterationContext: undefined,
+    })
+    expect(handlers.executeQueryOperation).toHaveBeenNthCalledWith(2, 'op2', {
+      requestParams: { query: undefined, body: { id: 'item-1' }, headers: undefined },
+      iterationContext: undefined,
+    })
+  })
+
+  it('calls executeQueryOperation exactly once for a single-entry executeOperations action', () => {
+    const handlers = createHandlers()
+    handlers.executeQueryOperation.mockResolvedValue(undefined)
+
+    runtimeUiActionExecutor.executeRuntimeUiAction(
+      {
+        type: 'executeOperations',
+        operations: [{ operationName: 'onlyOp' }],
+      },
+      handlers,
+    )
+
+    expect(handlers.executeQueryOperation).toHaveBeenCalledTimes(1)
+    expect(handlers.executeQueryOperation).toHaveBeenCalledWith('onlyOp', {
+      requestParams: { query: undefined, body: undefined, headers: undefined },
+      iterationContext: undefined,
+    })
+  })
+
+  it('does not call any other handler when executeOperations is dispatched', () => {
+    const handlers = createHandlers()
+    handlers.executeQueryOperation.mockResolvedValue(undefined)
+
+    runtimeUiActionExecutor.executeRuntimeUiAction(
+      {
+        type: 'executeOperations',
+        operations: [{ operationName: 'op1' }, { operationName: 'op2' }],
+      },
+      handlers,
+    )
+
+    expect(handlers.navigateToPage).not.toHaveBeenCalled()
+    expect(handlers.goBackPage).not.toHaveBeenCalled()
+    expect(handlers.openModal).not.toHaveBeenCalled()
+    expect(handlers.closeModal).not.toHaveBeenCalled()
+    expect(handlers.resetForm).not.toHaveBeenCalled()
+  })
+
+  it('propagates all request params (query, body, headers) per entry in executeOperations', () => {
+    const handlers = createHandlers()
+    handlers.executeQueryOperation.mockResolvedValue(undefined)
+
+    runtimeUiActionExecutor.executeRuntimeUiAction(
+      {
+        type: 'executeOperations',
+        operations: [
+          {
+            operationName: 'fullOp',
+            query: { filter: 'active' },
+            body: { name: 'Ada' },
+            headers: { authorization: 'token-xyz' },
+          },
+        ],
+      },
+      handlers,
+    )
+
+    expect(handlers.executeQueryOperation).toHaveBeenCalledWith('fullOp', {
+      requestParams: {
+        query: { filter: 'active' },
+        body: { name: 'Ada' },
+        headers: { authorization: 'token-xyz' },
+      },
+      iterationContext: undefined,
+    })
+  })
+
+  it('propagates body null literally in executeOperations entry', () => {
+    const handlers = createHandlers()
+    handlers.executeQueryOperation.mockResolvedValue(undefined)
+
+    runtimeUiActionExecutor.executeRuntimeUiAction(
+      {
+        type: 'executeOperations',
+        operations: [{ operationName: 'clearOp', body: null }],
+      },
+      handlers,
+    )
+
+    expect(handlers.executeQueryOperation).toHaveBeenCalledWith('clearOp', {
+      requestParams: { query: undefined, body: null, headers: undefined },
+      iterationContext: undefined,
+    })
+  })
+
+  it('propagates iterationContext to all executeQueryOperation calls in executeOperations', () => {
+    const handlers = createHandlers()
+    handlers.executeQueryOperation.mockResolvedValue(undefined)
+    const iterationContext = { item: { id: 'row-5' }, key: '4' }
+
+    runtimeUiActionExecutor.executeRuntimeUiAction(
+      {
+        type: 'executeOperations',
+        operations: [{ operationName: 'op1' }, { operationName: 'op2' }],
+      },
+      handlers,
+      { iterationContext },
+    )
+
+    expect(handlers.executeQueryOperation).toHaveBeenCalledTimes(2)
+    expect(handlers.executeQueryOperation).toHaveBeenNthCalledWith(1, 'op1', {
+      requestParams: { query: undefined, body: undefined, headers: undefined },
+      iterationContext,
+    })
+    expect(handlers.executeQueryOperation).toHaveBeenNthCalledWith(2, 'op2', {
+      requestParams: { query: undefined, body: undefined, headers: undefined },
+      iterationContext,
+    })
+  })
 })
 
 describe('ButtonNode', () => {
@@ -327,5 +463,76 @@ describe('ButtonNode', () => {
     expect(button).toHaveAttribute('type', 'submit')
     fireEvent.click(button)
     expect(executeRuntimeUiActionSpy).not.toHaveBeenCalled()
+  })
+
+  it('fires two executeQueryOperation calls when ButtonNode with executeOperations is clicked', () => {
+    const runtimeHandlers = {
+      executeQueryOperation: vi.fn().mockResolvedValue(undefined),
+      goBackPage: vi.fn(),
+      navigateToPage: vi.fn(),
+      openModal: vi.fn(),
+      closeModal: vi.fn(),
+      resetForm: vi.fn(),
+    }
+
+    useRuntimeStateActionsMock.mockReturnValue(runtimeHandlers)
+
+    render(
+      <ButtonNode
+        node={createButtonNode({
+          type: 'executeOperations',
+          operations: [
+            { operationName: 'deleteItem', body: { id: 'item-1' } },
+            { operationName: 'reloadList' },
+          ],
+        })}
+      />,
+    )
+
+    expect(runtimeHandlers.executeQueryOperation).not.toHaveBeenCalled()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Trigger action' }))
+
+    expect(runtimeHandlers.executeQueryOperation).toHaveBeenCalledTimes(2)
+    expect(runtimeHandlers.executeQueryOperation).toHaveBeenCalledWith('deleteItem', expect.objectContaining({
+      requestParams: expect.objectContaining({ body: { id: 'item-1' } }),
+    }))
+    expect(runtimeHandlers.executeQueryOperation).toHaveBeenCalledWith('reloadList', expect.objectContaining({
+      requestParams: expect.objectContaining({ body: undefined }),
+    }))
+  })
+
+  it('propagates iterationContext to executeOperations calls when ButtonNode has an iterationContext prop', () => {
+    const runtimeHandlers = {
+      executeQueryOperation: vi.fn().mockResolvedValue(undefined),
+      goBackPage: vi.fn(),
+      navigateToPage: vi.fn(),
+      openModal: vi.fn(),
+      closeModal: vi.fn(),
+      resetForm: vi.fn(),
+    }
+    const iterationContext = { item: { id: 'row-7' }, key: '6' }
+
+    useRuntimeStateActionsMock.mockReturnValue(runtimeHandlers)
+
+    render(
+      <ButtonNode
+        node={createButtonNode({
+          type: 'executeOperations',
+          operations: [{ operationName: 'op1' }, { operationName: 'op2' }],
+        })}
+        iterationContext={iterationContext}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Trigger action' }))
+
+    expect(runtimeHandlers.executeQueryOperation).toHaveBeenCalledTimes(2)
+    expect(runtimeHandlers.executeQueryOperation).toHaveBeenNthCalledWith(1, 'op1', expect.objectContaining({
+      iterationContext,
+    }))
+    expect(runtimeHandlers.executeQueryOperation).toHaveBeenNthCalledWith(2, 'op2', expect.objectContaining({
+      iterationContext,
+    }))
   })
 })

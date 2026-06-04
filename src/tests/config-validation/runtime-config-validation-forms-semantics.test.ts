@@ -723,6 +723,340 @@ describe('validateRuntimeConfig', () => {
     })
   })
 
+  it('accepts form.submitAction with executeOperations and two valid entries', () => {
+    const result = validateRuntimeConfig({
+      api: {
+        saveProfile: { method: 'POST', endpoint: '/api/profile' },
+        logActivity: { method: 'POST', endpoint: '/api/activity' },
+      },
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'form',
+              id: 'user-form',
+              submitAction: {
+                type: 'executeOperations',
+                operations: [
+                  { operationName: 'saveProfile', body: { name: 'forms.user-form.name' } },
+                  { operationName: 'logActivity' },
+                ],
+              },
+              children: [],
+            },
+          ],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(result.status).toBe('ready')
+  })
+
+  it('rejects form.submitAction with executeOperations when operations is missing', () => {
+    expect(
+      validateRuntimeConfig({
+        api: {},
+        pages: [
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'form',
+                id: 'user-form',
+                submitAction: {
+                  type: 'executeOperations',
+                },
+                children: [],
+              },
+            ],
+          },
+        ],
+        initialPage: 'home',
+      }),
+    ).toMatchObject({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        message: expect.stringContaining('submitAction.operations'),
+      },
+    })
+  })
+
+  it('rejects form.submitAction with executeOperations when operations is empty', () => {
+    expect(
+      validateRuntimeConfig({
+        api: {},
+        pages: [
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'form',
+                id: 'user-form',
+                submitAction: {
+                  type: 'executeOperations',
+                  operations: [],
+                },
+                children: [],
+              },
+            ],
+          },
+        ],
+        initialPage: 'home',
+      }),
+    ).toMatchObject({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        message: expect.stringContaining('submitAction.operations'),
+      },
+    })
+  })
+
+  it('rejects form.submitAction with executeOperations when an entry has no operationName', () => {
+    expect(
+      validateRuntimeConfig({
+        api: {},
+        pages: [
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'form',
+                id: 'user-form',
+                submitAction: {
+                  type: 'executeOperations',
+                  operations: [{}],
+                },
+                children: [],
+              },
+            ],
+          },
+        ],
+        initialPage: 'home',
+      }),
+    ).toMatchObject({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        message: expect.stringContaining('submitAction.operations[0].operationName'),
+      },
+    })
+  })
+
+  it('accepts form.submitAction with executeOperations and resetOnSuccess true (valid combination)', () => {
+    const result = validateRuntimeConfig({
+      api: {
+        saveProfile: { method: 'POST', endpoint: '/api/profile' },
+        logActivity: { method: 'POST', endpoint: '/api/activity' },
+      },
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'form',
+              id: 'user-form',
+              submitAction: {
+                type: 'executeOperations',
+                operations: [
+                  { operationName: 'saveProfile' },
+                  { operationName: 'logActivity' },
+                ],
+              },
+              resetOnSuccess: true,
+              children: [],
+            },
+          ],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(result.status).toBe('ready')
+  })
+
+  it('accepts form.submitAction with executeOperations when an entry has an inexistent operationName (not pre-rejected)', () => {
+    const result = validateRuntimeConfig({
+      api: {},
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'form',
+              id: 'user-form',
+              submitAction: {
+                type: 'executeOperations',
+                operations: [{ operationName: 'nonExistentOp' }],
+              },
+              children: [],
+            },
+          ],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(result.status).toBe('ready')
+  })
+
+  it('rejects form.submitAction with executeOperations when an entry has body and the operation method is GET', () => {
+    expect(
+      validateRuntimeConfig({
+        api: {
+          searchUsers: { method: 'GET', endpoint: '/api/users' },
+          logActivity: { method: 'POST', endpoint: '/api/activity' },
+        },
+        pages: [
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'form',
+                id: 'user-form',
+                submitAction: {
+                  type: 'executeOperations',
+                  operations: [
+                    { operationName: 'searchUsers', body: { search: 'Ada' } },
+                    { operationName: 'logActivity' },
+                  ],
+                },
+                children: [],
+              },
+            ],
+          },
+        ],
+        initialPage: 'home',
+      }),
+    ).toMatchObject({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        message: expect.stringContaining('submitAction.operations[0].body'),
+        message: expect.stringContaining('GET operations do not support body'),
+      },
+    })
+  })
+
+  it('rejects button.props.action with executeOperations when an entry has body and the operation method is GET', () => {
+    expect(
+      validateRuntimeConfig({
+        api: {
+          searchUsers: { method: 'GET', endpoint: '/api/users' },
+        },
+        pages: [
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'button',
+                props: {
+                  label: 'Search',
+                  action: {
+                    type: 'executeOperations',
+                    operations: [
+                      { operationName: 'searchUsers', body: { search: 'Ada' } },
+                    ],
+                  },
+                },
+              },
+            ],
+          },
+        ],
+        initialPage: 'home',
+      }),
+    ).toMatchObject({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        message: expect.stringContaining('props.action.operations[0].body'),
+        message: expect.stringContaining('GET operations do not support body'),
+      },
+    })
+  })
+
+  it('accepts form.submitAction or button.props.action with executeOperations when entry has body but operationName is inexistent', () => {
+    const formResult = validateRuntimeConfig({
+      api: {},
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'form',
+              id: 'user-form',
+              submitAction: {
+                type: 'executeOperations',
+                operations: [{ operationName: 'nonExistentOp', body: { search: 'Ada' } }],
+              },
+              children: [],
+            },
+          ],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(formResult.status).toBe('ready')
+
+    const buttonResult = validateRuntimeConfig({
+      api: {},
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'button',
+              props: {
+                label: 'Load',
+                action: {
+                  type: 'executeOperations',
+                  operations: [{ operationName: 'nonExistentOp', body: { search: 'Ada' } }],
+                },
+              },
+            },
+          ],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(buttonResult.status).toBe('ready')
+  })
+
+  it('still rejects form.submitAction with executeOperation (singular) when operationName is inexistent (regression)', () => {
+    expect(
+      validateRuntimeConfig(
+        createConfigWithFormLayout({
+          submitAction: {
+            type: 'executeOperation',
+            operationName: 'missingOperation',
+          },
+        }),
+      ),
+    ).toMatchObject({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        message: expect.stringContaining('submitAction.operationName'),
+      },
+    })
+  })
+
+  it('still accepts form.submitAction with executeOperation (singular) and normalizes as before (regression)', () => {
+    const result = validateRuntimeConfig(createConfigWithFormLayout())
+    expect(result.status).toBe('ready')
+
+    if (result.status !== 'ready') {
+      throw new Error('Expected ready result')
+    }
+
+    expect((result.config.pages[0].layout[0] as { submitAction: { type: string } }).submitAction.type).toBe('executeOperation')
+  })
+
   it('rejects select items with heterogeneous value types', () => {
     expect(
       validateRuntimeConfig(

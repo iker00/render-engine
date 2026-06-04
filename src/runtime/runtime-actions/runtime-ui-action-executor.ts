@@ -41,6 +41,18 @@ export function executeRuntimeUiAction(
         iterationContext: options?.iterationContext,
       })
       return
+    case 'executeOperations':
+      for (const entry of action.operations) {
+        void handlers.executeQueryOperation(entry.operationName, {
+          requestParams: {
+            query: entry.query,
+            body: entry.body,
+            headers: entry.headers,
+          },
+          iterationContext: options?.iterationContext,
+        })
+      }
+      return
     case 'openModal':
       handlers.openModal(action.modalId, { iterationContext: options?.iterationContext })
       return

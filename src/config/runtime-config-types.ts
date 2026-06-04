@@ -233,7 +233,7 @@ export interface FormLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayo
   type: 'form'
   id: string
   persistOnUnmount?: boolean
-  submitAction?: ExecuteOperationRuntimeUiAction
+  submitAction?: ExecuteOperationRuntimeUiAction | ExecuteOperationsRuntimeUiAction
   resetOnSuccess?: boolean
   children?: LayoutNode[]
 }
@@ -482,6 +482,18 @@ export interface ExecuteOperationRuntimeUiAction extends RuntimeApiRequestParams
   operationName: string
 }
 
+export interface ExecuteOperationsRuntimeUiActionEntry {
+  operationName: string
+  query?: RuntimeApiQuery
+  body?: RuntimeApiBodyValue
+  headers?: RuntimeApiHeaders
+}
+
+export interface ExecuteOperationsRuntimeUiAction {
+  type: 'executeOperations'
+  operations: ExecuteOperationsRuntimeUiActionEntry[]
+}
+
 export interface ResetFormRuntimeUiAction {
   type: 'resetForm'
   formId: string
@@ -497,12 +509,13 @@ export interface CloseModalRuntimeUiAction {
   modalId: string
 }
 
-export type RuntimeUiActionType = 'navigateTo' | 'goBack' | 'executeOperation' | 'resetForm' | 'openModal' | 'closeModal'
+export type RuntimeUiActionType = 'navigateTo' | 'goBack' | 'executeOperation' | 'executeOperations' | 'resetForm' | 'openModal' | 'closeModal'
 
 export type RuntimeUiAction =
   | NavigateToRuntimeUiAction
   | GoBackRuntimeUiAction
   | ExecuteOperationRuntimeUiAction
+  | ExecuteOperationsRuntimeUiAction
   | ResetFormRuntimeUiAction
   | OpenModalRuntimeUiAction
   | CloseModalRuntimeUiAction

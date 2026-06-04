@@ -1,6 +1,7 @@
 import type {
   CloseModalRuntimeUiAction,
   ExecuteOperationRuntimeUiAction,
+  ExecuteOperationsRuntimeUiAction,
   GoBackButtonAction,
   NavigateToButtonAction,
   OpenModalRuntimeUiAction,
@@ -22,6 +23,7 @@ import type {
 import {
   closeModalRuntimeUiActionSchema,
   executeOperationRuntimeUiActionSchema,
+  executeOperationsRuntimeUiActionSchema,
   goBackButtonActionSchema,
   navigateToButtonActionSchema,
   openModalRuntimeUiActionSchema,
@@ -50,6 +52,7 @@ export function validateRuntimeUiAction(
     rawAction.type !== 'navigateTo' &&
     rawAction.type !== 'goBack' &&
     rawAction.type !== 'executeOperation' &&
+    rawAction.type !== 'executeOperations' &&
     rawAction.type !== 'resetForm' &&
     rawAction.type !== 'openModal' &&
     rawAction.type !== 'closeModal'
@@ -131,6 +134,11 @@ export function validateRuntimeUiAction(
     }
   }
 
+  if (rawAction.type === 'executeOperations') {
+    const executeOperationsResult = validateExecuteOperationsAction(rawAction, path, pageId)
+    return executeOperationsResult
+  }
+
   if (rawAction.type === 'resetForm') {
     const resetFormParseResult = resetFormRuntimeUiActionSchema.safeParse(rawAction)
 
@@ -179,13 +187,17 @@ export function validateFormSubmitAction(
   rawAction: unknown,
   path: string,
   pageId: string,
-): { status: 'ready'; action: ExecuteOperationRuntimeUiAction } | { status: 'error'; error: RuntimeConfigError } {
+): { status: 'ready'; action: ExecuteOperationRuntimeUiAction | ExecuteOperationsRuntimeUiAction } | { status: 'error'; error: RuntimeConfigError } {
   if (!isRecord(rawAction)) {
     return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}".`)
   }
 
-  if (rawAction.type !== 'executeOperation') {
+  if (rawAction.type !== 'executeOperation' && rawAction.type !== 'executeOperations') {
     return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.type".`)
+  }
+
+  if (rawAction.type === 'executeOperations') {
+    return validateExecuteOperationsAction(rawAction, path, pageId)
   }
 
   const parseResult = executeOperationRuntimeUiActionSchema.safeParse(rawAction)
@@ -404,6 +416,60 @@ export function validateRuntimeApiRequestParams(
   }
 
   return null
+}
+
+function validateExecuteOperationsAction(
+  rawAction: Record<string, unknown>,
+  path: string,
+  pageId: string,
+): { status: 'ready'; action: ExecuteOperationsRuntimeUiAction } | { status: 'error'; error: RuntimeConfigError } {
+  const parseResult = executeOperationsRuntimeUiActionSchema.safeParse(rawAction)
+
+  if (!parseResult.success) {
+    const issuePath = parseResult.error.issues[0]?.path ?? []
+
+    if (issuePath[0] === 'operations' && typeof issuePath[1] === 'number') {
+      const entryIndex = issuePath[1]
+      const entryField = issuePath[2]
+
+      if (entryField === 'operationName' || (issuePath.length === 2)) {
+        return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.operations[${entryIndex}].operationName".`)
+      }
+
+      if (entryField === 'query') {
+        return mapRequestQueryIssue(pageId, `${path}.operations[${entryIndex}]`, (rawAction.operations as Record<string, unknown>[])?.[entryIndex]?.query, issuePath.slice(3))
+      }
+
+      if (entryField === 'headers') {
+        return mapRequestHeadersIssue(pageId, `${path}.operations[${entryIndex}]`, (rawAction.operations as Record<string, unknown>[])?.[entryIndex]?.headers, issuePath.slice(3))
+      }
+
+      if (entryField === 'body') {
+        return mapRequestBodyIssue(pageId, `${path}.operations[${entryIndex}]`, (rawAction.operations as Record<string, unknown>[])?.[entryIndex]?.body, issuePath.slice(3))
+      }
+
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.operations[${entryIndex}].${String(entryField)}".`)
+    }
+
+    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.operations".`)
+  }
+
+  // Validate each entry's query and headers
+  for (let index = 0; index < parseResult.data.operations.length; index += 1) {
+    const entry = parseResult.data.operations[index]
+    const entryPath = `${path}.operations[${index}]`
+
+    const requestParamsIssue = validateRuntimeApiRequestParams(entry, entryPath, pageId)
+
+    if (requestParamsIssue) {
+      return requestParamsIssue
+    }
+  }
+
+  return {
+    status: 'ready',
+    action: parseResult.data as ExecuteOperationsRuntimeUiAction,
+  }
 }
 
 function mapExecuteOperationActionIssue(

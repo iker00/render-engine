@@ -19,6 +19,7 @@ export type RuntimeReferenceSurface =
   | 'image.props.src'
   | 'image.props.alt'
   | 'table.cell'
+  | 'api.endpoint'
 
 export function reportRuntimeReferenceDiagnostic(
   result: RuntimeReferenceResolutionResult,

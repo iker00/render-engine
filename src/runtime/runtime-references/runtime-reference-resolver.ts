@@ -26,7 +26,7 @@ interface ResolveRuntimeReferenceOptions {
 }
 
 const RUNTIME_TEMPLATE_PLACEHOLDER_DETECTOR = /\{\{[\s\S]*?\}\}/
-const RUNTIME_TEMPLATE_PLACEHOLDER_PATTERN = /\{\{([\s\S]*?)\}\}/g
+export const RUNTIME_TEMPLATE_PLACEHOLDER_PATTERN = /\{\{([\s\S]*?)\}\}/g
 
 export function resolveRuntimeReference(
   value: string,

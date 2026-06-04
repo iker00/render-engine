@@ -342,6 +342,22 @@ export const executeOperationRuntimeUiActionSchema = z
   })
   .strip()
 
+export const executeOperationsRuntimeUiActionEntrySchema = z
+  .object({
+    operationName: nonEmptyStringSchema,
+    query: runtimeApiQuerySchema.optional(),
+    body: runtimeApiBodySchema.optional(),
+    headers: runtimeApiHeadersSchema.optional(),
+  })
+  .strip()
+
+export const executeOperationsRuntimeUiActionSchema = z
+  .object({
+    type: z.literal('executeOperations'),
+    operations: z.array(executeOperationsRuntimeUiActionEntrySchema).min(1),
+  })
+  .strip()
+
 export const resetFormRuntimeUiActionSchema = z
   .object({
     type: z.literal('resetForm'),

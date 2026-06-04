@@ -161,12 +161,40 @@ export function FormNode({ node, children, iterationContext }: FormNodeProps) {
       return
     }
 
-    const result = await executeQueryOperation(node.submitAction.operationName, {
+    const submitAction = node.submitAction
+
+    if (submitAction.type === 'executeOperations') {
+      const submitSnapshotState = readRuntimeState()
+      const results = await Promise.all(
+        submitAction.operations.map((entry) =>
+          executeQueryOperation(entry.operationName, {
+            snapshotState: submitSnapshotState,
+            requestParams: {
+              query: entry.query,
+              body: entry.body,
+              headers: entry.headers,
+            },
+            iterationContext,
+          }),
+        ),
+      )
+
+      const allSuccess = results.every((r) => r.status === 'success')
+
+      if (allSuccess && node.resetOnSuccess) {
+        resetForm(node.id)
+      }
+
+      return
+    }
+
+    // executeOperation branch (default for 'executeOperation' type)
+    const result = await executeQueryOperation(submitAction.operationName, {
       snapshotState: readRuntimeState(),
       requestParams: {
-        query: node.submitAction.query,
-        body: node.submitAction.body,
-        headers: node.submitAction.headers,
+        query: submitAction.query,
+        body: submitAction.body,
+        headers: submitAction.headers,
       },
       iterationContext,
     })

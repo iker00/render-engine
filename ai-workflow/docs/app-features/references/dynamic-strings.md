@@ -22,6 +22,7 @@
 - `checkboxGroup.props.items.label` y `checkboxGroup.props.items.value` en colecciones manuales o dinámicas de objetos
 - celdas string de `table` manual
 - `table.props.rows.cells` en modo dinámico
+- `api.endpoint` en el catálogo de operaciones (véase [[../config/api-catalog.md]] para semántica de placeholders no resolubles)
 
 ## Semántica de placeholders
 - cada placeholder se resuelve con la misma capa central que las referencias completas
@@ -45,6 +46,7 @@ Las siguientes superficies usan solo referencias completas o literales y NO apli
 - `repeater.props.items.source` y `repeater.props.items.key`
 - `list.props.items.source`, `select.props.items.source`, `radioGroup.props.items.source`, `checkboxGroup.props.items.source`
 - cabeceras de `table`
+- `preloads` (la interpolación de `endpoint` no aplica a precargas)
 
 ## Reglas de placeholder vacío
 - la interpolación parcial solo existe en el catálogo visible anterior y usa placeholders `{{referencia}}`

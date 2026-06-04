@@ -1330,4 +1330,539 @@ describe('Runtime api execution', () => {
       data: null,
     })
   })
+
+  it('two independent executeRuntimeApiOperation calls resolve to independent results and an error in one does not affect the other', async () => {
+    const [errorResult, successResult] = await Promise.all([
+      executeRuntimeApiOperation({
+        config: runtimeConfig,
+        operationName: 'nonExistent',
+        state: runtimeState,
+        fetch: vi.fn(),
+      }),
+      executeRuntimeApiOperation({
+        config: runtimeConfig,
+        operationName: 'searchUsers',
+        state: runtimeState,
+        fetch: vi.fn().mockResolvedValue(
+          new Response(JSON.stringify({ results: [] }), {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+          }),
+        ),
+      }),
+    ])
+
+    expect(errorResult).toEqual({
+      status: 'error',
+      error: {
+        code: 'operation-not-found',
+        message: 'The api operation "nonExistent" does not exist.',
+      },
+    })
+
+    expect(successResult).toEqual({
+      status: 'success',
+      data: { results: [] },
+    })
+  })
+})
+
+describe('Runtime api endpoint interpolation', () => {
+  const stateWithParams: RuntimeState = {
+    ...runtimeState,
+    navigation: {
+      currentPageId: 'details',
+      history: [
+        { entryId: 0, pageId: 'home', params: {} },
+        { entryId: 1, pageId: 'details', params: { itemId: '42' } },
+      ],
+      currentEntryIndex: 1,
+      lastError: null,
+    },
+    pageEntry: {
+      entryId: 1,
+      pageId: 'details',
+      params: { itemId: '42' },
+      preloadNames: [],
+      status: 'idle',
+    },
+  }
+
+  it('leaves a literal endpoint without placeholders unchanged (regression)', () => {
+    const result = buildRuntimeApiRequest({
+      config: runtimeConfig,
+      operationName: 'searchUsers',
+      state: runtimeState,
+    })
+
+    expect(result).toEqual({
+      status: 'ready',
+      request: expect.objectContaining({
+        url: '/api/users?search=Ada&page=2&active=true',
+      }),
+    })
+  })
+
+  it('interpolates {{params.itemId}} with the current page param value', () => {
+    const config: RuntimeConfig = {
+      ...runtimeConfig,
+      api: {
+        getItem: {
+          method: 'GET',
+          endpoint: '/api/items/{{params.itemId}}/detail',
+        },
+      },
+    }
+
+    const result = buildRuntimeApiRequest({
+      config,
+      operationName: 'getItem',
+      state: stateWithParams,
+    })
+
+    expect(result).toEqual({
+      status: 'ready',
+      request: expect.objectContaining({
+        url: '/api/items/42/detail',
+      }),
+    })
+  })
+
+  it('interpolates {{forms.itemForm.id}} from form store value', () => {
+    const stateWithForm: RuntimeState = {
+      ...runtimeState,
+      forms: {
+        ...runtimeState.forms,
+        itemForm: {
+          id: {
+            value: 'abc',
+            error: null,
+            touched: false,
+            dirty: false,
+            defaultValue: '',
+          },
+        },
+      },
+    }
+
+    const config: RuntimeConfig = {
+      ...runtimeConfig,
+      api: {
+        updateItem: {
+          method: 'PUT',
+          endpoint: '/api/items/{{forms.itemForm.id}}',
+        },
+      },
+    }
+
+    const result = buildRuntimeApiRequest({
+      config,
+      operationName: 'updateItem',
+      state: stateWithForm,
+    })
+
+    expect(result).toEqual({
+      status: 'ready',
+      request: expect.objectContaining({
+        url: '/api/items/abc',
+      }),
+    })
+  })
+
+  it('interpolates {{queries.previous.data.id}} with numeric query data value (number → string)', () => {
+    const stateWithQuery: RuntimeState = {
+      ...runtimeState,
+      queries: {
+        ...runtimeState.queries,
+        previous: {
+          status: 'success',
+          data: { id: 7 },
+          error: null,
+        },
+      },
+    }
+
+    const config: RuntimeConfig = {
+      ...runtimeConfig,
+      api: {
+        loadRelated: {
+          method: 'GET',
+          endpoint: '/api/items/{{queries.previous.data.id}}/related',
+        },
+      },
+    }
+
+    const result = buildRuntimeApiRequest({
+      config,
+      operationName: 'loadRelated',
+      state: stateWithQuery,
+    })
+
+    expect(result).toEqual({
+      status: 'ready',
+      request: expect.objectContaining({
+        url: '/api/items/7/related',
+      }),
+    })
+  })
+
+  it('interpolates {{queries.x.data.enabled}} with boolean false as string "false"', () => {
+    const stateWithBool: RuntimeState = {
+      ...runtimeState,
+      queries: {
+        ...runtimeState.queries,
+        x: {
+          status: 'success',
+          data: { enabled: false },
+          error: null,
+        },
+      },
+    }
+
+    const config: RuntimeConfig = {
+      ...runtimeConfig,
+      api: {
+        checkFeature: {
+          method: 'GET',
+          endpoint: '/api/features/{{queries.x.data.enabled}}/check',
+        },
+      },
+    }
+
+    const result = buildRuntimeApiRequest({
+      config,
+      operationName: 'checkFeature',
+      state: stateWithBool,
+    })
+
+    expect(result).toEqual({
+      status: 'ready',
+      request: expect.objectContaining({
+        url: '/api/features/false/check',
+      }),
+    })
+  })
+
+  it('interpolates {{item.id}} from iterationContext inside a repeater', () => {
+    const config: RuntimeConfig = {
+      ...runtimeConfig,
+      api: {
+        deleteRow: {
+          method: 'DELETE',
+          endpoint: '/api/rows/{{item.id}}',
+        },
+      },
+    }
+
+    const result = buildRuntimeApiRequest({
+      config,
+      operationName: 'deleteRow',
+      state: runtimeState,
+      iterationContext: {
+        item: { id: 'row-3' },
+        key: '2',
+      },
+    })
+
+    expect(result).toEqual({
+      status: 'ready',
+      request: expect.objectContaining({
+        url: '/api/rows/row-3',
+      }),
+    })
+  })
+
+  it('returns request-build-failed when {{params.missing}} is not in current page params', () => {
+    const config: RuntimeConfig = {
+      ...runtimeConfig,
+      api: {
+        getItem: {
+          method: 'GET',
+          endpoint: '/api/items/{{params.missing}}/detail',
+        },
+      },
+    }
+
+    const fetchMock = vi.fn()
+
+    const result = buildRuntimeApiRequest({
+      config,
+      operationName: 'getItem',
+      state: runtimeState,
+    })
+
+    expect(result).toEqual({
+      status: 'error',
+      error: {
+        code: 'request-build-failed',
+        message: expect.stringContaining('params.missing'),
+      },
+    })
+
+    expect(result).toEqual({
+      status: 'error',
+      error: {
+        code: 'request-build-failed',
+        message: expect.stringContaining('endpoint'),
+      },
+    })
+
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('returns request-build-failed when {{forms.foo.bar}} references a non-existent form', () => {
+    const config: RuntimeConfig = {
+      ...runtimeConfig,
+      api: {
+        update: {
+          method: 'PUT',
+          endpoint: '/api/items/{{forms.foo.bar}}',
+        },
+      },
+    }
+
+    const result = buildRuntimeApiRequest({
+      config,
+      operationName: 'update',
+      state: runtimeState,
+    })
+
+    expect(result).toEqual({
+      status: 'error',
+      error: {
+        code: 'request-build-failed',
+        message: expect.stringContaining('forms.foo.bar'),
+      },
+    })
+  })
+
+  it('returns request-build-failed when {{queries.x.data.user}} resolves to an object', () => {
+    const stateWithObj: RuntimeState = {
+      ...runtimeState,
+      queries: {
+        ...runtimeState.queries,
+        x: {
+          status: 'success',
+          data: { user: { name: 'Ada' } },
+          error: null,
+        },
+      },
+    }
+
+    const config: RuntimeConfig = {
+      ...runtimeConfig,
+      api: {
+        getUser: {
+          method: 'GET',
+          endpoint: '/api/users/{{queries.x.data.user}}',
+        },
+      },
+    }
+
+    const result = buildRuntimeApiRequest({
+      config,
+      operationName: 'getUser',
+      state: stateWithObj,
+    })
+
+    expect(result).toEqual({
+      status: 'error',
+      error: {
+        code: 'request-build-failed',
+        message: expect.stringContaining('endpoint'),
+      },
+    })
+  })
+
+  it('returns request-build-failed when {{item.tags}} resolves to an array', () => {
+    const config: RuntimeConfig = {
+      ...runtimeConfig,
+      api: {
+        getTags: {
+          method: 'GET',
+          endpoint: '/api/{{item.tags}}',
+        },
+      },
+    }
+
+    const result = buildRuntimeApiRequest({
+      config,
+      operationName: 'getTags',
+      state: runtimeState,
+      iterationContext: {
+        item: { tags: ['a', 'b'] },
+        key: '0',
+      },
+    })
+
+    expect(result).toEqual({
+      status: 'error',
+      error: {
+        code: 'request-build-failed',
+        message: expect.stringContaining('endpoint'),
+      },
+    })
+  })
+
+  it('returns request-build-failed when {{item.id}} is used outside a repeater (no iterationContext)', () => {
+    const config: RuntimeConfig = {
+      ...runtimeConfig,
+      api: {
+        getRow: {
+          method: 'GET',
+          endpoint: '/api/rows/{{item.id}}',
+        },
+      },
+    }
+
+    const result = buildRuntimeApiRequest({
+      config,
+      operationName: 'getRow',
+      state: runtimeState,
+    })
+
+    expect(result).toEqual({
+      status: 'error',
+      error: {
+        code: 'request-build-failed',
+        message: expect.stringContaining('endpoint'),
+      },
+    })
+  })
+
+  it('interpolates two placeholders in order when both are resolvable', () => {
+    const stateWithMulti: RuntimeState = {
+      ...stateWithParams,
+      forms: {
+        ...runtimeState.forms,
+        itemForm: {
+          section: {
+            value: 'config',
+            error: null,
+            touched: false,
+            dirty: false,
+            defaultValue: '',
+          },
+        },
+      },
+    }
+
+    const config: RuntimeConfig = {
+      ...runtimeConfig,
+      api: {
+        getSection: {
+          method: 'GET',
+          endpoint: '/api/{{forms.itemForm.section}}/{{params.itemId}}',
+        },
+      },
+    }
+
+    const result = buildRuntimeApiRequest({
+      config,
+      operationName: 'getSection',
+      state: stateWithMulti,
+    })
+
+    expect(result).toEqual({
+      status: 'ready',
+      request: expect.objectContaining({
+        url: '/api/config/42',
+      }),
+    })
+  })
+
+  it('returns request-build-failed when the first placeholder resolves but the second fails', () => {
+    const stateWithForm: RuntimeState = {
+      ...runtimeState,
+      forms: {
+        ...runtimeState.forms,
+        itemForm: {
+          id: {
+            value: 'abc',
+            error: null,
+            touched: false,
+            dirty: false,
+            defaultValue: '',
+          },
+        },
+      },
+    }
+
+    const config: RuntimeConfig = {
+      ...runtimeConfig,
+      api: {
+        action: {
+          method: 'POST',
+          endpoint: '/api/items/{{forms.itemForm.id}}/{{params.missing}}',
+        },
+      },
+    }
+
+    const result = buildRuntimeApiRequest({
+      config,
+      operationName: 'action',
+      state: stateWithForm,
+    })
+
+    expect(result).toEqual({
+      status: 'error',
+      error: {
+        code: 'request-build-failed',
+        message: expect.stringContaining('endpoint'),
+      },
+    })
+  })
+
+  it('trims spaces around reference in placeholder {{ params.itemId }} like {{params.itemId}}', () => {
+    const config: RuntimeConfig = {
+      ...runtimeConfig,
+      api: {
+        getItem: {
+          method: 'GET',
+          endpoint: '/api/items/{{ params.itemId }}/detail',
+        },
+      },
+    }
+
+    const result = buildRuntimeApiRequest({
+      config,
+      operationName: 'getItem',
+      state: stateWithParams,
+    })
+
+    expect(result).toEqual({
+      status: 'ready',
+      request: expect.objectContaining({
+        url: '/api/items/42/detail',
+      }),
+    })
+  })
+
+  it('correctly appends query string after endpoint interpolation', () => {
+    const config: RuntimeConfig = {
+      ...runtimeConfig,
+      api: {
+        listItems: {
+          method: 'GET',
+          endpoint: '/api/collections/{{params.itemId}}/items',
+          query: {
+            page: 1,
+          },
+        },
+      },
+    }
+
+    const result = buildRuntimeApiRequest({
+      config,
+      operationName: 'listItems',
+      state: stateWithParams,
+    })
+
+    expect(result).toEqual({
+      status: 'ready',
+      request: expect.objectContaining({
+        url: '/api/collections/42/items?page=1',
+      }),
+    })
+  })
 })

@@ -187,6 +187,7 @@
                 }
               ]
             },
+
             {
               "type": "container",
               "props": {
@@ -797,6 +798,7 @@
                 "level": 2
               }
             },
+
             {
               "type": "container",
               "props": {
@@ -969,6 +971,7 @@
                 }
               ]
             },
+
             {
               "type": "container",
               "props": {
@@ -2723,6 +2726,462 @@
               ]
             }
           ]
+        }
+      ]
+    },
+    {
+      "id": "test-page",
+      "layout": [
+        {
+          "type": "tabs",
+          "props": {
+            "items": [
+              {
+                "label": "Tab horizontal 1",
+                "visibility": {
+                  "reference": "queries.searchPosts3.data",
+                  "equals ": "isFalsy"
+                },
+                "children": [
+                  {
+                    "type": "paragraph",
+                    "props": {
+                      "text": "Tab horizontal 1"
+                    }
+                  }
+                ]
+              },
+              {
+                "label": "Tab horizontal 2",
+                "children": [
+                  {
+                    "type": "paragraph",
+                    "props": {
+                      "text": "Tab 2"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "type": "tabs",
+          "props": {
+            "orientation": "vertical",
+            "items": [
+              {
+                "label": "Tab vertical 1",
+                "children": [
+                  {
+                    "type": "paragraph",
+                    "props": {
+                      "text": "Contenido tab vertical 1"
+                    }
+                  }
+                ]
+              },
+              {
+                "label": "Tab vertical 2",
+                "children": [
+                  {
+                    "type": "paragraph",
+                    "props": {
+                      "text": "contenido tab vertical 2"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "type": "accordion",
+          "props": {
+            "label": "Accordion 1 (accordion-group)",
+            "defaultOpen": true,
+            "groupId": "accordion-group"
+          },
+          "children": [
+            {
+              "type": "paragraph",
+              "props": {
+                "text": "Accordion Item 1"
+              }
+            }
+          ]
+        },
+        {
+          "type": "accordion",
+          "props": {
+            "label": "Accordion 2 (accordion-group)",
+            "defaultOpen": true,
+            "groupId": "accordion-group"
+          },
+          "children": [
+            {
+              "type": "paragraph",
+              "props": {
+                "text": "Accordion Item 2"
+              }
+            }
+          ]
+        },
+        {
+          "type": "accordion",
+          "props": {
+            "label": "Accordion solo",
+            "defaultOpen": true
+          },
+          "children": [
+            {
+              "type": "paragraph",
+              "props": {
+                "text": "lorem ipsum"
+              }
+            }
+          ]
+        },
+        {
+          "type": "link",
+          "props": {
+            "label": "Link",
+            "href": "https://www.google.com"
+          }
+        },
+        {
+          "type": "link",
+          "props": {
+            "label": "Link (new window)",
+            "href": "https://www.google.com",
+            "target": "_blank"
+          }
+        },
+        {
+          "type": "link",
+          "props": {
+            "label": "Download ANIMSA ens",
+            "href": "https://www.animsa.es/wp-content/uploads/2026/05/ENS-2025-006_V2.pdf",
+            "download": "logo-animsa.png"
+          }
+        },
+        {
+          "type": "link",
+          "props": {
+            "label": "Go home",
+            "action": {
+              "type": "navigateTo",
+              "pageId": "bootstrap-home"
+            }
+          }
+        },
+        {
+          "type": "container",
+          "props": {
+            "direction": "row"
+          },
+          "children": [
+            {
+              "type": "badge",
+              "props": {
+                "label": "badge neutral",
+                "variant": "pill",
+                "color": "neutral"
+              }
+            },
+            {
+              "type": "badge",
+              "props": {
+                "label": "badge primary",
+                "variant": "pill",
+                "color": "primary"
+              }
+            },
+            {
+              "type": "badge",
+              "props": {
+                "label": "badge success",
+                "variant": "pill",
+                "color": "success"
+              }
+            },
+            {
+              "type": "badge",
+              "props": {
+                "label": "badge warning",
+                "variant": "pill",
+                "color": "warning"
+              }
+            },
+            {
+              "type": "badge",
+              "props": {
+                "label": "badge danger",
+                "variant": "pill",
+                "color": "danger"
+              }
+            },
+            {
+              "type": "badge",
+              "props": {
+                "label": "badge info",
+                "variant": "pill",
+                "color": "info"
+              }
+            }
+          ]
+        },
+        {
+          "type": "container",
+          "props": {
+            "direction": "row"
+          },
+          "children": [
+            {
+              "type": "badge",
+              "props": {
+                "label": "badge neutral",
+                "variant": "circle",
+                "color": "neutral"
+              }
+            },
+            {
+              "type": "badge",
+              "props": {
+                "label": "badge primary",
+                "variant": "circle",
+                "color": "primary"
+              }
+            },
+            {
+              "type": "badge",
+              "props": {
+                "label": "badge success",
+                "variant": "circle",
+                "color": "success"
+              }
+            },
+            {
+              "type": "badge",
+              "props": {
+                "label": "badge warning",
+                "variant": "circle",
+                "color": "warning"
+              }
+            },
+            {
+              "type": "badge",
+              "props": {
+                "label": "badge danger",
+                "variant": "circle",
+                "color": "danger"
+              }
+            },
+            {
+              "type": "badge",
+              "props": {
+                "label": "badge info",
+                "variant": "circle",
+                "color": "info"
+              }
+            }
+          ]
+        },
+        {
+          "type": "alert",
+          "props": {
+            "title": "Neutral",
+            "message": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed non risus. Suspendisse lectus tortor, dignissim sit amet, adipiscing nec, ultricies sed, dolor.",
+            "type": "neutral"
+          }
+        },
+        {
+          "type": "alert",
+          "props": {
+            "title": "Primary",
+            "message": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed non risus. Suspendisse lectus tortor, dignissim sit amet, adipiscing nec, ultricies sed, dolor.",
+            "type": "primary"
+          }
+        },
+        {
+          "type": "alert",
+          "props": {
+            "title": "Success",
+            "message": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed non risus. Suspendisse lectus tortor, dignissim sit amet, adipiscing nec, ultricies sed, dolor.",
+            "type": "success"
+          }
+        },
+        {
+          "type": "alert",
+          "props": {
+            "title": "Warning",
+            "message": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed non risus. Suspendisse lectus tortor, dignissim sit amet, adipiscing nec, ultricies sed, dolor.",
+            "type": "warning"
+          }
+        },
+        {
+          "type": "alert",
+          "props": {
+            "title": "Danger",
+            "message": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed non risus. Suspendisse lectus tortor, dignissim sit amet, adipiscing nec, ultricies sed, dolor.",
+            "type": "danger"
+          }
+        },
+        {
+          "type": "alert",
+          "props": {
+            "title": "Info",
+            "message": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed non risus. Suspendisse lectus tortor, dignissim sit amet, adipiscing nec, ultricies sed, dolor.",
+            "type": "info"
+          }
+        },
+        {
+          "type": "container",
+          "props": {
+            "direction": "row"
+          },
+          "children": [
+            {
+              "type": "stat",
+              "props": {
+                "label": "Stat 1",
+                "value": "2150",
+                "variant": "accent",
+                "color": "neutral"
+              }
+            },
+            {
+              "type": "stat",
+              "props": {
+                "label": "Stat 1",
+                "value": "2150",
+                "variant": "accent",
+                "color": "primary"
+              }
+            },
+            {
+              "type": "stat",
+              "props": {
+                "label": "Stat 1",
+                "value": "2150",
+                "variant": "accent",
+                "color": "success"
+              }
+            },
+            {
+              "type": "stat",
+              "props": {
+                "label": "Stat 1",
+                "value": "2150",
+                "variant": "accent",
+                "color": "warning"
+              }
+            },
+            {
+              "type": "stat",
+              "props": {
+                "label": "Stat 1",
+                "value": "2150",
+                "variant": "accent",
+                "color": "danger"
+              }
+            },
+            {
+              "type": "stat",
+              "props": {
+                "label": "Stat 1",
+                "value": "2150",
+                "variant": "accent",
+                "color": "info"
+              }
+            }
+          ]
+        },
+        {
+          "type": "container",
+          "props": {
+            "direction": "row"
+          },
+          "children": [
+            {
+              "type": "stat",
+              "props": {
+                "label": "Stat 1",
+                "value": "2150",
+                "variant": "tinted",
+                "color": "neutral"
+              }
+            },
+            {
+              "type": "stat",
+              "props": {
+                "label": "Stat 1",
+                "value": "2150",
+                "variant": "tinted",
+                "color": "primary"
+              }
+            },
+            {
+              "type": "stat",
+              "props": {
+                "label": "Stat 1",
+                "value": "2150",
+                "variant": "tinted",
+                "color": "success"
+              }
+            },
+            {
+              "type": "stat",
+              "props": {
+                "label": "Stat 1",
+                "value": "2150",
+                "variant": "tinted",
+                "color": "warning"
+              }
+            },
+            {
+              "type": "stat",
+              "props": {
+                "label": "Stat 1",
+                "value": "2150",
+                "variant": "tinted",
+                "color": "danger"
+              }
+            },
+            {
+              "type": "stat",
+              "props": {
+                "label": "Stat 1",
+                "value": "2150",
+                "variant": "tinted",
+                "color": "info"
+              }
+            }
+          ]
+        },
+        {
+          "type": "divider",
+          "props": {
+            "variant": "solid"
+          }
+        },
+        {
+          "type": "divider",
+          "props": {
+            "variant": "dashed"
+          }
+        },
+        {
+          "type": "divider",
+          "props": {
+            "variant": "dotted"
+          }
+        },
+        {
+          "type": "divider",
+          "props": {
+            "variant": "invisible"
+          }
         }
       ]
     }

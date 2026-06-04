@@ -654,6 +654,98 @@ describe('validateRuntimeConfig', () => {
       })
     })
 
+    it('accepts a config with both executeOperation and executeOperations buttons and valid request params', () => {
+      const result = validateRuntimeConfig({
+        api: {
+          searchUsers: { method: 'GET', endpoint: '/api/users' },
+          deleteItem: { method: 'DELETE', endpoint: '/api/items/1' },
+          reloadList: { method: 'GET', endpoint: '/api/items' },
+        },
+        pages: [
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'button',
+                props: {
+                  label: 'Search',
+                  action: {
+                    type: 'executeOperation',
+                    operationName: 'searchUsers',
+                    query: { search: 'Ada' },
+                  },
+                },
+              },
+              {
+                type: 'button',
+                props: {
+                  label: 'Delete and reload',
+                  action: {
+                    type: 'executeOperations',
+                    operations: [
+                      { operationName: 'deleteItem', headers: { 'x-custom': 'value' } },
+                      { operationName: 'reloadList', query: { page: 1 } },
+                    ],
+                  },
+                },
+              },
+            ],
+          },
+        ],
+        initialPage: 'home',
+      })
+
+      expect(result.status).toBe('ready')
+
+      if (result.status !== 'ready') {
+        throw new Error('Expected ready result')
+      }
+
+      const executeOpsAction = (result.config.pages[0].layout[1] as { props: { action: Record<string, unknown> } }).props.action as {
+        type: string
+        operations: Array<{ operationName: string; query?: Record<string, unknown>; headers?: Record<string, unknown> }>
+      }
+      expect(executeOpsAction.type).toBe('executeOperations')
+      expect(executeOpsAction.operations).toHaveLength(2)
+      expect(executeOpsAction.operations[0]).toEqual({ operationName: 'deleteItem', headers: { 'x-custom': 'value' } })
+      expect(executeOpsAction.operations[1]).toEqual({ operationName: 'reloadList', query: { page: 1 } })
+    })
+
+    it('rejects executeOperations when an entry has invalid query/headers/body producing paths with operations[N]', () => {
+      expect(
+        validateRuntimeConfig({
+          api: { myOp: { method: 'GET', endpoint: '/api/items' } },
+          pages: [
+            {
+              id: 'home',
+              layout: [
+                {
+                  type: 'button',
+                  props: {
+                    label: 'Broken',
+                    action: {
+                      type: 'executeOperations',
+                      operations: [
+                        { operationName: 'myOp' },
+                        { operationName: 'myOp', query: { filters: { active: true } } },
+                      ],
+                    },
+                  },
+                },
+              ],
+            },
+          ],
+          initialPage: 'home',
+        }),
+      ).toMatchObject({
+        status: 'error',
+        error: {
+          code: 'invalid-layout',
+          message: expect.stringContaining('props.action.operations[1].query'),
+        },
+      })
+    })
+
     it('rejects body trees with non-json values or incompatible shapes', () => {
       expect(
         validateRuntimeConfig(

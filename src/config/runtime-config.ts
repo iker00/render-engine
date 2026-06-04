@@ -62,6 +62,8 @@ export type {
   NavigateToButtonAction,
   NavigateToRuntimeUiAction,
   ExecuteOperationRuntimeUiAction,
+  ExecuteOperationsRuntimeUiAction,
+  ExecuteOperationsRuntimeUiActionEntry,
   ResetFormRuntimeUiAction,
   RuntimeUiAction,
   RuntimeUiActionType,

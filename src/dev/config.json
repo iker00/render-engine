@@ -7,6 +7,18 @@
     "buscarVehiculo": {
       "endpoint": "http://localhost:3000/api/vehiculos/global",
       "method": "POST"
+    },
+    "getItemDetail": {
+      "endpoint": "http://localhost:3000/api/items/{{params.itemId}}/detail",
+      "method": "GET"
+    },
+    "saveItemData": {
+      "endpoint": "http://localhost:3000/api/items/{{params.itemId}}",
+      "method": "POST"
+    },
+    "logOperation": {
+      "endpoint": "http://localhost:3000/api/log",
+      "method": "POST"
     }
   },
   "pages": [
@@ -63,9 +75,10 @@
           }
         },
         {
-          "type": "paragraph",
+          "type": "alert",
           "props": {
-            "text": "No se han encontrado resultados"
+            "message": "No se han encontrado resultados",
+            "type": "danger"
           },
           "visibility": {
             "reference": "queries.buscarPersona.error",
@@ -84,9 +97,6 @@
             }
           },
           "children": [
-            {
-              "type": "divider"
-            },
             {
               "type": "container",
               "props": {
@@ -225,9 +235,11 @@
                       }
                     },
                     {
-                      "type": "paragraph",
+                      "type": "badge",
                       "props": {
-                        "text": "Busca y captura"
+                        "label": "Busca y captura",
+                        "variant": "pill",
+                        "color": "danger"
                       }
                     }
                   ]
@@ -247,7 +259,7 @@
                       "type": "heading",
                       "props": {
                         "level": 2,
-                        "text": "{{translations.prueba}}: {{queries.buscarPersona.data.persona.nombreApellidos}}"
+                        "text": "{{queries.buscarPersona.data.persona.nombreApellidos}}"
                       },
                       "layout": {
                         "span": 12
@@ -301,11 +313,14 @@
                     "template": [
                       {
                         "type": "stat",
+                        "layout": {
+                          "span": 3
+                        },
                         "props": {
                           "label": "{{item.fuente.nombre}}",
                           "value": "{{item.total}}",
                           "variant": "tinted",
-                          "color": "primary"
+                          "color": "neutral"
                         }
                       }
                     ]
@@ -334,342 +349,412 @@
           ]
         },
         {
-          "type": "table",
-          "visibility": {
-            "reference": "queries.buscarPersona.data.resultados.vinfopol.datos",
-            "operator": "greaterThan",
-            "value": 0
-          },
+          "type": "tabs",
           "props": {
-            "headers": [
-              "Ano",
-              "Número",
-              "Fecha",
-              "Clase",
-              "Tipo de Atestado",
-              "Resultado",
-              "Implicados",
-              "Vehículos",
-              "Personas",
-              "Más info"
-            ],
-            "rows": {
-              "source": "queries.buscarPersona.data.resultados.vinfopol.datos",
-              "cells": [
-                "item.anio",
-                "item.numero",
-                "item.fechaHora",
-                "item.clase",
-                "item.tipoAtestado",
-                {
-                  "type": "list",
-                  "props": {
-                    "items": {
-                      "source": "item.resultado",
-                      "itemText": "({{item.codigo}}) {{item.descripcion}}"
-                    }
-                  }
+            "items": [
+              {
+                "label": "Vinfopol",
+                "visibility": {
+                  "reference": "queries.buscarPersona.data.resultados.vinfopol.datos",
+                  "operator": "isTruthy"
                 },
-                {
-                  "type": "list",
-                  "props": {
-                    "items": {
-                      "source": "item.implicados",
-                      "itemText": "({{item.documento}}) {{item.nombreApellidos}}"
-                    }
-                  }
-                },
-                {
-                  "type": "list",
-                  "props": {
-                    "items": {
-                      "source": "item.vehiculos",
-                      "itemText": "{{item.marca}} - {{item.modelo}} ({{item.matricula}})"
-                    }
-                  }
-                },
-                {
-                  "type": "list",
-                  "props": {
-                    "items": {
-                      "source": "item.personas",
-                      "itemText": "({{item.documento}}) {{item.nombreApellidos}}"
-                    }
-                  }
-                },
-                {
-                  "type": "container",
-                  "props": {
-                    "direction": "row"
-                  },
-                  "children": [
-                    {
-                      "type": "button",
-                      "props": {
-                        "label": "Ver más"
+                "children": [
+                  {
+                    "type": "table",
+                    "visibility": {
+                      "reference": "queries.buscarPersona.data.resultados.vinfopol.datos",
+                      "operator": "greaterThan",
+                      "value": 0
+                    },
+                    "props": {
+                      "headers": [
+                        "Ano",
+                        "Número",
+                        "Fecha",
+                        "Clase",
+                        "Tipo de Atestado",
+                        "Resultado",
+                        "Implicados",
+                        "Vehículos",
+                        "Personas",
+                        "Más info"
+                      ],
+                      "rows": {
+                        "source": "queries.buscarPersona.data.resultados.vinfopol.datos",
+                        "cells": [
+                          "item.anio",
+                          "item.numero",
+                          "item.fechaHora",
+                          "item.clase",
+                          "item.tipoAtestado",
+                          {
+                            "type": "list",
+                            "props": {
+                              "items": {
+                                "source": "item.resultado",
+                                "itemText": "({{item.codigo}}) {{item.descripcion}}"
+                              }
+                            }
+                          },
+                          {
+                            "type": "list",
+                            "props": {
+                              "items": {
+                                "source": "item.implicados",
+                                "itemText": "({{item.documento}}) {{item.nombreApellidos}}"
+                              }
+                            }
+                          },
+                          {
+                            "type": "list",
+                            "props": {
+                              "items": {
+                                "source": "item.vehiculos",
+                                "itemText": "{{item.marca}} - {{item.modelo}} ({{item.matricula}})"
+                              }
+                            }
+                          },
+                          {
+                            "type": "list",
+                            "props": {
+                              "items": {
+                                "source": "item.personas",
+                                "itemText": "({{item.documento}}) {{item.nombreApellidos}}"
+                              }
+                            }
+                          },
+                          {
+                            "type": "container",
+                            "props": {
+                              "direction": "row"
+                            },
+                            "children": [
+                              {
+                                "type": "button",
+                                "props": {
+                                  "label": "Ver más"
+                                }
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      "pagination": {
+                        "enabled": true,
+                        "pageSize": 2,
+                        "controls": {
+                          "variant": "numbered"
+                        }
                       }
                     }
-                  ]
-                }
-              ]
-            },
-            "pagination": {
-              "enabled": true,
-              "pageSize": 2,
-              "controls": {
-                "variant": "numbered"
+                  }
+                ]
+              },
+              {
+                "label": "Bites",
+                "visibility": {
+                  "reference": "queries.buscarPersona.data.resultados.bites.datos",
+                  "operator": "isTruthy"
+                },
+                "children": [
+                  {
+                    "type": "table",
+                    "visibility": {
+                      "reference": "queries.buscarPersona.data.resultados.bites.datos",
+                      "operator": "greaterThan",
+                      "value": 0
+                    },
+                    "props": {
+                      "headers": [
+                        "Nº Denuncia",
+                        "Fecha",
+                        "Matrícula",
+                        "Normativa",
+                        "Artículo",
+                        "Clasificación",
+                        "Hecho",
+                        "Ubicación",
+                        "Descripción",
+                        "Más info"
+                      ],
+                      "rows": {
+                        "source": "queries.buscarPersona.data.resultados.bites.datos",
+                        "cells": [
+                          "item.numeroDenuncia",
+                          "item.fechaHora",
+                          "item.matricula",
+                          "item.normativa",
+                          "item.articulo",
+                          "item.clasificacion",
+                          "item.tipoHecho",
+                          "item.ubicacion",
+                          "item.descripcion",
+                          "AÑADIR BOTÓN"
+                        ]
+                      },
+                      "pagination": {
+                        "enabled": true,
+                        "pageSize": 2,
+                        "controls": {
+                          "variant": "numbered"
+                        }
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "label": "Multas",
+                "visibility": {
+                  "reference": "queries.buscarPersona.data.resultados.multas.datos",
+                  "operator": "isTruthy"
+                },
+                "children": [
+                  {
+                    "type": "table",
+                    "visibility": {
+                      "reference": "queries.buscarPersona.data.resultados.multas.datos",
+                      "operator": "greaterThan",
+                      "value": 0
+                    },
+                    "props": {
+                      "headers": [
+                        "Expediente",
+                        "Fecha",
+                        "Matrícula",
+                        "Importe",
+                        "Estado",
+                        "Hecho",
+                        "Ubicación",
+                        "Desc",
+                        "Más info"
+                      ],
+                      "rows": {
+                        "source": "queries.buscarPersona.data.resultados.multas.datos",
+                        "cells": [
+                          "item.expediente",
+                          "item.fechaHora",
+                          "item.matricula",
+                          "item.importe",
+                          "item.estado",
+                          "item.tipoHecho",
+                          "item.ubicacion",
+                          "item.descripcion",
+                          "AÑADIR BOTÓN"
+                        ]
+                      },
+                      "pagination": {
+                        "enabled": true,
+                        "pageSize": 2,
+                        "controls": {
+                          "variant": "numbered"
+                        }
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "label": "Ade",
+                "visibility": {
+                  "reference": "queries.buscarPersona.data.resultados.ade.datos",
+                  "operator": "isTruthy"
+                },
+                "children": [
+                  {
+                    "type": "table",
+                    "visibility": {
+                      "reference": "queries.buscarPersona.data.resultados.ade.datos",
+                      "operator": "greaterThan",
+                      "value": 0
+                    },
+                    "props": {
+                      "headers": [
+                        "Expediente",
+                        "Fecha",
+                        "Matrícula",
+                        "Estado",
+                        "Organismo",
+                        "Hecho",
+                        "Ubicación",
+                        "Descripción",
+                        "Más info"
+                      ],
+                      "rows": {
+                        "source": "queries.buscarPersona.data.resultados.ade.datos",
+                        "cells": [
+                          "item.expediente",
+                          "item.fechaHora",
+                          "item.matricula",
+                          "item.estado",
+                          "item.organismo",
+                          "item.tipoHecho",
+                          "item.ubicacion",
+                          "item.descripcion",
+                          "AÑADIR BOTÓN"
+                        ]
+                      },
+                      "pagination": {
+                        "enabled": true,
+                        "pageSize": 2,
+                        "controls": {
+                          "variant": "numbered"
+                        }
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "label": "Cámaras",
+                "visibility": {
+                  "reference": "queries.buscarPersona.data.resultados.camaras.datos",
+                  "operator": "isTruthy"
+                },
+                "children": [
+                  {
+                    "type": "table",
+                    "visibility": {
+                      "reference": "queries.buscarPersona.data.resultados.camaras.datos",
+                      "operator": "greaterThan",
+                      "value": 0
+                    },
+                    "props": {
+                      "headers": [
+                        "Fecha",
+                        "Matrícula",
+                        "Cámara",
+                        "Ubicación",
+                        "Dirección",
+                        "Confianza",
+                        "Hecho",
+                        "Más info"
+                      ],
+                      "rows": {
+                        "source": "queries.buscarPersona.data.resultados.camaras.datos",
+                        "cells": [
+                          "item.fechaHora",
+                          "item.matricula",
+                          "item.camara",
+                          "item.ubicacion",
+                          "item.direccionMarcha",
+                          "item.confianza",
+                          "item.tipoHecho",
+                          "AÑADIR BOTÓN"
+                        ]
+                      },
+                      "pagination": {
+                        "enabled": true,
+                        "pageSize": 2,
+                        "controls": {
+                          "variant": "numbered"
+                        }
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "label": "Fichero intercambio",
+                "visibility": {
+                  "reference": "queries.buscarPersona.data.resultados.fichero-intercambio.datos",
+                  "operator": "isTruthy"
+                },
+                "children": [
+                  {
+                    "type": "table",
+                    "visibility": {
+                      "reference": "queries.buscarPersona.data.resultados.fichero-intercambio.datos",
+                      "operator": "greaterThan",
+                      "value": 0
+                    },
+                    "props": {
+                      "headers": [
+                        "Referencia externa",
+                        "Fecha",
+                        "Origen",
+                        "Matrícula",
+                        "Hecho",
+                        "Descripción",
+                        "Más info"
+                      ],
+                      "rows": {
+                        "source": "queries.buscarPersona.data.resultados.fichero-intercambio.datos",
+                        "cells": [
+                          "item.referenciaExterna",
+                          "item.fechaHora",
+                          "item.origen",
+                          "item.matricula",
+                          "item.tipoHecho",
+                          "item.descripcion",
+                          "AÑADIR BOTÓN"
+                        ]
+                      },
+                      "pagination": {
+                        "enabled": true,
+                        "pageSize": 2,
+                        "controls": {
+                          "variant": "numbered"
+                        }
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "label": "Circulación",
+                "visibility": {
+                  "reference": "queries.buscarPersona.data.resultados.circulacion.datos",
+                  "operator": "isTruthy"
+                },
+                "children": [
+                  {
+                    "type": "table",
+                    "visibility": {
+                      "reference": "queries.buscarPersona.data.resultados.circulacion.datos",
+                      "operator": "greaterThan",
+                      "value": 0
+                    },
+                    "props": {
+                      "headers": [
+                        "Matrícula",
+                        "Marca",
+                        "Modelo",
+                        "Bastidor",
+                        "Propietario",
+                        "Fecha alta",
+                        "Ejercicio",
+                        "Estado impuesto",
+                        "Importe",
+                        "Más info"
+                      ],
+                      "rows": {
+                        "source": "queries.buscarPersona.data.resultados.circulacion.datos",
+                        "cells": [
+                          "item.matricula",
+                          "item.marca",
+                          "item.modelo",
+                          "item.bastidor",
+                          "item.propietarioNombreApellidos",
+                          "item.fechaAlta",
+                          "item.impuestoCirculacion.ejercicio",
+                          "item.impuestoCirculacion.estado",
+                          "item.impuestoCirculacion.importe",
+                          "AÑADIR BOTÓN"
+                        ]
+                      },
+                      "pagination": {
+                        "enabled": true,
+                        "pageSize": 2,
+                        "controls": {
+                          "variant": "numbered"
+                        }
+                      }
+                    }
+                  }
+                ]
               }
-            }
-          }
-        },
-        {
-          "type": "table",
-          "visibility": {
-            "reference": "queries.buscarPersona.data.resultados.bites.datos",
-            "operator": "greaterThan",
-            "value": 0
-          },
-          "props": {
-            "headers": [
-              "Nº Denuncia",
-              "Fecha",
-              "Matrícula",
-              "Normativa",
-              "Artículo",
-              "Clasificación",
-              "Hecho",
-              "Ubicación",
-              "Descripción",
-              "Más info"
-            ],
-            "rows": {
-              "source": "queries.buscarPersona.data.resultados.bites.datos",
-              "cells": [
-                "item.numeroDenuncia",
-                "item.fechaHora",
-                "item.matricula",
-                "item.normativa",
-                "item.articulo",
-                "item.clasificacion",
-                "item.tipoHecho",
-                "item.ubicacion",
-                "item.descripcion",
-                "AÑADIR BOTÓN"
-              ]
-            },
-            "pagination": {
-              "enabled": true,
-              "pageSize": 2,
-              "controls": {
-                "variant": "numbered"
-              }
-            }
-          }
-        },
-        {
-          "type": "table",
-          "visibility": {
-            "reference": "queries.buscarPersona.data.resultados.multas.datos",
-            "operator": "greaterThan",
-            "value": 0
-          },
-          "props": {
-            "headers": [
-              "Expediente",
-              "Fecha",
-              "Matrícula",
-              "Importe",
-              "Estado",
-              "Hecho",
-              "Ubicación",
-              "Desc",
-              "Más info"
-            ],
-            "rows": {
-              "source": "queries.buscarPersona.data.resultados.multas.datos",
-              "cells": [
-                "item.expediente",
-                "item.fechaHora",
-                "item.matricula",
-                "item.importe",
-                "item.estado",
-                "item.tipoHecho",
-                "item.ubicacion",
-                "item.descripcion",
-                "AÑADIR BOTÓN"
-              ]
-            },
-            "pagination": {
-              "enabled": true,
-              "pageSize": 2,
-              "controls": {
-                "variant": "numbered"
-              }
-            }
-          }
-        },
-        {
-          "type": "table",
-          "visibility": {
-            "reference": "queries.buscarPersona.data.resultados.ade.datos",
-            "operator": "greaterThan",
-            "value": 0
-          },
-          "props": {
-            "headers": [
-              "Expediente",
-              "Fecha",
-              "Matrícula",
-              "Estado",
-              "Organismo",
-              "Hecho",
-              "Ubicación",
-              "Descripción",
-              "Más info"
-            ],
-            "rows": {
-              "source": "queries.buscarPersona.data.resultados.ade.datos",
-              "cells": [
-                "item.expediente",
-                "item.fechaHora",
-                "item.matricula",
-                "item.estado",
-                "item.organismo",
-                "item.tipoHecho",
-                "item.ubicacion",
-                "item.descripcion",
-                "AÑADIR BOTÓN"
-              ]
-            },
-            "pagination": {
-              "enabled": true,
-              "pageSize": 2,
-              "controls": {
-                "variant": "numbered"
-              }
-            }
-          }
-        },
-        {
-          "type": "table",
-          "visibility": {
-            "reference": "queries.buscarPersona.data.resultados.camaras.datos",
-            "operator": "greaterThan",
-            "value": 0
-          },
-          "props": {
-            "headers": [
-              "Fecha",
-              "Matrícula",
-              "Cámara",
-              "Ubicación",
-              "Dirección",
-              "Confianza",
-              "Hecho",
-              "Más info"
-            ],
-            "rows": {
-              "source": "queries.buscarPersona.data.resultados.camaras.datos",
-              "cells": [
-                "item.fechaHora",
-                "item.matricula",
-                "item.camara",
-                "item.ubicacion",
-                "item.direccionMarcha",
-                "item.confianza",
-                "item.tipoHecho",
-                "AÑADIR BOTÓN"
-              ]
-            },
-            "pagination": {
-              "enabled": true,
-              "pageSize": 2,
-              "controls": {
-                "variant": "numbered"
-              }
-            }
-          }
-        },
-        {
-          "type": "table",
-          "visibility": {
-            "reference": "queries.buscarPersona.data.resultados.fichero-intercambio.datos",
-            "operator": "greaterThan",
-            "value": 0
-          },
-          "props": {
-            "headers": [
-              "Referencia externa",
-              "Fecha",
-              "Origen",
-              "Matrícula",
-              "Hecho",
-              "Descripción",
-              "Más info"
-            ],
-            "rows": {
-              "source": "queries.buscarPersona.data.resultados.fichero-intercambio.datos",
-              "cells": [
-                "item.referenciaExterna",
-                "item.fechaHora",
-                "item.origen",
-                "item.matricula",
-                "item.tipoHecho",
-                "item.descripcion",
-                "AÑADIR BOTÓN"
-              ]
-            },
-            "pagination": {
-              "enabled": true,
-              "pageSize": 2,
-              "controls": {
-                "variant": "numbered"
-              }
-            }
-          }
-        },
-        {
-          "type": "table",
-          "visibility": {
-            "reference": "queries.buscarPersona.data.resultados.circulacion.datos",
-            "operator": "greaterThan",
-            "value": 0
-          },
-          "props": {
-            "headers": [
-              "Matrícula",
-              "Marca",
-              "Modelo",
-              "Bastidor",
-              "Propietario",
-              "Fecha alta",
-              "Ejercicio",
-              "Estado impuesto",
-              "Importe",
-              "Más info"
-            ],
-            "rows": {
-              "source": "queries.buscarPersona.data.resultados.circulacion.datos",
-              "cells": [
-                "item.matricula",
-                "item.marca",
-                "item.modelo",
-                "item.bastidor",
-                "item.propietarioNombreApellidos",
-                "item.fechaAlta",
-                "item.impuestoCirculacion.ejercicio",
-                "item.impuestoCirculacion.estado",
-                "item.impuestoCirculacion.importe",
-                "AÑADIR BOTÓN"
-              ]
-            },
-            "pagination": {
-              "enabled": true,
-              "pageSize": 2,
-              "controls": {
-                "variant": "numbered"
-              }
-            }
+            ]
           }
         }
       ]

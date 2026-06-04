@@ -1399,6 +1399,401 @@ describe('validateRuntimeConfig', () => {
     }
   })
 
+  it('accepts a button node with an executeOperations action with two valid entries', () => {
+    const result = validateRuntimeConfig({
+      api: {
+        deleteItem: { method: 'DELETE', endpoint: '/api/items/1' },
+        reloadList: { method: 'GET', endpoint: '/api/items' },
+      },
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'button',
+              props: {
+                label: 'Delete and reload',
+                action: {
+                  type: 'executeOperations',
+                  operations: [
+                    { operationName: 'deleteItem' },
+                    { operationName: 'reloadList', query: { page: 1 } },
+                  ],
+                },
+              },
+            },
+          ],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(result.status).toBe('ready')
+
+    if (result.status !== 'ready') {
+      throw new Error('Expected ready result')
+    }
+
+    expect(result.config.pages[0].layout[0]).toEqual({
+      type: 'button',
+      props: {
+        label: 'Delete and reload',
+        action: {
+          type: 'executeOperations',
+          operations: [
+            { operationName: 'deleteItem' },
+            { operationName: 'reloadList', query: { page: 1 } },
+          ],
+        },
+      },
+    })
+  })
+
+  it('accepts a button node with an executeOperations action with a single entry', () => {
+    const result = validateRuntimeConfig({
+      api: {
+        reloadList: { method: 'GET', endpoint: '/api/items' },
+      },
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'button',
+              props: {
+                label: 'Reload',
+                action: {
+                  type: 'executeOperations',
+                  operations: [{ operationName: 'reloadList' }],
+                },
+              },
+            },
+          ],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(result.status).toBe('ready')
+  })
+
+  it('rejects executeOperations without operations field', () => {
+    expect(
+      validateRuntimeConfig({
+        api: {},
+        pages: [
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'button',
+                props: {
+                  label: 'Broken',
+                  action: {
+                    type: 'executeOperations',
+                  },
+                },
+              },
+            ],
+          },
+        ],
+        initialPage: 'home',
+      }),
+    ).toMatchObject({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        message: expect.stringContaining('props.action.operations'),
+      },
+    })
+  })
+
+  it('rejects executeOperations with an empty operations array', () => {
+    expect(
+      validateRuntimeConfig({
+        api: {},
+        pages: [
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'button',
+                props: {
+                  label: 'Broken',
+                  action: {
+                    type: 'executeOperations',
+                    operations: [],
+                  },
+                },
+              },
+            ],
+          },
+        ],
+        initialPage: 'home',
+      }),
+    ).toMatchObject({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        message: expect.stringContaining('props.action.operations'),
+      },
+    })
+  })
+
+  it('rejects executeOperations when an entry does not declare operationName', () => {
+    expect(
+      validateRuntimeConfig({
+        api: {},
+        pages: [
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'button',
+                props: {
+                  label: 'Broken',
+                  action: {
+                    type: 'executeOperations',
+                    operations: [{}],
+                  },
+                },
+              },
+            ],
+          },
+        ],
+        initialPage: 'home',
+      }),
+    ).toMatchObject({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        message: expect.stringContaining('props.action.operations[0].operationName'),
+      },
+    })
+  })
+
+  it('rejects executeOperations when an entry declares an empty operationName', () => {
+    expect(
+      validateRuntimeConfig({
+        api: {},
+        pages: [
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'button',
+                props: {
+                  label: 'Broken',
+                  action: {
+                    type: 'executeOperations',
+                    operations: [{ operationName: '   ' }],
+                  },
+                },
+              },
+            ],
+          },
+        ],
+        initialPage: 'home',
+      }),
+    ).toMatchObject({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        message: expect.stringContaining('props.action.operations[0].operationName'),
+      },
+    })
+  })
+
+  it('rejects executeOperations when an entry has invalid query value', () => {
+    expect(
+      validateRuntimeConfig({
+        api: { myOp: { method: 'GET', endpoint: '/api/items' } },
+        pages: [
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'button',
+                props: {
+                  label: 'Broken',
+                  action: {
+                    type: 'executeOperations',
+                    operations: [{ operationName: 'myOp', query: { filters: { active: true } } }],
+                  },
+                },
+              },
+            ],
+          },
+        ],
+        initialPage: 'home',
+      }),
+    ).toMatchObject({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        message: expect.stringContaining('props.action.operations[0].query'),
+      },
+    })
+  })
+
+  it('rejects executeOperations when an entry has invalid headers value', () => {
+    expect(
+      validateRuntimeConfig({
+        api: { myOp: { method: 'GET', endpoint: '/api/items' } },
+        pages: [
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'button',
+                props: {
+                  label: 'Broken',
+                  action: {
+                    type: 'executeOperations',
+                    operations: [{ operationName: 'myOp', headers: { authorization: 123 } }],
+                  },
+                },
+              },
+            ],
+          },
+        ],
+        initialPage: 'home',
+      }),
+    ).toMatchObject({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        message: expect.stringContaining('props.action.operations[0].headers'),
+      },
+    })
+  })
+
+  it('rejects executeOperations when an entry has invalid body value', () => {
+    expect(
+      validateRuntimeConfig({
+        api: { myOp: { method: 'POST', endpoint: '/api/items' } },
+        pages: [
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'button',
+                props: {
+                  label: 'Broken',
+                  action: {
+                    type: 'executeOperations',
+                    operations: [{ operationName: 'myOp', body: { date: new Date() } }],
+                  },
+                },
+              },
+            ],
+          },
+        ],
+        initialPage: 'home',
+      }),
+    ).toMatchObject({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        message: expect.stringContaining('props.action.operations[0].body'),
+      },
+    })
+  })
+
+  it('discards extra keys in executeOperations entries silently (.strip())', () => {
+    const result = validateRuntimeConfig({
+      api: { myOp: { method: 'GET', endpoint: '/api/items' } },
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'button',
+              props: {
+                label: 'Load',
+                action: {
+                  type: 'executeOperations',
+                  operations: [{ operationName: 'myOp', unknownKey: 'ignored' }],
+                },
+              },
+            },
+          ],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(result.status).toBe('ready')
+
+    if (result.status !== 'ready') {
+      throw new Error('Expected ready result')
+    }
+
+    const action = (result.config.pages[0].layout[0] as { props: { action: Record<string, unknown> } }).props.action as { operations: Record<string, unknown>[] }
+    expect(action.operations[0]).not.toHaveProperty('unknownKey')
+    expect(action.operations[0]).toEqual({ operationName: 'myOp' })
+  })
+
+  it('accepts executeOperations with an inexistent operationName (not pre-rejected)', () => {
+    const result = validateRuntimeConfig({
+      api: {},
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'button',
+              props: {
+                label: 'Load',
+                action: {
+                  type: 'executeOperations',
+                  operations: [{ operationName: 'nonExistentOperation' }],
+                },
+              },
+            },
+          ],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(result.status).toBe('ready')
+  })
+
+  it('still rejects executeOperation (singular) with inexistent operationName (regression)', () => {
+    expect(
+      validateRuntimeConfig({
+        api: {
+          searchUsers: { method: 'GET', endpoint: '/api/users' },
+        },
+        pages: [
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'button',
+                props: {
+                  label: 'Broken',
+                  action: {
+                    type: 'executeOperation',
+                    operationName: 'missingOperation',
+                  },
+                },
+              },
+            ],
+          },
+        ],
+        initialPage: 'home',
+      }),
+    ).toMatchObject({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        message: expect.stringContaining('unknown operation "missingOperation"'),
+      },
+    })
+  })
+
   it('rejects resetForm actions without a valid non-empty formId but does not require a form catalog', () => {
     expect(
       validateRuntimeConfig(

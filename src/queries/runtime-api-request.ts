@@ -15,6 +15,11 @@ import {
   resolveBody,
   isPlainObject,
 } from './runtime-api-payload-resolver'
+import {
+  resolveRuntimeReference,
+  RUNTIME_TEMPLATE_PLACEHOLDER_PATTERN,
+} from '../runtime/runtime-references/runtime-reference-resolver'
+import { reportRuntimeReferenceDiagnostic } from '../runtime/runtime-references/runtime-reference-diagnostics'
 
 export function buildRuntimeApiRequest({
   config,
@@ -39,6 +44,14 @@ export function buildRuntimeApiRequest({
   const resolveOptions = { state, iterationContext }
   const messagePrefix = `The api operation "${operationName}"`
 
+  const endpointResult = resolveEndpoint(operationName, operation.endpoint, resolveOptions)
+
+  if (endpointResult.status === 'error') {
+    return endpointResult
+  }
+
+  const resolvedEndpoint = endpointResult.endpoint
+
   const queryResult = resolveQuery(operationName, effectiveRequestParams.query, resolveOptions)
 
   if (queryResult.status === 'error') {
@@ -62,6 +75,7 @@ export function buildRuntimeApiRequest({
     request: createRuntimeApiRequest({
       operationName,
       operation,
+      resolvedEndpoint,
       descriptor: {
         operationName,
         method: operation.method,
@@ -72,6 +86,73 @@ export function buildRuntimeApiRequest({
       },
     }),
   }
+}
+
+function resolveEndpoint(
+  operationName: string,
+  endpoint: string,
+  resolveOptions: Parameters<typeof resolvePayloadValue>[1],
+): { status: 'ready'; endpoint: string } | { status: 'error'; error: { code: 'request-build-failed'; message: string } } {
+  if (!endpoint.includes('{{')) {
+    return { status: 'ready', endpoint }
+  }
+
+  const { state, iterationContext } = resolveOptions
+  let failed = false
+  let failedPlaceholder = ''
+
+  // Reset lastIndex to ensure correct behavior with global regex
+  RUNTIME_TEMPLATE_PLACEHOLDER_PATTERN.lastIndex = 0
+
+  const resolved = endpoint.replace(RUNTIME_TEMPLATE_PLACEHOLDER_PATTERN, (_placeholder, rawReference) => {
+    if (failed) {
+      return ''
+    }
+
+    const referenceValue = rawReference.trim()
+
+    if (referenceValue.length === 0) {
+      failed = true
+      failedPlaceholder = _placeholder
+      return ''
+    }
+
+    const result = resolveRuntimeReference(referenceValue, state, { iterationContext })
+    reportRuntimeReferenceDiagnostic(result, 'api.endpoint')
+
+    if (result.status !== 'resolved') {
+      failed = true
+      failedPlaceholder = referenceValue
+      return ''
+    }
+
+    const value = result.value
+
+    if (typeof value === 'string') {
+      return value
+    }
+
+    if (typeof value === 'number' || typeof value === 'boolean') {
+      return String(value)
+    }
+
+    // Object, array, null, undefined — not representable as segment
+    failed = true
+    failedPlaceholder = referenceValue
+    return ''
+  })
+
+  if (failed) {
+    return {
+      status: 'error',
+      error: {
+        code: 'request-build-failed',
+        message: `The api operation "${operationName}" could not resolve "${failedPlaceholder}" for "endpoint".`,
+      },
+    }
+  }
+
+  return { status: 'ready', endpoint: resolved }
 }
 
 function resolveQuery(
@@ -126,16 +207,18 @@ function resolveQuery(
 function createRuntimeApiRequest({
   operationName,
   operation,
+  resolvedEndpoint,
   descriptor,
 }: {
   operationName: string
   operation: RuntimeApiOperation
+  resolvedEndpoint: string
   descriptor: RuntimeApiRequestDescriptor
 }): RuntimeApiRequest {
   const request = {
     operationName,
     operation,
-    url: appendQueryString(operation.endpoint, descriptor.query),
+    url: appendQueryString(resolvedEndpoint, descriptor.query),
     init: buildRequestInit(operation.method, descriptor.headers, descriptor.body),
   } as RuntimeApiRequest
 

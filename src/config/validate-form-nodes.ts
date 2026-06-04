@@ -1,5 +1,7 @@
 import type {
   CheckboxGroupLayoutNode,
+  ExecuteOperationRuntimeUiAction,
+  ExecuteOperationsRuntimeUiAction,
   FormLayoutNode,
   InputLayoutNode, LayoutNode,
   LayoutNodeCollection,
@@ -126,7 +128,7 @@ export function validateFormNode(
   }
 
   let children: LayoutNodeCollection | undefined
-  let submitAction: import('./runtime-config-types').ExecuteOperationRuntimeUiAction | undefined
+  let submitAction: ExecuteOperationRuntimeUiAction | ExecuteOperationsRuntimeUiAction | undefined
 
   if (parseResult.data.submitAction !== undefined) {
     const submitActionResult = validateFormSubmitAction(parseResult.data.submitAction, `${path}.submitAction`, pageId)
@@ -1125,7 +1127,7 @@ function validateFormNodesInCollection(
         return invalidLayout(`Page "${pageId}" has an invalid layout at "${nodePath}.resetOnSuccess": resetOnSuccess requires submitAction.`)
       }
 
-      if (node.submitAction && !context.operationNames.has(node.submitAction.operationName)) {
+      if (node.submitAction?.type === 'executeOperation' && !context.operationNames.has(node.submitAction.operationName)) {
         return invalidLayout(
           `Page "${pageId}" has an invalid layout at "${nodePath}.submitAction.operationName": unknown operation "${node.submitAction.operationName}".`,
         )
@@ -1387,11 +1389,33 @@ function validateExecutionRequestParamsInCollection(
       }
     }
 
-    if (node.type === 'form' && node.submitAction) {
+    if (node.type === 'button' && node.props.action?.type === 'executeOperations') {
+      for (let entryIndex = 0; entryIndex < node.props.action.operations.length; entryIndex += 1) {
+        const entry = node.props.action.operations[entryIndex]
+        const operation = api[entry.operationName]
+
+        if (operation?.method === 'GET' && entry.body !== undefined) {
+          return invalidLayout(`Page "${pageId}" has an invalid layout at "${nodePath}.props.action.operations[${entryIndex}].body": GET operations do not support body.`)
+        }
+      }
+    }
+
+    if (node.type === 'form' && node.submitAction?.type === 'executeOperation') {
       const operation = api[node.submitAction.operationName]
 
       if (operation?.method === 'GET' && node.submitAction.body !== undefined) {
         return invalidLayout(`Page "${pageId}" has an invalid layout at "${nodePath}.submitAction.body": GET operations do not support body.`)
+      }
+    }
+
+    if (node.type === 'form' && node.submitAction?.type === 'executeOperations') {
+      for (let entryIndex = 0; entryIndex < node.submitAction.operations.length; entryIndex += 1) {
+        const entry = node.submitAction.operations[entryIndex]
+        const operation = api[entry.operationName]
+
+        if (operation?.method === 'GET' && entry.body !== undefined) {
+          return invalidLayout(`Page "${pageId}" has an invalid layout at "${nodePath}.submitAction.operations[${entryIndex}].body": GET operations do not support body.`)
+        }
       }
     }
 
