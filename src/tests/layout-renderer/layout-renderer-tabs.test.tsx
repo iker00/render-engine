@@ -5,7 +5,8 @@ import { RuntimePage } from '../../runtime/runtime-page'
 import { RuntimeStateContext } from '../../runtime/runtime-state/runtime-state-context'
 import { createRuntimeState } from '../../runtime/runtime-state/runtime-state-reducer'
 import type { RuntimeState, RuntimeStateAction } from '../../runtime/runtime-state/runtime-state-types'
-import { RuntimeStateProvider } from '../../runtime/runtime-state/runtime-state-provider'
+import { RuntimeStateProvider, useRuntimeStateActions } from '../../runtime/runtime-state/runtime-state-provider'
+import { useEffect } from 'react'
 
 afterEach(() => {
   vi.unstubAllGlobals()
@@ -508,5 +509,423 @@ describe('TabsNode — form integration', () => {
 
     expect(screen.getByText('Form Tabs')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Fields' })).toBeInTheDocument()
+  })
+})
+
+// ── Helpers for item-visibility tests ──────────────────────────────────────
+
+function buildQueryState(queryName: string, data: unknown): RuntimeState['queries'] {
+  return {
+    [queryName]: {
+      status: 'success',
+      data,
+      requestedAt: 0,
+      resolvedAt: 0,
+      error: null,
+    },
+  }
+}
+
+function ToggleQueryFixture({ queryName, fieldPath, trueValue }: { queryName: string; fieldPath: string; trueValue: unknown }) {
+  const { initializeQuery, setQuerySuccess } = useRuntimeStateActions()
+
+  useEffect(() => {
+    initializeQuery(queryName)
+  }, [initializeQuery, queryName])
+
+  return (
+    <>
+      <button type="button" onClick={() => setQuerySuccess(queryName, { [fieldPath]: trueValue })}>
+        show
+      </button>
+      <button type="button" onClick={() => setQuerySuccess(queryName, { [fieldPath]: null })}>
+        hide
+      </button>
+    </>
+  )
+}
+
+function renderWithToggle(page: RuntimePageConfig, queryName: string, fieldPath: string, trueValue: unknown) {
+  const config: RuntimeConfig = {
+    api: {},
+    initialPage: page.id,
+    pages: [page],
+  }
+
+  return render(
+    <RuntimeStateProvider config={config}>
+      <ToggleQueryFixture queryName={queryName} fieldPath={fieldPath} trueValue={trueValue} />
+      <RuntimePage />
+    </RuntimeStateProvider>,
+  )
+}
+
+// ── item-level visibility tests ─────────────────────────────────────────────
+
+describe('TabsNode — item visibility', () => {
+  it('hides a tab from the bar and its panel when item visibility evaluates to false', () => {
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [
+        {
+          type: 'tabs',
+          props: {
+            items: [
+              {
+                label: 'Visible Tab',
+                children: [{ type: 'paragraph', props: { text: 'Visible content' } }],
+              },
+              {
+                label: 'Hidden Tab',
+                visibility: { reference: 'queries.q.data.show', operator: 'isTruthy' },
+                children: [{ type: 'paragraph', props: { text: 'Hidden content' } }],
+              },
+            ],
+          },
+        },
+      ],
+    }
+
+    const state = createRuntimePageState(page, buildQueryState('q', { show: false }))
+    renderRuntimePageWithState(page, state)
+
+    expect(screen.queryByRole('button', { name: 'Hidden Tab' })).not.toBeInTheDocument()
+    expect(screen.queryByText('Hidden content')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Visible Tab' })).toBeInTheDocument()
+  })
+
+  it('mounts with first visible tab active when index 0 is hidden and no defaultTab declared', () => {
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [
+        {
+          type: 'tabs',
+          props: {
+            items: [
+              {
+                label: 'Hidden',
+                visibility: { reference: 'queries.q.data.show', operator: 'isTruthy' },
+                children: [{ type: 'paragraph', props: { text: 'Hidden panel' } }],
+              },
+              {
+                label: 'Second',
+                children: [{ type: 'paragraph', props: { text: 'Second panel' } }],
+              },
+              {
+                label: 'Third',
+                children: [{ type: 'paragraph', props: { text: 'Third panel' } }],
+              },
+            ],
+          },
+        },
+      ],
+    }
+
+    const state = createRuntimePageState(page, buildQueryState('q', { show: false }))
+    renderRuntimePageWithState(page, state)
+
+    expect(screen.queryByRole('button', { name: 'Hidden' })).not.toBeInTheDocument()
+    expect(screen.getAllByRole('button').filter(b => b.getAttribute('aria-selected') === 'true')).toHaveLength(1)
+    expect(screen.getByRole('button', { name: 'Second' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByText('Second panel')).toBeInTheDocument()
+    expect(screen.queryByText('Hidden panel')).not.toBeInTheDocument()
+  })
+
+  it('mounts with first visible tab when defaultTab points to a hidden item', () => {
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [
+        {
+          type: 'tabs',
+          props: {
+            defaultTab: 1,
+            items: [
+              {
+                label: 'First',
+                children: [{ type: 'paragraph', props: { text: 'First panel' } }],
+              },
+              {
+                label: 'Hidden Default',
+                visibility: { reference: 'queries.q.data.show', operator: 'isTruthy' },
+                children: [{ type: 'paragraph', props: { text: 'Hidden panel' } }],
+              },
+            ],
+          },
+        },
+      ],
+    }
+
+    const state = createRuntimePageState(page, buildQueryState('q', { show: false }))
+    renderRuntimePageWithState(page, state)
+
+    expect(screen.queryByRole('button', { name: 'Hidden Default' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'First' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByText('First panel')).toBeInTheDocument()
+  })
+
+  it('regression: mounts with defaultTab:2 active when all three items are visible', () => {
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [
+        {
+          type: 'tabs',
+          props: {
+            defaultTab: 2,
+            items: [
+              { label: 'A', children: [{ type: 'paragraph', props: { text: 'Panel A' } }] },
+              { label: 'B', children: [{ type: 'paragraph', props: { text: 'Panel B' } }] },
+              { label: 'C', children: [{ type: 'paragraph', props: { text: 'Panel C' } }] },
+            ],
+          },
+        },
+      ],
+    }
+
+    renderRuntimePage(page)
+
+    expect(screen.getByRole('button', { name: 'C' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByText('Panel C')).toBeInTheDocument()
+    expect(screen.queryByText('Panel A')).not.toBeInTheDocument()
+    expect(screen.queryByText('Panel B')).not.toBeInTheDocument()
+  })
+
+  it('auto-activates first visible tab when active tab becomes hidden, without user interaction', () => {
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [
+        {
+          type: 'tabs',
+          props: {
+            items: [
+              { label: 'First', children: [{ type: 'paragraph', props: { text: 'First panel' } }] },
+              {
+                label: 'Second',
+                visibility: { reference: 'queries.q.data.show', operator: 'isTruthy' },
+                children: [{ type: 'paragraph', props: { text: 'Second panel' } }],
+              },
+            ],
+          },
+        },
+      ],
+    }
+
+    renderWithToggle(page, 'q', 'show', true)
+
+    // Activate second tab so it becomes active
+    fireEvent.click(screen.getByRole('button', { name: 'show' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Second' }))
+    expect(screen.getByText('Second panel')).toBeInTheDocument()
+
+    // Now hide second tab — first should become active
+    fireEvent.click(screen.getByRole('button', { name: 'hide' }))
+
+    expect(screen.queryByRole('button', { name: 'Second' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'First' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByText('First panel')).toBeInTheDocument()
+  })
+
+  it('renders nothing when all items are hidden by visibility', () => {
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [
+        {
+          type: 'tabs',
+          props: {
+            items: [
+              {
+                label: 'Tab A',
+                visibility: { reference: 'queries.q.data.show', operator: 'isTruthy' },
+                children: [{ type: 'paragraph', props: { text: 'Panel A' } }],
+              },
+              {
+                label: 'Tab B',
+                visibility: { reference: 'queries.q.data.show', operator: 'isTruthy' },
+                children: [{ type: 'paragraph', props: { text: 'Panel B' } }],
+              },
+            ],
+          },
+        },
+      ],
+    }
+
+    const state = createRuntimePageState(page, buildQueryState('q', { show: false }))
+    const { container } = renderRuntimePageWithState(page, state)
+
+    expect(container.querySelector('[data-layout-node="tabs"]')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Tab A' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Tab B' })).not.toBeInTheDocument()
+  })
+
+  it('regression: item without visibility is visible alongside items that have visibility', () => {
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [
+        {
+          type: 'tabs',
+          props: {
+            items: [
+              { label: 'Always', children: [] },
+              {
+                label: 'Conditional',
+                visibility: { reference: 'queries.q.data.show', operator: 'isTruthy' },
+                children: [],
+              },
+            ],
+          },
+        },
+      ],
+    }
+
+    const state = createRuntimePageState(page, buildQueryState('q', { show: true }))
+    renderRuntimePageWithState(page, state)
+
+    expect(screen.getByRole('button', { name: 'Always' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Conditional' })).toBeInTheDocument()
+  })
+
+  it('does not render tabs node when node-level visibility is false regardless of item visibility', () => {
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [
+        {
+          type: 'tabs',
+          visibility: { reference: 'queries.q.data.show', operator: 'isTruthy' },
+          props: {
+            items: [
+              { label: 'Tab A', children: [{ type: 'paragraph', props: { text: 'Panel A' } }] },
+            ],
+          },
+        },
+      ],
+    }
+
+    const state = createRuntimePageState(page, buildQueryState('q', { show: false }))
+    const { container } = renderRuntimePageWithState(page, state)
+
+    expect(container.querySelector('[data-layout-node="tabs"]')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Tab A' })).not.toBeInTheDocument()
+  })
+
+  it('evaluates item visibility per iteration in a repeater using item.* references', () => {
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [
+        {
+          type: 'repeater',
+          props: {
+            items: {
+              source: 'queries.q.data.rows',
+              key: 'id',
+            },
+            template: [
+              {
+                type: 'tabs',
+                props: {
+                  items: [
+                    { label: 'Always', children: [{ type: 'paragraph', props: { text: 'Always visible' } }] },
+                    {
+                      label: 'Conditional',
+                      visibility: { reference: 'item.showTab', operator: 'isTruthy' },
+                      children: [{ type: 'paragraph', props: { text: 'Conditional tab' } }],
+                    },
+                  ],
+                },
+              },
+            ],
+          },
+        },
+      ],
+    }
+
+    const state = createRuntimePageState(page, buildQueryState('q', {
+      rows: [
+        { id: 'row-1', showTab: true },
+        { id: 'row-2', showTab: false },
+      ],
+    }))
+    renderRuntimePageWithState(page, state)
+
+    // First iteration: showTab=true → both tabs visible
+    // Second iteration: showTab=false → only 'Always' visible
+    const allButtons = screen.getAllByRole('button', { name: 'Always' })
+    expect(allButtons).toHaveLength(2)
+
+    const conditionalButtons = screen.queryAllByRole('button', { name: 'Conditional' })
+    expect(conditionalButtons).toHaveLength(1)
+  })
+
+  it('toggle: shows active tab when hidden then re-shown, maintaining current selection', () => {
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [
+        {
+          type: 'tabs',
+          props: {
+            items: [
+              { label: 'Alpha', children: [{ type: 'paragraph', props: { text: 'Alpha panel' } }] },
+              {
+                label: 'Beta',
+                visibility: { reference: 'queries.q.data.show', operator: 'isTruthy' },
+                children: [{ type: 'paragraph', props: { text: 'Beta panel' } }],
+              },
+            ],
+          },
+        },
+      ],
+    }
+
+    renderWithToggle(page, 'q', 'show', true)
+
+    // Make Beta visible and click it
+    fireEvent.click(screen.getByRole('button', { name: 'show' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Beta' }))
+    expect(screen.getByText('Beta panel')).toBeInTheDocument()
+
+    // Hide Beta: Alpha should become active automatically
+    fireEvent.click(screen.getByRole('button', { name: 'hide' }))
+    expect(screen.getByRole('button', { name: 'Alpha' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByText('Alpha panel')).toBeInTheDocument()
+
+    // Reveal Beta again: Alpha stays selected (no forced jump back to Beta)
+    fireEvent.click(screen.getByRole('button', { name: 'show' }))
+    expect(screen.getByRole('button', { name: 'Alpha' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByText('Alpha panel')).toBeInTheDocument()
+  })
+
+  it('does not produce React maximum-update-depth warnings when active tab is hidden', () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [
+        {
+          type: 'tabs',
+          props: {
+            items: [
+              { label: 'Alpha', children: [] },
+              {
+                label: 'Beta',
+                visibility: { reference: 'queries.q.data.show', operator: 'isTruthy' },
+                children: [],
+              },
+            ],
+          },
+        },
+      ],
+    }
+
+    renderWithToggle(page, 'q', 'show', true)
+
+    // Make Beta visible, select it, then hide it
+    fireEvent.click(screen.getByRole('button', { name: 'show' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Beta' }))
+    fireEvent.click(screen.getByRole('button', { name: 'hide' }))
+
+    const maxUpdateErrors = consoleSpy.mock.calls.filter(args =>
+      typeof args[0] === 'string' && args[0].includes('Maximum update depth'),
+    )
+    expect(maxUpdateErrors).toHaveLength(0)
+
+    consoleSpy.mockRestore()
   })
 })

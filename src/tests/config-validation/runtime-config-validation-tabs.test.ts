@@ -181,3 +181,383 @@ describe('validateRuntimeConfig — tabs node shape', () => {
     }
   })
 })
+
+describe('validateRuntimeConfig — tabs item visibility', () => {
+  it('accepts items with valid visibility using operator equals and forms reference', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithLayout([
+        createTabsNode({
+          props: {
+            items: [
+              { label: 'Tab 1', visibility: { reference: 'forms.user.role', operator: 'equals', value: 'admin' } },
+              { label: 'Tab 2' },
+            ],
+          },
+        }),
+      ]),
+    )
+    expect(result.status).toBe('ready')
+  })
+
+  it('accepts items with valid visibility using operator notEquals', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithLayout([
+        createTabsNode({
+          props: {
+            items: [
+              { label: 'Tab 1', visibility: { reference: 'forms.user.role', operator: 'notEquals', value: 'guest' } },
+            ],
+          },
+        }),
+      ]),
+    )
+    expect(result.status).toBe('ready')
+  })
+
+  it('accepts items with valid visibility using operator isTruthy and queries reference', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithLayout([
+        createTabsNode({
+          props: {
+            items: [
+              { label: 'Tab 1', visibility: { reference: 'queries.someQuery.data.show', operator: 'isTruthy' } },
+            ],
+          },
+        }),
+      ]),
+    )
+    expect(result.status).toBe('ready')
+  })
+
+  it('accepts items with valid visibility using operator isFalsy and queries.data reference', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithLayout([
+        createTabsNode({
+          props: {
+            items: [
+              { label: 'Tab 1', visibility: { reference: 'queries.someQuery.data', operator: 'isFalsy' } },
+            ],
+          },
+        }),
+      ]),
+    )
+    expect(result.status).toBe('ready')
+  })
+
+  it('accepts items with valid visibility using operator greaterThan and numeric value', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithLayout([
+        createTabsNode({
+          props: {
+            items: [
+              { label: 'Tab 1', visibility: { reference: 'queries.data.data.count', operator: 'greaterThan', value: 5 } },
+            ],
+          },
+        }),
+      ]),
+    )
+    expect(result.status).toBe('ready')
+  })
+
+  it('accepts items with valid visibility using operator lessThan and params reference', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithLayout([
+        createTabsNode({
+          props: {
+            items: [
+              { label: 'Tab 1', visibility: { reference: 'queries.data.data.count', operator: 'lessThan', value: 10 } },
+            ],
+          },
+        }),
+      ]),
+    )
+    expect(result.status).toBe('ready')
+  })
+
+  it('accepts items with valid visibility using item.* reference', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithLayout([
+        createTabsNode({
+          props: {
+            items: [
+              { label: 'Tab 1', visibility: { reference: 'item.visible', operator: 'isTruthy' } },
+            ],
+          },
+        }),
+      ]),
+    )
+    expect(result.status).toBe('ready')
+  })
+
+  it('accepts item without visibility (regression: previous behavior unchanged)', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithLayout([
+        createTabsNode({
+          props: {
+            items: [{ label: 'Tab 1' }, { label: 'Tab 2' }],
+          },
+        }),
+      ]),
+    )
+    expect(result.status).toBe('ready')
+  })
+
+  it('accepts node-level visibility and item-level visibility simultaneously', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithLayout([
+        createTabsNode({
+          visibility: { reference: 'queries.someQuery.data.show', operator: 'isTruthy' },
+          props: {
+            items: [
+              { label: 'Tab 1', visibility: { reference: 'forms.user.role', operator: 'equals', value: 'admin' } },
+              { label: 'Tab 2' },
+            ],
+          },
+        }),
+      ]),
+    )
+    expect(result.status).toBe('ready')
+  })
+
+  it('rejects item with visibility.reference outside supported scope with path containing props.items[i].visibility.reference', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithLayout([
+        createTabsNode({
+          props: {
+            items: [
+              { label: 'Tab 1', visibility: { reference: 'foo.bar', operator: 'isTruthy' } },
+            ],
+          },
+        }),
+      ]),
+    )
+    expect(result.status).toBe('error')
+    if (result.status === 'error') {
+      expect(result.error.code).toBe('invalid-layout')
+      expect(result.error.message).toContain('props.items[0].visibility.reference')
+    }
+  })
+
+  it('rejects item with visibility.operator not in enum with path containing props.items[i].visibility.operator', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithLayout([
+        createTabsNode({
+          props: {
+            items: [
+              { label: 'Tab 1', visibility: { reference: 'forms.user.role', operator: 'contains' } },
+            ],
+          },
+        }),
+      ]),
+    )
+    expect(result.status).toBe('error')
+    if (result.status === 'error') {
+      expect(result.error.code).toBe('invalid-layout')
+      expect(result.error.message).toContain('props.items[0].visibility.operator')
+    }
+  })
+
+  it('rejects item with visibility.reference empty string with path containing props.items[i].visibility.reference', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithLayout([
+        createTabsNode({
+          props: {
+            items: [
+              { label: 'Tab 1', visibility: { reference: '', operator: 'isTruthy' } },
+            ],
+          },
+        }),
+      ]),
+    )
+    expect(result.status).toBe('error')
+    if (result.status === 'error') {
+      expect(result.error.code).toBe('invalid-layout')
+      expect(result.error.message).toContain('props.items[0].visibility.reference')
+    }
+  })
+
+  it('rejects item with isTruthy operator and value declared with path containing props.items[i].visibility.value', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithLayout([
+        createTabsNode({
+          props: {
+            items: [
+              { label: 'Tab 1', visibility: { reference: 'forms.user.role', operator: 'isTruthy', value: 'extra' } },
+            ],
+          },
+        }),
+      ]),
+    )
+    expect(result.status).toBe('error')
+    if (result.status === 'error') {
+      expect(result.error.code).toBe('invalid-layout')
+      expect(result.error.message).toContain('props.items[0].visibility.value')
+    }
+  })
+
+  it('rejects item with isFalsy operator and value declared with path containing props.items[i].visibility.value', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithLayout([
+        createTabsNode({
+          props: {
+            items: [
+              { label: 'Tab 1', visibility: { reference: 'forms.user.role', operator: 'isFalsy', value: true } },
+            ],
+          },
+        }),
+      ]),
+    )
+    expect(result.status).toBe('error')
+    if (result.status === 'error') {
+      expect(result.error.code).toBe('invalid-layout')
+      expect(result.error.message).toContain('props.items[0].visibility.value')
+    }
+  })
+
+  it('rejects item with equals operator and no value with path containing props.items[i].visibility.value', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithLayout([
+        createTabsNode({
+          props: {
+            items: [
+              { label: 'Tab 1', visibility: { reference: 'forms.user.role', operator: 'equals' } },
+            ],
+          },
+        }),
+      ]),
+    )
+    expect(result.status).toBe('error')
+    if (result.status === 'error') {
+      expect(result.error.code).toBe('invalid-layout')
+      expect(result.error.message).toContain('props.items[0].visibility.value')
+    }
+  })
+
+  it('rejects item with notEquals operator and no value with path containing props.items[i].visibility.value', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithLayout([
+        createTabsNode({
+          props: {
+            items: [
+              { label: 'Tab 1', visibility: { reference: 'forms.user.role', operator: 'notEquals' } },
+            ],
+          },
+        }),
+      ]),
+    )
+    expect(result.status).toBe('error')
+    if (result.status === 'error') {
+      expect(result.error.code).toBe('invalid-layout')
+      expect(result.error.message).toContain('props.items[0].visibility.value')
+    }
+  })
+
+  it('rejects item with greaterThan operator and no value with path containing props.items[i].visibility.value', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithLayout([
+        createTabsNode({
+          props: {
+            items: [
+              { label: 'Tab 1', visibility: { reference: 'queries.data.data.count', operator: 'greaterThan' } },
+            ],
+          },
+        }),
+      ]),
+    )
+    expect(result.status).toBe('error')
+    if (result.status === 'error') {
+      expect(result.error.code).toBe('invalid-layout')
+      expect(result.error.message).toContain('props.items[0].visibility.value')
+    }
+  })
+
+  it('rejects item with lessThan operator and no value with path containing props.items[i].visibility.value', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithLayout([
+        createTabsNode({
+          props: {
+            items: [
+              { label: 'Tab 1', visibility: { reference: 'queries.data.data.count', operator: 'lessThan' } },
+            ],
+          },
+        }),
+      ]),
+    )
+    expect(result.status).toBe('error')
+    if (result.status === 'error') {
+      expect(result.error.code).toBe('invalid-layout')
+      expect(result.error.message).toContain('props.items[0].visibility.value')
+    }
+  })
+
+  it('rejects item with equals operator and non-scalar value with error from validateVisibility', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithLayout([
+        createTabsNode({
+          props: {
+            items: [
+              { label: 'Tab 1', visibility: { reference: 'forms.user.role', operator: 'equals', value: { nested: true } } },
+            ],
+          },
+        }),
+      ]),
+    )
+    expect(result.status).toBe('error')
+    if (result.status === 'error') {
+      expect(result.error.code).toBe('invalid-layout')
+    }
+  })
+
+  it('rejects item with greaterThan operator and non-numeric value with error from validateVisibility', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithLayout([
+        createTabsNode({
+          props: {
+            items: [
+              { label: 'Tab 1', visibility: { reference: 'queries.data.data.count', operator: 'greaterThan', value: 'not-a-number' } },
+            ],
+          },
+        }),
+      ]),
+    )
+    expect(result.status).toBe('error')
+    if (result.status === 'error') {
+      expect(result.error.code).toBe('invalid-layout')
+    }
+  })
+
+  it('silently discards unsupported keys within item visibility (strip behavior)', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithLayout([
+        createTabsNode({
+          props: {
+            items: [
+              { label: 'Tab 1', visibility: { reference: 'forms.user.role', operator: 'isTruthy', unknownKey: 'ignored' } },
+            ],
+          },
+        }),
+      ]),
+    )
+    expect(result.status).toBe('ready')
+  })
+
+  it('reports error at second item when first item is valid and second has invalid visibility', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithLayout([
+        createTabsNode({
+          props: {
+            items: [
+              { label: 'Tab 1', visibility: { reference: 'forms.user.role', operator: 'isTruthy' } },
+              { label: 'Tab 2', visibility: { reference: 'foo.bar', operator: 'isTruthy' } },
+            ],
+          },
+        }),
+      ]),
+    )
+    expect(result.status).toBe('error')
+    if (result.status === 'error') {
+      expect(result.error.code).toBe('invalid-layout')
+      expect(result.error.message).toContain('props.items[1].visibility.reference')
+    }
+  })
+})

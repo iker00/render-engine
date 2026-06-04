@@ -391,6 +391,7 @@ export type TabsOrientation = 'horizontal' | 'vertical'
 export interface TabsItem {
   label: string
   children?: LayoutNode[]
+  visibility?: RuntimeVisibilityConfig
 }
 
 export interface TabsLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayoutFields {

@@ -501,6 +501,7 @@ export const tabsItemSchema = z
   .object({
     label: z.string(),
     children: z.array(z.unknown()).optional(),
+    visibility: visibilitySchema.optional(),
   })
   .strip()
 

@@ -4,6 +4,7 @@ import type { RuntimeIterationContext } from '../runtime-references/runtime-refe
 import { resolveRuntimeTextReference } from '../runtime-references/runtime-reference-resolver'
 import { useRuntimeState } from '../runtime-state/runtime-state-provider'
 import { LayoutRenderer } from '../layout-renderer'
+import { matchesVisibilityRule } from '../runtime-layout-visibility'
 
 interface TabsNodeProps {
   node: TabsLayoutNode
@@ -42,10 +43,30 @@ interface TabsNodeContentProps {
 }
 
 function TabsNodeContent({ node, items, orientation, defaultTab, state, iterationContext }: TabsNodeContentProps) {
-  const [activeTab, setActiveTab] = useState(defaultTab)
+  // Compute visible indices using the original array indices
+  const visibleIndices = items
+    .map((item, index) => ({ item, index }))
+    .filter(({ item }) => matchesVisibilityRule(item.visibility, state, iterationContext))
+    .map(({ index }) => index)
+
+  // Initialize with lazy state: respect defaultTab if visible, otherwise use first visible
+  const [activeTab, setActiveTab] = useState(() =>
+    visibleIndices.includes(defaultTab) ? defaultTab : (visibleIndices[0] ?? 0),
+  )
+
+  // If no visible tabs, render nothing
+  if (visibleIndices.length === 0) {
+    return null
+  }
+
+  // "Adjusting state during render" pattern: correct activeTab if it is no longer visible
+  let effectiveActiveTab = activeTab
+  if (!visibleIndices.includes(activeTab)) {
+    effectiveActiveTab = visibleIndices[0]
+    setActiveTab(effectiveActiveTab)
+  }
 
   const isVertical = orientation === 'vertical'
-
   const rootClassName = isVertical ? 'flex flex-row' : 'flex flex-col'
 
   const bar = (
@@ -54,14 +75,15 @@ function TabsNodeContent({ node, items, orientation, defaultTab, state, iteratio
       role="tablist"
       className={isVertical ? 'flex flex-col' : 'flex flex-row'}
     >
-      {items.map((item, index) => {
+      {visibleIndices.map((index) => {
+        const item = items[index]
         const resolvedLabel = resolveRuntimeTextReference(
           item.label,
           state,
           `tabs[${node.id ?? ''}].props.items[${index}].label`,
           { iterationContext },
         )
-        const isActive = index === activeTab
+        const isActive = index === effectiveActiveTab
         return (
           <button
             key={index}
@@ -81,7 +103,7 @@ function TabsNodeContent({ node, items, orientation, defaultTab, state, iteratio
     </div>
   )
 
-  const activeItem = items[activeTab]
+  const activeItem = items[effectiveActiveTab]
   const panel = (
     <div data-layout-node="tabs-panel" className="flex-1">
       {activeItem?.children && activeItem.children.length > 0 ? (

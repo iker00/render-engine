@@ -1181,6 +1181,12 @@ function validateTabsNode(
       return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.items[${issuePath[2]}].label".`)
     }
 
+    if (issuePath[0] === 'props' && issuePath[1] === 'items' && typeof issuePath[2] === 'number' && issuePath[3] === 'visibility') {
+      const itemIndex = issuePath[2]
+      const remainingSegments = issuePath.slice(3).map(formatPathSegment).join('')
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.items[${itemIndex}]${remainingSegments}".`)
+    }
+
     if (issuePath[0] === 'props' && issuePath[1] === 'items') {
       return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.items".`)
     }
@@ -1226,6 +1232,14 @@ function validateTabsNode(
       return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.items[${index}].label".`)
     }
 
+    const itemVisibilityResult = validateVisibility(
+      rawItem.visibility as LayoutNodeFeedbackFields['visibility'],
+      `${path}.props.items[${index}].visibility`,
+      pageId,
+    )
+
+    if (itemVisibilityResult.status === 'error') return itemVisibilityResult
+
     let children: LayoutNodeCollection | undefined
 
     if (rawItem.children !== undefined) {
@@ -1236,7 +1250,7 @@ function validateTabsNode(
       children = childrenResult.nodes
     }
 
-    normalizedItems.push({ label: rawItem.label, children })
+    normalizedItems.push({ label: rawItem.label, children, visibility: itemVisibilityResult.visibility })
   }
 
   return {
