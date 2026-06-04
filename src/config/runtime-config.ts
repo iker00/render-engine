@@ -1,5 +1,8 @@
 export type {
   AccordionLayoutNode,
+  BadgeLayoutNode,
+  BadgeVariant,
+  BadgeColor,
   ButtonAction,
   ButtonLayoutNode,
   LinkLayoutNode,

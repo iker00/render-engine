@@ -75,6 +75,14 @@
 - No existe un allowlist de tipos de `children` para `tabs`: admite cualquier nodo válido del catálogo, incluidos `form`, `repeater`, `container` y todos los nodos hoja.
 - La ruta diagnóstica de errores dentro de los `children` sigue el patrón `props.items[N].children`.
 
+## Reglas del nodo `badge`
+
+- `props.label` es obligatorio y debe ser string; si está ausente o no es string, el config se rechaza con `invalid-layout` y diagnóstico de ruta `{path}.props.label`.
+- `props.variant` solo acepta `"pill"` o `"circle"` si se declara; cualquier otro valor rechaza el config con `invalid-layout` y diagnóstico de ruta `{path}.props.variant`.
+- `props.color` solo acepta `"neutral"`, `"primary"`, `"success"`, `"warning"`, `"danger"` o `"info"` si se declara; cualquier otro valor rechaza el config con `invalid-layout` y diagnóstico de ruta `{path}.props.color`.
+- `badge` no acepta `children`; si se declaran, no pasan al resultado normalizado (nodo hoja).
+- `visibility`, `queryStateFeedback` y `layout.span` siguen el contrato transversal estándar.
+
 ## Reglas del nodo `link`
 
 - `props.label` es obligatorio; si está ausente o vacío, el config se rechaza con `invalid-layout` y ruta `{path}.props.label`.

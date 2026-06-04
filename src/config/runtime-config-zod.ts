@@ -20,6 +20,7 @@ export const supportedNodeTypes = [
   'modal',
   'tabs',
   'accordion',
+  'badge',
 ] as const
 
 export const tableCellAllowedNodeTypes = ['image', 'list', 'button', 'container', 'heading', 'paragraph'] as const
@@ -558,6 +559,26 @@ export const linkNodeSchema = z
         download: z.string().optional(),
         target: z.string().optional(),
         action: z.unknown().optional(),
+      })
+      .strip(),
+  })
+  .strip()
+
+export const supportedBadgeVariants = ['pill', 'circle'] as const
+export const supportedBadgeColors = ['neutral', 'primary', 'success', 'warning', 'danger', 'info'] as const
+
+export const badgeNodeSchema = z
+  .object({
+    type: z.literal('badge'),
+    id: nodeIdSchema.optional(),
+    queryStateFeedback: queryStateFeedbackSchema.optional(),
+    visibility: visibilitySchema.optional(),
+    layout: layoutNodeLayoutSchema.optional(),
+    props: z
+      .object({
+        label: z.string(),
+        variant: z.enum(supportedBadgeVariants).optional(),
+        color: z.enum(supportedBadgeColors).optional(),
       })
       .strip(),
   })

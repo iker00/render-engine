@@ -26,6 +26,7 @@ Los conceptos transversales (`visibility`, `queryStateFeedback`, referencias din
 | [table.md](./table.md) | Tablas semánticas de lectura, `headers`/`rows`/`columns`, filtros locales por columna, ordenación local, paginación local. |
 | [button.md](./button.md) | `button` y catálogo de acciones (`navigateTo`, `goBack`, `executeOperation`, `resetForm`, `openModal`, `closeModal`). |
 | [link.md](./link.md) | `link` — enlace declarativo como `<a>`, con `props.href` para URLs externas/descargas o `props.action` (`navigateTo`/`goBack`) para navegación interna. |
+| [badge.md](./badge.md) | `badge` — etiqueta visual compacta con variante `pill` o `circle` y paleta semántica cerrada de seis colores. |
 
 ## Nodos modales
 
@@ -44,7 +45,7 @@ Los conceptos transversales (`visibility`, `queryStateFeedback`, referencias din
 | [choice-groups.md](./choice-groups.md) | `radioGroup` y `checkboxGroup`, `optionLayout: vertical | inline`. |
 
 ## Reglas estructurales transversales del catálogo
-- `heading`, `paragraph`, `list`, `image`, `table`, `button` y `link` son nodos hoja; si reciben `children`, esos datos no pasan al resultado normalizado.
+- `heading`, `paragraph`, `list`, `image`, `table`, `button`, `link` y `badge` son nodos hoja; si reciben `children`, esos datos no pasan al resultado normalizado.
 - `repeater` rechaza `children` y solo admite repetición a través de `props.template`.
 - `input`, `textarea`, `select`, `radioGroup` y `checkboxGroup` solo son válidos como descendientes de un `form`.
 - `button` sin `action` solo es válido como descendiente de un `form` (actúa como submit implícito).

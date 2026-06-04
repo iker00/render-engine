@@ -17,6 +17,7 @@ export type LayoutNodeType =
   | 'modal'
   | 'tabs'
   | 'accordion'
+  | 'badge'
 export type RuntimeApiMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
 export type RuntimeApiQueryValue = string | number | boolean
 export type RuntimeApiQuery = Record<string, RuntimeApiQueryValue>
@@ -411,6 +412,20 @@ export interface AccordionLayoutNode extends LayoutNodeFeedbackFields, LayoutNod
   children?: LayoutNode[]
 }
 
+export type BadgeVariant = 'pill' | 'circle'
+export type BadgeColor = 'neutral' | 'primary' | 'success' | 'warning' | 'danger' | 'info'
+
+export interface BadgeLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayoutFields {
+  type: 'badge'
+  id?: string
+  props: {
+    label: string
+    variant?: BadgeVariant
+    color?: BadgeColor
+  }
+  children?: unknown
+}
+
 export interface NavigateToRuntimeUiAction {
   type: 'navigateTo'
   pageId: string
@@ -497,6 +512,7 @@ export type LayoutNode =
   | ModalLayoutNode
   | TabsLayoutNode
   | AccordionLayoutNode
+  | BadgeLayoutNode
 
 export type LayoutNodeCollection = LayoutNode[]
 
