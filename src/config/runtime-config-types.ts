@@ -18,6 +18,7 @@ export type LayoutNodeType =
   | 'tabs'
   | 'accordion'
   | 'badge'
+  | 'alert'
 export type RuntimeApiMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
 export type RuntimeApiQueryValue = string | number | boolean
 export type RuntimeApiQuery = Record<string, RuntimeApiQueryValue>
@@ -426,6 +427,19 @@ export interface BadgeLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLay
   children?: unknown
 }
 
+export type AlertType = 'neutral' | 'primary' | 'success' | 'warning' | 'danger' | 'info'
+
+export interface AlertLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayoutFields {
+  type: 'alert'
+  id?: string
+  props: {
+    message: string
+    type?: AlertType
+    title?: string
+  }
+  children?: never
+}
+
 export interface NavigateToRuntimeUiAction {
   type: 'navigateTo'
   pageId: string
@@ -513,6 +527,7 @@ export type LayoutNode =
   | TabsLayoutNode
   | AccordionLayoutNode
   | BadgeLayoutNode
+  | AlertLayoutNode
 
 export type LayoutNodeCollection = LayoutNode[]
 

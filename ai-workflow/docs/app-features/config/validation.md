@@ -94,6 +94,14 @@
 - Si `props.action.type` es `"navigateTo"`, se aplican las mismas reglas de `pageId` y `params` que en `button`: `pageId` es obligatorio, debe existir en `pages`, y `params` si se declara debe ser objeto plano con claves no vacías y valores escalares.
 - Si `props.action.pageId` apunta a una página inexistente, el config completo se rechaza antes del render con `invalid-layout`.
 
+## Reglas del nodo `alert`
+
+- `props.message` es obligatorio y debe ser string; si está ausente o no es string, el config se rechaza con `invalid-layout` y diagnóstico de ruta `{path}.props.message`.
+- `props.type` solo acepta `"neutral"`, `"primary"`, `"success"`, `"warning"`, `"danger"` o `"info"` si se declara; cualquier otro valor rechaza el config con `invalid-layout` y diagnóstico de ruta `{path}.props.type`.
+- `props.title` es opcional; si se declara y no es string, el config se rechaza con `invalid-layout` y diagnóstico de ruta `{path}.props.title`.
+- `alert` no acepta `children`; si se declaran, no pasan al resultado normalizado (nodo hoja).
+- `visibility`, `queryStateFeedback` y `layout.span` siguen el contrato transversal estándar.
+
 ## Política de errores
 - Los errores estructurales conservan la semántica pública actual (`invalid-layout` o `unsupported-node-type`) y ahora incluyen rutas canónicas del JSON cuando aplica, por ejemplo `layout[0].props.items[1]` o `searchUsers.query.filters`.
 - En desarrollo, los errores de configuración deben ser diagnósticos y visibles.

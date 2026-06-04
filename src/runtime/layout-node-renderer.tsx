@@ -7,6 +7,7 @@ import { getGridChildSpanClassName } from './runtime-node-styling'
 import { useRuntimeState } from './runtime-state/runtime-state-provider'
 import { LayoutRenderer } from './layout-renderer'
 import { AccordionNode } from './nodes/accordion-layout-node'
+import { AlertNode } from './nodes/alert-layout-node'
 import { BadgeNode } from './nodes/badge-layout-node'
 import { ButtonNode } from './nodes/button-layout-node'
 import { LinkNode } from './nodes/link-layout-node'
@@ -114,6 +115,9 @@ export function LayoutNodeRenderer({ node, renderedChildren, iterationContext }:
       break
     case 'badge':
       renderedNode = <BadgeNode node={node} iterationContext={iterationContext} />
+      break
+    case 'alert':
+      renderedNode = <AlertNode node={node} iterationContext={iterationContext} />
       break
   }
 

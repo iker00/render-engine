@@ -42,6 +42,7 @@ src/tests/
 - `runtime-config-validation-containers.test.ts` — contrato de layout de contenedores (~959 líneas)
 - `runtime-config-validation-image-table.test.ts` — validación de nodos image y table (~635 líneas)
 - `runtime-config-validation-modal.test.ts` — validación de nodo modal: shape, children permitidos, unicidad de id, referencias modalId, prohibición de defaultOpen en repeater (~700 líneas)
+- `runtime-config-validation-alert.test.ts` — validación del nodo `alert`: aceptación con type/message/title/transversales, rechazo de message ausente o no string, type inválido, title no string (~nuevo)
 
 ## layout-renderer/
 
@@ -60,6 +61,7 @@ src/tests/
 - `layout-renderer-repeater-state.test.tsx` — resets por colección/pageSize, repeaters independientes, scalar items, qsf+visibility (~400 líneas)
 - `layout-renderer-modal.test.tsx` — render condicional del modal, apertura/cierre por botón/ESC/overlay, tamaños, defaultOpen, visibility, focus trap (~500 líneas)
 - `layout-renderer-modal-repeater.test.tsx` — modal dentro de repeater.props.template, identidad por iteración, item.* en modal, cierre global uno a la vez (~400 líneas)
+- `layout-renderer-alert.test.tsx` — render básico del nodo `alert`: colores por tipo, icono placeholder, title/message, interpolación, transversales, integración repeater y form (~nuevo)
 
 ## runtime-state/
 

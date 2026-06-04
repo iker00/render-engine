@@ -21,6 +21,7 @@ export const supportedNodeTypes = [
   'tabs',
   'accordion',
   'badge',
+  'alert',
 ] as const
 
 export const tableCellAllowedNodeTypes = ['image', 'list', 'button', 'container', 'heading', 'paragraph'] as const
@@ -579,6 +580,25 @@ export const badgeNodeSchema = z
         label: z.string(),
         variant: z.enum(supportedBadgeVariants).optional(),
         color: z.enum(supportedBadgeColors).optional(),
+      })
+      .strip(),
+  })
+  .strip()
+
+export const supportedAlertTypes = ['neutral', 'primary', 'success', 'warning', 'danger', 'info'] as const
+
+export const alertNodeSchema = z
+  .object({
+    type: z.literal('alert'),
+    id: nodeIdSchema.optional(),
+    queryStateFeedback: queryStateFeedbackSchema.optional(),
+    visibility: visibilitySchema.optional(),
+    layout: layoutNodeLayoutSchema.optional(),
+    props: z
+      .object({
+        message: z.string(),
+        type: z.enum(supportedAlertTypes).optional(),
+        title: z.string().optional(),
       })
       .strip(),
   })
