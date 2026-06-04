@@ -568,6 +568,18 @@ function findInvalidActionTarget(
       }
     }
 
+    if (
+      node.type === 'link' &&
+      node.props.action?.type === 'navigateTo' &&
+      !pageIds.has(node.props.action.pageId)
+    ) {
+      return {
+        path: `${nodePath}.props.action`,
+        type: 'navigateTo',
+        target: node.props.action.pageId,
+      }
+    }
+
     if ((node.type === 'container' || node.type === 'form' || node.type === 'modal') && node.children) {
       const childResult = findInvalidActionTarget(node.children, `${nodePath}.children`, pageIds, operationNames)
 

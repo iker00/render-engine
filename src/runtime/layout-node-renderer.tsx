@@ -8,6 +8,7 @@ import { useRuntimeState } from './runtime-state/runtime-state-provider'
 import { LayoutRenderer } from './layout-renderer'
 import { AccordionNode } from './nodes/accordion-layout-node'
 import { ButtonNode } from './nodes/button-layout-node'
+import { LinkNode } from './nodes/link-layout-node'
 import { CheckboxGroupNode } from './nodes/checkbox-group-layout-node'
 import { ContainerNode } from './nodes/container-layout-node'
 import { FormNode } from './nodes/form-layout-node'
@@ -79,6 +80,9 @@ export function LayoutNodeRenderer({ node, renderedChildren, iterationContext }:
       break
     case 'button':
       renderedNode = <ButtonNode node={node} iterationContext={iterationContext} />
+      break
+    case 'link':
+      renderedNode = <LinkNode node={node} iterationContext={iterationContext} />
       break
     case 'modal':
       renderedNode = <ModalNode node={node} iterationContext={iterationContext}>{renderedChildren}</ModalNode>

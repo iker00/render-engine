@@ -10,6 +10,7 @@ export const supportedNodeTypes = [
   'image',
   'table',
   'button',
+  'link',
   'form',
   'input',
   'textarea',
@@ -540,5 +541,24 @@ export const accordionNodeSchema = z
       })
       .strip(),
     children: z.array(z.unknown()).optional(),
+  })
+  .strip()
+
+export const linkNodeSchema = z
+  .object({
+    type: z.literal('link'),
+    id: nodeIdSchema.optional(),
+    queryStateFeedback: queryStateFeedbackSchema.optional(),
+    visibility: visibilitySchema.optional(),
+    layout: layoutNodeLayoutSchema.optional(),
+    props: z
+      .object({
+        label: z.string(),
+        href: z.string().optional(),
+        download: z.string().optional(),
+        target: z.string().optional(),
+        action: z.unknown().optional(),
+      })
+      .strip(),
   })
   .strip()

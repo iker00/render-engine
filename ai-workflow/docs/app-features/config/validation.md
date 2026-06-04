@@ -75,6 +75,17 @@
 - No existe un allowlist de tipos de `children` para `tabs`: admite cualquier nodo válido del catálogo, incluidos `form`, `repeater`, `container` y todos los nodos hoja.
 - La ruta diagnóstica de errores dentro de los `children` sigue el patrón `props.items[N].children`.
 
+## Reglas del nodo `link`
+
+- `props.label` es obligatorio; si está ausente o vacío, el config se rechaza con `invalid-layout` y ruta `{path}.props.label`.
+- `props.href` y `props.action` son mutuamente excluyentes; si se declaran simultáneamente, el config se rechaza con `invalid-layout` y ruta `{path}`.
+- Debe declararse exactamente uno de `props.href` o `props.action`; si ninguno está presente, el config se rechaza con `invalid-layout` y ruta `{path}`.
+- `props.download` sin `props.href` rechaza el config con `invalid-layout` y ruta `{path}.props.download`.
+- `props.target` sin `props.href` rechaza el config con `invalid-layout` y ruta `{path}.props.target`.
+- `props.action.type` solo acepta `"navigateTo"` o `"goBack"`; cualquier otro valor rechaza el config con `invalid-layout` y ruta `{path}.props.action.type`.
+- Si `props.action.type` es `"navigateTo"`, se aplican las mismas reglas de `pageId` y `params` que en `button`: `pageId` es obligatorio, debe existir en `pages`, y `params` si se declara debe ser objeto plano con claves no vacías y valores escalares.
+- Si `props.action.pageId` apunta a una página inexistente, el config completo se rechaza antes del render con `invalid-layout`.
+
 ## Política de errores
 - Los errores estructurales conservan la semántica pública actual (`invalid-layout` o `unsupported-node-type`) y ahora incluyen rutas canónicas del JSON cuando aplica, por ejemplo `layout[0].props.items[1]` o `searchUsers.query.filters`.
 - En desarrollo, los errores de configuración deben ser diagnósticos y visibles.

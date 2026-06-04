@@ -955,6 +955,450 @@ describe('validateRuntimeConfig', () => {
     })
   })
 
+  it('accepts a link node with props.href and props.label', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithPages([
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'link',
+              props: {
+                label: 'Go',
+                href: 'https://example.com',
+              },
+            },
+          ],
+        },
+      ]),
+    )
+
+    expect(result.status).toBe('ready')
+
+    if (result.status !== 'ready') {
+      throw new Error('Expected ready result')
+    }
+
+    expect(result.config.pages[0].layout[0]).toEqual({
+      type: 'link',
+      props: {
+        label: 'Go',
+        href: 'https://example.com',
+      },
+    })
+  })
+
+  it('rejects a link node without props.label', () => {
+    expect(
+      validateRuntimeConfig(
+        createConfigWithPages([
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'link',
+                props: {
+                  href: 'https://example.com',
+                },
+              },
+            ],
+          },
+        ]),
+      ),
+    ).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message: 'Page "home" has an invalid layout at "layout[0].props.label".',
+      },
+    })
+  })
+
+  it('rejects a link node with empty props (no label)', () => {
+    expect(
+      validateRuntimeConfig(
+        createConfigWithPages([
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'link',
+                props: {},
+              },
+            ],
+          },
+        ]),
+      ),
+    ).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message: 'Page "home" has an invalid layout at "layout[0].props.label".',
+      },
+    })
+  })
+
+  it('accepts a link node with navigateTo action to an existing page', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithPages([
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'link',
+              props: {
+                label: 'Go to details',
+                action: { type: 'navigateTo', pageId: 'details' },
+              },
+            },
+          ],
+        },
+        { id: 'details', layout: [] },
+      ]),
+    )
+    expect(result.status).toBe('ready')
+    if (result.status === 'ready') {
+      expect(result.config.pages[0].layout[0]).toEqual({
+        type: 'link',
+        props: { label: 'Go to details', action: { type: 'navigateTo', pageId: 'details' } },
+      })
+    }
+  })
+
+  it('accepts a link node with goBack action', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithPages([
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'link',
+              props: {
+                label: 'Back',
+                action: { type: 'goBack' },
+              },
+            },
+          ],
+        },
+      ]),
+    )
+    expect(result.status).toBe('ready')
+    if (result.status === 'ready') {
+      expect(result.config.pages[0].layout[0]).toEqual({
+        type: 'link',
+        props: { label: 'Back', action: { type: 'goBack' } },
+      })
+    }
+  })
+
+  it('accepts a link node with download and href', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithPages([
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'link',
+              props: {
+                label: 'Download',
+                href: 'https://example.com/file.pdf',
+                download: 'file.pdf',
+              },
+            },
+          ],
+        },
+      ]),
+    )
+    expect(result.status).toBe('ready')
+    if (result.status === 'ready') {
+      expect(result.config.pages[0].layout[0]).toEqual({
+        type: 'link',
+        props: {
+          label: 'Download',
+          href: 'https://example.com/file.pdf',
+          download: 'file.pdf',
+        },
+      })
+    }
+  })
+
+  it('accepts a link node with target "_blank" and href', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithPages([
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'link',
+              props: {
+                label: 'Open',
+                href: 'https://example.com',
+                target: '_blank',
+              },
+            },
+          ],
+        },
+      ]),
+    )
+    expect(result.status).toBe('ready')
+    if (result.status === 'ready') {
+      expect(result.config.pages[0].layout[0]).toEqual({
+        type: 'link',
+        props: { label: 'Open', href: 'https://example.com', target: '_blank' },
+      })
+    }
+  })
+
+  it('rejects a link node without href nor action', () => {
+    expect(
+      validateRuntimeConfig(
+        createConfigWithPages([
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'link',
+                props: { label: 'Broken' },
+              },
+            ],
+          },
+        ]),
+      ),
+    ).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message: 'Page "home" has an invalid layout at "layout[0]": link nodes must have either props.href or props.action.',
+      },
+    })
+  })
+
+  it('rejects a link node with both href and action', () => {
+    expect(
+      validateRuntimeConfig(
+        createConfigWithPages([
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'link',
+                props: {
+                  label: 'Broken',
+                  href: 'https://example.com',
+                  action: { type: 'goBack' },
+                },
+              },
+            ],
+          },
+        ]),
+      ),
+    ).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message: 'Page "home" has an invalid layout at "layout[0]": link nodes cannot have both props.href and props.action.',
+      },
+    })
+  })
+
+  it('rejects a link node with download but no href', () => {
+    expect(
+      validateRuntimeConfig(
+        createConfigWithPages([
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'link',
+                props: {
+                  label: 'Broken',
+                  action: { type: 'goBack' },
+                  download: 'file.pdf',
+                },
+              },
+            ],
+          },
+        ]),
+      ),
+    ).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message: 'Page "home" has an invalid layout at "layout[0].props.download": download requires props.href.',
+      },
+    })
+  })
+
+  it('rejects a link node with target but no href', () => {
+    expect(
+      validateRuntimeConfig(
+        createConfigWithPages([
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'link',
+                props: {
+                  label: 'Broken',
+                  action: { type: 'goBack' },
+                  target: '_blank',
+                },
+              },
+            ],
+          },
+        ]),
+      ),
+    ).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message: 'Page "home" has an invalid layout at "layout[0].props.target": target requires props.href.',
+      },
+    })
+  })
+
+  it('rejects a link node with action type executeOperation', () => {
+    expect(
+      validateRuntimeConfig(
+        createConfigWithPages([
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'link',
+                props: {
+                  label: 'Broken',
+                  action: { type: 'executeOperation', operationName: 'foo' },
+                },
+              },
+            ],
+          },
+        ]),
+      ),
+    ).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message: 'Page "home" has an invalid layout at "layout[0].props.action.type".',
+      },
+    })
+  })
+
+  it('rejects a link node with navigateTo action pointing to an unknown page', () => {
+    expect(
+      validateRuntimeConfig(
+        createConfigWithPages([
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'link',
+                props: {
+                  label: 'Broken',
+                  action: { type: 'navigateTo', pageId: 'missing-page' },
+                },
+              },
+            ],
+          },
+        ]),
+      ),
+    ).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message: 'Page "home" has an invalid layout at "layout[0].props.action.pageId": unknown page "missing-page".',
+      },
+    })
+  })
+
+  it('rejects a link node with navigateTo action without pageId', () => {
+    expect(
+      validateRuntimeConfig(
+        createConfigWithPages([
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'link',
+                props: {
+                  label: 'Broken',
+                  action: { type: 'navigateTo' },
+                },
+              },
+            ],
+          },
+        ]),
+      ),
+    ).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message: 'Page "home" has an invalid layout at "layout[0].props.action.pageId".',
+      },
+    })
+  })
+
+  it('accepts a link node with visibility, queryStateFeedback and layout.span', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithPages([
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'link',
+              props: {
+                label: 'Go',
+                href: 'https://example.com',
+              },
+              visibility: { reference: 'queries.q.data', operator: 'isTruthy' },
+              queryStateFeedback: { query: 'queries.q' },
+              layout: { span: 6 },
+            },
+          ],
+        },
+      ]),
+    )
+    expect(result.status).toBe('ready')
+    if (result.status === 'ready') {
+      const node = result.config.pages[0].layout[0] as { type: string; visibility?: unknown; queryStateFeedback?: unknown; layout?: unknown }
+      expect(node.type).toBe('link')
+      expect(node.visibility).toEqual({ reference: 'queries.q.data', operator: 'isTruthy' })
+      expect(node.queryStateFeedback).toEqual({ query: 'queries.q' })
+      expect(node.layout).toEqual({ span: 6 })
+    }
+  })
+
+  it('does not propagate children from a link node', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithPages([
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'link',
+              props: { label: 'Go', href: 'https://example.com' },
+              children: [{ type: 'paragraph', props: { text: 'Ignored' } }],
+            },
+          ],
+        },
+      ]),
+    )
+    expect(result.status).toBe('ready')
+    if (result.status === 'ready') {
+      const node = result.config.pages[0].layout[0] as Record<string, unknown>
+      expect(node.children).toBeUndefined()
+    }
+  })
+
   it('rejects resetForm actions without a valid non-empty formId but does not require a form catalog', () => {
     expect(
       validateRuntimeConfig(

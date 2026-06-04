@@ -29,7 +29,7 @@ src/tests/
 - `runtime-config-root-zod.test.ts` — esquema Zod raíz de la config
 - `read-runtime-config.test.ts` — lectura y normalización de la config desde el DOM
 - `runtime-config-validation-preloads.test.ts` — layout raíz básico, preloads: aceptación y rechazo (~450 líneas)
-- `runtime-config-validation-buttons.test.ts` — botones y acciones: navigateTo, goBack, executeOperation, resetForm, leaf nodes (~700 líneas)
+- `runtime-config-validation-buttons.test.ts` — botones y acciones: navigateTo, goBack, executeOperation, resetForm, leaf nodes, validación estructural y cruzada del nodo `link` (~700 líneas)
 - `runtime-config-validation-qsf.test.ts` — queryStateFeedback: estados, fallback, rechazo (~430 líneas)
 - `runtime-config-validation-forms-validations.test.ts` — formularios: aceptación, normalización de reglas de validación (~580 líneas)
 - `runtime-config-validation-forms-semantics.test.ts` — formularios: restricciones de placement, IDs duplicados, submitAction, persistOnUnmount (~750 líneas)
@@ -51,7 +51,7 @@ src/tests/
 - `layout-renderer-image-table.test.tsx` — image nodes + tables manual/dynamic/filterable/sortable (~580 líneas)
 - `layout-renderer-table-pagination.test.tsx` — paginación de tabla (previousNext, numbered, scroll, IntersectionObserver) (~620 líneas)
 - `layout-renderer-table-rich-cells.test.tsx` — celdas ricas en tabla: image/button/container/heading/paragraph, item.* en dinámico, visibility/qsf, filtros/ordenación con nodos (~400 líneas)
-- `layout-renderer-buttons-text.test.tsx` — button nodes, navegación declarativa, interpolación de texto y referencias (~500 líneas)
+- `layout-renderer-buttons-text.test.tsx` — button nodes, nodo `link` (href, download, target, action navigateTo/goBack, referencias dinámicas, campos transversales), navegación declarativa, interpolación de texto y referencias (~500 líneas)
 - `layout-renderer-forms.test.tsx` — forms declarativos, orden de campos, labels interpolados, semántica de secciones (~640 líneas)
 - `layout-renderer-grid-spans.test.tsx` — layout.span, columnas responsive, span clamping, fallbacks móvil (~550 líneas)
 - `layout-renderer-forms-fields.test.tsx` — tipos de campo expandidos, opciones dinámicas, labels/valores interpolados, defaults lazy (~1100 líneas)

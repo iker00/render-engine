@@ -2,6 +2,7 @@ export type {
   AccordionLayoutNode,
   ButtonAction,
   ButtonLayoutNode,
+  LinkLayoutNode,
   CloseModalRuntimeUiAction,
   ModalLayoutNode,
   ModalLayoutNodeProps,

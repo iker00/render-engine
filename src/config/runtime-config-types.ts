@@ -7,6 +7,7 @@ export type LayoutNodeType =
   | 'image'
   | 'table'
   | 'button'
+  | 'link'
   | 'form'
   | 'input'
   | 'textarea'
@@ -464,6 +465,19 @@ export interface ButtonLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLa
   children?: unknown
 }
 
+export interface LinkLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayoutFields {
+  type: 'link'
+  id?: string
+  props: {
+    label: string
+    href?: string
+    download?: string
+    target?: string
+    action?: NavigateToRuntimeUiAction | GoBackRuntimeUiAction
+  }
+  children?: unknown
+}
+
 export type LayoutNode =
   | ContainerLayoutNode
   | RepeaterLayoutNode
@@ -473,6 +487,7 @@ export type LayoutNode =
   | ImageLayoutNode
   | TableLayoutNode
   | ButtonLayoutNode
+  | LinkLayoutNode
   | FormLayoutNode
   | InputLayoutNode
   | TextareaLayoutNode

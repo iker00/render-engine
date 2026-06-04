@@ -173,6 +173,339 @@ function renderRuntimePageWithSeed(activePage: RuntimePageConfig) {
   )
 }
 
+describe('link node render', () => {
+  it('renders a link node with literal href as an anchor with the correct href and label', () => {
+    renderRuntimePage({
+      id: 'link-page',
+      layout: [
+        {
+          type: 'link',
+          props: {
+            label: 'Visit site',
+            href: 'https://example.com',
+          },
+        },
+      ],
+    })
+
+    const anchor = screen.getByRole('link', { name: 'Visit site' })
+    expect(anchor).toHaveAttribute('href', 'https://example.com')
+    expect(anchor).toHaveAttribute('data-layout-node', 'link')
+  })
+
+  it('resolves a dynamic href reference from runtime state and renders it as the href attribute', () => {
+    const activePage: RuntimePageConfig = {
+      id: 'link-dynamic-href',
+      layout: [
+        {
+          type: 'link',
+          props: {
+            label: 'Dynamic URL',
+            href: 'queries.searchUsers.data.user.profile.url',
+          },
+        },
+      ],
+    }
+    const state = createRuntimePageState(activePage, {
+      searchUsers: {
+        status: 'success',
+        data: {
+          user: {
+            profile: {
+              url: 'https://dynamic.example.com',
+            },
+          },
+        },
+        error: null,
+      },
+    })
+
+    renderRuntimePageWithState(activePage, state)
+
+    const anchor = screen.getByRole('link', { name: 'Dynamic URL' })
+    expect(anchor).toHaveAttribute('href', 'https://dynamic.example.com')
+  })
+
+  it('resolves an interpolated label from runtime state and renders it as anchor text', () => {
+    const activePage: RuntimePageConfig = {
+      id: 'link-interpolated-label',
+      layout: [
+        {
+          type: 'link',
+          props: {
+            label: 'Hello {{queries.searchUsers.data.user.profile.name}}',
+            href: 'https://example.com',
+          },
+        },
+      ],
+    }
+    const state = createRuntimePageState(activePage, {
+      searchUsers: {
+        status: 'success',
+        data: {
+          user: {
+            profile: {
+              name: 'Ada',
+            },
+          },
+        },
+        error: null,
+      },
+    })
+
+    renderRuntimePageWithState(activePage, state)
+
+    expect(screen.getByRole('link', { name: 'Hello Ada' })).toBeInTheDocument()
+  })
+
+  it('renders a link with download attribute when props.download and props.href are present', () => {
+    renderRuntimePage({
+      id: 'link-download',
+      layout: [
+        {
+          type: 'link',
+          props: {
+            label: 'Download',
+            href: 'https://example.com/file.pdf',
+            download: 'file.pdf',
+          },
+        },
+      ],
+    })
+
+    const anchor = screen.getByRole('link', { name: 'Download' })
+    expect(anchor).toHaveAttribute('download', 'file.pdf')
+  })
+
+  it('renders a link with target="_blank" when props.target is declared', () => {
+    renderRuntimePage({
+      id: 'link-target',
+      layout: [
+        {
+          type: 'link',
+          props: {
+            label: 'Open',
+            href: 'https://example.com',
+            target: '_blank',
+          },
+        },
+      ],
+    })
+
+    const anchor = screen.getByRole('link', { name: 'Open' })
+    expect(anchor).toHaveAttribute('target', '_blank')
+  })
+
+  it('does not include target attribute when props.target is not declared', () => {
+    renderRuntimePage({
+      id: 'link-no-target',
+      layout: [
+        {
+          type: 'link',
+          props: {
+            label: 'No target',
+            href: 'https://example.com',
+          },
+        },
+      ],
+    })
+
+    const anchor = screen.getByRole('link', { name: 'No target' })
+    expect(anchor).not.toHaveAttribute('target')
+  })
+
+  it('navigates to the declared page when a link with navigateTo action is clicked', () => {
+    const config: RuntimeConfig = {
+      api: {},
+      initialPage: 'home',
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'link',
+              props: {
+                label: 'Go to details',
+                action: { type: 'navigateTo', pageId: 'details' },
+              },
+            },
+          ],
+        },
+        {
+          id: 'details',
+          layout: [
+            {
+              type: 'heading',
+              props: { text: 'Details page', level: 1 },
+            },
+          ],
+        },
+      ],
+    }
+
+    render(
+      <RuntimeStateProvider config={config}>
+        <RuntimePage />
+      </RuntimeStateProvider>,
+    )
+
+    fireEvent.click(screen.getByText('Go to details'))
+
+    expect(screen.getByTestId('runtime-page')).toHaveAttribute('data-runtime-page-id', 'details')
+    expect(screen.getByRole('heading', { name: 'Details page', level: 1 })).toBeInTheDocument()
+  })
+
+  it('does not include static href attribute when props.action is declared', () => {
+    renderRuntimePage({
+      id: 'link-action',
+      layout: [
+        {
+          type: 'link',
+          props: {
+            label: 'Navigate',
+            action: { type: 'goBack' },
+          },
+        },
+      ],
+    })
+
+    const anchor = screen.getByText('Navigate')
+    expect(anchor).toHaveAttribute('data-layout-node', 'link')
+    expect(anchor).not.toHaveAttribute('href')
+  })
+
+  it('calls window.history.back when a link with goBack action is clicked and history has entries', () => {
+    const historyBackSpy = vi.fn()
+    vi.stubGlobal('history', { back: historyBackSpy })
+
+    const activePage: RuntimePageConfig = {
+      id: 'link-go-back',
+      layout: [
+        {
+          type: 'link',
+          props: {
+            label: 'Go back',
+            action: { type: 'goBack' },
+          },
+        },
+      ],
+    }
+
+    const config: RuntimeConfig = {
+      api: {},
+      initialPage: activePage.id,
+      pages: [activePage],
+    }
+
+    const baseState = createRuntimeState(config)
+    // Simulate a navigation history with 2 entries so goBack does not short-circuit
+    const stateWithHistory: RuntimeState = {
+      ...baseState,
+      navigation: {
+        currentPageId: activePage.id,
+        history: [
+          { entryId: 0, pageId: 'prev', params: {} },
+          { entryId: 1, pageId: activePage.id, params: {} },
+        ],
+        currentEntryIndex: 1,
+        lastError: null,
+      },
+    }
+
+    renderRuntimePageWithState(activePage, stateWithHistory)
+
+    fireEvent.click(screen.getByText('Go back'))
+
+    expect(historyBackSpy).toHaveBeenCalledOnce()
+  })
+
+  it('does not render a link node when visibility rule evaluates to hidden', () => {
+    const activePage: RuntimePageConfig = {
+      id: 'link-hidden',
+      layout: [
+        {
+          type: 'link',
+          props: { label: 'Hidden link', href: 'https://example.com' },
+          visibility: { reference: 'queries.myQuery.data', operator: 'isTruthy' },
+        },
+      ],
+    }
+    const state = createRuntimePageState(activePage, {
+      myQuery: {
+        status: 'success',
+        data: null,
+        error: null,
+      },
+    })
+
+    renderRuntimePageWithState(activePage, state)
+
+    expect(screen.queryByRole('link', { name: 'Hidden link' })).not.toBeInTheDocument()
+  })
+
+  it('shows queryStateFeedback fallback content when the query is loading', () => {
+    const activePage: RuntimePageConfig = {
+      id: 'link-feedback',
+      layout: [
+        {
+          type: 'link',
+          props: { label: 'Link', href: 'https://example.com' },
+          queryStateFeedback: {
+            query: 'someQuery',
+            states: {
+              loading: {
+                mode: 'fallback',
+                fallback: [
+                  {
+                    type: 'paragraph',
+                    props: { text: 'Loading...' },
+                  },
+                ],
+              },
+            },
+          },
+        },
+      ],
+    }
+    const state = createRuntimePageState(activePage, {
+      someQuery: {
+        status: 'loading',
+        data: null,
+        error: null,
+        requestSignature: null,
+      },
+    })
+
+    renderRuntimePageWithState(activePage, state)
+
+    expect(screen.queryByRole('link', { name: 'Link' })).not.toBeInTheDocument()
+    expect(screen.getByText('Loading...')).toBeInTheDocument()
+  })
+
+  it('applies grid span class to a link node with layout.span', () => {
+    renderRuntimePage({
+      id: 'link-span',
+      layout: [
+        {
+          type: 'container',
+          props: { columns: 12 },
+          children: [
+            {
+              type: 'link',
+              props: { label: 'Spanning link', href: 'https://example.com' },
+              layout: { span: 6 },
+            },
+          ],
+        },
+      ],
+    })
+
+    const anchor = screen.getByRole('link', { name: 'Spanning link' })
+    const wrapper = anchor.closest('[class*="col-span"]')
+    expect(wrapper).not.toBeNull()
+  })
+})
+
 describe('RuntimePage', () => {
   it('renders button nodes as accessible button elements with stable base classes', () => {
     renderRuntimePage({

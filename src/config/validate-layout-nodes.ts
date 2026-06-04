@@ -8,6 +8,7 @@ import type {
   LayoutNodeCollection,
   LayoutNodeFeedbackFields,
   LayoutNodeType,
+  LinkLayoutNode,
   ListLayoutNode,
   ModalLayoutNode,
   ParagraphLayoutNode,
@@ -34,6 +35,7 @@ import {
   containerNodeSchema,
   headingNodeSchema,
   imageNodeSchema,
+  linkNodeSchema,
   listNodeSchema,
   modalNodeSchema,
   paragraphNodeSchema,
@@ -125,6 +127,8 @@ export function validateLayoutNode(
       return validateTableNode(rawNode, path, pageId)
     case 'button':
       return validateButtonNode(rawNode, path, pageId)
+    case 'link':
+      return validateLinkNode(rawNode, path, pageId)
     case 'form':
       return validateFormNode(rawNode, path, pageId)
     case 'input':
@@ -1328,6 +1332,137 @@ function validateButtonNode(
         label: parseResult.data.props.label,
         action,
       },
+    },
+  }
+}
+
+export function validateLinkNode(
+  rawNode: Record<string, unknown>,
+  path: string,
+  pageId: string,
+): { status: 'ready'; node: LinkLayoutNode } | { status: 'error'; error: RuntimeConfigError } {
+  const parseResult = linkNodeSchema.safeParse(rawNode)
+
+  if (!parseResult.success) {
+    const issue = parseResult.error.issues[0]
+    const issuePath = issue?.path ?? []
+
+    const feedbackIssue = mapQueryStateFeedbackIssue(pageId, path, issue)
+    if (feedbackIssue) return feedbackIssue
+
+    const visibilityIssue = mapVisibilityIssue(pageId, path, issue)
+    if (visibilityIssue) return visibilityIssue
+
+    const layoutIssue = mapLayoutNodeIssue(pageId, path, issuePath)
+    if (layoutIssue) return layoutIssue
+
+    if (issuePath[0] === 'id') {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.id".`)
+    }
+
+    if (issuePath[0] === 'props' && issuePath.length === 1) {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props".`)
+    }
+
+    if (issuePath[0] === 'props' && issuePath[1] === 'label') {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.label".`)
+    }
+
+    if (issuePath[0] === 'props' && issuePath[1] === 'href') {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.href".`)
+    }
+
+    if (issuePath[0] === 'props' && issuePath[1] === 'download') {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.download".`)
+    }
+
+    if (issuePath[0] === 'props' && issuePath[1] === 'target') {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.target".`)
+    }
+
+    if (issuePath[0] === 'props' && issuePath[1] === 'action') {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.action".`)
+    }
+
+    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props".`)
+  }
+
+  const feedbackResult = validateQueryStateFeedback(
+    parseResult.data.queryStateFeedback as LayoutNodeFeedbackFields['queryStateFeedback'],
+    `${path}.queryStateFeedback`,
+    pageId,
+  )
+
+  if (feedbackResult.status === 'error') return feedbackResult
+
+  const visibilityResult = validateVisibility(
+    parseResult.data.visibility as LayoutNodeFeedbackFields['visibility'],
+    `${path}.visibility`,
+    pageId,
+  )
+
+  if (visibilityResult.status === 'error') return visibilityResult
+
+  const { href, download, target, action } = parseResult.data.props
+  const hasHref = href !== undefined
+  const hasAction = action !== undefined
+
+  // Cross-validation: href and action are mutually exclusive
+  if (hasHref && hasAction) {
+    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}": link nodes cannot have both props.href and props.action.`)
+  }
+
+  // Cross-validation: must have either href or action
+  if (!hasHref && !hasAction) {
+    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}": link nodes must have either props.href or props.action.`)
+  }
+
+  // Cross-validation: download requires href
+  if (download !== undefined && !hasHref) {
+    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.download": download requires props.href.`)
+  }
+
+  // Cross-validation: target requires href
+  if (target !== undefined && !hasHref) {
+    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.target": target requires props.href.`)
+  }
+
+  // Cross-validation: action.type must be navigateTo or goBack
+  let validatedAction: LinkLayoutNode['props']['action'] | undefined
+  if (hasAction) {
+    const rawAction = action as Record<string, unknown>
+
+    if (rawAction.type !== 'navigateTo' && rawAction.type !== 'goBack') {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.action.type".`)
+    }
+
+    const linkActionResult = validateRuntimeUiAction(rawAction, `${path}.props.action`, pageId)
+
+    if (linkActionResult.status === 'error') {
+      return linkActionResult
+    }
+
+    validatedAction = linkActionResult.action as LinkLayoutNode['props']['action']
+  }
+
+  const props: LinkLayoutNode['props'] = {
+    label: parseResult.data.props.label,
+  }
+
+  if (href !== undefined) props.href = href
+  if (download !== undefined) props.download = download
+  if (target !== undefined) props.target = target
+  if (validatedAction !== undefined) props.action = validatedAction
+
+  return {
+    status: 'ready',
+    node: {
+      type: 'link',
+      id: parseResult.data.id,
+      queryStateFeedback: feedbackResult.queryStateFeedback,
+      visibility: visibilityResult.visibility,
+      layout: parseResult.data.layout,
+      props,
     },
   }
 }
