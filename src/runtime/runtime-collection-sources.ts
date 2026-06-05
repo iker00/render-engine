@@ -225,6 +225,7 @@ function projectObjectCollectionToTextItems(
       items.push(resolveInterpolatedCollectionString(itemText, state, surface, {
         iterationContext: {
           item,
+          key: String(index),
         },
       }))
       continue
@@ -303,6 +304,7 @@ function projectObjectCollectionToSelectItems(
       ? resolveInterpolatedCollectionString(labelPath, state, projectionSurfaces.label, {
           iterationContext: {
             item,
+            key: String(index),
           },
         })
       : normalizeCollectionItemPathText(item, labelPath)
@@ -322,6 +324,7 @@ function projectObjectCollectionToSelectItems(
         value: resolveInterpolatedCollectionString(valuePath, state, projectionSurfaces.value, {
           iterationContext: {
             item,
+            key: String(index),
           },
         }),
       })

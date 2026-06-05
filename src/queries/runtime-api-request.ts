@@ -1,4 +1,6 @@
 import type {
+  RuntimeApiBodyValue,
+  RuntimeApiHeaders,
   RuntimeApiOperation,
   RuntimeApiQuery,
   RuntimeApiRequestParams,

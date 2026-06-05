@@ -497,7 +497,7 @@ function resolveTableRows(
   const dynamicRows = node.props.rows as TableDynamicRows
   const items = resolveCollectionSourceItems(dynamicRows.source, state, { iterationContext })
 
-  const rows = items.map((item) => {
+  const rows = items.map((item, rowIndex) => {
     const row: (string | TableCellNode)[] = dynamicRows.cells.map((cell) => {
       // NodeObject: pass through as-is (TableCellNode), item context applied at render time
       if (isTableCellNode(cell)) {
@@ -508,6 +508,7 @@ function resolveTableRows(
         resolveRuntimeVisibleValue(cell, state, 'table.cell', {
           iterationContext: {
             item,
+            key: String(rowIndex),
           },
         }),
       )

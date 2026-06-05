@@ -5,6 +5,7 @@ import type {
   RuntimeApiExecutionResult,
 } from './runtime-api-types'
 import type { RuntimeApiOperation } from '../config/runtime-config'
+import type { RuntimeApiError } from './runtime-api-types'
 
 export { buildRuntimeApiRequest } from './runtime-api-request'
 export type {
@@ -171,12 +172,12 @@ function evaluateErrorCondition(operation: RuntimeApiOperation, parsed: unknown)
     }
   }
 
-  let code = 'business-error-condition'
+  let code: RuntimeApiError['code'] = 'business-error-condition'
 
   if (operation.errorCodePath !== undefined) {
     const codeResult = resolveBodyPath(parsed, operation.errorCodePath)
     if (codeResult.found && (typeof codeResult.value === 'string' || typeof codeResult.value === 'number')) {
-      code = String(codeResult.value)
+      code = String(codeResult.value) as RuntimeApiError['code']
     }
   }
 

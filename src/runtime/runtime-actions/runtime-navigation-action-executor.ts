@@ -15,5 +15,7 @@ export function executeRuntimeNavigationAction(
     goBackPage: handlers.goBackPage,
     navigateToPage: handlers.navigateToPage,
     resetForm: () => undefined,
+    openModal: () => undefined,
+    closeModal: () => undefined,
   })
 }

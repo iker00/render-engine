@@ -20,6 +20,15 @@ export type RuntimeReferenceSurface =
   | 'image.props.alt'
   | 'table.cell'
   | 'api.endpoint'
+  | 'alert.props.message'
+  | 'alert.props.title'
+  | 'badge.props.label'
+  | 'link.props.label'
+  | 'link.props.href'
+  | 'stat.props.label'
+  | 'stat.props.value'
+  | `accordion[${string}].props.label`
+  | `tabs[${string}].props.items[${string}].label`
 
 export function reportRuntimeReferenceDiagnostic(
   result: RuntimeReferenceResolutionResult,

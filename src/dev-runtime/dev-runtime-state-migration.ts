@@ -26,6 +26,8 @@ export function migrateRuntimeStateAcrossConfig(
     forms: nextForms,
     queries: nextQueries,
     pageEntry: nextPageEntry,
+    modal: prevState.modal,
+    i18n: prevState.i18n,
   }
 }
 
