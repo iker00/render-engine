@@ -116,6 +116,62 @@ describe('DividerNode — data-layout-node and variants', () => {
     expect(divider).toBeInTheDocument()
     expect(divider).not.toHaveClass('border-t')
   })
+
+  it('renders a divider with variant: "invisible" with border-0 class to suppress preflight border', () => {
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [{ type: 'divider', props: { variant: 'invisible' } }],
+    }
+    const { container } = renderRuntimePage(page)
+    const divider = container.querySelector('[data-layout-node="divider"]')
+    expect(divider).toBeInTheDocument()
+    expect(divider).toHaveClass('border-0')
+  })
+
+  it('renders a divider with variant: "invisible" with block and h-0 classes preserved', () => {
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [{ type: 'divider', props: { variant: 'invisible' } }],
+    }
+    const { container } = renderRuntimePage(page)
+    const divider = container.querySelector('[data-layout-node="divider"]')
+    expect(divider).toBeInTheDocument()
+    expect(divider).toHaveClass('block')
+    expect(divider).toHaveClass('h-0')
+  })
+
+  it('renders a divider with variant: "solid" without border-0 class', () => {
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [{ type: 'divider', props: { variant: 'solid' } }],
+    }
+    const { container } = renderRuntimePage(page)
+    const divider = container.querySelector('[data-layout-node="divider"]')
+    expect(divider).toBeInTheDocument()
+    expect(divider).not.toHaveClass('border-0')
+  })
+
+  it('renders a divider with variant: "dashed" without border-0 class', () => {
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [{ type: 'divider', props: { variant: 'dashed' } }],
+    }
+    const { container } = renderRuntimePage(page)
+    const divider = container.querySelector('[data-layout-node="divider"]')
+    expect(divider).toBeInTheDocument()
+    expect(divider).not.toHaveClass('border-0')
+  })
+
+  it('renders a divider with variant: "dotted" without border-0 class', () => {
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [{ type: 'divider', props: { variant: 'dotted' } }],
+    }
+    const { container } = renderRuntimePage(page)
+    const divider = container.querySelector('[data-layout-node="divider"]')
+    expect(divider).toBeInTheDocument()
+    expect(divider).not.toHaveClass('border-0')
+  })
 })
 
 describe('DividerNode — transversal features (via LayoutNodeRenderer)', () => {

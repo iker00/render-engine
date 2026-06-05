@@ -27,7 +27,7 @@ Se renderiza como un `<hr data-layout-node="divider">` con clases Tailwind segú
 | `solid` | `border-t border-app-border-soft` | Línea continua visible. |
 | `dashed` | `border-t border-dashed border-app-border-soft` | Línea discontinua visible. |
 | `dotted` | `border-t border-dotted border-app-border-soft` | Línea punteada visible. |
-| `invisible` | `block h-0` | Separador sin línea visible; actúa como espaciador puro. |
+| `invisible` | `block h-0 border-0` | Separador sin línea visible; actúa como espaciador puro. `border-0` suprime el borde que aplica el preflight de Tailwind v4 al elemento `<hr>`. |
 
 ## Comportamiento de render
 

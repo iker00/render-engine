@@ -10,7 +10,7 @@ const variantClassMap: Record<DividerVariant, string> = {
   solid: 'border-t border-app-border-soft',
   dashed: 'border-t border-dashed border-app-border-soft',
   dotted: 'border-t border-dotted border-app-border-soft',
-  invisible: 'block h-0',
+  invisible: 'block h-0 border-0',
 }
 
 export function DividerNode({ node }: DividerNodeProps) {
