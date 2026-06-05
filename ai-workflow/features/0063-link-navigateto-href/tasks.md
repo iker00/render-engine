@@ -1,0 +1,112 @@
+# Tasks: Link `navigateTo` — añadir `href` canónico
+
+Contrato de ejecución secuencial. La tarea T01 debe quedar cerrada antes de iniciar la T02.
+
+---
+
+## T01 — Helper puro `resolveLinkActionHref`
+
+- **ID**: T01
+- **Estado**: done
+- **Objetivo**: Introducir un helper puro que reciba el `props.action` de un nodo `link` (`navigateTo | goBack`), el `state.navigation` del runtime y el `initialPageId` de la config, y devuelva el `href` canónico que el `<a>` debe pintar. La función debe ser pura, sin efectos secundarios ni dependencias de React.
+- **Fuera de alcance**:
+  - Tocar el componente `LinkNode` o cualquier otro renderer.
+  - Modificar el contrato de validación, schema Zod o tipos públicos de `LinkLayoutNode`.
+  - Cambiar la firma o el comportamiento de `createBrowserHashNavigationHash`.
+  - Añadir un nuevo hook de React; eso queda para T02.
+- **Dependencias**: ninguna.
+- **Impacto esperado en archivos**:
+  - Código a crear:
+    - `src/runtime/nodes/link-action-href.ts` — exporta `resolveLinkActionHref(action, navigation, initialPageId): string`.
+  - Tests a crear:
+    - `src/tests/runtime/runtime-link-action-href.test.ts`.
+  - Documentación a revisar: `ai-workflow/docs/app-features/nodes/link.md` (afectado por la feature en su conjunto; ver T02).
+- **Detalle de la función**:
+  - Importa `createBrowserHashNavigationHash` desde `src/runtime/runtime-navigation/browser-hash-navigation.ts` para el caso `goBack`.
+  - Para `action.type === 'navigateTo'`: devuelve siempre el literal `` `#/${action.pageId}` ``. No usar `createBrowserHashNavigationHash` aquí; el spec exige `#/initialPageId` aun cuando `pageId === initialPageId`.
+  - Para `action.type === 'goBack'`:
+    - Si `navigation.currentEntryIndex < 1` o `navigation.history[navigation.currentEntryIndex - 1]` no existe, devuelve `"#"`.
+    - En caso contrario, calcula el hash canónico llamando a `createBrowserHashNavigationHash({ pageId: previousEntry.pageId, params: previousEntry.params }, { initialPageId })`.
+  - La función no debe lanzar excepciones para entradas válidas según el contrato de `LinkLayoutNode`; cualquier degradación esperada se modela como `"#"`.
+- **Tests**:
+  - **Ficheros de test**:
+    - `src/tests/runtime/runtime-link-action-href.test.ts` (nuevo) — único fichero responsable del comportamiento unitario del helper.
+  - **Comportamiento cubierto**:
+    - `navigateTo` con `pageId` distinto de `initialPage` devuelve `#/{pageId}`.
+    - `navigateTo` con `pageId` igual al `initialPage` devuelve `#/{initialPageId}` literal (NO normaliza a `#/`).
+    - `navigateTo` con `pageId` ignora cualquier `action.params` adicional: el `href` no incluye query string.
+    - `goBack` con `currentEntryIndex < 1` (incluye historial vacío y única entrada inicial) devuelve `"#"`.
+    - `goBack` con entrada previa cuyo `pageId` es distinto del `initialPage` y sin params devuelve `#/{previousPageId}`.
+    - `goBack` con entrada previa cuyo `pageId` coincide con `initialPage` devuelve `#/` (normalización canónica de la home).
+    - `goBack` con entrada previa que contiene `params` escalares devuelve un hash con query string ordenado alfabéticamente (consistente con el contrato canónico).
+    - `goBack` con `currentEntryIndex` apuntando a una entrada inexistente (`history[currentEntryIndex - 1]` undefined) devuelve `"#"`.
+  - **Comandos durante la implementación**:
+    - `pnpm test --run src/tests/runtime/runtime-link-action-href.test.ts`
+  - **Restricciones**:
+    - No mockear `createBrowserHashNavigationHash`: usar la implementación real para validar la canonicalización por composición.
+    - No usar fixtures globales; cada caso construye el `navigation` y el `action` mínimos.
+- **Documentación afectada**: ninguna en esta tarea; el helper es interno y no aparece como API pública. La ficha `link.md` se actualizará a partir de las notas consolidadas tras la pasada (responsabilidad de `update-app-documentation`).
+- **Criterios de finalización**:
+  - El helper existe en la ruta indicada y exporta una firma tipada.
+  - Todos los casos del sub-bloque `tests` pasan en verde.
+  - No se han tocado `LinkNode`, `useRuntimeState*`, ni los tests de `layout-renderer`.
+- **Cierre de implementación**:
+  - `pnpm test --run src/tests/runtime/runtime-link-action-href.test.ts` en verde.
+
+---
+
+## T02 — Render del `href` en `LinkNode` con acción
+
+- **ID**: T02
+- **Estado**: done
+- **Objetivo**: Usar el helper de T01 dentro del componente `LinkNode` para que, cuando `props.action` esté declarado (`navigateTo` o `goBack`), el `<a>` renderizado lleve un atributo `href` decorativo. El comportamiento de clic (`preventDefault` + `executeRuntimeUiAction`) no cambia. El caso de `props.href` externo queda intacto.
+- **Fuera de alcance**:
+  - Cambiar la firma o comportamiento del helper introducido en T01.
+  - Modificar la validación Zod, el schema o cualquier contrato declarativo de `LinkLayoutNode`.
+  - Cambiar el comportamiento de navegación: el clic sigue ejecutándose vía `executeRuntimeUiAction`, no por seguimiento nativo del `href`.
+  - Tocar el nodo `button` o cualquier otro renderer.
+  - Inyectar `rel`, `title` u otros atributos nuevos en el `<a>`.
+- **Dependencias**: T01 cerrada.
+- **Impacto esperado en archivos**:
+  - Código a modificar:
+    - `src/runtime/nodes/link-layout-node.tsx` — importar y usar `resolveLinkActionHref`; calcular el `href` cuando `action` esté presente; mantener intacto el comportamiento cuando `href` esté presente.
+    - `src/runtime/runtime-state/runtime-state-provider.tsx` — añadir y exportar un hook `useRuntimeConfig(): RuntimeConfig` (o equivalente mínimo `useRuntimeInitialPageId(): string`) que permita a `LinkNode` acceder al `initialPage` sin romper el encapsulado. Mantener el hook estrictamente de solo lectura.
+  - Tests a modificar:
+    - `src/tests/layout-renderer/layout-renderer-buttons-text.test.tsx` (ampliación) — añadir casos de `href` decorativo para `navigateTo` y `goBack`, y reforzar el caso de comportamiento de clic.
+  - Documentación a revisar: `ai-workflow/docs/app-features/nodes/link.md` (descrita por la skill posterior; ver Documentación afectada).
+- **Detalle de la implementación**:
+  - El cálculo de `resolvedActionHref` debe envolverse en `useMemo` con dependencias `[action, navigation, initialPageId]` para preservar la estabilidad entre renders sucesivos cuando la config no cambia (criterio no funcional de la spec).
+  - El render queda:
+    - Si `href` está presente: usar la rama actual sin cambios, `href={resolvedHref}`.
+    - Si `action` está presente y `href` ausente: `href={resolvedActionHref}`.
+    - El `onClick` con `preventDefault` + `executeRuntimeUiAction` se mantiene tal cual cuando `action` está presente.
+    - Cuando ni `href` ni `action` estén presentes (caso teórico bloqueado por validación previa), no añadir `href` al `<a>`.
+  - El hook nuevo expuesto desde `runtime-state-provider.tsx` debe limitarse a devolver lo necesario (preferentemente `RuntimeConfig`) y no introducir lógica adicional. No debe alterar `useRuntimeStateContext` ni los hooks existentes.
+- **Tests**:
+  - **Ficheros de test**:
+    - `src/tests/layout-renderer/layout-renderer-buttons-text.test.tsx` (ampliación).
+  - **Comportamiento cubierto**:
+    - Un `link` con `action: { type: 'navigateTo', pageId: 'dashboard' }` renderiza `<a>` con `href="#/dashboard"`.
+    - Un `link` con `action: navigateTo` cuyo `pageId` coincide con `initialPage` mantiene `href="#/{initialPageId}"` literal (no se normaliza a `#/`).
+    - Un `link` con `action: navigateTo` y `params` declarados ignora los params en el `href` (no aparecen en el atributo).
+    - Un `link` con `action: { type: 'goBack' }` y al menos una entrada previa en `state.navigation.history` renderiza `<a href="#/{previousPageId}">` (incluido el caso en que la entrada previa es `initialPage`, donde el href es `#/`).
+    - Un `link` con `action: { type: 'goBack' }` sin historial previo (`currentEntryIndex < 1`) renderiza `<a href="#">`.
+    - Un `link` con `action: navigateTo` clickeado sigue invocando la navegación del runtime y previene el comportamiento nativo del `<a>`: el test debe verificar que el `pageId` del runtime cambia tras el click (no que se siga el `href` del navegador).
+    - El test existente del caso `href` externo (`props.href` declarado con literal o referencia) sigue en verde sin modificaciones.
+  - **Comandos durante la implementación**:
+    - `pnpm test --run src/tests/layout-renderer/layout-renderer-buttons-text.test.tsx`
+    - `pnpm test --run src/tests/runtime/runtime-link-action-href.test.ts` (regresión sobre T01).
+  - **Restricciones**:
+    - Reutilizar los helpers existentes del fichero (`renderRuntimePage`, `renderRuntimePageWithState`, fixtures de historial). No introducir un nuevo harness paralelo.
+    - El caso del `it('does not include static href attribute when props.action is declared', …)` debe actualizarse o reemplazarse para reflejar que el `<a>` ahora SÍ lleva `href`. No dejar la aserción antigua viva: contradice la feature.
+    - No añadir snapshots: las aserciones deben ser explícitas sobre `href`.
+- **Documentación afectada**:
+  - `ai-workflow/docs/app-features/nodes/link.md` — la sección **Comportamiento de render** y **Casos límite** deben recoger el nuevo `href` decorativo (no se actualiza en esta tarea; queda anotado para `update-app-documentation`).
+- **Criterios de finalización**:
+  - `LinkNode` pinta el `href` esperado en los dos modos de acción (`navigateTo`, `goBack`).
+  - El comportamiento de clic (`preventDefault` + ejecución de la acción del runtime) sigue siendo el único motor de navegación.
+  - El caso `href` externo (modo URL) se comporta exactamente como antes.
+  - Los tests existentes del nodo `link` siguen en verde junto con los nuevos casos.
+- **Cierre de implementación**:
+  - `pnpm test --run src/tests/layout-renderer/layout-renderer-buttons-text.test.tsx` en verde.
+  - `pnpm test --run src/tests/runtime/runtime-link-action-href.test.ts` en verde (sin regresión sobre T01).
