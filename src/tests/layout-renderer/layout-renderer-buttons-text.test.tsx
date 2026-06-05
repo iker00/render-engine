@@ -530,15 +530,13 @@ describe('RuntimePage', () => {
       'items-center',
       'justify-center',
       'rounded-control',
-      'border-app-border-strong',
-      'bg-white',
+      'border',
       'px-4',
       'py-3',
       'sm:px-3.5',
       'sm:py-2.5',
       'text-sm',
       'font-semibold',
-      'text-app-text-strong',
     )
   })
 

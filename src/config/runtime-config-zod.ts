@@ -378,6 +378,9 @@ export const resetFormRuntimeUiActionSchema = z
   })
   .strip()
 
+export const supportedButtonVariants = ['solid', 'outline', 'ghost', 'link'] as const
+export const supportedButtonColors = ['neutral', 'primary', 'success', 'warning', 'danger', 'info'] as const
+
 export const buttonNodeSchema = z
   .object({
     type: z.literal('button'),
@@ -389,6 +392,9 @@ export const buttonNodeSchema = z
       .object({
         label: z.string(),
         action: z.unknown().optional(),
+        color: z.enum(supportedButtonColors).optional(),
+        variant: z.enum(supportedButtonVariants).optional(),
+        fullWidth: z.boolean().optional(),
       })
       .strip(),
   })

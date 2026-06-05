@@ -537,12 +537,18 @@ export type NavigateToButtonAction = NavigateToRuntimeUiAction
 export type GoBackButtonAction = GoBackRuntimeUiAction
 export type ButtonAction = RuntimeUiAction
 
+export type ButtonColor = 'neutral' | 'primary' | 'success' | 'warning' | 'danger' | 'info'
+export type ButtonVariant = 'solid' | 'outline' | 'ghost' | 'link'
+
 export interface ButtonLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayoutFields {
   type: 'button'
   id?: string
   props: {
     label: string
     action?: RuntimeUiAction
+    color?: ButtonColor
+    variant?: ButtonVariant
+    fullWidth?: boolean
   }
   children?: unknown
 }

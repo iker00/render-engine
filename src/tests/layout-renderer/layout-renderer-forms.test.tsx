@@ -247,8 +247,8 @@ describe('RuntimePage', () => {
       'sm:py-2.5',
     )
     expect(screen.getByRole('combobox', { name: 'Role' })).not.toHaveClass('shadow-sm')
-    expect(buttons[0]).toHaveClass('bg-white', 'text-app-text-strong', 'sm:px-3.5', 'sm:py-2.5')
-    expect(buttons[1]).toHaveClass('bg-app-accent', 'text-white', 'sm:px-3.5', 'sm:py-2.5')
+    expect(buttons[0]).toHaveClass('bg-blue-600', 'text-white', 'sm:px-3.5', 'sm:py-2.5')
+    expect(buttons[1]).toHaveClass('bg-blue-600', 'text-white', 'sm:px-3.5', 'sm:py-2.5')
     expect(buttons[0]).toHaveTextContent('Aux reset')
     expect(buttons[1]).toHaveTextContent('Submit profile')
   })

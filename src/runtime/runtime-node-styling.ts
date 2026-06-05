@@ -1,5 +1,7 @@
 import type { CSSProperties } from 'react'
 import type {
+  ButtonColor,
+  ButtonVariant,
   ChoiceGroupOptionLayout,
   RuntimeResponsiveBreakpoint,
   RuntimeResponsiveLayoutValue,
@@ -769,4 +771,78 @@ export function getModalPanelClassName(size: 'sm' | 'md' | 'lg' = 'md') {
     'shadow-shell',
     'sm:p-8',
   ].join(' ')
+}
+
+const buttonSolidVariantClassMap: Record<ButtonColor, string> = {
+  neutral: 'bg-gray-500 border-gray-500 text-white hover:bg-gray-600 hover:border-gray-600',
+  primary: 'bg-blue-600 border-blue-600 text-white hover:bg-blue-700 hover:border-blue-700',
+  success: 'bg-green-600 border-green-600 text-white hover:bg-green-700 hover:border-green-700',
+  warning: 'bg-yellow-400 border-yellow-400 text-gray-900 hover:bg-yellow-500 hover:border-yellow-500',
+  danger: 'bg-red-600 border-red-600 text-white hover:bg-red-700 hover:border-red-700',
+  info: 'bg-cyan-500 border-cyan-500 text-gray-900 hover:bg-cyan-600 hover:border-cyan-600',
+}
+
+const buttonOutlineVariantClassMap: Record<ButtonColor, string> = {
+  neutral: 'bg-transparent border-gray-400 text-gray-600 hover:bg-gray-50',
+  primary: 'bg-transparent border-blue-500 text-blue-600 hover:bg-blue-50',
+  success: 'bg-transparent border-green-500 text-green-600 hover:bg-green-50',
+  warning: 'bg-transparent border-yellow-400 text-yellow-600 hover:bg-yellow-50',
+  danger: 'bg-transparent border-red-500 text-red-600 hover:bg-red-50',
+  info: 'bg-transparent border-cyan-500 text-cyan-600 hover:bg-cyan-50',
+}
+
+const buttonGhostVariantClassMap: Record<ButtonColor, string> = {
+  neutral: 'border-transparent bg-transparent text-gray-600 hover:bg-gray-100',
+  primary: 'border-transparent bg-transparent text-blue-600 hover:bg-blue-100',
+  success: 'border-transparent bg-transparent text-green-600 hover:bg-green-100',
+  warning: 'border-transparent bg-transparent text-yellow-600 hover:bg-yellow-100',
+  danger: 'border-transparent bg-transparent text-red-600 hover:bg-red-100',
+  info: 'border-transparent bg-transparent text-cyan-600 hover:bg-cyan-100',
+}
+
+const buttonLinkVariantClassMap: Record<ButtonColor, string> = {
+  neutral: 'border-transparent bg-transparent text-gray-600 hover:underline underline-offset-2',
+  primary: 'border-transparent bg-transparent text-blue-600 hover:underline underline-offset-2',
+  success: 'border-transparent bg-transparent text-green-600 hover:underline underline-offset-2',
+  warning: 'border-transparent bg-transparent text-yellow-600 hover:underline underline-offset-2',
+  danger: 'border-transparent bg-transparent text-red-600 hover:underline underline-offset-2',
+  info: 'border-transparent bg-transparent text-cyan-600 hover:underline underline-offset-2',
+}
+
+const buttonVariantClassMaps: Record<ButtonVariant, Record<ButtonColor, string>> = {
+  solid: buttonSolidVariantClassMap,
+  outline: buttonOutlineVariantClassMap,
+  ghost: buttonGhostVariantClassMap,
+  link: buttonLinkVariantClassMap,
+}
+
+export function getButtonVariantClassName(
+  color: ButtonColor,
+  variant: ButtonVariant,
+  fullWidth: boolean,
+): string {
+  const baseClasses = [
+    'inline-flex',
+    'items-center',
+    'justify-center',
+    'rounded-control',
+    'border',
+    'px-4',
+    'py-3',
+    'sm:px-3.5',
+    'sm:py-2.5',
+    'text-sm',
+    'font-semibold',
+    'leading-5',
+    'transition-colors',
+    'cursor-pointer',
+    'focus-visible:outline',
+    'focus-visible:outline-2',
+    'focus-visible:outline-offset-2',
+    'focus-visible:outline-app-accent',
+  ]
+  const widthClass = fullWidth ? 'w-full' : 'self-start'
+  const variantClasses = buttonVariantClassMaps[variant][color]
+
+  return [...baseClasses, widthClass, variantClasses].join(' ')
 }

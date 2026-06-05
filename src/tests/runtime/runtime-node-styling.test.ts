@@ -6,6 +6,7 @@ import {
   getAppShellErrorEyebrowClassName,
   getAppShellErrorTitleClassName,
   getAppShellFrameClassName,
+  getButtonVariantClassName,
   getChoiceGroupClassName,
   getChoiceOptionClassName,
   getFieldControlClassName,
@@ -370,5 +371,67 @@ describe('runtime node styling', () => {
     expect(getHeadingTag(0)).toBe('h1')
     expect(getHeadingTag(3)).toBe('h3')
     expect(getHeadingTag(9)).toBe('h6')
+  })
+
+  describe('getButtonVariantClassName', () => {
+    it('renders a solid primary button with self-start when fullWidth is false', () => {
+      const className = getButtonVariantClassName('primary', 'solid', false)
+
+      expect(className).toContain('bg-blue-600')
+      expect(className).toContain('text-white')
+      expect(className).toContain('self-start')
+      expect(className).not.toContain('w-full')
+    })
+
+    it('uses w-full instead of self-start when fullWidth is true', () => {
+      const className = getButtonVariantClassName('primary', 'solid', true)
+
+      expect(className).toContain('w-full')
+      expect(className).not.toContain('self-start')
+    })
+
+    it('renders a solid danger button with red background and white text', () => {
+      const className = getButtonVariantClassName('danger', 'solid', false)
+
+      expect(className).toContain('bg-red-600')
+      expect(className).toContain('text-white')
+    })
+
+    it('renders a solid warning button with dark text for low-luminance background', () => {
+      const className = getButtonVariantClassName('warning', 'solid', false)
+
+      expect(className).toContain('bg-yellow-400')
+      expect(className).toContain('text-gray-900')
+    })
+
+    it('renders an outline primary button with transparent background and colored border and text', () => {
+      const className = getButtonVariantClassName('primary', 'outline', false)
+
+      expect(className).toContain('bg-transparent')
+      expect(className).toContain('border-blue-500')
+      expect(className).toContain('text-blue-600')
+    })
+
+    it('renders a ghost success button with transparent background and border and colored text', () => {
+      const className = getButtonVariantClassName('success', 'ghost', false)
+
+      expect(className).toContain('bg-transparent')
+      expect(className).toContain('border-transparent')
+      expect(className).toContain('text-green-600')
+    })
+
+    it('renders a link info button with cyan text and hover underline', () => {
+      const className = getButtonVariantClassName('info', 'link', false)
+
+      expect(className).toContain('text-cyan-600')
+      expect(className).toContain('hover:underline')
+    })
+
+    it('renders an outline neutral button with gray border and gray text', () => {
+      const className = getButtonVariantClassName('neutral', 'outline', false)
+
+      expect(className).toContain('text-gray-600')
+      expect(className).toContain('border-gray-400')
+    })
   })
 })

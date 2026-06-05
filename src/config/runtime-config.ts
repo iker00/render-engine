@@ -11,6 +11,8 @@ export type {
   DividerLayoutNode,
   DividerVariant,
   ButtonAction,
+  ButtonColor,
+  ButtonVariant,
   ButtonLayoutNode,
   LinkLayoutNode,
   CloseModalRuntimeUiAction,

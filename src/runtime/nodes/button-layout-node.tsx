@@ -1,11 +1,11 @@
-import type { ButtonLayoutNode } from '../../config/runtime-config'
+import type { ButtonColor, ButtonLayoutNode, ButtonVariant } from '../../config/runtime-config'
 import { useOptionalFormContext } from '../form-context'
 import {
   resolveRuntimeTextReference,
   type RuntimeIterationContext,
 } from '../runtime-references/runtime-reference-resolver'
 import { executeRuntimeUiAction } from '../runtime-actions/runtime-ui-action-executor'
-import { getPrimaryButtonNodeClassName, getSecondaryButtonNodeClassName } from '../runtime-node-styling'
+import { getButtonVariantClassName } from '../runtime-node-styling'
 import { useRuntimeState, useRuntimeStateActions } from '../runtime-state/runtime-state-provider'
 
 interface ButtonNodeProps {
@@ -19,7 +19,10 @@ export function ButtonNode({ node, iterationContext }: ButtonNodeProps) {
   const formContext = useOptionalFormContext()
   const action = node.props.action
   const isImplicitSubmit = action === undefined && formContext !== null
-  const className = isImplicitSubmit ? getPrimaryButtonNodeClassName() : getSecondaryButtonNodeClassName()
+  const color: ButtonColor = node.props.color ?? 'primary'
+  const variant: ButtonVariant = node.props.variant ?? 'solid'
+  const fullWidth = node.props.fullWidth ?? false
+  const className = getButtonVariantClassName(color, variant, fullWidth)
   const label = resolveRuntimeTextReference(node.props.label, state, 'button.props.label', { iterationContext })
 
   return (

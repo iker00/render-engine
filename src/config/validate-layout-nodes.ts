@@ -1309,6 +1309,18 @@ function validateButtonNode(
       return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.action".`)
     }
 
+    if (issuePath[0] === 'props' && issuePath[1] === 'color') {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.color".`)
+    }
+
+    if (issuePath[0] === 'props' && issuePath[1] === 'variant') {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.variant".`)
+    }
+
+    if (issuePath[0] === 'props' && issuePath[1] === 'fullWidth') {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.fullWidth".`)
+    }
+
     const layoutIssue = mapLayoutNodeIssue(pageId, path, issuePath)
 
     if (layoutIssue) {
@@ -1361,6 +1373,9 @@ function validateButtonNode(
       props: {
         label: parseResult.data.props.label,
         action,
+        color: parseResult.data.props.color,
+        variant: parseResult.data.props.variant,
+        fullWidth: parseResult.data.props.fullWidth,
       },
     },
   }
