@@ -827,6 +827,306 @@ describe('validateRuntimeConfig', () => {
         },
       })
     })
+
+    describe('placeholder field on input, textarea and select nodes', () => {
+      it('accepts input with props.placeholder as a string and exposes it in the normalized node', () => {
+        const result = validateRuntimeConfig(
+          createConfigWithFormLayout({
+            children: [
+              {
+                type: 'input',
+                props: {
+                  fieldId: 'name',
+                  label: 'Name',
+                  placeholder: 'Introduce tu nombre',
+                },
+              },
+            ],
+          }),
+        )
+
+        expect(result.status).toBe('ready')
+        if (result.status !== 'ready') throw new Error('Expected ready')
+
+        const formNode = result.page.layout[0]
+        if (formNode.type !== 'form') throw new Error('Expected form')
+
+        expect(formNode.children?.[0]).toMatchObject({
+          type: 'input',
+          props: { fieldId: 'name', placeholder: 'Introduce tu nombre' },
+        })
+      })
+
+      it('accepts input without props.placeholder and the normalized node does not include it', () => {
+        const result = validateRuntimeConfig(
+          createConfigWithFormLayout({
+            children: [
+              {
+                type: 'input',
+                props: {
+                  fieldId: 'name',
+                  label: 'Name',
+                },
+              },
+            ],
+          }),
+        )
+
+        expect(result.status).toBe('ready')
+        if (result.status !== 'ready') throw new Error('Expected ready')
+
+        const formNode = result.page.layout[0]
+        if (formNode.type !== 'form') throw new Error('Expected form')
+
+        expect(formNode.children?.[0]).not.toHaveProperty('props.placeholder')
+      })
+
+      it('accepts input with props.placeholder as empty string and preserves it', () => {
+        const result = validateRuntimeConfig(
+          createConfigWithFormLayout({
+            children: [
+              {
+                type: 'input',
+                props: {
+                  fieldId: 'name',
+                  label: 'Name',
+                  placeholder: '',
+                },
+              },
+            ],
+          }),
+        )
+
+        expect(result.status).toBe('ready')
+        if (result.status !== 'ready') throw new Error('Expected ready')
+
+        const formNode = result.page.layout[0]
+        if (formNode.type !== 'form') throw new Error('Expected form')
+
+        expect(formNode.children?.[0]).toMatchObject({
+          type: 'input',
+          props: { placeholder: '' },
+        })
+      })
+
+      it('rejects input with props.placeholder as a non-string value', () => {
+        const result = validateRuntimeConfig(
+          createConfigWithFormLayout({
+            children: [
+              {
+                type: 'input',
+                props: {
+                  fieldId: 'name',
+                  label: 'Name',
+                  placeholder: 123,
+                },
+              },
+            ],
+          }),
+        )
+
+        expect(result).toEqual({
+          status: 'error',
+          error: {
+            code: 'invalid-layout',
+            displayMode: 'development-only',
+            message: 'Page "home" has an invalid layout at "layout[0].children[0].props.placeholder".',
+          },
+        })
+      })
+
+      it('accepts textarea with props.placeholder as a string and exposes it in the normalized node', () => {
+        const result = validateRuntimeConfig(
+          createConfigWithFormLayout({
+            children: [
+              {
+                type: 'textarea',
+                props: {
+                  fieldId: 'bio',
+                  label: 'Bio',
+                  placeholder: 'Escribe aquí...',
+                },
+              },
+            ],
+          }),
+        )
+
+        expect(result.status).toBe('ready')
+        if (result.status !== 'ready') throw new Error('Expected ready')
+
+        const formNode = result.page.layout[0]
+        if (formNode.type !== 'form') throw new Error('Expected form')
+
+        expect(formNode.children?.[0]).toMatchObject({
+          type: 'textarea',
+          props: { fieldId: 'bio', placeholder: 'Escribe aquí...' },
+        })
+      })
+
+      it('rejects textarea with props.placeholder as a non-string value', () => {
+        const result = validateRuntimeConfig(
+          createConfigWithFormLayout({
+            children: [
+              {
+                type: 'textarea',
+                props: {
+                  fieldId: 'bio',
+                  label: 'Bio',
+                  placeholder: true,
+                },
+              },
+            ],
+          }),
+        )
+
+        expect(result).toEqual({
+          status: 'error',
+          error: {
+            code: 'invalid-layout',
+            displayMode: 'development-only',
+            message: 'Page "home" has an invalid layout at "layout[0].children[0].props.placeholder".',
+          },
+        })
+      })
+
+      it('accepts select simple with props.placeholder and exposes it in the normalized node', () => {
+        const result = validateRuntimeConfig(
+          createConfigWithFormLayout({
+            children: [
+              {
+                type: 'select',
+                props: {
+                  fieldId: 'role',
+                  label: 'Role',
+                  placeholder: 'Selecciona una opción',
+                  items: [{ label: 'Admin', value: 'admin' }],
+                },
+              },
+            ],
+          }),
+        )
+
+        expect(result.status).toBe('ready')
+        if (result.status !== 'ready') throw new Error('Expected ready')
+
+        const formNode = result.page.layout[0]
+        if (formNode.type !== 'form') throw new Error('Expected form')
+
+        expect(formNode.children?.[0]).toMatchObject({
+          type: 'select',
+          props: { fieldId: 'role', placeholder: 'Selecciona una opción' },
+        })
+      })
+
+      it('accepts select.multiple with props.placeholder declared (not rejected, runtime ignores it silently)', () => {
+        const result = validateRuntimeConfig(
+          createConfigWithFormLayout({
+            children: [
+              {
+                type: 'select',
+                props: {
+                  fieldId: 'scopes',
+                  label: 'Scopes',
+                  multiple: true,
+                  placeholder: 'Selecciona varias',
+                  items: { values: ['read', 'write'] },
+                },
+              },
+            ],
+          }),
+        )
+
+        expect(result.status).toBe('ready')
+        if (result.status !== 'ready') throw new Error('Expected ready')
+
+        const formNode = result.page.layout[0]
+        if (formNode.type !== 'form') throw new Error('Expected form')
+
+        expect(formNode.children?.[0]).toMatchObject({
+          type: 'select',
+          props: { fieldId: 'scopes', multiple: true, placeholder: 'Selecciona varias' },
+        })
+      })
+
+      it('rejects select with props.placeholder as a non-string value', () => {
+        const result = validateRuntimeConfig(
+          createConfigWithFormLayout({
+            children: [
+              {
+                type: 'select',
+                props: {
+                  fieldId: 'role',
+                  label: 'Role',
+                  placeholder: 99,
+                  items: [{ label: 'Admin', value: 'admin' }],
+                },
+              },
+            ],
+          }),
+        )
+
+        expect(result).toEqual({
+          status: 'error',
+          error: {
+            code: 'invalid-layout',
+            displayMode: 'development-only',
+            message: 'Page "home" has an invalid layout at "layout[0].children[0].props.placeholder".',
+          },
+        })
+      })
+
+      it('strips props.placeholder from radioGroup (not in scope) without error', () => {
+        const result = validateRuntimeConfig(
+          createConfigWithFormLayout({
+            children: [
+              {
+                type: 'radioGroup',
+                props: {
+                  fieldId: 'role',
+                  label: 'Role',
+                  placeholder: 'Should be stripped',
+                  items: [{ label: 'Admin', value: 'admin' }],
+                },
+              },
+            ],
+          }),
+        )
+
+        expect(result.status).toBe('ready')
+        if (result.status !== 'ready') throw new Error('Expected ready')
+
+        const formNode = result.page.layout[0]
+        if (formNode.type !== 'form') throw new Error('Expected form')
+
+        expect(formNode.children?.[0]).not.toHaveProperty('props.placeholder')
+      })
+
+      it('strips props.placeholder from checkboxGroup (not in scope) without error', () => {
+        const result = validateRuntimeConfig(
+          createConfigWithFormLayout({
+            children: [
+              {
+                type: 'checkboxGroup',
+                props: {
+                  fieldId: 'scopes',
+                  label: 'Scopes',
+                  placeholder: 'Should be stripped',
+                  items: { values: ['read', 'write'] },
+                },
+              },
+            ],
+          }),
+        )
+
+        expect(result.status).toBe('ready')
+        if (result.status !== 'ready') throw new Error('Expected ready')
+
+        const formNode = result.page.layout[0]
+        if (formNode.type !== 'form') throw new Error('Expected form')
+
+        expect(formNode.children?.[0]).not.toHaveProperty('props.placeholder')
+      })
+    })
   })
 
   it('validates fallback trees with the same form semantics and action targets as the main layout tree', () => {

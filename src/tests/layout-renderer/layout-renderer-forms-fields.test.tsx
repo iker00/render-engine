@@ -1807,4 +1807,690 @@ describe('RuntimePage', () => {
       expect(document.getElementById('choice-form-teams-error')).not.toBeInTheDocument()
     })
   })
+
+  it('renders input placeholder attribute when props.placeholder is a non-empty string', () => {
+    renderRuntimeFormPage({
+      id: 'input-placeholder-basic',
+      layout: [
+        {
+          type: 'form',
+          id: 'placeholder-form',
+          children: [
+            {
+              type: 'input',
+              props: {
+                fieldId: 'name',
+                label: 'Name',
+                placeholder: 'Introduce tu nombre',
+              },
+            },
+          ],
+        },
+      ],
+    })
+
+    expect(screen.getByLabelText('Name')).toHaveAttribute('placeholder', 'Introduce tu nombre')
+  })
+
+  it('does not render placeholder attribute on input when props.placeholder is absent', () => {
+    renderRuntimeFormPage({
+      id: 'input-placeholder-absent',
+      layout: [
+        {
+          type: 'form',
+          id: 'placeholder-form',
+          children: [
+            {
+              type: 'input',
+              props: {
+                fieldId: 'name',
+                label: 'Name',
+              },
+            },
+          ],
+        },
+      ],
+    })
+
+    expect(screen.getByLabelText('Name')).not.toHaveAttribute('placeholder')
+  })
+
+  it('does not render placeholder attribute on input when props.placeholder is empty string', () => {
+    renderRuntimeFormPage({
+      id: 'input-placeholder-empty',
+      layout: [
+        {
+          type: 'form',
+          id: 'placeholder-form',
+          children: [
+            {
+              type: 'input',
+              props: {
+                fieldId: 'name',
+                label: 'Name',
+                placeholder: '',
+              },
+            },
+          ],
+        },
+      ],
+    })
+
+    expect(screen.getByLabelText('Name')).not.toHaveAttribute('placeholder')
+  })
+
+  it('resolves interpolated placeholder on input using params references', () => {
+    const activePage: RuntimePageConfig = {
+      id: 'input-placeholder-interpolated',
+      layout: [
+        {
+          type: 'form',
+          id: 'placeholder-form',
+          children: [
+            {
+              type: 'input',
+              props: {
+                fieldId: 'name',
+                label: 'Name',
+                placeholder: 'Hola {{params.userName}}',
+              },
+            },
+          ],
+        },
+      ],
+    }
+    const config: RuntimeConfig = {
+      api: {},
+      initialPage: activePage.id,
+      pages: [activePage],
+    }
+    const state: RuntimeState = {
+      ...createRuntimeState(config),
+      navigation: {
+        currentPageId: activePage.id,
+        history: [{ entryId: 0, pageId: activePage.id, params: { userName: 'Ada' } }],
+        currentEntryIndex: 0,
+        lastError: null,
+      },
+      pageEntry: {
+        entryId: 0,
+        pageId: activePage.id,
+        params: { userName: 'Ada' },
+        preloadNames: [],
+        status: 'idle',
+      },
+    }
+
+    renderRuntimePageWithState(activePage, state)
+
+    expect(screen.getByLabelText('Name')).toHaveAttribute('placeholder', 'Hola Ada')
+  })
+
+  it('renders partial literal text in placeholder when interpolated reference is missing', () => {
+    const activePage: RuntimePageConfig = {
+      id: 'input-placeholder-missing-ref',
+      layout: [
+        {
+          type: 'form',
+          id: 'placeholder-form',
+          children: [
+            {
+              type: 'input',
+              props: {
+                fieldId: 'name',
+                label: 'Name',
+                placeholder: 'Hola {{params.missing}}',
+              },
+            },
+          ],
+        },
+      ],
+    }
+    const config: RuntimeConfig = {
+      api: {},
+      initialPage: activePage.id,
+      pages: [activePage],
+    }
+    const state: RuntimeState = {
+      ...createRuntimeState(config),
+      pageEntry: {
+        entryId: 0,
+        pageId: activePage.id,
+        params: {},
+        preloadNames: [],
+        status: 'idle',
+      },
+    }
+
+    renderRuntimePageWithState(activePage, state)
+
+    expect(screen.getByLabelText('Name')).toHaveAttribute('placeholder', 'Hola ')
+  })
+
+  it('adding placeholder to input does not change form field value or trigger onChange side effects', () => {
+    renderRuntimeFormPage({
+      id: 'input-placeholder-no-value-change',
+      layout: [
+        {
+          type: 'form',
+          id: 'placeholder-form',
+          children: [
+            {
+              type: 'input',
+              props: {
+                fieldId: 'name',
+                label: 'Name',
+                defaultValue: 'existing value',
+                placeholder: 'Enter name',
+              },
+            },
+          ],
+        },
+      ],
+    })
+
+    expect(screen.getByLabelText('Name')).toHaveValue('existing value')
+    expect(screen.getByLabelText('Name')).toHaveAttribute('placeholder', 'Enter name')
+  })
+
+  it('renders textarea placeholder attribute when props.placeholder is a non-empty string', () => {
+    renderRuntimeFormPage({
+      id: 'textarea-placeholder-basic',
+      layout: [
+        {
+          type: 'form',
+          id: 'placeholder-form',
+          children: [
+            {
+              type: 'textarea',
+              props: {
+                fieldId: 'bio',
+                label: 'Bio',
+                placeholder: 'Escribe aquí...',
+              },
+            },
+          ],
+        },
+      ],
+    })
+
+    expect(document.getElementById('placeholder-form-bio')).toHaveAttribute('placeholder', 'Escribe aquí...')
+  })
+
+  it('does not render placeholder attribute on textarea when props.placeholder is absent', () => {
+    renderRuntimeFormPage({
+      id: 'textarea-placeholder-absent',
+      layout: [
+        {
+          type: 'form',
+          id: 'placeholder-form',
+          children: [
+            {
+              type: 'textarea',
+              props: {
+                fieldId: 'bio',
+                label: 'Bio',
+              },
+            },
+          ],
+        },
+      ],
+    })
+
+    expect(document.getElementById('placeholder-form-bio')).not.toHaveAttribute('placeholder')
+  })
+
+  it('does not render placeholder attribute on textarea when props.placeholder is empty string', () => {
+    renderRuntimeFormPage({
+      id: 'textarea-placeholder-empty',
+      layout: [
+        {
+          type: 'form',
+          id: 'placeholder-form',
+          children: [
+            {
+              type: 'textarea',
+              props: {
+                fieldId: 'bio',
+                label: 'Bio',
+                placeholder: '',
+              },
+            },
+          ],
+        },
+      ],
+    })
+
+    expect(document.getElementById('placeholder-form-bio')).not.toHaveAttribute('placeholder')
+  })
+
+  it('resolves interpolated placeholder on textarea using params references', () => {
+    const activePage: RuntimePageConfig = {
+      id: 'textarea-placeholder-interpolated',
+      layout: [
+        {
+          type: 'form',
+          id: 'placeholder-form',
+          children: [
+            {
+              type: 'textarea',
+              props: {
+                fieldId: 'bio',
+                label: 'Bio',
+                placeholder: '{{params.userName}}',
+              },
+            },
+          ],
+        },
+      ],
+    }
+    const config: RuntimeConfig = {
+      api: {},
+      initialPage: activePage.id,
+      pages: [activePage],
+    }
+    const state: RuntimeState = {
+      ...createRuntimeState(config),
+      navigation: {
+        currentPageId: activePage.id,
+        history: [{ entryId: 0, pageId: activePage.id, params: { userName: 'Ada' } }],
+        currentEntryIndex: 0,
+        lastError: null,
+      },
+      pageEntry: {
+        entryId: 0,
+        pageId: activePage.id,
+        params: { userName: 'Ada' },
+        preloadNames: [],
+        status: 'idle',
+      },
+    }
+
+    renderRuntimePageWithState(activePage, state)
+
+    expect(document.getElementById('placeholder-form-bio')).toHaveAttribute('placeholder', 'Ada')
+  })
+
+  it('does not render placeholder on textarea when interpolated reference resolves to empty string', () => {
+    const activePage: RuntimePageConfig = {
+      id: 'textarea-placeholder-missing-ref',
+      layout: [
+        {
+          type: 'form',
+          id: 'placeholder-form',
+          children: [
+            {
+              type: 'textarea',
+              props: {
+                fieldId: 'bio',
+                label: 'Bio',
+                placeholder: '{{params.missing}}',
+              },
+            },
+          ],
+        },
+      ],
+    }
+    const config: RuntimeConfig = {
+      api: {},
+      initialPage: activePage.id,
+      pages: [activePage],
+    }
+    const state: RuntimeState = {
+      ...createRuntimeState(config),
+      pageEntry: {
+        entryId: 0,
+        pageId: activePage.id,
+        params: {},
+        preloadNames: [],
+        status: 'idle',
+      },
+    }
+
+    renderRuntimePageWithState(activePage, state)
+
+    expect(document.getElementById('placeholder-form-bio')).not.toHaveAttribute('placeholder')
+  })
+
+  it('adding placeholder to textarea does not change field value', () => {
+    renderRuntimeFormPage({
+      id: 'textarea-placeholder-no-value-change',
+      layout: [
+        {
+          type: 'form',
+          id: 'placeholder-form',
+          children: [
+            {
+              type: 'textarea',
+              props: {
+                fieldId: 'bio',
+                label: 'Bio',
+                defaultValue: 'existing content',
+                placeholder: 'Write here',
+              },
+            },
+          ],
+        },
+      ],
+    })
+
+    const textarea = document.getElementById('placeholder-form-bio') as HTMLTextAreaElement
+    expect(textarea).toHaveValue('existing content')
+    expect(textarea).toHaveAttribute('placeholder', 'Write here')
+  })
+
+  it('renders select placeholder as first disabled option when props.placeholder is declared and no value is selected', () => {
+    renderRuntimeFormPage({
+      id: 'select-placeholder-basic',
+      layout: [
+        {
+          type: 'form',
+          id: 'placeholder-form',
+          children: [
+            {
+              type: 'select',
+              props: {
+                fieldId: 'role',
+                label: 'Role',
+                placeholder: 'Selecciona una opción',
+                items: [
+                  { label: 'Admin', value: 'admin' },
+                  { label: 'Editor', value: 'editor' },
+                ],
+              },
+            },
+          ],
+        },
+      ],
+    })
+
+    const select = screen.getByRole('combobox', { name: 'Role' })
+    const options = within(select).getAllByRole('option')
+    expect(options[0]).toHaveTextContent('Selecciona una opción')
+    expect(options[0]).toHaveAttribute('value', '')
+    expect(options[0]).toBeDisabled()
+    expect(options.map((o) => o.textContent)).toEqual(['Selecciona una opción', 'Admin', 'Editor'])
+  })
+
+  it('select placeholder option is not selectable (disabled attribute present)', () => {
+    renderRuntimeFormPage({
+      id: 'select-placeholder-disabled',
+      layout: [
+        {
+          type: 'form',
+          id: 'placeholder-form',
+          children: [
+            {
+              type: 'select',
+              props: {
+                fieldId: 'role',
+                label: 'Role',
+                placeholder: 'Selecciona una opción',
+                items: [
+                  { label: 'Admin', value: 'admin' },
+                ],
+              },
+            },
+          ],
+        },
+      ],
+    })
+
+    const select = screen.getByRole('combobox', { name: 'Role' })
+    const placeholderOption = within(select).getByRole('option', { name: 'Selecciona una opción' })
+    expect(placeholderOption).toBeDisabled()
+  })
+
+  it('select placeholder option is in DOM but not active when a real defaultValue is selected', async () => {
+    renderRuntimeFormPage({
+      id: 'select-placeholder-with-default',
+      layout: [
+        {
+          type: 'form',
+          id: 'placeholder-form',
+          children: [
+            {
+              type: 'select',
+              props: {
+                fieldId: 'role',
+                label: 'Role',
+                placeholder: 'Selecciona una opción',
+                defaultValue: 'admin',
+                items: [
+                  { label: 'Admin', value: 'admin' },
+                  { label: 'Editor', value: 'editor' },
+                ],
+              },
+            },
+          ],
+        },
+      ],
+    })
+
+    const select = screen.getByRole('combobox', { name: 'Role' })
+    await waitFor(() => expect(select).toHaveValue('admin'))
+    const placeholderOption = within(select).getByRole('option', { name: 'Selecciona una opción' })
+    expect(placeholderOption).toBeInTheDocument()
+    expect(placeholderOption).toBeDisabled()
+  })
+
+  it('select placeholder remains visible when defaultValue does not match any option', () => {
+    renderRuntimeFormPage({
+      id: 'select-placeholder-unmatched-default',
+      layout: [
+        {
+          type: 'form',
+          id: 'placeholder-form',
+          children: [
+            {
+              type: 'select',
+              props: {
+                fieldId: 'role',
+                label: 'Role',
+                placeholder: 'Selecciona',
+                defaultValue: 'nonexistent',
+                items: [
+                  { label: 'Admin', value: 'admin' },
+                ],
+              },
+            },
+          ],
+        },
+      ],
+    })
+
+    const select = screen.getByRole('combobox', { name: 'Role' })
+    const placeholderOption = within(select).getByRole('option', { name: 'Selecciona' })
+    expect(placeholderOption).toBeInTheDocument()
+    expect(placeholderOption).toBeDisabled()
+  })
+
+  it('select without props.placeholder preserves current behavior: first option empty without disabled', () => {
+    renderRuntimeFormPage({
+      id: 'select-placeholder-absent',
+      layout: [
+        {
+          type: 'form',
+          id: 'placeholder-form',
+          children: [
+            {
+              type: 'select',
+              props: {
+                fieldId: 'role',
+                label: 'Role',
+                items: [
+                  { label: 'Admin', value: 'admin' },
+                  { label: 'Editor', value: 'editor' },
+                ],
+              },
+            },
+          ],
+        },
+      ],
+    })
+
+    const select = screen.getByRole('combobox', { name: 'Role' })
+    const options = within(select).getAllByRole('option')
+    expect(options[0]).toHaveValue('')
+    expect(options[0]).not.toBeDisabled()
+    expect(options.map((o) => o.textContent)).toEqual(['', 'Admin', 'Editor'])
+  })
+
+  it('select with empty string props.placeholder behaves the same as no placeholder', () => {
+    renderRuntimeFormPage({
+      id: 'select-placeholder-empty',
+      layout: [
+        {
+          type: 'form',
+          id: 'placeholder-form',
+          children: [
+            {
+              type: 'select',
+              props: {
+                fieldId: 'role',
+                label: 'Role',
+                placeholder: '',
+                items: [
+                  { label: 'Admin', value: 'admin' },
+                ],
+              },
+            },
+          ],
+        },
+      ],
+    })
+
+    const select = screen.getByRole('combobox', { name: 'Role' })
+    const options = within(select).getAllByRole('option')
+    expect(options[0]).toHaveValue('')
+    expect(options[0]).not.toBeDisabled()
+  })
+
+  it('resolves interpolated placeholder on select using params references', () => {
+    const activePage: RuntimePageConfig = {
+      id: 'select-placeholder-interpolated',
+      layout: [
+        {
+          type: 'form',
+          id: 'placeholder-form',
+          children: [
+            {
+              type: 'select',
+              props: {
+                fieldId: 'role',
+                label: 'Role',
+                placeholder: 'Hola {{params.userName}}',
+                items: [
+                  { label: 'Admin', value: 'admin' },
+                ],
+              },
+            },
+          ],
+        },
+      ],
+    }
+    const config: RuntimeConfig = {
+      api: {},
+      initialPage: activePage.id,
+      pages: [activePage],
+    }
+    const state: RuntimeState = {
+      ...createRuntimeState(config),
+      navigation: {
+        currentPageId: activePage.id,
+        history: [{ entryId: 0, pageId: activePage.id, params: { userName: 'Ada' } }],
+        currentEntryIndex: 0,
+        lastError: null,
+      },
+      pageEntry: {
+        entryId: 0,
+        pageId: activePage.id,
+        params: { userName: 'Ada' },
+        preloadNames: [],
+        status: 'idle',
+      },
+    }
+
+    renderRuntimePageWithState(activePage, state)
+
+    const select = screen.getByRole('combobox', { name: 'Role' })
+    const placeholderOption = within(select).getByRole('option', { name: 'Hola Ada' })
+    expect(placeholderOption).toBeInTheDocument()
+    expect(placeholderOption).toBeDisabled()
+  })
+
+  it('select.multiple ignores props.placeholder and does not add any extra option', () => {
+    renderRuntimeFormPage({
+      id: 'select-multiple-placeholder-ignored',
+      layout: [
+        {
+          type: 'form',
+          id: 'placeholder-form',
+          children: [
+            {
+              type: 'select',
+              props: {
+                fieldId: 'roles',
+                label: 'Roles',
+                multiple: true,
+                placeholder: 'Selecciona varias',
+                items: [
+                  { label: 'Admin', value: 'admin' },
+                  { label: 'Editor', value: 'editor' },
+                ],
+              },
+            },
+          ],
+        },
+      ],
+    })
+
+    const select = screen.getByRole('listbox', { name: 'Roles' })
+    const options = within(select).getAllByRole('option')
+    expect(options.map((o) => o.textContent)).toEqual(['Admin', 'Editor'])
+    expect(options).toHaveLength(2)
+  })
+
+  it('select with placeholder and required validation still fails required when placeholder is selected', async () => {
+    renderRuntimeFormPage({
+      id: 'select-placeholder-required',
+      layout: [
+        {
+          type: 'form',
+          id: 'placeholder-form',
+          submitAction: {
+            type: 'executeOperation',
+            operationName: 'submitProfile',
+          },
+          children: [
+            {
+              type: 'select',
+              props: {
+                fieldId: 'role',
+                label: 'Role',
+                placeholder: 'Selecciona una opción',
+                items: [
+                  { label: 'Admin', value: 'admin' },
+                  { label: 'Editor', value: 'editor' },
+                ],
+                validations: {
+                  required: { value: true },
+                },
+              },
+            },
+            {
+              type: 'button',
+              props: { label: 'Submit' },
+            },
+          ],
+        },
+      ],
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Submit' }))
+
+    await waitFor(() => {
+      expect(document.getElementById('placeholder-form-role-error')).toBeInTheDocument()
+    })
+  })
 })

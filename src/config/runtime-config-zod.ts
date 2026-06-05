@@ -426,6 +426,7 @@ export const inputNodeSchema = z
     props: formFieldNodePropsSchema
       .extend({
         inputType: z.enum(supportedInputTypes).optional(),
+        placeholder: z.string().optional(),
       })
       .strip(),
   })
@@ -437,7 +438,11 @@ export const textareaNodeSchema = z
     queryStateFeedback: queryStateFeedbackSchema.optional(),
     visibility: visibilitySchema.optional(),
     layout: layoutNodeLayoutSchema.optional(),
-    props: formFieldNodePropsSchema,
+    props: formFieldNodePropsSchema
+      .extend({
+        placeholder: z.string().optional(),
+      })
+      .strip(),
   })
   .strip()
 
@@ -458,6 +463,7 @@ export const selectNodeSchema = z
       .extend({
         items: z.unknown(),
         multiple: z.boolean().optional(),
+        placeholder: z.string().optional(),
       })
       .strip(),
   })

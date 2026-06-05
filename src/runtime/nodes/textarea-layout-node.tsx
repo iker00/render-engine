@@ -32,6 +32,9 @@ export function TextareaNode({ node, iterationContext }: TextareaNodeProps) {
   const fieldState = selectFormFieldState(state, formContext.formId, node.props.fieldId)
   const fieldDefinition = resolveResolvedFormFieldDefinition(node, state, iterationContext)
   const label = resolveRuntimeTextReference(node.props.label, state, 'textarea.props.label', { iterationContext })
+  const placeholder = node.props.placeholder !== undefined
+    ? resolveRuntimeTextReference(node.props.placeholder, state, 'textarea.props.placeholder', { iterationContext })
+    : ''
   const defaultValue = fieldDefinition.defaultValue
   const value =
     typeof fieldState?.value === 'string'
@@ -48,6 +51,7 @@ export function TextareaNode({ node, iterationContext }: TextareaNodeProps) {
         id={`${formContext.formId}-${node.props.fieldId}`}
         className={`${getFieldControlClassName(error !== null)} min-h-28 resize-y sm:min-h-32`}
         aria-describedby={error !== null ? `${formContext.formId}-${node.props.fieldId}-error` : undefined}
+        placeholder={placeholder !== '' ? placeholder : undefined}
         value={value}
         onChange={(event) => {
           const nextValue = event.currentTarget.value

@@ -32,6 +32,9 @@ export function InputNode({ node, iterationContext }: InputNodeProps) {
   const fieldState = selectFormFieldState(state, formContext.formId, node.props.fieldId)
   const fieldDefinition = resolveResolvedFormFieldDefinition(node, state, iterationContext)
   const label = resolveRuntimeTextReference(node.props.label, state, 'input.props.label', { iterationContext })
+  const placeholder = node.props.placeholder !== undefined
+    ? resolveRuntimeTextReference(node.props.placeholder, state, 'input.props.placeholder', { iterationContext })
+    : ''
   const defaultValue = fieldDefinition.defaultValue
   const value =
     typeof fieldState?.value === 'string'
@@ -49,6 +52,7 @@ export function InputNode({ node, iterationContext }: InputNodeProps) {
         type={node.props.inputType ?? 'text'}
         className={getFieldControlClassName(error !== null)}
         aria-describedby={error !== null ? `${formContext.formId}-${node.props.fieldId}-error` : undefined}
+        placeholder={placeholder !== '' ? placeholder : undefined}
         value={value}
         onChange={(event) => {
           const nextValue = event.currentTarget.value

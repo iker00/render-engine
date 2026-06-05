@@ -7,6 +7,7 @@
 ## Contrato (`props`)
 - `props.fieldId`: string obligatorio y único dentro del `form` contenedor.
 - `props.label`: string obligatorio, literal, referencia dinámica completa o string visible interpolado con `{{...}}`.
+- `props.placeholder`: string opcional, literal o string visible interpolado con `{{...}}`. Aparece como texto de ayuda cuando el campo está vacío, usando el atributo HTML nativo `placeholder`.
 - `props.validations`: objeto opcional y ordenado por declaración.
   - `props.validations.required`: `true` o `{ value: true, message?: string }`.
   - `props.validations.minLength`: número o `{ value: number, message?: string }`, solo para `input` textuales.

@@ -9,8 +9,11 @@
 - `paragraph.props.text`
 - `button.props.label`
 - `input.props.label`
+- `input.props.placeholder`
 - `textarea.props.label`
+- `textarea.props.placeholder`
 - `select.props.label`
+- `select.props.placeholder`
 - `radioGroup.props.label`
 - `checkboxGroup.props.label`
 - `image.props.src`

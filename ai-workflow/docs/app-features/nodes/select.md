@@ -7,6 +7,7 @@
 ## Contrato (`props`)
 - `props.fieldId`: string obligatorio y único dentro del `form` contenedor.
 - `props.label`: string obligatorio, literal, referencia dinámica completa o string visible interpolado con `{{...}}`.
+- `props.placeholder`: string opcional, literal o string visible interpolado con `{{...}}`. Solo aplica a selección simple (`multiple` ausente o `false`); se renderiza como opción deshabilitada al inicio del listado cuando el campo está vacío. No aplica a selección múltiple (`multiple: true`).
 - `props.validations`: objeto opcional y ordenado por declaración.
   - `props.validations.required`: `true` o `{ value: true, message?: string }`.
   - `props.validations.minSelections`: número o `{ value: number, message?: string }`, solo cuando `props.multiple: true`.
@@ -35,6 +36,14 @@
 - Los valores interpolados de opción se normalizan como strings finales; `0` y `false` se conservan como `0` y `false`, y un placeholder no resoluble solo vacía su parte del string.
 - `select` simple comparte la semántica de valor vacío `''` con `radioGroup`.
 - `select.multiple` comparte la semántica de valor vacío `[]` y el mismo orden estable según el catálogo efectivo visible con `checkboxGroup`.
+
+## Comportamiento del `placeholder` en selección simple
+- Cuando `props.placeholder` está declarado con valor no vacío y el campo tiene valor `''`, se renderiza una opción `<option value="" disabled>` con el texto del placeholder al inicio del listado.
+- La opción placeholder es visible para el usuario pero no seleccionable (atributo `disabled`).
+- Cuando hay un valor seleccionado que coincide con una opción real, la opción placeholder sigue presente en el DOM pero no aparece como selección activa.
+- La opción placeholder mantiene valor `''` y participa en la validación `required` como cualquier otro valor vacío.
+- Si `props.placeholder` está ausente o resuelve a string vacío, la opción placeholder no se inserta y se preserva el comportamiento previo (primera opción vacía sin etiqueta).
+- En `select.multiple`, `props.placeholder` se ignora completamente aunque esté declarado.
 
 ## Comportamiento ante opciones que cambian
 - En `select` simple, si el valor efectivo no coincide con ninguna opción disponible en la colección resuelta, el campo queda vacío.

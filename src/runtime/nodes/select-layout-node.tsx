@@ -47,12 +47,19 @@ export function SelectNode({ node, iterationContext }: SelectNodeProps) {
     },
   )
   const error = fieldState?.error ?? null
-  const items =
-    !isMultiple &&
-    value === '' &&
-    !resolvedItems.some((item) => item.value === '')
-      ? [{ label: '', value: '' }, ...resolvedItems]
-      : resolvedItems
+  const placeholderText = !isMultiple
+    ? resolveRuntimeTextReference(node.props.placeholder ?? '', state, 'select.props.placeholder', { iterationContext })
+    : ''
+  const items = (() => {
+    if (isMultiple) return resolvedItems
+    if (placeholderText !== '' && !resolvedItems.some((item) => item.value === '')) {
+      return [{ label: placeholderText, value: '' }, ...resolvedItems]
+    }
+    if (value === '' && !resolvedItems.some((item) => item.value === '')) {
+      return [{ label: '', value: '' }, ...resolvedItems]
+    }
+    return resolvedItems
+  })()
 
   return (
     <label className={getFieldWrapperClassName()} data-layout-node="select">
@@ -86,7 +93,11 @@ export function SelectNode({ node, iterationContext }: SelectNodeProps) {
           }}
         >
           {items.map((item, index) => (
-            <option key={`${node.props.fieldId}-${index}-${String(item.value)}`} value={String(item.value)}>
+            <option
+              key={`${node.props.fieldId}-${index}-${String(item.value)}`}
+              value={String(item.value)}
+              disabled={index === 0 && item.value === '' && placeholderText !== ''}
+            >
               {item.label}
             </option>
           ))}

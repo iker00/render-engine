@@ -288,6 +288,7 @@ export interface InputLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLay
   id?: string
   props: FormFieldLayoutNodeProps & {
     inputType?: 'text' | 'email' | 'password' | 'search' | 'tel' | 'url' | 'number' | 'date' | 'datetime-local'
+    placeholder?: string
   }
   children?: unknown
 }
@@ -295,7 +296,9 @@ export interface InputLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLay
 export interface TextareaLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayoutFields {
   type: 'textarea'
   id?: string
-  props: FormFieldLayoutNodeProps
+  props: FormFieldLayoutNodeProps & {
+    placeholder?: string
+  }
   children?: unknown
 }
 
@@ -354,6 +357,7 @@ export interface SelectLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLa
   props: FormFieldLayoutNodeProps & {
     items: SelectLayoutNodeItems
     multiple?: boolean
+    placeholder?: string
   }
   children?: unknown
 }

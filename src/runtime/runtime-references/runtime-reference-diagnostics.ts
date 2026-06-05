@@ -29,6 +29,9 @@ export type RuntimeReferenceSurface =
   | 'stat.props.value'
   | `accordion[${string}].props.label`
   | `tabs[${string}].props.items[${string}].label`
+  | 'input.props.placeholder'
+  | 'textarea.props.placeholder'
+  | 'select.props.placeholder'
 
 export function reportRuntimeReferenceDiagnostic(
   result: RuntimeReferenceResolutionResult,
