@@ -10,6 +10,8 @@ export type {
   StatColor,
   DividerLayoutNode,
   DividerVariant,
+  SkeletonLayoutNode,
+  SkeletonVariant,
   ButtonAction,
   ButtonColor,
   ButtonVariant,

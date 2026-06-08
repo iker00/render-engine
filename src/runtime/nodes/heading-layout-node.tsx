@@ -4,6 +4,7 @@ import type { RuntimeIterationContext } from '../runtime-references/runtime-refe
 import { useRuntimeState } from '../runtime-state/runtime-state-provider'
 import { resolveRuntimeTextReference } from '../runtime-references/runtime-reference-resolver'
 import { getHeadingNodeClassName, getHeadingTag } from '../runtime-node-styling'
+import { IconNode } from './icon-node'
 
 interface HeadingNodeProps {
   node: HeadingLayoutNode
@@ -19,6 +20,7 @@ export function HeadingNode({ node, iterationContext }: HeadingNodeProps) {
       'data-layout-node': 'heading',
       className: getHeadingNodeClassName(node.props.level),
     },
+    <IconNode name={node.props.icon} className="size-[1em] shrink-0 inline-block align-middle mr-2" />,
     text,
   )
 }

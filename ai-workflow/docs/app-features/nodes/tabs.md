@@ -32,6 +32,8 @@ El nodo `tabs` aplica los campos transversales estándar sobre el nodo completo 
 
 ## Comportamiento
 
+### Ciclo de vida del tab activo y visibilidad
+
 - Al montar, la barra de tabs muestra solo los items cuya `visibility` evalúa como visible (o todos si no declaran `visibility`). El tab activo es el indicado por `props.defaultTab`, salvo que esté oculto, en cuyo caso se activa el primer tab visible por índice creciente del array original.
 - Un tab oculto por `visibility` no aparece como botón en la barra ni su panel se renderiza en el DOM.
 - Al hacer clic en un tab visible, el panel correspondiente pasa a ser el activo y el anterior desaparece del DOM. Solo el panel del tab activo está presente en el DOM en cada momento.
@@ -39,6 +41,13 @@ El nodo `tabs` aplica los campos transversales estándar sobre el nodo completo 
 - El estado del tab activo se mantiene por índice del array original, independientemente de cuántos tabs estén ocultos.
 - Los `children` de cada item se renderizan como una colección de nodos usando el mismo renderer del runtime. Admiten cualquier nodo válido del catálogo, incluyendo `container`, `form`, `repeater`, nodos hoja, etc.
 - El nodo `tabs` puede aparecer en cualquier posición del árbol de layout, incluyendo dentro de `form` y dentro de `container`.
+
+### Comportamiento visual de la barra de tabs
+
+La barra de tabs se adapta al espacio disponible según la `orientation`:
+
+- En orientación `vertical` (barra a la izquierda): la barra tiene un ancho máximo fijo (~192px). Las etiquetas que superen ese ancho se muestran en múltiples líneas dentro del botón, permitiendo wrapping y ruptura de palabras largas sin desbordar el ancho de la barra.
+- En orientación `horizontal` (barra encima del panel): cuando el conjunto de botones supera el ancho disponible del container padre, la barra permite scroll horizontal interno. En pantallas anchas con pocos tabs, el comportamiento visual es idéntico al anterior: sin scroll visible.
 
 ## Casos límite
 

@@ -12,6 +12,7 @@ Nodo hoja de presentación pura que renderiza una métrica o KPI con una cabecer
 |---|---|---|---|---|
 | `props.label` | `string` | sí | — | Texto de cabecera descriptivo. Admite literal, referencia dinámica completa o interpolación `{{...}}`. |
 | `props.value` | `string` | sí | — | Valor principal a mostrar. Admite literal, referencia dinámica completa o interpolación `{{...}}`. |
+| `props.icon` | `string` | no | — | Nombre del icono Lucide React (ej. `"TrendingUp"`). Se renderiza a la izquierda del bloque label/value. Si el nombre no resuelve, se ignora silenciosamente. |
 | `props.variant` | `"accent" \| "tinted"` | no | `"accent"` | Estilo visual del stat. |
 | `props.color` | `"neutral" \| "primary" \| "success" \| "warning" \| "danger" \| "info"` | no | `"neutral"` | Color semántico aplicado. |
 
@@ -78,8 +79,9 @@ Renderiza un `<div data-layout-node="stat">` con fondo de color suave derivado d
 
 ## Lo que está fuera de alcance (v1)
 
-- Iconos, imágenes o indicador de tendencia (trend indicator) dentro del stat.
+- Indicador de tendencia (trend indicator) dentro del stat.
 - Colores libres fuera de la paleta semántica definida.
+- Tamaño o color del icono configurable por JSON (se heredan del color semántico del stat).
 - Stat interactivo o con acción (no es un botón).
 - Tamaños configurables del valor.
 - Theming o tokens visuales configurables por JSON.

@@ -21,6 +21,7 @@ export type LayoutNodeType =
   | 'alert'
   | 'stat'
   | 'divider'
+  | 'skeleton'
 export type RuntimeApiMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
 export type RuntimeApiQueryValue = string | number | boolean
 export type RuntimeApiQuery = Record<string, RuntimeApiQueryValue>
@@ -165,6 +166,7 @@ export interface HeadingLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeL
   props: {
     text: string
     level: number
+    icon?: string
   }
   children?: unknown
 }
@@ -174,6 +176,7 @@ export interface ParagraphLayoutNode extends LayoutNodeFeedbackFields, LayoutNod
   id?: string
   props: {
     text: string
+    icon?: string
   }
   children?: unknown
 }
@@ -289,6 +292,7 @@ export interface InputLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLay
   props: FormFieldLayoutNodeProps & {
     inputType?: 'text' | 'email' | 'password' | 'search' | 'tel' | 'url' | 'number' | 'date' | 'datetime-local'
     placeholder?: string
+    icon?: string
   }
   children?: unknown
 }
@@ -467,6 +471,7 @@ export interface StatLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayo
     value: string
     variant?: StatVariant
     color?: StatColor
+    icon?: string
   }
   children?: unknown
 }
@@ -477,6 +482,22 @@ export interface DividerLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeL
   type: 'divider'
   id?: string
   props?: { variant?: DividerVariant }
+  children?: never
+}
+
+export type SkeletonVariant = 'text' | 'rect' | 'circle'
+
+export interface SkeletonLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayoutFields {
+  type: 'skeleton'
+  id?: string
+  props?: {
+    variant?: SkeletonVariant
+    lines?: number
+    width?: string
+    height?: string
+    rounded?: boolean
+    animate?: boolean
+  }
   children?: never
 }
 
@@ -549,6 +570,7 @@ export interface ButtonLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLa
     color?: ButtonColor
     variant?: ButtonVariant
     fullWidth?: boolean
+    icon?: string
   }
   children?: unknown
 }
@@ -562,6 +584,7 @@ export interface LinkLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayo
     download?: string
     target?: string
     action?: NavigateToRuntimeUiAction | GoBackRuntimeUiAction
+    icon?: string
   }
   children?: unknown
 }
@@ -589,6 +612,7 @@ export type LayoutNode =
   | AlertLayoutNode
   | StatLayoutNode
   | DividerLayoutNode
+  | SkeletonLayoutNode
 
 export type LayoutNodeCollection = LayoutNode[]
 

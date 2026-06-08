@@ -7,6 +7,7 @@ import {
 import { executeRuntimeUiAction } from '../runtime-actions/runtime-ui-action-executor'
 import { getButtonVariantClassName } from '../runtime-node-styling'
 import { useRuntimeState, useRuntimeStateActions } from '../runtime-state/runtime-state-provider'
+import { IconNode } from './icon-node'
 
 interface ButtonNodeProps {
   node: ButtonLayoutNode
@@ -44,6 +45,7 @@ export function ButtonNode({ node, iterationContext }: ButtonNodeProps) {
           : undefined
       }
     >
+      <IconNode name={node.props.icon} className="size-4 shrink-0" />
       {label}
     </button>
   )

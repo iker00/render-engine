@@ -19,7 +19,7 @@ export function App({
   devConfigOverride = defaultDevConfig,
   devDataValuesOverride = defaultDevDataValues,
   isDevelopment = import.meta.env.DEV || false,
-  rootElement = document.getElementById('root'),
+  rootElement = document.getElementById('layout-renderer'),
 }: AppProps) {
   const runtimeConfig = readRuntimeConfig({
     devConfig: devConfigOverride,

@@ -114,7 +114,7 @@ export function AccordionNode({ node, iterationContext }: AccordionNodeProps) {
           }}
         >
           {node.children && node.children.length > 0 ? (
-            <div className="px-4 py-2">
+            <div className="px-4 py-2 flex flex-col gap-5">
               <LayoutRenderer nodes={node.children} iterationContext={iterationContext} />
             </div>
           ) : null}

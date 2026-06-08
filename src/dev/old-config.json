@@ -187,7 +187,6 @@
                 }
               ]
             },
-
             {
               "type": "container",
               "props": {
@@ -798,7 +797,6 @@
                 "level": 2
               }
             },
-
             {
               "type": "container",
               "props": {
@@ -845,6 +843,22 @@
                       "required": true,
                       "min": 1,
                       "max": 100
+                    }
+                  },
+                  "layout": {
+                    "span": 12
+                  }
+                },
+                {
+                  "type": "textarea",
+                  "props": {
+                    "fieldId": "textarea",
+                    "label": "Textarea",
+                    "placeholder": "Enter text here...",
+                    "validations": {
+                      "required": true,
+                      "minLength": 10,
+                      "maxLength": 20
                     }
                   },
                   "layout": {
@@ -953,6 +967,7 @@
                   "props": {
                     "fieldId": "personal_estadoCivil",
                     "label": "Estado civil",
+                    "placeholder": "Seleccione un estado civil",
                     "items": [
                       {
                         "label": "Soltero",
@@ -971,7 +986,6 @@
                 }
               ]
             },
-
             {
               "type": "container",
               "props": {
@@ -2738,10 +2752,6 @@
             "items": [
               {
                 "label": "Tab horizontal 1",
-                "visibility": {
-                  "reference": "queries.searchPosts3.data",
-                  "equals ": "isFalsy"
-                },
                 "children": [
                   {
                     "type": "paragraph",
@@ -3182,6 +3192,302 @@
           "props": {
             "variant": "invisible"
           }
+        },
+        {
+          "type": "container",
+          "props": {
+            "direction": "row"
+          },
+          "children": [
+            {
+              "type": "button",
+              "props": {
+                "label": "solid - neutral",
+                "variant": "solid",
+                "color": "neutral",
+                "action": {
+                  "type": "goBack"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "solid - primary",
+                "variant": "solid",
+                "color": "primary",
+                "action": {
+                  "type": "goBack"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "solid - success",
+                "variant": "solid",
+                "color": "success",
+                "action": {
+                  "type": "goBack"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "solid - warning",
+                "variant": "solid",
+                "color": "warning",
+                "action": {
+                  "type": "goBack"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "solid - danger",
+                "variant": "solid",
+                "color": "danger",
+                "action": {
+                  "type": "goBack"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "solid - info",
+                "variant": "solid",
+                "color": "info",
+                "action": {
+                  "type": "goBack"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "container",
+          "props": {
+            "direction": "row"
+          },
+          "children": [
+            {
+              "type": "button",
+              "props": {
+                "label": "outline - neutral",
+                "variant": "outline",
+                "color": "neutral",
+                "action": {
+                  "type": "goBack"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "outline - primary",
+                "variant": "outline",
+                "color": "primary",
+                "action": {
+                  "type": "goBack"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "outline - success",
+                "variant": "outline",
+                "color": "success",
+                "action": {
+                  "type": "goBack"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "outline - warning",
+                "variant": "outline",
+                "color": "warning",
+                "action": {
+                  "type": "goBack"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "outline - danger",
+                "variant": "outline",
+                "color": "danger",
+                "action": {
+                  "type": "goBack"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "outline - info",
+                "variant": "outline",
+                "color": "info",
+                "action": {
+                  "type": "goBack"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "container",
+          "props": {
+            "direction": "row"
+          },
+          "children": [
+            {
+              "type": "button",
+              "props": {
+                "label": "ghost - neutral",
+                "variant": "ghost",
+                "color": "neutral",
+                "action": {
+                  "type": "goBack"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "ghost - primary",
+                "variant": "ghost",
+                "color": "primary",
+                "action": {
+                  "type": "goBack"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "ghost - success",
+                "variant": "ghost",
+                "color": "success",
+                "action": {
+                  "type": "goBack"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "ghost - warning",
+                "variant": "ghost",
+                "color": "warning",
+                "action": {
+                  "type": "goBack"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "ghost - danger",
+                "variant": "ghost",
+                "color": "danger",
+                "action": {
+                  "type": "goBack"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "ghost - info",
+                "variant": "ghost",
+                "color": "info",
+                "action": {
+                  "type": "goBack"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "container",
+          "props": {
+            "direction": "row"
+          },
+          "children": [
+            {
+              "type": "button",
+              "props": {
+                "label": "link - neutral",
+                "variant": "link",
+                "color": "neutral",
+                "action": {
+                  "type": "goBack"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "link - primary",
+                "variant": "link",
+                "color": "primary",
+                "action": {
+                  "type": "goBack"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "link - success",
+                "variant": "link",
+                "color": "success",
+                "action": {
+                  "type": "goBack"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "link - warning",
+                "variant": "link",
+                "color": "warning",
+                "action": {
+                  "type": "goBack"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "link - danger",
+                "variant": "link",
+                "color": "danger",
+                "action": {
+                  "type": "goBack"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "link - info",
+                "variant": "link",
+                "color": "info",
+                "action": {
+                  "type": "goBack"
+                }
+              }
+            }
+          ]
         }
       ]
     }

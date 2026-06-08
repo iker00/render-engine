@@ -15,6 +15,8 @@ La exploración previa, cuando hace falta, se hace conversacionalmente con `expl
 La política completa está definida en el documento de workflow del proyecto.
 
 ## Planificadas
+- `0071-lucide-icons`: integra `lucide-react` como librería de iconos del runtime. Añade `props.icon` opcional (nombre PascalCase de Lucide) a los nodos `button`, `heading`, `paragraph`, `link`, `stat` e `input`; el icono se renderiza siempre a la izquierda del contenido. En `input`, el icono aparece visualmente dentro del campo con padding compensatorio. El nodo `alert` reemplaza su placeholder por el icono Lucide semántico fijo por `props.type`, sin prop nueva. Degradación silenciosa ante nombres no reconocidos. Bundle completo (~100 KB gzipped aceptado).
+- `0070-tabs-bar-responsive`: aplica un ancho máximo fijo con wrapping de etiquetas a la barra de tabs en orientación `vertical`, y scroll horizontal a la barra en orientación `horizontal` para pantallas pequeñas. Sin cambios en contrato JSON, validación ni lógica del runtime.
 - `0064-alert-node-title-layout`: modifica el layout visual del nodo `alert` para que, cuando se declara `props.title`, el icono y el título aparezcan en la misma fila (título con `flex-1`) y el mensaje ocupe una fila propia debajo. Sin cambios en props, validación ni integración transversal.
 - `0043-dev-mode-live-config-editor`: wrapper opt-in sobre el runtime que añade un editor Monaco en panel lateral para editar el JSON de configuración en vivo, validarlo con la fachada actual y aplicarlo preservando estado compatible. Plan de implementación listo; pendiente de implementación.
 

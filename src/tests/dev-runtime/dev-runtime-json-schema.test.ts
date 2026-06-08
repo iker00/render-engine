@@ -26,4 +26,10 @@ describe('getRuntimeConfigJsonSchema', () => {
     // The union for layout nodes includes a container variant discriminated by type
     expect(schemaStr).toContain('container')
   })
+
+  it('schema includes skeleton node variant in the layout union (autocomplete support)', () => {
+    const schema = getRuntimeConfigJsonSchema()
+    const schemaStr = JSON.stringify(schema)
+    expect(schemaStr).toContain('skeleton')
+  })
 })

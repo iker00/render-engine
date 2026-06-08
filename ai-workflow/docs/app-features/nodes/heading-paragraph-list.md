@@ -7,13 +7,16 @@
 ## `heading`
 - `props.text`: string obligatorio, literal, referencia dinámica completa o string visible interpolado con `{{...}}`.
 - `props.level`: número entero obligatorio.
-- `heading.props` soporta `text` y `level`; `text` admite literal, referencia completa o interpolación parcial visible.
-- `heading` conserva su jerarquía semántica actual, pero con una escala tipográfica y un bloque introductorio más contenidos que en la baseline previa.
+- `props.icon`: string opcional, nombre del icono Lucide React (ej. `"User"`, `"Info"`). Se renderiza a la izquierda del texto del heading. Si el nombre no resuelve, se ignora silenciosamente.
+- `heading.props` soporta `text`, `level` e `icon`; `text` admite literal, referencia completa o interpolación parcial visible.
+- `heading` conserva su jerarquía semántica (`<h1>`–`<h6>`) intacta; el icono no altera la estructura semántica.
+- `heading` conserva su escala tipográfica actual; el icono se alinea con la línea base del texto.
 
 ## `paragraph`
 - `props.text`: string obligatorio, literal, referencia dinámica completa o string visible interpolado con `{{...}}`.
-- `paragraph.props` soporta `text`; `text` admite literal, referencia completa o interpolación parcial visible.
-- `paragraph` conserva su jerarquía semántica actual, pero con una escala tipográfica y un bloque introductorio más contenidos que en la baseline previa.
+- `props.icon`: string opcional, nombre del icono Lucide React (ej. `"Info"`, `"AlertCircle"`). Se renderiza a la izquierda del texto del párrafo. Si el nombre no resuelve, se ignora silenciosamente.
+- `paragraph.props` soporta `text` e `icon`; ambos admiten literal, referencia completa o interpolación parcial visible.
+- `paragraph` conserva su jerarquía semántica (`<p>`) intacta; el icono no altera la estructura semántica.
 
 ## `list`
 - `props.items`: obligatorio. Shapes admitidos:

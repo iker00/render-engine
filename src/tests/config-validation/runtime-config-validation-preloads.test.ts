@@ -453,6 +453,61 @@ describe('validateRuntimeConfig', () => {
     })
   })
 
+  it('accepts a heading with props.icon as a string without rejecting in bootstrap', () => {
+    const result = validateRuntimeConfig({
+      api: {},
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'heading',
+              props: {
+                text: 'Hello',
+                level: 1,
+                icon: 'Search',
+              },
+            },
+          ],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(result.status).toBe('ready')
+    if (result.status === 'ready') {
+      const node = result.config.pages[0].layout[0] as { props: { icon?: string } }
+      expect(node.props.icon).toBe('Search')
+    }
+  })
+
+  it('accepts a paragraph with props.icon as a string without rejecting in bootstrap', () => {
+    const result = validateRuntimeConfig({
+      api: {},
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'paragraph',
+              props: {
+                text: 'Hello',
+                icon: 'Search',
+              },
+            },
+          ],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(result.status).toBe('ready')
+    if (result.status === 'ready') {
+      const node = result.config.pages[0].layout[0] as { props: { icon?: string } }
+      expect(node.props.icon).toBe('Search')
+    }
+  })
+
   it('keeps missing preload operations as runtime-recoverable instead of rejecting them in config validation', () => {
     const result = validateRuntimeConfig({
       api: {},

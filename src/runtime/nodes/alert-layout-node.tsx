@@ -1,6 +1,7 @@
 import type { AlertLayoutNode, AlertType } from '../../config/runtime-config'
 import { resolveRuntimeTextReference, type RuntimeIterationContext } from '../runtime-references/runtime-reference-resolver'
 import { useRuntimeState } from '../runtime-state/runtime-state-provider'
+import { IconNode } from './icon-node'
 
 interface AlertNodeProps {
   node: AlertLayoutNode
@@ -16,6 +17,15 @@ const colorMap: Record<AlertType, { bg: string; text: string }> = {
   info: { bg: 'bg-cyan-100', text: 'text-cyan-700' },
 }
 
+const alertTypeIconMap: Record<AlertType, string> = {
+  neutral: 'MessageCircle',
+  primary: 'Megaphone',
+  success: 'CheckCircle',
+  warning: 'AlertTriangle',
+  danger: 'XCircle',
+  info: 'Info',
+}
+
 export function AlertNode({ node, iterationContext }: AlertNodeProps) {
   const state = useRuntimeState()
   const alertType: AlertType = node.props.type ?? 'neutral'
@@ -28,13 +38,22 @@ export function AlertNode({ node, iterationContext }: AlertNodeProps) {
 
   const showTitle = title !== undefined && title !== ''
 
+  if (showTitle) {
+    return (
+      <div data-layout-node="alert" className={`flex items-start gap-3 rounded-md p-4 ${bg}`}>
+        <IconNode name={alertTypeIconMap[alertType]} className={`${text} size-5 shrink-0`} />
+        <div className="flex flex-col flex-1">
+          <strong className={text}>{title}</strong>
+          <span>{message}</span>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div data-layout-node="alert" className={`flex items-start gap-3 rounded-md p-4 ${bg}`}>
-      <span className={text}>icon</span>
-      <div>
-        {showTitle && <strong>{title}</strong>}
-        <span>{message}</span>
-      </div>
+      <IconNode name={alertTypeIconMap[alertType]} className={`${text} size-5 shrink-0`} />
+      <span>{message}</span>
     </div>
   )
 }

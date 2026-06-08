@@ -11,6 +11,7 @@ Nodo hoja que se renderiza siempre como un elemento `<a>` HTML semántico. Permi
 | Prop | Tipo | Requerido | Descripción |
 |---|---|---|---|
 | `props.label` | `string` | sí | Texto visible del enlace. Admite literal, referencia dinámica completa o interpolación `{{...}}`. |
+| `props.icon` | `string` | no | Nombre del icono Lucide React (ej. `"ExternalLink"`). Se renderiza a la izquierda del label. Si el nombre no resuelve, se ignora silenciosamente. |
 | `props.href` | `string` | condicional | URL de destino. Obligatorio si no hay `props.action`. Admite literal o referencia dinámica completa (`queries.*`, `item.*`, etc.). |
 | `props.download` | `string` | no | Nombre de fichero sugerido al navegador. Activa el atributo `download` del anchor. Solo aplicable junto a `props.href`. |
 | `props.target` | `string` | no | Valor del atributo `target` del anchor (p.ej. `"_blank"`). Solo aplicable junto a `props.href`. Sin valor, el anchor no lleva atributo `target`. |
@@ -37,7 +38,9 @@ Sin parámetros adicionales. Ejecuta navegación hacia atrás del runtime.
 
 - El nodo se renderiza siempre como `<a data-layout-node="link">`.
 - Si `props.href` está presente: el anchor usa el valor resuelto como atributo `href`. Si `props.download` está declarado, se añade el atributo `download` con el nombre de fichero. Si `props.target` está declarado, se añade el atributo `target`.
-- Si `props.action` está presente: el anchor previene el comportamiento por defecto del navegador al hacer clic y delega en el ejecutor común de acciones del runtime (`executeRuntimeUiAction`). No lleva atributo `href` estático en el DOM.
+- Si `props.action` está presente: el anchor lleva un atributo `href` decorativo que permite al navegador mostrar el destino en la barra de estado y cambiar el cursor a puntero de enlace. El href se calcula de forma estable y no interfiere con el comportamiento de clic: el anchor sigue previniendo el comportamiento por defecto del navegador al hacer clic y delega en el ejecutor común de acciones del runtime (`executeRuntimeUiAction`).
+  - Para `navigateTo`: el `href` es siempre `#/{pageId}` (literal).
+  - Para `goBack`: el `href` se resuelve desde el historial previo del runtime usando su función de canonicalización (`createBrowserHashNavigationHash`). Si no hay entrada previa, el `href` es `"#"`.
 - `props.label` y `props.href` se resuelven como referencias de texto dinámicas con el mismo mecanismo que el resto del runtime (`resolveRuntimeTextReference`).
 - El nodo es hoja: si recibe `children` en la configuración, esos datos no pasan al resultado normalizado.
 
@@ -45,7 +48,11 @@ Sin parámetros adicionales. Ejecuta navegación hacia atrás del runtime.
 
 - **`props.href` resuelto a referencia no disponible o vacía**: el anchor se renderiza con `href=""`. La degradación es segura y no produce error de render.
 - **`props.download` con `props.href` vacío resuelto**: el atributo `download` se incluye igualmente; la degradación es responsabilidad del navegador.
-- **`props.action: goBack` en la primera página del historial del runtime**: mismo comportamiento que `button` con `goBack`; el runtime no tiene histórico anterior y no produce error visible.
+- **`props.action: navigateTo` con `pageId` igual a `initialPage`**: el `href` renderizado sigue siendo `#/{initialPageId}` literal; no se normaliza a `#/` en el atributo (esa normalización ocurre en tiempo de navegación dentro del runtime).
+- **`props.action: navigateTo` con `params` declarados**: los params se ignoran en el cálculo del `href`. El atributo `href` solo refleja la ruta de página (`#/{pageId}`).
+- **`props.action: goBack` en la primera página del historial del runtime**: el `href` es `"#"` como fallback; el comportamiento de clic sigue previniendo el comportamiento nativo del navegador.
+- **`props.action: goBack` con entrada previa cuyo `pageId` coincide con `initialPage`**: el `href` se normaliza canónicamente a `#/` (no `#/{initialPageId}`).
+- **`props.action: goBack` con entrada previa que contiene `params`**: el `href` incluye los params como query string, normalizados según la función canónica del runtime.
 - **`props.label` interpolado con referencia no disponible**: el placeholder se vacía, igual que en el resto de strings interpolados del runtime.
 - **`target: "_blank"` sin `rel`**: en v1 el runtime no inyecta automáticamente `rel="noopener noreferrer"`.
 

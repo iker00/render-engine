@@ -4,6 +4,7 @@ import type {
   BadgeLayoutNode,
   StatLayoutNode,
   DividerLayoutNode,
+  SkeletonLayoutNode,
   ButtonLayoutNode,
   ContainerLayoutNode,
   HeadingLayoutNode,
@@ -39,6 +40,7 @@ import {
   badgeNodeSchema,
   statNodeSchema,
   dividerNodeSchema,
+  skeletonNodeSchema,
   buttonNodeSchema,
   containerNodeSchema,
   headingNodeSchema,
@@ -163,6 +165,8 @@ export function validateLayoutNode(
       return validateStatNode(rawNode, path, pageId)
     case 'divider':
       return validateDividerNode(rawNode, path, pageId)
+    case 'skeleton':
+      return validateSkeletonNode(rawNode, path, pageId)
   }
 
   return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.type".`)
@@ -1376,6 +1380,7 @@ function validateButtonNode(
         color: parseResult.data.props.color,
         variant: parseResult.data.props.variant,
         fullWidth: parseResult.data.props.fullWidth,
+        icon: parseResult.data.props.icon,
       },
     },
   }
@@ -1448,7 +1453,7 @@ export function validateLinkNode(
 
   if (visibilityResult.status === 'error') return visibilityResult
 
-  const { href, download, target, action } = parseResult.data.props
+  const { href, download, target, action, icon } = parseResult.data.props
   const hasHref = href !== undefined
   const hasAction = action !== undefined
 
@@ -1498,6 +1503,7 @@ export function validateLinkNode(
   if (download !== undefined) props.download = download
   if (target !== undefined) props.target = target
   if (validatedAction !== undefined) props.action = validatedAction
+  if (icon !== undefined) props.icon = icon
 
   return {
     status: 'ready',
@@ -2147,6 +2153,86 @@ function validateDividerNode(
     status: 'ready',
     node: {
       type: 'divider',
+      id: parseResult.data.id,
+      queryStateFeedback: feedbackResult.queryStateFeedback,
+      visibility: visibilityResult.visibility,
+      layout: parseResult.data.layout,
+      props: parseResult.data.props,
+    },
+  }
+}
+
+function validateSkeletonNode(
+  rawNode: Record<string, unknown>,
+  path: string,
+  pageId: string,
+): { status: 'ready'; node: SkeletonLayoutNode } | { status: 'error'; error: RuntimeConfigError } {
+  const parseResult = skeletonNodeSchema.safeParse(rawNode)
+
+  if (!parseResult.success) {
+    const issue = parseResult.error.issues[0]
+    const issuePath = issue?.path ?? []
+
+    const feedbackIssue = mapQueryStateFeedbackIssue(pageId, path, issue)
+    if (feedbackIssue) return feedbackIssue
+
+    const visibilityIssue = mapVisibilityIssue(pageId, path, issue)
+    if (visibilityIssue) return visibilityIssue
+
+    const layoutIssue = mapLayoutNodeIssue(pageId, path, issuePath)
+    if (layoutIssue) return layoutIssue
+
+    if (issuePath[0] === 'id') {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.id".`)
+    }
+
+    if (issuePath[0] === 'props' && issuePath[1] === 'variant') {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.variant".`)
+    }
+
+    if (issuePath[0] === 'props' && issuePath[1] === 'lines') {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.lines".`)
+    }
+
+    if (issuePath[0] === 'props' && issuePath[1] === 'width') {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.width".`)
+    }
+
+    if (issuePath[0] === 'props' && issuePath[1] === 'height') {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.height".`)
+    }
+
+    if (issuePath[0] === 'props' && issuePath[1] === 'rounded') {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.rounded".`)
+    }
+
+    if (issuePath[0] === 'props' && issuePath[1] === 'animate') {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.animate".`)
+    }
+
+    return mapLeafNodeIssue(pageId, path, issuePath)
+  }
+
+  const feedbackResult = validateQueryStateFeedback(
+    parseResult.data.queryStateFeedback as LayoutNodeFeedbackFields['queryStateFeedback'],
+    `${path}.queryStateFeedback`,
+    pageId,
+  )
+
+  if (feedbackResult.status === 'error') return feedbackResult
+
+  const visibilityResult = validateVisibility(
+    parseResult.data.visibility as LayoutNodeFeedbackFields['visibility'],
+    `${path}.visibility`,
+    pageId,
+  )
+
+  if (visibilityResult.status === 'error') return visibilityResult
+
+  return {
+    status: 'ready',
+    node: {
+      type: 'skeleton',
       id: parseResult.data.id,
       queryStateFeedback: feedbackResult.queryStateFeedback,
       visibility: visibilityResult.visibility,

@@ -108,6 +108,29 @@ describe('validateRuntimeConfig — stat node: acceptance', () => {
   })
 })
 
+describe('validateRuntimeConfig — stat node: props.icon acceptance', () => {
+  it('accepts stat with props.icon as an arbitrary string', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithLayout([createStatNode({ props: { label: 'Revenue', value: '$12,000', icon: 'TrendingUp' } })]),
+    )
+    expect(result.status).toBe('ready')
+  })
+
+  it('accepts stat with props.icon as an unknown icon name string', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithLayout([createStatNode({ props: { label: 'Revenue', value: '$12,000', icon: 'NonExistentIconXyz' } })]),
+    )
+    expect(result.status).toBe('ready')
+  })
+
+  it('accepts stat with props.icon combined with variant and color', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithLayout([createStatNode({ props: { label: 'X', value: '0', variant: 'tinted', color: 'success', icon: 'CheckCircle' } })]),
+    )
+    expect(result.status).toBe('ready')
+  })
+})
+
 describe('validateRuntimeConfig — stat node: rejection', () => {
   it('rejects stat without props.label — error contains props.label', () => {
     const result = validateRuntimeConfig(

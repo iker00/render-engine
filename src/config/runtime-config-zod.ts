@@ -24,6 +24,7 @@ export const supportedNodeTypes = [
   'alert',
   'stat',
   'divider',
+  'skeleton',
 ] as const
 
 export const tableCellAllowedNodeTypes = ['image', 'list', 'button', 'container', 'heading', 'paragraph'] as const
@@ -225,6 +226,7 @@ export const headingNodeSchema = z
       .object({
         text: z.string(),
         level: z.number().int(),
+        icon: z.string().optional(),
       })
       .strip(),
   })
@@ -263,6 +265,7 @@ export const paragraphNodeSchema = z
     props: z
       .object({
         text: z.string(),
+        icon: z.string().optional(),
       })
       .strip(),
   })
@@ -395,6 +398,7 @@ export const buttonNodeSchema = z
         color: z.enum(supportedButtonColors).optional(),
         variant: z.enum(supportedButtonVariants).optional(),
         fullWidth: z.boolean().optional(),
+        icon: z.string().optional(),
       })
       .strip(),
   })
@@ -433,6 +437,7 @@ export const inputNodeSchema = z
       .extend({
         inputType: z.enum(supportedInputTypes).optional(),
         placeholder: z.string().optional(),
+        icon: z.string().optional(),
       })
       .strip(),
   })
@@ -604,6 +609,7 @@ export const linkNodeSchema = z
         download: z.string().optional(),
         target: z.string().optional(),
         action: z.unknown().optional(),
+        icon: z.string().optional(),
       })
       .strip(),
   })
@@ -664,6 +670,7 @@ export const statNodeSchema = z
         value: z.string(),
         variant: z.enum(supportedStatVariants).optional(),
         color: z.enum(supportedStatColors).optional(),
+        icon: z.string().optional(),
       })
       .strip(),
   })
@@ -681,6 +688,29 @@ export const dividerNodeSchema = z
     props: z
       .object({
         variant: z.enum(supportedDividerVariants).optional(),
+      })
+      .strip()
+      .optional(),
+  })
+  .strip()
+
+export const supportedSkeletonVariants = ['text', 'rect', 'circle'] as const
+
+export const skeletonNodeSchema = z
+  .object({
+    type: z.literal('skeleton'),
+    id: nodeIdSchema.optional(),
+    queryStateFeedback: queryStateFeedbackSchema.optional(),
+    visibility: visibilitySchema.optional(),
+    layout: layoutNodeLayoutSchema.optional(),
+    props: z
+      .object({
+        variant: z.enum(supportedSkeletonVariants).optional(),
+        lines: z.number().int().min(1).optional(),
+        width: z.string().optional(),
+        height: z.string().optional(),
+        rounded: z.boolean().optional(),
+        animate: z.boolean().optional(),
       })
       .strip()
       .optional(),

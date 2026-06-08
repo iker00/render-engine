@@ -30,6 +30,7 @@ Los conceptos transversales (`visibility`, `queryStateFeedback`, referencias din
 | [alert.md](./alert.md) | `alert` — bloque de aviso semántico con icono placeholder, cabecera opcional (`props.title`) y mensaje obligatorio (`props.message`), paleta semántica de seis tipos. |
 | [stat.md](./stat.md) | `stat` — métrica o KPI con cabecera descriptiva (`props.label`) y valor principal (`props.value`), variantes `accent` (borde lateral de color) y `tinted` (fondo suave), paleta semántica de seis colores. |
 | [divider.md](./divider.md) | `divider` — separador visual horizontal con cuatro variantes: `solid` (línea continua), `dashed` (línea discontinua), `dotted` (línea punteada), `invisible` (espaciador sin línea). No acepta `children` ni etiqueta. |
+| [skeleton.md](./skeleton.md) | `skeleton` — placeholder de carga con forma de silueta, tres variantes: `rect` (rectángulo), `text` (líneas apiladas), `circle` (círculo). Soporta animación pulse y uso primario en `queryStateFeedback.states.loading.fallback`. |
 
 ## Nodos modales
 

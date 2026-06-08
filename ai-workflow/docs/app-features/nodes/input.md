@@ -8,6 +8,7 @@
 - `props.fieldId`: string obligatorio y único dentro del `form` contenedor.
 - `props.label`: string obligatorio, literal, referencia dinámica completa o string visible interpolado con `{{...}}`.
 - `props.placeholder`: string opcional, literal o string visible interpolado con `{{...}}`. Aparece como texto de ayuda cuando el campo está vacío, usando el atributo HTML nativo `placeholder`.
+- `props.icon`: string opcional, nombre del icono Lucide React (ej. `"Mail"`, `"Search"`). Se renderiza visualmente dentro del campo a la izquierda del área de texto. Si el nombre no resuelve, se ignora silenciosamente. El icono es puramente decorativo: no afecta al valor, validación ni submit del formulario.
 - `props.validations`: objeto opcional y ordenado por declaración.
   - `props.validations.required`: `true` o `{ value: true, message?: string }`.
   - `props.validations.minLength`: número o `{ value: number, message?: string }`, solo para `input` textuales.

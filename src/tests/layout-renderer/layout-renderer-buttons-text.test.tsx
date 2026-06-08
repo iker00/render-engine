@@ -355,7 +355,203 @@ describe('link node render', () => {
     expect(screen.getByRole('heading', { name: 'Details page', level: 1 })).toBeInTheDocument()
   })
 
-  it('does not include static href attribute when props.action is declared', () => {
+  it('renders decorative href="#/dashboard" when link has navigateTo action with pageId dashboard', () => {
+    renderRuntimePage({
+      id: 'home',
+      layout: [
+        {
+          type: 'link',
+          props: {
+            label: 'Go to dashboard',
+            action: { type: 'navigateTo', pageId: 'dashboard' },
+          },
+        },
+      ],
+    })
+
+    const anchor = screen.getByRole('link', { name: 'Go to dashboard' })
+    expect(anchor).toHaveAttribute('href', '#/dashboard')
+  })
+
+  it('renders href="#/home" literal (not normalized to #/) when navigateTo pageId equals initialPage', () => {
+    const config: RuntimeConfig = {
+      api: {},
+      initialPage: 'home',
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'link',
+              props: {
+                label: 'Go home',
+                action: { type: 'navigateTo', pageId: 'home' },
+              },
+            },
+          ],
+        },
+      ],
+    }
+
+    render(
+      <RuntimeStateProvider config={config}>
+        <RuntimePage />
+      </RuntimeStateProvider>,
+    )
+
+    const anchor = screen.getByRole('link', { name: 'Go home' })
+    expect(anchor).toHaveAttribute('href', '#/home')
+  })
+
+  it('ignores action params in href when navigateTo has params declared', () => {
+    renderRuntimePage({
+      id: 'home',
+      layout: [
+        {
+          type: 'link',
+          props: {
+            label: 'Go with params',
+            action: { type: 'navigateTo', pageId: 'details', params: { id: '42' } },
+          },
+        },
+      ],
+    })
+
+    const anchor = screen.getByRole('link', { name: 'Go with params' })
+    expect(anchor).toHaveAttribute('href', '#/details')
+    expect(anchor.getAttribute('href')).not.toContain('?')
+  })
+
+  it('renders href="#/prev" when link has goBack action and there is a previous history entry', () => {
+    const activePage: RuntimePageConfig = {
+      id: 'current',
+      layout: [
+        {
+          type: 'link',
+          props: {
+            label: 'Go back',
+            action: { type: 'goBack' },
+          },
+        },
+      ],
+    }
+
+    const config: RuntimeConfig = {
+      api: {},
+      initialPage: 'home',
+      pages: [
+        { id: 'home', layout: [] },
+        { id: 'prev', layout: [] },
+        activePage,
+      ],
+    }
+
+    const baseState = createRuntimeState(config)
+    const stateWithHistory: RuntimeState = {
+      ...baseState,
+      navigation: {
+        currentPageId: 'current',
+        history: [
+          { entryId: 0, pageId: 'prev', params: {} },
+          { entryId: 1, pageId: 'current', params: {} },
+        ],
+        currentEntryIndex: 1,
+        lastError: null,
+      },
+      pageEntry: {
+        ...baseState.pageEntry,
+        pageId: 'current',
+        entryId: 1,
+      },
+    }
+
+    const dispatch = vi.fn<(action: RuntimeStateAction) => void>()
+    const dispatchAndSyncState = vi.fn<(action: RuntimeStateAction) => void>()
+
+    render(
+      <RuntimeStateContext.Provider
+        value={{
+          config,
+          initialState: stateWithHistory,
+          state: stateWithHistory,
+          dispatch,
+          dispatchAndSyncState,
+          getLatestState: () => stateWithHistory,
+        }}
+      >
+        <RuntimePage />
+      </RuntimeStateContext.Provider>,
+    )
+
+    const anchor = screen.getByRole('link', { name: 'Go back' })
+    expect(anchor).toHaveAttribute('href', '#/prev')
+  })
+
+  it('renders href="#/" when link has goBack action and the previous entry is the initialPage', () => {
+    const activePage: RuntimePageConfig = {
+      id: 'current',
+      layout: [
+        {
+          type: 'link',
+          props: {
+            label: 'Go back to home',
+            action: { type: 'goBack' },
+          },
+        },
+      ],
+    }
+
+    const config: RuntimeConfig = {
+      api: {},
+      initialPage: 'home',
+      pages: [
+        { id: 'home', layout: [] },
+        activePage,
+      ],
+    }
+
+    const baseState = createRuntimeState(config)
+    const stateWithHistory: RuntimeState = {
+      ...baseState,
+      navigation: {
+        currentPageId: 'current',
+        history: [
+          { entryId: 0, pageId: 'home', params: {} },
+          { entryId: 1, pageId: 'current', params: {} },
+        ],
+        currentEntryIndex: 1,
+        lastError: null,
+      },
+      pageEntry: {
+        ...baseState.pageEntry,
+        pageId: 'current',
+        entryId: 1,
+      },
+    }
+
+    const dispatch = vi.fn<(action: RuntimeStateAction) => void>()
+    const dispatchAndSyncState = vi.fn<(action: RuntimeStateAction) => void>()
+
+    render(
+      <RuntimeStateContext.Provider
+        value={{
+          config,
+          initialState: stateWithHistory,
+          state: stateWithHistory,
+          dispatch,
+          dispatchAndSyncState,
+          getLatestState: () => stateWithHistory,
+        }}
+      >
+        <RuntimePage />
+      </RuntimeStateContext.Provider>,
+    )
+
+    const anchor = screen.getByRole('link', { name: 'Go back to home' })
+    expect(anchor).toHaveAttribute('href', '#/')
+  })
+
+  it('renders href="#" when link has goBack action and there is no previous history entry', () => {
     renderRuntimePage({
       id: 'link-action',
       layout: [
@@ -371,7 +567,52 @@ describe('link node render', () => {
 
     const anchor = screen.getByText('Navigate')
     expect(anchor).toHaveAttribute('data-layout-node', 'link')
-    expect(anchor).not.toHaveAttribute('href')
+    expect(anchor).toHaveAttribute('href', '#')
+  })
+
+  it('navigates via runtime and prevents default when a link with navigateTo action is clicked, not by following href', () => {
+    const config: RuntimeConfig = {
+      api: {},
+      initialPage: 'home',
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'link',
+              props: {
+                label: 'Go to details',
+                action: { type: 'navigateTo', pageId: 'details' },
+              },
+            },
+          ],
+        },
+        {
+          id: 'details',
+          layout: [
+            {
+              type: 'heading',
+              props: { text: 'Details page', level: 1 },
+            },
+          ],
+        },
+      ],
+    }
+
+    render(
+      <RuntimeStateProvider config={config}>
+        <RuntimePage />
+      </RuntimeStateProvider>,
+    )
+
+    const anchor = screen.getByRole('link', { name: 'Go to details' })
+    expect(anchor).toHaveAttribute('href', '#/details')
+
+    fireEvent.click(anchor)
+
+    // Navigation was handled by runtime, not by native href follow
+    expect(screen.getByTestId('runtime-page')).toHaveAttribute('data-runtime-page-id', 'details')
+    expect(screen.getByRole('heading', { name: 'Details page', level: 1 })).toBeInTheDocument()
   })
 
   it('calls window.history.back when a link with goBack action is clicked and history has entries', () => {
@@ -503,6 +744,201 @@ describe('link node render', () => {
     const anchor = screen.getByRole('link', { name: 'Spanning link' })
     const wrapper = anchor.closest('[class*="col-span"]')
     expect(wrapper).not.toBeNull()
+  })
+})
+
+describe('button node with props.icon', () => {
+  it('renders an svg with aria-hidden="true" before the label when props.icon is a valid Lucide name', () => {
+    renderRuntimePage({
+      id: 'button-icon',
+      layout: [
+        {
+          type: 'button',
+          props: {
+            label: 'Search',
+            icon: 'Search',
+            action: { type: 'goBack' },
+          },
+        },
+      ],
+    })
+
+    const button = screen.getByRole('button', { name: 'Search' })
+    const svg = button.querySelector('svg')
+    expect(svg).not.toBeNull()
+    expect(svg).toHaveAttribute('aria-hidden', 'true')
+    // svg must appear before the label text
+    const children = Array.from(button.childNodes)
+    const svgIndex = children.findIndex((n) => n.nodeName === 'svg')
+    const textIndex = children.findIndex((n) => n.nodeType === Node.TEXT_NODE && n.textContent?.includes('Search'))
+    expect(svgIndex).toBeLessThan(textIndex)
+  })
+
+  it('maintains variant and color classes when props.icon is present', () => {
+    renderRuntimePage({
+      id: 'button-icon-variant',
+      layout: [
+        {
+          type: 'button',
+          props: {
+            label: 'Delete',
+            icon: 'Search',
+            variant: 'outline',
+            color: 'danger',
+            action: { type: 'goBack' },
+          },
+        },
+      ],
+    })
+
+    const button = screen.getByRole('button', { name: 'Delete' })
+    expect(button.querySelector('svg')).not.toBeNull()
+    // Should have outline/danger classes
+    expect(button.className).toContain('outline')
+    expect(button.className).toMatch(/danger|red/)
+  })
+
+  it('renders the icon and maintains fullWidth class when props.fullWidth is true', () => {
+    renderRuntimePage({
+      id: 'button-icon-fullwidth',
+      layout: [
+        {
+          type: 'button',
+          props: {
+            label: 'Full',
+            icon: 'Search',
+            fullWidth: true,
+            action: { type: 'goBack' },
+          },
+        },
+      ],
+    })
+
+    const button = screen.getByRole('button', { name: 'Full' })
+    expect(button.querySelector('svg')).not.toBeNull()
+    expect(button.className).toContain('w-full')
+  })
+
+  it('renders only the label without svg when props.icon is an unknown icon name', () => {
+    renderRuntimePage({
+      id: 'button-icon-unknown',
+      layout: [
+        {
+          type: 'button',
+          props: {
+            label: 'Go',
+            icon: 'NonExistentIconXyz',
+            action: { type: 'goBack' },
+          },
+        },
+      ],
+    })
+
+    const button = screen.getByRole('button', { name: 'Go' })
+    expect(button.querySelector('svg')).toBeNull()
+  })
+
+  it('renders without svg when props.icon is absent', () => {
+    renderRuntimePage({
+      id: 'button-no-icon',
+      layout: [
+        {
+          type: 'button',
+          props: {
+            label: 'Plain',
+            action: { type: 'goBack' },
+          },
+        },
+      ],
+    })
+
+    const button = screen.getByRole('button', { name: 'Plain' })
+    expect(button.querySelector('svg')).toBeNull()
+  })
+})
+
+describe('link node with props.icon', () => {
+  it('renders an svg with aria-hidden="true" before the label when props.icon is a valid Lucide name and href is set', () => {
+    renderRuntimePage({
+      id: 'link-icon-href',
+      layout: [
+        {
+          type: 'link',
+          props: {
+            label: 'External',
+            href: 'https://example.com',
+            icon: 'ExternalLink',
+          },
+        },
+      ],
+    })
+
+    const anchor = screen.getByRole('link', { name: 'External' })
+    const svg = anchor.querySelector('svg')
+    expect(svg).not.toBeNull()
+    expect(svg).toHaveAttribute('aria-hidden', 'true')
+    // svg must appear before the label text node
+    const children = Array.from(anchor.childNodes)
+    const svgIndex = children.findIndex((n) => n.nodeName === 'svg')
+    const textIndex = children.findIndex((n) => n.nodeType === Node.TEXT_NODE && n.textContent?.includes('External'))
+    expect(svgIndex).toBeLessThan(textIndex)
+  })
+
+  it('renders an svg before the label when props.icon is set and action is navigateTo, and href is decorative', () => {
+    renderRuntimePage({
+      id: 'link-icon-action',
+      layout: [
+        {
+          type: 'link',
+          props: {
+            label: 'Go home',
+            action: { type: 'navigateTo', pageId: 'link-icon-action' },
+            icon: 'ExternalLink',
+          },
+        },
+      ],
+    })
+
+    const anchor = screen.getByRole('link', { name: 'Go home' })
+    expect(anchor.querySelector('svg')).not.toBeNull()
+    expect(anchor).toHaveAttribute('href', '#/link-icon-action')
+  })
+
+  it('renders without svg when props.icon is an unknown icon name', () => {
+    renderRuntimePage({
+      id: 'link-icon-unknown',
+      layout: [
+        {
+          type: 'link',
+          props: {
+            label: 'Visit',
+            href: 'https://example.com',
+            icon: 'NonExistentIconXyz',
+          },
+        },
+      ],
+    })
+
+    const anchor = screen.getByRole('link', { name: 'Visit' })
+    expect(anchor.querySelector('svg')).toBeNull()
+  })
+
+  it('renders without svg when props.icon is absent', () => {
+    renderRuntimePage({
+      id: 'link-no-icon',
+      layout: [
+        {
+          type: 'link',
+          props: {
+            label: 'Plain link',
+            href: 'https://example.com',
+          },
+        },
+      ],
+    })
+
+    const anchor = screen.getByRole('link', { name: 'Plain link' })
+    expect(anchor.querySelector('svg')).toBeNull()
   })
 })
 

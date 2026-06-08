@@ -929,3 +929,297 @@ describe('TabsNode — item visibility', () => {
     consoleSpy.mockRestore()
   })
 })
+
+describe('TabsNode — bar sizing and overflow', () => {
+  it('vertical bar has w-48 and shrink-0 classes in addition to flex and flex-col', () => {
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [
+        {
+          type: 'tabs',
+          props: {
+            orientation: 'vertical',
+            items: [
+              { label: 'Tab A', children: [] },
+              { label: 'Tab B', children: [] },
+            ],
+          },
+        },
+      ],
+    }
+
+    const { container } = renderRuntimePage(page)
+    const bar = container.querySelector('[data-layout-node="tabs-bar"]')
+    expect(bar).toBeInTheDocument()
+    expect(bar).toHaveClass('w-48')
+    expect(bar).toHaveClass('shrink-0')
+    expect(bar).toHaveClass('flex')
+    expect(bar).toHaveClass('flex-col')
+  })
+
+  it('vertical buttons have text-left, whitespace-normal and break-words classes (active and inactive)', () => {
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [
+        {
+          type: 'tabs',
+          props: {
+            orientation: 'vertical',
+            items: [
+              { label: 'Tab A', children: [] },
+              { label: 'Tab B', children: [] },
+            ],
+          },
+        },
+      ],
+    }
+
+    renderRuntimePage(page)
+
+    const buttons = screen.getAllByRole('button')
+    for (const btn of buttons) {
+      expect(btn).toHaveClass('text-left')
+      expect(btn).toHaveClass('whitespace-normal')
+      expect(btn).toHaveClass('break-words')
+    }
+  })
+
+  it('vertical bar has w-48 and shrink-0 with a single item', () => {
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [
+        {
+          type: 'tabs',
+          props: {
+            orientation: 'vertical',
+            items: [
+              { label: 'Only Tab', children: [] },
+            ],
+          },
+        },
+      ],
+    }
+
+    const { container } = renderRuntimePage(page)
+    const bar = container.querySelector('[data-layout-node="tabs-bar"]')
+    expect(bar).toHaveClass('w-48')
+    expect(bar).toHaveClass('shrink-0')
+  })
+
+  it('vertical button with very long label has wrapping classes (whitespace-normal, break-words)', () => {
+    const longLabel = 'A'.repeat(60)
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [
+        {
+          type: 'tabs',
+          props: {
+            orientation: 'vertical',
+            items: [
+              { label: longLabel, children: [] },
+            ],
+          },
+        },
+      ],
+    }
+
+    renderRuntimePage(page)
+
+    const btn = screen.getByRole('button', { name: longLabel })
+    expect(btn).toHaveClass('whitespace-normal')
+    expect(btn).toHaveClass('break-words')
+  })
+
+  it('horizontal bar has overflow-x-auto in addition to flex and flex-row (two items)', () => {
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [
+        {
+          type: 'tabs',
+          props: {
+            orientation: 'horizontal',
+            items: [
+              { label: 'Tab A', children: [] },
+              { label: 'Tab B', children: [] },
+            ],
+          },
+        },
+      ],
+    }
+
+    const { container } = renderRuntimePage(page)
+    const bar = container.querySelector('[data-layout-node="tabs-bar"]')
+    expect(bar).toBeInTheDocument()
+    expect(bar).toHaveClass('overflow-x-auto')
+    expect(bar).toHaveClass('flex')
+    expect(bar).toHaveClass('flex-row')
+  })
+
+  it('horizontal buttons have shrink-0 and whitespace-nowrap classes (active and inactive)', () => {
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [
+        {
+          type: 'tabs',
+          props: {
+            orientation: 'horizontal',
+            items: [
+              { label: 'Tab A', children: [] },
+              { label: 'Tab B', children: [] },
+            ],
+          },
+        },
+      ],
+    }
+
+    renderRuntimePage(page)
+
+    const buttons = screen.getAllByRole('button')
+    for (const btn of buttons) {
+      expect(btn).toHaveClass('shrink-0')
+      expect(btn).toHaveClass('whitespace-nowrap')
+    }
+  })
+
+  it('horizontal bar has overflow-x-auto with a single item', () => {
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [
+        {
+          type: 'tabs',
+          props: {
+            orientation: 'horizontal',
+            items: [
+              { label: 'Only Tab', children: [] },
+            ],
+          },
+        },
+      ],
+    }
+
+    const { container } = renderRuntimePage(page)
+    const bar = container.querySelector('[data-layout-node="tabs-bar"]')
+    expect(bar).toHaveClass('overflow-x-auto')
+  })
+
+  it('hidden tabs do not appear as buttons; all rendered buttons have horizontal sizing classes', () => {
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [
+        {
+          type: 'tabs',
+          props: {
+            orientation: 'horizontal',
+            items: [
+              { label: 'Visible', children: [] },
+              {
+                label: 'Hidden',
+                visibility: { reference: 'queries.q.data.show', operator: 'isTruthy' },
+                children: [],
+              },
+            ],
+          },
+        },
+      ],
+    }
+
+    const state = createRuntimePageState(page, buildQueryState('q', { show: false }))
+    renderRuntimePageWithState(page, state)
+
+    expect(screen.queryByRole('button', { name: 'Hidden' })).not.toBeInTheDocument()
+
+    const buttons = screen.getAllByRole('button')
+    for (const btn of buttons) {
+      expect(btn).toHaveClass('shrink-0')
+      expect(btn).toHaveClass('whitespace-nowrap')
+    }
+  })
+
+  it('vertical bar does not have overflow-x-auto; horizontal bar does not have w-48 or shrink-0 (exclusive classes)', () => {
+    const verticalPage: RuntimePageConfig = {
+      id: 'home',
+      layout: [
+        {
+          type: 'tabs',
+          props: {
+            orientation: 'vertical',
+            items: [
+              { label: 'Tab A', children: [] },
+              { label: 'Tab B', children: [] },
+            ],
+          },
+        },
+      ],
+    }
+
+    const { container: vertContainer, unmount } = renderRuntimePage(verticalPage)
+    const vertBar = vertContainer.querySelector('[data-layout-node="tabs-bar"]')
+    expect(vertBar).not.toHaveClass('overflow-x-auto')
+
+    const vertButtons = vertContainer.querySelectorAll('[data-layout-node="tabs-bar"] button')
+    for (const btn of Array.from(vertButtons)) {
+      expect(btn).not.toHaveClass('whitespace-nowrap')
+    }
+
+    unmount()
+
+    const horizontalPage: RuntimePageConfig = {
+      id: 'home',
+      layout: [
+        {
+          type: 'tabs',
+          props: {
+            orientation: 'horizontal',
+            items: [
+              { label: 'Tab A', children: [] },
+              { label: 'Tab B', children: [] },
+            ],
+          },
+        },
+      ],
+    }
+
+    const { container: horizContainer } = renderRuntimePage(horizontalPage)
+    const horizBar = horizContainer.querySelector('[data-layout-node="tabs-bar"]')
+    expect(horizBar).not.toHaveClass('w-48')
+    // shrink-0 is used in horizontal buttons (not bar), so we only check the bar here
+    expect(horizBar).not.toHaveClass('text-left')
+    expect(horizBar).not.toHaveClass('whitespace-normal')
+    expect(horizBar).not.toHaveClass('break-words')
+
+    const horizButtons = horizContainer.querySelectorAll('[data-layout-node="tabs-bar"] button')
+    for (const btn of Array.from(horizButtons)) {
+      expect(btn).not.toHaveClass('text-left')
+      expect(btn).not.toHaveClass('whitespace-normal')
+      expect(btn).not.toHaveClass('break-words')
+    }
+  })
+
+  it('sanity: clicking second tab in horizontal orientation still switches the active panel', () => {
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [
+        {
+          type: 'tabs',
+          props: {
+            orientation: 'horizontal',
+            items: [
+              { label: 'Tab A', children: [{ type: 'paragraph', props: { text: 'Content A' } }] },
+              { label: 'Tab B', children: [{ type: 'paragraph', props: { text: 'Content B' } }] },
+            ],
+          },
+        },
+      ],
+    }
+
+    renderRuntimePage(page)
+
+    expect(screen.getByText('Content A')).toBeInTheDocument()
+    expect(screen.queryByText('Content B')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Tab B' }))
+
+    expect(screen.queryByText('Content A')).not.toBeInTheDocument()
+    expect(screen.getByText('Content B')).toBeInTheDocument()
+  })
+})

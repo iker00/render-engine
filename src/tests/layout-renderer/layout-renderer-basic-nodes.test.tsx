@@ -740,4 +740,104 @@ describe('RuntimePage', () => {
       'marker:text-app-accent',
     )
   })
+
+  it('renders heading with props.icon as an svg with aria-hidden before the text', () => {
+    renderRuntimePage({
+      id: 'heading-icon',
+      layout: [
+        {
+          type: 'heading',
+          props: {
+            text: 'Users',
+            level: 2,
+            icon: 'User',
+          },
+        },
+      ],
+    })
+
+    const heading = screen.getByRole('heading', { name: 'Users', level: 2 })
+    const svg = heading.querySelector('svg')
+    expect(svg).toBeInTheDocument()
+    expect(svg).toHaveAttribute('aria-hidden', 'true')
+    // svg must come before the text node
+    expect(heading.firstChild).toBe(svg)
+  })
+
+  it('renders heading with props.icon at any heading level preserving hierarchy', () => {
+    renderRuntimePage({
+      id: 'heading-icon-level1',
+      layout: [
+        {
+          type: 'heading',
+          props: {
+            text: 'Title',
+            level: 1,
+            icon: 'User',
+          },
+        },
+      ],
+    })
+
+    expect(screen.getByRole('heading', { name: 'Title', level: 1 })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Title', level: 1 }).querySelector('svg')).toBeInTheDocument()
+  })
+
+  it('renders heading without icon when props.icon is absent', () => {
+    renderRuntimePage({
+      id: 'heading-no-icon',
+      layout: [
+        {
+          type: 'heading',
+          props: {
+            text: 'No Icon',
+            level: 3,
+          },
+        },
+      ],
+    })
+
+    const heading = screen.getByRole('heading', { name: 'No Icon', level: 3 })
+    expect(heading.querySelector('svg')).not.toBeInTheDocument()
+  })
+
+  it('renders paragraph with props.icon as an svg with aria-hidden before the text', () => {
+    renderRuntimePage({
+      id: 'paragraph-icon',
+      layout: [
+        {
+          type: 'paragraph',
+          props: {
+            text: 'Some info text.',
+            icon: 'Info',
+          },
+        },
+      ],
+    })
+
+    const paragraph = document.querySelector('[data-layout-node="paragraph"]')
+    expect(paragraph).toBeInTheDocument()
+    const svg = paragraph!.querySelector('svg')
+    expect(svg).toBeInTheDocument()
+    expect(svg).toHaveAttribute('aria-hidden', 'true')
+  })
+
+  it('renders paragraph without icon when props.icon is an unknown name', () => {
+    renderRuntimePage({
+      id: 'paragraph-unknown-icon',
+      layout: [
+        {
+          type: 'paragraph',
+          props: {
+            text: 'Text only.',
+            icon: 'NonExistentIconXyz',
+          },
+        },
+      ],
+    })
+
+    const paragraph = document.querySelector('[data-layout-node="paragraph"]')
+    expect(paragraph).toBeInTheDocument()
+    expect(paragraph!.querySelector('svg')).not.toBeInTheDocument()
+  })
 })

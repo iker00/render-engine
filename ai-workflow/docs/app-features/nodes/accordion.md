@@ -37,6 +37,7 @@ El nodo `accordion` aplica los campos transversales estándar sobre el nodo comp
 - **Estilo visual**: la cabecera usa un fondo de tono suave del color primario (`app-accent/10`), con un tono más marcado en hover (`app-accent/20`). El anillo de foco usa el color primario (`app-accent`).
 - **Indicador chevron**: la cabecera muestra un icono chevron alineado a la derecha. El chevron apunta hacia abajo cuando el accordion está cerrado y hacia arriba cuando está abierto, con una rotación animada suave al cambiar de estado.
 - **Transición de apertura/cierre**: el cuerpo del accordion aparece y desaparece con una transición visual suave en lugar de aparecer o desaparecer de golpe. Los hijos se montan/desmontan de forma síncrona con `isOpen`, por lo que la transición opera sobre el wrapper exterior del cuerpo.
+- **Espaciado en el cuerpo**: cuando el accordion está expandido y tiene hijos, el cuerpo aplica un espaciado vertical fijo (`gap-5` en Tailwind, equivalente al alias `md` del nodo `container`) entre los hijos directos, evitando que aparezcan pegados. El espaciado es transparente cuando el cuerpo tiene un único hijo o está vacío.
 
 ### Coordinación de grupos
 

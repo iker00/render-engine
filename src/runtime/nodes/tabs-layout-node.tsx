@@ -73,7 +73,7 @@ function TabsNodeContent({ node, items, orientation, defaultTab, state, iteratio
     <div
       data-layout-node="tabs-bar"
       role="tablist"
-      className={isVertical ? 'flex flex-col' : 'flex flex-row'}
+      className={isVertical ? 'flex flex-col w-48 shrink-0' : 'flex flex-row overflow-x-auto'}
     >
       {visibleIndices.map((index) => {
         const item = items[index]
@@ -92,8 +92,8 @@ function TabsNodeContent({ node, items, orientation, defaultTab, state, iteratio
             onClick={() => setActiveTab(index)}
             className={
               isActive
-                ? 'border-b-2 border-blue-600 font-semibold px-4 py-2'
-                : 'px-4 py-2 text-gray-600 hover:text-gray-900'
+                ? `border-b-2 border-blue-600 font-semibold px-4 py-2${isVertical ? ' text-left whitespace-normal break-words' : ' shrink-0 whitespace-nowrap'}`
+                : `px-4 py-2 text-gray-600 hover:text-gray-900${isVertical ? ' text-left whitespace-normal break-words' : ' shrink-0 whitespace-nowrap'}`
             }
           >
             {resolvedLabel}

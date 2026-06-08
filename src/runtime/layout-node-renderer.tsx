@@ -10,6 +10,7 @@ import { AccordionNode } from './nodes/accordion-layout-node'
 import { AlertNode } from './nodes/alert-layout-node'
 import { BadgeNode } from './nodes/badge-layout-node'
 import { DividerNode } from './nodes/divider-layout-node'
+import { SkeletonNode } from './nodes/skeleton-layout-node'
 import { StatNode } from './nodes/stat-layout-node'
 import { ButtonNode } from './nodes/button-layout-node'
 import { LinkNode } from './nodes/link-layout-node'
@@ -126,6 +127,9 @@ export function LayoutNodeRenderer({ node, renderedChildren, iterationContext }:
       break
     case 'divider':
       renderedNode = <DividerNode node={node} iterationContext={iterationContext} />
+      break
+    case 'skeleton':
+      renderedNode = <SkeletonNode node={node} iterationContext={iterationContext} />
       break
   }
 

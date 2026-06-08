@@ -6,6 +6,7 @@
 
 ## Contrato (`props`)
 - `props.label`: string obligatorio, literal, referencia dinámica completa o string visible interpolado con `{{...}}`.
+- `props.icon`: string opcional, nombre del icono Lucide React (ej. `"Search"`, `"User"`, `"ArrowRight"`). Se renderiza a la izquierda del label. Si el nombre no resuelve a un icono conocido, se ignora silenciosamente.
 - `props.action`: opcional; sin `action` solo es válido dentro del subárbol de un `form` y actúa como submit implícito.
 - `props.action.type`: `navigateTo | goBack | executeOperation | executeOperations | resetForm | openModal | closeModal`.
 - `props.color`: opcional, enum cerrado de seis valores semánticos: `neutral | primary | success | warning | danger | info`, default `primary`.

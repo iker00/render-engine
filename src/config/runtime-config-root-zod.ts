@@ -19,6 +19,7 @@ import {
   repeaterNodeSchema,
   runtimeApiOperationShellSchema,
   selectNodeSchema,
+  skeletonNodeSchema,
   statNodeSchema,
   tabsNodeSchema,
   tableNodeSchema,
@@ -50,6 +51,7 @@ const layoutNodeSchema: z.ZodType<unknown> = z.lazy(() =>
     alertNodeSchema,
     statNodeSchema,
     dividerNodeSchema,
+    skeletonNodeSchema,
   ]),
 )
 

@@ -403,3 +403,82 @@ describe('StatNode — form integration', () => {
     expect(container.querySelector('[data-layout-node="stat"]')).toBeInTheDocument()
   })
 })
+
+describe('StatNode — props.icon', () => {
+  it('stat with variant: "accent", color: "primary" and props.icon: "TrendingUp" renders an <svg> with aria-hidden="true" inside [data-layout-node="stat"]', () => {
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [{ type: 'stat', props: { label: 'Growth', value: '+12%', variant: 'accent', color: 'primary', icon: 'TrendingUp' } }],
+    }
+    const { container } = renderRuntimePage(page)
+    const stat = container.querySelector('[data-layout-node="stat"]')
+    expect(stat).toBeInTheDocument()
+    const svg = stat!.querySelector('svg')
+    expect(svg).toBeInTheDocument()
+    expect(svg).toHaveAttribute('aria-hidden', 'true')
+  })
+
+  it('stat with variant: "accent", color: "primary" and props.icon: "TrendingUp" still has class border-blue-500', () => {
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [{ type: 'stat', props: { label: 'Growth', value: '+12%', variant: 'accent', color: 'primary', icon: 'TrendingUp' } }],
+    }
+    const { container } = renderRuntimePage(page)
+    const stat = container.querySelector('[data-layout-node="stat"]')
+    expect(stat).toHaveClass('border-blue-500')
+  })
+
+  it('stat with variant: "accent", color: "primary" and props.icon: "TrendingUp" still renders label and value text', () => {
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [{ type: 'stat', props: { label: 'Growth', value: '+12%', variant: 'accent', color: 'primary', icon: 'TrendingUp' } }],
+    }
+    renderRuntimePage(page)
+    expect(screen.getByText('Growth')).toBeInTheDocument()
+    expect(screen.getByText('+12%')).toBeInTheDocument()
+  })
+
+  it('stat with variant: "tinted", color: "success" and props.icon: "TrendingUp" renders an <svg> with aria-hidden="true"', () => {
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [{ type: 'stat', props: { label: 'Users', value: '500', variant: 'tinted', color: 'success', icon: 'TrendingUp' } }],
+    }
+    const { container } = renderRuntimePage(page)
+    const stat = container.querySelector('[data-layout-node="stat"]')
+    const svg = stat!.querySelector('svg')
+    expect(svg).toBeInTheDocument()
+    expect(svg).toHaveAttribute('aria-hidden', 'true')
+  })
+
+  it('stat with variant: "tinted", color: "success" and props.icon: "TrendingUp" still has class bg-green-100', () => {
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [{ type: 'stat', props: { label: 'Users', value: '500', variant: 'tinted', color: 'success', icon: 'TrendingUp' } }],
+    }
+    const { container } = renderRuntimePage(page)
+    const stat = container.querySelector('[data-layout-node="stat"]')
+    expect(stat).toHaveClass('bg-green-100')
+  })
+
+  it('stat with props.icon: "NonExistentIconXyz" renders no <svg> inside [data-layout-node="stat"]', () => {
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [{ type: 'stat', props: { label: 'Metric', value: '100', icon: 'NonExistentIconXyz' } }],
+    }
+    const { container } = renderRuntimePage(page)
+    const stat = container.querySelector('[data-layout-node="stat"]')
+    expect(stat).toBeInTheDocument()
+    expect(stat!.querySelector('svg')).not.toBeInTheDocument()
+  })
+
+  it('stat without props.icon renders no <svg> inside [data-layout-node="stat"]', () => {
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [{ type: 'stat', props: { label: 'Metric', value: '100' } }],
+    }
+    const { container } = renderRuntimePage(page)
+    const stat = container.querySelector('[data-layout-node="stat"]')
+    expect(stat).toBeInTheDocument()
+    expect(stat!.querySelector('svg')).not.toBeInTheDocument()
+  })
+})

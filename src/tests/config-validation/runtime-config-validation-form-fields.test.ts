@@ -7,6 +7,79 @@ import {
 } from './helpers'
 
 describe('validateRuntimeConfig', () => {
+  describe('input props.icon', () => {
+    it('accepts input with props.icon as an arbitrary string', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithFormLayout({
+          children: [
+            {
+              type: 'input',
+              props: {
+                fieldId: 'email',
+                label: 'Email',
+                icon: 'Mail',
+              },
+            },
+          ],
+        }),
+      )
+
+      expect(result.status).toBe('ready')
+      if (result.status !== 'ready') throw new Error('Expected ready')
+
+      const formNode = result.page.layout[0]
+      if (formNode.type !== 'form') throw new Error('Expected form')
+
+      expect(formNode.children?.[0]).toMatchObject({
+        type: 'input',
+        props: { fieldId: 'email', icon: 'Mail' },
+      })
+    })
+
+    it('accepts input without props.icon and the normalized node does not include it', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithFormLayout({
+          children: [
+            {
+              type: 'input',
+              props: {
+                fieldId: 'email',
+                label: 'Email',
+              },
+            },
+          ],
+        }),
+      )
+
+      expect(result.status).toBe('ready')
+      if (result.status !== 'ready') throw new Error('Expected ready')
+
+      const formNode = result.page.layout[0]
+      if (formNode.type !== 'form') throw new Error('Expected form')
+
+      expect(formNode.children?.[0]).not.toHaveProperty('props.icon')
+    })
+
+    it('accepts input with props.icon as an unknown Lucide name (no validation against catalog)', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithFormLayout({
+          children: [
+            {
+              type: 'input',
+              props: {
+                fieldId: 'email',
+                label: 'Email',
+                icon: 'NonExistentIconXyz',
+              },
+            },
+          ],
+        }),
+      )
+
+      expect(result.status).toBe('ready')
+    })
+  })
+
   describe('reusable form field expansion contract', () => {
     it('accepts the expanded inputType catalog', () => {
       const result = validateRuntimeConfig(

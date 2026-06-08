@@ -756,6 +756,120 @@ describe('AccordionNode — body open/close transition', () => {
   })
 })
 
+describe('AccordionNode — body gap between children', () => {
+  it('wrapper interno tiene flex, flex-col y gap-5 cuando accordion está abierto con dos hijos', () => {
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [
+        {
+          type: 'accordion',
+          props: { label: 'Dos hijos', defaultOpen: true },
+          children: [
+            { type: 'paragraph', props: { text: 'Hijo 1' } },
+            { type: 'paragraph', props: { text: 'Hijo 2' } },
+          ],
+        },
+      ],
+    }
+
+    const { container } = renderRuntimePage(page)
+    const wrapper = container.querySelector('[data-layout-node="accordion-body"] .px-4.py-2')
+
+    expect(wrapper).not.toBeNull()
+    expect(wrapper!.classList.contains('flex')).toBe(true)
+    expect(wrapper!.classList.contains('flex-col')).toBe(true)
+    expect(wrapper!.classList.contains('gap-5')).toBe(true)
+  })
+
+  it('wrapper interno tiene flex, flex-col y gap-5 cuando accordion está abierto con un único hijo', () => {
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [
+        {
+          type: 'accordion',
+          props: { label: 'Un hijo', defaultOpen: true },
+          children: [{ type: 'paragraph', props: { text: 'Único hijo' } }],
+        },
+      ],
+    }
+
+    const { container } = renderRuntimePage(page)
+    const wrapper = container.querySelector('[data-layout-node="accordion-body"] .px-4.py-2')
+
+    expect(wrapper).not.toBeNull()
+    expect(wrapper!.classList.contains('flex')).toBe(true)
+    expect(wrapper!.classList.contains('flex-col')).toBe(true)
+    expect(wrapper!.classList.contains('gap-5')).toBe(true)
+  })
+
+  it('cuando accordion está cerrado por defecto, el wrapper interno no existe en el DOM', () => {
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [
+        {
+          type: 'accordion',
+          props: { label: 'Cerrado gap' },
+          children: [
+            { type: 'paragraph', props: { text: 'Hijo 1' } },
+            { type: 'paragraph', props: { text: 'Hijo 2' } },
+          ],
+        },
+      ],
+    }
+
+    const { container } = renderRuntimePage(page)
+    const body = container.querySelector('[data-layout-node="accordion-body"]')
+    expect(body).toBeNull()
+    const wrapper = container.querySelector('[data-layout-node="accordion-body"] .px-4.py-2')
+    expect(wrapper).toBeNull()
+  })
+
+  it('wrapper interno con px-4 py-2 flex flex-col gap-5 NO se renderiza con children vacío', () => {
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [
+        {
+          type: 'accordion',
+          props: { label: 'Sin hijos gap', defaultOpen: true },
+          children: [],
+        },
+      ],
+    }
+
+    const { container } = renderRuntimePage(page)
+    const wrapper = container.querySelector('[data-layout-node="accordion-body"] .px-4.py-2')
+    expect(wrapper).toBeNull()
+  })
+
+  it('tras hacer click en accordion cerrado con dos hijos, el wrapper interno tiene flex, flex-col y gap-5', () => {
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [
+        {
+          type: 'accordion',
+          props: { label: 'Click gap' },
+          children: [
+            { type: 'paragraph', props: { text: 'Hijo click 1' } },
+            { type: 'paragraph', props: { text: 'Hijo click 2' } },
+          ],
+        },
+      ],
+    }
+
+    const { container } = renderRuntimePage(page)
+
+    expect(container.querySelector('[data-layout-node="accordion-body"] .px-4.py-2')).toBeNull()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Click gap' }))
+
+    const wrapper = container.querySelector('[data-layout-node="accordion-body"] .px-4.py-2')
+    expect(wrapper).not.toBeNull()
+    expect(wrapper!.classList.contains('flex')).toBe(true)
+    expect(wrapper!.classList.contains('flex-col')).toBe(true)
+    expect(wrapper!.classList.contains('gap-5')).toBe(true)
+  })
+})
+
 describe('AccordionNode — header styling and chevron', () => {
   it('header has bg-app-accent/10 and hover:bg-app-accent/20 classes and no legacy gray classes', () => {
     const page: RuntimePageConfig = {

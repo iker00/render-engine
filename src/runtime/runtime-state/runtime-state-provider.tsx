@@ -735,6 +735,10 @@ export function useRuntimeStateActions() {
   )
 }
 
+export function useRuntimeConfig() {
+  return useRuntimeStateContext().config
+}
+
 export function useRuntimeCurrentPage() {
   const { config, state } = useRuntimeStateContext()
 

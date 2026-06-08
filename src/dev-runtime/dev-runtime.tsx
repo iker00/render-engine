@@ -44,7 +44,7 @@ if (import.meta.hot) {
   })
 }
 
-export function DevRuntime({ rootElement = document.getElementById('root') }: DevRuntimeProps) {
+export function DevRuntime({ rootElement = document.getElementById('layout-renderer') }: DevRuntimeProps) {
   // Capture the raw text before validation so the editor shows the original format.
   // The validator normalizes preloads from { "opName": {} } to { operationName, requestParams },
   // so re-serializing the normalized config would break re-validation.

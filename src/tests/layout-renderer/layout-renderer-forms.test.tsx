@@ -125,6 +125,213 @@ function renderRuntimeFormPage(activePage: RuntimePageConfig) {
   )
 }
 
+describe('input icon', () => {
+  it('renders an svg with aria-hidden inside the input wrapper when props.icon resolves', () => {
+    renderRuntimeFormPage({
+      id: 'input-icon-test',
+      layout: [
+        {
+          type: 'form',
+          id: 'icon-form',
+          children: [
+            {
+              type: 'input',
+              props: {
+                fieldId: 'email',
+                label: 'Email',
+                icon: 'Mail',
+              },
+            },
+          ],
+        },
+      ],
+    })
+
+    const wrapper = screen.getByText('Email').closest('[data-layout-node="input"]')
+    expect(wrapper).not.toBeNull()
+    const svg = wrapper!.querySelector('svg')
+    expect(svg).not.toBeNull()
+    expect(svg).toHaveAttribute('aria-hidden', 'true')
+  })
+
+  it('renders the icon in a separate addon container with bg-gray-50 and no pl- class on the input', () => {
+    renderRuntimeFormPage({
+      id: 'input-icon-addon-test',
+      layout: [
+        {
+          type: 'form',
+          id: 'icon-form',
+          children: [
+            {
+              type: 'input',
+              props: {
+                fieldId: 'email',
+                label: 'Email',
+                icon: 'Mail',
+              },
+            },
+          ],
+        },
+      ],
+    })
+
+    const wrapper = screen.getByText('Email').closest('[data-layout-node="input"]')
+    const addonContainer = wrapper!.querySelector('.bg-gray-50')
+    expect(addonContainer).not.toBeNull()
+    expect(addonContainer!.querySelector('svg')).not.toBeNull()
+
+    const input = screen.getByLabelText('Email')
+    const classList = Array.from(input.classList)
+    expect(classList.some((c) => c.startsWith('pl-'))).toBe(false)
+  })
+
+  it('does not render svg and does not add pl- padding when props.icon is unknown', () => {
+    renderRuntimeFormPage({
+      id: 'input-icon-unknown-test',
+      layout: [
+        {
+          type: 'form',
+          id: 'icon-form',
+          children: [
+            {
+              type: 'input',
+              props: {
+                fieldId: 'email',
+                label: 'Email',
+                icon: 'NonExistentIconXyz',
+              },
+            },
+          ],
+        },
+      ],
+    })
+
+    const wrapper = screen.getByText('Email').closest('[data-layout-node="input"]')
+    expect(wrapper!.querySelector('svg')).toBeNull()
+
+    const input = screen.getByLabelText('Email')
+    const classList = Array.from(input.classList)
+    expect(classList.some((c) => c.startsWith('pl-'))).toBe(false)
+  })
+
+  it('does not render svg when props.icon is absent', () => {
+    renderRuntimeFormPage({
+      id: 'input-no-icon-test',
+      layout: [
+        {
+          type: 'form',
+          id: 'icon-form',
+          children: [
+            {
+              type: 'input',
+              props: {
+                fieldId: 'email',
+                label: 'Email',
+              },
+            },
+          ],
+        },
+      ],
+    })
+
+    const wrapper = screen.getByText('Email').closest('[data-layout-node="input"]')
+    expect(wrapper!.querySelector('svg')).toBeNull()
+  })
+
+  it('keeps placeholder visible on the input when props.icon is present', () => {
+    renderRuntimeFormPage({
+      id: 'input-icon-placeholder-test',
+      layout: [
+        {
+          type: 'form',
+          id: 'icon-form',
+          children: [
+            {
+              type: 'input',
+              props: {
+                fieldId: 'email',
+                label: 'Email',
+                icon: 'Mail',
+                placeholder: 'your@email.com',
+              },
+            },
+          ],
+        },
+      ],
+    })
+
+    const input = screen.getByLabelText('Email')
+    expect(input).toHaveAttribute('placeholder', 'your@email.com')
+  })
+
+  it('keeps aria-describedby and shows icon after submit with validation error', async () => {
+    renderRuntimeFormPage({
+      id: 'input-icon-validation-test',
+      layout: [
+        {
+          type: 'form',
+          id: 'icon-form',
+          children: [
+            {
+              type: 'input',
+              props: {
+                fieldId: 'email',
+                label: 'Email',
+                icon: 'Mail',
+                validations: {
+                  required: { value: true, message: 'Required' },
+                },
+              },
+            },
+            {
+              type: 'button',
+              props: { label: 'Submit' },
+            },
+          ],
+        },
+      ],
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Submit' }))
+
+    await waitFor(() => {
+      const inputEl = document.getElementById('icon-form-email')
+      expect(inputEl).toHaveAttribute('aria-describedby', 'icon-form-email-error')
+    })
+
+    const wrapper = screen.getByText('Email').closest('[data-layout-node="input"]')
+    expect(wrapper!.querySelector('svg')).not.toBeNull()
+  })
+
+  it('svg is not focusable (aria-hidden and no tabindex)', () => {
+    renderRuntimeFormPage({
+      id: 'input-icon-focusable-test',
+      layout: [
+        {
+          type: 'form',
+          id: 'icon-form',
+          children: [
+            {
+              type: 'input',
+              props: {
+                fieldId: 'email',
+                label: 'Email',
+                icon: 'Mail',
+              },
+            },
+          ],
+        },
+      ],
+    })
+
+    const wrapper = screen.getByText('Email').closest('[data-layout-node="input"]')
+    const svg = wrapper!.querySelector('svg')
+    expect(svg).not.toBeNull()
+    expect(svg).toHaveAttribute('aria-hidden', 'true')
+    expect(svg).not.toHaveAttribute('tabindex')
+  })
+})
+
 describe('RuntimePage', () => {
   it('renders declarative forms and nested fields in order with initialized values', () => {
     renderRuntimeFormPage({

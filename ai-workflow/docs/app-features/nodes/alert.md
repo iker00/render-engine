@@ -1,10 +1,10 @@
-> Cuándo leer: si la tarea toca el nodo `alert` — bloque de aviso semántico con icono placeholder, cabecera opcional y mensaje.
+> Cuándo leer: si la tarea toca el nodo `alert` — bloque de aviso semántico con icono Lucide por tipo, cabecera opcional y mensaje.
 > Tamaño: medio.
 > Relacionados: [[../references/visibility.md]], [[../references/query-state-feedback.md]], [[../config/validation.md]].
 
 # Nodo `alert`
 
-Nodo hoja de presentación pura que renderiza un bloque horizontal de aviso con icono placeholder, cabecera opcional y texto de mensaje. Soporta una paleta semántica cerrada de seis tipos. No es interactivo ni acepta acciones.
+Nodo hoja de presentación pura que renderiza un bloque horizontal de aviso con icono Lucide semántico fijo por tipo, cabecera opcional y texto de mensaje. Soporta una paleta semántica cerrada de seis tipos. No es interactivo ni acepta acciones.
 
 ## Props
 
@@ -33,22 +33,44 @@ Renderiza un `<div data-layout-node="alert">` con layout horizontal `flex items-
 | `danger` | `bg-red-100` | `text-red-700` |
 | `info` | `bg-cyan-100` | `text-cyan-700` |
 
-El icono placeholder se renderiza como un `<span>` con la clase de texto del tipo y el literal `icon` como contenido. El icono definitivo se sustituirá en una iteración futura; la implementación actual no requiere librería de iconos externa.
+El icono se selecciona automáticamente según `props.type` y se renderiza con la librería `lucide-react`:
+
+| Tipo | Icono Lucide |
+|---|---|
+| `neutral` | `MessageCircle` |
+| `primary` | `Megaphone` |
+| `success` | `CheckCircle` |
+| `warning` | `AlertTriangle` |
+| `danger` | `XCircle` |
+| `info` | `Info` |
+
+El icono se renderiza como `<svg>` con la clase de acento del tipo (`text-{color}-700`), tamaño `size-5` y atributo `aria-hidden="true"`.
 
 ## Estructura visual
 
-El bloque se compone de dos zonas dispuestas horizontalmente:
+El bloque se compone de un contenedor horizontal con dos zonas:
 
 1. **Zona de icono** — `<span>` con la clase de acento del tipo y el texto `icon`.
-2. **Zona de contenido** — `<div>` con:
-   - `<strong>` con `props.title` resuelto, solo cuando está presente y no es string vacío.
-   - `<span>` con `props.message` resuelto.
+2. **Zona de contenido** — `<div>` que adopta dos estructuras según `props.title`:
+
+   **Con `props.title` presente y no vacío:**
+   - La zona de contenido es una columna vertical (`flex-col`) que ocupa el ancho restante (`flex-1`):
+     - Fila superior: `<strong>` con `props.title` resuelto, en el color de acento del tipo.
+     - Fila inferior: `<span>` con `props.message` resuelto.
+
+   **Sin `props.title` (ausente o string vacío):**
+   - La zona de contenido es un `<span>` simple con `props.message` resuelto (layout clásico de una fila).
 
 ## Comportamiento de render
 
-- Se renderiza siempre con `data-layout-node="alert"`.
+- Se renderiza siempre con `data-layout-node="alert"` en un contenedor horizontal (`flex items-start`).
 - `props.type` usa `"neutral"` como default si no se declara.
-- `props.title` se renderiza como `<strong>` cuando está presente y no es string vacío. Si está ausente o es string vacío, el elemento `<strong>` no aparece en el DOM.
+- Cuando `props.title` está presente y no es string vacío tras la resolución:
+  - La zona de contenido se renderiza como `<div className="flex flex-col flex-1">`.
+  - Contiene un `<strong>` con el título resuelto (en el color de acento del tipo) y un `<span>` con el mensaje debajo.
+- Cuando `props.title` está ausente o es string vacío:
+  - La zona de contenido se renderiza como un `<span>` simple.
+  - Contiene el mensaje resuelto (layout clásico de una fila).
 - `props.message` y `props.title` se resuelven con `resolveRuntimeTextReference`, igual que en otros nodos textuales del catálogo.
 - El nodo es hoja: si recibe `children` en la configuración, esos datos no pasan al resultado normalizado.
 - Sin estado local ni efectos secundarios; es un nodo de presentación pura.

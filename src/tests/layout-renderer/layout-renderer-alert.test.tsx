@@ -116,17 +116,85 @@ describe('AlertNode — render basic and data-layout-node', () => {
   })
 })
 
-describe('AlertNode — icon placeholder', () => {
-  it('root element contains a <span> child with text "icon" for all types', () => {
+describe('AlertNode — Lucide icon by type', () => {
+  const allTypes = ['neutral', 'primary', 'success', 'warning', 'danger', 'info'] as const
+
+  allTypes.forEach((type) => {
+    it(`alert with type="${type}" renders an <svg> inside [data-layout-node="alert"]`, () => {
+      const page: RuntimePageConfig = {
+        id: 'home',
+        layout: [{ type: 'alert', props: { message: 'Msg', type } }],
+      }
+      const { container } = renderRuntimePage(page)
+      const alertEl = container.querySelector('[data-layout-node="alert"]')
+      expect(alertEl).toBeInTheDocument()
+      const svg = alertEl!.querySelector('svg')
+      expect(svg).toBeInTheDocument()
+    })
+  })
+
+  allTypes.forEach((type) => {
+    it(`alert with type="${type}" renders <svg> with aria-hidden="true"`, () => {
+      const page: RuntimePageConfig = {
+        id: 'home',
+        layout: [{ type: 'alert', props: { message: 'Msg', type } }],
+      }
+      const { container } = renderRuntimePage(page)
+      const alertEl = container.querySelector('[data-layout-node="alert"]')
+      const svg = alertEl!.querySelector('svg')
+      expect(svg).toHaveAttribute('aria-hidden', 'true')
+    })
+  })
+
+  const accentClassCases = [
+    { type: 'neutral', textClass: 'text-gray-700' },
+    { type: 'primary', textClass: 'text-blue-700' },
+    { type: 'success', textClass: 'text-green-700' },
+    { type: 'warning', textClass: 'text-yellow-700' },
+    { type: 'danger', textClass: 'text-red-700' },
+    { type: 'info', textClass: 'text-cyan-700' },
+  ] as const
+
+  accentClassCases.forEach(({ type, textClass }) => {
+    it(`alert with type="${type}" renders <svg> with class ${textClass}`, () => {
+      const page: RuntimePageConfig = {
+        id: 'home',
+        layout: [{ type: 'alert', props: { message: 'Msg', type } }],
+      }
+      const { container } = renderRuntimePage(page)
+      const alertEl = container.querySelector('[data-layout-node="alert"]')
+      const svg = alertEl!.querySelector('svg')
+      expect(svg).toHaveClass(textClass)
+    })
+  })
+
+  it('the literal text "icon" does not appear inside [data-layout-node="alert"]', () => {
     const page: RuntimePageConfig = {
       id: 'home',
       layout: [{ type: 'alert', props: { message: 'Msg', type: 'success' } }],
     }
     const { container } = renderRuntimePage(page)
     const alertEl = container.querySelector('[data-layout-node="alert"]')
-    expect(alertEl).toBeInTheDocument()
-    const iconSpan = Array.from(alertEl!.querySelectorAll('span')).find((s) => s.textContent === 'icon')
-    expect(iconSpan).toBeInTheDocument()
+    expect(alertEl!.textContent).not.toContain('icon')
+  })
+
+  it('alert with type="success" and type="warning" render distinct <svg> elements (different icons)', () => {
+    const successPage: RuntimePageConfig = {
+      id: 'home',
+      layout: [{ type: 'alert', props: { message: 'Msg', type: 'success' } }],
+    }
+    const warningPage: RuntimePageConfig = {
+      id: 'home',
+      layout: [{ type: 'alert', props: { message: 'Msg', type: 'warning' } }],
+    }
+    const { container: successContainer } = renderRuntimePage(successPage)
+    const { container: warningContainer } = renderRuntimePage(warningPage)
+    const successSvg = successContainer.querySelector('[data-layout-node="alert"] svg')
+    const warningSvg = warningContainer.querySelector('[data-layout-node="alert"] svg')
+    expect(successSvg).toBeInTheDocument()
+    expect(warningSvg).toBeInTheDocument()
+    // Different icons have different inner path content
+    expect(successSvg!.innerHTML).not.toBe(warningSvg!.innerHTML)
   })
 })
 
@@ -397,6 +465,121 @@ describe('AlertNode — repeater integration', () => {
     const strongB = screen.getByText('Título B').closest('strong')
     expect(strongA).toBeInTheDocument()
     expect(strongB).toBeInTheDocument()
+  })
+})
+
+describe('AlertNode — two-row layout with title', () => {
+  it('when props.title is present and not empty, an inner column container has class flex-col and the root does not', () => {
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [{ type: 'alert', props: { message: 'Mensaje', title: 'Título' } }],
+    }
+    const { container } = renderRuntimePage(page)
+    const alertEl = container.querySelector('[data-layout-node="alert"]')
+    expect(alertEl).toBeInTheDocument()
+    expect(alertEl).not.toHaveClass('flex-col')
+    const strong = container.querySelector('strong')
+    const innerColumn = strong!.parentElement
+    expect(innerColumn).toHaveClass('flex-col')
+  })
+
+  it('when props.title is present, the icon svg is a direct child of the root alert and not inside the column container', () => {
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [{ type: 'alert', props: { message: 'Mensaje', title: 'Título' } }],
+    }
+    const { container } = renderRuntimePage(page)
+    const alertEl = container.querySelector('[data-layout-node="alert"]')
+    const strong = container.querySelector('strong')
+    expect(strong).toBeInTheDocument()
+    const innerColumn = strong!.parentElement
+    // The icon svg is a direct child of the root, not inside the inner column
+    const svgDirect = Array.from(alertEl!.children).find((el) => el.tagName === 'svg')
+    expect(svgDirect).toBeInTheDocument()
+    const svgInsideColumn = innerColumn!.querySelector('svg')
+    expect(svgInsideColumn).not.toBeInTheDocument()
+  })
+
+  it('when props.title is present, the inner column container has class flex-1', () => {
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [{ type: 'alert', props: { message: 'Mensaje', title: 'Título' } }],
+    }
+    const { container } = renderRuntimePage(page)
+    const strong = container.querySelector('strong')
+    expect(strong).toBeInTheDocument()
+    const innerColumn = strong!.parentElement
+    expect(innerColumn).toHaveClass('flex-1')
+  })
+
+  it('when props.title is absent, the root alert element does not have class flex-col', () => {
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [{ type: 'alert', props: { message: 'Solo mensaje' } }],
+    }
+    const { container } = renderRuntimePage(page)
+    const alertEl = container.querySelector('[data-layout-node="alert"]')
+    expect(alertEl).toBeInTheDocument()
+    expect(alertEl).not.toHaveClass('flex-col')
+  })
+
+  it('when props.title is empty string, the root alert element does not have class flex-col and has no <strong>', () => {
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [{ type: 'alert', props: { message: 'Mensaje', title: '' } }],
+    }
+    const { container } = renderRuntimePage(page)
+    const alertEl = container.querySelector('[data-layout-node="alert"]')
+    expect(alertEl).toBeInTheDocument()
+    expect(alertEl).not.toHaveClass('flex-col')
+    expect(container.querySelector('strong')).not.toBeInTheDocument()
+  })
+
+  it('when props.title resolves to empty string via placeholder, layout is single row without flex-col and without <strong>', () => {
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [{ type: 'alert', props: { message: 'Mensaje', title: '{{queries.nonexistent.data}}' } }],
+    }
+    const state = createRuntimePageState(page, {})
+    const { container } = renderRuntimePageWithState(page, state)
+    const alertEl = container.querySelector('[data-layout-node="alert"]')
+    expect(alertEl).toBeInTheDocument()
+    expect(alertEl).not.toHaveClass('flex-col')
+    expect(container.querySelector('strong')).not.toBeInTheDocument()
+  })
+
+  it('when props.message is empty with props.title declared and not empty, inner column renders with title without error', () => {
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [{ type: 'alert', props: { message: '', title: 'Título' } }],
+    }
+    const { container } = renderRuntimePage(page)
+    const alertEl = container.querySelector('[data-layout-node="alert"]')
+    expect(alertEl).toBeInTheDocument()
+    const strong = container.querySelector('strong')
+    expect(strong).toBeInTheDocument()
+    expect(strong).toHaveTextContent('Título')
+    const innerColumn = strong!.parentElement
+    expect(innerColumn).toHaveClass('flex-col')
+  })
+
+  it('when props.title is present, the message span is inside the inner column container alongside the title', () => {
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [{ type: 'alert', props: { message: 'Mensaje', title: 'Título' } }],
+    }
+    const { container } = renderRuntimePage(page)
+    const strong = container.querySelector('strong')
+    expect(strong).toBeInTheDocument()
+    const innerColumn = strong!.parentElement
+    // Message is inside the inner column (same container as the title, not below the icon)
+    const messageSpanInColumn = Array.from(innerColumn!.querySelectorAll('span')).find(
+      (s) => s.textContent === 'Mensaje',
+    )
+    expect(messageSpanInColumn).toBeInTheDocument()
+    // No icon svg inside the inner column
+    const svgInColumn = innerColumn!.querySelector('svg')
+    expect(svgInColumn).not.toBeInTheDocument()
   })
 })
 

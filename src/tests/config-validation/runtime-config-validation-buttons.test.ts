@@ -1760,6 +1760,56 @@ describe('validateRuntimeConfig', () => {
     expect(result.status).toBe('ready')
   })
 
+  it('accepts a button node with props.icon as an arbitrary string without rejection', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithPages([
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'button',
+              props: {
+                label: 'Search',
+                icon: 'Search',
+                action: { type: 'goBack' },
+              },
+            },
+          ],
+        },
+      ]),
+    )
+
+    expect(result.status).toBe('ready')
+
+    if (result.status !== 'ready') {
+      throw new Error('Expected ready result')
+    }
+
+    expect((result.config.pages[0].layout[0] as { props: { icon?: string } }).props.icon).toBe('Search')
+  })
+
+  it('accepts a button node with an unknown props.icon string without rejection', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithPages([
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'button',
+              props: {
+                label: 'Go',
+                icon: 'SomeArbitraryIconName123',
+                action: { type: 'goBack' },
+              },
+            },
+          ],
+        },
+      ]),
+    )
+
+    expect(result.status).toBe('ready')
+  })
+
   it('still rejects executeOperation (singular) with inexistent operationName (regression)', () => {
     expect(
       validateRuntimeConfig({
@@ -1792,6 +1842,56 @@ describe('validateRuntimeConfig', () => {
         message: expect.stringContaining('unknown operation "missingOperation"'),
       },
     })
+  })
+
+  it('accepts a link node with props.icon as an arbitrary string without rejection', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithPages([
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'link',
+              props: {
+                label: 'Visit',
+                href: 'https://example.com',
+                icon: 'ExternalLink',
+              },
+            },
+          ],
+        },
+      ]),
+    )
+
+    expect(result.status).toBe('ready')
+
+    if (result.status !== 'ready') {
+      throw new Error('Expected ready result')
+    }
+
+    expect((result.config.pages[0].layout[0] as { props: { icon?: string } }).props.icon).toBe('ExternalLink')
+  })
+
+  it('accepts a link node with an unknown props.icon string without rejection', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithPages([
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'link',
+              props: {
+                label: 'Visit',
+                href: 'https://example.com',
+                icon: 'SomeArbitraryIconName123',
+              },
+            },
+          ],
+        },
+      ]),
+    )
+
+    expect(result.status).toBe('ready')
   })
 
   it('rejects resetForm actions without a valid non-empty formId but does not require a form catalog', () => {

@@ -1,10 +1,13 @@
+import { useMemo } from 'react'
 import type { LinkLayoutNode } from '../../config/runtime-config'
 import {
   resolveRuntimeTextReference,
   type RuntimeIterationContext,
 } from '../runtime-references/runtime-reference-resolver'
 import { executeRuntimeUiAction } from '../runtime-actions/runtime-ui-action-executor'
-import { useRuntimeState, useRuntimeStateActions } from '../runtime-state/runtime-state-provider'
+import { useRuntimeConfig, useRuntimeState, useRuntimeStateActions } from '../runtime-state/runtime-state-provider'
+import { resolveLinkActionHref } from './link-action-href'
+import { IconNode } from './icon-node'
 
 interface LinkNodeProps {
   node: LinkLayoutNode
@@ -13,17 +16,27 @@ interface LinkNodeProps {
 
 export function LinkNode({ node, iterationContext }: LinkNodeProps) {
   const state = useRuntimeState()
+  const config = useRuntimeConfig()
   const { executeQueryOperation, goBackPage, navigateToPage, openModal, closeModal, resetForm } = useRuntimeStateActions()
-  const { href, download, target, action } = node.props
+  const { href, download, target, action, icon } = node.props
   const label = resolveRuntimeTextReference(node.props.label, state, 'link.props.label', { iterationContext })
   const resolvedHref = href !== undefined
     ? resolveRuntimeTextReference(href, state, 'link.props.href', { iterationContext })
     : undefined
 
+  const resolvedActionHref = useMemo(() => {
+    if (action == null) {
+      return undefined
+    }
+    return resolveLinkActionHref(action, state.navigation, config.initialPage)
+  }, [action, state.navigation, config.initialPage])
+
+  const effectiveHref = resolvedHref ?? resolvedActionHref
+
   return (
     <a
       data-layout-node="link"
-      href={resolvedHref}
+      href={effectiveHref}
       download={download}
       target={target}
       onClick={
@@ -43,6 +56,7 @@ export function LinkNode({ node, iterationContext }: LinkNodeProps) {
       }
       className="text-blue-600 underline hover:text-blue-800"
     >
+      <IconNode name={icon} className="size-4 shrink-0 inline-block align-middle mr-1" />
       {label}
     </a>
   )
