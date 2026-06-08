@@ -34,6 +34,9 @@ El nodo `accordion` aplica los campos transversales estándar sobre el nodo comp
 - La cabecera es siempre visible e interactiva. Al pulsar una cabecera cerrada, el cuerpo aparece en el DOM. Al pulsarla de nuevo, el cuerpo desaparece (toggle).
 - El estado abierto/cerrado es local al componente y se reinicia al desmontarse (por ejemplo, al navegar a otra página).
 - La cabecera es un `<button type="button">` con `aria-expanded` que refleja el estado actual.
+- **Estilo visual**: la cabecera usa un fondo de tono suave del color primario (`app-accent/10`), con un tono más marcado en hover (`app-accent/20`). El anillo de foco usa el color primario (`app-accent`).
+- **Indicador chevron**: la cabecera muestra un icono chevron alineado a la derecha. El chevron apunta hacia abajo cuando el accordion está cerrado y hacia arriba cuando está abierto, con una rotación animada suave al cambiar de estado.
+- **Transición de apertura/cierre**: el cuerpo del accordion aparece y desaparece con una transición visual suave en lugar de aparecer o desaparecer de golpe. Los hijos se montan/desmontan de forma síncrona con `isOpen`, por lo que la transición opera sobre el wrapper exterior del cuerpo.
 
 ### Coordinación de grupos
 
@@ -73,7 +76,7 @@ Cada iteración del repeater genera su propia instancia de accordion con estado 
 
 - Acciones UI para abrir o cerrar un accordion desde un botón externo (`openAccordion`, `closeAccordion`).
 - Exposición del estado abierto/cerrado al sistema de referencias del runtime (`queries.*`, `forms.*`).
-- Animación o transición de apertura/cierre configurable desde JSON.
+- Duración o tipo de transición de apertura/cierre configurable desde JSON (las transiciones son de duración fija y tipo fijo).
 - Visibilidad o deshabilitación de la cabecera de forma independiente al nodo completo.
 - Persistencia del estado abierto en navegación o `pageEntry`.
 - Generación dinámica de ítems desde una colección de `queries.*` (forma multi-ítem declarativa).

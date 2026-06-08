@@ -25,12 +25,12 @@ export function AccordionNode({ node, iterationContext }: AccordionNodeProps) {
     }
 
     if (defaultOpen) {
-      // Try to claim the group as the default-open accordion
       return claimDefaultOpen(groupId, instanceId)
     }
 
     return false
   })
+  const [isClosing, setIsClosing] = useState(false)
 
   // For grouped accordions, sync local state with the group context
   useEffect(() => {
@@ -38,14 +38,14 @@ export function AccordionNode({ node, iterationContext }: AccordionNodeProps) {
 
     const activeId = getActiveInstanceId(groupId)
 
-    // If the group has an active accordion and it's not this one, close this one
     if (activeId !== null && activeId !== instanceId && isOpen) {
       setIsOpen(false)
+      setIsClosing(true)
     }
 
-    // If this accordion is the active one in the group but not locally open, open it
     if (activeId === instanceId && !isOpen) {
       setIsOpen(true)
+      setIsClosing(false)
     }
   })
 
@@ -61,14 +61,24 @@ export function AccordionNode({ node, iterationContext }: AccordionNodeProps) {
       if (isOpen) {
         closeInGroup(groupId)
         setIsOpen(false)
+        setIsClosing(true)
       } else {
         openInGroup(groupId, instanceId)
         setIsOpen(true)
+        setIsClosing(false)
       }
     } else {
-      setIsOpen((prev) => !prev)
+      if (isOpen) {
+        setIsOpen(false)
+        setIsClosing(true)
+      } else {
+        setIsOpen(true)
+        setIsClosing(false)
+      }
     }
   }
+
+  const showContent = isOpen || isClosing
 
   return (
     <div data-layout-node="accordion">
@@ -77,14 +87,36 @@ export function AccordionNode({ node, iterationContext }: AccordionNodeProps) {
         data-layout-node="accordion-header"
         aria-expanded={isOpen}
         onClick={handleToggle}
-        className="w-full text-left px-4 py-2 font-semibold bg-gray-100 hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="w-full text-left px-4 py-2 font-semibold flex items-center justify-between bg-app-accent/10 hover:bg-app-accent/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-app-accent"
       >
-        {resolvedLabel}
+        <span>{resolvedLabel}</span>
+        <svg
+          data-layout-node="accordion-chevron"
+          aria-hidden="true"
+          className={`h-4 w-4 text-app-accent transition-transform duration-200 ease-out${isOpen ? ' rotate-180' : ''}`}
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
       </button>
-      {isOpen && (
-        <div data-layout-node="accordion-body" className="px-4 py-2">
+      {showContent && (
+        <div
+          data-layout-node="accordion-body"
+          className={isOpen ? 'animate-accordion-open' : 'animate-accordion-close'}
+          onAnimationEnd={() => {
+            if (!isOpen) setIsClosing(false)
+          }}
+        >
           {node.children && node.children.length > 0 ? (
-            <LayoutRenderer nodes={node.children} iterationContext={iterationContext} />
+            <div className="px-4 py-2">
+              <LayoutRenderer nodes={node.children} iterationContext={iterationContext} />
+            </div>
           ) : null}
         </div>
       )}
