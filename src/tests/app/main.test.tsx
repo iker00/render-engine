@@ -59,8 +59,25 @@ describe('main (DEV mode — default Vitest environment)', () => {
   })
 })
 
+describe('main (DEV mode — root has data-enable-dev-mode attribute)', () => {
+  it('mounts DevRuntime when root has data-enable-dev-mode attribute and env is DEV', async () => {
+    document.body.innerHTML = '<div id="root" data-enable-dev-mode=""></div>'
+    const { DevRuntime } = await import('../../dev-runtime/dev-runtime')
+    await import('../../main')
+    await flushMicrotasks()
+
+    expect(renderMock).toHaveBeenCalledTimes(1)
+
+    const renderedElement = renderMock.mock.calls[0][0]
+    const innerType = renderedElement.props?.children?.type
+    expect(innerType).toBe(DevRuntime)
+  })
+})
+
 // Note: Testing import.meta.env.DEV = false (production path) is not directly possible
 // in Vitest because import.meta.env.DEV is a compile-time constant set to true in test mode.
-// The production path (App mounted, DevRuntime not imported) is covered by the bundle
-// verification gate in T9 (dev-runtime-bundle.test.ts), which builds with vite and confirms
-// that monaco-editor, DevRuntime, and runtimeConfigRootSchema are absent from dist/assets/.
+// The production branch (App mounted, DevRuntime not imported) is covered by two mechanisms:
+// 1. The bundle verification gate in dev-runtime-bundle.test.ts confirms the entry chunk does not
+//    include DevRuntime/Monaco when built for production without the attribute.
+// 2. The shouldMountDevRuntime helper (src/tests/app/should-mount-dev-runtime.test.ts) covers the
+//    production-path decision logic as a pure function, including the data-enable-dev-mode cases.
