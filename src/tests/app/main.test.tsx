@@ -26,17 +26,17 @@ async function flushMicrotasks() {
 }
 
 beforeEach(() => {
-  document.body.innerHTML = '<div id="root"></div>'
+  document.body.innerHTML = '<div id="layout-renderer"></div>'
   renderMock.mockClear()
   createRootMock.mockClear()
   vi.resetModules()
 })
 
 describe('main (DEV mode — default Vitest environment)', () => {
-  it('creates the root from the #root element', async () => {
+  it('creates the root from the #layout-renderer element', async () => {
     await import('../../main')
     await flushMicrotasks()
-    expect(createRootMock).toHaveBeenCalledWith(document.getElementById('root'))
+    expect(createRootMock).toHaveBeenCalledWith(document.getElementById('layout-renderer'))
   })
 
   it('renders the app into the root element exactly once', async () => {
@@ -61,7 +61,7 @@ describe('main (DEV mode — default Vitest environment)', () => {
 
 describe('main (DEV mode — root has data-enable-dev-mode attribute)', () => {
   it('mounts DevRuntime when root has data-enable-dev-mode attribute and env is DEV', async () => {
-    document.body.innerHTML = '<div id="root" data-enable-dev-mode=""></div>'
+    document.body.innerHTML = '<div id="layout-renderer" data-enable-dev-mode=""></div>'
     const { DevRuntime } = await import('../../dev-runtime/dev-runtime')
     await import('../../main')
     await flushMicrotasks()

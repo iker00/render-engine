@@ -17,7 +17,7 @@ No es histórico acumulado ni sustituto de las fichas funcionales. El detalle es
 | Queries, preloads y feedback | estable | [queries/](./app-features/queries/index.md) | `0060` |
 | Navegación y páginas | estable | [navigation/](./app-features/navigation/index.md) | `0046` |
 | Accesibilidad | estable | [nodes/](./app-features/nodes/index.md), [queries/](./app-features/queries/index.md), [navigation/](./app-features/navigation/index.md) | `0046` |
-| Desarrollo local | estable | [development/](./app-features/development/index.md) | `0047` |
+| Desarrollo local | estable | [development/](./app-features/development/index.md) | `0067` |
 | Theming declarativo | fuera de v1 | — | — |
 | Autenticación y permisos | fuera de v1 | — | — |
 | Subida de archivos | fuera de v1 | — | — |
