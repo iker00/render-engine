@@ -210,7 +210,7 @@ describe('validateRuntimeConfig', () => {
       })
     })
 
-    it('rejects params references in visibility rules before render', () => {
+    it('accepts params.{paramName} references in visibility rules before render', () => {
       expect(
         validateRuntimeConfig(
           createConfigWithLayout([
@@ -228,15 +228,7 @@ describe('validateRuntimeConfig', () => {
             },
           ]),
         ),
-      ).toEqual({
-        status: 'error',
-        error: {
-          code: 'invalid-layout',
-          displayMode: 'development-only',
-          message:
-            'Page "home" has an invalid layout at "layout[0].visibility.reference": visibility references must use item, item.*, forms.{formId}.{fieldId}, queries.{queryName}, queries.{queryName}.data, queries.{queryName}.data.*, queries.{queryName}.status, queries.{queryName}.error, queries.{queryName}.error.message or queries.{queryName}.error.code.',
-        },
-      })
+      ).toMatchObject({ status: 'ready' })
     })
 
     it('rejects params references and templates in dynamic collection sources before render', () => {

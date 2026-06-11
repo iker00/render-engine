@@ -607,4 +607,283 @@ describe('Runtime layout visibility', () => {
       ),
     ).toBe(true)
   })
+
+  describe('params.* visibility references', () => {
+    const stateWithParams: RuntimeState = {
+      ...runtimeState,
+      navigation: {
+        currentPageId: 'details',
+        history: [
+          { entryId: 0, pageId: 'home', params: {} },
+          { entryId: 1, pageId: 'details', params: { userId: 'u-42', mode: 'edit', page: '3' } },
+        ],
+        currentEntryIndex: 1,
+        lastError: null,
+      },
+      pageEntry: {
+        entryId: 1,
+        pageId: 'details',
+        params: { userId: 'u-42', mode: 'edit', page: '3' },
+        preloadNames: [],
+        status: 'idle',
+      },
+    }
+
+    const stateWithoutParam: RuntimeState = {
+      ...runtimeState,
+      navigation: {
+        currentPageId: 'home',
+        history: [{ entryId: 0, pageId: 'home', params: {} }],
+        currentEntryIndex: 0,
+        lastError: null,
+      },
+      pageEntry: {
+        entryId: 0,
+        pageId: 'home',
+        params: {},
+        preloadNames: [],
+        status: 'idle',
+      },
+    }
+
+    it('isTruthy: shows when param contains a non-empty string; hides when param is absent', () => {
+      expect(
+        matchesVisibilityRule(
+          { reference: 'params.userId', operator: 'isTruthy' },
+          stateWithParams,
+        ),
+      ).toBe(true)
+
+      expect(
+        matchesVisibilityRule(
+          { reference: 'params.userId', operator: 'isTruthy' },
+          stateWithoutParam,
+        ),
+      ).toBe(false)
+    })
+
+    it('isFalsy: shows when param is absent or empty string; hides when param is a non-empty string', () => {
+      expect(
+        matchesVisibilityRule(
+          { reference: 'params.userId', operator: 'isFalsy' },
+          stateWithoutParam,
+        ),
+      ).toBe(true)
+
+      const stateWithEmptyParam: RuntimeState = {
+        ...runtimeState,
+        navigation: {
+          currentPageId: 'details',
+          history: [{ entryId: 0, pageId: 'details', params: { userId: '' } }],
+          currentEntryIndex: 0,
+          lastError: null,
+        },
+        pageEntry: {
+          entryId: 0,
+          pageId: 'details',
+          params: { userId: '' },
+          preloadNames: [],
+          status: 'idle',
+        },
+      }
+
+      expect(
+        matchesVisibilityRule(
+          { reference: 'params.userId', operator: 'isFalsy' },
+          stateWithEmptyParam,
+        ),
+      ).toBe(true)
+
+      expect(
+        matchesVisibilityRule(
+          { reference: 'params.userId', operator: 'isFalsy' },
+          stateWithParams,
+        ),
+      ).toBe(false)
+    })
+
+    it('equals: shows only when param matches exact value; hides when different or absent', () => {
+      expect(
+        matchesVisibilityRule(
+          { reference: 'params.mode', operator: 'equals', value: 'edit' },
+          stateWithParams,
+        ),
+      ).toBe(true)
+
+      const stateWithReadonlyMode: RuntimeState = {
+        ...runtimeState,
+        navigation: {
+          currentPageId: 'details',
+          history: [{ entryId: 0, pageId: 'details', params: { mode: 'readonly' } }],
+          currentEntryIndex: 0,
+          lastError: null,
+        },
+        pageEntry: {
+          entryId: 0,
+          pageId: 'details',
+          params: { mode: 'readonly' },
+          preloadNames: [],
+          status: 'idle',
+        },
+      }
+
+      expect(
+        matchesVisibilityRule(
+          { reference: 'params.mode', operator: 'equals', value: 'edit' },
+          stateWithReadonlyMode,
+        ),
+      ).toBe(false)
+
+      expect(
+        matchesVisibilityRule(
+          { reference: 'params.mode', operator: 'equals', value: 'edit' },
+          stateWithoutParam,
+        ),
+      ).toBe(false)
+    })
+
+    it('notEquals: shows when param differs from value; hides when param is absent (absent = no-match)', () => {
+      const stateWithReadonlyMode: RuntimeState = {
+        ...runtimeState,
+        navigation: {
+          currentPageId: 'details',
+          history: [{ entryId: 0, pageId: 'details', params: { mode: 'readonly' } }],
+          currentEntryIndex: 0,
+          lastError: null,
+        },
+        pageEntry: {
+          entryId: 0,
+          pageId: 'details',
+          params: { mode: 'readonly' },
+          preloadNames: [],
+          status: 'idle',
+        },
+      }
+
+      expect(
+        matchesVisibilityRule(
+          { reference: 'params.mode', operator: 'notEquals', value: 'readonly' },
+          stateWithParams,
+        ),
+      ).toBe(true)
+
+      expect(
+        matchesVisibilityRule(
+          { reference: 'params.mode', operator: 'notEquals', value: 'readonly' },
+          stateWithReadonlyMode,
+        ),
+      ).toBe(false)
+
+      expect(
+        matchesVisibilityRule(
+          { reference: 'params.mode', operator: 'notEquals', value: 'readonly' },
+          stateWithoutParam,
+        ),
+      ).toBe(false)
+    })
+
+    it('equals with boolean value: strict comparison against string param — no coercion', () => {
+      const stateWithStringTrue: RuntimeState = {
+        ...runtimeState,
+        navigation: {
+          currentPageId: 'details',
+          history: [{ entryId: 0, pageId: 'details', params: { mode: 'true' } }],
+          currentEntryIndex: 0,
+          lastError: null,
+        },
+        pageEntry: {
+          entryId: 0,
+          pageId: 'details',
+          params: { mode: 'true' },
+          preloadNames: [],
+          status: 'idle',
+        },
+      }
+
+      expect(
+        matchesVisibilityRule(
+          { reference: 'params.mode', operator: 'equals', value: true },
+          stateWithStringTrue,
+        ),
+      ).toBe(false)
+    })
+
+    it('greaterThan: string param degrades to no-match without error', () => {
+      expect(
+        matchesVisibilityRule(
+          { reference: 'params.page', operator: 'greaterThan', value: 2 },
+          stateWithParams,
+        ),
+      ).toBe(false)
+    })
+
+    it('lessThan: string param degrades to no-match without error', () => {
+      expect(
+        matchesVisibilityRule(
+          { reference: 'params.page', operator: 'lessThan', value: 10 },
+          stateWithParams,
+        ),
+      ).toBe(false)
+    })
+
+    it('page change that removes referenced param: absent param applies value-absent semantics per operator', () => {
+      const stateBeforePageChange: RuntimeState = {
+        ...runtimeState,
+        navigation: {
+          currentPageId: 'details',
+          history: [{ entryId: 0, pageId: 'details', params: { userId: 'u-42' } }],
+          currentEntryIndex: 0,
+          lastError: null,
+        },
+        pageEntry: {
+          entryId: 0,
+          pageId: 'details',
+          params: { userId: 'u-42' },
+          preloadNames: [],
+          status: 'idle',
+        },
+      }
+
+      const stateAfterPageChange: RuntimeState = {
+        ...runtimeState,
+        navigation: {
+          currentPageId: 'home',
+          history: [
+            { entryId: 0, pageId: 'details', params: { userId: 'u-42' } },
+            { entryId: 1, pageId: 'home', params: {} },
+          ],
+          currentEntryIndex: 1,
+          lastError: null,
+        },
+        pageEntry: {
+          entryId: 1,
+          pageId: 'home',
+          params: {},
+          preloadNames: [],
+          status: 'idle',
+        },
+      }
+
+      expect(
+        matchesVisibilityRule(
+          { reference: 'params.userId', operator: 'isFalsy' },
+          stateBeforePageChange,
+        ),
+      ).toBe(false)
+
+      expect(
+        matchesVisibilityRule(
+          { reference: 'params.userId', operator: 'isFalsy' },
+          stateAfterPageChange,
+        ),
+      ).toBe(true)
+
+      expect(
+        matchesVisibilityRule(
+          { reference: 'params.userId', operator: 'equals', value: 'u-42' },
+          stateAfterPageChange,
+        ),
+      ).toBe(false)
+    })
+  })
 })

@@ -334,7 +334,7 @@ export function validateVisibility(
 
   if (!isValidVisibilityReference(rawVisibility.reference)) {
     return invalidLayout(
-      `Page "${pageId}" has an invalid layout at "${path}.reference": visibility references must use item, item.*, forms.{formId}.{fieldId}, queries.{queryName}, queries.{queryName}.data, queries.{queryName}.data.*, queries.{queryName}.status, queries.{queryName}.error, queries.{queryName}.error.message or queries.{queryName}.error.code.`,
+      `Page "${pageId}" has an invalid layout at "${path}.reference": visibility references must use params.{paramName}, item, item.*, forms.{formId}.{fieldId}, queries.{queryName}, queries.{queryName}.data, queries.{queryName}.data.*, queries.{queryName}.status, queries.{queryName}.error, queries.{queryName}.error.message or queries.{queryName}.error.code.`,
     )
   }
 
@@ -861,6 +861,10 @@ function isValidVisibilityReference(reference: string): boolean {
   if (reference === 'item' || reference.startsWith('item.')) {
     const parsedReference = parseRuntimeReference(reference, { allowItemReference: true })
     return parsedReference.kind === 'reference' && parsedReference.status === 'supported'
+  }
+
+  if (whenParamsReferencePattern.test(reference)) {
+    return true
   }
 
   const segments = reference.split('.')

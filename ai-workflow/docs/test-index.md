@@ -36,7 +36,7 @@ src/tests/
 - `runtime-config-validation-collections.test.ts` — contrato de fuentes de colección multi-valor (~860 líneas)
 - `runtime-config-validation-form-fields.test.ts` — expansión de campos de formulario reutilizables + tests de estructura (~1129 líneas)
 - `runtime-config-validation-api-operations.test.ts` — operaciones API: métodos, query/body/headers, extra keys, body trees (~490 líneas)
-- `runtime-config-validation-visibility.test.ts` — reglas de visibility: operadores, referencias, valores, extra keys (~430 líneas)
+- `runtime-config-validation-visibility.test.ts` — reglas de visibility: operadores, referencias (incluido `params.{paramName}`), valores, extra keys (~807 líneas)
 - `runtime-config-validation-navigate-params.test.ts` — navigateTo.params, validaciones de params y colecciones antes de render (~310 líneas)
 - `runtime-config-validation-repeater.test.ts` — nodo repeater: fuente, key, template, paginación (~390 líneas)
 - `runtime-config-validation-containers.test.ts` — contrato de layout de contenedores (~959 líneas)
@@ -86,7 +86,7 @@ src/tests/
 - `runtime-page-entry-preloads.test.tsx` — precarga de operaciones al entrar en página
 - `runtime-api-execution.test.ts` — ejecución de operaciones y ciclo de vida de queries
 - `runtime-reference-resolution.test.tsx` — resolución de referencias declarativas (`forms.*`, `queries.*`, `item.*`, `params.*`)
-- `runtime-layout-visibility.test.ts` — reglas de visibilidad por condición
+- `runtime-layout-visibility.test.ts` — reglas de visibilidad por condición: operadores, referencias (incluido `params.{paramName}`) y semántica de ausencia (~889 líneas)
 - `runtime-form-validations.test.ts` — validaciones locales de formulario en submit
 - `runtime-collection-pagination.test.ts` — paginación local de colecciones
 - `runtime-browser-hash-navigation.test.ts` — sincronización de navegación con hash del navegador

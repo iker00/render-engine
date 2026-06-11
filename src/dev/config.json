@@ -448,7 +448,7 @@
             "message": "Post saved successfully"
           },
           "visibility": {
-            "reference": "queries.savePost.data",
+            "reference": "params.success",
             "operator": "isTruthy"
           }
         },

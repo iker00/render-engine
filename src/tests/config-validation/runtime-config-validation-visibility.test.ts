@@ -296,7 +296,6 @@ describe('validateRuntimeConfig', () => {
       for (const reference of [
         'navigation.currentPageId',
         'routeParams.userId',
-        'params.filter',
         '{{forms.profile.role}}',
         'queries.searchUsers.status.code',
         'queries.searchUsers.error.token',
@@ -587,15 +586,112 @@ describe('validateRuntimeConfig', () => {
       })
     })
 
-    // T3: confirm that visibility still rejects params.* (not contaminated by when logic)
-    it('rejects visibility references using params.* (params.* is only valid in when, not visibility)', () => {
+    // T3 (updated): params.{paramName} is now a valid visibility reference
+    it('accepts params.{paramName} as a valid visibility reference with isTruthy operator', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithLayout([
+          {
+            type: 'heading',
+            visibility: createVisibilityRule({
+              reference: 'params.userId',
+              operator: 'isTruthy',
+            }),
+            props: {
+              text: 'Welcome',
+              level: 1,
+            },
+          },
+        ]),
+      )
+      expect(result.status).toBe('ready')
+    })
+
+    it('accepts params.{paramName} with equals operator and string value', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithLayout([
+          {
+            type: 'heading',
+            visibility: {
+              reference: 'params.mode',
+              operator: 'equals',
+              value: 'edit',
+            },
+            props: {
+              text: 'Welcome',
+              level: 1,
+            },
+          },
+        ]),
+      )
+      expect(result.status).toBe('ready')
+
+      if (result.status !== 'ready') {
+        throw new Error('Expected ready result')
+      }
+
+      expect(result.config.pages[0].layout[0]).toEqual({
+        type: 'heading',
+        visibility: {
+          reference: 'params.mode',
+          operator: 'equals',
+          value: 'edit',
+        },
+        props: {
+          text: 'Welcome',
+          level: 1,
+        },
+      })
+    })
+
+    it('accepts params.{paramName} with notEquals operator and string value', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithLayout([
+          {
+            type: 'heading',
+            visibility: {
+              reference: 'params.mode',
+              operator: 'notEquals',
+              value: 'readonly',
+            },
+            props: {
+              text: 'Welcome',
+              level: 1,
+            },
+          },
+        ]),
+      )
+      expect(result.status).toBe('ready')
+    })
+
+    it('accepts params.{paramName} with greaterThan operator and numeric threshold', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithLayout([
+          {
+            type: 'heading',
+            visibility: {
+              reference: 'params.page',
+              operator: 'greaterThan',
+              value: 2,
+            },
+            props: {
+              text: 'Welcome',
+              level: 1,
+            },
+          },
+        ]),
+      )
+      expect(result.status).toBe('ready')
+    })
+
+    it('rejects params (without segment) as a visibility reference', () => {
       expect(
         validateRuntimeConfig(
           createConfigWithLayout([
             {
               type: 'heading',
               visibility: createVisibilityRule({
-                reference: 'params.filter',
+                reference: 'params',
+                operator: 'isTruthy',
               }),
               props: {
                 text: 'Welcome',
@@ -609,7 +705,62 @@ describe('validateRuntimeConfig', () => {
         error: {
           code: 'invalid-layout',
           displayMode: 'development-only',
-          message: expect.stringContaining('visibility.reference'),
+          message: expect.stringContaining('layout[0].visibility.reference'),
+        },
+      })
+    })
+
+    it('rejects params.user.id (more than one dynamic segment) as a visibility reference', () => {
+      expect(
+        validateRuntimeConfig(
+          createConfigWithLayout([
+            {
+              type: 'heading',
+              visibility: createVisibilityRule({
+                reference: 'params.user.id',
+                operator: 'isTruthy',
+              }),
+              props: {
+                text: 'Welcome',
+                level: 1,
+              },
+            },
+          ]),
+        ),
+      ).toEqual({
+        status: 'error',
+        error: {
+          code: 'invalid-layout',
+          displayMode: 'development-only',
+          message: expect.stringContaining('layout[0].visibility.reference'),
+        },
+      })
+    })
+
+    it('rejects params.userId when operator is outside the supported catalog', () => {
+      expect(
+        validateRuntimeConfig(
+          createConfigWithLayout([
+            {
+              type: 'heading',
+              visibility: {
+                reference: 'params.userId',
+                operator: 'contains',
+                value: 'abc',
+              },
+              props: {
+                text: 'Welcome',
+                level: 1,
+              },
+            },
+          ]),
+        ),
+      ).toEqual({
+        status: 'error',
+        error: {
+          code: 'invalid-layout',
+          displayMode: 'development-only',
+          message: expect.stringContaining('layout[0].visibility.operator'),
         },
       })
     })
