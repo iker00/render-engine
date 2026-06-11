@@ -10,6 +10,11 @@ Cualquier nodo soportado hoy puede declarar opcionalmente:
 - `operator`: `equals | notEquals | isTruthy | isFalsy | greaterThan | lessThan`
 - `value`: obligatorio solo para `equals`, `notEquals`, `greaterThan` y `lessThan`
 
+Este mismo shape se reutiliza en otros contextos del runtime para declarar condiciones:
+- `submitAction.onSuccess[*].when` — condicionar la ejecución de una acción post-éxito
+- `pages[].preloads[*].when` — condicionar la ejecución de una precarga
+- `button.props.action.operations[*].when` (y equivalente en `form.submitAction`) — condicionar la ejecución de una operación individual dentro de `executeOperations`
+
 ## Referencias admitidas
 - `item`
 - `item.{segmentosAnidados}`

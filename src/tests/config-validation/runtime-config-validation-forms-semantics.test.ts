@@ -1086,4 +1086,726 @@ describe('validateRuntimeConfig', () => {
       },
     })
   })
+
+  // T2: when in executeOperations entries inside submitAction (structural schema tests)
+
+  it('accepts form.submitAction executeOperations with operations[i].when valid shape', () => {
+    const result = validateRuntimeConfig({
+      api: {
+        saveProfile: { method: 'POST', endpoint: '/api/profile' },
+      },
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'form',
+              id: 'user-form',
+              submitAction: {
+                type: 'executeOperations',
+                operations: [
+                  {
+                    operationName: 'saveProfile',
+                    when: { reference: 'queries.saveProfile.data.flag', operator: 'isTruthy' },
+                  },
+                ],
+              },
+              children: [],
+            },
+          ],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(result.status).toBe('ready')
+    if (result.status !== 'ready') throw new Error('Expected ready')
+    const form = result.config.pages[0].layout[0] as {
+      submitAction: { operations: Array<{ operationName: string; when?: unknown }> }
+    }
+    expect(form.submitAction.operations[0]).toEqual({
+      operationName: 'saveProfile',
+      when: { reference: 'queries.saveProfile.data.flag', operator: 'isTruthy' },
+    })
+  })
+
+  it('rejects form.submitAction executeOperations when operations[i].when.operator is not a string', () => {
+    const result = validateRuntimeConfig({
+      api: {},
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'form',
+              id: 'user-form',
+              submitAction: {
+                type: 'executeOperations',
+                operations: [
+                  {
+                    operationName: 'saveProfile',
+                    when: { reference: 'queries.saveProfile.data.flag', operator: 123 },
+                  },
+                ],
+              },
+              children: [],
+            },
+          ],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(result.status).toBe('error')
+    if (result.status !== 'error') throw new Error('Expected error')
+    expect(result.error.message).toContain('submitAction.operations[0].when')
+  })
+
+  // T3: semantic validation of when.reference in submitAction.executeOperations entries
+
+  it('accepts submitAction.executeOperations entry when with params.* reference', () => {
+    const result = validateRuntimeConfig({
+      api: {
+        saveOp: { method: 'POST', endpoint: '/api/save' },
+      },
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'form',
+              id: 'my-form',
+              submitAction: {
+                type: 'executeOperations',
+                operations: [
+                  {
+                    operationName: 'saveOp',
+                    when: { reference: 'params.id', operator: 'isTruthy' },
+                  },
+                ],
+              },
+              children: [],
+            },
+          ],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(result.status).toBe('ready')
+  })
+
+  it('accepts submitAction.executeOperations entry when with item.* reference (inside repeater context)', () => {
+    const result = validateRuntimeConfig({
+      api: {
+        saveOp: { method: 'POST', endpoint: '/api/save' },
+      },
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'form',
+              id: 'my-form',
+              submitAction: {
+                type: 'executeOperations',
+                operations: [
+                  {
+                    operationName: 'saveOp',
+                    when: { reference: 'item.status', operator: 'equals', value: 'active' },
+                  },
+                ],
+              },
+              children: [],
+            },
+          ],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(result.status).toBe('ready')
+  })
+
+  it('rejects submitAction.executeOperations entry when with operator outside catalog', () => {
+    const result = validateRuntimeConfig({
+      api: {},
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'form',
+              id: 'my-form',
+              submitAction: {
+                type: 'executeOperations',
+                operations: [
+                  {
+                    operationName: 'op1',
+                    when: { reference: 'queries.x.data.flag', operator: 'contains' },
+                  },
+                ],
+              },
+              children: [],
+            },
+          ],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(result.status).toBe('error')
+    if (result.status !== 'error') throw new Error('Expected error')
+    expect(result.error.message).toContain('submitAction.operations[0].when')
+  })
+
+  it('rejects submitAction.executeOperations entry when isTruthy with value declared', () => {
+    const result = validateRuntimeConfig({
+      api: {},
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'form',
+              id: 'my-form',
+              submitAction: {
+                type: 'executeOperations',
+                operations: [
+                  {
+                    operationName: 'op1',
+                    when: { reference: 'queries.x.data.flag', operator: 'isTruthy', value: 'bad' },
+                  },
+                ],
+              },
+              children: [],
+            },
+          ],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(result.status).toBe('error')
+    if (result.status !== 'error') throw new Error('Expected error')
+    expect(result.error.message).toContain('submitAction.operations[0].when')
+  })
+
+  // T4: cross-validation — form submitAction executeOperations with when field
+
+  it('accepts form.submitAction executeOperations with valid when and inexistent operationName (not pre-rejected at bootstrap)', () => {
+    const result = validateRuntimeConfig({
+      api: {},
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'form',
+              id: 'my-form',
+              submitAction: {
+                type: 'executeOperations',
+                operations: [
+                  {
+                    operationName: 'nonExistentOp',
+                    when: { reference: 'queries.x.data.flag', operator: 'isTruthy' },
+                  },
+                ],
+              },
+              children: [],
+            },
+          ],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    // executeOperations operationName is not cross-checked at bootstrap per current contract
+    expect(result.status).toBe('ready')
+  })
+
+  it('rejects form.submitAction executeOperations when entry has GET body with valid when (body error takes priority, not when)', () => {
+    const result = validateRuntimeConfig({
+      api: {
+        searchUsers: { method: 'GET', endpoint: '/api/users' },
+      },
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'form',
+              id: 'my-form',
+              submitAction: {
+                type: 'executeOperations',
+                operations: [
+                  {
+                    operationName: 'searchUsers',
+                    body: { search: 'Ada' },
+                    when: { reference: 'queries.x.data.flag', operator: 'isTruthy' },
+                  },
+                ],
+              },
+              children: [],
+            },
+          ],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(result.status).toBe('error')
+    if (result.status !== 'error') throw new Error('Expected error')
+    // Error is about body, not about when
+    expect(result.error.message).toContain('submitAction.operations[0].body')
+    expect(result.error.message).toContain('GET operations do not support body')
+  })
+
+  // T5: submitAction.onSuccess validation
+
+  it('accepts submitAction.onSuccess as an empty array (valid no-op)', () => {
+    const result = validateRuntimeConfig({
+      api: {
+        submitUserForm: { method: 'POST', endpoint: '/api/forms' },
+      },
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'form',
+              id: 'user-form',
+              submitAction: {
+                type: 'executeOperation',
+                operationName: 'submitUserForm',
+                onSuccess: [],
+              },
+              children: [],
+            },
+          ],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(result.status).toBe('ready')
+  })
+
+  it('accepts submitAction.onSuccess with a valid navigateTo action referencing an existing page', () => {
+    const result = validateRuntimeConfig({
+      api: {
+        submitUserForm: { method: 'POST', endpoint: '/api/forms' },
+      },
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'form',
+              id: 'user-form',
+              submitAction: {
+                type: 'executeOperation',
+                operationName: 'submitUserForm',
+                onSuccess: [{ type: 'navigateTo', pageId: 'details' }],
+              },
+              children: [],
+            },
+          ],
+        },
+        {
+          id: 'details',
+          layout: [],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(result.status).toBe('ready')
+  })
+
+  it('accepts submitAction.onSuccess with a navigateTo action and valid when condition', () => {
+    const result = validateRuntimeConfig({
+      api: {
+        submitUserForm: { method: 'POST', endpoint: '/api/forms' },
+      },
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'form',
+              id: 'user-form',
+              submitAction: {
+                type: 'executeOperation',
+                operationName: 'submitUserForm',
+                onSuccess: [
+                  {
+                    type: 'navigateTo',
+                    pageId: 'details',
+                    when: { reference: 'queries.submitUserForm.data.status', operator: 'equals', value: 'ok' },
+                  },
+                ],
+              },
+              children: [],
+            },
+          ],
+        },
+        {
+          id: 'details',
+          layout: [],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(result.status).toBe('ready')
+  })
+
+  it('accepts submitAction.onSuccess with executeOperations that has operations[i].when', () => {
+    const result = validateRuntimeConfig({
+      api: {
+        submitUserForm: { method: 'POST', endpoint: '/api/forms' },
+        logActivity: { method: 'POST', endpoint: '/api/activity' },
+      },
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'form',
+              id: 'user-form',
+              submitAction: {
+                type: 'executeOperation',
+                operationName: 'submitUserForm',
+                onSuccess: [
+                  {
+                    type: 'executeOperations',
+                    operations: [
+                      {
+                        operationName: 'logActivity',
+                        when: { reference: 'queries.submitUserForm.data.flag', operator: 'isTruthy' },
+                      },
+                    ],
+                  },
+                ],
+              },
+              children: [],
+            },
+          ],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(result.status).toBe('ready')
+  })
+
+  it('rejects submitAction.onSuccess when it is not an array', () => {
+    const result = validateRuntimeConfig({
+      api: {
+        submitUserForm: { method: 'POST', endpoint: '/api/forms' },
+      },
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'form',
+              id: 'user-form',
+              submitAction: {
+                type: 'executeOperation',
+                operationName: 'submitUserForm',
+                onSuccess: 'invalid',
+              },
+              children: [],
+            },
+          ],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(result.status).toBe('error')
+    if (result.status !== 'error') throw new Error('Expected error')
+    expect(result.error.message).toContain('submitAction.onSuccess')
+  })
+
+  it('rejects submitAction.onSuccess with a navigateTo action referencing an inexistent page', () => {
+    const result = validateRuntimeConfig({
+      api: {
+        submitUserForm: { method: 'POST', endpoint: '/api/forms' },
+      },
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'form',
+              id: 'user-form',
+              submitAction: {
+                type: 'executeOperation',
+                operationName: 'submitUserForm',
+                onSuccess: [{ type: 'navigateTo', pageId: 'missing-page' }],
+              },
+              children: [],
+            },
+          ],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(result.status).toBe('error')
+    if (result.status !== 'error') throw new Error('Expected error')
+    expect(result.error.message).toContain('submitAction.onSuccess[0].pageId')
+    expect(result.error.message).toContain('missing-page')
+  })
+
+  it('rejects submitAction.onSuccess with executeOperation referencing an inexistent operationName', () => {
+    const result = validateRuntimeConfig({
+      api: {},
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'form',
+              id: 'user-form',
+              submitAction: {
+                type: 'executeOperation',
+                operationName: 'someOp',
+                onSuccess: [{ type: 'executeOperation', operationName: 'nonExistentOp' }],
+              },
+              children: [],
+            },
+          ],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    // submitAction.executeOperation is still cross-checked (known operation), but
+    // onSuccess.executeOperation references should also be cross-checked
+    // submitAction.executeOperation 'someOp' will fail first
+    // Let's use an existing api so only onSuccess fails
+    const result2 = validateRuntimeConfig({
+      api: {
+        someOp: { method: 'POST', endpoint: '/api/some' },
+      },
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'form',
+              id: 'user-form',
+              submitAction: {
+                type: 'executeOperation',
+                operationName: 'someOp',
+                onSuccess: [{ type: 'executeOperation', operationName: 'nonExistentOp' }],
+              },
+              children: [],
+            },
+          ],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(result2.status).toBe('error')
+    if (result2.status !== 'error') throw new Error('Expected error')
+    expect(result2.error.message).toContain('submitAction.onSuccess[0].operationName')
+    expect(result2.error.message).toContain('nonExistentOp')
+  })
+
+  it('rejects submitAction.onSuccess with openModal referencing an inexistent modalId', () => {
+    const result = validateRuntimeConfig({
+      api: {
+        submitUserForm: { method: 'POST', endpoint: '/api/forms' },
+      },
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'form',
+              id: 'user-form',
+              submitAction: {
+                type: 'executeOperation',
+                operationName: 'submitUserForm',
+                onSuccess: [{ type: 'openModal', modalId: 'nonExistentModal' }],
+              },
+              children: [],
+            },
+          ],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(result.status).toBe('error')
+    if (result.status !== 'error') throw new Error('Expected error')
+    expect(result.error.message).toContain('submitAction.onSuccess[0].modalId')
+    expect(result.error.message).toContain('nonExistentModal')
+  })
+
+  it('accepts submitAction.onSuccess with openModal referencing an existing modal node', () => {
+    const result = validateRuntimeConfig({
+      api: {
+        submitUserForm: { method: 'POST', endpoint: '/api/forms' },
+      },
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'modal',
+              id: 'confirm-modal',
+              children: [],
+            },
+            {
+              type: 'form',
+              id: 'user-form',
+              submitAction: {
+                type: 'executeOperation',
+                operationName: 'submitUserForm',
+                onSuccess: [{ type: 'openModal', modalId: 'confirm-modal' }],
+              },
+              children: [],
+            },
+          ],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(result.status).toBe('ready')
+  })
+
+  it('rejects submitAction.onSuccess[i].when with operator outside catalog', () => {
+    const result = validateRuntimeConfig({
+      api: {
+        submitUserForm: { method: 'POST', endpoint: '/api/forms' },
+      },
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'form',
+              id: 'user-form',
+              submitAction: {
+                type: 'executeOperation',
+                operationName: 'submitUserForm',
+                onSuccess: [
+                  {
+                    type: 'goBack',
+                    when: { reference: 'queries.submitUserForm.data.flag', operator: 'contains' },
+                  },
+                ],
+              },
+              children: [],
+            },
+          ],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(result.status).toBe('error')
+    if (result.status !== 'error') throw new Error('Expected error')
+    expect(result.error.message).toContain('submitAction.onSuccess[0].when')
+  })
+
+  it('rejects submitAction.onSuccess[i] with GET + body, with exact path for body error', () => {
+    const result = validateRuntimeConfig({
+      api: {
+        submitUserForm: { method: 'POST', endpoint: '/api/forms' },
+        searchUsers: { method: 'GET', endpoint: '/api/users' },
+      },
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'form',
+              id: 'user-form',
+              submitAction: {
+                type: 'executeOperation',
+                operationName: 'submitUserForm',
+                onSuccess: [
+                  {
+                    type: 'executeOperation',
+                    operationName: 'searchUsers',
+                    body: { search: 'Ada' },
+                  },
+                ],
+              },
+              children: [],
+            },
+          ],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(result.status).toBe('error')
+    if (result.status !== 'error') throw new Error('Expected error')
+    expect(result.error.message).toContain('submitAction.onSuccess[0].body')
+    expect(result.error.message).toContain('GET operations do not support body')
+  })
+
+  it('accepts resetOnSuccess: true together with onSuccess actions', () => {
+    const result = validateRuntimeConfig({
+      api: {
+        submitUserForm: { method: 'POST', endpoint: '/api/forms' },
+      },
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'form',
+              id: 'user-form',
+              resetOnSuccess: true,
+              submitAction: {
+                type: 'executeOperation',
+                operationName: 'submitUserForm',
+                onSuccess: [{ type: 'goBack' }],
+              },
+              children: [],
+            },
+          ],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(result.status).toBe('ready')
+  })
+
+  it('silently discards onSuccess at root form node (without submitAction) per Zod .strip()', () => {
+    // onSuccess at root of form node (not inside submitAction) is unknown to the schema
+    // Zod strips it silently; no error is reported. This is a key invariant.
+    const result = validateRuntimeConfig({
+      api: {},
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'form',
+              id: 'user-form',
+              onSuccess: [{ type: 'goBack' }],
+              children: [],
+            },
+          ],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    // onSuccess at root is silently discarded — no error
+    expect(result.status).toBe('ready')
+  })
 })

@@ -3,6 +3,7 @@ import type { FormEvent, ReactNode } from 'react'
 import type {
   CheckboxGroupLayoutNode,
   FormLayoutNode,
+  FormOnSuccessAction,
   InputLayoutNode,
   LayoutNode,
   LayoutNodeCollection,
@@ -11,7 +12,7 @@ import type {
   TextareaLayoutNode,
 } from '../../config/runtime-config'
 import { FormContextProvider } from '../form-context'
-import { isLayoutNodeVisible } from '../runtime-layout-visibility'
+import { isLayoutNodeVisible, matchesVisibilityRule } from '../runtime-layout-visibility'
 import type { RuntimeIterationContext } from '../runtime-references/runtime-reference-resolver'
 import { resolveRuntimeValueWithOptions } from '../runtime-references/runtime-reference-resolver'
 import { getFormNodeClassName } from '../runtime-node-styling'
@@ -19,6 +20,7 @@ import { normalizeChoiceFieldValue } from '../runtime-collection-sources'
 import { type ResolvedFormFieldDefinition, validateFormFields } from '../runtime-form-validations'
 import { useRuntimeState, useRuntimeStateActions } from '../runtime-state/runtime-state-provider'
 import { selectFormFieldState } from '../runtime-state/runtime-state-selectors'
+import { executeRuntimeUiAction, type RuntimeUiActionHandlers } from '../runtime-actions/runtime-ui-action-executor'
 
 interface FormNodeProps {
   node: FormLayoutNode
@@ -28,7 +30,7 @@ interface FormNodeProps {
 
 export function FormNode({ node, children, iterationContext }: FormNodeProps) {
   const state = useRuntimeState()
-  const { executeQueryOperation, initializeForm, readRuntimeState, removeForm, resetForm, setFormFieldError, setFormFieldValue } =
+  const { executeQueryOperation, goBackPage, initializeForm, navigateToPage, openModal, closeModal, readRuntimeState, removeForm, resetForm, setFormFieldError, setFormFieldValue } =
     useRuntimeStateActions()
   const mountedPageEntryIdRef = useRef(state.pageEntry.entryId)
 
@@ -114,6 +116,41 @@ export function FormNode({ node, children, iterationContext }: FormNodeProps) {
     }
   }, [fieldDefinitions, node.id, setFormFieldValue, state])
 
+  function buildHandlers(): RuntimeUiActionHandlers {
+    return {
+      executeQueryOperation: (operationName, options) =>
+        executeQueryOperation(operationName, options),
+      goBackPage,
+      navigateToPage,
+      openModal,
+      closeModal,
+      resetForm,
+    }
+  }
+
+  function runOnSuccessActions(actions: FormOnSuccessAction[] | undefined) {
+    if (!actions || actions.length === 0) {
+      return
+    }
+
+    const handlers = buildHandlers()
+
+    for (const action of actions) {
+      const snapshot = readRuntimeState()
+
+      if (!matchesVisibilityRule(action.when, snapshot, iterationContext)) {
+        continue
+      }
+
+      // Strip 'when' before passing to executor since RuntimeUiAction doesn't have 'when'
+      const { when: _when, ...baseAction } = action as FormOnSuccessAction & { when?: unknown }
+      executeRuntimeUiAction(baseAction as Parameters<typeof executeRuntimeUiAction>[0], handlers, {
+        state: snapshot,
+        iterationContext,
+      })
+    }
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
@@ -165,8 +202,11 @@ export function FormNode({ node, children, iterationContext }: FormNodeProps) {
 
     if (submitAction.type === 'executeOperations') {
       const submitSnapshotState = readRuntimeState()
+      const filteredOperations = submitAction.operations.filter((entry) =>
+        matchesVisibilityRule(entry.when, submitSnapshotState, iterationContext),
+      )
       const results = await Promise.all(
-        submitAction.operations.map((entry) =>
+        filteredOperations.map((entry) =>
           executeQueryOperation(entry.operationName, {
             snapshotState: submitSnapshotState,
             requestParams: {
@@ -181,8 +221,12 @@ export function FormNode({ node, children, iterationContext }: FormNodeProps) {
 
       const allSuccess = results.every((r) => r.status === 'success')
 
-      if (allSuccess && node.resetOnSuccess) {
-        resetForm(node.id)
+      if (allSuccess) {
+        runOnSuccessActions(node.onSuccess)
+
+        if (node.resetOnSuccess) {
+          resetForm(node.id)
+        }
       }
 
       return
@@ -199,8 +243,12 @@ export function FormNode({ node, children, iterationContext }: FormNodeProps) {
       iterationContext,
     })
 
-    if (result.status === 'success' && node.resetOnSuccess) {
-      resetForm(node.id)
+    if (result.status === 'success') {
+      runOnSuccessActions(node.onSuccess)
+
+      if (node.resetOnSuccess) {
+        resetForm(node.id)
+      }
     }
   }
 

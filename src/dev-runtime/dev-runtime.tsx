@@ -98,6 +98,7 @@ function DevRuntimeReady({ initialConfig, initialConfigText, dataValues }: DevRu
   const [hasPendingChanges, setHasPendingChanges] = useState(false)
   const [validationError, setValidationError] = useState<RuntimeConfigError | null>(null)
   const [parseError, setParseError] = useState<{ code: string; message: string } | null>(null)
+  const [hasAppliedChanges, setHasAppliedChanges] = useState(false)
 
   const bridgeRef = useRef<DevRuntimeStateBridgeHandle>(null)
 
@@ -166,6 +167,20 @@ function DevRuntimeReady({ initialConfig, initialConfigText, dataValues }: DevRu
     }
   }, [])
 
+  useEffect(() => {
+    if (!hasAppliedChanges) return
+
+    function handleBeforeUnload(event: BeforeUnloadEvent) {
+      event.returnValue = 'unsaved-changes'
+      return 'unsaved-changes'
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+    }
+  }, [hasAppliedChanges])
+
   const currentError = parseError ?? validationError
 
   function handleToggle() {
@@ -224,6 +239,7 @@ function DevRuntimeReady({ initialConfig, initialConfigText, dataValues }: DevRu
       setParseError(null)
       setValidationError(null)
       setHasPendingChanges(false)
+      setHasAppliedChanges(true)
       // Keep editorBuffer as-is: it's the text that just validated.
       // Re-serializing validation.config would produce the normalized format
       // (e.g. preloads as { operationName, requestParams }) which the validator

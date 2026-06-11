@@ -16,6 +16,10 @@
       "method": "GET",
       "endpoint": "https://jsonplaceholder.typicode.com/posts"
     },
+    "savePost": {
+      "method": "POST",
+      "endpoint": "https://jsonplaceholder.typicode.com/posts"
+    },
     "getComments": {
       "method": "GET",
       "endpoint": "https://jsonplaceholder.typicode.com/todos"
@@ -438,6 +442,17 @@
           }
         },
         {
+          "type": "alert",
+          "props": {
+            "type": "success",
+            "message": "Post saved successfully"
+          },
+          "visibility": {
+            "reference": "queries.savePost.data",
+            "operator": "isTruthy"
+          }
+        },
+        {
           "type": "form",
           "id": "postForm",
           "submitAction": {
@@ -459,7 +474,8 @@
                   "source": "queries.searchUsers.data",
                   "label": "name",
                   "value": "id"
-                }
+                },
+                "defaultValue": "params.authorId"
               },
               "queryStateFeedback": {
                 "query": "searchUsers",
@@ -1146,6 +1162,28 @@
               "id": "editPost",
               "persistOnUnmount": false,
               "resetOnSuccess": false,
+              "submitAction": {
+                "type": "executeOperation",
+                "operationName": "savePost",
+                "body": {
+                  "title": "forms.editPost.title"
+                },
+                "onSuccess": [
+                  {
+                    "type": "navigateTo",
+                    "pageId": "search-posts",
+                    "params": {
+                      "authorId": "queries.getPost.data.0.userId",
+                      "success": true
+                    },
+                    "when": {
+                      "reference": "forms.editPost.title",
+                      "operator": "equals",
+                      "value": "hola"
+                    }
+                  }
+                ]
+              },
               "queryStateFeedback": {
                 "query": "getPost",
                 "states": {

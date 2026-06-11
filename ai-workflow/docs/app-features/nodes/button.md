@@ -29,7 +29,11 @@
   - `query`: objeto plano opcional con valores `string | number | boolean`
   - `body`: payload JSON opcional
   - `headers`: objeto plano opcional con valores string
-- Las N operaciones se lanzan en paralelo; cada una actualiza `queries.{operationName}` de forma independiente.
+  - `when`: objeto opcional con shape idéntico a `visibility` (`reference`, `operator`, `value?`) para condicionar la ejecución de esa operación individual
+- Las N operaciones cuya condición `when` se cumple se lanzan en paralelo; cada una actualiza `queries.{operationName}` de forma independiente.
+- Una operación sin `when` siempre se lanza.
+- Si la condición `when` de una operación no se cumple, esa operación se omite silenciosamente.
+- Si todas las operaciones son omitidas por sus condiciones `when`, la acción completa sin lanzar ninguna query; esto se trata como éxito.
 - Overrides por operación siguen la misma semántica de merge que `executeOperation` singular.
 
 ### `resetForm`

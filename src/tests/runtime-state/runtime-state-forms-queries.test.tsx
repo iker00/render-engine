@@ -820,3 +820,629 @@ describe('Runtime shared state store', () => {
     )
   })
 })
+
+describe('Form submitAction.onSuccess', () => {
+  function makeSuccessFetch() {
+    return vi.fn<typeof fetch>().mockImplementation(() =>
+      Promise.resolve(
+        new Response(JSON.stringify({ ok: true }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        }),
+      ),
+    )
+  }
+
+  function makeErrorFetch() {
+    return vi.fn<typeof fetch>().mockImplementation(() =>
+      Promise.resolve(
+        new Response(JSON.stringify({ error: 'fail' }), {
+          status: 500,
+          headers: { 'content-type': 'application/json' },
+        }),
+      ),
+    )
+  }
+
+  it('navigates to pageId from onSuccess after a successful executeOperation submit', async () => {
+    const fetchMock = makeSuccessFetch()
+
+    const config: RuntimeConfig = {
+      api: {
+        saveProfile: {
+          method: 'POST',
+          endpoint: '/api/profile',
+        },
+      },
+      initialPage: 'home',
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'form',
+              id: 'profile-form',
+              submitAction: {
+                type: 'executeOperation',
+                operationName: 'saveProfile',
+              },
+              onSuccess: [{ type: 'navigateTo', pageId: 'details' }],
+              children: [
+                {
+                  type: 'button',
+                  props: { label: 'Submit profile' },
+                },
+              ],
+            },
+          ],
+        },
+        { id: 'details', layout: [] },
+      ],
+    }
+
+    globalThis.fetch = fetchMock
+
+    render(
+      <RuntimeStateProvider config={config}>
+        <RuntimePage />
+        <RuntimeStateSnapshot testId="runtime-state" />
+      </RuntimeStateProvider>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Submit profile' }))
+
+    await waitFor(() =>
+      expect(screen.getByTestId('runtime-page')).toHaveAttribute('data-runtime-page-id', 'details'),
+    )
+  })
+
+  it('does not execute onSuccess actions when the submit fails', async () => {
+    const fetchMock = makeErrorFetch()
+
+    const config: RuntimeConfig = {
+      api: {
+        saveProfile: {
+          method: 'POST',
+          endpoint: '/api/profile',
+        },
+      },
+      initialPage: 'home',
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'form',
+              id: 'profile-form',
+              submitAction: {
+                type: 'executeOperation',
+                operationName: 'saveProfile',
+              },
+              onSuccess: [{ type: 'navigateTo', pageId: 'details' }],
+              children: [
+                {
+                  type: 'button',
+                  props: { label: 'Submit profile' },
+                },
+              ],
+            },
+          ],
+        },
+        { id: 'details', layout: [] },
+      ],
+    }
+
+    globalThis.fetch = fetchMock
+
+    render(
+      <RuntimeStateProvider config={config}>
+        <RuntimePage />
+        <RuntimeStateSnapshot testId="runtime-state" />
+      </RuntimeStateProvider>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Submit profile' }))
+
+    await waitFor(() =>
+      expect(readRuntimeStateSnapshot('runtime-state').queries.saveProfile?.status).toBe('error'),
+    )
+
+    expect(screen.getByTestId('runtime-page')).toHaveAttribute('data-runtime-page-id', 'home')
+  })
+
+  it('only executes onSuccess actions whose when condition is met', async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockImplementation(() =>
+      Promise.resolve(
+        new Response(JSON.stringify({ status: 'ok' }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        }),
+      ),
+    )
+
+    const config: RuntimeConfig = {
+      api: {
+        saveProfile: {
+          method: 'POST',
+          endpoint: '/api/profile',
+        },
+      },
+      initialPage: 'home',
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'form',
+              id: 'profile-form',
+              submitAction: {
+                type: 'executeOperation',
+                operationName: 'saveProfile',
+              },
+              onSuccess: [
+                {
+                  type: 'navigateTo',
+                  pageId: 'details',
+                  when: {
+                    reference: 'queries.saveProfile.data.status',
+                    operator: 'equals',
+                    value: 'ok',
+                  },
+                },
+                {
+                  type: 'navigateTo',
+                  pageId: 'other',
+                  when: {
+                    reference: 'queries.saveProfile.data.status',
+                    operator: 'equals',
+                    value: 'pending',
+                  },
+                },
+              ],
+              children: [
+                {
+                  type: 'button',
+                  props: { label: 'Submit profile' },
+                },
+              ],
+            },
+          ],
+        },
+        { id: 'details', layout: [] },
+        { id: 'other', layout: [] },
+      ],
+    }
+
+    globalThis.fetch = fetchMock
+
+    render(
+      <RuntimeStateProvider config={config}>
+        <RuntimePage />
+        <RuntimeStateSnapshot testId="runtime-state" />
+      </RuntimeStateProvider>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Submit profile' }))
+
+    await waitFor(() =>
+      expect(screen.getByTestId('runtime-page')).toHaveAttribute('data-runtime-page-id', 'details'),
+    )
+  })
+
+  it('executes both onSuccess actions in order when both when conditions are met', async () => {
+    const fetchMock = makeSuccessFetch()
+
+    const config: RuntimeConfig = {
+      api: {
+        saveProfile: {
+          method: 'POST',
+          endpoint: '/api/profile',
+        },
+        reloadUser: {
+          method: 'GET',
+          endpoint: '/api/user',
+        },
+      },
+      initialPage: 'home',
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'form',
+              id: 'profile-form',
+              submitAction: {
+                type: 'executeOperation',
+                operationName: 'saveProfile',
+              },
+              onSuccess: [
+                { type: 'executeOperation', operationName: 'reloadUser' },
+                { type: 'navigateTo', pageId: 'details' },
+              ],
+              children: [
+                {
+                  type: 'button',
+                  props: { label: 'Submit profile' },
+                },
+              ],
+            },
+          ],
+        },
+        { id: 'details', layout: [] },
+      ],
+    }
+
+    globalThis.fetch = fetchMock
+
+    render(
+      <RuntimeStateProvider config={config}>
+        <RuntimePage />
+        <RuntimeStateSnapshot testId="runtime-state" />
+      </RuntimeStateProvider>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Submit profile' }))
+
+    await waitFor(() =>
+      expect(screen.getByTestId('runtime-page')).toHaveAttribute('data-runtime-page-id', 'details'),
+    )
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2))
+    expect(fetchMock.mock.calls[0]?.[0]).toContain('/api/profile')
+    expect(fetchMock.mock.calls[1]?.[0]).toContain('/api/user')
+  })
+
+  it('resets form after executing onSuccess actions when resetOnSuccess is true', async () => {
+    const fetchMock = makeSuccessFetch()
+
+    const config: RuntimeConfig = {
+      api: {
+        saveProfile: {
+          method: 'POST',
+          endpoint: '/api/profile',
+          body: {
+            name: 'forms.profile-form.name',
+          },
+        },
+      },
+      initialPage: 'home',
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'form',
+              id: 'profile-form',
+              persistOnUnmount: true,
+              submitAction: {
+                type: 'executeOperation',
+                operationName: 'saveProfile',
+              },
+              resetOnSuccess: true,
+              onSuccess: [{ type: 'navigateTo', pageId: 'details' }],
+              children: [
+                {
+                  type: 'input',
+                  props: { fieldId: 'name', label: 'Name', defaultValue: '' },
+                },
+                {
+                  type: 'button',
+                  props: { label: 'Submit profile' },
+                },
+              ],
+            },
+          ],
+        },
+        { id: 'details', layout: [] },
+      ],
+    }
+
+    globalThis.fetch = fetchMock
+
+    render(
+      <RuntimeStateProvider config={config}>
+        <RuntimePage />
+        <RuntimeStateSnapshot testId="runtime-state" />
+      </RuntimeStateProvider>,
+    )
+
+    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Ada' } })
+    expect(screen.getByTestId('runtime-state')).toHaveTextContent('"name":{"value":"Ada"')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Submit profile' }))
+
+    await waitFor(() =>
+      expect(screen.getByTestId('runtime-page')).toHaveAttribute('data-runtime-page-id', 'details'),
+    )
+
+    await waitFor(() =>
+      expect(readRuntimeStateSnapshot('runtime-state').forms?.['profile-form']?.name?.value).toBe(''),
+    )
+  })
+
+  it('executes onSuccess and resetOnSuccess for executeOperations when all entries succeed', async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockImplementation(() =>
+      Promise.resolve(
+        new Response(JSON.stringify({ ok: true }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        }),
+      ),
+    )
+
+    const config: RuntimeConfig = {
+      api: {
+        op1: { method: 'POST', endpoint: '/api/op1' },
+        op2: { method: 'POST', endpoint: '/api/op2' },
+      },
+      initialPage: 'home',
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'form',
+              id: 'multi-form',
+              persistOnUnmount: true,
+              submitAction: {
+                type: 'executeOperations',
+                operations: [
+                  { operationName: 'op1' },
+                  { operationName: 'op2' },
+                ],
+              },
+              resetOnSuccess: true,
+              onSuccess: [{ type: 'navigateTo', pageId: 'details' }],
+              children: [
+                {
+                  type: 'input',
+                  props: { fieldId: 'name', label: 'Name', defaultValue: '' },
+                },
+                {
+                  type: 'button',
+                  props: { label: 'Submit multi' },
+                },
+              ],
+            },
+          ],
+        },
+        { id: 'details', layout: [] },
+      ],
+    }
+
+    globalThis.fetch = fetchMock
+
+    render(
+      <RuntimeStateProvider config={config}>
+        <RuntimePage />
+        <RuntimeStateSnapshot testId="runtime-state" />
+      </RuntimeStateProvider>,
+    )
+
+    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Grace' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Submit multi' }))
+
+    await waitFor(() =>
+      expect(screen.getByTestId('runtime-page')).toHaveAttribute('data-runtime-page-id', 'details'),
+    )
+
+    await waitFor(() =>
+      expect(readRuntimeStateSnapshot('runtime-state').forms?.['multi-form']?.name?.value).toBe(''),
+    )
+  })
+
+  it('does not execute onSuccess when executeOperations has a failing entry', async () => {
+    const config: RuntimeConfig = {
+      api: {
+        op1: { method: 'POST', endpoint: '/api/op1' },
+        op2: { method: 'POST', endpoint: '/api/op2' },
+      },
+      initialPage: 'home',
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'form',
+              id: 'multi-form',
+              submitAction: {
+                type: 'executeOperations',
+                operations: [
+                  { operationName: 'op1' },
+                  { operationName: 'op2' },
+                ],
+              },
+              onSuccess: [{ type: 'navigateTo', pageId: 'details' }],
+              children: [
+                {
+                  type: 'button',
+                  props: { label: 'Submit multi fail' },
+                },
+              ],
+            },
+          ],
+        },
+        { id: 'details', layout: [] },
+      ],
+    }
+
+    globalThis.fetch = vi.fn<typeof fetch>()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ ok: true }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ error: 'fail' }), {
+          status: 500,
+          headers: { 'content-type': 'application/json' },
+        }),
+      )
+
+    render(
+      <RuntimeStateProvider config={config}>
+        <RuntimePage />
+        <RuntimeStateSnapshot testId="runtime-state" />
+      </RuntimeStateProvider>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Submit multi fail' }))
+
+    await waitFor(() =>
+      expect(readRuntimeStateSnapshot('runtime-state').queries.op2?.status).toBe('error'),
+    )
+
+    expect(screen.getByTestId('runtime-page')).toHaveAttribute('data-runtime-page-id', 'home')
+  })
+
+  it('executes onSuccess and resetOnSuccess when all executeOperations entries are filtered by when', async () => {
+    const fetchMock = vi.fn<typeof fetch>()
+
+    const config: RuntimeConfig = {
+      api: {
+        op1: { method: 'POST', endpoint: '/api/op1' },
+      },
+      initialPage: 'home',
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'form',
+              id: 'filtered-form',
+              persistOnUnmount: true,
+              submitAction: {
+                type: 'executeOperations',
+                operations: [
+                  {
+                    operationName: 'op1',
+                    when: {
+                      reference: 'forms.filtered-form.name',
+                      operator: 'equals',
+                      value: 'trigger',
+                    },
+                  },
+                ],
+              },
+              resetOnSuccess: true,
+              onSuccess: [{ type: 'navigateTo', pageId: 'details' }],
+              children: [
+                {
+                  type: 'input',
+                  props: { fieldId: 'name', label: 'Name', defaultValue: '' },
+                },
+                {
+                  type: 'button',
+                  props: { label: 'Submit filtered' },
+                },
+              ],
+            },
+          ],
+        },
+        { id: 'details', layout: [] },
+      ],
+    }
+
+    globalThis.fetch = fetchMock
+
+    render(
+      <RuntimeStateProvider config={config}>
+        <RuntimePage />
+        <RuntimeStateSnapshot testId="runtime-state" />
+      </RuntimeStateProvider>,
+    )
+
+    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'no-match' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Submit filtered' }))
+
+    await waitFor(() =>
+      expect(screen.getByTestId('runtime-page')).toHaveAttribute('data-runtime-page-id', 'details'),
+    )
+
+    expect(fetchMock).not.toHaveBeenCalled()
+
+    await waitFor(() =>
+      expect(readRuntimeStateSnapshot('runtime-state').forms?.['filtered-form']?.name?.value).toBe(''),
+    )
+  })
+
+  it('evaluates onSuccess when against queries data after the successful submit operation', async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockImplementation(() =>
+      Promise.resolve(
+        new Response(JSON.stringify({ result: 'approved' }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        }),
+      ),
+    )
+
+    const config: RuntimeConfig = {
+      api: {
+        reviewProfile: {
+          method: 'POST',
+          endpoint: '/api/review',
+        },
+      },
+      initialPage: 'home',
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'form',
+              id: 'review-form',
+              submitAction: {
+                type: 'executeOperation',
+                operationName: 'reviewProfile',
+              },
+              onSuccess: [
+                {
+                  type: 'navigateTo',
+                  pageId: 'approved',
+                  when: {
+                    reference: 'queries.reviewProfile.data.result',
+                    operator: 'equals',
+                    value: 'approved',
+                  },
+                },
+                {
+                  type: 'navigateTo',
+                  pageId: 'rejected',
+                  when: {
+                    reference: 'queries.reviewProfile.data.result',
+                    operator: 'equals',
+                    value: 'rejected',
+                  },
+                },
+              ],
+              children: [
+                {
+                  type: 'button',
+                  props: { label: 'Submit review' },
+                },
+              ],
+            },
+          ],
+        },
+        { id: 'approved', layout: [] },
+        { id: 'rejected', layout: [] },
+      ],
+    }
+
+    globalThis.fetch = fetchMock
+
+    render(
+      <RuntimeStateProvider config={config}>
+        <RuntimePage />
+        <RuntimeStateSnapshot testId="runtime-state" />
+      </RuntimeStateProvider>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Submit review' }))
+
+    await waitFor(() =>
+      expect(screen.getByTestId('runtime-page')).toHaveAttribute('data-runtime-page-id', 'approved'),
+    )
+  })
+})

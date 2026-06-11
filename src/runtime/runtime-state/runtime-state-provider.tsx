@@ -17,6 +17,7 @@ import {
 } from '../runtime-navigation/browser-hash-navigation'
 import type { RuntimeIterationContext } from '../runtime-references/runtime-reference-resolver'
 import { resolveRuntimeValueWithOptions } from '../runtime-references/runtime-reference-resolver'
+import { matchesVisibilityRule } from '../runtime-layout-visibility'
 import { RuntimeStateContext } from './runtime-state-context'
 import { createRuntimeState, runtimeStateReducer } from './runtime-state-reducer'
 import { selectCurrentNavigationEntry, selectCurrentPage } from './runtime-state-selectors'
@@ -806,7 +807,8 @@ function planPagePreloadExecution({
   params: RuntimePageParams
   state: RuntimeState
 }) {
-  const preloads = page.preloads ?? []
+  const allPreloads = page.preloads ?? []
+  const preloads = allPreloads.filter((preload) => matchesVisibilityRule(preload.when, state))
   const preloadNames = preloads.map((preload) => preload.operationName)
   const snapshotState = createPreloadPlanningSnapshot(state, preloadNames)
 

@@ -8,7 +8,8 @@
 - Las precargas se declaran a nivel de página.
 - Se ejecutan al entrar en la página.
 - La página puede depender de esos datos para mostrar su layout o bloques concretos.
-- Cada preload declara hoy su `operationName` y puede añadir `query`, `body` y `headers` con la misma semántica de `executeOperation`.
+- Cada preload declara su `operationName` y puede añadir `query`, `body` y `headers` con la misma semántica de `executeOperation`.
+- Cada preload puede declarar opcionalmente `when` con el mismo shape que `visibility`: `{ reference, operator, value? }` para condicionarse y ejecutarse solo si se cumple la condición.
 
 ## Tanda agregada y `pageEntry`
 - Cada entrada de página crea una tanda agregada con `entryId`, `pageId`, `params`, `preloadNames` y `status`.
@@ -16,8 +17,18 @@
 - `idle` representa explícitamente la entrada actual sin precargas que ejecutar.
 - Antes de ejecutar una tanda, el runtime resuelve cada preload contra un snapshot común del estado ya preparado para esa entrada y deriva una firma estable de request a partir del método, endpoint, `query`, `body` y `headers` efectivos.
 
+## Evaluación condicional (`when`)
+- Al entrar a una página, el runtime evalúa el predicado `when` de cada preload contra el estado activo en ese momento.
+- Si la condición no se cumple, el preload se omite silenciosamente y no se ejecuta.
+- Un preload omitido por su condición `when` no aparece en `pageEntry.preloadNames` ni contribuye a `pageEntry.status`.
+- Si todos los preloads de una página son omitidos por sus condiciones `when`, `pageEntry.status` queda en `idle`.
+- Las referencias válidas en `when` son: `forms.*`, `queries.*` y `params.*`.
+- `item.*` no es una referencia válida en preloads (no existe contexto de item a nivel de página); el config se rechaza en bootstrap con ruta exacta.
+- Los operadores y el shape de condición son idénticos a los de `visibility`: `equals`, `notEquals`, `isTruthy`, `isFalsy`, `greaterThan`, `lessThan`.
+
 ## Reevaluación selectiva por firma
 - Si una firma efectiva coincide con la firma ya visible en `queries.{operationName}`, ese preload no se relanza automáticamente ni abre una nueva carga artificial por sí solo.
+- La evaluación del predicado `when` ocurre antes de derivar la firma de request; si la condición no se cumple, el preload se omite sin comparar firmas.
 - El arranque de una tanda con `preloads` prepara primero la nueva `pageEntry` en un único paso observable: limpia solo las queries incluidas en el subconjunto realmente relanzado y las deja directamente en `loading`.
 - Esa preparación ocurre antes del primer render útil de la nueva entrada, así que cualquier consumidor de `queries.*` ve estado limpio o `loading`, nunca el `data` exitoso de otra entrada previa para esas mismas precargas.
 - La preparación previa no introduce un paso visible por `idle` para esa nueva tanda.

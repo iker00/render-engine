@@ -1,5 +1,7 @@
 import type { NavigateToRuntimeUiAction, RuntimeApiRequestParams, RuntimeUiAction } from '../../config/runtime-config'
 import type { RuntimeIterationContext } from '../runtime-references/runtime-reference-resolver'
+import { matchesVisibilityRule } from '../runtime-layout-visibility'
+import type { RuntimeState } from '../runtime-state/runtime-state-types'
 
 export interface RuntimeUiActionHandlers {
   executeQueryOperation: (
@@ -20,7 +22,7 @@ export interface RuntimeUiActionHandlers {
 export function executeRuntimeUiAction(
   action: RuntimeUiAction,
   handlers: RuntimeUiActionHandlers,
-  options?: { iterationContext?: RuntimeIterationContext },
+  options?: { state?: RuntimeState; iterationContext?: RuntimeIterationContext },
 ) {
   switch (action.type) {
     case 'navigateTo':
@@ -43,6 +45,9 @@ export function executeRuntimeUiAction(
       return
     case 'executeOperations':
       for (const entry of action.operations) {
+        if (options?.state && !matchesVisibilityRule(entry.when, options.state, options.iterationContext)) {
+          continue
+        }
         void handlers.executeQueryOperation(entry.operationName, {
           requestParams: {
             query: entry.query,

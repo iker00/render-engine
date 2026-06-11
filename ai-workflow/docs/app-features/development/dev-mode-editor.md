@@ -52,6 +52,27 @@ Cuando `src/dev/config.json` cambia en disco durante el desarrollo, Vite's HMR a
 
 Esto permite editar `config.json` directamente en el editor de código y ver el resultado en el navegador sin tocar el drawer. El estado de la sesión (navegación, formularios, queries) se preserva en la medida en que el nuevo config lo permita.
 
+## Guardia de cambios aplicados (unsaved changes guard)
+Cuando el usuario pulsa el botón Aplicar y la validación es exitosa, se activa una guardia que intercepta cualquier intento de descargar la página (recargar, navegar fuera, cerrar la pestaña, etc.) mostrando un diálogo nativo del navegador que advierte al usuario de que perderá los cambios aplicados si continúa.
+
+### Activación
+La guardia se activa exactamente en el primer Aplicar exitoso de la sesión. Una vez activada, permanece activa hasta que la página se descargue realmente, aunque:
+- Se apliquen cambios adicionales (segundo Aplicar exitoso, HMR).
+- Se cierre el drawer del editor.
+- Se navegue dentro del runtime por hash (la navegación interna por hash no descarga la página y no desactiva la guardia).
+
+### Comportamiento
+- **Activación correcta**: Tras un Aplicar exitoso (validación pasada, config aceptado), el diálogo nativo del navegador aparece al recargar, navegar fuera, cerrar la pestaña, etc.
+- **Errores de validación o sintaxis**: Un Aplicar fallido por JSON inválido o validación estructural no activa la guardia. El usuario debe aplicar un cambio válido para activarla.
+- **Cancelar el diálogo**: Si el usuario elige "quedarse en la página" cuando el navegador lo pregunta, la página no se descarga y los cambios aplicados se conservan.
+- **Confirmar el diálogo**: Si el usuario elige "abandonar la página", la descarga prosigue normalmente y el runtime se reinicia desde `config.json` del disco, perdiendo los cambios aplicados de la sesión.
+
+### Límites de la guardia
+- El diálogo muestra un mensaje genérico del navegador; no es personalizable (política de seguridad de navegadores modernos).
+- Solo intercepta descargas reales de la página (recargar, navegar a URL distinta, cerrar pestaña). No aplica a la navegación interna del runtime por hash.
+- No persiste la configuración aplicada en `localStorage`, `sessionStorage` o disco; es únicamente para avisar al usuario durante la sesión.
+- No existe ningún elemento visual adicional (banner, badge, indicador) más allá del diálogo nativo.
+
 ## Límites
 - No persiste cambios entre sesiones del navegador (`localStorage`/`sessionStorage` fuera de alcance).
 - No descarga el JSON como archivo.

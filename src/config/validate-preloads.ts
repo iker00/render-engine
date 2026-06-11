@@ -7,6 +7,7 @@ import {
   runtimeApiRequestParamsSchema,
 } from './runtime-config-zod'
 import { invalidLayout } from './runtime-config-validation-errors'
+import { validateWhenCondition } from './validate-actions-visibility'
 
 export function validatePagePreloads(
   rawPreloads: unknown[] | undefined,
@@ -35,11 +36,22 @@ export function validatePagePreloads(
 
     const entries = Object.entries(rawPreload)
 
-    if (entries.length !== 1) {
+    if (entries.length === 0 || entries.length > 2) {
       return invalidPreloadEntry(pageIndex, preloadIndex)
     }
 
-    const [operationName, rawRequestParams] = entries[0]
+    if (entries.length === 2 && !entries.some(([key]) => key === 'when')) {
+      return invalidPreloadEntry(pageIndex, preloadIndex)
+    }
+
+    const operationEntry = entries.find(([key]) => key !== 'when')
+
+    if (!operationEntry) {
+      return invalidPreloadEntry(pageIndex, preloadIndex)
+    }
+
+    const [operationName, rawRequestParams] = operationEntry
+    const rawWhen = rawPreload['when']
 
     if (operationName.trim().length === 0) {
       return invalidPreloadEntry(pageIndex, preloadIndex)
@@ -82,10 +94,23 @@ export function validatePagePreloads(
 
     seenOperationNames.add(operationName)
 
-    preloads.push({
+    const preloadConfig: RuntimePreloadConfig = {
       operationName,
       requestParams: requestParamsResult.data as RuntimeApiRequestParams,
-    })
+    }
+
+    if (rawWhen !== undefined) {
+      const whenPath = `pages[${pageIndex}].preloads[${preloadIndex}].when`
+      const whenResult = validateWhenCondition(rawWhen, whenPath, `pages[${pageIndex}]`, { allowItem: false })
+
+      if (whenResult.status === 'error') {
+        return normalizePagePreloadRequestParamsIssue(whenResult, pageIndex)
+      }
+
+      preloadConfig.when = whenResult.when
+    }
+
+    preloads.push(preloadConfig)
   }
 
   return {

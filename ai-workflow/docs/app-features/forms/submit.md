@@ -17,12 +17,25 @@
 - El submit resuelve sus referencias contra el snapshot más reciente del runtime tras la validación local del formulario.
 - Si `submitAction` y la operación base aportan request params a la vez, `query` y `headers` combinan por clave con precedencia del submit, y `body` sigue la misma semántica limitada de merge superficial o sustitución total que usa el dominio `queries`.
 
+## Acciones post-éxito (`onSuccess`)
+- `submitAction` acepta opcionalmente `onSuccess`: una lista ordenada de acciones a ejecutar tras un submit exitoso.
+- Las acciones de `onSuccess` pueden ser cualquiera del catálogo de botón: `navigateTo`, `goBack`, `executeOperation`, `executeOperations`, `resetForm`, `openModal`, `closeModal`.
+- Cada acción en `onSuccess` puede declarar opcionalmente `when` con el mismo shape que `visibility`: `{ reference, operator, value? }`.
+- Las acciones se evalúan y ejecutan en orden declarado; todas las que cumplan su condición `when` se ejecutan sin semántica de "primera coincidencia".
+- Una acción sin `when` siempre se ejecuta.
+- Si la condición `when` no se cumple, la acción se omite silenciosamente.
+- Si el submit falla, no se ejecuta ninguna acción de `onSuccess`.
+- Con `submitAction.type: executeOperations` (plural), `onSuccess` se ejecuta solo si **todas** las operaciones de la lista terminan en éxito.
+- Las referencias `queries.{operationName}.*` ya reflejan el estado `success` y sus datos antes de que se evalúen los `when` de las acciones `onSuccess`.
+
 ## Reseteo
 - `resetForm` restaura el estado inicial efectivo de cada campo del formulario objetivo.
 - `resetForm` no borra `forms.{formId}` ni sustituye la limpieza por desmontaje; solo restaura el estado inicial efectivo del formulario actualmente presente en store.
 - Si `form.resetOnSuccess` es `true`, el comportamiento depende del tipo de `submitAction`:
   - Con `submitAction.type: executeOperation` (singular): un submit exitoso dispara el reset.
   - Con `submitAction.type: executeOperations` (plural): el reset solo se dispara si **todas** las operaciones de la lista terminan en `status: success`. Si alguna operación falla, el formulario conserva sus valores actuales.
+- Si existe `onSuccess`, el reset se ejecuta **después** de todas las acciones de `onSuccess`.
 - Si el submit falla, el runtime conserva los valores actuales del usuario y no resetea automáticamente.
 - El shape se valida en bootstrap, pero `formId` no se comprueba contra un catálogo semántico global inexistente.
 - Si el formulario todavía no está inicializado en el store, la pantalla se mantiene estable y no aparece una semántica nueva de error.
+- `resetOnSuccess: true` coexiste con `onSuccess`; ambos pueden estar presentes a la vez.

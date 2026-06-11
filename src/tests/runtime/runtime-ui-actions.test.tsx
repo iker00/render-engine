@@ -377,6 +377,84 @@ describe('executeRuntimeUiAction', () => {
       iterationContext,
     })
   })
+
+  it('filters executeOperations entries by when: only launches entries whose condition is met', () => {
+    const handlers = createHandlers()
+    handlers.executeQueryOperation.mockResolvedValue(undefined)
+
+    const stateWithQuerySuccess = {
+      ...runtimeStateMock,
+      queries: {
+        statusQuery: {
+          status: 'success' as const,
+          data: { flag: true },
+          error: null,
+          requestSignature: null,
+        },
+      },
+    }
+
+    runtimeUiActionExecutor.executeRuntimeUiAction(
+      {
+        type: 'executeOperations',
+        operations: [
+          {
+            operationName: 'op1',
+            when: { reference: 'queries.statusQuery.data.flag', operator: 'isTruthy' },
+          },
+          {
+            operationName: 'op2',
+            when: { reference: 'queries.statusQuery.data.flag', operator: 'isFalsy' },
+          },
+        ],
+      },
+      handlers,
+      { state: stateWithQuerySuccess },
+    )
+
+    expect(handlers.executeQueryOperation).toHaveBeenCalledTimes(1)
+    expect(handlers.executeQueryOperation).toHaveBeenCalledWith('op1', expect.objectContaining({
+      requestParams: { query: undefined, body: undefined, headers: undefined },
+    }))
+    expect(handlers.executeQueryOperation).not.toHaveBeenCalledWith('op2', expect.anything())
+  })
+
+  it('fires no queries when all executeOperations entries are filtered by when', () => {
+    const handlers = createHandlers()
+    handlers.executeQueryOperation.mockResolvedValue(undefined)
+
+    const stateWithQuerySuccess = {
+      ...runtimeStateMock,
+      queries: {
+        flagQuery: {
+          status: 'success' as const,
+          data: { enabled: false },
+          error: null,
+          requestSignature: null,
+        },
+      },
+    }
+
+    runtimeUiActionExecutor.executeRuntimeUiAction(
+      {
+        type: 'executeOperations',
+        operations: [
+          {
+            operationName: 'op1',
+            when: { reference: 'queries.flagQuery.data.enabled', operator: 'isTruthy' },
+          },
+          {
+            operationName: 'op2',
+            when: { reference: 'queries.flagQuery.data.enabled', operator: 'isTruthy' },
+          },
+        ],
+      },
+      handlers,
+      { state: stateWithQuerySuccess },
+    )
+
+    expect(handlers.executeQueryOperation).not.toHaveBeenCalled()
+  })
 })
 
 describe('ButtonNode', () => {

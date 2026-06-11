@@ -317,3 +317,185 @@ describe('DevRuntime data-values pre-seeding', () => {
     expect(screen.getByTestId('runtime-error-message')).toBeInTheDocument()
   })
 })
+
+describe('DevRuntime unsaved changes guard', () => {
+  let addEventSpy: ReturnType<typeof vi.spyOn>
+  let removeEventSpy: ReturnType<typeof vi.spyOn>
+
+  beforeEach(() => {
+    addEventSpy = vi.spyOn(window, 'addEventListener')
+    removeEventSpy = vi.spyOn(window, 'removeEventListener')
+  })
+
+  afterEach(() => {
+    addEventSpy.mockRestore()
+    removeEventSpy.mockRestore()
+  })
+
+  function beforeunloadCalls() {
+    return addEventSpy.mock.calls.filter(([type]) => type === 'beforeunload')
+  }
+
+  function removeBeforeunloadCalls() {
+    return removeEventSpy.mock.calls.filter(([type]) => type === 'beforeunload')
+  }
+
+  it('does not register a beforeunload listener before any Apply', async () => {
+    render(<DevRuntime rootElement={makeRootElement(minimalConfig)} />)
+
+    expect(beforeunloadCalls()).toHaveLength(0)
+
+    const event = new Event('beforeunload', { cancelable: true })
+    window.dispatchEvent(event)
+
+    expect(event.defaultPrevented).toBe(false)
+  })
+
+  it('registers beforeunload listener exactly once after the first successful Apply', async () => {
+    render(<DevRuntime rootElement={makeRootElement(minimalConfig)} />)
+
+    fireEvent.click(screen.getByTestId('dev-runtime-toggle'))
+    await waitFor(() => expect(screen.getByTestId('monaco-editor-mock')).toBeInTheDocument())
+
+    fireEvent.change(screen.getByTestId('monaco-editor-mock'), {
+      target: { value: JSON.stringify(secondConfig) },
+    })
+    fireEvent.click(screen.getByTestId('dev-runtime-apply'))
+
+    await waitFor(() => expect(screen.getByText('Updated Title')).toBeInTheDocument())
+
+    expect(beforeunloadCalls()).toHaveLength(1)
+
+    const event = new Event('beforeunload', { cancelable: true })
+    window.dispatchEvent(event)
+
+    expect((event as BeforeUnloadEvent).returnValue).not.toBe('')
+  })
+
+  it('does not register beforeunload listener after a failed Apply due to invalid JSON', async () => {
+    render(<DevRuntime rootElement={makeRootElement(minimalConfig)} />)
+
+    fireEvent.click(screen.getByTestId('dev-runtime-toggle'))
+    await waitFor(() => expect(screen.getByTestId('monaco-editor-mock')).toBeInTheDocument())
+
+    fireEvent.change(screen.getByTestId('monaco-editor-mock'), {
+      target: { value: '{invalid json' },
+    })
+    fireEvent.click(screen.getByTestId('dev-runtime-apply'))
+
+    expect(beforeunloadCalls()).toHaveLength(0)
+
+    const event = new Event('beforeunload', { cancelable: true })
+    window.dispatchEvent(event)
+
+    expect(event.defaultPrevented).toBe(false)
+  })
+
+  it('does not register beforeunload listener after a failed Apply due to validation error', async () => {
+    const invalidConfig = { api: {}, pages: [], initialPage: 'missing-page' }
+    render(<DevRuntime rootElement={makeRootElement(minimalConfig)} />)
+
+    fireEvent.click(screen.getByTestId('dev-runtime-toggle'))
+    await waitFor(() => expect(screen.getByTestId('monaco-editor-mock')).toBeInTheDocument())
+
+    fireEvent.change(screen.getByTestId('monaco-editor-mock'), {
+      target: { value: JSON.stringify(invalidConfig) },
+    })
+    fireEvent.click(screen.getByTestId('dev-runtime-apply'))
+
+    expect(beforeunloadCalls()).toHaveLength(0)
+
+    const event = new Event('beforeunload', { cancelable: true })
+    window.dispatchEvent(event)
+
+    expect(event.defaultPrevented).toBe(false)
+  })
+
+  it('registers listener after a failed Apply followed by a successful Apply', async () => {
+    render(<DevRuntime rootElement={makeRootElement(minimalConfig)} />)
+
+    fireEvent.click(screen.getByTestId('dev-runtime-toggle'))
+    await waitFor(() => expect(screen.getByTestId('monaco-editor-mock')).toBeInTheDocument())
+
+    // First: failed apply
+    fireEvent.change(screen.getByTestId('monaco-editor-mock'), {
+      target: { value: '{invalid json' },
+    })
+    fireEvent.click(screen.getByTestId('dev-runtime-apply'))
+
+    expect(beforeunloadCalls()).toHaveLength(0)
+
+    // Then: successful apply
+    fireEvent.change(screen.getByTestId('monaco-editor-mock'), {
+      target: { value: JSON.stringify(secondConfig) },
+    })
+    fireEvent.click(screen.getByTestId('dev-runtime-apply'))
+
+    await waitFor(() => expect(screen.getByText('Updated Title')).toBeInTheDocument())
+
+    expect(beforeunloadCalls()).toHaveLength(1)
+
+    const event = new Event('beforeunload', { cancelable: true })
+    window.dispatchEvent(event)
+
+    expect((event as BeforeUnloadEvent).returnValue).not.toBe('')
+  })
+
+  it('does not register a duplicate listener after a second successful Apply', async () => {
+    render(<DevRuntime rootElement={makeRootElement(minimalConfig)} />)
+
+    fireEvent.click(screen.getByTestId('dev-runtime-toggle'))
+    await waitFor(() => expect(screen.getByTestId('monaco-editor-mock')).toBeInTheDocument())
+
+    // First successful apply
+    fireEvent.change(screen.getByTestId('monaco-editor-mock'), {
+      target: { value: JSON.stringify(secondConfig) },
+    })
+    fireEvent.click(screen.getByTestId('dev-runtime-apply'))
+    await waitFor(() => expect(screen.getByText('Updated Title')).toBeInTheDocument())
+
+    // Second successful apply
+    fireEvent.change(screen.getByTestId('monaco-editor-mock'), {
+      target: { value: JSON.stringify(minimalConfig) },
+    })
+    fireEvent.click(screen.getByTestId('dev-runtime-apply'))
+    await waitFor(() => expect(screen.getByText('Hello World')).toBeInTheDocument())
+
+    // Should still be exactly one registration (not two)
+    expect(beforeunloadCalls()).toHaveLength(1)
+  })
+
+  it('removes the beforeunload listener on unmount after a successful Apply', async () => {
+    const { unmount } = render(<DevRuntime rootElement={makeRootElement(minimalConfig)} />)
+
+    fireEvent.click(screen.getByTestId('dev-runtime-toggle'))
+    await waitFor(() => expect(screen.getByTestId('monaco-editor-mock')).toBeInTheDocument())
+
+    fireEvent.change(screen.getByTestId('monaco-editor-mock'), {
+      target: { value: JSON.stringify(secondConfig) },
+    })
+    fireEvent.click(screen.getByTestId('dev-runtime-apply'))
+    await waitFor(() => expect(screen.getByText('Updated Title')).toBeInTheDocument())
+
+    const registeredHandler = beforeunloadCalls()[0][1] as EventListenerOrEventListenerObject
+
+    unmount()
+
+    const removeCalls = removeBeforeunloadCalls()
+    expect(removeCalls).toHaveLength(1)
+    expect(removeCalls[0][1]).toBe(registeredHandler)
+
+    const event = new Event('beforeunload', { cancelable: true })
+    window.dispatchEvent(event)
+    expect(event.defaultPrevented).toBe(false)
+  })
+
+  it('does not call addEventListener or removeEventListener for beforeunload when unmounting without any Apply', () => {
+    const { unmount } = render(<DevRuntime rootElement={makeRootElement(minimalConfig)} />)
+
+    unmount()
+
+    expect(beforeunloadCalls()).toHaveLength(0)
+    expect(removeBeforeunloadCalls()).toHaveLength(0)
+  })
+})

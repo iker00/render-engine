@@ -587,6 +587,33 @@ describe('validateRuntimeConfig', () => {
       })
     })
 
+    // T3: confirm that visibility still rejects params.* (not contaminated by when logic)
+    it('rejects visibility references using params.* (params.* is only valid in when, not visibility)', () => {
+      expect(
+        validateRuntimeConfig(
+          createConfigWithLayout([
+            {
+              type: 'heading',
+              visibility: createVisibilityRule({
+                reference: 'params.filter',
+              }),
+              props: {
+                text: 'Welcome',
+                level: 1,
+              },
+            },
+          ]),
+        ),
+      ).toEqual({
+        status: 'error',
+        error: {
+          code: 'invalid-layout',
+          displayMode: 'development-only',
+          message: expect.stringContaining('visibility.reference'),
+        },
+      })
+    })
+
     it('drops unsupported extra keys from visibility blocks without changing valid configs', () => {
       const result = validateRuntimeConfig(
         createConfigWithLayout([

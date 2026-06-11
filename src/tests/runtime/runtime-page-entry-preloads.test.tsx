@@ -1434,3 +1434,379 @@ describe('Runtime page entry preloads integration', () => {
     )
   })
 })
+
+describe('Runtime page entry preloads — when predicate', () => {
+  it('omits a preload whose when condition is not met: not executed, not in preloadNames, status idle', async () => {
+    const fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+
+    const config: RuntimeConfig = {
+      api: {
+        searchUsers: { method: 'GET', endpoint: '/api/users' },
+      },
+      initialPage: 'landing',
+      pages: [
+        { id: 'landing', layout: [] },
+        {
+          id: 'conditional',
+          preloads: [
+            {
+              operationName: 'searchUsers',
+              requestParams: {},
+              when: { reference: 'params.userId', operator: 'isTruthy' },
+            },
+          ],
+          layout: [],
+        },
+      ],
+    }
+
+    render(
+      <RuntimeStateProvider config={config}>
+        <NavigationFixtureForConfig config={config} />
+        <RuntimeStateSnapshot />
+      </RuntimeStateProvider>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Go to conditional' }))
+
+    await waitFor(() => expect(readRuntimeState().pageEntry.pageId).toBe('conditional'))
+
+    expect(readRuntimeState().pageEntry).toEqual({
+      entryId: 1,
+      pageId: 'conditional',
+      params: {},
+      preloadNames: [],
+      status: 'idle',
+    })
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('executes a preload normally when its when condition is met', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(createJsonResponse({ results: ['Ada'] }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const config: RuntimeConfig = {
+      api: {
+        searchUsers: { method: 'GET', endpoint: '/api/users' },
+      },
+      initialPage: 'landing',
+      pages: [
+        { id: 'landing', layout: [] },
+        {
+          id: 'conditional',
+          preloads: [
+            {
+              operationName: 'searchUsers',
+              requestParams: {},
+              when: { reference: 'params.userId', operator: 'isTruthy' },
+            },
+          ],
+          layout: [],
+        },
+      ],
+    }
+
+    render(
+      <RuntimeStateProvider config={config}>
+        <NavigationFixtureForConfig config={config} />
+        <RuntimeStateSnapshot />
+      </RuntimeStateProvider>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Go to conditional with userId' }))
+
+    await waitFor(() => expect(readRuntimeState().pageEntry.pageId).toBe('conditional'))
+    await waitFor(() => expect(readRuntimeState().pageEntry.status).toBe('success'))
+
+    expect(readRuntimeState().pageEntry.preloadNames).toEqual(['searchUsers'])
+    expect(fetchMock).toHaveBeenCalledWith('/api/users', { method: 'GET' })
+  })
+
+  it('includes only the preload without when when another has a false when condition', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(createJsonResponse({ teams: ['Runtime'] }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const config: RuntimeConfig = {
+      api: {
+        searchUsers: { method: 'GET', endpoint: '/api/users' },
+        loadTeams: { method: 'GET', endpoint: '/api/teams' },
+      },
+      initialPage: 'landing',
+      pages: [
+        { id: 'landing', layout: [] },
+        {
+          id: 'mixed',
+          preloads: [
+            {
+              operationName: 'searchUsers',
+              requestParams: {},
+              when: { reference: 'params.userId', operator: 'isTruthy' },
+            },
+            { operationName: 'loadTeams', requestParams: {} },
+          ],
+          layout: [],
+        },
+      ],
+    }
+
+    render(
+      <RuntimeStateProvider config={config}>
+        <NavigationFixtureForConfig config={config} />
+        <RuntimeStateSnapshot />
+      </RuntimeStateProvider>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Go to mixed' }))
+
+    await waitFor(() => expect(readRuntimeState().pageEntry.status).toBe('success'))
+
+    expect(readRuntimeState().pageEntry.preloadNames).toEqual(['loadTeams'])
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(fetchMock).toHaveBeenCalledWith('/api/teams', { method: 'GET' })
+  })
+
+  it('reflects loading status from the preload passing when while omitting the one with false when', async () => {
+    let resolveTeams: ((response: Response) => void) | null = null
+    const fetchMock = vi.fn(() => new Promise<Response>((resolve) => {
+      resolveTeams = resolve
+    }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const config: RuntimeConfig = {
+      api: {
+        searchUsers: { method: 'GET', endpoint: '/api/users' },
+        loadTeams: { method: 'GET', endpoint: '/api/teams' },
+      },
+      initialPage: 'landing',
+      pages: [
+        { id: 'landing', layout: [] },
+        {
+          id: 'mixed',
+          preloads: [
+            {
+              operationName: 'searchUsers',
+              requestParams: {},
+              when: { reference: 'params.userId', operator: 'isTruthy' },
+            },
+            { operationName: 'loadTeams', requestParams: {} },
+          ],
+          layout: [],
+        },
+      ],
+    }
+
+    render(
+      <RuntimeStateProvider config={config}>
+        <NavigationFixtureForConfig config={config} />
+        <RuntimeStateSnapshot />
+      </RuntimeStateProvider>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Go to mixed' }))
+
+    await waitFor(() => expect(readRuntimeState().pageEntry.status).toBe('loading'))
+
+    expect(readRuntimeState().pageEntry.preloadNames).toEqual(['loadTeams'])
+    expect(readRuntimeState().queries.searchUsers).toBeUndefined()
+
+    resolveTeams?.(createJsonResponse({ teams: ['Runtime'] }))
+    await waitFor(() => expect(readRuntimeState().pageEntry.status).toBe('success'))
+  })
+
+  it('keeps status idle and launches no queries when all preloads have a false when condition', async () => {
+    const fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+
+    const config: RuntimeConfig = {
+      api: {
+        searchUsers: { method: 'GET', endpoint: '/api/users' },
+        loadTeams: { method: 'GET', endpoint: '/api/teams' },
+      },
+      initialPage: 'landing',
+      pages: [
+        { id: 'landing', layout: [] },
+        {
+          id: 'allfiltered',
+          preloads: [
+            {
+              operationName: 'searchUsers',
+              requestParams: {},
+              when: { reference: 'params.userId', operator: 'isTruthy' },
+            },
+            {
+              operationName: 'loadTeams',
+              requestParams: {},
+              when: { reference: 'params.teamId', operator: 'isTruthy' },
+            },
+          ],
+          layout: [],
+        },
+      ],
+    }
+
+    render(
+      <RuntimeStateProvider config={config}>
+        <NavigationFixtureForConfig config={config} />
+        <RuntimeStateSnapshot />
+      </RuntimeStateProvider>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Go to allfiltered' }))
+
+    await waitFor(() => expect(readRuntimeState().pageEntry.pageId).toBe('allfiltered'))
+
+    expect(readRuntimeState().pageEntry).toEqual({
+      entryId: 1,
+      pageId: 'allfiltered',
+      params: {},
+      preloadNames: [],
+      status: 'idle',
+    })
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('evaluates when before comparing request signature: omits preload without reaching signature comparison', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(createJsonResponse({ results: ['Ada'] }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const config: RuntimeConfig = {
+      api: {
+        searchUsers: { method: 'GET', endpoint: '/api/users' },
+      },
+      initialPage: 'landing',
+      pages: [
+        { id: 'landing', layout: [] },
+        {
+          id: 'sigcheck',
+          preloads: [
+            {
+              operationName: 'searchUsers',
+              requestParams: {},
+              when: { reference: 'params.userId', operator: 'isTruthy' },
+            },
+          ],
+          layout: [],
+        },
+        {
+          id: 'sigcheck-with-user',
+          preloads: [
+            {
+              operationName: 'searchUsers',
+              requestParams: {},
+              when: { reference: 'params.userId', operator: 'isTruthy' },
+            },
+          ],
+          layout: [],
+        },
+      ],
+    }
+
+    render(
+      <RuntimeStateProvider config={config}>
+        <NavigationFixtureForConfig config={config} />
+        <RuntimeStateSnapshot />
+      </RuntimeStateProvider>,
+    )
+
+    // First navigate with userId to prime the query with a signature
+    fireEvent.click(screen.getByRole('button', { name: 'Go to sigcheck-with-user with userId' }))
+    await waitFor(() => expect(readRuntimeState().pageEntry.status).toBe('success'))
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+
+    // Now navigate to sigcheck without userId: when is false, signature should not be compared
+    fireEvent.click(screen.getByRole('button', { name: 'Go to sigcheck' }))
+    await waitFor(() => expect(readRuntimeState().pageEntry.pageId).toBe('sigcheck'))
+
+    expect(readRuntimeState().pageEntry).toEqual({
+      entryId: 2,
+      pageId: 'sigcheck',
+      params: {},
+      preloadNames: [],
+      status: 'idle',
+    })
+    // No additional fetch call since preload was filtered out
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('evaluates when against the current snapshot when using forms reference', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(createJsonResponse({ results: ['Ada'] }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const config: RuntimeConfig = {
+      api: {
+        searchUsers: { method: 'GET', endpoint: '/api/users' },
+      },
+      initialPage: 'formpage',
+      pages: [
+        {
+          id: 'formpage',
+          layout: [
+            {
+              type: 'form',
+              id: 'f1',
+              children: [
+                {
+                  type: 'input',
+                  props: {
+                    fieldId: 'field1',
+                    label: 'Field 1',
+                    defaultValue: '',
+                  },
+                },
+              ],
+            },
+          ],
+        },
+        {
+          id: 'results',
+          preloads: [
+            {
+              operationName: 'searchUsers',
+              requestParams: {},
+              when: { reference: 'forms.f1.field1', operator: 'equals', value: 'x' },
+            },
+          ],
+          layout: [],
+        },
+      ],
+    }
+
+    render(
+      <RuntimeStateProvider config={config}>
+        <NavigationFixtureForConfig config={config} />
+        <RuntimeStateSnapshot />
+        <RuntimePage />
+      </RuntimeStateProvider>,
+    )
+
+    // Navigate to results page without setting f1.field1 = 'x': when is false
+    fireEvent.click(screen.getByRole('button', { name: 'Go to results' }))
+    await waitFor(() => expect(readRuntimeState().pageEntry.pageId).toBe('results'))
+
+    expect(readRuntimeState().pageEntry.preloadNames).toEqual([])
+    expect(readRuntimeState().pageEntry.status).toBe('idle')
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+})
+
+function NavigationFixtureForConfig({ config }: { config: RuntimeConfig }) {
+  const { navigateToPage } = useRuntimeStateActions()
+  const pageIds = config.pages.map((page) => page.id)
+
+  return (
+    <>
+      {pageIds.map((pageId) => (
+        <button key={pageId} type="button" onClick={() => navigateToPage(pageId)}>
+          {`Go to ${pageId}`}
+        </button>
+      ))}
+      <button type="button" onClick={() => navigateToPage('conditional', { userId: 'user-1' })}>
+        Go to conditional with userId
+      </button>
+      <button type="button" onClick={() => navigateToPage('sigcheck-with-user', { userId: 'user-1' })}>
+        Go to sigcheck-with-user with userId
+      </button>
+    </>
+  )
+}

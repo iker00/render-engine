@@ -56,6 +56,7 @@ export interface RuntimeApiOperation extends RuntimeApiRequestParams {
 export interface RuntimePreloadConfig {
   operationName: string
   requestParams: RuntimeApiRequestParams
+  when?: RuntimeWhenCondition
 }
 
 export type RuntimeApiConfig = Record<string, RuntimeApiOperation>
@@ -73,6 +74,8 @@ export interface RuntimeVisibilityConfig {
   operator: RuntimeVisibilityOperator
   value?: RuntimeConfigValue
 }
+
+export type RuntimeWhenCondition = RuntimeVisibilityConfig
 
 export interface QueryStateFeedbackShowRule {
   mode: 'show'
@@ -248,6 +251,7 @@ export interface FormLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayo
   submitAction?: ExecuteOperationRuntimeUiAction | ExecuteOperationsRuntimeUiAction
   resetOnSuccess?: boolean
   children?: LayoutNode[]
+  onSuccess?: FormOnSuccessAction[]
 }
 
 export type RuntimeFormValidationRuleName =
@@ -521,6 +525,7 @@ export interface ExecuteOperationsRuntimeUiActionEntry {
   query?: RuntimeApiQuery
   body?: RuntimeApiBodyValue
   headers?: RuntimeApiHeaders
+  when?: RuntimeWhenCondition
 }
 
 export interface ExecuteOperationsRuntimeUiAction {
@@ -553,6 +558,8 @@ export type RuntimeUiAction =
   | ResetFormRuntimeUiAction
   | OpenModalRuntimeUiAction
   | CloseModalRuntimeUiAction
+
+export type FormOnSuccessAction = RuntimeUiAction & { when?: RuntimeWhenCondition }
 
 export type NavigateToButtonAction = NavigateToRuntimeUiAction
 export type GoBackButtonAction = GoBackRuntimeUiAction

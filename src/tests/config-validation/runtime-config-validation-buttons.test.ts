@@ -2013,4 +2013,314 @@ describe('validateRuntimeConfig', () => {
       },
     })
   })
+
+  // T2: when in executeOperations entries (structural schema tests)
+
+  it('accepts button.props.action executeOperations entry with valid when shape', () => {
+    const result = validateRuntimeConfig({
+      api: {
+        reloadList: { method: 'GET', endpoint: '/api/items' },
+      },
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'button',
+              props: {
+                label: 'Reload',
+                action: {
+                  type: 'executeOperations',
+                  operations: [
+                    {
+                      operationName: 'reloadList',
+                      when: { reference: 'queries.reloadList.data.flag', operator: 'isTruthy' },
+                    },
+                  ],
+                },
+              },
+            },
+          ],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(result.status).toBe('ready')
+    if (result.status !== 'ready') throw new Error('Expected ready')
+    const action = (result.config.pages[0].layout[0] as { props: { action: { operations: unknown[] } } }).props.action
+    expect(action.operations[0]).toEqual({
+      operationName: 'reloadList',
+      when: { reference: 'queries.reloadList.data.flag', operator: 'isTruthy' },
+    })
+  })
+
+  it('rejects button.props.action executeOperations entry when when.operator is not a string', () => {
+    const result = validateRuntimeConfig({
+      api: {},
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'button',
+              props: {
+                label: 'Load',
+                action: {
+                  type: 'executeOperations',
+                  operations: [
+                    {
+                      operationName: 'op1',
+                      when: { reference: 'queries.op1.data.flag', operator: 123 },
+                    },
+                  ],
+                },
+              },
+            },
+          ],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(result.status).toBe('error')
+    if (result.status !== 'error') throw new Error('Expected error')
+    expect(result.error.message).toContain('layout[0].props.action.operations[0].when')
+  })
+
+  it('rejects button.props.action navigateTo with when at root level (when not accepted at action root)', () => {
+    const result = validateRuntimeConfig({
+      api: {},
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'button',
+              props: {
+                label: 'Go somewhere',
+                action: {
+                  type: 'navigateTo',
+                  pageId: 'home',
+                  when: { reference: 'queries.x.data.flag', operator: 'isTruthy' },
+                },
+              },
+            },
+          ],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    // navigateTo action schema uses .strip(), so when is silently dropped (not an error)
+    // but the when key is NOT part of navigateTo contract - it is stripped silently
+    expect(result.status).toBe('ready')
+    if (result.status !== 'ready') throw new Error('Expected ready')
+    const action = (result.config.pages[0].layout[0] as { props: { action: Record<string, unknown> } }).props.action
+    // when key should have been stripped
+    expect(action.when).toBeUndefined()
+  })
+
+  // T3: semantic validation of when.reference in executeOperations entries
+
+  it('accepts button executeOperations entry when with params.* reference', () => {
+    const result = validateRuntimeConfig({
+      api: {},
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'button',
+              props: {
+                label: 'Run',
+                action: {
+                  type: 'executeOperations',
+                  operations: [
+                    {
+                      operationName: 'op1',
+                      when: { reference: 'params.id', operator: 'isTruthy' },
+                    },
+                  ],
+                },
+              },
+            },
+          ],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(result.status).toBe('ready')
+  })
+
+  it('accepts button executeOperations entry when with item.* reference', () => {
+    const result = validateRuntimeConfig({
+      api: {},
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'repeater',
+              props: {
+                items: { source: 'queries.posts.data', key: 'id' },
+                template: [
+                  {
+                    type: 'button',
+                    props: {
+                      label: 'Run',
+                      action: {
+                        type: 'executeOperations',
+                        operations: [
+                          {
+                            operationName: 'op1',
+                            when: { reference: 'item.x', operator: 'isTruthy' },
+                          },
+                        ],
+                      },
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(result.status).toBe('ready')
+  })
+
+  it('accepts button executeOperations entry when with queries.* reference', () => {
+    const result = validateRuntimeConfig({
+      api: {},
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'button',
+              props: {
+                label: 'Run',
+                action: {
+                  type: 'executeOperations',
+                  operations: [
+                    {
+                      operationName: 'op1',
+                      when: { reference: 'queries.x.data.flag', operator: 'isTruthy' },
+                    },
+                  ],
+                },
+              },
+            },
+          ],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(result.status).toBe('ready')
+  })
+
+  it('rejects button executeOperations entry when with operator outside catalog', () => {
+    const result = validateRuntimeConfig({
+      api: {},
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'button',
+              props: {
+                label: 'Run',
+                action: {
+                  type: 'executeOperations',
+                  operations: [
+                    {
+                      operationName: 'op1',
+                      when: { reference: 'queries.x.data.flag', operator: 'contains' },
+                    },
+                  ],
+                },
+              },
+            },
+          ],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(result.status).toBe('error')
+    if (result.status !== 'error') throw new Error('Expected error')
+    expect(result.error.message).toContain('layout[0].props.action.operations[0].when')
+  })
+
+  it('rejects button executeOperations entry when isTruthy with a value declared', () => {
+    const result = validateRuntimeConfig({
+      api: {},
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'button',
+              props: {
+                label: 'Run',
+                action: {
+                  type: 'executeOperations',
+                  operations: [
+                    {
+                      operationName: 'op1',
+                      when: { reference: 'queries.x.data.flag', operator: 'isTruthy', value: 'bad' },
+                    },
+                  ],
+                },
+              },
+            },
+          ],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(result.status).toBe('error')
+    if (result.status !== 'error') throw new Error('Expected error')
+    expect(result.error.message).toContain('layout[0].props.action.operations[0].when')
+  })
+
+  // T4: cross-validation — button executeOperations with when and non-existent operationName
+
+  it('accepts button.props.action executeOperations with valid when and inexistent operationName (not pre-rejected at bootstrap)', () => {
+    const result = validateRuntimeConfig({
+      api: {},
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'button',
+              props: {
+                label: 'Run',
+                action: {
+                  type: 'executeOperations',
+                  operations: [
+                    {
+                      operationName: 'nonExistentOp',
+                      when: { reference: 'queries.x.data.flag', operator: 'isTruthy' },
+                    },
+                  ],
+                },
+              },
+            },
+          ],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    // executeOperations operationName is not cross-checked at bootstrap per current contract
+    expect(result.status).toBe('ready')
+  })
 })

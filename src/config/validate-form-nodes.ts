@@ -129,6 +129,7 @@ export function validateFormNode(
 
   let children: LayoutNodeCollection | undefined
   let submitAction: ExecuteOperationRuntimeUiAction | ExecuteOperationsRuntimeUiAction | undefined
+  let onSuccess: import('./runtime-config-types').FormOnSuccessAction[] | undefined
 
   if (parseResult.data.submitAction !== undefined) {
     const submitActionResult = validateFormSubmitAction(parseResult.data.submitAction, `${path}.submitAction`, pageId)
@@ -138,6 +139,7 @@ export function validateFormNode(
     }
 
     submitAction = submitActionResult.action
+    onSuccess = submitActionResult.onSuccess
   }
 
   if (parseResult.data.children !== undefined) {
@@ -161,6 +163,7 @@ export function validateFormNode(
       persistOnUnmount: parseResult.data.persistOnUnmount,
       submitAction,
       resetOnSuccess: parseResult.data.resetOnSuccess,
+      onSuccess,
       children,
     },
   }
@@ -1057,6 +1060,8 @@ export function validateFormSemantics(
 ): { status: 'error'; error: RuntimeConfigError } | null {
   const formIds = new Set<string>()
   const operationNames = new Set(Object.keys(config.api))
+  const pageIds = new Set(config.pages.map((page) => page.id))
+  const modalIds = collectModalIds(config.pages.flatMap((page) => page.layout))
 
   for (const page of config.pages) {
     const error = validateFormNodesInCollection(page.layout, 'layout', page.id, {
@@ -1066,6 +1071,8 @@ export function validateFormSemantics(
       currentFormId: null,
       fieldIds: null,
       operationNames,
+      pageIds,
+      modalIds,
     })
 
     if (error) {
@@ -1074,6 +1081,30 @@ export function validateFormSemantics(
   }
 
   return null
+}
+
+function collectModalIds(nodes: LayoutNodeCollection): ReadonlySet<string> {
+  const ids = new Set<string>()
+
+  for (const node of nodes) {
+    if (node.type === 'modal' && node.id) {
+      ids.add(node.id)
+    }
+
+    if ((node.type === 'container' || node.type === 'form' || node.type === 'modal') && node.children) {
+      for (const id of collectModalIds(node.children)) {
+        ids.add(id)
+      }
+    }
+
+    if (node.type === 'repeater') {
+      for (const id of collectModalIds(node.props.template)) {
+        ids.add(id)
+      }
+    }
+  }
+
+  return ids
 }
 
 export function validateExecutionRequestParams(
@@ -1097,6 +1128,8 @@ interface FormValidationContext {
   currentFormId: string | null
   fieldIds: Set<string> | null
   operationNames: ReadonlySet<string>
+  pageIds: ReadonlySet<string>
+  modalIds: ReadonlySet<string>
 }
 
 function validateFormNodesInCollection(
@@ -1131,6 +1164,21 @@ function validateFormNodesInCollection(
         return invalidLayout(
           `Page "${pageId}" has an invalid layout at "${nodePath}.submitAction.operationName": unknown operation "${node.submitAction.operationName}".`,
         )
+      }
+
+      if (node.onSuccess) {
+        const onSuccessError = validateOnSuccessActionTargets(
+          node.onSuccess,
+          `${nodePath}.submitAction.onSuccess`,
+          pageId,
+          context.pageIds,
+          context.operationNames,
+          context.modalIds,
+        )
+
+        if (onSuccessError) {
+          return onSuccessError
+        }
       }
 
       const childrenError = validateFormChildren(node.children ?? [], `${nodePath}.children`, pageId, {
@@ -1419,6 +1467,32 @@ function validateExecutionRequestParamsInCollection(
       }
     }
 
+    if (node.type === 'form' && node.onSuccess) {
+      for (let actionIndex = 0; actionIndex < node.onSuccess.length; actionIndex += 1) {
+        const action = node.onSuccess[actionIndex]
+        const actionPath = `${nodePath}.submitAction.onSuccess[${actionIndex}]`
+
+        if (action.type === 'executeOperation') {
+          const operation = api[action.operationName]
+
+          if (operation?.method === 'GET' && action.body !== undefined) {
+            return invalidLayout(`Page "${pageId}" has an invalid layout at "${actionPath}.body": GET operations do not support body.`)
+          }
+        }
+
+        if (action.type === 'executeOperations') {
+          for (let entryIndex = 0; entryIndex < action.operations.length; entryIndex += 1) {
+            const entry = action.operations[entryIndex]
+            const operation = api[entry.operationName]
+
+            if (operation?.method === 'GET' && entry.body !== undefined) {
+              return invalidLayout(`Page "${pageId}" has an invalid layout at "${actionPath}.operations[${entryIndex}].body": GET operations do not support body.`)
+            }
+          }
+        }
+      }
+    }
+
     if ((node.type === 'container' || node.type === 'form' || node.type === 'modal') && node.children) {
       const childError = validateExecutionRequestParamsInCollection(node.children, `${nodePath}.children`, pageId, api)
 
@@ -1433,6 +1507,46 @@ function validateExecutionRequestParamsInCollection(
       if (childError) {
         return childError
       }
+    }
+  }
+
+  return null
+}
+
+function validateOnSuccessActionTargets(
+  actions: import('./runtime-config-types').FormOnSuccessAction[],
+  basePath: string,
+  pageId: string,
+  pageIds: ReadonlySet<string>,
+  operationNames: ReadonlySet<string>,
+  modalIds: ReadonlySet<string>,
+): { status: 'error'; error: RuntimeConfigError } | null {
+  for (let index = 0; index < actions.length; index += 1) {
+    const action = actions[index]
+    const actionPath = `${basePath}[${index}]`
+
+    if (action.type === 'navigateTo' && !pageIds.has(action.pageId)) {
+      return invalidLayout(
+        `Page "${pageId}" has an invalid layout at "${actionPath}.pageId": unknown page "${action.pageId}".`,
+      )
+    }
+
+    if (action.type === 'executeOperation' && !operationNames.has(action.operationName)) {
+      return invalidLayout(
+        `Page "${pageId}" has an invalid layout at "${actionPath}.operationName": unknown operation "${action.operationName}".`,
+      )
+    }
+
+    if (action.type === 'openModal' && !modalIds.has(action.modalId)) {
+      return invalidLayout(
+        `Page "${pageId}" has an invalid layout at "${actionPath}.modalId": unknown modal "${action.modalId}".`,
+      )
+    }
+
+    if (action.type === 'closeModal' && !modalIds.has(action.modalId)) {
+      return invalidLayout(
+        `Page "${pageId}" has an invalid layout at "${actionPath}.modalId": unknown modal "${action.modalId}".`,
+      )
     }
   }
 

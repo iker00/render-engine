@@ -138,8 +138,6 @@ export function LayoutNodeRenderer({ node, renderedChildren, iterationContext }:
       ? null
       : getGridChildSpanClassName(node.layout?.span, parentGridColumns)
 
-  console.log(node, node.layout?.span)
-
   if (!gridChildSpanClassName) {
     return renderedNode
   }

@@ -7,12 +7,14 @@
 ## Contrato (props del nodo)
 - `id`: string obligatorio, estable y único dentro de toda la configuración.
 - `persistOnUnmount`: boolean opcional; cuando vale `true`, el formulario conserva su estado local al desmontarse, y cuando no existe o vale `false` el runtime lo elimina por defecto.
-- `submitAction.type`: solo `executeOperation`.
-- `submitAction.operationName`: string obligatorio y no vacío cuando existe `submitAction`.
+- `submitAction.type`: `executeOperation` o `executeOperations`.
+- `submitAction.operationName`: string obligatorio y no vacío cuando existe `submitAction` y `type` es `executeOperation`.
+- `submitAction.operations`: array no vacío de operaciones cuando `type` es `executeOperations`.
 - `submitAction.query`: objeto plano opcional con valores `string | number | boolean`.
 - `submitAction.body`: payload JSON opcional.
 - `submitAction.headers`: objeto plano opcional con valores string.
-- `resetOnSuccess`: boolean opcional, válido solo cuando existe `submitAction`.
+- `submitAction.onSuccess`: lista opcional de acciones a ejecutar tras un submit exitoso (cada una puede ser `navigateTo`, `goBack`, `executeOperation`, `executeOperations`, `resetForm`, `openModal` o `closeModal`, y cada una puede declarar opcionalmente `when` con el mismo shape que `visibility`).
+- `resetOnSuccess`: boolean opcional, válido solo cuando existe `submitAction`; se ejecuta después de `onSuccess` si está activo.
 - `children`: colección ordenada con soporte para `input`, `textarea`, `select`, `radioGroup`, `checkboxGroup`, `button`, `heading`, `paragraph`, `image`, `table`, `container`, `accordion` y `divider`.
 
 ## Reglas de render

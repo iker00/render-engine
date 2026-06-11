@@ -163,6 +163,8 @@ const visibilitySchema = z
   })
   .strip()
 
+export const whenConditionSchema = visibilitySchema
+
 const layoutNodeLayoutSchema = z
   .object({
     span: responsiveLayoutValueSchema.optional(),
@@ -364,6 +366,7 @@ export const executeOperationsRuntimeUiActionEntrySchema = z
     query: runtimeApiQuerySchema.optional(),
     body: runtimeApiBodySchema.optional(),
     headers: runtimeApiHeadersSchema.optional(),
+    when: whenConditionSchema.optional(),
   })
   .strip()
 

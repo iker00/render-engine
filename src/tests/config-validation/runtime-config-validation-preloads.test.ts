@@ -551,4 +551,280 @@ describe('validateRuntimeConfig', () => {
       },
     })
   })
+
+  // T2: when in preload entries (structural schema tests)
+
+  it('accepts a preload entry with operationName key and a valid when key', () => {
+    const result = validateRuntimeConfig({
+      api: {},
+      pages: [
+        {
+          id: 'home',
+          preloads: [
+            {
+              searchUsers: {},
+              when: { reference: 'queries.searchUsers.data.flag', operator: 'isTruthy' },
+            },
+          ],
+          layout: [],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(result.status).toBe('ready')
+    if (result.status !== 'ready') throw new Error('Expected ready')
+    expect(result.config.pages[0].preloads?.[0]).toEqual({
+      operationName: 'searchUsers',
+      requestParams: {},
+      when: { reference: 'queries.searchUsers.data.flag', operator: 'isTruthy' },
+    })
+  })
+
+  it('rejects a preload entry with three keys (operationName + when + extra) with existing invalidPreloadEntry message', () => {
+    const result = validateRuntimeConfig({
+      api: {},
+      pages: [
+        {
+          id: 'home',
+          preloads: [
+            {
+              searchUsers: {},
+              when: { reference: 'queries.x.data', operator: 'isTruthy' },
+              extraKey: 'not-allowed',
+            },
+          ],
+          layout: [],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(result).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message: 'The page at "pages[0].preloads[0]" must be an object with exactly one non-empty operationName key.',
+      },
+    })
+  })
+
+  it('rejects a preload entry with two keys where neither is "when" with existing invalidPreloadEntry message', () => {
+    const result = validateRuntimeConfig({
+      api: {},
+      pages: [
+        {
+          id: 'home',
+          preloads: [
+            {
+              searchUsers: {},
+              anotherKey: { foo: 'bar' },
+            },
+          ],
+          layout: [],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(result).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message: 'The page at "pages[0].preloads[0]" must be an object with exactly one non-empty operationName key.',
+      },
+    })
+  })
+
+  it('rejects a preload entry when when.operator is not a string with ruta pages[N].preloads[M].when.<segment>', () => {
+    const result = validateRuntimeConfig({
+      api: {},
+      pages: [
+        {
+          id: 'home',
+          preloads: [
+            {
+              searchUsers: {},
+              when: { reference: 'queries.x.data', operator: 123 },
+            },
+          ],
+          layout: [],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(result.status).toBe('error')
+    if (result.status !== 'error') throw new Error('Expected error')
+    expect(result.error.message).toContain('pages[0].preloads[0].when')
+  })
+
+  it('rejects a preload entry when when value is not an object', () => {
+    const result = validateRuntimeConfig({
+      api: {},
+      pages: [
+        {
+          id: 'home',
+          preloads: [
+            {
+              searchUsers: {},
+              when: 'not-an-object',
+            },
+          ],
+          layout: [],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(result.status).toBe('error')
+    if (result.status !== 'error') throw new Error('Expected error')
+    expect(result.error.message).toContain('pages[0].preloads[0].when')
+  })
+
+  // T3: semantic validation of when.reference in preloads
+
+  it('accepts preload with when.reference using params.*', () => {
+    const result = validateRuntimeConfig({
+      api: {},
+      pages: [
+        {
+          id: 'home',
+          preloads: [
+            {
+              searchUsers: {},
+              when: { reference: 'params.userId', operator: 'isTruthy' },
+            },
+          ],
+          layout: [],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(result.status).toBe('ready')
+    if (result.status !== 'ready') throw new Error('Expected ready')
+    expect(result.config.pages[0].preloads?.[0]).toEqual({
+      operationName: 'searchUsers',
+      requestParams: {},
+      when: { reference: 'params.userId', operator: 'isTruthy' },
+    })
+  })
+
+  it('accepts preload with when.reference using forms.*', () => {
+    const result = validateRuntimeConfig({
+      api: {},
+      pages: [
+        {
+          id: 'home',
+          preloads: [
+            {
+              searchUsers: {},
+              when: { reference: 'forms.f1.field1', operator: 'equals', value: 'x' },
+            },
+          ],
+          layout: [],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(result.status).toBe('ready')
+  })
+
+  it('rejects preload with when.reference using item.* with exact error path', () => {
+    const result = validateRuntimeConfig({
+      api: {},
+      pages: [
+        {
+          id: 'home',
+          preloads: [
+            {
+              searchUsers: {},
+              when: { reference: 'item.x', operator: 'isTruthy' },
+            },
+          ],
+          layout: [],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(result.status).toBe('error')
+    if (result.status !== 'error') throw new Error('Expected error')
+    expect(result.error.message).toContain('pages[0].preloads[0]')
+    expect(result.error.message).toContain('when.reference')
+  })
+
+  it('rejects preload with when.reference using unsupported namespace', () => {
+    const result = validateRuntimeConfig({
+      api: {},
+      pages: [
+        {
+          id: 'home',
+          preloads: [
+            {
+              searchUsers: {},
+              when: { reference: 'navigation.currentPage', operator: 'isTruthy' },
+            },
+          ],
+          layout: [],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(result.status).toBe('error')
+    if (result.status !== 'error') throw new Error('Expected error')
+    expect(result.error.message).toContain('pages[0].preloads[0]')
+    expect(result.error.message).toContain('when.reference')
+  })
+
+  it('rejects preload when.value that is not scalar when operator is equals', () => {
+    const result = validateRuntimeConfig({
+      api: {},
+      pages: [
+        {
+          id: 'home',
+          preloads: [
+            {
+              searchUsers: {},
+              when: { reference: 'params.userId', operator: 'equals', value: { nested: true } },
+            },
+          ],
+          layout: [],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(result.status).toBe('error')
+    if (result.status !== 'error') throw new Error('Expected error')
+    expect(result.error.message).toContain('when')
+  })
+
+  it('rejects preload when operator is outside the supported catalog', () => {
+    const result = validateRuntimeConfig({
+      api: {},
+      pages: [
+        {
+          id: 'home',
+          preloads: [
+            {
+              searchUsers: {},
+              when: { reference: 'params.userId', operator: 'contains' },
+            },
+          ],
+          layout: [],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(result.status).toBe('error')
+    if (result.status !== 'error') throw new Error('Expected error')
+    expect(result.error.message).toContain('when')
+  })
 })
