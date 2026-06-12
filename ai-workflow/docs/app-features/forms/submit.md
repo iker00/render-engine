@@ -28,6 +28,21 @@
 - Con `submitAction.type: executeOperations` (plural), `onSuccess` se ejecuta solo si **todas** las operaciones de la lista terminan en éxito.
 - Las referencias `queries.{operationName}.*` ya reflejan el estado `success` y sus datos antes de que se evalúen los `when` de las acciones `onSuccess`.
 
+## Acciones post-fallo (`onError`)
+- `submitAction` acepta opcionalmente `onError`: una lista ordenada de acciones a ejecutar tras un submit fallido.
+- Las acciones de `onError` pueden ser cualquiera del catálogo de botón: `navigateTo`, `goBack`, `executeOperation`, `executeOperations`, `resetForm`, `openModal`, `closeModal`.
+- Cada acción en `onError` puede declarar opcionalmente `when` con el mismo shape que `visibility`: `{ reference, operator, value? }`.
+- Las acciones se evalúan y ejecutan en orden declarado; todas las que cumplan su condición `when` se ejecutan sin semántica de "primera coincidencia".
+- Una acción sin `when` siempre se ejecuta.
+- Si la condición `when` no se cumple, la acción se omite silenciosamente.
+- `onError` se ejecuta cuando el submit termina en error HTTP o error de negocio vía `errorCondition`.
+- `onError` **no** se ejecuta cuando el submit tiene éxito.
+- `onError` **no** se ejecuta cuando el submit falla por validación local de campos; esa situación se resuelve exclusivamente con mensajes de validación inline.
+- Con `submitAction.type: executeOperations` (plural), `onError` se ejecuta si **alguna** de las operaciones de la lista termina en error, aunque otras tengan éxito.
+- Las referencias `queries.{operationName}.*` ya reflejan el estado `error` (incluyendo `error.message` y `error.code`) antes de que se evalúen los `when` de las acciones `onError`.
+- `onSuccess` y `onError` pueden coexistir en el mismo `submitAction`; se ejecuta únicamente el bloque que corresponda al resultado del submit.
+- `onError` es terminal: si una acción dentro de `onError` falla, ese fallo no dispara recursivamente otro ciclo de `onError`.
+
 ## Reseteo
 - `resetForm` restaura el estado inicial efectivo de cada campo del formulario objetivo.
 - `resetForm` no borra `forms.{formId}` ni sustituye la limpieza por desmontaje; solo restaura el estado inicial efectivo del formulario actualmente presente en store.
@@ -36,6 +51,7 @@
   - Con `submitAction.type: executeOperations` (plural): el reset solo se dispara si **todas** las operaciones de la lista terminan en `status: success`. Si alguna operación falla, el formulario conserva sus valores actuales.
 - Si existe `onSuccess`, el reset se ejecuta **después** de todas las acciones de `onSuccess`.
 - Si el submit falla, el runtime conserva los valores actuales del usuario y no resetea automáticamente.
+- `resetOnSuccess` no interacciona con `onError`; su ejecución sigue siendo posterior a `onSuccess` y no se ve afectada por la presencia de `onError`.
 - El shape se valida en bootstrap, pero `formId` no se comprueba contra un catálogo semántico global inexistente.
 - Si el formulario todavía no está inicializado en el store, la pantalla se mantiene estable y no aparece una semántica nueva de error.
 - `resetOnSuccess: true` coexiste con `onSuccess`; ambos pueden estar presentes a la vez.

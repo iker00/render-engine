@@ -2,6 +2,7 @@ import type {
   CloseModalRuntimeUiAction,
   ExecuteOperationRuntimeUiAction,
   ExecuteOperationsRuntimeUiAction,
+  FormOnErrorAction,
   FormOnSuccessAction,
   GoBackButtonAction,
   NavigateToButtonAction,
@@ -190,7 +191,7 @@ export function validateFormSubmitAction(
   rawAction: unknown,
   path: string,
   pageId: string,
-): { status: 'ready'; action: ExecuteOperationRuntimeUiAction | ExecuteOperationsRuntimeUiAction; onSuccess?: FormOnSuccessAction[] } | { status: 'error'; error: RuntimeConfigError } {
+): { status: 'ready'; action: ExecuteOperationRuntimeUiAction | ExecuteOperationsRuntimeUiAction; onSuccess?: FormOnSuccessAction[]; onError?: FormOnErrorAction[] } | { status: 'error'; error: RuntimeConfigError } {
   if (!isRecord(rawAction)) {
     return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}".`)
   }
@@ -224,13 +225,16 @@ export function validateFormSubmitAction(
     }
   }
 
+  let onSuccess: FormOnSuccessAction[] | undefined
+  let onError: FormOnErrorAction[] | undefined
+
   // Validate onSuccess if present
   if (rawAction.onSuccess !== undefined) {
     if (!Array.isArray(rawAction.onSuccess)) {
       return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.onSuccess".`)
     }
 
-    const onSuccess: FormOnSuccessAction[] = []
+    const onSuccessAccumulator: FormOnSuccessAction[] = []
 
     for (let index = 0; index < rawAction.onSuccess.length; index += 1) {
       const rawEntry = rawAction.onSuccess[index]
@@ -251,22 +255,56 @@ export function validateFormSubmitAction(
           return whenResult
         }
 
-        onSuccess.push({ ...actionResult.action, when: whenResult.when })
+        onSuccessAccumulator.push({ ...actionResult.action, when: whenResult.when })
       } else {
-        onSuccess.push(actionResult.action)
+        onSuccessAccumulator.push(actionResult.action)
       }
     }
 
-    return {
-      status: 'ready',
-      action,
-      onSuccess,
+    onSuccess = onSuccessAccumulator
+  }
+
+  // Validate onError if present
+  if (rawAction.onError !== undefined) {
+    if (!Array.isArray(rawAction.onError)) {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.onError".`)
     }
+
+    const onErrorAccumulator: FormOnErrorAction[] = []
+
+    for (let index = 0; index < rawAction.onError.length; index += 1) {
+      const rawEntry = rawAction.onError[index]
+      const entryPath = `${path}.onError[${index}]`
+
+      const actionResult = validateRuntimeUiAction(rawEntry, entryPath, pageId)
+
+      if (actionResult.status === 'error') {
+        return actionResult
+      }
+
+      const rawWhen = isRecord(rawEntry) ? rawEntry.when : undefined
+
+      if (rawWhen !== undefined) {
+        const whenResult = validateWhenCondition(rawWhen, `${entryPath}.when`, pageId, { allowItem: true })
+
+        if (whenResult.status === 'error') {
+          return whenResult
+        }
+
+        onErrorAccumulator.push({ ...actionResult.action, when: whenResult.when })
+      } else {
+        onErrorAccumulator.push(actionResult.action)
+      }
+    }
+
+    onError = onErrorAccumulator
   }
 
   return {
     status: 'ready',
     action,
+    ...(onSuccess !== undefined ? { onSuccess } : {}),
+    ...(onError !== undefined ? { onError } : {}),
   }
 }
 

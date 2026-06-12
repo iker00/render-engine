@@ -3,6 +3,7 @@ import type { FormEvent, ReactNode } from 'react'
 import type {
   CheckboxGroupLayoutNode,
   FormLayoutNode,
+  FormOnErrorAction,
   FormOnSuccessAction,
   InputLayoutNode,
   LayoutNode,
@@ -151,6 +152,29 @@ export function FormNode({ node, children, iterationContext }: FormNodeProps) {
     }
   }
 
+  function runOnErrorActions(actions: FormOnErrorAction[] | undefined) {
+    if (!actions || actions.length === 0) {
+      return
+    }
+
+    const handlers = buildHandlers()
+
+    for (const action of actions) {
+      const snapshot = readRuntimeState()
+
+      if (!matchesVisibilityRule(action.when, snapshot, iterationContext)) {
+        continue
+      }
+
+      // Strip 'when' before passing to executor since RuntimeUiAction doesn't have 'when'
+      const { when: _when, ...baseAction } = action as FormOnErrorAction & { when?: unknown }
+      executeRuntimeUiAction(baseAction as Parameters<typeof executeRuntimeUiAction>[0], handlers, {
+        state: snapshot,
+        iterationContext,
+      })
+    }
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
@@ -220,6 +244,7 @@ export function FormNode({ node, children, iterationContext }: FormNodeProps) {
       )
 
       const allSuccess = results.every((r) => r.status === 'success')
+      const anyError = results.some((r) => r.status === 'error')
 
       if (allSuccess) {
         runOnSuccessActions(node.onSuccess)
@@ -227,6 +252,8 @@ export function FormNode({ node, children, iterationContext }: FormNodeProps) {
         if (node.resetOnSuccess) {
           resetForm(node.id)
         }
+      } else if (anyError) {
+        runOnErrorActions(node.onError)
       }
 
       return
@@ -249,6 +276,8 @@ export function FormNode({ node, children, iterationContext }: FormNodeProps) {
       if (node.resetOnSuccess) {
         resetForm(node.id)
       }
+    } else if (result.status === 'error') {
+      runOnErrorActions(node.onError)
     }
   }
 

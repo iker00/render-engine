@@ -1446,3 +1446,917 @@ describe('Form submitAction.onSuccess', () => {
     )
   })
 })
+
+describe('Form submitAction.onError', () => {
+  function makeSuccessFetch() {
+    return vi.fn<typeof fetch>().mockImplementation(() =>
+      Promise.resolve(
+        new Response(JSON.stringify({ ok: true }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        }),
+      ),
+    )
+  }
+
+  function makeErrorFetch() {
+    return vi.fn<typeof fetch>().mockImplementation(() =>
+      Promise.resolve(
+        new Response(JSON.stringify({ error: 'fail' }), {
+          status: 500,
+          headers: { 'content-type': 'application/json' },
+        }),
+      ),
+    )
+  }
+
+  it('navigates to pageId from onError after a failed executeOperation submit (HTTP error)', async () => {
+    const fetchMock = makeErrorFetch()
+
+    const config: RuntimeConfig = {
+      api: {
+        saveProfile: {
+          method: 'POST',
+          endpoint: '/api/profile',
+        },
+      },
+      initialPage: 'home',
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'form',
+              id: 'profile-form',
+              submitAction: {
+                type: 'executeOperation',
+                operationName: 'saveProfile',
+              },
+              onError: [{ type: 'navigateTo', pageId: 'error-page' }],
+              children: [
+                {
+                  type: 'button',
+                  props: { label: 'Submit profile' },
+                },
+              ],
+            },
+          ],
+        },
+        { id: 'error-page', layout: [] },
+      ],
+    }
+
+    globalThis.fetch = fetchMock
+
+    render(
+      <RuntimeStateProvider config={config}>
+        <RuntimePage />
+        <RuntimeStateSnapshot testId="runtime-state" />
+      </RuntimeStateProvider>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Submit profile' }))
+
+    await waitFor(() =>
+      expect(screen.getByTestId('runtime-page')).toHaveAttribute('data-runtime-page-id', 'error-page'),
+    )
+  })
+
+  it('navigates to pageId from onError after a business error (errorCondition on 2xx payload)', async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockImplementation(() =>
+      Promise.resolve(
+        new Response(JSON.stringify({ success: false, message: 'forbidden' }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        }),
+      ),
+    )
+
+    const config: RuntimeConfig = {
+      api: {
+        saveProfile: {
+          method: 'POST',
+          endpoint: '/api/profile',
+          errorCondition: { path: 'success', equals: false },
+          errorMessagePath: 'message',
+        },
+      },
+      initialPage: 'home',
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'form',
+              id: 'profile-form',
+              submitAction: {
+                type: 'executeOperation',
+                operationName: 'saveProfile',
+              },
+              onError: [{ type: 'navigateTo', pageId: 'error-page' }],
+              children: [
+                {
+                  type: 'button',
+                  props: { label: 'Submit profile' },
+                },
+              ],
+            },
+          ],
+        },
+        { id: 'error-page', layout: [] },
+      ],
+    }
+
+    globalThis.fetch = fetchMock
+
+    render(
+      <RuntimeStateProvider config={config}>
+        <RuntimePage />
+        <RuntimeStateSnapshot testId="runtime-state" />
+      </RuntimeStateProvider>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Submit profile' }))
+
+    await waitFor(() =>
+      expect(screen.getByTestId('runtime-page')).toHaveAttribute('data-runtime-page-id', 'error-page'),
+    )
+  })
+
+  it('does not execute onError when the submit succeeds; onSuccess executes instead', async () => {
+    const fetchMock = makeSuccessFetch()
+
+    const config: RuntimeConfig = {
+      api: {
+        saveProfile: {
+          method: 'POST',
+          endpoint: '/api/profile',
+        },
+      },
+      initialPage: 'home',
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'form',
+              id: 'profile-form',
+              submitAction: {
+                type: 'executeOperation',
+                operationName: 'saveProfile',
+              },
+              onSuccess: [{ type: 'navigateTo', pageId: 'success-page' }],
+              onError: [{ type: 'navigateTo', pageId: 'error-page' }],
+              children: [
+                {
+                  type: 'button',
+                  props: { label: 'Submit profile' },
+                },
+              ],
+            },
+          ],
+        },
+        { id: 'success-page', layout: [] },
+        { id: 'error-page', layout: [] },
+      ],
+    }
+
+    globalThis.fetch = fetchMock
+
+    render(
+      <RuntimeStateProvider config={config}>
+        <RuntimePage />
+        <RuntimeStateSnapshot testId="runtime-state" />
+      </RuntimeStateProvider>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Submit profile' }))
+
+    await waitFor(() =>
+      expect(screen.getByTestId('runtime-page')).toHaveAttribute('data-runtime-page-id', 'success-page'),
+    )
+
+    // Must not have navigated to error-page
+    expect(screen.getByTestId('runtime-page')).not.toHaveAttribute('data-runtime-page-id', 'error-page')
+  })
+
+  it('does not execute onError when submit fails due to local field validation', async () => {
+    const fetchMock = vi.fn<typeof fetch>()
+
+    const config: RuntimeConfig = {
+      api: {
+        saveProfile: {
+          method: 'POST',
+          endpoint: '/api/profile',
+        },
+      },
+      initialPage: 'home',
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'form',
+              id: 'profile-form',
+              submitAction: {
+                type: 'executeOperation',
+                operationName: 'saveProfile',
+              },
+              onError: [{ type: 'navigateTo', pageId: 'error-page' }],
+              children: [
+                {
+                  type: 'input',
+                  props: {
+                    fieldId: 'name',
+                    label: 'Name',
+                    defaultValue: '',
+                    validations: { required: true },
+                  },
+                },
+                {
+                  type: 'button',
+                  props: { label: 'Submit profile' },
+                },
+              ],
+            },
+          ],
+        },
+        { id: 'error-page', layout: [] },
+      ],
+    }
+
+    globalThis.fetch = fetchMock
+
+    render(
+      <RuntimeStateProvider config={config}>
+        <RuntimePage />
+        <RuntimeStateSnapshot testId="runtime-state" />
+      </RuntimeStateProvider>,
+    )
+
+    // Submit without filling required field — triggers local validation failure
+    fireEvent.click(screen.getByRole('button', { name: 'Submit profile' }))
+
+    // Wait for validation error to appear in state
+    await waitFor(() =>
+      expect(readRuntimeStateSnapshot('runtime-state').forms?.['profile-form']?.name?.error).toBeTruthy(),
+    )
+
+    // Must stay on home page, not navigate to error-page
+    expect(screen.getByTestId('runtime-page')).toHaveAttribute('data-runtime-page-id', 'home')
+    // Fetch must not have been called
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('executes onError (not onSuccess) when executeOperations has one failing entry', async () => {
+    const config: RuntimeConfig = {
+      api: {
+        op1: { method: 'POST', endpoint: '/api/op1' },
+        op2: { method: 'POST', endpoint: '/api/op2' },
+      },
+      initialPage: 'home',
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'form',
+              id: 'multi-form',
+              persistOnUnmount: true,
+              submitAction: {
+                type: 'executeOperations',
+                operations: [
+                  { operationName: 'op1' },
+                  { operationName: 'op2' },
+                ],
+              },
+              resetOnSuccess: true,
+              onSuccess: [{ type: 'navigateTo', pageId: 'success-page' }],
+              onError: [{ type: 'navigateTo', pageId: 'error-page' }],
+              children: [
+                {
+                  type: 'input',
+                  props: { fieldId: 'name', label: 'Name', defaultValue: '' },
+                },
+                {
+                  type: 'button',
+                  props: { label: 'Submit multi' },
+                },
+              ],
+            },
+          ],
+        },
+        { id: 'success-page', layout: [] },
+        { id: 'error-page', layout: [] },
+      ],
+    }
+
+    globalThis.fetch = vi.fn<typeof fetch>()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ ok: true }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ error: 'fail' }), {
+          status: 500,
+          headers: { 'content-type': 'application/json' },
+        }),
+      )
+
+    render(
+      <RuntimeStateProvider config={config}>
+        <RuntimePage />
+        <RuntimeStateSnapshot testId="runtime-state" />
+      </RuntimeStateProvider>,
+    )
+
+    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Ada' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Submit multi' }))
+
+    await waitFor(() =>
+      expect(screen.getByTestId('runtime-page')).toHaveAttribute('data-runtime-page-id', 'error-page'),
+    )
+
+    // Confirm resetOnSuccess was NOT triggered: the form value should still be 'Ada'
+    await waitFor(() =>
+      expect(readRuntimeStateSnapshot('runtime-state').forms?.['multi-form']?.name?.value).toBe('Ada'),
+    )
+  })
+
+  it('does not execute onError when all executeOperations entries are filtered by their when condition', async () => {
+    const fetchMock = vi.fn<typeof fetch>()
+
+    const config: RuntimeConfig = {
+      api: {
+        op1: { method: 'POST', endpoint: '/api/op1' },
+      },
+      initialPage: 'home',
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'form',
+              id: 'filtered-form',
+              persistOnUnmount: true,
+              submitAction: {
+                type: 'executeOperations',
+                operations: [
+                  {
+                    operationName: 'op1',
+                    when: {
+                      reference: 'forms.filtered-form.name',
+                      operator: 'equals',
+                      value: 'trigger',
+                    },
+                  },
+                ],
+              },
+              onSuccess: [{ type: 'navigateTo', pageId: 'success-page' }],
+              onError: [{ type: 'navigateTo', pageId: 'error-page' }],
+              children: [
+                {
+                  type: 'input',
+                  props: { fieldId: 'name', label: 'Name', defaultValue: '' },
+                },
+                {
+                  type: 'button',
+                  props: { label: 'Submit filtered' },
+                },
+              ],
+            },
+          ],
+        },
+        { id: 'success-page', layout: [] },
+        { id: 'error-page', layout: [] },
+      ],
+    }
+
+    globalThis.fetch = fetchMock
+
+    render(
+      <RuntimeStateProvider config={config}>
+        <RuntimePage />
+        <RuntimeStateSnapshot testId="runtime-state" />
+      </RuntimeStateProvider>,
+    )
+
+    // Field value 'no-match' does not match 'trigger', so all ops filtered → allSuccess = true
+    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'no-match' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Submit filtered' }))
+
+    await waitFor(() =>
+      expect(screen.getByTestId('runtime-page')).toHaveAttribute('data-runtime-page-id', 'success-page'),
+    )
+
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('executes onError once when all executeOperations entries fail', async () => {
+    const config: RuntimeConfig = {
+      api: {
+        op1: { method: 'POST', endpoint: '/api/op1' },
+        op2: { method: 'POST', endpoint: '/api/op2' },
+      },
+      initialPage: 'home',
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'form',
+              id: 'all-fail-form',
+              submitAction: {
+                type: 'executeOperations',
+                operations: [
+                  { operationName: 'op1' },
+                  { operationName: 'op2' },
+                ],
+              },
+              onError: [{ type: 'navigateTo', pageId: 'error-page' }],
+              children: [
+                {
+                  type: 'button',
+                  props: { label: 'Submit all fail' },
+                },
+              ],
+            },
+          ],
+        },
+        { id: 'error-page', layout: [] },
+      ],
+    }
+
+    globalThis.fetch = vi.fn<typeof fetch>().mockImplementation(() =>
+      Promise.resolve(
+        new Response(JSON.stringify({ error: 'fail' }), {
+          status: 500,
+          headers: { 'content-type': 'application/json' },
+        }),
+      ),
+    )
+
+    render(
+      <RuntimeStateProvider config={config}>
+        <RuntimePage />
+        <RuntimeStateSnapshot testId="runtime-state" />
+      </RuntimeStateProvider>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Submit all fail' }))
+
+    await waitFor(() =>
+      expect(screen.getByTestId('runtime-page')).toHaveAttribute('data-runtime-page-id', 'error-page'),
+    )
+  })
+
+  it('evaluates onError when conditions against the post-error snapshot (business error via errorCondition)', async () => {
+    // Use a 2xx response with errorCondition so the error.message is populated from the payload
+    const fetchMock = vi.fn<typeof fetch>().mockImplementation(() =>
+      Promise.resolve(
+        new Response(JSON.stringify({ success: false, message: 'Access denied' }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        }),
+      ),
+    )
+
+    const config: RuntimeConfig = {
+      api: {
+        saveProfile: {
+          method: 'POST',
+          endpoint: '/api/profile',
+          errorCondition: { path: 'success', equals: false },
+          errorMessagePath: 'message',
+        },
+      },
+      initialPage: 'home',
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'form',
+              id: 'profile-form',
+              submitAction: {
+                type: 'executeOperation',
+                operationName: 'saveProfile',
+              },
+              onError: [
+                {
+                  type: 'navigateTo',
+                  pageId: 'forbidden-page',
+                  when: {
+                    reference: 'queries.saveProfile.error.message',
+                    operator: 'equals',
+                    value: 'Access denied',
+                  },
+                },
+                {
+                  type: 'navigateTo',
+                  pageId: 'generic-error-page',
+                  when: {
+                    reference: 'queries.saveProfile.error.message',
+                    operator: 'equals',
+                    value: 'Other error',
+                  },
+                },
+              ],
+              children: [
+                {
+                  type: 'button',
+                  props: { label: 'Submit profile' },
+                },
+              ],
+            },
+          ],
+        },
+        { id: 'forbidden-page', layout: [] },
+        { id: 'generic-error-page', layout: [] },
+      ],
+    }
+
+    globalThis.fetch = fetchMock
+
+    render(
+      <RuntimeStateProvider config={config}>
+        <RuntimePage />
+        <RuntimeStateSnapshot testId="runtime-state" />
+      </RuntimeStateProvider>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Submit profile' }))
+
+    await waitFor(() =>
+      expect(screen.getByTestId('runtime-page')).toHaveAttribute('data-runtime-page-id', 'forbidden-page'),
+    )
+  })
+
+  it('executes both onError actions in order when neither has a when condition', async () => {
+    const fetchMock = makeErrorFetch()
+    const callOrder: string[] = []
+
+    const config: RuntimeConfig = {
+      api: {
+        op1: { method: 'POST', endpoint: '/api/op1' },
+        op2: { method: 'GET', endpoint: '/api/op2' },
+        saveProfile: { method: 'POST', endpoint: '/api/profile' },
+      },
+      initialPage: 'home',
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'form',
+              id: 'profile-form',
+              submitAction: {
+                type: 'executeOperation',
+                operationName: 'saveProfile',
+              },
+              onError: [
+                { type: 'executeOperation', operationName: 'op1' },
+                { type: 'executeOperation', operationName: 'op2' },
+              ],
+              children: [
+                {
+                  type: 'button',
+                  props: { label: 'Submit profile' },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    }
+
+    const successResponse = new Response(JSON.stringify({ ok: true }), {
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+    })
+    const errorResponse = new Response(JSON.stringify({ error: 'fail' }), {
+      status: 500,
+      headers: { 'content-type': 'application/json' },
+    })
+
+    globalThis.fetch = vi.fn<typeof fetch>().mockImplementation((input) => {
+      const url = String(input)
+      if (url.includes('/api/profile')) {
+        callOrder.push('saveProfile')
+        return Promise.resolve(errorResponse.clone())
+      }
+      if (url.includes('/api/op1')) {
+        callOrder.push('op1')
+        return Promise.resolve(successResponse.clone())
+      }
+      if (url.includes('/api/op2')) {
+        callOrder.push('op2')
+        return Promise.resolve(successResponse.clone())
+      }
+      return Promise.resolve(successResponse.clone())
+    })
+
+    render(
+      <RuntimeStateProvider config={config}>
+        <RuntimePage />
+        <RuntimeStateSnapshot testId="runtime-state" />
+      </RuntimeStateProvider>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Submit profile' }))
+
+    await waitFor(() =>
+      expect(callOrder).toContain('op2'),
+    )
+
+    expect(callOrder).toEqual(['saveProfile', 'op1', 'op2'])
+  })
+
+  it('executes only onError (not onSuccess) when submit fails with both declared', async () => {
+    globalThis.fetch = makeErrorFetch()
+
+    const config: RuntimeConfig = {
+      api: {
+        saveProfile: { method: 'POST', endpoint: '/api/profile' },
+      },
+      initialPage: 'home',
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'form',
+              id: 'profile-form',
+              submitAction: {
+                type: 'executeOperation',
+                operationName: 'saveProfile',
+              },
+              onSuccess: [{ type: 'navigateTo', pageId: 'success-page' }],
+              onError: [{ type: 'navigateTo', pageId: 'error-page' }],
+              children: [
+                {
+                  type: 'button',
+                  props: { label: 'Submit profile' },
+                },
+              ],
+            },
+          ],
+        },
+        { id: 'success-page', layout: [] },
+        { id: 'error-page', layout: [] },
+      ],
+    }
+
+    render(
+      <RuntimeStateProvider config={config}>
+        <RuntimePage />
+        <RuntimeStateSnapshot testId="runtime-state" />
+      </RuntimeStateProvider>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Submit profile' }))
+
+    await waitFor(() =>
+      expect(screen.getByTestId('runtime-page')).toHaveAttribute('data-runtime-page-id', 'error-page'),
+    )
+  })
+
+  it('executes only onSuccess (not onError) when submit succeeds with both declared', async () => {
+    globalThis.fetch = makeSuccessFetch()
+
+    const config: RuntimeConfig = {
+      api: {
+        saveProfile: { method: 'POST', endpoint: '/api/profile' },
+      },
+      initialPage: 'home',
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'form',
+              id: 'profile-form',
+              submitAction: {
+                type: 'executeOperation',
+                operationName: 'saveProfile',
+              },
+              onSuccess: [{ type: 'navigateTo', pageId: 'success-page' }],
+              onError: [{ type: 'navigateTo', pageId: 'error-page' }],
+              children: [
+                {
+                  type: 'button',
+                  props: { label: 'Submit profile' },
+                },
+              ],
+            },
+          ],
+        },
+        { id: 'success-page', layout: [] },
+        { id: 'error-page', layout: [] },
+      ],
+    }
+
+    render(
+      <RuntimeStateProvider config={config}>
+        <RuntimePage />
+        <RuntimeStateSnapshot testId="runtime-state" />
+      </RuntimeStateProvider>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Submit profile' }))
+
+    await waitFor(() =>
+      expect(screen.getByTestId('runtime-page')).toHaveAttribute('data-runtime-page-id', 'success-page'),
+    )
+  })
+
+  it('does not trigger resetOnSuccess when submit fails and onError is declared', async () => {
+    const fetchMock = makeErrorFetch()
+
+    const config: RuntimeConfig = {
+      api: {
+        saveProfile: {
+          method: 'POST',
+          endpoint: '/api/profile',
+          body: { name: 'forms.profile-form.name' },
+        },
+      },
+      initialPage: 'home',
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'form',
+              id: 'profile-form',
+              persistOnUnmount: true,
+              submitAction: {
+                type: 'executeOperation',
+                operationName: 'saveProfile',
+              },
+              resetOnSuccess: true,
+              onError: [{ type: 'navigateTo', pageId: 'error-page' }],
+              children: [
+                {
+                  type: 'input',
+                  props: { fieldId: 'name', label: 'Name', defaultValue: '' },
+                },
+                {
+                  type: 'button',
+                  props: { label: 'Submit profile' },
+                },
+              ],
+            },
+          ],
+        },
+        { id: 'error-page', layout: [] },
+      ],
+    }
+
+    globalThis.fetch = fetchMock
+
+    render(
+      <RuntimeStateProvider config={config}>
+        <RuntimePage />
+        <RuntimeStateSnapshot testId="runtime-state" />
+      </RuntimeStateProvider>,
+    )
+
+    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Ada' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Submit profile' }))
+
+    await waitFor(() =>
+      expect(screen.getByTestId('runtime-page')).toHaveAttribute('data-runtime-page-id', 'error-page'),
+    )
+
+    // resetOnSuccess must not have fired: form value should remain 'Ada'
+    await waitFor(() =>
+      expect(readRuntimeStateSnapshot('runtime-state').forms?.['profile-form']?.name?.value).toBe('Ada'),
+    )
+  })
+
+  it('does not recursively trigger onError when the onError action itself fails', async () => {
+    let submitCount = 0
+
+    const config: RuntimeConfig = {
+      api: {
+        saveProfile: { method: 'POST', endpoint: '/api/profile' },
+        notifyError: { method: 'POST', endpoint: '/api/notify-error' },
+      },
+      initialPage: 'home',
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'form',
+              id: 'profile-form',
+              submitAction: {
+                type: 'executeOperation',
+                operationName: 'saveProfile',
+              },
+              onError: [{ type: 'executeOperation', operationName: 'notifyError' }],
+              children: [
+                {
+                  type: 'button',
+                  props: { label: 'Submit profile' },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    }
+
+    globalThis.fetch = vi.fn<typeof fetch>().mockImplementation((input) => {
+      const url = String(input)
+      if (url.includes('/api/profile')) {
+        submitCount++
+        return Promise.resolve(
+          new Response(JSON.stringify({ error: 'fail' }), {
+            status: 500,
+            headers: { 'content-type': 'application/json' },
+          }),
+        )
+      }
+      // notifyError also fails
+      return Promise.resolve(
+        new Response(JSON.stringify({ error: 'notify fail' }), {
+          status: 500,
+          headers: { 'content-type': 'application/json' },
+        }),
+      )
+    })
+
+    render(
+      <RuntimeStateProvider config={config}>
+        <RuntimePage />
+        <RuntimeStateSnapshot testId="runtime-state" />
+      </RuntimeStateProvider>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Submit profile' }))
+
+    // Wait for notifyError to be dispatched (it fires fire-and-forget)
+    await waitFor(() =>
+      expect(readRuntimeStateSnapshot('runtime-state').queries.notifyError?.status).toBe('error'),
+    )
+
+    // saveProfile was only submitted once — no recursive cycle
+    expect(submitCount).toBe(1)
+  })
+
+  it('does not execute any side-effect when onError is an empty array and submit fails', async () => {
+    const fetchMock = makeErrorFetch()
+
+    const config: RuntimeConfig = {
+      api: {
+        saveProfile: { method: 'POST', endpoint: '/api/profile' },
+      },
+      initialPage: 'home',
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'form',
+              id: 'profile-form',
+              submitAction: {
+                type: 'executeOperation',
+                operationName: 'saveProfile',
+              },
+              onError: [],
+              children: [
+                {
+                  type: 'button',
+                  props: { label: 'Submit profile' },
+                },
+              ],
+            },
+          ],
+        },
+        { id: 'other', layout: [] },
+      ],
+    }
+
+    globalThis.fetch = fetchMock
+
+    render(
+      <RuntimeStateProvider config={config}>
+        <RuntimePage />
+        <RuntimeStateSnapshot testId="runtime-state" />
+      </RuntimeStateProvider>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Submit profile' }))
+
+    await waitFor(() =>
+      expect(readRuntimeStateSnapshot('runtime-state').queries.saveProfile?.status).toBe('error'),
+    )
+
+    // Must stay on home page — no side effects from empty onError
+    expect(screen.getByTestId('runtime-page')).toHaveAttribute('data-runtime-page-id', 'home')
+  })
+})

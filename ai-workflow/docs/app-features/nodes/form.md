@@ -14,6 +14,7 @@
 - `submitAction.body`: payload JSON opcional.
 - `submitAction.headers`: objeto plano opcional con valores string.
 - `submitAction.onSuccess`: lista opcional de acciones a ejecutar tras un submit exitoso (cada una puede ser `navigateTo`, `goBack`, `executeOperation`, `executeOperations`, `resetForm`, `openModal` o `closeModal`, y cada una puede declarar opcionalmente `when` con el mismo shape que `visibility`).
+- `submitAction.onError`: lista opcional de acciones a ejecutar tras un submit fallido (cada una puede ser `navigateTo`, `goBack`, `executeOperation`, `executeOperations`, `resetForm`, `openModal` o `closeModal`, y cada una puede declarar opcionalmente `when` con el mismo shape que `visibility`).
 - `resetOnSuccess`: boolean opcional, válido solo cuando existe `submitAction`; se ejecuta después de `onSuccess` si está activo.
 - `children`: colección ordenada con soporte para `input`, `textarea`, `select`, `radioGroup`, `checkboxGroup`, `button`, `heading`, `paragraph`, `image`, `table`, `container`, `accordion` y `divider`.
 

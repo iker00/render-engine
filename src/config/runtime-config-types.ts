@@ -252,6 +252,7 @@ export interface FormLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayo
   resetOnSuccess?: boolean
   children?: LayoutNode[]
   onSuccess?: FormOnSuccessAction[]
+  onError?: FormOnErrorAction[]
 }
 
 export type RuntimeFormValidationRuleName =
@@ -560,6 +561,8 @@ export type RuntimeUiAction =
   | CloseModalRuntimeUiAction
 
 export type FormOnSuccessAction = RuntimeUiAction & { when?: RuntimeWhenCondition }
+
+export type FormOnErrorAction = RuntimeUiAction & { when?: RuntimeWhenCondition }
 
 export type NavigateToButtonAction = NavigateToRuntimeUiAction
 export type GoBackButtonAction = GoBackRuntimeUiAction
