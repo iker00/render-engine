@@ -1,11 +1,13 @@
 import type {
   RuntimeApiBodyValue,
+  RuntimeApiFileField,
   RuntimeApiHeaders,
   RuntimeApiOperation,
   RuntimeApiQuery,
   RuntimeApiRequestParams,
 } from '../config/runtime-config'
 import type {
+  BuildInlineRuntimeApiRequestOptions,
   BuildRuntimeApiRequestOptions,
   RuntimeApiRequest,
   RuntimeApiRequestDescriptor,
@@ -42,6 +44,16 @@ export function buildRuntimeApiRequest({
     }
   }
 
+  return buildInlineRuntimeApiRequest({ operation, operationName, state, requestParams, iterationContext })
+}
+
+export function buildInlineRuntimeApiRequest({
+  operation,
+  operationName,
+  state,
+  requestParams,
+  iterationContext,
+}: BuildInlineRuntimeApiRequestOptions): RuntimeApiRequestBuildResult {
   const effectiveRequestParams = mergeRuntimeApiRequestParams(operation, requestParams)
   const resolveOptions = { state, iterationContext }
   const messagePrefix = `The api operation "${operationName}"`
@@ -70,6 +82,46 @@ export function buildRuntimeApiRequest({
 
   if (headersResult.status === 'error') {
     return headersResult
+  }
+
+  const effectiveFiles = effectiveRequestParams.files
+
+  if (effectiveFiles && effectiveFiles.length > 0) {
+    const multipartResult = buildMultipartRequestInit(
+      operationName,
+      operation.method,
+      headersResult.headers,
+      bodyResult.body,
+      effectiveFiles,
+    )
+
+    if (multipartResult.status === 'error') {
+      return multipartResult
+    }
+
+    return {
+      status: 'ready',
+      request: createRuntimeApiRequest({
+        operationName,
+        operation,
+        resolvedEndpoint,
+        descriptor: {
+          operationName,
+          method: operation.method,
+          endpoint: operation.endpoint,
+          query: queryResult.query,
+          body: bodyResult.body,
+          headers: headersResult.headers,
+        },
+        filesSignature: effectiveFiles.map((field) => ({
+          name: field.name,
+          fileName: field.file.name,
+          size: field.file.size,
+          type: field.file.type,
+        })),
+        multipartInit: multipartResult.init,
+      }),
+    }
   }
 
   return {
@@ -206,23 +258,82 @@ function resolveQuery(
   } as const
 }
 
+type MultipartBuildResult =
+  | { status: 'ready'; init: RequestInit }
+  | { status: 'error'; error: { code: 'request-build-failed'; message: string } }
+
+function buildMultipartRequestInit(
+  operationName: string,
+  method: RuntimeApiOperation['method'],
+  headers: RuntimeApiHeaders | undefined,
+  body: RuntimeApiBodyValue | null | undefined,
+  files: RuntimeApiFileField[],
+): MultipartBuildResult {
+  const formData = new FormData()
+
+  for (const field of files) {
+    formData.append(field.name, field.file, field.file.name)
+  }
+
+  if (body !== null && body !== undefined) {
+    if (!isPlainObject(body)) {
+      return {
+        status: 'error',
+        error: {
+          code: 'request-build-failed',
+          message: `The api operation "${operationName}" cannot serialize body root for multipart payload (only scalar values are allowed).`,
+        },
+      }
+    }
+
+    for (const [key, value] of Object.entries(body)) {
+      if (typeof value !== 'string' && typeof value !== 'number' && typeof value !== 'boolean') {
+        return {
+          status: 'error',
+          error: {
+            code: 'request-build-failed',
+            message: `The api operation "${operationName}" cannot serialize "body.${key}" for multipart payload (only scalar values are allowed).`,
+          },
+        }
+      }
+      formData.append(key, String(value))
+    }
+  }
+
+  const requestInit: RequestInit = { method, body: formData }
+
+  if (headers) {
+    requestInit.headers = headers
+  }
+
+  return { status: 'ready', init: requestInit }
+}
+
 function createRuntimeApiRequest({
   operationName,
   operation,
   resolvedEndpoint,
   descriptor,
+  filesSignature,
+  multipartInit,
 }: {
   operationName: string
   operation: RuntimeApiOperation
   resolvedEndpoint: string
   descriptor: RuntimeApiRequestDescriptor
+  filesSignature?: Array<{ name: string; fileName: string; size: number; type: string }>
+  multipartInit?: RequestInit
 }): RuntimeApiRequest {
   const request = {
     operationName,
     operation,
     url: appendQueryString(resolvedEndpoint, descriptor.query),
-    init: buildRequestInit(operation.method, descriptor.headers, descriptor.body),
+    init: multipartInit ?? buildRequestInit(operation.method, descriptor.headers, descriptor.body),
   } as RuntimeApiRequest
+
+  const signatureDescriptor = filesSignature !== undefined
+    ? { ...descriptor, filesSignature }
+    : descriptor
 
   Object.defineProperties(request, {
     descriptor: {
@@ -232,7 +343,7 @@ function createRuntimeApiRequest({
       writable: false,
     },
     requestSignature: {
-      value: createStableRequestSignature(descriptor),
+      value: createStableRequestSignature(signatureDescriptor),
       enumerable: false,
       configurable: false,
       writable: false,
@@ -299,6 +410,7 @@ function mergeRuntimeApiRequestParams(
     query: mergeFlatRecord(operation.query, requestParams?.query),
     headers: mergeFlatRecord(operation.headers, requestParams?.headers),
     body: mergeRuntimeApiBody(operation.body, requestParams?.body),
+    files: requestParams?.files,
   }
 }
 

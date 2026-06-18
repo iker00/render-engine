@@ -20,6 +20,10 @@ export function validateApiConfig(
   const api: RuntimeApiConfig = {}
 
   for (const [operationName, rawOperation] of Object.entries(rawApiConfig)) {
+    if (operationName.startsWith('__fileManager__:')) {
+      return invalidLayout(`The api operation "${operationName}" uses the reserved prefix "__fileManager__:".`)
+    }
+
     if (!isRecord(rawOperation)) {
       return invalidLayout(`The api operation "${operationName}" must be an object.`)
     }

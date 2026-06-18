@@ -9,7 +9,8 @@ import type {
   RuntimePageConfig,
   RuntimePreloadConfig,
 } from '../../config/runtime-config'
-import { buildRuntimeApiRequest, executeBuiltRuntimeApiRequest } from '../../queries/runtime-api-executor'
+import { buildRuntimeApiRequest, buildInlineRuntimeApiRequest, executeBuiltRuntimeApiRequest } from '../../queries/runtime-api-executor'
+import type { RuntimeApiOperation } from '../../config/runtime-config'
 import {
   areBrowserHashNavigationEntriesEqual,
   createBrowserHashNavigationHash,
@@ -44,6 +45,82 @@ interface PlannedPreloadBatch {
   preloadNames: string[]
   reloadItems: PlannedPreloadReloadItem[]
   snapshotState: RuntimeState
+}
+
+async function executeInlineQueryOperationWithSnapshot({
+  operation,
+  dispatch,
+  slotName,
+  snapshotState,
+  requestParams,
+  iterationContext,
+  fetchImplementation,
+}: {
+  operation: RuntimeApiOperation
+  dispatch: Dispatch<RuntimeStateAction>
+  slotName: string
+  snapshotState: RuntimeState
+  requestParams?: RuntimeApiRequestParams
+  iterationContext?: RuntimeIterationContext
+  fetchImplementation?: typeof fetch
+}) {
+  const requestResult = buildInlineRuntimeApiRequest({
+    operation,
+    operationName: slotName,
+    state: snapshotState,
+    requestParams,
+    iterationContext,
+  })
+
+  if (requestResult.status === 'error') {
+    dispatch({
+      type: 'queries/set-error',
+      payload: {
+        queryName: slotName,
+        error: requestResult.error satisfies RuntimeQueryError,
+        requestSignature: null,
+      },
+    })
+
+    return requestResult
+  }
+
+  dispatch({
+    type: 'queries/set-loading',
+    payload: {
+      queryName: slotName,
+      requestSignature: requestResult.request.requestSignature,
+    },
+  })
+
+  const result = await executeBuiltRuntimeApiRequest({
+    request: requestResult.request,
+    fetch: fetchImplementation,
+  })
+
+  if (result.status === 'success') {
+    dispatch({
+      type: 'queries/set-success',
+      payload: {
+        queryName: slotName,
+        data: result.data,
+        requestSignature: requestResult.request.requestSignature,
+      },
+    })
+
+    return result
+  }
+
+  dispatch({
+    type: 'queries/set-error',
+    payload: {
+      queryName: slotName,
+      error: result.error satisfies RuntimeQueryError,
+      requestSignature: requestResult.request.requestSignature,
+    },
+  })
+
+  return result
 }
 
 async function executeQueryOperationWithSnapshot({
@@ -685,9 +762,33 @@ export function useRuntimeStateActions() {
     [config, dispatchAndSyncState, getLatestState],
   )
 
+  const executeInlineQueryOperation = useCallback(
+    async (
+      slotName: string,
+      options: {
+        operation: RuntimeApiOperation
+        requestParams?: RuntimeApiRequestParams
+        iterationContext?: RuntimeIterationContext
+      },
+      fetchOverride?: typeof fetch,
+    ) => {
+      return executeInlineQueryOperationWithSnapshot({
+        operation: options.operation,
+        dispatch: dispatchAndSyncState,
+        slotName,
+        snapshotState: getLatestState(),
+        requestParams: options.requestParams,
+        iterationContext: options.iterationContext,
+        fetchImplementation: fetchOverride,
+      })
+    },
+    [dispatchAndSyncState, getLatestState],
+  )
+
   return useMemo(
     () => ({
       executeQueryOperation,
+      executeInlineQueryOperation,
       goBackPage,
       initializeForm,
       initializeQuery,
@@ -718,6 +819,7 @@ export function useRuntimeStateActions() {
       dispatchAndSyncState,
       initialState,
       executeQueryOperation,
+      executeInlineQueryOperation,
       goBackPage,
       initializeForm,
       initializeQuery,

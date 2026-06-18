@@ -1313,6 +1313,12 @@ function validateFormChildren(
       return fallbackError
     }
 
+    if (node.type === 'fileManager') {
+      return invalidLayout(
+        `Page "${pageId}" has an invalid layout at "${nodePath}": "fileManager" is not allowed inside a form.`,
+      )
+    }
+
     if (
       node.type !== 'input' &&
       node.type !== 'textarea' &&

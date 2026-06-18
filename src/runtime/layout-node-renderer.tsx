@@ -7,6 +7,7 @@ import { getGridChildSpanClassName } from './runtime-node-styling'
 import { useRuntimeState } from './runtime-state/runtime-state-provider'
 import { LayoutRenderer } from './layout-renderer'
 import { AccordionNode } from './nodes/accordion-layout-node'
+import { FileManagerNode } from './nodes/file-manager-layout-node'
 import { AlertNode } from './nodes/alert-layout-node'
 import { BadgeNode } from './nodes/badge-layout-node'
 import { DividerNode } from './nodes/divider-layout-node'
@@ -130,6 +131,9 @@ export function LayoutNodeRenderer({ node, renderedChildren, iterationContext }:
       break
     case 'skeleton':
       renderedNode = <SkeletonNode node={node} iterationContext={iterationContext} />
+      break
+    case 'fileManager':
+      renderedNode = <FileManagerNode node={node} iterationContext={iterationContext} />
       break
   }
 

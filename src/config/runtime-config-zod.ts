@@ -25,6 +25,7 @@ export const supportedNodeTypes = [
   'stat',
   'divider',
   'skeleton',
+  'fileManager',
 ] as const
 
 export const tableCellAllowedNodeTypes = ['image', 'list', 'button', 'container', 'heading', 'paragraph'] as const
@@ -717,5 +718,52 @@ export const skeletonNodeSchema = z
       })
       .strip()
       .optional(),
+  })
+  .strip()
+
+const fileManagerValidationsSchema = z
+  .object({
+    accept: z.object({ value: z.array(z.string()), message: z.string().optional() }).strip().optional(),
+    maxFileSize: z.object({ value: z.number(), message: z.string().optional() }).strip().optional(),
+    maxTotalSize: z.object({ value: z.number(), message: z.string().optional() }).strip().optional(),
+    minFiles: z.object({ value: z.number(), message: z.string().optional() }).strip().optional(),
+    maxFiles: z.object({ value: z.number(), message: z.string().optional() }).strip().optional(),
+    validFileNames: z.object({ value: z.array(z.string()), message: z.string().optional() }).strip().optional(),
+  })
+  .strip()
+
+const fileManagerOperationSchema = z.union([z.string(), z.literal(false)]).optional()
+
+export const fileManagerNodeSchema = z
+  .object({
+    type: z.literal('fileManager'),
+    id: nodeIdSchema.optional(),
+    queryStateFeedback: queryStateFeedbackSchema.optional(),
+    visibility: visibilitySchema.optional(),
+    layout: layoutNodeLayoutSchema.optional(),
+    props: z
+      .object({
+        fieldName: z.string().optional(),
+        fileField: z.string().optional(),
+        listPath: z.string().optional(),
+        fileIdField: z.string().optional(),
+        fileNameField: z.string().optional(),
+        multiple: z.boolean().optional(),
+        prefix: z.string().optional(),
+        acceptExtension: z.array(z.string()).optional(),
+        getOperation: fileManagerOperationSchema,
+        uploadOperation: fileManagerOperationSchema,
+        deleteOperation: fileManagerOperationSchema,
+        viewOperation: fileManagerOperationSchema,
+        downloadOperation: fileManagerOperationSchema,
+        validations: fileManagerValidationsSchema.optional(),
+        pagination: z
+          .object({
+            pageSize: z.number().int().min(1).optional(),
+          })
+          .strip()
+          .optional(),
+      })
+      .strip(),
   })
   .strip()

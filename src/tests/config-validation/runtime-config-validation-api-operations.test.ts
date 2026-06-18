@@ -1206,5 +1206,73 @@ describe('validateRuntimeConfig', () => {
         })
       })
     })
+
+    describe('reserved prefix __fileManager__', () => {
+      it('rejects an operation whose name starts with __fileManager__: (full slot form)', () => {
+        expect(
+          validateRuntimeConfig(
+            createConfigWithApi({
+              '__fileManager__:foo:upload': {
+                method: 'POST',
+                endpoint: '/x',
+              },
+            }),
+          ),
+        ).toEqual({
+          status: 'error',
+          error: {
+            code: 'invalid-layout',
+            displayMode: 'development-only',
+            message: 'The api operation "__fileManager__:foo:upload" uses the reserved prefix "__fileManager__:".',
+          },
+        })
+      })
+
+      it('rejects an operation whose name starts with __fileManager__: (short form without op suffix)', () => {
+        expect(
+          validateRuntimeConfig(
+            createConfigWithApi({
+              '__fileManager__:bar': {
+                method: 'GET',
+                endpoint: '/x',
+              },
+            }),
+          ),
+        ).toEqual({
+          status: 'error',
+          error: {
+            code: 'invalid-layout',
+            displayMode: 'development-only',
+            message: 'The api operation "__fileManager__:bar" uses the reserved prefix "__fileManager__:".',
+          },
+        })
+      })
+
+      it('accepts an operation whose name starts with fileManager__ (no leading underscores before word)', () => {
+        expect(
+          validateRuntimeConfig(
+            createConfigWithApi({
+              'fileManager__foo': {
+                method: 'GET',
+                endpoint: '/api/files',
+              },
+            }),
+          ).status,
+        ).toBe('ready')
+      })
+
+      it('accepts an ordinary operation that has nothing to do with the reserved prefix', () => {
+        expect(
+          validateRuntimeConfig(
+            createConfigWithApi({
+              uploadDocuments: {
+                method: 'POST',
+                endpoint: '/api/docs',
+              },
+            }),
+          ).status,
+        ).toBe('ready')
+      })
+    })
   })
 })

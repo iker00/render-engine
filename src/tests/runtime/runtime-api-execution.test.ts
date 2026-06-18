@@ -2,7 +2,9 @@ import { describe, expect, it, vi } from 'vitest'
 import type { RuntimeConfig } from '../../config/runtime-config'
 import {
   buildRuntimeApiRequest,
+  buildInlineRuntimeApiRequest,
   executeRuntimeApiOperation,
+  executeInlineRuntimeApiOperation,
 } from '../../queries/runtime-api-executor'
 import type { RuntimeState } from '../../runtime/runtime-state/runtime-state-types'
 
@@ -2621,6 +2623,124 @@ describe('Runtime api errorCondition evaluation', () => {
     expect(result).toEqual({
       status: 'error',
       error: { code: 'FAIL', message: 'Fallo' },
+    })
+  })
+})
+
+describe('Runtime api inline builder/executor (T2)', () => {
+  const inlineOperation = runtimeConfig.api.searchUsers
+
+  it('buildInlineRuntimeApiRequest produces the same url and init as buildRuntimeApiRequest with the same operation in config', () => {
+    const viaConfig = buildRuntimeApiRequest({
+      config: runtimeConfig,
+      operationName: 'searchUsers',
+      state: runtimeState,
+    })
+
+    const viaInline = buildInlineRuntimeApiRequest({
+      operation: inlineOperation,
+      operationName: 'searchUsers',
+      state: runtimeState,
+    })
+
+    expect(viaConfig.status).toBe('ready')
+    expect(viaInline.status).toBe('ready')
+
+    if (viaConfig.status !== 'ready' || viaInline.status !== 'ready') return
+
+    expect(viaInline.request.url).toBe(viaConfig.request.url)
+    expect(viaInline.request.init).toEqual(viaConfig.request.init)
+  })
+
+  it('buildInlineRuntimeApiRequest with requestParams.files activates the multipart path (T1 regression via inline)', () => {
+    const docFile = new File(['content'], 'doc.pdf', { type: 'application/pdf' })
+    // Use replaceUser which has a flat scalar body { name: 'Ada Lovelace' } — safe for multipart
+    const uploadOperation = runtimeConfig.api.replaceUser
+
+    const result = buildInlineRuntimeApiRequest({
+      operation: uploadOperation,
+      operationName: 'replaceUser',
+      state: runtimeState,
+      requestParams: {
+        files: [{ name: 'file', file: docFile }],
+      },
+    })
+
+    expect(result.status).toBe('ready')
+
+    if (result.status !== 'ready') return
+
+    expect(result.request.init.body).toBeInstanceOf(FormData)
+  })
+
+  it('executeInlineRuntimeApiOperation returns the same status and data as executeRuntimeApiOperation with the same operation', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ results: ['Ada'] }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    )
+
+    const viaOperation = await executeRuntimeApiOperation({
+      config: runtimeConfig,
+      operationName: 'searchUsers',
+      state: runtimeState,
+      fetch: fetchMock,
+    })
+
+    const fetchMock2 = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ results: ['Ada'] }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    )
+
+    const viaInline = await executeInlineRuntimeApiOperation({
+      operation: inlineOperation,
+      operationName: 'searchUsers',
+      state: runtimeState,
+      fetch: fetchMock2,
+    })
+
+    expect(viaOperation).toEqual(viaInline)
+    expect(viaInline).toEqual({ status: 'success', data: { results: ['Ada'] } })
+  })
+
+  it('buildRuntimeApiRequest still returns operation-not-found with the literal message when operationName does not exist in config', () => {
+    const result = buildRuntimeApiRequest({
+      config: runtimeConfig,
+      operationName: 'ghostOperation',
+      state: runtimeState,
+    })
+
+    expect(result).toEqual({
+      status: 'error',
+      error: {
+        code: 'operation-not-found',
+        message: 'The api operation "ghostOperation" does not exist.',
+      },
+    })
+  })
+
+  it('existing runtime-api-execution tests are unaffected by the refactor (regression sanity)', () => {
+    const result = buildRuntimeApiRequest({
+      config: runtimeConfig,
+      operationName: 'createUser',
+      state: runtimeState,
+    })
+
+    expect(result).toEqual({
+      status: 'ready',
+      request: {
+        operationName: 'createUser',
+        operation: runtimeConfig.api.createUser,
+        url: '/api/users',
+        init: {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ name: 'Ada', profile: { nickname: 'Countess' } }),
+        },
+      },
     })
   })
 })

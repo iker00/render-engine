@@ -5,6 +5,7 @@ import type {
   StatLayoutNode,
   DividerLayoutNode,
   SkeletonLayoutNode,
+  FileManagerLayoutNode,
   ButtonLayoutNode,
   ContainerLayoutNode,
   HeadingLayoutNode,
@@ -41,6 +42,7 @@ import {
   statNodeSchema,
   dividerNodeSchema,
   skeletonNodeSchema,
+  fileManagerNodeSchema,
   buttonNodeSchema,
   containerNodeSchema,
   headingNodeSchema,
@@ -74,7 +76,7 @@ import {
 } from './validate-form-nodes'
 
 const collectionPathSegmentPattern = /^[A-Za-z0-9_-]+$/
-const modalAllowedChildTypes = new Set(['container', 'form', 'heading', 'paragraph', 'list', 'image', 'table', 'button', 'repeater', 'accordion'])
+const modalAllowedChildTypes = new Set(['container', 'form', 'heading', 'paragraph', 'list', 'image', 'table', 'button', 'repeater', 'accordion', 'fileManager'])
 
 export function validateLayoutCollection(
   rawNodes: unknown,
@@ -167,6 +169,8 @@ export function validateLayoutNode(
       return validateDividerNode(rawNode, path, pageId)
     case 'skeleton':
       return validateSkeletonNode(rawNode, path, pageId)
+    case 'fileManager':
+      return validateFileManagerNode(rawNode, path, pageId)
   }
 
   return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.type".`)
@@ -1129,7 +1133,7 @@ function validateModalNode(
 
       if (!childType || !modalAllowedChildTypes.has(childType)) {
         return invalidLayout(
-          `Page "${pageId}" has an invalid layout at "${path}.children[${i}]": modal children may only be container, form, heading, paragraph, list, image, table, button or repeater nodes.`,
+          `Page "${pageId}" has an invalid layout at "${path}.children[${i}]": modal children may only be container, form, heading, paragraph, list, image, table, button, repeater, accordion or fileManager nodes.`,
         )
       }
     }
@@ -2238,6 +2242,98 @@ function validateSkeletonNode(
       visibility: visibilityResult.visibility,
       layout: parseResult.data.layout,
       props: parseResult.data.props,
+    },
+  }
+}
+
+function validateFileManagerNode(
+  rawNode: Record<string, unknown>,
+  path: string,
+  pageId: string,
+): { status: 'ready'; node: FileManagerLayoutNode } | { status: 'error'; error: RuntimeConfigError } {
+  const parseResult = fileManagerNodeSchema.safeParse(rawNode)
+
+  if (!parseResult.success) {
+    const issue = parseResult.error.issues[0]
+    const issuePath = issue?.path ?? []
+
+    const feedbackIssue = mapQueryStateFeedbackIssue(pageId, path, issue)
+    if (feedbackIssue) return feedbackIssue
+
+    const visibilityIssue = mapVisibilityIssue(pageId, path, issue)
+    if (visibilityIssue) return visibilityIssue
+
+    const layoutIssue = mapLayoutNodeIssue(pageId, path, issuePath)
+    if (layoutIssue) return layoutIssue
+
+    if (issuePath[0] === 'id') {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.id".`)
+    }
+
+    if (issuePath[0] === 'props' && issuePath.length === 1) {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props".`)
+    }
+
+    if (issuePath[0] === 'props' && issuePath[1] === 'multiple') {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.multiple".`)
+    }
+
+    if (issuePath[0] === 'props' && issuePath[1] === 'getOperation') {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.getOperation".`)
+    }
+
+    if (issuePath[0] === 'props' && issuePath[1] === 'uploadOperation') {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.uploadOperation".`)
+    }
+
+    if (issuePath[0] === 'props' && issuePath[1] === 'deleteOperation') {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.deleteOperation".`)
+    }
+
+    if (issuePath[0] === 'props' && issuePath[1] === 'viewOperation') {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.viewOperation".`)
+    }
+
+    if (issuePath[0] === 'props' && issuePath[1] === 'downloadOperation') {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.downloadOperation".`)
+    }
+
+    if (issuePath[0] === 'props' && issuePath[1] === 'pagination') {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.pagination".`)
+    }
+
+    if (issuePath[0] === 'props' && issuePath[1] === 'validations') {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.validations".`)
+    }
+
+    return mapLeafNodeIssue(pageId, path, issuePath)
+  }
+
+  const feedbackResult = validateQueryStateFeedback(
+    parseResult.data.queryStateFeedback as LayoutNodeFeedbackFields['queryStateFeedback'],
+    `${path}.queryStateFeedback`,
+    pageId,
+  )
+
+  if (feedbackResult.status === 'error') return feedbackResult
+
+  const visibilityResult = validateVisibility(
+    parseResult.data.visibility as LayoutNodeFeedbackFields['visibility'],
+    `${path}.visibility`,
+    pageId,
+  )
+
+  if (visibilityResult.status === 'error') return visibilityResult
+
+  return {
+    status: 'ready',
+    node: {
+      type: 'fileManager',
+      id: parseResult.data.id,
+      queryStateFeedback: feedbackResult.queryStateFeedback,
+      visibility: visibilityResult.visibility,
+      layout: parseResult.data.layout,
+      props: parseResult.data.props as FileManagerLayoutNode['props'],
     },
   }
 }

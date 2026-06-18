@@ -22,6 +22,7 @@ export type LayoutNodeType =
   | 'stat'
   | 'divider'
   | 'skeleton'
+  | 'fileManager'
 export type RuntimeApiMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
 export type RuntimeApiQueryValue = string | number | boolean
 export type RuntimeApiQuery = Record<string, RuntimeApiQueryValue>
@@ -33,10 +34,13 @@ export type RuntimeApiBodyValue =
   | RuntimeApiBodyValue[]
   | { [key: string]: RuntimeApiBodyValue }
 
+export type RuntimeApiFileField = { name: string; file: File }
+
 export interface RuntimeApiRequestParams {
   query?: RuntimeApiQuery
   body?: RuntimeApiBodyValue
   headers?: RuntimeApiHeaders
+  files?: RuntimeApiFileField[]
 }
 
 export interface RuntimeApiErrorCondition {
@@ -282,6 +286,15 @@ export interface RuntimeFormFieldValidations {
   max?: RuntimeNumericValidationRule
   minSelections?: RuntimeNumericValidationRule
   maxSelections?: RuntimeNumericValidationRule
+}
+
+export interface RuntimeFileManagerValidations {
+  accept?: { value: string[]; message?: string }
+  maxFileSize?: { value: number; message?: string }
+  maxTotalSize?: { value: number; message?: string }
+  minFiles?: { value: number; message?: string }
+  maxFiles?: { value: number; message?: string }
+  validFileNames?: { value: string[]; message?: string }
 }
 
 export interface FormFieldLayoutNodeProps {
@@ -599,6 +612,28 @@ export interface LinkLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayo
   children?: unknown
 }
 
+export interface FileManagerLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayoutFields {
+  type: 'fileManager'
+  id?: string
+  props: {
+    fieldName?: string
+    fileField?: string
+    listPath?: string
+    fileIdField?: string
+    fileNameField?: string
+    multiple?: boolean
+    prefix?: string
+    acceptExtension?: string[]
+    getOperation?: string | false
+    uploadOperation?: string | false
+    deleteOperation?: string | false
+    viewOperation?: string | false
+    downloadOperation?: string | false
+    validations?: RuntimeFileManagerValidations
+    pagination?: { pageSize?: number }
+  }
+}
+
 export type LayoutNode =
   | ContainerLayoutNode
   | RepeaterLayoutNode
@@ -623,6 +658,7 @@ export type LayoutNode =
   | StatLayoutNode
   | DividerLayoutNode
   | SkeletonLayoutNode
+  | FileManagerLayoutNode
 
 export type LayoutNodeCollection = LayoutNode[]
 

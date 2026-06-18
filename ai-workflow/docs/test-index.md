@@ -45,6 +45,7 @@ src/tests/
 - `runtime-config-validation-alert.test.ts` — validación del nodo `alert`: aceptación con type/message/title/transversales, rechazo de message ausente o no string, type inválido, title no string (~nuevo)
 - `runtime-config-validation-stat.test.ts` — validación del nodo `stat`: aceptación con label/value/variant/color/transversales/children ignorados, rechazo de label ausente o no string, value ausente o no string, variant inválido, color inválido, layout.span inválido (~nuevo)
 - `runtime-config-validation-divider.test.ts` — validación del nodo `divider`: aceptación sin props, con todas las variantes, con transversales (visibility/queryStateFeedback/layout.span), con children silenciosamente descartados, dentro de container; rechazo de variant inválido y layout.span fuera de rango (~nuevo)
+- `runtime-config-validation-file-manager.test.ts` — validación del nodo `fileManager`: operaciones (getOperation/uploadOperation/deleteOperation/viewOperation/downloadOperation) como string/false/omitida, fieldName requerido cuando omitida, validaciones (accept/maxFileSize/maxTotalSize/minFiles/maxFiles/validFileNames), pagination.pageSize, bootstrap checks (~nuevo)
 
 ## layout-renderer/
 
@@ -66,6 +67,7 @@ src/tests/
 - `layout-renderer-alert.test.tsx` — render básico del nodo `alert`: colores por tipo, icono placeholder, title/message, interpolación, transversales, integración repeater y form (~nuevo)
 - `layout-renderer-stat.test.tsx` — render del nodo `stat`: variantes accent/tinted, paleta de seis colores (borde y fondo/texto), label/value visibles, interpolación, transversales (visibility/queryStateFeedback/layout.span), integración repeater con item.* y form (~nuevo)
 - `layout-renderer-divider.test.tsx` — render del nodo `divider`: data-layout-node, variantes solid/dashed/dotted/invisible (clases Tailwind), visibility (visible/oculto), layout.span dentro de container con columns, repetición en repeater, ausencia de children en el DOM (~nuevo)
+- `layout-renderer-file-manager.test.tsx` — render del nodo `fileManager`: zona DnD, selector nativo, subida secuencial, barra de progreso, validaciones client-side (accept/maxFileSize/maxTotalSize/maxFiles/validFileNames/duplicados/0 bytes), lista paginada, botones Ver/Descargar/Eliminar, precarga con getOperation, independencia del formulario, transversales (visibility/queryStateFeedback/layout.span) (~nuevo)
 
 ## runtime-state/
 
@@ -91,6 +93,9 @@ src/tests/
 - `runtime-collection-pagination.test.ts` — paginación local de colecciones
 - `runtime-browser-hash-navigation.test.ts` — sincronización de navegación con hash del navegador
 - `runtime-node-styling.test.ts` — utilidades de estilo y clases Tailwind de nodos
+- `runtime-api-multipart.test.ts` — construcción de FormData en el builder de requests, manejo de files en multipart/form-data, flatness de body con escalares (~nuevo)
+- `runtime-file-manager-normalize-name.test.ts` — normalización de nombre de fichero: caracteres inválidos Windows, espacios al final, nombres reservados, truncado a 255 caracteres, prefijo (~nuevo)
+- `runtime-file-manager-hook.test.tsx` — comportamiento del nodo fileManager: subida secuencial, validaciones client-side, lista paginada, botones Ver/Descargar/Eliminar, precarga, integración con queries state (~nuevo)
 - `runtime-table-processing.test.ts` — filtrado, ordenación y procesamiento local de tablas
 - `runtime-ui-actions.test.tsx` — ejecución de acciones UI (clicks, submit) y delegación al executor compartido
 

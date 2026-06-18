@@ -17,6 +17,7 @@ import { validatePagePreloads } from './validate-preloads'
 import { validateRuntimeApiRequestParams, validateActionTargets } from './validate-actions-visibility'
 import { validateLayoutCollection } from './validate-layout-nodes'
 import { validateFormSemantics, validateExecutionRequestParams } from './validate-form-nodes'
+import { validateFileManagerSemantics } from './validate-file-manager-nodes'
 import { validateTranslations } from './validate-translations'
 
 export function validateRuntimeConfig(rawConfig: unknown): RuntimeConfigValidationResult {
@@ -162,6 +163,12 @@ export function validateRuntimeConfig(rawConfig: unknown): RuntimeConfigValidati
 
   if (requestParamsError) {
     return requestParamsError
+  }
+
+  const fileManagerSemanticsError = validateFileManagerSemantics(config)
+
+  if (fileManagerSemanticsError) {
+    return fileManagerSemanticsError
   }
 
   const modalRefsError = validateModalReferences(config)

@@ -48,6 +48,12 @@ Los conceptos transversales (`visibility`, `queryStateFeedback`, referencias din
 | [select.md](./select.md) | Selección simple o múltiple, shapes de `items` manuales o dinámicos. |
 | [choice-groups.md](./choice-groups.md) | `radioGroup` y `checkboxGroup`, `optionLayout: vertical | inline`. |
 
+## Nodos de gestión de ficheros
+
+| Nodo | Cuándo leer la ficha |
+|---|---|
+| [file-manager.md](./file-manager.md) | Subida DnD o selector nativo, lista paginada, operaciones configurables (`getOperation`, `uploadOperation`, `deleteOperation`, `viewOperation`, `downloadOperation`), validaciones client-side de ficheros, normalización de nombre. |
+
 ## Reglas estructurales transversales del catálogo
 - `heading`, `paragraph`, `list`, `image`, `table`, `button`, `link`, `badge`, `alert`, `stat` y `divider` son nodos hoja; si reciben `children`, esos datos no pasan al resultado normalizado.
 - `repeater` rechaza `children` y solo admite repetición a través de `props.template`.

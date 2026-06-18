@@ -18,11 +18,31 @@
     },
     "savePost": {
       "method": "POST",
-      "endpoint": "https://jsonplaceholder.typicode.com/pos"
+      "endpoint": "https://jsonplaceholder.typicode.com/posts"
     },
     "getComments": {
       "method": "GET",
       "endpoint": "https://jsonplaceholder.typicode.com/todos"
+    },
+    "getFiles": {
+      "method": "GET",
+      "endpoint": "http://localhost:3001/api/files"
+    },
+    "uploadFile": {
+      "method": "POST",
+      "endpoint": "http://localhost:3001/api/files/upload"
+    },
+    "deleteFile": {
+      "method": "DELETE",
+      "endpoint": "http://localhost:3001/api/files"
+    },
+    "viewFile": {
+      "method": "GET",
+      "endpoint": "http://localhost:3001/api/files/view"
+    },
+    "downloadFile": {
+      "method": "GET",
+      "endpoint": "http://localhost:3001/api/files/download"
     }
   },
   "pages": [
@@ -4250,6 +4270,43 @@
               ]
             }
           ]
+        },
+        {
+          "type": "fileManager",
+          "props": {
+            "fieldName": "prueba-field-name",
+            "fileField": "file",
+            "listPath": "files",
+            "fileIdField": "id",
+            "fileNameField": "name",
+            "multiple": true,
+            "prefix": "fichero_",
+            "acceptExtension": [
+              ".jpg",
+              ".pdf"
+            ],
+            "getOperation": "getFiles",
+            "uploadOperation": "uploadFile",
+            "deleteOperation": "deleteFile",
+            "viewOperation": "viewFile",
+            "downloadOperation": "downloadFile",
+            "validations": {
+              "accept": {
+                "value": [
+                  "image/jpeg",
+                  "application/pdf"
+                ],
+                "message": "Solo se permiten archivos jpeg y PDF"
+              },
+              "maxFileSize": {
+                "value": 6,
+                "message": "El tamaño máximo permitido es de 6 MB"
+              }
+            },
+            "pagination": {
+              "pageSize": 1
+            }
+          }
         }
       ]
     }

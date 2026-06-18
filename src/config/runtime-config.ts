@@ -24,6 +24,7 @@ export type {
   OpenModalRuntimeUiAction,
   RuntimeApiBodyValue,
   RuntimeApiConfig,
+  RuntimeApiFileField,
   RuntimeApiHeaders,
   RuntimeApiHeaderValue,
   RuntimeConfigValue,
@@ -84,6 +85,7 @@ export type {
   RuntimeVisibilityOperator,
   RuntimeConfig,
   RuntimeConfigError,
+  RuntimeFileManagerValidations,
   RuntimeFormFieldValidations,
   RuntimeFormValidationRuleName,
   RuntimeNumericValidationRule,
@@ -109,6 +111,7 @@ export type {
   TextareaLayoutNode,
   CheckboxGroupLayoutNode,
   ChoiceGroupOptionLayout,
+  FileManagerLayoutNode,
 } from './runtime-config-types'
 export type { RuntimeTranslationsConfig, RuntimeTranslationsLangMap } from './runtime-config-types'
 export { validateRuntimeConfig } from './validate-runtime-config'

@@ -39,6 +39,25 @@
 - `min` y `max` solo aplican a `inputType: 'number'`, comparando contra el valor numérico efectivo del campo cuando existe.
 - `minSelections` y `maxSelections` solo aplican a `select.multiple` y `checkboxGroup`, contando la selección efectiva después de normalizar el catálogo visible.
 
+## Validaciones de ficheros (fileManager)
+
+El nodo `fileManager` extiende `runtime-form-validations` con reglas específicas para ficheros `File[]` que se evalúan **previas a la subida**, con error inline en la zona DnD si alguna validación falla. Estas reglas **no escriben en `forms.*`**; el estado de error vive en el estado local del nodo.
+
+| Regla | Aplica | Comportamiento |
+|---|---|---|
+| `accept` | `string[]` de MIME types | Ficheros con MIME type no incluido se rechazan. Ej.: `["application/pdf", "image/jpeg"]`. |
+| `maxFileSize` | `number` en MB | Ficheros que superen el límite individual se rechazan. Ej.: `2` = máximo 2 MB por fichero. |
+| `maxTotalSize` | `number` en MB | Si el lote total supera el límite, se rechaza el lote completo. Ej.: `10` = máximo 10 MB acumulados. |
+| `minFiles` | `number` | Mínimo de ficheros que deben estar subidos (informativo; no bloquea submit del formulario contenedor). |
+| `maxFiles` | `number` | Máximo de ficheros permitidos contando los ya presentes. Si se alcanza, la zona DnD se deshabilita. |
+| `validFileNames` | `string[]` de regex | Ficheros cuyo nombre no coincide con ningún patrón regex se rechazan. Ej.: `["^FACT_\\d{4}\\.pdf$"]`. |
+
+Validaciones implícitas adicionales:
+- Fichero de 0 bytes: rechazado automáticamente.
+- Nombre duplicado: rechazado si el nombre ya existe en la lista actual.
+
+Los ficheros rechazados **no llegan al servidor**. Los errores desaparecen al intentar una nueva selección o drop.
+
 ## Errores y visibilidad
 - Si un campo visible requerido falla, el runtime escribe `Required` en `forms.{formId}.{fieldId}.error` y bloquea el submit.
 - Si varias reglas fallan a la vez, el runtime escribe solo el mensaje de la primera regla fallida según el orden declarado en `props.validations`.

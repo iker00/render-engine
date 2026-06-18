@@ -17,6 +17,14 @@ export interface BuildRuntimeApiRequestOptions {
   iterationContext?: RuntimeIterationContext
 }
 
+export interface BuildInlineRuntimeApiRequestOptions {
+  operation: RuntimeApiOperation
+  operationName: string
+  state: RuntimeState
+  requestParams?: RuntimeApiRequestParams
+  iterationContext?: RuntimeIterationContext
+}
+
 export interface RuntimeApiRequest {
   operationName: string
   operation: RuntimeApiOperation
@@ -57,6 +65,10 @@ export type RuntimeApiRequestBuildResult =
     }
 
 export interface ExecuteRuntimeApiOperationOptions extends BuildRuntimeApiRequestOptions {
+  fetch?: typeof fetch
+}
+
+export interface ExecuteInlineRuntimeApiOperationOptions extends BuildInlineRuntimeApiRequestOptions {
   fetch?: typeof fetch
 }
 

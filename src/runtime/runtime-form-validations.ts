@@ -3,6 +3,7 @@ import type {
   InputLayoutNode,
   LayoutNode,
   RadioGroupLayoutNode,
+  RuntimeFileManagerValidations,
   RuntimeFormFieldValidations,
   SelectLayoutNode,
 } from '../config/runtime-config'
@@ -200,4 +201,163 @@ function getChoiceFieldSurface(type: ResolvedFormFieldDefinition['type']) {
   }
 
   return 'select.props.items' as const
+}
+
+export interface FileManagerRejectionPerFile {
+  scope: 'per-file'
+  file: File
+  ruleName: string
+  message: string
+}
+
+export interface FileManagerRejectionBatch {
+  scope: 'batch'
+  ruleName: string
+  message: string
+}
+
+export type FileManagerRejection = FileManagerRejectionPerFile | FileManagerRejectionBatch
+
+export interface FileManagerValidationResult {
+  acceptedFiles: File[]
+  rejection?: FileManagerRejection
+}
+
+export function evaluateFileManagerBatch(
+  validations: RuntimeFileManagerValidations | undefined,
+  existingFiles: File[],
+  incomingBatch: File[],
+): FileManagerValidationResult {
+  const acceptedFiles: File[] = []
+  let firstPerFileRejection: FileManagerRejectionPerFile | undefined
+
+  // Build the set of names already present (existing + previously accepted in this batch)
+  const acceptedNames = new Set(existingFiles.map((f) => f.name))
+
+  // Step 1: per-file evaluation
+  for (const file of incomingBatch) {
+    const rejection = evaluatePerFileRules(validations, file, acceptedNames)
+    if (rejection !== undefined) {
+      if (firstPerFileRejection === undefined) {
+        firstPerFileRejection = rejection
+      }
+      // rejected files are excluded from acceptedFiles but batch continues
+    } else {
+      acceptedFiles.push(file)
+      acceptedNames.add(file.name)
+    }
+  }
+
+  // Step 2: batch rules over existingFiles ∪ acceptedFiles
+  const allFiles = [...existingFiles, ...acceptedFiles]
+
+  if (validations?.maxFiles !== undefined) {
+    const { value, message } = validations.maxFiles
+    if (allFiles.length > value) {
+      return {
+        acceptedFiles: [],
+        rejection: {
+          scope: 'batch',
+          ruleName: 'maxFiles',
+          message: message ?? `Se ha superado el número máximo de ficheros permitidos (${value}).`,
+        },
+      }
+    }
+  }
+
+  if (validations?.maxTotalSize !== undefined) {
+    const { value, message } = validations.maxTotalSize
+    const limitBytes = value * 1024 * 1024
+    const totalSize = allFiles.reduce((sum, f) => sum + f.size, 0)
+    if (totalSize > limitBytes) {
+      return {
+        acceptedFiles: [],
+        rejection: {
+          scope: 'batch',
+          ruleName: 'maxTotalSize',
+          message: message ?? `El tamaño total del lote supera el límite (${value} MB).`,
+        },
+      }
+    }
+  }
+
+  return {
+    acceptedFiles,
+    rejection: firstPerFileRejection,
+  }
+}
+
+function evaluatePerFileRules(
+  validations: RuntimeFileManagerValidations | undefined,
+  file: File,
+  existingNames: Set<string>,
+): FileManagerRejectionPerFile | undefined {
+  const fileName = file.name
+
+  // 1. Zero bytes
+  if (file.size === 0) {
+    return {
+      scope: 'per-file',
+      file,
+      ruleName: 'zero-bytes',
+      message: `El fichero "${fileName}" tiene 0 bytes.`,
+    }
+  }
+
+  // 2. Duplicate name
+  if (existingNames.has(fileName)) {
+    return {
+      scope: 'per-file',
+      file,
+      ruleName: 'duplicate-name',
+      message: `Ya se ha subido un fichero con el nombre "${fileName}".`,
+    }
+  }
+
+  if (validations === undefined) {
+    return undefined
+  }
+
+  // 3. accept (MIME type)
+  if (validations.accept !== undefined) {
+    const { value, message } = validations.accept
+    if (!value.includes(file.type)) {
+      return {
+        scope: 'per-file',
+        file,
+        ruleName: 'accept',
+        message: message ?? `El fichero "${fileName}" no es de un tipo válido.`,
+      }
+    }
+  }
+
+  // 4. maxFileSize
+  if (validations.maxFileSize !== undefined) {
+    const { value, message } = validations.maxFileSize
+    const limitBytes = value * 1024 * 1024
+    if (file.size > limitBytes) {
+      return {
+        scope: 'per-file',
+        file,
+        ruleName: 'maxFileSize',
+        message: message ?? `El fichero "${fileName}" supera el tamaño máximo permitido (${value} MB).`,
+      }
+    }
+  }
+
+  // 5. validFileNames
+  if (validations.validFileNames !== undefined) {
+    const { value, message } = validations.validFileNames
+    const matches = value.some((pattern) => new RegExp(pattern).test(fileName))
+    if (!matches) {
+      return {
+        scope: 'per-file',
+        file,
+        ruleName: 'validFileNames',
+        message: message ?? `El nombre del fichero "${fileName}" no coincide con los patrones permitidos.`,
+      }
+    }
+  }
+
+  return undefined
 }

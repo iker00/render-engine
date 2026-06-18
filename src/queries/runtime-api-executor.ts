@@ -1,15 +1,18 @@
-import { buildRuntimeApiRequest } from './runtime-api-request'
+import { buildRuntimeApiRequest, buildInlineRuntimeApiRequest } from './runtime-api-request'
 import type {
   ExecuteBuiltRuntimeApiRequestOptions,
+  ExecuteInlineRuntimeApiOperationOptions,
   ExecuteRuntimeApiOperationOptions,
   RuntimeApiExecutionResult,
 } from './runtime-api-types'
 import type { RuntimeApiOperation } from '../config/runtime-config'
 import type { RuntimeApiError } from './runtime-api-types'
 
-export { buildRuntimeApiRequest } from './runtime-api-request'
+export { buildRuntimeApiRequest, buildInlineRuntimeApiRequest } from './runtime-api-request'
 export type {
+  BuildInlineRuntimeApiRequestOptions,
   ExecuteBuiltRuntimeApiRequestOptions,
+  ExecuteInlineRuntimeApiOperationOptions,
   ExecuteRuntimeApiOperationOptions,
   RuntimeApiError,
   RuntimeApiExecutionResult,
@@ -27,6 +30,32 @@ export async function executeRuntimeApiOperation({
 }: ExecuteRuntimeApiOperationOptions): Promise<RuntimeApiExecutionResult> {
   const requestResult = buildRuntimeApiRequest({
     config,
+    operationName,
+    state,
+    requestParams,
+    iterationContext,
+  })
+
+  if (requestResult.status === 'error') {
+    return requestResult
+  }
+
+  return executeBuiltRuntimeApiRequest({
+    request: requestResult.request,
+    fetch: fetchImplementation,
+  })
+}
+
+export async function executeInlineRuntimeApiOperation({
+  operation,
+  operationName,
+  state,
+  requestParams,
+  iterationContext,
+  fetch: fetchImplementation = fetch,
+}: ExecuteInlineRuntimeApiOperationOptions): Promise<RuntimeApiExecutionResult> {
+  const requestResult = buildInlineRuntimeApiRequest({
+    operation,
     operationName,
     state,
     requestParams,
