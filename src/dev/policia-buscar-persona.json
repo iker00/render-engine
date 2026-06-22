@@ -1,0 +1,159 @@
+{
+  "api": {
+    "buscarPersona": {
+      "method": "POST",
+      "endpoint": "http://localhost:3002/api/PersonaNegocio/BuscarPersona",
+      "body": {
+        "BuscarPersonaEntradaDTO": {
+          "Descripcion": "forms.search.desc",
+          "DocIdent": "forms.search.doc",
+          "Nombre": "forms.search.name"
+        }
+      }
+    }
+  },
+  "pages": [
+    {
+      "id": "home",
+      "layout": [
+        {
+          "type": "heading",
+          "props": {
+            "text": "Búsqueda de personas",
+            "level": 1
+          }
+        },
+        {
+          "type": "form",
+          "id": "search",
+          "submitAction": {
+            "type": "executeOperation",
+            "operationName": "buscarPersona"
+          },
+          "children": [
+            {
+              "type": "radioGroup",
+              "props": {
+                "fieldId": "searchType",
+                "label": "Tipo de búsqueda",
+                "defaultValue": "image",
+                "optionLayout": "inline",
+                "items": [
+                  {
+                    "label": "Imagen",
+                    "value": "image"
+                  },
+                  {
+                    "label": "Descripción",
+                    "value": "description"
+                  },
+                  {
+                    "label": "Datos personales",
+                    "value": "data"
+                  }
+                ]
+              }
+            },
+            {
+              "type": "paragraph",
+              "props": {
+                "text": "TODO: AÑADIR CAMPO ADJUNTAR FOTO"
+              },
+              "visibility": {
+                "reference": "forms.search.searchType",
+                "operator": "equals",
+                "value": "image"
+              }
+            },
+            {
+              "type": "textarea",
+              "props": {
+                "fieldId": "desc",
+                "label": "Descripción"
+              },
+              "visibility": {
+                "reference": "forms.search.searchType",
+                "operator": "equals",
+                "value": "description"
+              }
+            },
+            {
+              "type": "input",
+              "props": {
+                "fieldId": "doc",
+                "label": "Documento"
+              },
+              "visibility": {
+                "reference": "forms.search.searchType",
+                "operator": "equals",
+                "value": "data"
+              }
+            },
+            {
+              "type": "input",
+              "props": {
+                "fieldId": "name",
+                "label": "Name"
+              },
+              "visibility": {
+                "reference": "forms.search.searchType",
+                "operator": "equals",
+                "value": "data"
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Buscar",
+                "icon": "search"
+              }
+            }
+          ]
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Resultados",
+            "level": 1
+          },
+          "queryStateFeedback": {
+            "query": "buscarPersona",
+            "states": {
+              "idle": {
+                "mode": "hide"
+              }
+            }
+          }
+        },
+        {
+          "type": "repeater",
+          "props": {
+            "items": {
+              "source": "queries.buscarPersona.data.FichaPersonaDTO"
+            }
+          },
+          "queryStateFeedback": {
+            "query": "buscarPersona",
+            "states": {
+              "idle": {
+                "mode": "hide"
+              },
+              "loading": {
+                "mode": "fallback",
+                "fallback": [
+                  {
+                    "type": "paragraph",
+                    "props": {
+                      "text": "Cargando..."
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "initialPage": "home"
+}

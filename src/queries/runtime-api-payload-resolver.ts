@@ -2,17 +2,19 @@ import type { RuntimeApiBodyValue, RuntimeApiHeaders } from '../config/runtime-c
 import { resolveRuntimeReference } from '../runtime/runtime-references/runtime-reference-resolver'
 import type { RuntimeIterationContext } from '../runtime/runtime-references/runtime-reference-resolver'
 import type { RuntimeState } from '../runtime/runtime-state/runtime-state-types'
+import type { RuntimeApiHiddenFormFields } from './runtime-api-types'
 
 interface ResolvePayloadValueOptions {
   state: RuntimeState
   iterationContext?: RuntimeIterationContext
+  hiddenFormFields?: RuntimeApiHiddenFormFields
 }
 
 export function resolvePayloadValue(
   value: string | number | boolean,
   options: ResolvePayloadValueOptions,
 ) {
-  const { state, iterationContext } = options
+  const { state, iterationContext, hiddenFormFields } = options
 
   if (typeof value !== 'string') {
     return {
@@ -31,9 +33,34 @@ export function resolvePayloadValue(
   }
 
   if (resolvedReference.status === 'resolved') {
+    if (
+      hiddenFormFields !== undefined &&
+      resolvedReference.reference.namespace === 'forms' &&
+      resolvedReference.reference.path.length === 2 &&
+      resolvedReference.reference.path[0] === hiddenFormFields.formId &&
+      hiddenFormFields.fieldIds.has(resolvedReference.reference.path[1])
+    ) {
+      return {
+        status: 'omit',
+      } as const
+    }
+
     return {
       status: 'ready',
       value: resolvedReference.value,
+    } as const
+  }
+
+  if (
+    resolvedReference.status === 'missing' &&
+    hiddenFormFields !== undefined &&
+    resolvedReference.reference.namespace === 'forms' &&
+    resolvedReference.reference.path.length === 2 &&
+    resolvedReference.reference.path[0] === hiddenFormFields.formId &&
+    hiddenFormFields.fieldIds.has(resolvedReference.reference.path[1])
+  ) {
+    return {
+      status: 'omit',
     } as const
   }
 
@@ -45,7 +72,7 @@ export function resolvePayloadValue(
 export function resolveJsonPayloadValue(
   value: RuntimeApiBodyValue,
   options: ResolvePayloadValueOptions,
-): { status: 'ready'; value: RuntimeApiBodyValue } | { status: 'error' } {
+): { status: 'ready'; value: RuntimeApiBodyValue } | { status: 'omit' } | { status: 'error' } {
   if (value === null) {
     return {
       status: 'ready',
@@ -55,6 +82,10 @@ export function resolveJsonPayloadValue(
 
   if (typeof value === 'string') {
     const resolvedValue = resolvePayloadValue(value, options)
+
+    if (resolvedValue.status === 'omit') {
+      return { status: 'omit' } as const
+    }
 
     if (resolvedValue.status === 'error' || !isRuntimeApiBodyRuntimeValue(resolvedValue.value)) {
       return {
@@ -81,6 +112,11 @@ export function resolveJsonPayloadValue(
     for (const item of value) {
       const resolvedItem = resolveJsonPayloadValue(item, options)
 
+      if (resolvedItem.status === 'omit') {
+        // Arrays cannot have entries silently removed — treat as error
+        return { status: 'error' } as const
+      }
+
       if (resolvedItem.status === 'error') {
         return resolvedItem
       }
@@ -98,6 +134,11 @@ export function resolveJsonPayloadValue(
 
   for (const [key, childValue] of Object.entries(value)) {
     const resolvedChild = resolveJsonPayloadValue(childValue, options)
+
+    if (resolvedChild.status === 'omit') {
+      // Skip this key — omission at object level
+      continue
+    }
 
     if (resolvedChild.status === 'error') {
       return resolvedChild
@@ -175,6 +216,11 @@ export function resolveHeaders(
 
   for (const [key, rawValue] of Object.entries(headersDefinition)) {
     const resolvedValue = resolvePayloadValue(rawValue, options)
+
+    if (resolvedValue.status === 'omit') {
+      // Skip this header key
+      continue
+    }
 
     if (resolvedValue.status === 'error') {
       return {

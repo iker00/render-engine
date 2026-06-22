@@ -12,6 +12,7 @@
 - `submitAction` puede añadir `query`, `body` y `headers` por ejecución sobre la operación `api` base sin duplicar operaciones casi idénticas.
 - En `executeOperations` (plural), cada entrada de la lista declara `operationName` y puede aportar overrides propios de `query`, `body` y `headers`. Las operaciones se lanzan en paralelo; no existe orden garantizado entre ellas.
 - El payload efectivo del submit reutiliza referencias `forms.{formId}.{fieldId}` ya soportadas en `api.query`, `api.body`, `api.headers` y en los canales equivalentes de `submitAction`.
+- Cuando un campo del formulario está oculto en el momento del submit, cualquier clave del payload cuya referencia apunte a ese campo se omite del wire format final (ver [[lifecycle.md#Campos ocultos]]).
 - Dentro de un `repeater`, `submitAction.query`, `submitAction.body` y `submitAction.headers` también pueden resolver `item.*` contra el item actual sin abrir una semántica distinta por formulario.
 - El resultado visible del submit vive solo en `queries.{operationName}`; no existe un dominio paralelo de `submitting`, `submitSuccess` o `submitError`.
 - El submit resuelve sus referencias contra el snapshot más reciente del runtime tras la validación local del formulario.

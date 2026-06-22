@@ -64,6 +64,7 @@ Los ficheros rechazados **no llegan al servidor**. Los errores desaparecen al in
 - Si un `select` simple o un `radioGroup` pierde la opción correspondiente a su valor almacenado tras cambiar la colección efectiva, el runtime limpia ese valor a `''` y reutiliza ese mismo estado vacío para render, `required` y submit.
 - Si un `select.multiple` o un `checkboxGroup` pierde parte de sus opciones seleccionadas al cambiar la colección efectiva, el runtime elimina solo los valores ya inválidos y reutiliza la colección restante en render, validación y submit.
 - Cuando un campo con error vuelve a editarse, el runtime reevalúa localmente sus reglas visibles y solo limpia el error cuando el valor actual deja de incumplir la primera regla fallida.
+- Un campo oculto por `visibility` o `queryStateFeedback` no bloquea el submit (ver [[lifecycle.md#Campos ocultos]]) y además cualquier referencia a ese campo en el payload se omite del wire format al ejecutar el submit.
 
 ## Qué no hace todavía
 - No valida al cambiar de página ni por desmontaje del formulario.

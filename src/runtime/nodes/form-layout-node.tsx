@@ -22,6 +22,7 @@ import { type ResolvedFormFieldDefinition, validateFormFields } from '../runtime
 import { useRuntimeState, useRuntimeStateActions } from '../runtime-state/runtime-state-provider'
 import { selectFormFieldState } from '../runtime-state/runtime-state-selectors'
 import { executeRuntimeUiAction, type RuntimeUiActionHandlers } from '../runtime-actions/runtime-ui-action-executor'
+import type { RuntimeApiHiddenFormFields } from '../../queries/runtime-api-types'
 
 interface FormNodeProps {
   node: FormLayoutNode
@@ -222,6 +223,13 @@ export function FormNode({ node, children, iterationContext }: FormNodeProps) {
       return
     }
 
+    const visibleFieldIds = new Set(visibleFieldDefinitions.map((f) => f.fieldId))
+    const hiddenFieldIds = new Set(
+      collectAllFormFieldIds(node.children ?? [])
+        .filter((id) => !visibleFieldIds.has(id)),
+    )
+    const hiddenFormFields: RuntimeApiHiddenFormFields = { formId: node.id, fieldIds: hiddenFieldIds }
+
     const submitAction = node.submitAction
 
     if (submitAction.type === 'executeOperations') {
@@ -239,6 +247,7 @@ export function FormNode({ node, children, iterationContext }: FormNodeProps) {
               headers: entry.headers,
             },
             iterationContext,
+            hiddenFormFields,
           }),
         ),
       )
@@ -268,6 +277,7 @@ export function FormNode({ node, children, iterationContext }: FormNodeProps) {
         headers: submitAction.headers,
       },
       iterationContext,
+      hiddenFormFields,
     })
 
     if (result.status === 'success') {
@@ -324,6 +334,38 @@ export function collectResolvedFormFieldDefinitions(
   }
 
   return fields
+}
+
+/**
+ * Collects all field IDs in a form tree regardless of node visibility.
+ * Used by handleSubmit to compute the set of hidden fieldIds at submit time.
+ */
+export function collectAllFormFieldIds(nodes: LayoutNodeCollection): string[] {
+  const fieldIds: string[] = []
+
+  for (const node of nodes) {
+    if (node.type === 'container') {
+      fieldIds.push(...collectAllFormFieldIds(node.children ?? []))
+      continue
+    }
+
+    if (node.type === 'repeater') {
+      fieldIds.push(...collectAllFormFieldIds(node.props.template))
+      continue
+    }
+
+    if (
+      node.type === 'input' ||
+      node.type === 'textarea' ||
+      node.type === 'select' ||
+      node.type === 'radioGroup' ||
+      node.type === 'checkboxGroup'
+    ) {
+      fieldIds.push(node.props.fieldId)
+    }
+  }
+
+  return fieldIds
 }
 
 export function resolveResolvedFormFieldDefinition(

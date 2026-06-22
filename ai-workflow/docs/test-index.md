@@ -90,6 +90,8 @@ src/tests/
 - `runtime-reference-resolution.test.tsx` — resolución de referencias declarativas (`forms.*`, `queries.*`, `item.*`, `params.*`)
 - `runtime-layout-visibility.test.ts` — reglas de visibilidad por condición: operadores, referencias (incluido `params.{paramName}`) y semántica de ausencia (~889 líneas)
 - `runtime-form-validations.test.ts` — validaciones locales de formulario en submit
+- `runtime-api-payload-omission.test.ts` — omisión de claves en payload cuando referencia un campo oculto del propio form (unit tests) (~320 líneas)
+- `runtime-form-submit-hidden-fields.test.tsx` — end-to-end: submit de form con campos ocultos omite claves del wire format (~808 líneas)
 - `runtime-collection-pagination.test.ts` — paginación local de colecciones
 - `runtime-browser-hash-navigation.test.ts` — sincronización de navegación con hash del navegador
 - `runtime-node-styling.test.ts` — utilidades de estilo y clases Tailwind de nodos

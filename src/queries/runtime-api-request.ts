@@ -31,6 +31,7 @@ export function buildRuntimeApiRequest({
   state,
   requestParams,
   iterationContext,
+  hiddenFormFields,
 }: BuildRuntimeApiRequestOptions): RuntimeApiRequestBuildResult {
   const operation = config.api[operationName]
 
@@ -44,7 +45,7 @@ export function buildRuntimeApiRequest({
     }
   }
 
-  return buildInlineRuntimeApiRequest({ operation, operationName, state, requestParams, iterationContext })
+  return buildInlineRuntimeApiRequest({ operation, operationName, state, requestParams, iterationContext, hiddenFormFields })
 }
 
 export function buildInlineRuntimeApiRequest({
@@ -53,9 +54,10 @@ export function buildInlineRuntimeApiRequest({
   state,
   requestParams,
   iterationContext,
+  hiddenFormFields,
 }: BuildInlineRuntimeApiRequestOptions): RuntimeApiRequestBuildResult {
   const effectiveRequestParams = mergeRuntimeApiRequestParams(operation, requestParams)
-  const resolveOptions = { state, iterationContext }
+  const resolveOptions = { state, iterationContext, hiddenFormFields }
   const messagePrefix = `The api operation "${operationName}"`
 
   const endpointResult = resolveEndpoint(operationName, operation.endpoint, resolveOptions)
@@ -224,6 +226,11 @@ function resolveQuery(
 
   for (const [key, rawValue] of Object.entries(queryDefinition)) {
     const resolvedValue = resolvePayloadValue(rawValue, resolveOptions)
+
+    if (resolvedValue.status === 'omit') {
+      // Skip this query key
+      continue
+    }
 
     if (resolvedValue.status === 'error') {
       return {

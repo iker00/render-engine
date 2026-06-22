@@ -26,6 +26,7 @@ export async function executeRuntimeApiOperation({
   state,
   requestParams,
   iterationContext,
+  hiddenFormFields,
   fetch: fetchImplementation = fetch,
 }: ExecuteRuntimeApiOperationOptions): Promise<RuntimeApiExecutionResult> {
   const requestResult = buildRuntimeApiRequest({
@@ -34,6 +35,7 @@ export async function executeRuntimeApiOperation({
     state,
     requestParams,
     iterationContext,
+    hiddenFormFields,
   })
 
   if (requestResult.status === 'error') {
@@ -52,6 +54,7 @@ export async function executeInlineRuntimeApiOperation({
   state,
   requestParams,
   iterationContext,
+  hiddenFormFields,
   fetch: fetchImplementation = fetch,
 }: ExecuteInlineRuntimeApiOperationOptions): Promise<RuntimeApiExecutionResult> {
   const requestResult = buildInlineRuntimeApiRequest({
@@ -60,6 +63,7 @@ export async function executeInlineRuntimeApiOperation({
     state,
     requestParams,
     iterationContext,
+    hiddenFormFields,
   })
 
   if (requestResult.status === 'error') {

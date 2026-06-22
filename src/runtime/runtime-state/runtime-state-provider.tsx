@@ -11,6 +11,7 @@ import type {
 } from '../../config/runtime-config'
 import { buildRuntimeApiRequest, buildInlineRuntimeApiRequest, executeBuiltRuntimeApiRequest } from '../../queries/runtime-api-executor'
 import type { RuntimeApiOperation } from '../../config/runtime-config'
+import type { RuntimeApiHiddenFormFields } from '../../queries/runtime-api-types'
 import {
   areBrowserHashNavigationEntriesEqual,
   createBrowserHashNavigationHash,
@@ -130,6 +131,7 @@ async function executeQueryOperationWithSnapshot({
   snapshotState,
   requestParams,
   iterationContext,
+  hiddenFormFields,
   fetchImplementation,
   skipLoadingDispatch = false,
 }: {
@@ -139,6 +141,7 @@ async function executeQueryOperationWithSnapshot({
   snapshotState: RuntimeState
   requestParams?: RuntimeApiRequestParams
   iterationContext?: RuntimeIterationContext
+  hiddenFormFields?: RuntimeApiHiddenFormFields
   fetchImplementation?: typeof fetch
   skipLoadingDispatch?: boolean
 }) {
@@ -148,6 +151,7 @@ async function executeQueryOperationWithSnapshot({
     state: snapshotState,
     requestParams,
     iterationContext,
+    hiddenFormFields,
   })
 
   if (requestResult.status === 'error') {
@@ -747,6 +751,7 @@ export function useRuntimeStateActions() {
         snapshotState?: RuntimeState
         requestParams?: RuntimeApiRequestParams
         iterationContext?: RuntimeIterationContext
+        hiddenFormFields?: RuntimeApiHiddenFormFields
       },
     ) => {
       return executeQueryOperationWithSnapshot({
@@ -756,6 +761,7 @@ export function useRuntimeStateActions() {
         snapshotState: options?.snapshotState ?? getLatestState(),
         requestParams: options?.requestParams,
         iterationContext: options?.iterationContext,
+        hiddenFormFields: options?.hiddenFormFields,
         fetchImplementation: options?.fetch,
       })
     },

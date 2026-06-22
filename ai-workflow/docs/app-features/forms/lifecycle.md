@@ -30,6 +30,7 @@
 - La visibilidad efectiva de esos campos reutiliza exactamente la misma utilidad compartida que usa el renderer central para combinar `queryStateFeedback` y `visibility`.
 - Un campo oculto por `queryStateFeedback.states.idle` no bloquea el submit antes de la primera ejecución de la query observada y vuelve a validarse cuando la query abandona `idle`.
 - Si un campo vuelve a hacerse visible tras una regla `visibility`, el runtime reutiliza su estado local existente y vuelve a incluirlo en la validación normal.
+- **Omisión de payload**: cuando un campo del formulario está oculto en el momento del submit, cualquier clave del request (`body`, `query`, `headers`) cuya referencia apunte a ese campo se omite del payload final, en lugar de viajar vacía. Esto aplica solo a referencias a campos del propio formulario que dispara el submit; referencias a campos de otros formularios, `params.*`, `queries.*` o `item.*` siguen siendo errores si faltan.
 
 ## Encaje en el contrato de páginas
 - El runtime implementa `form` como nodo contenedor real dentro de `pages[].layout`.

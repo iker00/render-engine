@@ -9,12 +9,18 @@ import type {
 import type { RuntimeIterationContext } from '../runtime/runtime-references/runtime-reference-resolver'
 import type { RuntimeState } from '../runtime/runtime-state/runtime-state-types'
 
+export interface RuntimeApiHiddenFormFields {
+  formId: string
+  fieldIds: ReadonlySet<string>
+}
+
 export interface BuildRuntimeApiRequestOptions {
   config: RuntimeConfig
   operationName: string
   state: RuntimeState
   requestParams?: RuntimeApiRequestParams
   iterationContext?: RuntimeIterationContext
+  hiddenFormFields?: RuntimeApiHiddenFormFields
 }
 
 export interface BuildInlineRuntimeApiRequestOptions {
@@ -23,6 +29,7 @@ export interface BuildInlineRuntimeApiRequestOptions {
   state: RuntimeState
   requestParams?: RuntimeApiRequestParams
   iterationContext?: RuntimeIterationContext
+  hiddenFormFields?: RuntimeApiHiddenFormFields
 }
 
 export interface RuntimeApiRequest {
