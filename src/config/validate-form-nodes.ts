@@ -1345,10 +1345,11 @@ function validateFormChildren(
       node.type !== 'table' &&
       node.type !== 'container' &&
       node.type !== 'accordion' &&
-      node.type !== 'divider'
+      node.type !== 'divider' &&
+      node.type !== 'tabs'
     ) {
       return invalidLayout(
-        `Page "${pageId}" has an invalid layout at "${nodePath}": form nodes only accept input, textarea, select, radioGroup, checkboxGroup, button, heading, paragraph, image, table, container, accordion and divider descendants.`,
+        `Page "${pageId}" has an invalid layout at "${nodePath}": form nodes only accept input, textarea, select, radioGroup, checkboxGroup, button, heading, paragraph, image, table, container, accordion, divider and tabs descendants.`,
       )
     }
 
@@ -1367,6 +1368,27 @@ function validateFormChildren(
 
       if (childrenError) {
         return childrenError
+      }
+
+      continue
+    }
+
+    if (node.type === 'tabs') {
+      for (let itemIndex = 0; itemIndex < node.props.items.length; itemIndex += 1) {
+        const item = node.props.items[itemIndex]
+
+        if (item.children && item.children.length > 0) {
+          const itemChildrenError = validateFormChildren(
+            item.children,
+            `${nodePath}.props.items[${itemIndex}].children`,
+            pageId,
+            context,
+          )
+
+          if (itemChildrenError) {
+            return itemChildrenError
+          }
+        }
       }
 
       continue
@@ -1570,6 +1592,25 @@ function validateExecutionRequestParamsInCollection(
 
       if (childError) {
         return childError
+      }
+    }
+
+    if (node.type === 'tabs') {
+      for (let itemIndex = 0; itemIndex < node.props.items.length; itemIndex += 1) {
+        const item = node.props.items[itemIndex]
+
+        if (item.children && item.children.length > 0) {
+          const childError = validateExecutionRequestParamsInCollection(
+            item.children,
+            `${nodePath}.props.items[${itemIndex}].children`,
+            pageId,
+            api,
+          )
+
+          if (childError) {
+            return childError
+          }
+        }
       }
     }
   }

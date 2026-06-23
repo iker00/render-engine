@@ -12,13 +12,8 @@
 
 ### Pendiente de decisión
 
-- Añadir JWT + renovación automática. Crear nuevo namespace `tokens` en el que se almacenen todos los JWT.
-    - En el JSON de configuración llegará el JWT inicial, el endpoint para actualizarlo y la frecuencia.
-    - Dentro de las cabeceras de las peticiones http podremos obtener los tokens poniendo `tokens.tokenName`.
-
 - (🚨 high - 🧠 medium) Añadir estado `onError` al formulario
 - Añadir `.describe()` en los schemas Zod para el schema del prompt
-- Subida de ficheros con componente DND.
 - Subida de ficheros con componente de formulario attachment o file.
 - Permitir personalizar todos los literales del componente fileManager
 - Añadir mensajes personalizados todas las validaciones

@@ -322,6 +322,16 @@ export function collectResolvedFormFieldDefinitions(
       continue
     }
 
+    if (node.type === 'tabs') {
+      for (const item of node.props.items) {
+        if (!matchesVisibilityRule(item.visibility, state, iterationContext)) {
+          continue
+        }
+        fields.push(...collectResolvedFormFieldDefinitions(item.children ?? [], state, iterationContext))
+      }
+      continue
+    }
+
     if (
       node.type === 'input' ||
       node.type === 'textarea' ||
@@ -351,6 +361,13 @@ export function collectAllFormFieldIds(nodes: LayoutNodeCollection): string[] {
 
     if (node.type === 'repeater') {
       fieldIds.push(...collectAllFormFieldIds(node.props.template))
+      continue
+    }
+
+    if (node.type === 'tabs') {
+      for (const item of node.props.items) {
+        fieldIds.push(...collectAllFormFieldIds(item.children ?? []))
+      }
       continue
     }
 

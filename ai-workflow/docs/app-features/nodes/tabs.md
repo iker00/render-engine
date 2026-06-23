@@ -42,6 +42,22 @@ El nodo `tabs` aplica los campos transversales estándar sobre el nodo completo 
 - Los `children` de cada item se renderizan como una colección de nodos usando el mismo renderer del runtime. Admiten cualquier nodo válido del catálogo, incluyendo `container`, `form`, `repeater`, nodos hoja, etc.
 - El nodo `tabs` puede aparecer en cualquier posición del árbol de layout, incluyendo dentro de `form` y dentro de `container`.
 
+## Comportamiento dentro de `form`
+
+Cuando `tabs` aparece como hijo de un nodo `form`:
+
+- Los campos de formulario (`input`, `textarea`, `select`, `radioGroup`, `checkboxGroup`) dentro de los paneles de todos los items con `visibility` evaluada como visible participan en validación, inicialización y submit del formulario, **independientemente del tab activo**. Solo el panel activo se renderiza en el DOM.
+- Los campos en items con `visibility` oculto no participan en validación ni submit; sus referencias se omiten del payload, igual que cualquier campo oculto por `visibility`.
+- Los valores de campos de todos los items (con `visibility` visible) se incluyen en el payload del submit, no solo los del tab activo.
+- Al montar el form, los campos de todos los tabs se inicializan en el store con su `defaultValue` resuelto, aunque el tab esté inactivo.
+- Si un campo `required` vive en un tab inactivo nunca visitado por el usuario, el submit falla por validación igual que si el campo fuera visible.
+- Los campos en tabs inactivos conservan su estado (`value`, `error`, `touched`, `dirty`) mientras el formulario sigue montado, aunque su panel no esté en el DOM.
+- `resetOnSuccess` y `resetForm` afectan a todos los campos del formulario, incluidos los de tabs inactivos.
+
+**Diferencia con `accordion`**: `accordion` dentro de form tiene un comportamiento distinto. Los campos dentro de un accordion cerrado se desmontan y no participan en submit si nunca fueron montados. Con `tabs`, todos los campos participan sin importar qué tab esté activo.
+
+El nodo `tabs` fuera de form sigue comportándose exactamente igual que antes: solo el panel activo en el DOM, estado local del tab, sin relación con formularios.
+
 ### Comportamiento visual de la barra de tabs
 
 La barra de tabs se adapta al espacio disponible según la `orientation`:

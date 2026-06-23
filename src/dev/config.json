@@ -19,9 +19,6 @@
           "DocIdent": "forms.search.doc",
           "Nombre": "forms.search.name"
         }
-      },
-      "headers": {
-        "Authorization": "Bearer {{tokens.sede.value}}"
       }
     },
     "obtenerFichaPersona": {
@@ -59,73 +56,52 @@
           },
           "children": [
             {
-              "type": "radioGroup",
+              "type": "tabs",
               "props": {
-                "fieldId": "searchType",
-                "label": "Tipo de búsqueda",
-                "defaultValue": "image",
-                "optionLayout": "inline",
                 "items": [
                   {
                     "label": "Imagen",
-                    "value": "image"
+                    "children": [
+                      {
+                        "type": "paragraph",
+                        "props": {
+                          "text": "TODO: AÑADIR CAMPO ADJUNTAR FOTO"
+                        }
+                      }
+                    ]
                   },
                   {
                     "label": "Descripción",
-                    "value": "description"
+                    "children": [
+                      {
+                        "type": "textarea",
+                        "props": {
+                          "fieldId": "desc",
+                          "label": "Descripción"
+                        }
+                      }
+                    ]
                   },
                   {
                     "label": "Datos personales",
-                    "value": "data"
+                    "children": [
+                      {
+                        "type": "input",
+                        "props": {
+                          "fieldId": "doc",
+                          "label": "Documento"
+                        }
+                      },
+                      {
+                        "type": "input",
+                        "props": {
+                          "fieldId": "name",
+                          "label": "Name"
+                        }
+                      }
+                    ]
                   }
                 ]
-              }
-            },
-            {
-              "type": "paragraph",
-              "props": {
-                "text": "TODO: AÑADIR CAMPO ADJUNTAR FOTO"
-              },
-              "visibility": {
-                "reference": "forms.search.searchType",
-                "operator": "equals",
-                "value": "image"
-              }
-            },
-            {
-              "type": "textarea",
-              "props": {
-                "fieldId": "desc",
-                "label": "Descripción"
-              },
-              "visibility": {
-                "reference": "forms.search.searchType",
-                "operator": "equals",
-                "value": "description"
-              }
-            },
-            {
-              "type": "input",
-              "props": {
-                "fieldId": "doc",
-                "label": "Documento"
-              },
-              "visibility": {
-                "reference": "forms.search.searchType",
-                "operator": "equals",
-                "value": "data"
-              }
-            },
-            {
-              "type": "input",
-              "props": {
-                "fieldId": "name",
-                "label": "Name"
-              },
-              "visibility": {
-                "reference": "forms.search.searchType",
-                "operator": "equals",
-                "value": "data"
               }
             },
             {
