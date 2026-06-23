@@ -43,14 +43,11 @@ La misma convención de referencias completas se reutiliza dentro de `api.query`
 - una referencia soportada pero sin valor disponible no invalida el config en bootstrap; produce un error de construcción del request al ejecutar la operación
 
 Esa misma convención se reutiliza también en:
-- `api.headers`
 - `button.props.action.query`
 - `button.props.action.body`
-- `button.props.action.headers`
 - `button.props.action.params`
 - `form.submitAction.query`
 - `form.submitAction.body`
-- `form.submitAction.headers`
 - `image.props.src`
 - `image.props.alt`
 - celdas string manuales de `table`
@@ -58,13 +55,21 @@ Esa misma convención se reutiliza también en:
 - `repeater.props.items.source`
 - `visibility.reference`
 
-Consumidores adicionales con la misma frontera:
+Superficies de headers (referencias completas + interpolación parcial):
+- `api.headers`
+- `button.props.action.headers`
+- `form.submitAction.headers`
+- `preloads[].headers`
+
+En headers, los valores admiten tanto referencias completas como interpolación parcial `{{...}}`. Detalle en [[dynamic-strings.md]].
+
+Consumidores adicionales con la misma frontera (referencias completas):
 - `list.props.items.source`
 - `select.props.items.source`
 - `radioGroup.props.items.source`
 - `checkboxGroup.props.items.source`
 
-Estas superficies siguen fuera del catálogo de interpolación parcial: si declaran `prefix-{{params.userId}}`, se tratan como literales o como contratos inválidos según la semántica histórica de cada consumidor.
+Las superficies de `query`, `body`, `params` y otras no listadas siguen fuera del catálogo de interpolación parcial: si declaran `prefix-{{params.userId}}`, se tratan como literales o como contratos inválidos según la semántica histórica de cada consumidor.
 
 ## Frontera específica de `params.*`
 - `params.{paramName}` solo admite un segmento dinámico después del namespace.

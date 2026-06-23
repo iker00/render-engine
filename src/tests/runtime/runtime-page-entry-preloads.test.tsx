@@ -530,7 +530,9 @@ describe('Runtime page entry preloads integration', () => {
     })
   })
 
-  it('keeps partial template strings literal in page preload query body and headers', async () => {
+  it('keeps partial template strings literal in page preload query and body; header with unresolvable placeholder fails the preload', async () => {
+    // query and body: {{...}} strings are treated as literals (no interpolation in those surfaces).
+    // headers: {{...}} strings ARE interpolated — an unresolvable reference fails with request-build-failed.
     const configWithTemplatePreload: RuntimeConfig = {
       api: {
         preloadProfile: {
@@ -550,7 +552,9 @@ describe('Runtime page entry preloads integration', () => {
                   search: 'prefix-{{forms.userSearch.term}}',
                 },
                 headers: {
-                  authorization: 'Bearer {{forms.userSearch.term}}',
+                  // Using a static literal header here so the preload request can be built.
+                  // Interpolation of {{...}} in headers is tested in runtime-api-header-interpolation.test.ts.
+                  authorization: 'Bearer static-token',
                 },
                 body: {
                   name: 'prefix-{{forms.userSearch.term}}',
@@ -568,10 +572,11 @@ describe('Runtime page entry preloads integration', () => {
     renderRuntimePageWithPreloads(configWithTemplatePreload)
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+    // query and body: {{...}} strings are kept as literal (no interpolation)
     expect(fetchMock).toHaveBeenCalledWith('/api/profile?search=prefix-%7B%7Bforms.userSearch.term%7D%7D', {
       method: 'POST',
       headers: {
-        authorization: 'Bearer {{forms.userSearch.term}}',
+        authorization: 'Bearer static-token',
         'content-type': 'application/json',
       },
       body: JSON.stringify({
@@ -1787,6 +1792,85 @@ describe('Runtime page entry preloads — when predicate', () => {
     expect(readRuntimeState().pageEntry.preloadNames).toEqual([])
     expect(readRuntimeState().pageEntry.status).toBe('idle')
     expect(fetchMock).not.toHaveBeenCalled()
+  })
+})
+
+describe('Runtime page entry preloads — header interpolation (T2 integration)', () => {
+  it('resolves "Bearer {{tokens.sede.value}}" in preloads[].headers when token is ready', async () => {
+    const config: RuntimeConfig = {
+      api: {
+        loadData: {
+          method: 'GET',
+          endpoint: '/api/data',
+          headers: {
+            Authorization: 'Bearer {{tokens.sede.value}}',
+          },
+        },
+      },
+      tokens: {
+        sede: { value: 'tok-xyz' },
+      },
+      initialPage: 'datapage',
+      pages: [
+        {
+          id: 'datapage',
+          preloads: [{ operationName: 'loadData', requestParams: {} }],
+          layout: [],
+        },
+      ],
+    }
+
+    const fetchMock = vi.fn().mockResolvedValue(createJsonResponse({ ok: true }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    renderRuntimePageWithPreloads(config)
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(readRuntimeState().pageEntry.status).toBe('success'))
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/data', {
+      method: 'GET',
+      headers: {
+        Authorization: 'Bearer tok-xyz',
+      },
+    })
+  })
+
+  it('preloads[].headers with missing placeholder reference fails the preload with request-build-failed', async () => {
+    const config: RuntimeConfig = {
+      api: {
+        loadData: {
+          method: 'GET',
+          endpoint: '/api/data',
+          headers: {
+            'X-Custom': '{{params.nonExistentParam}}',
+          },
+        },
+      },
+      initialPage: 'datapage',
+      pages: [
+        {
+          id: 'datapage',
+          preloads: [{ operationName: 'loadData', requestParams: {} }],
+          layout: [],
+        },
+      ],
+    }
+
+    const fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+
+    renderRuntimePageWithPreloads(config)
+
+    await waitFor(() => expect(readRuntimeState().pageEntry.status).toBe('error'))
+
+    expect(fetchMock).not.toHaveBeenCalled()
+    expect(readRuntimeState().queries.loadData).toMatchObject({
+      status: 'error',
+      error: {
+        code: 'request-build-failed',
+      },
+    })
   })
 })
 

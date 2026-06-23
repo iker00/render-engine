@@ -6,6 +6,7 @@ export type RuntimeReferenceNamespace =
   | 'routeParams'
   | 'params'
   | 'translations'
+  | 'tokens'
 
 export type RuntimeReferenceParseResult =
   | RuntimeLiteralReference
@@ -21,7 +22,7 @@ export interface RuntimeLiteralReference {
 export interface RuntimeSupportedReference {
   kind: 'reference'
   status: 'supported'
-  namespace: 'item' | 'forms' | 'queries' | 'params' | 'translations'
+  namespace: 'item' | 'forms' | 'queries' | 'params' | 'translations' | 'tokens'
   path: string[]
   source: string
 }
@@ -48,6 +49,7 @@ export type RuntimeReferenceResolutionResult =
   | RuntimeMissingReference
   | RuntimeUnsupportedResolution
   | RuntimeInvalidResolution
+  | RuntimeTokenErrorResolution
 
 export interface RuntimeLiteralResolution {
   status: 'literal'
@@ -73,4 +75,9 @@ export interface RuntimeUnsupportedResolution {
 export interface RuntimeInvalidResolution {
   status: 'invalid'
   reference: RuntimeInvalidReference
+}
+
+export interface RuntimeTokenErrorResolution {
+  status: 'token-error'
+  reference: RuntimeSupportedReference
 }

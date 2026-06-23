@@ -68,6 +68,14 @@ export interface RuntimeI18nState {
   activeLanguage: string
 }
 
+export type RuntimeTokenStatus = 'ready' | 'refreshing' | 'error'
+
+export interface RuntimeTokenState {
+  value: string
+  status: RuntimeTokenStatus
+  failedAttempts: number
+}
+
 export interface RuntimeState {
   navigation: RuntimeNavigationState
   forms: Record<string, RuntimeFormState>
@@ -75,6 +83,7 @@ export interface RuntimeState {
   pageEntry: RuntimePageEntryState
   modal: RuntimeModalState
   i18n: RuntimeI18nState
+  tokens: Record<string, RuntimeTokenState>
 }
 
 export type RuntimeStateAction =
@@ -122,6 +131,10 @@ export type RuntimeStateAction =
   | { type: 'modal/open'; payload: { modalId: string; iterationKey?: string } }
   | { type: 'modal/close'; payload: { modalId: string; iterationKey?: string } }
   | { type: 'modal/close-all' }
+  | { type: 'tokens/set-refreshing'; payload: { tokenId: string } }
+  | { type: 'tokens/set-value'; payload: { tokenId: string; value: string } }
+  | { type: 'tokens/set-error'; payload: { tokenId: string } }
+  | { type: 'tokens/record-failed-attempt'; payload: { tokenId: string } }
 
 export interface RuntimeStateContextValue {
   config: RuntimeConfig

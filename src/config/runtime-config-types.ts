@@ -671,11 +671,25 @@ export interface RuntimePageConfig {
 export type RuntimeTranslationsLangMap = Record<string, string>
 export type RuntimeTranslationsConfig = Record<string, RuntimeTranslationsLangMap>
 
+export interface RuntimeTokenRefreshConfig {
+  operation: string
+  responsePath: string
+  intervalSeconds: number
+}
+
+export interface RuntimeTokenConfig {
+  value: string
+  refresh?: RuntimeTokenRefreshConfig
+}
+
+export type RuntimeTokensConfig = Record<string, RuntimeTokenConfig>
+
 export interface RuntimeConfig {
   api: RuntimeApiConfig
   pages: RuntimePageConfig[]
   initialPage: string
   translations?: RuntimeTranslationsConfig
+  tokens?: RuntimeTokensConfig
 }
 
 export interface RuntimeConfigError {

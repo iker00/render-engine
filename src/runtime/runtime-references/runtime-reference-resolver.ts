@@ -13,6 +13,7 @@ import { parseRuntimeReference } from './runtime-reference-parser'
 import type {
   RuntimeReferenceResolutionResult,
   RuntimeSupportedReference,
+  RuntimeTokenErrorResolution,
 } from './runtime-reference-types'
 
 export interface RuntimeIterationContext {
@@ -61,7 +62,14 @@ export function resolveRuntimeReference(
   if (state) {
     const resolvedValue = resolveSupportedReferenceValue(parsedReference, state, options.iterationContext)
 
-    if (resolvedValue.found) {
+    if ('tokenError' in resolvedValue) {
+      return {
+        status: 'token-error',
+        reference: parsedReference,
+      } satisfies RuntimeTokenErrorResolution
+    }
+
+    if ('found' in resolvedValue && resolvedValue.found) {
       return {
         status: 'resolved',
         value: resolvedValue.value,
@@ -106,7 +114,7 @@ export function resolveRuntimeVisibleValue(
     return result.value
   }
 
-  if (result.status !== 'resolved') {
+  if (result.status === 'token-error' || result.status !== 'resolved') {
     return ''
   }
 
@@ -208,7 +216,22 @@ function resolveSupportedReferenceValue(
   reference: RuntimeSupportedReference,
   state: RuntimeState,
   iterationContext?: RuntimeIterationContext,
-) {
+): { found: true; value: unknown } | { found: false } | { tokenError: true } {
+  if (reference.namespace === 'tokens') {
+    const [tokenId] = reference.path
+    const tokenState = (state.tokens ?? {})[tokenId]
+
+    if (tokenState === undefined) {
+      return { found: false }
+    }
+
+    if (tokenState.status === 'error') {
+      return { tokenError: true }
+    }
+
+    return { found: true, value: tokenState.value }
+  }
+
   if (reference.namespace === 'translations') {
     const key = reference.path[0]
     const { translations, activeLanguage } = state.i18n

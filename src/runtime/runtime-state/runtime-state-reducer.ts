@@ -9,6 +9,7 @@ import type {
   RuntimeQueryState,
   RuntimeState,
   RuntimeStateAction,
+  RuntimeTokenState,
 } from './runtime-state-types'
 
 export function createRuntimeState(
@@ -28,6 +29,15 @@ export function createRuntimeState(
           ]),
         )
       : {}
+
+  const tokens: Record<string, RuntimeTokenState> = config.tokens
+    ? Object.fromEntries(
+        Object.entries(config.tokens).map(([tokenId, tokenConfig]) => [
+          tokenId,
+          { value: tokenConfig.value, status: 'ready' as const, failedAttempts: 0 },
+        ]),
+      )
+    : {}
 
   return {
     navigation: {
@@ -53,6 +63,7 @@ export function createRuntimeState(
       translations: config.translations ?? {},
       activeLanguage: options?.activeLanguage ?? 'es',
     },
+    tokens,
   }
 }
 
@@ -306,6 +317,62 @@ export function runtimeStateReducer(stateIn: RuntimeState, action: RuntimeStateA
           activeIterationKey: null,
         },
       }
+    case 'tokens/set-refreshing': {
+      const tokenId = action.payload.tokenId
+      const current = state.tokens[tokenId]
+      if (!current) {
+        return state
+      }
+      return {
+        ...state,
+        tokens: {
+          ...state.tokens,
+          [tokenId]: { ...current, status: 'refreshing' },
+        },
+      }
+    }
+    case 'tokens/set-value': {
+      const tokenId = action.payload.tokenId
+      const current = state.tokens[tokenId]
+      if (!current) {
+        return state
+      }
+      return {
+        ...state,
+        tokens: {
+          ...state.tokens,
+          [tokenId]: { value: action.payload.value, status: 'ready', failedAttempts: 0 },
+        },
+      }
+    }
+    case 'tokens/set-error': {
+      const tokenId = action.payload.tokenId
+      const current = state.tokens[tokenId]
+      if (!current) {
+        return state
+      }
+      return {
+        ...state,
+        tokens: {
+          ...state.tokens,
+          [tokenId]: { ...current, status: 'error' },
+        },
+      }
+    }
+    case 'tokens/record-failed-attempt': {
+      const tokenId = action.payload.tokenId
+      const current = state.tokens[tokenId]
+      if (!current) {
+        return state
+      }
+      return {
+        ...state,
+        tokens: {
+          ...state.tokens,
+          [tokenId]: { ...current, failedAttempts: current.failedAttempts + 1 },
+        },
+      }
+    }
     default:
       return state
   }

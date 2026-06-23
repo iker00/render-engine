@@ -2323,4 +2323,177 @@ describe('validateRuntimeConfig', () => {
     // executeOperations operationName is not cross-checked at bootstrap per current contract
     expect(result.status).toBe('ready')
   })
+
+  describe('tokens.* gating in button actions', () => {
+    it('accepts tokens.* in button.props.action.headers for executeOperation', () => {
+      const result = validateRuntimeConfig({
+        api: { op: { method: 'GET', endpoint: '/api/x' } },
+        pages: [
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'button',
+                props: {
+                  label: 'Load',
+                  action: {
+                    type: 'executeOperation',
+                    operationName: 'op',
+                    headers: { Authorization: 'tokens.session.value' },
+                  },
+                },
+              },
+            ],
+          },
+        ],
+        initialPage: 'home',
+      })
+      expect(result.status).toBe('ready')
+    })
+
+    it('rejects tokens.* in button.props.action.query for executeOperation', () => {
+      const result = validateRuntimeConfig({
+        api: { op: { method: 'GET', endpoint: '/api/x' } },
+        pages: [
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'button',
+                props: {
+                  label: 'Load',
+                  action: {
+                    type: 'executeOperation',
+                    operationName: 'op',
+                    query: { token: 'tokens.session.value' },
+                  },
+                },
+              },
+            ],
+          },
+        ],
+        initialPage: 'home',
+      })
+      expect(result.status).toBe('error')
+      if (result.status === 'error') {
+        expect(result.error.message).toContain('tokens.*')
+      }
+    })
+
+    it('rejects tokens.* in button.props.action.body for executeOperation', () => {
+      const result = validateRuntimeConfig({
+        api: { op: { method: 'POST', endpoint: '/api/x' } },
+        pages: [
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'button',
+                props: {
+                  label: 'Save',
+                  action: {
+                    type: 'executeOperation',
+                    operationName: 'op',
+                    body: { token: 'tokens.session.value' },
+                  },
+                },
+              },
+            ],
+          },
+        ],
+        initialPage: 'home',
+      })
+      expect(result.status).toBe('error')
+      if (result.status === 'error') {
+        expect(result.error.message).toContain('tokens.*')
+      }
+    })
+
+    it('accepts tokens.* in executeOperations.operations[].headers', () => {
+      const result = validateRuntimeConfig({
+        api: { op: { method: 'GET', endpoint: '/api/x' } },
+        pages: [
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'button',
+                props: {
+                  label: 'Run',
+                  action: {
+                    type: 'executeOperations',
+                    operations: [
+                      { operationName: 'op', headers: { Authorization: 'tokens.session.value' } },
+                    ],
+                  },
+                },
+              },
+            ],
+          },
+        ],
+        initialPage: 'home',
+      })
+      expect(result.status).toBe('ready')
+    })
+
+    it('rejects tokens.* in executeOperations.operations[].query', () => {
+      const result = validateRuntimeConfig({
+        api: { op: { method: 'GET', endpoint: '/api/x' } },
+        pages: [
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'button',
+                props: {
+                  label: 'Run',
+                  action: {
+                    type: 'executeOperations',
+                    operations: [
+                      { operationName: 'op', query: { token: 'tokens.session.value' } },
+                    ],
+                  },
+                },
+              },
+            ],
+          },
+        ],
+        initialPage: 'home',
+      })
+      expect(result.status).toBe('error')
+      if (result.status === 'error') {
+        expect(result.error.message).toContain('tokens.*')
+      }
+    })
+
+    it('rejects tokens.* in button.props.action.params for navigateTo', () => {
+      const result = validateRuntimeConfig({
+        api: {},
+        pages: [
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'button',
+                props: {
+                  label: 'Go',
+                  action: {
+                    type: 'navigateTo',
+                    pageId: 'details',
+                    params: { token: 'tokens.session.value' },
+                  },
+                },
+              },
+            ],
+          },
+          { id: 'details', layout: [] },
+        ],
+        initialPage: 'home',
+      })
+      expect(result.status).toBe('error')
+      if (result.status === 'error') {
+        expect(result.error.message).toContain('tokens.*')
+      }
+    })
+  })
 })

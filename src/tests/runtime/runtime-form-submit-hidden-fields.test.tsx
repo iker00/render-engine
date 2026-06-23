@@ -806,3 +806,240 @@ describe('Form submit — hidden fields omitted from wire format', () => {
     }
   })
 })
+
+describe('Form submit — header interpolation (T2 integration)', () => {
+  it('form.submitAction.headers with "Bearer {{forms.myForm.token}}" visible field produces interpolated header', async () => {
+    const fetchMock = makeSuccessFetch()
+    globalThis.fetch = fetchMock
+
+    const config: RuntimeConfig = {
+      api: {
+        submitOp: {
+          method: 'POST',
+          endpoint: '/api/submit',
+          body: {
+            name: 'forms.myForm.name',
+          },
+        },
+      },
+      initialPage: 'home',
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'form',
+              id: 'myForm',
+              submitAction: {
+                type: 'executeOperation',
+                operationName: 'submitOp',
+                headers: {
+                  Authorization: 'Bearer {{forms.myForm.token}}',
+                },
+              },
+              children: [
+                {
+                  type: 'input',
+                  props: {
+                    fieldId: 'name',
+                    label: 'Name',
+                    defaultValue: 'Ada',
+                  },
+                },
+                {
+                  type: 'input',
+                  props: {
+                    fieldId: 'token',
+                    label: 'Token',
+                    defaultValue: 'tok-123',
+                  },
+                },
+                {
+                  type: 'button',
+                  props: { label: 'Submit' },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    }
+
+    render(
+      <RuntimeStateProvider config={config}>
+        <RuntimePage />
+        <RuntimeStateSnapshot testId="runtime-state" />
+      </RuntimeStateProvider>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Submit' }))
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+
+    const [, init] = fetchMock.mock.calls[0]!
+    expect((init?.headers as Record<string, string>)?.['Authorization']).toBe('Bearer tok-123')
+  })
+
+  it('form.submitAction.headers: "{{forms.myForm.hiddenField}}" with hidden field omits the header key entirely', async () => {
+    const fetchMock = makeSuccessFetch()
+    globalThis.fetch = fetchMock
+
+    const config: RuntimeConfig = {
+      api: {
+        submitOp: {
+          method: 'POST',
+          endpoint: '/api/submit',
+          body: {
+            nombre: 'forms.searchForm.nameField',
+          },
+        },
+      },
+      initialPage: 'home',
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'form',
+              id: 'searchForm',
+              submitAction: {
+                type: 'executeOperation',
+                operationName: 'submitOp',
+                headers: {
+                  'X-Hint': '{{forms.searchForm.dniField}}',
+                },
+              },
+              children: [
+                {
+                  type: 'radioGroup',
+                  props: {
+                    fieldId: 'searchType',
+                    label: 'Tipo',
+                    optionLayout: 'inline',
+                    items: [
+                      { label: 'Nombre', value: 'nombre' },
+                      { label: 'DNI', value: 'dni' },
+                    ],
+                    defaultValue: 'nombre',
+                  },
+                },
+                {
+                  type: 'input',
+                  visibility: {
+                    reference: 'forms.searchForm.searchType',
+                    operator: 'equals',
+                    value: 'nombre',
+                  },
+                  props: {
+                    fieldId: 'nameField',
+                    label: 'Nombre',
+                    defaultValue: 'Ada',
+                  },
+                },
+                {
+                  type: 'input',
+                  visibility: {
+                    reference: 'forms.searchForm.searchType',
+                    operator: 'equals',
+                    value: 'dni',
+                  },
+                  props: {
+                    fieldId: 'dniField',
+                    label: 'DNI',
+                    defaultValue: '',
+                  },
+                },
+                {
+                  type: 'button',
+                  props: { label: 'Submit' },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    }
+
+    render(
+      <RuntimeStateProvider config={config}>
+        <RuntimePage />
+        <RuntimeStateSnapshot testId="runtime-state" />
+      </RuntimeStateProvider>,
+    )
+
+    // dniField is hidden in default mode (nombre), so X-Hint must be omitted
+    fireEvent.click(screen.getByRole('button', { name: 'Submit' }))
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+
+    const [, init] = fetchMock.mock.calls[0]!
+    const headers = (init?.headers as Record<string, string>) ?? {}
+    expect(headers).not.toHaveProperty('X-Hint')
+    // body should still be submitted normally
+    const body = JSON.parse(init!.body as string) as Record<string, unknown>
+    expect(body).toEqual({ nombre: 'Ada' })
+  })
+
+  it('form.submitAction.headers with "{{params.unknownParam}}" fails with request-build-failed', async () => {
+    const fetchMock = makeSuccessFetch()
+    globalThis.fetch = fetchMock
+
+    const config: RuntimeConfig = {
+      api: {
+        submitOp: {
+          method: 'POST',
+          endpoint: '/api/submit',
+          body: null,
+        },
+      },
+      initialPage: 'home',
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'form',
+              id: 'myForm',
+              submitAction: {
+                type: 'executeOperation',
+                operationName: 'submitOp',
+                headers: {
+                  'X-Custom': '{{params.unknownParam}}',
+                },
+              },
+              children: [
+                {
+                  type: 'button',
+                  props: { label: 'Submit' },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    }
+
+    render(
+      <RuntimeStateProvider config={config}>
+        <RuntimePage />
+        <RuntimeStateSnapshot testId="runtime-state" />
+      </RuntimeStateProvider>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Submit' }))
+
+    await waitFor(() =>
+      expect(JSON.parse(screen.getByTestId('runtime-state').textContent ?? '') as {
+        queries: { submitOp?: { status?: string } }
+      })
+        .toMatchObject({ queries: { submitOp: { status: 'error' } } }),
+    )
+
+    expect(fetchMock).not.toHaveBeenCalled()
+
+    const state = JSON.parse(screen.getByTestId('runtime-state').textContent ?? '') as {
+      queries: { submitOp?: { status?: string; error?: { code?: string } } }
+    }
+    expect(state.queries.submitOp?.error?.code).toBe('request-build-failed')
+  })
+})

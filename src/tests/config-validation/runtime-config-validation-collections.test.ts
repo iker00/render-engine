@@ -857,4 +857,89 @@ describe('validateRuntimeConfig', () => {
       })
     })
   })
+
+  describe('tokens.* gating in collection sources', () => {
+    it('rejects tokens.* in repeater.props.items.source', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithLayout([
+          {
+            type: 'repeater',
+            props: {
+              items: { source: 'tokens.session.value', key: 'id' },
+              template: [],
+            },
+          },
+        ]),
+      )
+      expect(result.status).toBe('error')
+    })
+
+    it('rejects tokens.* in list.props.items.source', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithLayout([
+          {
+            type: 'list',
+            props: {
+              items: { source: 'tokens.session.value' },
+            },
+          },
+        ]),
+      )
+      expect(result.status).toBe('error')
+    })
+
+    it('rejects tokens.* in select.props.items.source inside a form', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithFormLayout({
+          children: [
+            {
+              type: 'select',
+              props: {
+                fieldId: 'role',
+                label: 'Role',
+                items: { source: 'tokens.session.value', itemText: 'label' },
+              },
+            },
+          ],
+        }),
+      )
+      expect(result.status).toBe('error')
+    })
+
+    it('rejects tokens.* in radioGroup.props.items.source inside a form', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithFormLayout({
+          children: [
+            {
+              type: 'radioGroup',
+              props: {
+                fieldId: 'role',
+                label: 'Role',
+                items: { source: 'tokens.session.value', itemText: 'label' },
+              },
+            },
+          ],
+        }),
+      )
+      expect(result.status).toBe('error')
+    })
+
+    it('rejects tokens.* in checkboxGroup.props.items.source inside a form', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithFormLayout({
+          children: [
+            {
+              type: 'checkboxGroup',
+              props: {
+                fieldId: 'roles',
+                label: 'Roles',
+                items: { source: 'tokens.session.value', itemText: 'label' },
+              },
+            },
+          ],
+        }),
+      )
+      expect(result.status).toBe('error')
+    })
+  })
 })

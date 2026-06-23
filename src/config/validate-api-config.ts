@@ -13,6 +13,7 @@ import {
   runtimeApiHeadersSchema,
 } from './runtime-config-zod'
 import { invalidLayout } from './runtime-config-validation-errors'
+import { isTokensReference, templateContainsTokensReference } from './runtime-reference-namespace-guards'
 
 export function validateApiConfig(
   rawApiConfig: Record<string, unknown>,
@@ -108,10 +109,28 @@ function validateApiOperation(
     if (queryIssue) {
       return queryIssue
     }
+
+    const queryTokensIssue = rejectTokensInApiQuery(operationName, shellResult.data.query)
+
+    if (queryTokensIssue) {
+      return queryTokensIssue
+    }
   }
 
   if (shellResult.data.body !== undefined && shellResult.data.method === 'GET') {
     return invalidLayout(`The api operation "${operationName}" uses method "GET" but declares an unsupported body.`)
+  }
+
+  if (shellResult.data.body !== undefined) {
+    const bodyTokensIssue = rejectTokensInApiBody(operationName, shellResult.data.body)
+
+    if (bodyTokensIssue) {
+      return bodyTokensIssue
+    }
+  }
+
+  if (templateContainsTokensReference(shellResult.data.endpoint)) {
+    return invalidLayout(`The api operation "${operationName}.endpoint" contains tokens.* references, which are not supported in endpoint placeholders.`)
   }
 
   if (shellResult.data.headers !== undefined) {
@@ -163,6 +182,76 @@ function validateApiOperation(
     status: 'ready',
     operation,
   }
+}
+
+function rejectTokensInApiQuery(
+  operationName: string,
+  query: RuntimeApiOperation['query'],
+): { status: 'error'; error: RuntimeConfigError } | null {
+  if (query === undefined) {
+    return null
+  }
+
+  for (const [key, value] of Object.entries(query)) {
+    if (typeof value === 'string' && isTokensReference(value)) {
+      return invalidLayout(
+        `The api operation "${operationName}.query.${key}" contains tokens.* references, which are not supported in query parameters.`,
+      )
+    }
+  }
+
+  return null
+}
+
+function rejectTokensInApiBody(
+  operationName: string,
+  body: unknown,
+): { status: 'error'; error: RuntimeConfigError } | null {
+  return rejectTokensInApiBodyAtPath(operationName, `${operationName}.body`, body)
+}
+
+function rejectTokensInApiBodyAtPath(
+  operationName: string,
+  path: string,
+  value: unknown,
+): { status: 'error'; error: RuntimeConfigError } | null {
+  if (typeof value === 'string') {
+    if (isTokensReference(value)) {
+      return invalidLayout(
+        `The api operation "${path}" contains tokens.* references, which are not supported in body values.`,
+      )
+    }
+
+    return null
+  }
+
+  if (value === null || value === undefined || typeof value === 'number' || typeof value === 'boolean') {
+    return null
+  }
+
+  if (Array.isArray(value)) {
+    for (let index = 0; index < value.length; index += 1) {
+      const childIssue = rejectTokensInApiBodyAtPath(operationName, `${path}[${index}]`, value[index])
+
+      if (childIssue) {
+        return childIssue
+      }
+    }
+
+    return null
+  }
+
+  if (isRecord(value)) {
+    for (const [key, childValue] of Object.entries(value)) {
+      const childIssue = rejectTokensInApiBodyAtPath(operationName, `${path}.${key}`, childValue)
+
+      if (childIssue) {
+        return childIssue
+      }
+    }
+  }
+
+  return null
 }
 
 function mapApiQueryIssue(

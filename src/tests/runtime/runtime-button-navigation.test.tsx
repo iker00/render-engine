@@ -1144,7 +1144,7 @@ describe('Runtime button navigation', () => {
     )
   })
 
-  it('keeps partial template strings literal in button executeOperation query body and headers', async () => {
+  it('keeps partial template strings literal in button executeOperation query and body, but interpolates {{...}} in headers', async () => {
     const fetchMock = vi.fn().mockResolvedValue(createJsonResponse({ ok: true }))
     vi.stubGlobal('fetch', fetchMock)
 
@@ -1187,14 +1187,17 @@ describe('Runtime button navigation', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Search literal templates' }))
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+    // query: {{...}} is treated as literal (no interpolation in query surface)
     expect(fetchMock.mock.calls[0]?.[0]).toBe('/api/users?search=prefix-%7B%7Bforms.userSearch.name%7D%7D')
+    // headers: {{...}} IS interpolated — "Bearer {{forms.userSearch.name}}" resolves to "Bearer Ada"
     expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({
       method: 'POST',
       headers: {
-        authorization: 'Bearer {{forms.userSearch.name}}',
+        authorization: 'Bearer Ada',
         'content-type': 'application/json',
       },
     })
+    // body: {{...}} is treated as literal (no interpolation in body surface)
     expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toEqual({
       name: 'prefix-{{forms.userSearch.name}}',
     })

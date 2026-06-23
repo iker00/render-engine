@@ -614,3 +614,103 @@ describe('ButtonNode', () => {
     }))
   })
 })
+
+describe('Button action — header interpolation (T2 integration)', () => {
+  function createButtonNodeWithAction(action: RuntimeUiAction): ButtonLayoutNode {
+    return {
+      type: 'button',
+      props: {
+        label: 'Trigger action',
+        action,
+      },
+    }
+  }
+
+  it('button.props.action.headers with interpolation template passes raw template to executeQueryOperation', () => {
+    const runtimeHandlers = {
+      executeQueryOperation: vi.fn().mockResolvedValue(undefined),
+      goBackPage: vi.fn(),
+      navigateToPage: vi.fn(),
+      openModal: vi.fn(),
+      closeModal: vi.fn(),
+      resetForm: vi.fn(),
+    }
+
+    useRuntimeStateActionsMock.mockReturnValue(runtimeHandlers)
+
+    render(
+      <ButtonNode
+        node={createButtonNodeWithAction({
+          type: 'executeOperation',
+          operationName: 'secureAction',
+          headers: {
+            Authorization: 'Bearer {{tokens.sede.value}}',
+          },
+        })}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Trigger action' }))
+
+    expect(runtimeHandlers.executeQueryOperation).toHaveBeenCalledWith('secureAction', {
+      requestParams: {
+        query: undefined,
+        body: undefined,
+        headers: {
+          Authorization: 'Bearer {{tokens.sede.value}}',
+        },
+      },
+    })
+  })
+
+  it('executeOperations plural: header templates are passed per-operation to executeQueryOperation (smoke)', () => {
+    const runtimeHandlers = {
+      executeQueryOperation: vi.fn().mockResolvedValue(undefined),
+      goBackPage: vi.fn(),
+      navigateToPage: vi.fn(),
+      openModal: vi.fn(),
+      closeModal: vi.fn(),
+      resetForm: vi.fn(),
+    }
+
+    useRuntimeStateActionsMock.mockReturnValue(runtimeHandlers)
+
+    render(
+      <ButtonNode
+        node={createButtonNodeWithAction({
+          type: 'executeOperations',
+          operations: [
+            {
+              operationName: 'op1',
+              headers: { Authorization: 'Bearer {{tokens.sede.value}}' },
+            },
+            {
+              operationName: 'op2',
+              headers: { 'X-Static': 'static-value' },
+            },
+          ],
+        })}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Trigger action' }))
+
+    expect(runtimeHandlers.executeQueryOperation).toHaveBeenCalledTimes(2)
+    expect(runtimeHandlers.executeQueryOperation).toHaveBeenNthCalledWith(1, 'op1', {
+      requestParams: {
+        query: undefined,
+        body: undefined,
+        headers: { Authorization: 'Bearer {{tokens.sede.value}}' },
+      },
+      iterationContext: undefined,
+    })
+    expect(runtimeHandlers.executeQueryOperation).toHaveBeenNthCalledWith(2, 'op2', {
+      requestParams: {
+        query: undefined,
+        body: undefined,
+        headers: { 'X-Static': 'static-value' },
+      },
+      iterationContext: undefined,
+    })
+  })
+})

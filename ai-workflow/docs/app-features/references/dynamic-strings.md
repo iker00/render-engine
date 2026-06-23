@@ -26,8 +26,14 @@
 - celdas string de `table` manual
 - `table.props.rows.cells` en modo dinámico
 - `api.endpoint` en el catálogo de operaciones (véase [[../config/api-catalog.md]] para semántica de placeholders no resolubles)
+- `api.headers` valores (véase [[execution.md]] para semántica de error en headers)
+- `button.props.action.headers` valores
+- `form.submitAction.headers` valores
+- `preloads[].headers` valores
 
 ## Semántica de placeholders
+
+### En superficies visibles
 - cada placeholder se resuelve con la misma capa central que las referencias completas
 - espacios alrededor de la referencia dentro del placeholder se ignoran
 - `string`, `number`, `boolean`, `0` y `false` producen texto visible
@@ -37,11 +43,19 @@
 - `params.*` conserva la frontera `params.{paramName}`; `params.user.id` queda fuera de contrato y produce string vacío dentro de un placeholder
 - `translations.{key}` se resuelve aplicando la cadena de fallback del catálogo según el idioma activo declarado en `data-lang`
 
+### En superficies de headers
+- cada placeholder se resuelve con la misma capa central que las referencias completas
+- espacios alrededor de la referencia dentro del placeholder se ignoran
+- `string`, `number`, `boolean` producen texto serializado en el header
+- objetos, arrays, `null`, `undefined`, referencias ausentes, inválidas, no soportadas o fuera de contrato producen `request-build-failed` (no string vacío como en superficies visibles)
+- si un placeholder de un valor de header referencia un campo oculto del propio formulario, el header completo se omite del wire format
+- delimitadores no emparejados se tratan como texto literal
+
 ## Superficies fuera de interpolación parcial
 Las siguientes superficies usan solo referencias completas o literales y NO aplican interpolación parcial. Un string como `prefix-{{params.userId}}` se conserva como literal o queda sometido a la validación histórica del consumidor, pero no se reinterpreta como plantilla:
-- `api.query`, `api.body`, `api.headers`
-- `button.props.action.query`, `button.props.action.body`, `button.props.action.headers`, `button.props.action.params`
-- `form.submitAction.query`, `form.submitAction.body`, `form.submitAction.headers`
+- `api.query`, `api.body`
+- `button.props.action.query`, `button.props.action.body`, `button.props.action.params`
+- `form.submitAction.query`, `form.submitAction.body`
 - `navigateTo.params`
 - `defaultValue` de campos de formulario
 - `visibility.reference`
@@ -49,7 +63,6 @@ Las siguientes superficies usan solo referencias completas o literales y NO apli
 - `repeater.props.items.source` y `repeater.props.items.key`
 - `list.props.items.source`, `select.props.items.source`, `radioGroup.props.items.source`, `checkboxGroup.props.items.source`
 - cabeceras de `table`
-- `preloads` (la interpolación de `endpoint` no aplica a precargas)
 
 ## Reglas de placeholder vacío
 - la interpolación parcial solo existe en el catálogo visible anterior y usa placeholders `{{referencia}}`

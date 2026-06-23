@@ -1370,4 +1370,142 @@ describe('Runtime reference resolution', () => {
       consoleWarnSpy.mockRestore()
     })
   })
+
+  describe('T0078-05 tokens reference parser contract', () => {
+    it('classifies tokens.{id}.value as a supported reference', () => {
+      expect(parseRuntimeReference('tokens.session.value')).toMatchObject({
+        kind: 'reference',
+        status: 'supported',
+        namespace: 'tokens',
+        path: ['session', 'value'],
+      })
+    })
+
+    it('classifies tokens alone as invalid', () => {
+      expect(parseRuntimeReference('tokens')).toMatchObject({
+        kind: 'reference',
+        status: 'invalid',
+        namespace: 'tokens',
+      })
+    })
+
+    it('classifies tokens.{id} with only one segment as invalid', () => {
+      expect(parseRuntimeReference('tokens.session')).toMatchObject({
+        kind: 'reference',
+        status: 'invalid',
+        namespace: 'tokens',
+      })
+    })
+
+    it('classifies tokens.{id}.value.extra with extra segments as invalid', () => {
+      expect(parseRuntimeReference('tokens.session.value.extra')).toMatchObject({
+        kind: 'reference',
+        status: 'invalid',
+        namespace: 'tokens',
+      })
+    })
+
+    it('classifies tokens.{id}.other (not .value) as invalid', () => {
+      expect(parseRuntimeReference('tokens.session.other')).toMatchObject({
+        kind: 'reference',
+        status: 'invalid',
+        namespace: 'tokens',
+      })
+    })
+
+    it('treats escaped tokens.{id}.value as a visible literal string', () => {
+      expect(parseRuntimeReference('\\tokens.session.value')).toEqual({
+        kind: 'literal',
+        value: 'tokens.session.value',
+      })
+    })
+  })
+
+  describe('T0078-05 tokens reference resolver contract', () => {
+    const stateWithReadyToken: RuntimeState = {
+      ...runtimeState,
+      tokens: {
+        session: { value: 'abc', status: 'ready', failedAttempts: 0 },
+      },
+    } as RuntimeState
+
+    const stateWithRefreshingToken: RuntimeState = {
+      ...runtimeState,
+      tokens: {
+        session: { value: 'abc', status: 'refreshing', failedAttempts: 0 },
+      },
+    } as RuntimeState
+
+    const stateWithErrorToken: RuntimeState = {
+      ...runtimeState,
+      tokens: {
+        session: { value: 'abc', status: 'error', failedAttempts: 2 },
+      },
+    } as RuntimeState
+
+    const stateWithNoTokens: RuntimeState = {
+      ...runtimeState,
+      tokens: {},
+    } as RuntimeState
+
+    it('resolves tokens.{id}.value to the token value when status is ready', () => {
+      expect(resolveRuntimeReference('tokens.session.value', stateWithReadyToken)).toEqual({
+        status: 'resolved',
+        value: 'abc',
+        reference: parseRuntimeReference('tokens.session.value'),
+      })
+    })
+
+    it('resolves tokens.{id}.value to the current value when status is refreshing (proactive refresh does not block)', () => {
+      expect(resolveRuntimeReference('tokens.session.value', stateWithRefreshingToken)).toEqual({
+        status: 'resolved',
+        value: 'abc',
+        reference: parseRuntimeReference('tokens.session.value'),
+      })
+    })
+
+    it('returns token-error status when the token is in error state', () => {
+      const result = resolveRuntimeReference('tokens.session.value', stateWithErrorToken)
+      expect(result.status).toBe('token-error')
+    })
+
+    it('returns missing when the referenced tokenId does not exist in state.tokens', () => {
+      expect(resolveRuntimeReference('tokens.unknown.value', stateWithNoTokens)).toEqual({
+        status: 'missing',
+        reference: parseRuntimeReference('tokens.unknown.value'),
+      })
+    })
+
+    it('does not throw and returns missing when state.tokens is undefined (legacy / partial state)', () => {
+      const stateWithoutTokensDomain = {
+        ...runtimeState,
+        // tokens omitted intentionally
+      } as unknown as RuntimeState
+
+      expect(() => resolveRuntimeReference('tokens.session.value', stateWithoutTokensDomain)).not.toThrow()
+
+      expect(resolveRuntimeReference('tokens.session.value', stateWithoutTokensDomain)).toEqual({
+        status: 'missing',
+        reference: parseRuntimeReference('tokens.session.value'),
+      })
+    })
+
+    it('returns empty string from resolveRuntimeVisibleValue when the token is in error state', () => {
+      expect(
+        resolveRuntimeVisibleValue('tokens.session.value', stateWithErrorToken, 'heading.props.text'),
+      ).toBe('')
+    })
+
+    it('resolves {{tokens.session.value}} interpolation to empty string when token is in error state', () => {
+      expect(
+        resolveRuntimeVisibleValue('Header: {{tokens.session.value}}', stateWithErrorToken, 'heading.props.text'),
+      ).toBe('Header: ')
+    })
+
+    it('resolves {{tokens.session.value}} interpolation to the token value when status is ready', () => {
+      expect(
+        resolveRuntimeVisibleValue('Bearer: {{tokens.session.value}}', stateWithReadyToken, 'heading.props.text'),
+      ).toBe('Bearer: abc')
+    })
+  })
 })

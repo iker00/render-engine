@@ -2340,4 +2340,172 @@ describe('validateRuntimeConfig', () => {
     // onError at root is silently discarded — no error
     expect(result.status).toBe('ready')
   })
+
+  describe('tokens.* gating in form submitAction', () => {
+    it('accepts tokens.* in form.submitAction.headers', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithFormLayout({
+          submitAction: {
+            type: 'executeOperation',
+            operationName: 'submitUserForm',
+            headers: { Authorization: 'tokens.session.value' },
+          },
+        }),
+      )
+      expect(result.status).toBe('ready')
+    })
+
+    it('accepts tokens.* in form.submitAction executeOperations.operations[].headers', () => {
+      const result = validateRuntimeConfig({
+        api: { submitUserForm: { method: 'POST', endpoint: '/api/forms' } },
+        pages: [
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'form',
+                id: 'user-form',
+                submitAction: {
+                  type: 'executeOperations',
+                  operations: [
+                    { operationName: 'submitUserForm', headers: { Authorization: 'tokens.session.value' } },
+                  ],
+                },
+                children: [],
+              },
+            ],
+          },
+        ],
+        initialPage: 'home',
+      })
+      expect(result.status).toBe('ready')
+    })
+
+    it('rejects tokens.* in form.submitAction.query', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithFormLayout({
+          submitAction: {
+            type: 'executeOperation',
+            operationName: 'submitUserForm',
+            query: { token: 'tokens.session.value' },
+          },
+        }),
+      )
+      expect(result.status).toBe('error')
+      if (result.status === 'error') {
+        expect(result.error.message).toContain('tokens.*')
+      }
+    })
+
+    it('rejects tokens.* in form.submitAction.body', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithFormLayout({
+          submitAction: {
+            type: 'executeOperation',
+            operationName: 'submitUserForm',
+            body: { token: 'tokens.session.value' },
+          },
+        }),
+      )
+      expect(result.status).toBe('error')
+      if (result.status === 'error') {
+        expect(result.error.message).toContain('tokens.*')
+      }
+    })
+
+    it('rejects tokens.* in form.submitAction executeOperations.operations[].body', () => {
+      const result = validateRuntimeConfig({
+        api: { submitUserForm: { method: 'POST', endpoint: '/api/forms' } },
+        pages: [
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'form',
+                id: 'user-form',
+                submitAction: {
+                  type: 'executeOperations',
+                  operations: [
+                    { operationName: 'submitUserForm', body: { token: 'tokens.session.value' } },
+                  ],
+                },
+                children: [],
+              },
+            ],
+          },
+        ],
+        initialPage: 'home',
+      })
+      expect(result.status).toBe('error')
+      if (result.status === 'error') {
+        expect(result.error.message).toContain('tokens.*')
+      }
+    })
+  })
+
+  describe('tokens.* gating in form field defaultValue', () => {
+    it('rejects tokens.* in input.props.defaultValue', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithFormLayout({
+          children: [
+            {
+              type: 'input',
+              props: {
+                fieldId: 'name',
+                label: 'Name',
+                defaultValue: 'tokens.session.value',
+              },
+            },
+          ],
+        }),
+      )
+      expect(result.status).toBe('error')
+      if (result.status === 'error') {
+        expect(result.error.message).toContain('tokens.*')
+      }
+    })
+
+    it('rejects tokens.* in textarea.props.defaultValue', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithFormLayout({
+          children: [
+            {
+              type: 'textarea',
+              props: {
+                fieldId: 'bio',
+                label: 'Bio',
+                defaultValue: 'tokens.session.value',
+              },
+            },
+          ],
+        }),
+      )
+      expect(result.status).toBe('error')
+      if (result.status === 'error') {
+        expect(result.error.message).toContain('tokens.*')
+      }
+    })
+
+    it('rejects tokens.* in select.props.defaultValue (single)', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithFormLayout({
+          children: [
+            {
+              type: 'select',
+              props: {
+                fieldId: 'role',
+                label: 'Role',
+                defaultValue: 'tokens.session.value',
+                items: [{ label: 'Admin', value: 'admin' }],
+              },
+            },
+          ],
+        }),
+      )
+      expect(result.status).toBe('error')
+      if (result.status === 'error') {
+        expect(result.error.message).toContain('tokens.*')
+      }
+    })
+  })
 })

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useState } from 'react'
 import type { Dispatch, ReactNode } from 'react'
 import { useContext, useMemo, useReducer, useRef } from 'react'
+import { useRuntimeTokenScheduler } from '../runtime-tokens'
 import type {
   NavigateToRuntimeUiAction,
   RuntimeApiRequestParams,
@@ -241,6 +242,9 @@ export function RuntimeStateProvider({ config, dataValues, activeLanguage, child
     }),
     [config, dispatch, dispatchAndSyncState, initialState, state],
   )
+
+  const getLatestStateForScheduler = useCallback(() => latestStateRef.current, [])
+  useRuntimeTokenScheduler({ config, dispatch: dispatchAndSyncState, getLatestState: getLatestStateForScheduler })
 
   useLayoutEffect(() => {
     const normalizedHash = parseBrowserHashNavigationHash(window.location.hash, {

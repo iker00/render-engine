@@ -28,6 +28,7 @@ import {
 } from './runtime-config-zod'
 import { invalidLayout } from './runtime-config-validation-errors'
 import { hasRuntimeTemplateDelimiter, parseRuntimeReference } from '../runtime/runtime-references/runtime-reference-parser'
+import { isTokensReference } from './runtime-reference-namespace-guards'
 import {
   validateLayoutCollection,
   validateQueryStateFeedback,
@@ -220,6 +221,10 @@ export function validateInputNode(
     return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.defaultValue": input fields do not accept array literal defaultValue.`)
   }
 
+  if (typeof parseResult.data.props.defaultValue === 'string' && isTokensReference(parseResult.data.props.defaultValue)) {
+    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.defaultValue": tokens.* references are not supported in defaultValue.`)
+  }
+
   const validationsResult = validateFormFieldValidations(
     rawNode.props,
     parseResult.data.props.validations,
@@ -295,6 +300,10 @@ export function validateTextareaNode(
 
   if (Array.isArray(parseResult.data.props.defaultValue)) {
     return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.defaultValue": textarea fields do not accept array literal defaultValue.`)
+  }
+
+  if (typeof parseResult.data.props.defaultValue === 'string' && isTokensReference(parseResult.data.props.defaultValue)) {
+    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.defaultValue": tokens.* references are not supported in defaultValue.`)
   }
 
   const validationsResult = validateFormFieldValidations(rawNode.props, parseResult.data.props.validations, { type: 'textarea' }, path, pageId)
@@ -1010,6 +1019,10 @@ export function validateChoiceFieldDefaultValue(
   }
 
   if (!isMultiple) {
+    if (typeof defaultValue === 'string' && isTokensReference(defaultValue)) {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}": tokens.* references are not supported in defaultValue.`)
+    }
+
     return null
   }
 

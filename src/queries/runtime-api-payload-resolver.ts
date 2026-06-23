@@ -1,5 +1,8 @@
 import type { RuntimeApiBodyValue, RuntimeApiHeaders } from '../config/runtime-config'
-import { resolveRuntimeReference } from '../runtime/runtime-references/runtime-reference-resolver'
+import {
+  resolveRuntimeReference,
+  RUNTIME_TEMPLATE_PLACEHOLDER_PATTERN,
+} from '../runtime/runtime-references/runtime-reference-resolver'
 import type { RuntimeIterationContext } from '../runtime/runtime-references/runtime-reference-resolver'
 import type { RuntimeState } from '../runtime/runtime-state/runtime-state-types'
 import type { RuntimeApiHiddenFormFields } from './runtime-api-types'
@@ -13,7 +16,11 @@ interface ResolvePayloadValueOptions {
 export function resolvePayloadValue(
   value: string | number | boolean,
   options: ResolvePayloadValueOptions,
-) {
+):
+  | { status: 'ready'; value: string | number | boolean }
+  | { status: 'omit' }
+  | { status: 'error' }
+  | { status: 'token-error'; tokenId: string } {
   const { state, iterationContext, hiddenFormFields } = options
 
   if (typeof value !== 'string') {
@@ -32,6 +39,13 @@ export function resolvePayloadValue(
     } as const
   }
 
+  if (resolvedReference.status === 'token-error') {
+    return {
+      status: 'token-error',
+      tokenId: resolvedReference.reference.path[0],
+    } as const
+  }
+
   if (resolvedReference.status === 'resolved') {
     if (
       hiddenFormFields !== undefined &&
@@ -47,7 +61,7 @@ export function resolvePayloadValue(
 
     return {
       status: 'ready',
-      value: resolvedReference.value,
+      value: resolvedReference.value as string | number | boolean,
     } as const
   }
 
@@ -72,7 +86,7 @@ export function resolvePayloadValue(
 export function resolveJsonPayloadValue(
   value: RuntimeApiBodyValue,
   options: ResolvePayloadValueOptions,
-): { status: 'ready'; value: RuntimeApiBodyValue } | { status: 'omit' } | { status: 'error' } {
+): { status: 'ready'; value: RuntimeApiBodyValue } | { status: 'omit' } | { status: 'error' } | { status: 'token-error'; tokenId: string } {
   if (value === null) {
     return {
       status: 'ready',
@@ -85,6 +99,10 @@ export function resolveJsonPayloadValue(
 
     if (resolvedValue.status === 'omit') {
       return { status: 'omit' } as const
+    }
+
+    if (resolvedValue.status === 'token-error') {
+      return resolvedValue
     }
 
     if (resolvedValue.status === 'error' || !isRuntimeApiBodyRuntimeValue(resolvedValue.value)) {
@@ -117,6 +135,10 @@ export function resolveJsonPayloadValue(
         return { status: 'error' } as const
       }
 
+      if (resolvedItem.status === 'token-error') {
+        return resolvedItem
+      }
+
       if (resolvedItem.status === 'error') {
         return resolvedItem
       }
@@ -138,6 +160,10 @@ export function resolveJsonPayloadValue(
     if (resolvedChild.status === 'omit') {
       // Skip this key — omission at object level
       continue
+    }
+
+    if (resolvedChild.status === 'token-error') {
+      return resolvedChild
     }
 
     if (resolvedChild.status === 'error') {
@@ -195,9 +221,145 @@ export interface ResolveBodyResult {
 export interface ResolveFieldErrorResult {
   status: 'error'
   error: {
-    code: 'request-build-failed'
+    code: 'request-build-failed' | 'token-refresh-failed'
     message: string
   }
+}
+
+type ResolveHeaderValueResult =
+  | { status: 'ready'; value: string | number | boolean }
+  | { status: 'omit' }
+  | { status: 'error' }
+  | { status: 'token-error'; tokenId: string }
+
+/**
+ * Resolves a single header value, supporting both plain references and
+ * interpolated strings with `{{...}}` placeholders.
+ *
+ * If the value does not contain `{{`, it delegates to `resolvePayloadValue`
+ * preserving the exact existing behavior (complete reference, literal, omit,
+ * token-error, error).
+ *
+ * If the value contains `{{`, each placeholder is resolved individually and
+ * the fragments are concatenated into the final string. The semantics for each
+ * placeholder match D3 from the design:
+ *   - empty/whitespace placeholder → error (request-build-failed)
+ *   - token-error state → token-error propagation (cuts further processing)
+ *   - hidden-form-field condition → omit (the whole header is omitted)
+ *   - resolved string/number/boolean → inserted as string
+ *   - resolved null/object/array, missing (non-omittable), invalid, unsupported,
+ *     or literal → error (request-build-failed)
+ */
+function resolveHeaderTemplateValue(
+  rawValue: string,
+  headerKey: string,
+  options: ResolvePayloadValueOptions,
+): ResolveHeaderValueResult {
+  if (!rawValue.includes('{{')) {
+    // Delegate entirely to the existing resolver — no behavior change.
+    // Non-string `ready` values are passed through so that `resolveHeaders`
+    // can emit the original "unsupported header value" diagnostic message.
+    return resolvePayloadValue(rawValue, options)
+  }
+
+  // Interpolation path
+  const { state, iterationContext, hiddenFormFields } = options
+
+  let failed = false
+  let failedPlaceholder = ''
+  let tokenError: { tokenId: string } | null = null
+  let shouldOmit = false
+
+  // Reset lastIndex before iterating (global regex retains state between calls)
+  RUNTIME_TEMPLATE_PLACEHOLDER_PATTERN.lastIndex = 0
+
+  const resolved = rawValue.replace(RUNTIME_TEMPLATE_PLACEHOLDER_PATTERN, (_placeholder, rawReference: string) => {
+    // Stop processing further placeholders once we've already hit an error
+    if (failed || tokenError !== null || shouldOmit) {
+      return ''
+    }
+
+    const referenceValue = rawReference.trim()
+
+    if (referenceValue.length === 0) {
+      failed = true
+      failedPlaceholder = _placeholder
+      return ''
+    }
+
+    const result = resolveRuntimeReference(referenceValue, state, { iterationContext })
+
+    if (result.status === 'token-error') {
+      tokenError = { tokenId: result.reference.path[0] }
+      return ''
+    }
+
+    if (result.status === 'missing') {
+      // Check hidden-form-field omission condition (same logic as resolvePayloadValue)
+      if (
+        hiddenFormFields !== undefined &&
+        result.reference.namespace === 'forms' &&
+        result.reference.path.length === 2 &&
+        result.reference.path[0] === hiddenFormFields.formId &&
+        hiddenFormFields.fieldIds.has(result.reference.path[1])
+      ) {
+        shouldOmit = true
+        return ''
+      }
+
+      failed = true
+      failedPlaceholder = referenceValue
+      return ''
+    }
+
+    if (result.status === 'resolved') {
+      // Check hidden-form-field omission condition for resolved references too
+      if (
+        hiddenFormFields !== undefined &&
+        result.reference.namespace === 'forms' &&
+        result.reference.path.length === 2 &&
+        result.reference.path[0] === hiddenFormFields.formId &&
+        hiddenFormFields.fieldIds.has(result.reference.path[1])
+      ) {
+        shouldOmit = true
+        return ''
+      }
+
+      const value = result.value
+
+      if (typeof value === 'string') {
+        return value
+      }
+
+      if (typeof value === 'number' || typeof value === 'boolean') {
+        return String(value)
+      }
+
+      // null, object, array — not serializable as header value
+      failed = true
+      failedPlaceholder = referenceValue
+      return ''
+    }
+
+    // literal, invalid, unsupported — all produce request-build-failed
+    failed = true
+    failedPlaceholder = referenceValue
+    return ''
+  })
+
+  if (tokenError !== null) {
+    return { status: 'token-error', tokenId: (tokenError as { tokenId: string }).tokenId }
+  }
+
+  if (shouldOmit) {
+    return { status: 'omit' }
+  }
+
+  if (failed) {
+    return { status: 'error' }
+  }
+
+  return { status: 'ready', value: resolved }
 }
 
 export function resolveHeaders(
@@ -215,11 +377,21 @@ export function resolveHeaders(
   const headers: RuntimeApiHeaders = {}
 
   for (const [key, rawValue] of Object.entries(headersDefinition)) {
-    const resolvedValue = resolvePayloadValue(rawValue, options)
+    const resolvedValue = resolveHeaderTemplateValue(rawValue, key, options)
 
     if (resolvedValue.status === 'omit') {
       // Skip this header key
       continue
+    }
+
+    if (resolvedValue.status === 'token-error') {
+      return {
+        status: 'error',
+        error: {
+          code: 'token-refresh-failed',
+          message: `${messagePrefix} cannot build the request because token "${resolvedValue.tokenId}" is in error state.`,
+        },
+      }
     }
 
     if (resolvedValue.status === 'error') {
@@ -271,6 +443,16 @@ export function resolveBody(
   }
 
   const resolvedBody = resolveJsonPayloadValue(bodyDefinition, options)
+
+  if (resolvedBody.status === 'token-error') {
+    return {
+      status: 'error',
+      error: {
+        code: 'token-refresh-failed',
+        message: `${messagePrefix} cannot build the request because token "${resolvedBody.tokenId}" is in error state.`,
+      },
+    }
+  }
 
   if (resolvedBody.status === 'error') {
     return {

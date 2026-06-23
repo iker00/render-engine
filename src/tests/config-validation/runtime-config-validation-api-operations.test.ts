@@ -1275,4 +1275,135 @@ describe('validateRuntimeConfig', () => {
       })
     })
   })
+
+  describe('tokens.* gating in api operations', () => {
+    it('rejects tokens.* in api.{op}.query', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithApi({
+          getUser: { method: 'GET', endpoint: '/api/user', query: { token: 'tokens.session.value' } },
+        }),
+      )
+      expect(result.status).toBe('error')
+      if (result.status === 'error') {
+        expect(result.error.message).toContain('tokens.*')
+      }
+    })
+
+    it('rejects tokens.* in api.{op}.body', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithApi({
+          saveUser: { method: 'POST', endpoint: '/api/user', body: { token: 'tokens.session.value' } },
+        }),
+      )
+      expect(result.status).toBe('error')
+      if (result.status === 'error') {
+        expect(result.error.message).toContain('tokens.*')
+      }
+    })
+
+    it('rejects tokens.* nested in api.{op}.body', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithApi({
+          saveUser: { method: 'POST', endpoint: '/api/user', body: { nested: { token: 'tokens.session.value' } } },
+        }),
+      )
+      expect(result.status).toBe('error')
+      if (result.status === 'error') {
+        expect(result.error.message).toContain('tokens.*')
+      }
+    })
+
+    it('rejects tokens.* in api.{op}.endpoint placeholder', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithApi({
+          getUser: { method: 'GET', endpoint: '/api/{{tokens.session.value}}/data' },
+        }),
+      )
+      expect(result.status).toBe('error')
+      if (result.status === 'error') {
+        expect(result.error.message).toContain('tokens.*')
+      }
+    })
+
+    it('accepts tokens.* in api.{op}.headers', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithApi({
+          getUser: { method: 'GET', endpoint: '/api/user', headers: { Authorization: 'tokens.session.value' } },
+        }),
+      )
+      expect(result.status).toBe('ready')
+    })
+
+    it('rejects tokens.* in button.props.action.query', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithExecuteOperationButtonAction({ query: { token: 'tokens.session.value' } }),
+      )
+      expect(result.status).toBe('error')
+      if (result.status === 'error') {
+        expect(result.error.message).toContain('tokens.*')
+      }
+    })
+
+    it('rejects tokens.* in button.props.action.body', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithExecuteOperationButtonAction({ body: { token: 'tokens.session.value' } }),
+      )
+      expect(result.status).toBe('error')
+      if (result.status === 'error') {
+        expect(result.error.message).toContain('tokens.*')
+      }
+    })
+
+    it('accepts tokens.* in button.props.action.headers', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithExecuteOperationButtonAction({ headers: { Authorization: 'tokens.session.value' } }),
+      )
+      expect(result.status).toBe('ready')
+    })
+
+    it('rejects tokens.* in form.submitAction.query', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithFormLayout({
+          submitAction: {
+            type: 'executeOperation',
+            operationName: 'submitUserForm',
+            query: { token: 'tokens.session.value' },
+          },
+        }),
+      )
+      expect(result.status).toBe('error')
+      if (result.status === 'error') {
+        expect(result.error.message).toContain('tokens.*')
+      }
+    })
+
+    it('rejects tokens.* in form.submitAction.body', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithFormLayout({
+          submitAction: {
+            type: 'executeOperation',
+            operationName: 'submitUserForm',
+            body: { token: 'tokens.session.value' },
+          },
+        }),
+      )
+      expect(result.status).toBe('error')
+      if (result.status === 'error') {
+        expect(result.error.message).toContain('tokens.*')
+      }
+    })
+
+    it('accepts tokens.* in form.submitAction.headers', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithFormLayout({
+          submitAction: {
+            type: 'executeOperation',
+            operationName: 'submitUserForm',
+            headers: { Authorization: 'tokens.session.value' },
+          },
+        }),
+      )
+      expect(result.status).toBe('ready')
+    })
+  })
 })

@@ -54,6 +54,7 @@ export interface RuntimeApiError {
   code:
     | 'operation-not-found'
     | 'request-build-failed'
+    | 'token-refresh-failed'
     | 'network-error'
     | 'http-error'
     | 'invalid-json-response'

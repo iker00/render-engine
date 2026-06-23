@@ -19,6 +19,7 @@ import { validateLayoutCollection } from './validate-layout-nodes'
 import { validateFormSemantics, validateExecutionRequestParams } from './validate-form-nodes'
 import { validateFileManagerSemantics } from './validate-file-manager-nodes'
 import { validateTranslations } from './validate-translations'
+import { validateTokensConfig } from './validate-tokens-config'
 
 export function validateRuntimeConfig(rawConfig: unknown): RuntimeConfigValidationResult {
   // Extract and validate the optional translations block before the shell schema strips it
@@ -31,6 +32,9 @@ export function validateRuntimeConfig(rawConfig: unknown): RuntimeConfigValidati
       return { status: 'error', error: validatedTranslations.error }
     }
   }
+
+  // Extract the optional tokens block before the shell schema strips it
+  const rawTokens = isRecord(rawConfig) && 'tokens' in rawConfig ? rawConfig.tokens : undefined
 
   const configShellResult = runtimeConfigShellSchema.safeParse(rawConfig)
 
@@ -60,6 +64,13 @@ export function validateRuntimeConfig(rawConfig: unknown): RuntimeConfigValidati
 
   if (apiResult.status === 'error') {
     return apiResult
+  }
+
+  // Validate the tokens block after api is validated (cross-check needs api operation names)
+  const tokensResult = validateTokensConfig(rawTokens, new Set(Object.keys(apiResult.api)))
+
+  if (tokensResult.status === 'error') {
+    return { status: 'error', error: tokensResult.error }
   }
 
   const pageShellResults: Array<{
@@ -139,6 +150,10 @@ export function validateRuntimeConfig(rawConfig: unknown): RuntimeConfigValidati
 
   if (validatedTranslations !== null && validatedTranslations.status === 'ok') {
     config.translations = validatedTranslations.translations
+  }
+
+  if (tokensResult.status === 'ready' && Object.keys(tokensResult.tokens).length > 0) {
+    config.tokens = tokensResult.tokens
   }
 
   const page = config.pages.find((entry) => entry.id === config.initialPage)

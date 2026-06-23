@@ -134,7 +134,7 @@ export async function executeBuiltRuntimeApiRequest({
   }
 }
 
-function resolveBodyPath(body: unknown, dotPath: string): { found: true; value: unknown } | { found: false } {
+export function resolveBodyPath(body: unknown, dotPath: string): { found: true; value: unknown } | { found: false } {
   const segments = dotPath.split('.')
   let current: unknown = body
 

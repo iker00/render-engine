@@ -804,4 +804,47 @@ describe('validateRuntimeConfig', () => {
       })
     })
   })
+
+  describe('tokens.* gating in visibility and when', () => {
+    it('rejects tokens.* in visibility.reference with exact message', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithLayout([
+          {
+            type: 'heading',
+            props: { text: 'Hello', level: 1 },
+            visibility: { reference: 'tokens.session.value', operator: 'isTruthy' },
+          },
+        ]),
+      )
+      expect(result.status).toBe('error')
+      if (result.status === 'error') {
+        expect(result.error.message).toBe(
+          'Page "home" has an invalid layout at "layout[0].visibility.reference": tokens.* references are not supported in visibility or when conditions.',
+        )
+      }
+    })
+
+    it('rejects tokens.* in when.reference within preloads', () => {
+      const result = validateRuntimeConfig({
+        api: {},
+        pages: [
+          {
+            id: 'home',
+            layout: [],
+            preloads: [
+              {
+                loadUser: {},
+                when: { reference: 'tokens.session.value', operator: 'isTruthy' },
+              },
+            ],
+          },
+        ],
+        initialPage: 'home',
+      })
+      expect(result.status).toBe('error')
+      if (result.status === 'error') {
+        expect(result.error.message).toContain('tokens.* references are not supported')
+      }
+    })
+  })
 })

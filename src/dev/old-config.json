@@ -16,9 +16,33 @@
       "method": "GET",
       "endpoint": "https://jsonplaceholder.typicode.com/posts"
     },
+    "savePost": {
+      "method": "POST",
+      "endpoint": "https://jsonplaceholder.typicode.com/posts"
+    },
     "getComments": {
       "method": "GET",
       "endpoint": "https://jsonplaceholder.typicode.com/todos"
+    },
+    "getFiles": {
+      "method": "GET",
+      "endpoint": "http://localhost:3001/api/files"
+    },
+    "uploadFile": {
+      "method": "POST",
+      "endpoint": "http://localhost:3001/api/files/upload"
+    },
+    "deleteFile": {
+      "method": "DELETE",
+      "endpoint": "http://localhost:3001/api/files"
+    },
+    "viewFile": {
+      "method": "GET",
+      "endpoint": "http://localhost:3001/api/files/view"
+    },
+    "downloadFile": {
+      "method": "GET",
+      "endpoint": "http://localhost:3001/api/files/download"
     }
   },
   "pages": [
@@ -171,6 +195,7 @@
                 {
                   "type": "input",
                   "props": {
+                    "icon": "bell",
                     "fieldId": "fullName",
                     "label": "Nombre y apellidos",
                     "defaultValue": "Ada Lovelace"
@@ -182,7 +207,8 @@
                     "inputType": "email",
                     "fieldId": "email",
                     "label": "Correo electrónico",
-                    "defaultValue": "ada@example.com"
+                    "defaultValue": "ada@example.com",
+                    "icon": "mail"
                   }
                 }
               ]
@@ -436,6 +462,17 @@
           }
         },
         {
+          "type": "alert",
+          "props": {
+            "type": "success",
+            "message": "Post saved successfully"
+          },
+          "visibility": {
+            "reference": "params.success",
+            "operator": "isTruthy"
+          }
+        },
+        {
           "type": "form",
           "id": "postForm",
           "submitAction": {
@@ -457,7 +494,8 @@
                   "source": "queries.searchUsers.data",
                   "label": "name",
                   "value": "id"
-                }
+                },
+                "defaultValue": "params.authorId"
               },
               "queryStateFeedback": {
                 "query": "searchUsers",
@@ -526,10 +564,467 @@
                 "mode": "fallback",
                 "fallback": [
                   {
-                    "type": "paragraph",
+                    "type": "container",
                     "props": {
-                      "text": "Cargando..."
-                    }
+                      "gap": "md"
+                    },
+                    "children": [
+                      {
+                        "type": "container",
+                        "props": {
+                          "gap": "md"
+                        },
+                        "children": [
+                          {
+                            "type": "container",
+                            "props": {
+                              "columns": 12,
+                              "gap": "md",
+                              "variant": "card"
+                            },
+                            "children": [
+                              {
+                                "type": "skeleton",
+                                "layout": {
+                                  "span": 3
+                                },
+                                "props": {
+                                  "variant": "rect",
+                                  "height": "full",
+                                  "rounded": true
+                                }
+                              },
+                              {
+                                "type": "container",
+                                "layout": {
+                                  "span": 9
+                                },
+                                "props": {
+                                  "gap": "sm"
+                                },
+                                "children": [
+                                  {
+                                    "type": "skeleton",
+                                    "props": {
+                                      "variant": "rect",
+                                      "width": "2/3",
+                                      "height": "8"
+                                    }
+                                  },
+                                  {
+                                    "type": "skeleton",
+                                    "props": {
+                                      "variant": "text",
+                                      "lines": 2
+                                    }
+                                  },
+                                  {
+                                    "type": "container",
+                                    "props": {
+                                      "direction": "row",
+                                      "gap": "sm"
+                                    },
+                                    "children": [
+                                      {
+                                        "type": "skeleton",
+                                        "props": {
+                                          "variant": "rect",
+                                          "width": "16",
+                                          "height": "5",
+                                          "rounded": true
+                                        }
+                                      },
+                                      {
+                                        "type": "skeleton",
+                                        "props": {
+                                          "variant": "rect",
+                                          "width": "16",
+                                          "height": "5",
+                                          "rounded": true
+                                        }
+                                      },
+                                      {
+                                        "type": "skeleton",
+                                        "props": {
+                                          "variant": "rect",
+                                          "width": "16",
+                                          "height": "5",
+                                          "rounded": true
+                                        }
+                                      }
+                                    ]
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "type": "container",
+                        "props": {
+                          "gap": "md"
+                        },
+                        "children": [
+                          {
+                            "type": "container",
+                            "props": {
+                              "columns": 12,
+                              "gap": "md",
+                              "variant": "card"
+                            },
+                            "children": [
+                              {
+                                "type": "skeleton",
+                                "layout": {
+                                  "span": 3
+                                },
+                                "props": {
+                                  "variant": "rect",
+                                  "height": "full",
+                                  "rounded": true
+                                }
+                              },
+                              {
+                                "type": "container",
+                                "layout": {
+                                  "span": 9
+                                },
+                                "props": {
+                                  "gap": "sm"
+                                },
+                                "children": [
+                                  {
+                                    "type": "skeleton",
+                                    "props": {
+                                      "variant": "rect",
+                                      "width": "2/3",
+                                      "height": "8"
+                                    }
+                                  },
+                                  {
+                                    "type": "skeleton",
+                                    "props": {
+                                      "variant": "text",
+                                      "lines": 2
+                                    }
+                                  },
+                                  {
+                                    "type": "container",
+                                    "props": {
+                                      "direction": "row",
+                                      "gap": "sm"
+                                    },
+                                    "children": [
+                                      {
+                                        "type": "skeleton",
+                                        "props": {
+                                          "variant": "rect",
+                                          "width": "16",
+                                          "height": "5",
+                                          "rounded": true
+                                        }
+                                      },
+                                      {
+                                        "type": "skeleton",
+                                        "props": {
+                                          "variant": "rect",
+                                          "width": "16",
+                                          "height": "5",
+                                          "rounded": true
+                                        }
+                                      },
+                                      {
+                                        "type": "skeleton",
+                                        "props": {
+                                          "variant": "rect",
+                                          "width": "16",
+                                          "height": "5",
+                                          "rounded": true
+                                        }
+                                      }
+                                    ]
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "type": "container",
+                        "props": {
+                          "gap": "md"
+                        },
+                        "children": [
+                          {
+                            "type": "container",
+                            "props": {
+                              "columns": 12,
+                              "gap": "md",
+                              "variant": "card"
+                            },
+                            "children": [
+                              {
+                                "type": "skeleton",
+                                "layout": {
+                                  "span": 3
+                                },
+                                "props": {
+                                  "variant": "rect",
+                                  "height": "full",
+                                  "rounded": true
+                                }
+                              },
+                              {
+                                "type": "container",
+                                "layout": {
+                                  "span": 9
+                                },
+                                "props": {
+                                  "gap": "sm"
+                                },
+                                "children": [
+                                  {
+                                    "type": "skeleton",
+                                    "props": {
+                                      "variant": "rect",
+                                      "width": "2/3",
+                                      "height": "8"
+                                    }
+                                  },
+                                  {
+                                    "type": "skeleton",
+                                    "props": {
+                                      "variant": "text",
+                                      "lines": 2
+                                    }
+                                  },
+                                  {
+                                    "type": "container",
+                                    "props": {
+                                      "direction": "row",
+                                      "gap": "sm"
+                                    },
+                                    "children": [
+                                      {
+                                        "type": "skeleton",
+                                        "props": {
+                                          "variant": "rect",
+                                          "width": "16",
+                                          "height": "5",
+                                          "rounded": true
+                                        }
+                                      },
+                                      {
+                                        "type": "skeleton",
+                                        "props": {
+                                          "variant": "rect",
+                                          "width": "16",
+                                          "height": "5",
+                                          "rounded": true
+                                        }
+                                      },
+                                      {
+                                        "type": "skeleton",
+                                        "props": {
+                                          "variant": "rect",
+                                          "width": "16",
+                                          "height": "5",
+                                          "rounded": true
+                                        }
+                                      }
+                                    ]
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "type": "container",
+                        "props": {
+                          "gap": "md"
+                        },
+                        "children": [
+                          {
+                            "type": "container",
+                            "props": {
+                              "columns": 12,
+                              "gap": "md",
+                              "variant": "card"
+                            },
+                            "children": [
+                              {
+                                "type": "skeleton",
+                                "layout": {
+                                  "span": 3
+                                },
+                                "props": {
+                                  "variant": "rect",
+                                  "height": "full",
+                                  "rounded": true
+                                }
+                              },
+                              {
+                                "type": "container",
+                                "layout": {
+                                  "span": 9
+                                },
+                                "props": {
+                                  "gap": "sm"
+                                },
+                                "children": [
+                                  {
+                                    "type": "skeleton",
+                                    "props": {
+                                      "variant": "rect",
+                                      "width": "2/3",
+                                      "height": "8"
+                                    }
+                                  },
+                                  {
+                                    "type": "skeleton",
+                                    "props": {
+                                      "variant": "text",
+                                      "lines": 2
+                                    }
+                                  },
+                                  {
+                                    "type": "container",
+                                    "props": {
+                                      "direction": "row",
+                                      "gap": "sm"
+                                    },
+                                    "children": [
+                                      {
+                                        "type": "skeleton",
+                                        "props": {
+                                          "variant": "rect",
+                                          "width": "16",
+                                          "height": "5",
+                                          "rounded": true
+                                        }
+                                      },
+                                      {
+                                        "type": "skeleton",
+                                        "props": {
+                                          "variant": "rect",
+                                          "width": "16",
+                                          "height": "5",
+                                          "rounded": true
+                                        }
+                                      },
+                                      {
+                                        "type": "skeleton",
+                                        "props": {
+                                          "variant": "rect",
+                                          "width": "16",
+                                          "height": "5",
+                                          "rounded": true
+                                        }
+                                      }
+                                    ]
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "type": "container",
+                        "props": {
+                          "gap": "md"
+                        },
+                        "children": [
+                          {
+                            "type": "container",
+                            "props": {
+                              "columns": 12,
+                              "gap": "md",
+                              "variant": "card"
+                            },
+                            "children": [
+                              {
+                                "type": "skeleton",
+                                "layout": {
+                                  "span": 3
+                                },
+                                "props": {
+                                  "variant": "rect",
+                                  "height": "full",
+                                  "rounded": true
+                                }
+                              },
+                              {
+                                "type": "container",
+                                "layout": {
+                                  "span": 9
+                                },
+                                "props": {
+                                  "gap": "sm"
+                                },
+                                "children": [
+                                  {
+                                    "type": "skeleton",
+                                    "props": {
+                                      "variant": "rect",
+                                      "width": "2/3",
+                                      "height": "8"
+                                    }
+                                  },
+                                  {
+                                    "type": "skeleton",
+                                    "props": {
+                                      "variant": "text",
+                                      "lines": 2
+                                    }
+                                  },
+                                  {
+                                    "type": "container",
+                                    "props": {
+                                      "direction": "row",
+                                      "gap": "sm"
+                                    },
+                                    "children": [
+                                      {
+                                        "type": "skeleton",
+                                        "props": {
+                                          "variant": "rect",
+                                          "width": "16",
+                                          "height": "5",
+                                          "rounded": true
+                                        }
+                                      },
+                                      {
+                                        "type": "skeleton",
+                                        "props": {
+                                          "variant": "rect",
+                                          "width": "16",
+                                          "height": "5",
+                                          "rounded": true
+                                        }
+                                      },
+                                      {
+                                        "type": "skeleton",
+                                        "props": {
+                                          "variant": "rect",
+                                          "width": "16",
+                                          "height": "5",
+                                          "rounded": true
+                                        }
+                                      }
+                                    ]
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
                   }
                 ]
               },
@@ -687,6 +1182,28 @@
               "id": "editPost",
               "persistOnUnmount": false,
               "resetOnSuccess": false,
+              "submitAction": {
+                "type": "executeOperation",
+                "operationName": "savePost",
+                "body": {
+                  "title": "forms.editPost.title"
+                },
+                "onSuccess": [
+                  {
+                    "type": "navigateTo",
+                    "pageId": "search-posts",
+                    "params": {
+                      "authorId": "queries.getPost.data.0.userId",
+                      "success": true
+                    },
+                    "when": {
+                      "reference": "forms.editPost.title",
+                      "operator": "equals",
+                      "value": "hola"
+                    }
+                  }
+                ]
+              },
               "queryStateFeedback": {
                 "query": "getPost",
                 "states": {
@@ -707,6 +1224,7 @@
                 {
                   "type": "input",
                   "props": {
+                    "icon": "captions",
                     "fieldId": "title",
                     "label": "Title",
                     "defaultValue": "queries.getPost.data.0.title"
@@ -715,6 +1233,7 @@
                 {
                   "type": "input",
                   "props": {
+                    "icon": "captions",
                     "fieldId": "body",
                     "label": "Body",
                     "defaultValue": "queries.getPost.data.0.body"
@@ -726,6 +1245,7 @@
                     "fieldId": "userId",
                     "label": "Author",
                     "items": {
+                      "icon": "user",
                       "source": "queries.searchUsers.data",
                       "label": "name",
                       "value": "id"
@@ -806,6 +1326,7 @@
                 {
                   "type": "input",
                   "props": {
+                    "user": "user",
                     "fieldId": "name",
                     "label": "Name",
                     "validations": {
@@ -821,6 +1342,7 @@
                 {
                   "type": "input",
                   "props": {
+                    "icon": "mail",
                     "inputType": "email",
                     "fieldId": "email",
                     "label": "Email",
@@ -836,6 +1358,7 @@
                 {
                   "type": "input",
                   "props": {
+                    "icon": "hash",
                     "inputType": "number",
                     "fieldId": "number",
                     "label": "Número",
@@ -950,6 +1473,7 @@
                 {
                   "type": "input",
                   "props": {
+                    "icon": "id-card",
                     "fieldId": "personal_dni",
                     "label": "DNI"
                   }
@@ -957,6 +1481,7 @@
                 {
                   "type": "input",
                   "props": {
+                    "icon": "calendar",
                     "inputType": "date",
                     "fieldId": "personal_nacimiento",
                     "label": "Fecha de nacimiento"
@@ -3488,6 +4013,300 @@
               }
             }
           ]
+        },
+        {
+          "type": "container",
+          "props": {
+            "gap": "md"
+          },
+          "children": [
+            {
+              "type": "container",
+              "props": {
+                "columns": 12,
+                "gap": "md",
+                "variant": "card"
+              },
+              "children": [
+                {
+                  "type": "skeleton",
+                  "layout": {
+                    "span": 3
+                  },
+                  "props": {
+                    "variant": "rect",
+                    "height": "24",
+                    "rounded": true
+                  }
+                },
+                {
+                  "type": "container",
+                  "layout": {
+                    "span": 9
+                  },
+                  "props": {
+                    "gap": "sm"
+                  },
+                  "children": [
+                    {
+                      "type": "skeleton",
+                      "props": {
+                        "variant": "rect",
+                        "width": "2/3",
+                        "height": "4"
+                      }
+                    },
+                    {
+                      "type": "skeleton",
+                      "props": {
+                        "variant": "text",
+                        "lines": 2
+                      }
+                    },
+                    {
+                      "type": "container",
+                      "props": {
+                        "direction": "row",
+                        "gap": "sm"
+                      },
+                      "children": [
+                        {
+                          "type": "skeleton",
+                          "props": {
+                            "variant": "rect",
+                            "width": "16",
+                            "height": "5",
+                            "rounded": true
+                          }
+                        },
+                        {
+                          "type": "skeleton",
+                          "props": {
+                            "variant": "rect",
+                            "width": "16",
+                            "height": "5",
+                            "rounded": true
+                          }
+                        },
+                        {
+                          "type": "skeleton",
+                          "props": {
+                            "variant": "rect",
+                            "width": "16",
+                            "height": "5",
+                            "rounded": true
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "container",
+              "props": {
+                "columns": 12,
+                "gap": "md",
+                "variant": "card"
+              },
+              "children": [
+                {
+                  "type": "skeleton",
+                  "layout": {
+                    "span": 3
+                  },
+                  "props": {
+                    "variant": "rect",
+                    "height": "24",
+                    "rounded": true
+                  }
+                },
+                {
+                  "type": "container",
+                  "layout": {
+                    "span": 9
+                  },
+                  "props": {
+                    "gap": "sm"
+                  },
+                  "children": [
+                    {
+                      "type": "skeleton",
+                      "props": {
+                        "variant": "rect",
+                        "width": "2/3",
+                        "height": "4"
+                      }
+                    },
+                    {
+                      "type": "skeleton",
+                      "props": {
+                        "variant": "text",
+                        "lines": 2
+                      }
+                    },
+                    {
+                      "type": "container",
+                      "props": {
+                        "direction": "row",
+                        "gap": "sm"
+                      },
+                      "children": [
+                        {
+                          "type": "skeleton",
+                          "props": {
+                            "variant": "rect",
+                            "width": "16",
+                            "height": "5",
+                            "rounded": true
+                          }
+                        },
+                        {
+                          "type": "skeleton",
+                          "props": {
+                            "variant": "rect",
+                            "width": "16",
+                            "height": "5",
+                            "rounded": true
+                          }
+                        },
+                        {
+                          "type": "skeleton",
+                          "props": {
+                            "variant": "rect",
+                            "width": "16",
+                            "height": "5",
+                            "rounded": true
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "container",
+              "props": {
+                "columns": 12,
+                "gap": "md",
+                "variant": "card"
+              },
+              "children": [
+                {
+                  "type": "skeleton",
+                  "layout": {
+                    "span": 3
+                  },
+                  "props": {
+                    "variant": "rect",
+                    "height": "24",
+                    "rounded": true
+                  }
+                },
+                {
+                  "type": "container",
+                  "layout": {
+                    "span": 9
+                  },
+                  "props": {
+                    "gap": "sm"
+                  },
+                  "children": [
+                    {
+                      "type": "skeleton",
+                      "props": {
+                        "variant": "rect",
+                        "width": "2/3",
+                        "height": "4"
+                      }
+                    },
+                    {
+                      "type": "skeleton",
+                      "props": {
+                        "variant": "text",
+                        "lines": 2
+                      }
+                    },
+                    {
+                      "type": "container",
+                      "props": {
+                        "direction": "row",
+                        "gap": "sm"
+                      },
+                      "children": [
+                        {
+                          "type": "skeleton",
+                          "props": {
+                            "variant": "rect",
+                            "width": "16",
+                            "height": "5",
+                            "rounded": true
+                          }
+                        },
+                        {
+                          "type": "skeleton",
+                          "props": {
+                            "variant": "rect",
+                            "width": "16",
+                            "height": "5",
+                            "rounded": true
+                          }
+                        },
+                        {
+                          "type": "skeleton",
+                          "props": {
+                            "variant": "rect",
+                            "width": "16",
+                            "height": "5",
+                            "rounded": true
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "fileManager",
+          "props": {
+            "fieldName": "prueba-field-name",
+            "fileField": "file",
+            "listPath": "files",
+            "fileIdField": "id",
+            "fileNameField": "name",
+            "multiple": true,
+            "prefix": "fichero_",
+            "acceptExtension": [
+              ".jpg",
+              ".pdf"
+            ],
+            "getOperation": "getFiles",
+            "uploadOperation": "uploadFile",
+            "deleteOperation": "deleteFile",
+            "viewOperation": "viewFile",
+            "downloadOperation": "downloadFile",
+            "validations": {
+              "accept": {
+                "value": [
+                  "image/jpeg",
+                  "application/pdf"
+                ],
+                "message": "Solo se permiten archivos jpeg y PDF"
+              },
+              "maxFileSize": {
+                "value": 6,
+                "message": "El tamaño máximo permitido es de 6 MB"
+              }
+            },
+            "pagination": {
+              "pageSize": 1
+            }
+          }
         }
       ]
     }

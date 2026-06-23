@@ -30,6 +30,7 @@ function makeState(forms: RuntimeState['forms'] = {}): RuntimeState {
     },
     modal: { activeModalId: null, activeIterationKey: null },
     i18n: { translations: {}, activeLanguage: 'es' },
+    tokens: {},
   }
 }
 
@@ -315,6 +316,41 @@ describe('resolveQuery — omit handling (via buildRuntimeApiRequest)', () => {
         code: 'request-build-failed',
         message: expect.stringContaining('endpoint'),
       },
+    })
+  })
+})
+
+describe('resolveHeaders — token regression (non-token references unaffected)', () => {
+  it('resolves form reference in headers without token interference', () => {
+    const state = makeState(makeFormState({ apiKey: 'key-from-form' }))
+    const result = resolveHeaders(
+      { 'X-Api-Key': 'forms.myForm.apiKey' },
+      'The api operation "test"',
+      { state },
+    )
+    expect(result).toEqual({
+      status: 'ready',
+      headers: { 'X-Api-Key': 'key-from-form' },
+    })
+  })
+
+  it('resolves a params reference in headers without token interference', () => {
+    const stateWithParams = makeState()
+    const stateOverridden = {
+      ...stateWithParams,
+      navigation: {
+        ...stateWithParams.navigation,
+        history: [{ entryId: 0, pageId: 'home', params: { userId: 'u1' } }],
+      },
+    }
+    const result = resolveHeaders(
+      { 'X-User': 'params.userId' },
+      'The api operation "test"',
+      { state: stateOverridden },
+    )
+    expect(result).toEqual({
+      status: 'ready',
+      headers: { 'X-User': 'u1' },
     })
   })
 })

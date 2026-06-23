@@ -557,7 +557,7 @@ describe('RuntimePage', () => {
     expect(screen.getByRole('button', { name: 'Save urgent' })).toHaveAttribute('type', 'submit')
   })
 
-  it('keeps partial template strings literal in form submitAction query body and headers', async () => {
+  it('keeps partial template strings literal in form submitAction query and body, but interpolates {{...}} in headers', async () => {
     const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
       new Response(JSON.stringify({ ok: true }), {
         status: 200,
@@ -611,14 +611,17 @@ describe('RuntimePage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Submit profile' }))
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+    // query: {{...}} is kept as literal (no interpolation in query surface)
     expect(fetchMock.mock.calls[0]?.[0]).toBe('/api/profile?name=prefix-%7B%7Bforms.profile-form.name%7D%7D')
+    // headers: {{...}} IS interpolated — "Bearer {{forms.profile-form.name}}" resolves to "Bearer Ada"
     expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({
       method: 'POST',
       headers: {
-        authorization: 'Bearer {{forms.profile-form.name}}',
+        authorization: 'Bearer Ada',
         'content-type': 'application/json',
       },
     })
+    // body: {{...}} is kept as literal (no interpolation in body surface)
     expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toEqual({
       name: 'prefix-{{forms.profile-form.name}}',
     })

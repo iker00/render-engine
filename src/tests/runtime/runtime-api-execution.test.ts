@@ -457,7 +457,7 @@ describe('Runtime api execution', () => {
     })
   })
 
-  it('keeps partial template strings literal across api query body and headers while complete missing references still fail', () => {
+  it('keeps partial template strings literal in api query and body while interpolating {{...}} in headers', () => {
     const configWithPartialTemplates: RuntimeConfig = {
       ...runtimeConfig,
       api: {
@@ -488,6 +488,8 @@ describe('Runtime api execution', () => {
       },
     }
 
+    // query and body: {{...}} strings are treated as literals (no interpolation in those surfaces).
+    // headers: {{...}} strings ARE interpolated — "Bearer {{forms.userSearch.term}}" resolves to "Bearer Ada".
     expect(
       buildRuntimeApiRequest({
         config: configWithPartialTemplates,
@@ -503,7 +505,7 @@ describe('Runtime api execution', () => {
         init: {
           method: 'POST',
           headers: {
-            authorization: 'Bearer {{forms.userSearch.term}}',
+            authorization: 'Bearer Ada',
             'content-type': 'application/json',
           },
           body: JSON.stringify({
@@ -2623,6 +2625,158 @@ describe('Runtime api errorCondition evaluation', () => {
     expect(result).toEqual({
       status: 'error',
       error: { code: 'FAIL', message: 'Fallo' },
+    })
+  })
+})
+
+describe('Runtime api header interpolation — api.headers surface (T2 integration)', () => {
+  function makeStateWithToken(
+    tokenId: string,
+    status: 'ready' | 'error',
+    value = '',
+  ): RuntimeState {
+    return {
+      ...runtimeState,
+      tokens: {
+        [tokenId]: status === 'ready' ? { status: 'ready', value, failedAttempts: 0 } : { status: 'error' },
+      },
+    }
+  }
+
+  it('resolves "Bearer {{tokens.sede.value}}" in api.headers when token is ready', () => {
+    const state = makeStateWithToken('sede', 'ready', 'XYZ')
+    const result = buildRuntimeApiRequest({
+      config: {
+        ...runtimeConfig,
+        api: {
+          secureGet: {
+            method: 'GET',
+            endpoint: '/api/secure',
+            headers: {
+              Authorization: 'Bearer {{tokens.sede.value}}',
+            },
+          },
+        },
+      },
+      operationName: 'secureGet',
+      state,
+    })
+
+    expect(result).toEqual({
+      status: 'ready',
+      request: expect.objectContaining({
+        init: expect.objectContaining({
+          headers: expect.objectContaining({
+            Authorization: 'Bearer XYZ',
+          }),
+        }),
+      }),
+    })
+  })
+
+  it('resolves multi-placeholder "{{params.tenantId}}-{{queries.session.data.userId}}" in api.headers', () => {
+    const state: RuntimeState = {
+      ...runtimeState,
+      navigation: {
+        currentPageId: 'details',
+        history: [
+          { entryId: 0, pageId: 'home', params: {} },
+          { entryId: 1, pageId: 'details', params: { tenantId: 'acme' } },
+        ],
+        currentEntryIndex: 1,
+        lastError: null,
+      },
+      pageEntry: {
+        entryId: 1,
+        pageId: 'details',
+        params: { tenantId: 'acme' },
+        preloadNames: [],
+        status: 'idle',
+      },
+      queries: {
+        ...runtimeState.queries,
+        session: {
+          status: 'success',
+          data: { userId: 'u-1' },
+          error: null,
+        },
+      },
+    }
+
+    const result = buildRuntimeApiRequest({
+      config: {
+        ...runtimeConfig,
+        api: {
+          multiHeader: {
+            method: 'GET',
+            endpoint: '/api/multi',
+            headers: {
+              'X-Header': '{{params.tenantId}}-{{queries.session.data.userId}}',
+            },
+          },
+        },
+      },
+      operationName: 'multiHeader',
+      state,
+    })
+
+    expect(result.status).toBe('ready')
+    if (result.status !== 'ready') return
+    expect((result.request.init.headers as Record<string, string>)['X-Header']).toBe('acme-u-1')
+  })
+
+  it('api.headers with placeholder whose token is in error produces token-refresh-failed', () => {
+    const state = makeStateWithToken('sede', 'error')
+    const result = buildRuntimeApiRequest({
+      config: {
+        ...runtimeConfig,
+        api: {
+          secureGet: {
+            method: 'GET',
+            endpoint: '/api/secure',
+            headers: {
+              Authorization: 'Bearer {{tokens.sede.value}}',
+            },
+          },
+        },
+      },
+      operationName: 'secureGet',
+      state,
+    })
+
+    expect(result).toEqual({
+      status: 'error',
+      error: {
+        code: 'token-refresh-failed',
+        message: expect.stringContaining('sede'),
+      },
+    })
+  })
+
+  it('api.headers with placeholder whose reference is missing produces request-build-failed', () => {
+    const result = buildRuntimeApiRequest({
+      config: {
+        ...runtimeConfig,
+        api: {
+          secureGet: {
+            method: 'GET',
+            endpoint: '/api/secure',
+            headers: {
+              'X-Custom': '{{params.nonExistentParam}}',
+            },
+          },
+        },
+      },
+      operationName: 'secureGet',
+      state: runtimeState,
+    })
+
+    expect(result).toEqual({
+      status: 'error',
+      error: {
+        code: 'request-build-failed',
+        message: expect.stringContaining('params.nonExistentParam'),
+      },
     })
   })
 })

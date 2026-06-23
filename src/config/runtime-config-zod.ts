@@ -767,3 +767,20 @@ export const fileManagerNodeSchema = z
       .strip(),
   })
   .strip()
+
+export const runtimeTokenRefreshSchema = z
+  .object({
+    operation: nonEmptyStringSchema,
+    responsePath: nonEmptyStringSchema,
+    intervalSeconds: z.number().int().positive(),
+  })
+  .strip()
+
+export const runtimeTokenConfigSchema = z
+  .object({
+    value: nonEmptyStringSchema,
+    refresh: runtimeTokenRefreshSchema.optional(),
+  })
+  .strip()
+
+export const runtimeTokensConfigSchema = z.record(nonEmptyStringSchema, runtimeTokenConfigSchema)

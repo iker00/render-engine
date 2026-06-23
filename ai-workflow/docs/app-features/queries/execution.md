@@ -39,8 +39,17 @@
 - `body: null` en la raíz equivale a una petición deliberada sin body serializado
 - `headers` admite solo valores finales string
 - referencias completas y strings escapados siguen la misma convención central del runtime
-- la interpolación parcial `{{...}}` no aplica en `api.query`, `api.body`, `api.headers`, `preloads`, `button.props.action.*` ni `form.submitAction.*`; esos strings no vacían placeholders silenciosamente ni cambian la semántica de `request-build-failed`
-- esa convención ya permite `params.{paramName}` en `api.query`, `api.body`, `api.headers`, `button.props.action.*` y `form.submitAction.*`
+- la interpolación parcial `{{...}}` aplica en valores de `api.headers`, `button.props.action.headers`, `form.submitAction.headers` y `preloads[].headers`, con semántica de error `request-build-failed` (no string vacío como en superficies visibles)
+- la interpolación parcial `{{...}}` NO aplica en `api.query`, `api.body`, `button.props.action.query`, `button.props.action.body` ni `form.submitAction.query`, `form.submitAction.body`; esos strings no interpolan placeholders
+- referencias completas y `params.{paramName}` se admiten en todas las superficies de payload (`query`, `body`, `headers`)
+
+## Omisión de campos ocultos en submit
+- Cuando se ejecuta el submit (`form.submitAction`) de un formulario, cualquier clave del payload (`body`, `query`, `headers`) cuya referencia apunte a un campo **oculto por `visibility` o `queryStateFeedback`** se omite del wire format en lugar de causar error `request-build-failed`.
+- La omisión aplica **solo a referencias a campos del propio formulario** que dispara el submit (namespace `forms.{formId}.{fieldId}` donde `formId` coincide).
+- Referencias a otros formularios, `params.*`, `queries.*` o `item.*` que falten siguen siendo errores `request-build-failed` en cualquier contexto.
+- La referencia en `endpoint` (path/template) a un campo oculto sigue siendo un error, aunque el campo sea del propio form. El path no admite omisión silenciosa.
+- En `body` JSON anidado, cuando se omiten las claves: un objeto contenedor vacío se conserva como `{}`, no se poda.
+- Este comportamiento ocurre **solo en submit**; operaciones disparadas desde `button.props.action` u otros contextos mantienen la semántica de error si la referencia es missing.
 
 ## Refetch y mutadoras (estado actual)
 - Algunas acciones pueden necesitar relanzar queries después de éxito.

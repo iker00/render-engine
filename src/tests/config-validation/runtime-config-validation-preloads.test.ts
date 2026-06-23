@@ -827,4 +827,86 @@ describe('validateRuntimeConfig', () => {
     if (result.status !== 'error') throw new Error('Expected error')
     expect(result.error.message).toContain('when')
   })
+
+  describe('tokens.* gating in preloads', () => {
+    it('accepts tokens.* in preloads[].headers', () => {
+      const result = validateRuntimeConfig({
+        api: {},
+        pages: [
+          {
+            id: 'home',
+            layout: [],
+            preloads: [
+              { loadUser: { headers: { Authorization: 'tokens.session.value' } } },
+            ],
+          },
+        ],
+        initialPage: 'home',
+      })
+      expect(result.status).toBe('ready')
+    })
+
+    it('rejects tokens.* in preloads[].query', () => {
+      const result = validateRuntimeConfig({
+        api: {},
+        pages: [
+          {
+            id: 'home',
+            layout: [],
+            preloads: [
+              { loadUser: { query: { token: 'tokens.session.value' } } },
+            ],
+          },
+        ],
+        initialPage: 'home',
+      })
+      expect(result.status).toBe('error')
+      if (result.status === 'error') {
+        expect(result.error.message).toContain('tokens.*')
+      }
+    })
+
+    it('rejects tokens.* in preloads[].body', () => {
+      const result = validateRuntimeConfig({
+        api: {},
+        pages: [
+          {
+            id: 'home',
+            layout: [],
+            preloads: [
+              { loadUser: { body: { token: 'tokens.session.value' } } },
+            ],
+          },
+        ],
+        initialPage: 'home',
+      })
+      expect(result.status).toBe('error')
+      if (result.status === 'error') {
+        expect(result.error.message).toContain('tokens.*')
+      }
+    })
+
+    it('rejects tokens.* in preloads[].when.reference', () => {
+      const result = validateRuntimeConfig({
+        api: {},
+        pages: [
+          {
+            id: 'home',
+            layout: [],
+            preloads: [
+              {
+                loadUser: {},
+                when: { reference: 'tokens.session.value', operator: 'isTruthy' },
+              },
+            ],
+          },
+        ],
+        initialPage: 'home',
+      })
+      expect(result.status).toBe('error')
+      if (result.status === 'error') {
+        expect(result.error.message).toContain('tokens.*')
+      }
+    })
+  })
 })

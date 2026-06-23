@@ -36,6 +36,7 @@ import {
 } from './runtime-config-zod'
 import { invalidLayout } from './runtime-config-validation-errors'
 import { hasRuntimeTemplateDelimiter, parseRuntimeReference } from '../runtime/runtime-references/runtime-reference-parser'
+import { isTokensReference } from './runtime-reference-namespace-guards'
 
 const collectionPathSegmentPattern = /^[A-Za-z0-9_-]+$/
 const whenParamsReferencePattern = /^params\.[A-Za-z0-9_-]+$/
@@ -336,6 +337,12 @@ export function validateNavigateToParams(
     }
 
     if (typeof value === 'string') {
+      if (isTokensReference(value)) {
+        return invalidLayout(
+          `Page "${pageId}" has an invalid layout at "${path}.${key}": navigateTo params do not accept tokens.* references.`,
+        )
+      }
+
       const parsedReference = parseRuntimeReference(value)
 
       if (
@@ -368,6 +375,12 @@ export function validateVisibility(
       status: 'ready',
       visibility: undefined,
     }
+  }
+
+  if (typeof rawVisibility.reference === 'string' && isTokensReference(rawVisibility.reference)) {
+    return invalidLayout(
+      `Page "${pageId}" has an invalid layout at "${path}.reference": tokens.* references are not supported in visibility or when conditions.`,
+    )
   }
 
   if (!isValidVisibilityReference(rawVisibility.reference)) {
@@ -496,6 +509,18 @@ export function validateRuntimeApiRequestParams(
 
   if (queryIssue) {
     return queryIssue
+  }
+
+  const queryTokensIssue = rejectTokensInQuery(pageId, path, requestParams.query)
+
+  if (queryTokensIssue) {
+    return queryTokensIssue
+  }
+
+  const bodyTokensIssue = rejectTokensInBody(pageId, path, requestParams.body)
+
+  if (bodyTokensIssue) {
+    return bodyTokensIssue
   }
 
   const headersIssue = validateRequestHeadersKeys(pageId, path, requestParams.headers)
@@ -831,6 +856,12 @@ export function validateWhenCondition(
     )
   }
 
+  if (isTokensReference(rawWhen.reference)) {
+    return invalidLayout(
+      `Page "${pageId}" has an invalid layout at "${path}.reference": tokens.* references are not supported in visibility or when conditions.`,
+    )
+  }
+
   if (!isValidWhenReference(rawWhen.reference, options)) {
     return invalidLayout(
       `Page "${pageId}" has an invalid layout at "${path}.reference": when references must use params.{paramName}, item, item.*, forms.{formId}.{fieldId}, queries.{queryName}, queries.{queryName}.data, queries.{queryName}.data.*, queries.{queryName}.status, queries.{queryName}.error, queries.{queryName}.error.message or queries.{queryName}.error.code.`,
@@ -984,6 +1015,78 @@ function findInvalidJsonBodyPath(value: unknown, path: string): string | null {
 
     if (invalidChildPath) {
       return invalidChildPath
+    }
+  }
+
+  return null
+}
+
+function rejectTokensInQuery(
+  pageId: string,
+  path: string,
+  query: RuntimeApiQuery | undefined,
+): { status: 'error'; error: RuntimeConfigError } | null {
+  if (query === undefined) {
+    return null
+  }
+
+  for (const [key, value] of Object.entries(query)) {
+    if (typeof value === 'string' && isTokensReference(value)) {
+      return invalidLayout(
+        `Page "${pageId}" has an invalid layout at "${path}.query.${key}": tokens.* references are not supported in query parameters.`,
+      )
+    }
+  }
+
+  return null
+}
+
+function rejectTokensInBody(
+  pageId: string,
+  path: string,
+  body: unknown,
+): { status: 'error'; error: RuntimeConfigError } | null {
+  return rejectTokensInBodyAtPath(pageId, `${path}.body`, body)
+}
+
+function rejectTokensInBodyAtPath(
+  pageId: string,
+  bodyPath: string,
+  value: unknown,
+): { status: 'error'; error: RuntimeConfigError } | null {
+  if (typeof value === 'string') {
+    if (isTokensReference(value)) {
+      return invalidLayout(
+        `Page "${pageId}" has an invalid layout at "${bodyPath}": tokens.* references are not supported in body values.`,
+      )
+    }
+
+    return null
+  }
+
+  if (value === null || value === undefined || typeof value === 'number' || typeof value === 'boolean') {
+    return null
+  }
+
+  if (Array.isArray(value)) {
+    for (let index = 0; index < value.length; index += 1) {
+      const childIssue = rejectTokensInBodyAtPath(pageId, `${bodyPath}[${index}]`, value[index])
+
+      if (childIssue) {
+        return childIssue
+      }
+    }
+
+    return null
+  }
+
+  if (isRecord(value)) {
+    for (const [key, childValue] of Object.entries(value)) {
+      const childIssue = rejectTokensInBodyAtPath(pageId, `${bodyPath}.${key}`, childValue)
+
+      if (childIssue) {
+        return childIssue
+      }
     }
   }
 
