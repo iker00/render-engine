@@ -8,6 +8,7 @@ import { executeRuntimeUiAction } from '../runtime-actions/runtime-ui-action-exe
 import { useRuntimeConfig, useRuntimeState, useRuntimeStateActions } from '../runtime-state/runtime-state-provider'
 import { resolveLinkActionHref } from './link-action-href'
 import { IconNode } from './icon-node'
+import { getLinkNodeClassName } from '../runtime-node-styling'
 
 interface LinkNodeProps {
   node: LinkLayoutNode
@@ -54,7 +55,7 @@ export function LinkNode({ node, iterationContext }: LinkNodeProps) {
             }
           : undefined
       }
-      className="text-blue-600 underline hover:text-blue-800"
+      className={getLinkNodeClassName()}
     >
       <IconNode name={icon} className="size-4 shrink-0 inline-block align-middle mr-1" />
       {label}

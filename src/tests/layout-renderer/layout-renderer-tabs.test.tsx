@@ -1223,3 +1223,104 @@ describe('TabsNode — bar sizing and overflow', () => {
     expect(screen.getByText('Content B')).toBeInTheDocument()
   })
 })
+
+describe('TabsNode — T6 semantic tokens and centralized styling', () => {
+  it('active horizontal tab button has border-primary-600, text-primary-700, font-semibold and transition-colors (D10 D6 D8)', () => {
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [
+        {
+          type: 'tabs',
+          props: {
+            orientation: 'horizontal',
+            items: [
+              { label: 'Active Tab', children: [] },
+              { label: 'Inactive Tab', children: [] },
+            ],
+          },
+        },
+      ],
+    }
+
+    renderRuntimePage(page)
+
+    const activeBtn = screen.getByRole('button', { name: 'Active Tab' })
+    expect(activeBtn).toHaveClass('border-primary-600')
+    expect(activeBtn).toHaveClass('text-primary-700')
+    expect(activeBtn).toHaveClass('font-semibold')
+    expect(activeBtn).toHaveClass('transition-colors')
+    expect(activeBtn.className).not.toMatch(/blue-/)
+  })
+
+  it('inactive horizontal tab button has text-app-text-muted and font-medium (D10 D6)', () => {
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [
+        {
+          type: 'tabs',
+          props: {
+            orientation: 'horizontal',
+            items: [
+              { label: 'Active Tab', children: [] },
+              { label: 'Inactive Tab', children: [] },
+            ],
+          },
+        },
+      ],
+    }
+
+    renderRuntimePage(page)
+
+    const inactiveBtn = screen.getByRole('button', { name: 'Inactive Tab' })
+    expect(inactiveBtn).toHaveClass('text-app-text-muted')
+    expect(inactiveBtn).toHaveClass('font-medium')
+    expect(inactiveBtn.className).not.toMatch(/gray-/)
+  })
+
+  it('tab buttons use px-3 and py-1.5 padding without responsive inversion (D7)', () => {
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [
+        {
+          type: 'tabs',
+          props: {
+            orientation: 'horizontal',
+            items: [
+              { label: 'Tab A', children: [] },
+              { label: 'Tab B', children: [] },
+            ],
+          },
+        },
+      ],
+    }
+
+    renderRuntimePage(page)
+
+    const buttons = screen.getAllByRole('button')
+    for (const btn of buttons) {
+      expect(btn).toHaveClass('px-3')
+      expect(btn).toHaveClass('py-1.5')
+      expect(btn.className).not.toContain('px-4')
+      expect(btn.className).not.toContain('py-2 ')
+    }
+  })
+
+  it('tabs node maintains data-layout-node attributes after centralized styling migration', () => {
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [
+        {
+          type: 'tabs',
+          props: {
+            items: [{ label: 'Tab A', children: [] }],
+          },
+        },
+      ],
+    }
+
+    const { container } = renderRuntimePage(page)
+    expect(container.querySelector('[data-layout-node="tabs"]')).toBeInTheDocument()
+    expect(container.querySelector('[data-layout-node="tabs-bar"]')).toBeInTheDocument()
+    expect(container.querySelector('[data-layout-node="tabs-panel"]')).toBeInTheDocument()
+  })
+})

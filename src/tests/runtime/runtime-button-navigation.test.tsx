@@ -1324,9 +1324,9 @@ describe('Runtime button navigation', () => {
     })
 
     expect(screen.getByRole('button', { name: 'Submit profile' })).toHaveClass(
-      'bg-blue-600',
+      'bg-primary-600',
       'text-white',
-      'border-blue-600',
+      'border-primary-600',
     )
     expect(screen.getByRole('button', { name: 'Submit profile' }).closest('[data-layout-node="container"]')).toHaveClass(
       'flex',
@@ -1428,9 +1428,9 @@ describe('Runtime button navigation', () => {
     })
 
     expect(screen.getByRole('button', { name: 'Open details' })).toHaveClass(
-      'bg-blue-600',
+      'bg-primary-600',
       'text-white',
-      'border-blue-600',
+      'border-primary-600',
     )
 
     fireEvent.click(screen.getByRole('button', { name: 'Open details' }))

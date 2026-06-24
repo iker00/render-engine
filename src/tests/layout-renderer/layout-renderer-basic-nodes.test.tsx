@@ -715,12 +715,12 @@ describe('RuntimePage', () => {
 
     expect(screen.getByRole('heading', { name: 'Welcome', level: 1 })).toHaveClass(
       'm-0',
-      'text-3xl',
+      'text-lg',
       'font-semibold',
       'leading-tight',
       'tracking-[-0.03em]',
       'text-app-text-strong',
-      'sm:text-4xl',
+      'sm:text-xl',
     )
     expect(screen.getByText('Build forms from configuration.')).toHaveClass(
       'm-0',

@@ -22,16 +22,16 @@ Nodo hoja de presentación pura que renderiza una etiqueta visual compacta. Sopo
 
 ## Variante `pill`
 
-Renderiza un `<span data-layout-node="badge">` con una etiqueta compacta de forma redondeada (`rounded-full`). El fondo y el texto usan colores suaves y marcados derivados del color semántico declarado:
+Renderiza un `<span data-layout-node="badge">` con una etiqueta compacta de forma redondeada (`rounded-full`). El fondo y el texto usan colores suaves y marcados derivados del color semántico declarado en `@theme` de `src/app/index.css`:
 
 | Color | Fondo | Texto |
 |---|---|---|
-| `neutral` | `bg-gray-100` | `text-gray-700` |
-| `primary` | `bg-blue-100` | `text-blue-700` |
-| `success` | `bg-green-100` | `text-green-700` |
-| `warning` | `bg-yellow-100` | `text-yellow-700` |
-| `danger` | `bg-red-100` | `text-red-700` |
-| `info` | `bg-cyan-100` | `text-cyan-700` |
+| `neutral` | `bg-neutral-100` | `text-neutral-700` |
+| `primary` | `bg-primary-100` | `text-primary-700` |
+| `success` | `bg-success-100` | `text-success-700` |
+| `warning` | `bg-warning-100` | `text-warning-700` |
+| `danger` | `bg-danger-100` | `text-danger-700` |
+| `info` | `bg-info-100` | `text-info-700` |
 
 ## Variante `circle`
 
@@ -39,12 +39,12 @@ Renderiza un `<span data-layout-node="badge">` con un círculo de color sólido 
 
 | Color | Clase del círculo |
 |---|---|
-| `neutral` | `bg-gray-400` |
-| `primary` | `bg-blue-500` |
-| `success` | `bg-green-500` |
-| `warning` | `bg-yellow-400` |
-| `danger` | `bg-red-500` |
-| `info` | `bg-cyan-500` |
+| `neutral` | `bg-neutral-500` |
+| `primary` | `bg-primary-500` |
+| `success` | `bg-success-500` |
+| `warning` | `bg-warning-500` |
+| `danger` | `bg-danger-500` |
+| `info` | `bg-info-500` |
 
 ## Comportamiento de render
 

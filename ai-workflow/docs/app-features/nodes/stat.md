@@ -28,12 +28,12 @@ Renderiza un `<div data-layout-node="stat">` con un borde lateral izquierdo (`bo
 
 | Color | Borde izquierdo |
 |---|---|
-| `neutral` | `border-gray-400` |
-| `primary` | `border-blue-500` |
-| `success` | `border-green-500` |
-| `warning` | `border-yellow-400` |
-| `danger` | `border-red-500` |
-| `info` | `border-cyan-500` |
+| `neutral` | `border-neutral-500` |
+| `primary` | `border-primary-500` |
+| `success` | `border-success-500` |
+| `warning` | `border-warning-500` |
+| `danger` | `border-danger-500` |
+| `info` | `border-info-500` |
 
 Los shades del borde coinciden con la paleta sólida de la variante `circle` del nodo `badge`.
 
@@ -43,12 +43,12 @@ Renderiza un `<div data-layout-node="stat">` con fondo de color suave derivado d
 
 | Color | Fondo | Texto de `label` | Texto de `value` |
 |---|---|---|---|
-| `neutral` | `bg-gray-100` | `text-gray-600` | `text-gray-800 font-bold` |
-| `primary` | `bg-blue-100` | `text-blue-600` | `text-blue-800 font-bold` |
-| `success` | `bg-green-100` | `text-green-600` | `text-green-800 font-bold` |
-| `warning` | `bg-yellow-100` | `text-yellow-600` | `text-yellow-800 font-bold` |
-| `danger` | `bg-red-100` | `text-red-600` | `text-red-800 font-bold` |
-| `info` | `bg-cyan-100` | `text-cyan-600` | `text-cyan-800 font-bold` |
+| `neutral` | `bg-neutral-100` | `text-neutral-600` | `text-neutral-800 font-bold` |
+| `primary` | `bg-primary-100` | `text-primary-600` | `text-primary-800 font-bold` |
+| `success` | `bg-success-100` | `text-success-600` | `text-success-800 font-bold` |
+| `warning` | `bg-warning-100` | `text-warning-600` | `text-warning-800 font-bold` |
+| `danger` | `bg-danger-100` | `text-danger-600` | `text-danger-800 font-bold` |
+| `info` | `bg-info-100` | `text-info-600` | `text-info-800 font-bold` |
 
 ## Comportamiento de render
 

@@ -1,5 +1,10 @@
 import { Download, Eye, EyeOff, Trash2 } from 'lucide-react'
 import type { RuntimeConfig } from '../../../config/runtime-config'
+import {
+  getFileManagerRowActionClassName,
+  getFileManagerRowClassName,
+  getFileManagerRowFileNameClassName,
+} from '../../runtime-node-styling'
 import type { RuntimeState } from '../../runtime-state/runtime-state-types'
 import { buildFileLinkUrl } from './build-file-link-url'
 
@@ -66,8 +71,8 @@ export function FileManagerRow({
   const showDelete = deleteOperation !== false
 
   return (
-    <div data-file-manager-row className="flex items-center justify-between py-2 border-b border-gray-200 last:border-0">
-      <span className="text-sm text-gray-700 flex-1 truncate">{fileName}</span>
+    <div data-file-manager-row className={getFileManagerRowClassName()}>
+      <span className={getFileManagerRowFileNameClassName()}>{fileName}</span>
       <div className="flex items-center gap-2 ml-2 shrink-0">
         {showView && (
           viewUrlResult.status === 'ready' ? (
@@ -75,14 +80,14 @@ export function FileManagerRow({
               href={viewUrlResult.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800"
+              className={getFileManagerRowActionClassName('primary')}
               aria-label="Ver fichero"
             >
               <Eye size={14} />
               Ver
             </a>
           ) : (
-            <span className="flex items-center gap-1 text-sm text-gray-300" aria-label="Ver no disponible">
+            <span className={getFileManagerRowActionClassName('disabled')} aria-label="Ver no disponible">
               <EyeOff size={14} />
               Ver
             </span>
@@ -94,14 +99,14 @@ export function FileManagerRow({
             <a
               href={downloadUrlResult.url}
               download
-              className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800"
+              className={getFileManagerRowActionClassName('primary')}
               aria-label="Descargar fichero"
             >
               <Download size={14} />
               Descargar
             </a>
           ) : (
-            <span className="flex items-center gap-1 text-sm text-gray-300" aria-label="Descargar no disponible">
+            <span className={getFileManagerRowActionClassName('disabled')} aria-label="Descargar no disponible">
               <Download size={14} />
               Descargar
             </span>
@@ -114,7 +119,7 @@ export function FileManagerRow({
             disabled={isDeleting}
             onClick={() => onDelete(file)}
             aria-label="Eliminar fichero"
-            className="flex items-center gap-1 text-sm text-red-500 hover:text-red-700 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+            className={getFileManagerRowActionClassName('danger')}
           >
             <Trash2 size={14} />
             Eliminar

@@ -5,6 +5,12 @@ import { resolveRuntimeTextReference } from '../runtime-references/runtime-refer
 import { useRuntimeState } from '../runtime-state/runtime-state-provider'
 import { LayoutRenderer } from '../layout-renderer'
 import { matchesVisibilityRule } from '../runtime-layout-visibility'
+import {
+  getTabsBarClassName,
+  getTabsButtonClassName,
+  getTabsPanelClassName,
+  getTabsRootClassName,
+} from '../runtime-node-styling'
 
 interface TabsNodeProps {
   node: TabsLayoutNode
@@ -66,14 +72,11 @@ function TabsNodeContent({ node, items, orientation, defaultTab, state, iteratio
     setActiveTab(effectiveActiveTab)
   }
 
-  const isVertical = orientation === 'vertical'
-  const rootClassName = isVertical ? 'flex flex-row' : 'flex flex-col'
-
   const bar = (
     <div
       data-layout-node="tabs-bar"
       role="tablist"
-      className={isVertical ? 'flex flex-col w-48 shrink-0' : 'flex flex-row overflow-x-auto'}
+      className={getTabsBarClassName(orientation)}
     >
       {visibleIndices.map((index) => {
         const item = items[index]
@@ -90,11 +93,7 @@ function TabsNodeContent({ node, items, orientation, defaultTab, state, iteratio
             type="button"
             aria-selected={isActive}
             onClick={() => setActiveTab(index)}
-            className={
-              isActive
-                ? `border-b-2 border-blue-600 font-semibold px-4 py-2${isVertical ? ' text-left whitespace-normal break-words' : ' shrink-0 whitespace-nowrap'}`
-                : `px-4 py-2 text-gray-600 hover:text-gray-900${isVertical ? ' text-left whitespace-normal break-words' : ' shrink-0 whitespace-nowrap'}`
-            }
+            className={getTabsButtonClassName(isActive, orientation)}
           >
             {resolvedLabel}
           </button>
@@ -105,7 +104,7 @@ function TabsNodeContent({ node, items, orientation, defaultTab, state, iteratio
 
   const activeItem = items[effectiveActiveTab]
   const panel = (
-    <div data-layout-node="tabs-panel" className="flex-1">
+    <div data-layout-node="tabs-panel" className={getTabsPanelClassName()}>
       {activeItem?.children && activeItem.children.length > 0 ? (
         <LayoutRenderer nodes={activeItem.children} iterationContext={iterationContext} />
       ) : null}
@@ -113,7 +112,7 @@ function TabsNodeContent({ node, items, orientation, defaultTab, state, iteratio
   )
 
   return (
-    <div data-layout-node="tabs" className={rootClassName}>
+    <div data-layout-node="tabs" className={getTabsRootClassName(orientation)}>
       {bar}
       {panel}
     </div>

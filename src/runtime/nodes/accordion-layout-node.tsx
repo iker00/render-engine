@@ -5,6 +5,12 @@ import { resolveRuntimeTextReference } from '../runtime-references/runtime-refer
 import { useRuntimeState } from '../runtime-state/runtime-state-provider'
 import { LayoutRenderer } from '../layout-renderer'
 import { useAccordionGroup } from '../runtime-accordion-group'
+import {
+  getAccordionBodyAnimationClassName,
+  getAccordionBodyClassName,
+  getAccordionChevronClassName,
+  getAccordionHeaderClassName,
+} from '../runtime-node-styling'
 
 interface AccordionNodeProps {
   node: AccordionLayoutNode
@@ -87,13 +93,13 @@ export function AccordionNode({ node, iterationContext }: AccordionNodeProps) {
         data-layout-node="accordion-header"
         aria-expanded={isOpen}
         onClick={handleToggle}
-        className="w-full text-left px-4 py-2 font-semibold flex items-center justify-between bg-app-accent/10 hover:bg-app-accent/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-app-accent"
+        className={getAccordionHeaderClassName()}
       >
         <span>{resolvedLabel}</span>
         <svg
           data-layout-node="accordion-chevron"
           aria-hidden="true"
-          className={`h-4 w-4 text-app-accent transition-transform duration-200 ease-out${isOpen ? ' rotate-180' : ''}`}
+          className={getAccordionChevronClassName(isOpen)}
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 24 24"
           fill="none"
@@ -108,13 +114,13 @@ export function AccordionNode({ node, iterationContext }: AccordionNodeProps) {
       {showContent && (
         <div
           data-layout-node="accordion-body"
-          className={isOpen ? 'animate-accordion-open' : 'animate-accordion-close'}
+          className={getAccordionBodyAnimationClassName(isOpen)}
           onAnimationEnd={() => {
             if (!isOpen) setIsClosing(false)
           }}
         >
           {node.children && node.children.length > 0 ? (
-            <div className="px-4 py-2 flex flex-col gap-5">
+            <div className={getAccordionBodyClassName()}>
               <LayoutRenderer nodes={node.children} iterationContext={iterationContext} />
             </div>
           ) : null}

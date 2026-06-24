@@ -71,7 +71,7 @@ describe('AlertNode — render basic and data-layout-node', () => {
     expect(container.querySelector('[data-layout-node="alert"]')).toBeInTheDocument()
   })
 
-  it('element with data-layout-node="alert" for type neutral has class bg-gray-100', () => {
+  it('element with data-layout-node="alert" for type neutral has class bg-neutral-100', () => {
     const page: RuntimePageConfig = {
       id: 'home',
       layout: [{ type: 'alert', props: { message: 'Msg', type: 'neutral' } }],
@@ -79,16 +79,16 @@ describe('AlertNode — render basic and data-layout-node', () => {
     const { container } = renderRuntimePage(page)
     const alertEl = container.querySelector('[data-layout-node="alert"]')
     expect(alertEl).toBeInTheDocument()
-    expect(alertEl).toHaveClass('bg-gray-100')
+    expect(alertEl).toHaveClass('bg-neutral-100')
   })
 
   const colorCases = [
-    { type: 'neutral', bgClass: 'bg-gray-100' },
-    { type: 'primary', bgClass: 'bg-blue-100' },
-    { type: 'success', bgClass: 'bg-green-100' },
-    { type: 'warning', bgClass: 'bg-yellow-100' },
-    { type: 'danger', bgClass: 'bg-red-100' },
-    { type: 'info', bgClass: 'bg-cyan-100' },
+    { type: 'neutral', bgClass: 'bg-neutral-100' },
+    { type: 'primary', bgClass: 'bg-primary-100' },
+    { type: 'success', bgClass: 'bg-success-100' },
+    { type: 'warning', bgClass: 'bg-warning-100' },
+    { type: 'danger', bgClass: 'bg-danger-100' },
+    { type: 'info', bgClass: 'bg-info-100' },
   ] as const
 
   colorCases.forEach(({ type, bgClass }) => {
@@ -104,7 +104,7 @@ describe('AlertNode — render basic and data-layout-node', () => {
     })
   })
 
-  it('alert without props.type renders with bg-gray-100 (default neutral)', () => {
+  it('alert without props.type renders with bg-neutral-100 (default neutral)', () => {
     const page: RuntimePageConfig = {
       id: 'home',
       layout: [{ type: 'alert', props: { message: 'Msg sin tipo' } }],
@@ -112,7 +112,7 @@ describe('AlertNode — render basic and data-layout-node', () => {
     const { container } = renderRuntimePage(page)
     const alertEl = container.querySelector('[data-layout-node="alert"]')
     expect(alertEl).toBeInTheDocument()
-    expect(alertEl).toHaveClass('bg-gray-100')
+    expect(alertEl).toHaveClass('bg-neutral-100')
   })
 })
 
@@ -147,12 +147,12 @@ describe('AlertNode — Lucide icon by type', () => {
   })
 
   const accentClassCases = [
-    { type: 'neutral', textClass: 'text-gray-700' },
-    { type: 'primary', textClass: 'text-blue-700' },
-    { type: 'success', textClass: 'text-green-700' },
-    { type: 'warning', textClass: 'text-yellow-700' },
-    { type: 'danger', textClass: 'text-red-700' },
-    { type: 'info', textClass: 'text-cyan-700' },
+    { type: 'neutral', textClass: 'text-neutral-700' },
+    { type: 'primary', textClass: 'text-primary-700' },
+    { type: 'success', textClass: 'text-success-700' },
+    { type: 'warning', textClass: 'text-warning-700' },
+    { type: 'danger', textClass: 'text-danger-700' },
+    { type: 'info', textClass: 'text-info-700' },
   ] as const
 
   accentClassCases.forEach(({ type, textClass }) => {

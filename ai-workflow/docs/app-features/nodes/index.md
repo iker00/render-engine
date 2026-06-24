@@ -1,6 +1,6 @@
 > Cuándo leer: si la tarea toca un nodo concreto del catálogo. Carga solo la ficha del nodo afectado, no este índice entero.
 > Tamaño: corto.
-> Relacionados: [[../config/structure.md]], [[../references/visibility.md]], [[../references/query-state-feedback.md]].
+> Relacionados: [[../config/structure.md]], [[../references/visibility.md]], [[../references/query-state-feedback.md]], [[../runtime/design-tokens.md]].
 
 # Catálogo de nodos
 

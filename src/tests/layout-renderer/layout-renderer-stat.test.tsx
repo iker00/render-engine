@@ -88,12 +88,12 @@ describe('StatNode — variant and data-layout-node', () => {
     const { container } = renderRuntimePage(page)
     const stat = container.querySelector('[data-layout-node="stat"]')
     expect(stat).toBeInTheDocument()
-    // accent variant: border-l-4 class, no tinted bg classes like bg-gray-100
+    // accent variant: border-l-4 class, no tinted bg classes like bg-neutral-100
     expect(stat).toHaveClass('border-l-4')
-    expect(stat).not.toHaveClass('bg-gray-100')
+    expect(stat).not.toHaveClass('bg-neutral-100')
   })
 
-  it('stat without color uses neutral (accent: border-gray-400)', () => {
+  it('stat without color uses neutral (accent: border-neutral-400)', () => {
     const page: RuntimePageConfig = {
       id: 'home',
       layout: [{ type: 'stat', props: { label: 'Revenue', value: '$12,000' } }],
@@ -101,7 +101,7 @@ describe('StatNode — variant and data-layout-node', () => {
     const { container } = renderRuntimePage(page)
     const stat = container.querySelector('[data-layout-node="stat"]')
     expect(stat).toBeInTheDocument()
-    expect(stat).toHaveClass('border-gray-400')
+    expect(stat).toHaveClass('border-neutral-400')
   })
 
   it('label and value are visible in the DOM as text', () => {
@@ -117,12 +117,12 @@ describe('StatNode — variant and data-layout-node', () => {
 
 describe('StatNode — accent variant border color classes', () => {
   const accentColors = [
-    { color: 'neutral', borderClass: 'border-gray-400' },
-    { color: 'primary', borderClass: 'border-blue-500' },
-    { color: 'success', borderClass: 'border-green-500' },
-    { color: 'warning', borderClass: 'border-yellow-400' },
-    { color: 'danger', borderClass: 'border-red-500' },
-    { color: 'info', borderClass: 'border-cyan-500' },
+    { color: 'neutral', borderClass: 'border-neutral-400' },
+    { color: 'primary', borderClass: 'border-primary-500' },
+    { color: 'success', borderClass: 'border-success-500' },
+    { color: 'warning', borderClass: 'border-warning-500' },
+    { color: 'danger', borderClass: 'border-danger-500' },
+    { color: 'info', borderClass: 'border-info-500' },
   ] as const
 
   accentColors.forEach(({ color, borderClass }) => {
@@ -141,12 +141,12 @@ describe('StatNode — accent variant border color classes', () => {
 
 describe('StatNode — tinted variant background and text color classes', () => {
   const tintedColors = [
-    { color: 'neutral', bgClass: 'bg-gray-100', labelClass: 'text-gray-600', valueClass: 'text-gray-800' },
-    { color: 'primary', bgClass: 'bg-blue-100', labelClass: 'text-blue-600', valueClass: 'text-blue-800' },
-    { color: 'success', bgClass: 'bg-green-100', labelClass: 'text-green-600', valueClass: 'text-green-800' },
-    { color: 'warning', bgClass: 'bg-yellow-100', labelClass: 'text-yellow-600', valueClass: 'text-yellow-800' },
-    { color: 'danger', bgClass: 'bg-red-100', labelClass: 'text-red-600', valueClass: 'text-red-800' },
-    { color: 'info', bgClass: 'bg-cyan-100', labelClass: 'text-cyan-600', valueClass: 'text-cyan-800' },
+    { color: 'neutral', bgClass: 'bg-neutral-100', labelClass: 'text-neutral-700', valueClass: 'text-neutral-800' },
+    { color: 'primary', bgClass: 'bg-primary-100', labelClass: 'text-primary-700', valueClass: 'text-primary-800' },
+    { color: 'success', bgClass: 'bg-success-100', labelClass: 'text-success-700', valueClass: 'text-success-800' },
+    { color: 'warning', bgClass: 'bg-warning-100', labelClass: 'text-warning-700', valueClass: 'text-warning-800' },
+    { color: 'danger', bgClass: 'bg-danger-100', labelClass: 'text-danger-700', valueClass: 'text-danger-800' },
+    { color: 'info', bgClass: 'bg-info-100', labelClass: 'text-info-700', valueClass: 'text-info-800' },
   ] as const
 
   tintedColors.forEach(({ color, bgClass, labelClass, valueClass }) => {
@@ -418,14 +418,14 @@ describe('StatNode — props.icon', () => {
     expect(svg).toHaveAttribute('aria-hidden', 'true')
   })
 
-  it('stat with variant: "accent", color: "primary" and props.icon: "TrendingUp" still has class border-blue-500', () => {
+  it('stat with variant: "accent", color: "primary" and props.icon: "TrendingUp" still has class border-primary-500', () => {
     const page: RuntimePageConfig = {
       id: 'home',
       layout: [{ type: 'stat', props: { label: 'Growth', value: '+12%', variant: 'accent', color: 'primary', icon: 'TrendingUp' } }],
     }
     const { container } = renderRuntimePage(page)
     const stat = container.querySelector('[data-layout-node="stat"]')
-    expect(stat).toHaveClass('border-blue-500')
+    expect(stat).toHaveClass('border-primary-500')
   })
 
   it('stat with variant: "accent", color: "primary" and props.icon: "TrendingUp" still renders label and value text', () => {
@@ -450,14 +450,14 @@ describe('StatNode — props.icon', () => {
     expect(svg).toHaveAttribute('aria-hidden', 'true')
   })
 
-  it('stat with variant: "tinted", color: "success" and props.icon: "TrendingUp" still has class bg-green-100', () => {
+  it('stat with variant: "tinted", color: "success" and props.icon: "TrendingUp" still has class bg-success-100', () => {
     const page: RuntimePageConfig = {
       id: 'home',
       layout: [{ type: 'stat', props: { label: 'Users', value: '500', variant: 'tinted', color: 'success', icon: 'TrendingUp' } }],
     }
     const { container } = renderRuntimePage(page)
     const stat = container.querySelector('[data-layout-node="stat"]')
-    expect(stat).toHaveClass('bg-green-100')
+    expect(stat).toHaveClass('bg-success-100')
   })
 
   it('stat with props.icon: "NonExistentIconXyz" renders no <svg> inside [data-layout-node="stat"]', () => {

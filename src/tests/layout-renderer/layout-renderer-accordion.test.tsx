@@ -871,7 +871,7 @@ describe('AccordionNode — body gap between children', () => {
 })
 
 describe('AccordionNode — header styling and chevron', () => {
-  it('header has bg-app-accent/10 and hover:bg-app-accent/20 classes and no legacy gray classes', () => {
+  it('header has bg-primary-50 and hover:bg-primary-100 classes and no legacy app-accent or gray classes', () => {
     const page: RuntimePageConfig = {
       id: 'home',
       layout: [
@@ -885,9 +885,12 @@ describe('AccordionNode — header styling and chevron', () => {
     const { container } = renderRuntimePage(page)
     const header = container.querySelector('[data-layout-node="accordion-header"]')!
 
-    expect(header.classList.contains('bg-app-accent/10')).toBe(true)
-    expect(header.classList.contains('hover:bg-app-accent/20')).toBe(true)
-    expect(header.classList.contains('focus-visible:ring-app-accent')).toBe(true)
+    expect(header.classList.contains('bg-primary-50')).toBe(true)
+    expect(header.classList.contains('hover:bg-primary-100')).toBe(true)
+    expect(header.classList.contains('focus-visible:ring-primary-600')).toBe(true)
+    expect(header.classList.contains('bg-app-accent/10')).toBe(false)
+    expect(header.classList.contains('hover:bg-app-accent/20')).toBe(false)
+    expect(header.classList.contains('focus-visible:ring-app-accent')).toBe(false)
     expect(header.classList.contains('bg-gray-100')).toBe(false)
     expect(header.classList.contains('bg-gray-200')).toBe(false)
     expect(header.classList.contains('focus:ring-blue-500')).toBe(false)

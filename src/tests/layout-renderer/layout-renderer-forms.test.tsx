@@ -154,7 +154,7 @@ describe('input icon', () => {
     expect(svg).toHaveAttribute('aria-hidden', 'true')
   })
 
-  it('renders the icon in a separate addon container with bg-gray-50 and no pl- class on the input', () => {
+  it('renders the icon in a separate addon container with bg-neutral-50 and no pl- class on the input', () => {
     renderRuntimeFormPage({
       id: 'input-icon-addon-test',
       layout: [
@@ -176,7 +176,7 @@ describe('input icon', () => {
     })
 
     const wrapper = screen.getByText('Email').closest('[data-layout-node="input"]')
-    const addonContainer = wrapper!.querySelector('.bg-gray-50')
+    const addonContainer = wrapper!.querySelector('.bg-neutral-50')
     expect(addonContainer).not.toBeNull()
     expect(addonContainer!.querySelector('svg')).not.toBeNull()
 
@@ -428,19 +428,18 @@ describe('RuntimePage', () => {
     )
     expect(screen.getByRole('heading', { name: 'Profile form', level: 2 })).toBeInTheDocument()
     expect(screen.getByText('Name').closest('[data-layout-node="input"]')).toHaveClass('grid', 'gap-2')
-    expect(screen.getByText('Name')).toHaveClass('text-sm', 'font-semibold', 'leading-5', 'text-app-text-strong')
+    expect(screen.getByText('Name')).toHaveClass('text-sm', 'font-medium', 'leading-5', 'text-app-text-strong')
     expect(screen.getByLabelText('Name')).toHaveValue('Ada')
     expect(screen.getByLabelText('Name')).toHaveClass(
       'rounded-control',
       'border-app-border-soft',
       'bg-white',
-      'px-4',
-      'py-3',
-      'sm:px-3.5',
-      'sm:py-2.5',
+      'px-3',
+      'py-2',
       'text-app-text',
     )
     expect(screen.getByLabelText('Name')).not.toHaveClass('shadow-sm')
+    expect(screen.getByLabelText('Name')).not.toHaveClass('px-4', 'py-3', 'sm:px-3.5', 'sm:py-2.5')
     expect(screen.getByLabelText('Bio')).toHaveValue('Runtime builder')
     expect(screen.getByRole('combobox', { name: 'Role' })).toHaveValue('2')
     expect(screen.getByLabelText('Bio')).toHaveClass('rounded-control', 'bg-white', 'min-h-28', 'sm:min-h-32')
@@ -450,12 +449,11 @@ describe('RuntimePage', () => {
       'bg-white',
       'appearance-none',
       'pr-12',
-      'sm:px-3.5',
-      'sm:py-2.5',
     )
+    expect(screen.getByRole('combobox', { name: 'Role' })).not.toHaveClass('sm:px-3.5', 'sm:py-2.5')
     expect(screen.getByRole('combobox', { name: 'Role' })).not.toHaveClass('shadow-sm')
-    expect(buttons[0]).toHaveClass('bg-blue-600', 'text-white', 'sm:px-3.5', 'sm:py-2.5')
-    expect(buttons[1]).toHaveClass('bg-blue-600', 'text-white', 'sm:px-3.5', 'sm:py-2.5')
+    expect(buttons[0]).toHaveClass('bg-primary-600', 'text-white', 'px-3.5', 'py-2')
+    expect(buttons[1]).toHaveClass('bg-primary-600', 'text-white', 'px-3.5', 'py-2')
     expect(buttons[0]).toHaveTextContent('Aux reset')
     expect(buttons[1]).toHaveTextContent('Submit profile')
   })

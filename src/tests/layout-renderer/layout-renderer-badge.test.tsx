@@ -107,18 +107,18 @@ describe('BadgeNode — variant and data-layout-node', () => {
   })
 })
 
-describe('BadgeNode — pill variant color classes', () => {
+describe('BadgeNode — pill variant color classes (semantic tokens D10)', () => {
   const pillColors = [
-    { color: 'neutral', bgClass: 'bg-gray-100', textClass: 'text-gray-700' },
-    { color: 'primary', bgClass: 'bg-blue-100', textClass: 'text-blue-700' },
-    { color: 'success', bgClass: 'bg-green-100', textClass: 'text-green-700' },
-    { color: 'warning', bgClass: 'bg-yellow-100', textClass: 'text-yellow-700' },
-    { color: 'danger', bgClass: 'bg-red-100', textClass: 'text-red-700' },
-    { color: 'info', bgClass: 'bg-cyan-100', textClass: 'text-cyan-700' },
+    { color: 'neutral', bgClass: 'bg-neutral-100', textClass: 'text-neutral-700' },
+    { color: 'primary', bgClass: 'bg-primary-100', textClass: 'text-primary-700' },
+    { color: 'success', bgClass: 'bg-success-100', textClass: 'text-success-700' },
+    { color: 'warning', bgClass: 'bg-warning-100', textClass: 'text-warning-700' },
+    { color: 'danger', bgClass: 'bg-danger-100', textClass: 'text-danger-700' },
+    { color: 'info', bgClass: 'bg-info-100', textClass: 'text-info-700' },
   ] as const
 
   pillColors.forEach(({ color, bgClass, textClass }) => {
-    it(`badge pill with color="${color}" has ${bgClass} and ${textClass} classes`, () => {
+    it(`badge pill with color="${color}" has ${bgClass} and ${textClass} classes (semantic)`, () => {
       const page: RuntimePageConfig = {
         id: 'home',
         layout: [{ type: 'badge', props: { label: 'Test', variant: 'pill', color } }],
@@ -132,20 +132,37 @@ describe('BadgeNode — pill variant color classes', () => {
       expect(pillSpan).toHaveClass(textClass)
     })
   })
+
+  it('badge pill does not use any raw Tailwind color classes', () => {
+    const colors = ['neutral', 'primary', 'success', 'warning', 'danger', 'info'] as const
+    colors.forEach((color) => {
+      const page: RuntimePageConfig = {
+        id: 'home',
+        layout: [{ type: 'badge', props: { label: 'Test', variant: 'pill', color } }],
+      }
+      const { container } = renderRuntimePage(page)
+      const badge = container.querySelector('[data-layout-node="badge"]')
+      const pillSpan = badge!.querySelector('.rounded-full')
+      expect(pillSpan).not.toBeNull()
+      // Verify no raw Tailwind color classes
+      const classList = Array.from(pillSpan!.classList).join(' ')
+      expect(classList).not.toMatch(/\b(blue|red|green|yellow|cyan|gray)-/)
+    })
+  })
 })
 
-describe('BadgeNode — circle variant color classes', () => {
+describe('BadgeNode — circle variant color classes (semantic tokens D10)', () => {
   const circleColors = [
-    { color: 'neutral', dotClass: 'bg-gray-400' },
-    { color: 'primary', dotClass: 'bg-blue-500' },
-    { color: 'success', dotClass: 'bg-green-500' },
-    { color: 'warning', dotClass: 'bg-yellow-400' },
-    { color: 'danger', dotClass: 'bg-red-500' },
-    { color: 'info', dotClass: 'bg-cyan-500' },
+    { color: 'neutral', dotClass: 'bg-neutral-500' },
+    { color: 'primary', dotClass: 'bg-primary-500' },
+    { color: 'success', dotClass: 'bg-success-500' },
+    { color: 'warning', dotClass: 'bg-warning-500' },
+    { color: 'danger', dotClass: 'bg-danger-500' },
+    { color: 'info', dotClass: 'bg-info-500' },
   ] as const
 
   circleColors.forEach(({ color, dotClass }) => {
-    it(`badge circle with color="${color}" has dot with class ${dotClass}`, () => {
+    it(`badge circle with color="${color}" has dot with class ${dotClass} (semantic)`, () => {
       const page: RuntimePageConfig = {
         id: 'home',
         layout: [{ type: 'badge', props: { label: 'Test', variant: 'circle', color } }],
@@ -155,6 +172,22 @@ describe('BadgeNode — circle variant color classes', () => {
       expect(badge).toBeInTheDocument()
       const dot = badge!.querySelector(`.${dotClass}`)
       expect(dot).toBeInTheDocument()
+    })
+  })
+
+  it('badge circle dot does not use any raw Tailwind color classes', () => {
+    const colors = ['neutral', 'primary', 'success', 'warning', 'danger', 'info'] as const
+    colors.forEach((color) => {
+      const page: RuntimePageConfig = {
+        id: 'home',
+        layout: [{ type: 'badge', props: { label: 'Test', variant: 'circle', color } }],
+      }
+      const { container } = renderRuntimePage(page)
+      const badge = container.querySelector('[data-layout-node="badge"]')
+      const dot = badge!.querySelector('.rounded-full.inline-block')
+      expect(dot).not.toBeNull()
+      const classList = Array.from(dot!.classList).join(' ')
+      expect(classList).not.toMatch(/\b(blue|red|green|yellow|cyan|gray)-/)
     })
   })
 })

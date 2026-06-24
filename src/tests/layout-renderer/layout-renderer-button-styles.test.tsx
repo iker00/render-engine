@@ -19,7 +19,7 @@ function renderRuntimePage(activePage: RuntimePageConfig) {
 }
 
 describe('ButtonNode style variants', () => {
-  it('renders a danger solid button with bg-red-600', () => {
+  it('renders a danger solid button with semantic bg-danger-600', () => {
     renderRuntimePage({
       id: 'page',
       layout: [
@@ -36,11 +36,12 @@ describe('ButtonNode style variants', () => {
     })
 
     const button = screen.getByRole('button', { name: 'Delete' })
-    expect(button.className).toContain('bg-red-600')
+    expect(button.className).toContain('bg-danger-600')
+    expect(button.className).not.toMatch(/red-/)
     expect(button).toHaveAttribute('data-layout-node', 'button')
   })
 
-  it('renders a primary outline button with border-blue-500 and text-blue-600', () => {
+  it('renders a primary outline button with semantic border-primary-500 and text-primary-600', () => {
     renderRuntimePage({
       id: 'page',
       layout: [
@@ -57,12 +58,13 @@ describe('ButtonNode style variants', () => {
     })
 
     const button = screen.getByRole('button', { name: 'Edit' })
-    expect(button.className).toContain('border-blue-500')
-    expect(button.className).toContain('text-blue-600')
+    expect(button.className).toContain('border-primary-500')
+    expect(button.className).toContain('text-primary-600')
+    expect(button.className).not.toMatch(/blue-/)
     expect(button).toHaveAttribute('data-layout-node', 'button')
   })
 
-  it('renders a success ghost button with text-green-600', () => {
+  it('renders a success ghost button with semantic text-success-600', () => {
     renderRuntimePage({
       id: 'page',
       layout: [
@@ -79,11 +81,12 @@ describe('ButtonNode style variants', () => {
     })
 
     const button = screen.getByRole('button', { name: 'Confirm' })
-    expect(button.className).toContain('text-green-600')
+    expect(button.className).toContain('text-success-600')
+    expect(button.className).not.toMatch(/green-/)
     expect(button).toHaveAttribute('data-layout-node', 'button')
   })
 
-  it('renders an info link button with hover:underline', () => {
+  it('renders an info link button with semantic text-info-600 and hover:underline', () => {
     renderRuntimePage({
       id: 'page',
       layout: [
@@ -100,11 +103,13 @@ describe('ButtonNode style variants', () => {
     })
 
     const button = screen.getByRole('button', { name: 'More info' })
+    expect(button.className).toContain('text-info-600')
     expect(button.className).toContain('hover:underline')
+    expect(button.className).not.toMatch(/cyan-/)
     expect(button).toHaveAttribute('data-layout-node', 'button')
   })
 
-  it('renders a button without color or variant with default primary solid (bg-blue-600)', () => {
+  it('renders a button without color or variant with default primary solid (bg-primary-600)', () => {
     renderRuntimePage({
       id: 'page',
       layout: [
@@ -119,7 +124,8 @@ describe('ButtonNode style variants', () => {
     })
 
     const button = screen.getByRole('button', { name: 'Default' })
-    expect(button.className).toContain('bg-blue-600')
+    expect(button.className).toContain('bg-primary-600')
+    expect(button.className).not.toMatch(/blue-/)
     expect(button).toHaveAttribute('data-layout-node', 'button')
   })
 
@@ -191,7 +197,8 @@ describe('ButtonNode style variants', () => {
 
     const button = screen.getByRole('button', { name: 'Submit form' })
     expect(button).toHaveAttribute('type', 'submit')
-    expect(button.className).toContain('border-red-500')
+    expect(button.className).toContain('border-danger-500')
+    expect(button.className).not.toMatch(/red-/)
     expect(button).toHaveAttribute('data-layout-node', 'button')
   })
 

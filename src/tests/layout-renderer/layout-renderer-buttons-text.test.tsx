@@ -745,6 +745,31 @@ describe('link node render', () => {
     const wrapper = anchor.closest('[class*="col-span"]')
     expect(wrapper).not.toBeNull()
   })
+
+  it('renders the link anchor with semantic primary color, transition-colors and font-medium classes (T7 D10 D8 D6)', () => {
+    renderRuntimePage({
+      id: 'link-semantic-classes',
+      layout: [
+        {
+          type: 'link',
+          props: {
+            label: 'Semantic link',
+            href: 'https://example.com',
+          },
+        },
+      ],
+    })
+
+    const anchor = screen.getByRole('link', { name: 'Semantic link' })
+    expect(anchor).toHaveAttribute('data-layout-node', 'link')
+    expect(anchor.className).toContain('text-primary-600')
+    expect(anchor.className).toContain('hover:text-primary-800')
+    expect(anchor.className).toContain('underline')
+    expect(anchor.className).toContain('transition-colors')
+    expect(anchor.className).toContain('font-medium')
+    expect(anchor.className).not.toContain('text-blue-600')
+    expect(anchor.className).not.toContain('hover:text-blue-800')
+  })
 })
 
 describe('button node with props.icon', () => {
@@ -967,13 +992,12 @@ describe('RuntimePage', () => {
       'justify-center',
       'rounded-control',
       'border',
-      'px-4',
-      'py-3',
-      'sm:px-3.5',
-      'sm:py-2.5',
+      'px-3.5',
+      'py-2',
       'text-sm',
       'font-semibold',
     )
+    expect(screen.getByRole('button', { name: 'Open details' })).not.toHaveClass('px-4', 'py-3', 'sm:px-3.5', 'sm:py-2.5')
   })
 
   it('treats button as a leaf node even when it receives children', () => {

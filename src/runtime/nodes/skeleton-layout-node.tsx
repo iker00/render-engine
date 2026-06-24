@@ -1,5 +1,6 @@
 import type { SkeletonLayoutNode } from '../../config/runtime-config'
 import type { RuntimeIterationContext } from '../runtime-references/runtime-reference-resolver'
+import { getSkeletonAnimateClassName, getSkeletonBaseClassName } from '../runtime-node-styling'
 
 interface SkeletonNodeProps {
   node: SkeletonLayoutNode
@@ -14,13 +15,14 @@ export function SkeletonNode({ node }: SkeletonNodeProps) {
   const height = node.props?.height
   const lines = node.props?.lines ?? 1
 
-  const animateClass = animate ? 'animate-pulse' : ''
+  const baseClass = getSkeletonBaseClassName()
+  const animateClass = getSkeletonAnimateClassName(animate)
 
   if (variant === 'text') {
     const wrapperClasses = ['flex', 'flex-col', 'gap-2', animateClass].filter(Boolean).join(' ')
     const lineWidthClass = width ? `w-${width}` : 'w-full'
     const lineRoundedClass = rounded ? 'rounded' : ''
-    const lineClasses = ['bg-gray-200', 'h-3', lineWidthClass, lineRoundedClass].filter(Boolean).join(' ')
+    const lineClasses = [baseClass, 'h-3', lineWidthClass, lineRoundedClass].filter(Boolean).join(' ')
 
     return (
       <div data-layout-node="skeleton" className={wrapperClasses}>
@@ -33,7 +35,7 @@ export function SkeletonNode({ node }: SkeletonNodeProps) {
 
   if (variant === 'circle') {
     const sizeClass = width ? `w-${width} h-${width}` : 'w-12 h-12'
-    const circleClasses = ['bg-gray-200', 'rounded-full', sizeClass, animateClass].filter(Boolean).join(' ')
+    const circleClasses = [baseClass, 'rounded-full', sizeClass, animateClass].filter(Boolean).join(' ')
 
     return <div data-layout-node="skeleton" className={circleClasses} />
   }
@@ -42,7 +44,7 @@ export function SkeletonNode({ node }: SkeletonNodeProps) {
   const widthClass = width ? `w-${width}` : ''
   const heightClass = height ? `h-${height}` : 'h-4'
   const roundedClass = rounded ? 'rounded' : ''
-  const rectClasses = ['bg-gray-200', 'block', heightClass, widthClass, roundedClass, animateClass]
+  const rectClasses = [baseClass, 'block', heightClass, widthClass, roundedClass, animateClass]
     .filter(Boolean)
     .join(' ')
 

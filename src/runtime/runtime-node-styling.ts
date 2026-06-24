@@ -218,12 +218,12 @@ const containerWrapClassMap: Record<string, string> = {
 }
 
 const headingSizeClassMap: Record<number, string> = {
-  1: 'text-3xl sm:text-4xl',
-  2: 'text-2xl sm:text-3xl',
-  3: 'text-xl sm:text-2xl',
-  4: 'text-lg sm:text-xl',
-  5: 'text-base sm:text-lg',
-  6: 'text-sm sm:text-base',
+  1: 'text-lg sm:text-xl',
+  2: 'text-base sm:text-lg',
+  3: 'text-sm sm:text-base',
+  4: 'text-sm sm:text-base',
+  5: 'text-xs sm:text-sm',
+  6: 'text-xs sm:text-sm',
 }
 
 interface ContainerNodeStylingOptions {
@@ -448,10 +448,12 @@ export function getHeadingTag(level: number) {
 }
 
 export function getHeadingNodeClassName(level: number) {
+  const weight = level <= 2 ? 'font-semibold' : 'font-medium'
+
   return [
     'm-0',
     ...(headingSizeClassMap[level] ?? headingSizeClassMap[6]).split(' '),
-    'font-semibold',
+    weight,
     'leading-tight',
     'tracking-[-0.03em]',
     'text-app-text-strong',
@@ -536,7 +538,7 @@ export function getTableFilterResetButtonClassName() {
     'px-3.5',
     'py-2',
     'text-sm',
-    'font-semibold',
+    'font-medium',
     'leading-5',
     'text-app-text-strong',
     'transition-colors',
@@ -604,10 +606,8 @@ export function getPrimaryButtonNodeClassName() {
     'border',
     'border-app-accent',
     'bg-app-accent',
-    'px-4',
-    'py-3',
-    'sm:px-3.5',
-    'sm:py-2.5',
+    'px-3.5',
+    'py-2',
     'text-sm',
     'font-semibold',
     'leading-5',
@@ -631,10 +631,8 @@ export function getSecondaryButtonNodeClassName() {
     'border',
     'border-app-border-strong',
     'bg-white',
-    'px-4',
-    'py-3',
-    'sm:px-3.5',
-    'sm:py-2.5',
+    'px-3.5',
+    'py-2',
     'text-sm',
     'font-semibold',
     'leading-5',
@@ -668,8 +666,8 @@ export function getRepeaterPaginationButtonClassName() {
     'border',
     'border-app-border-strong',
     'bg-white',
-    'px-3.5',
-    'py-2',
+    'px-3',
+    'py-1.5',
     'text-sm',
     'font-semibold',
     'leading-5',
@@ -704,7 +702,7 @@ export function getFieldWrapperClassName() {
 }
 
 export function getFieldLabelClassName() {
-  return 'text-sm font-semibold leading-5 text-app-text-strong'
+  return 'text-sm font-medium leading-5 text-app-text-strong'
 }
 
 export function getFieldControlClassName(hasError = false) {
@@ -714,13 +712,10 @@ export function getFieldControlClassName(hasError = false) {
     'border',
     hasError ? 'border-app-danger' : 'border-app-border-soft',
     'bg-white',
-    'px-4',
-    'py-3',
-    'sm:px-3.5',
-    'sm:py-2.5',
+    'px-3',
+    'py-2',
     'text-sm',
-    'leading-6',
-    'sm:leading-5',
+    'leading-5',
     'text-app-text',
     'placeholder:text-app-text-muted',
     'focus-visible:outline-none',
@@ -774,39 +769,39 @@ export function getModalPanelClassName(size: 'sm' | 'md' | 'lg' = 'md') {
 }
 
 const buttonSolidVariantClassMap: Record<ButtonColor, string> = {
-  neutral: 'bg-gray-500 border-gray-500 text-white hover:bg-gray-600 hover:border-gray-600',
-  primary: 'bg-blue-600 border-blue-600 text-white hover:bg-blue-700 hover:border-blue-700',
-  success: 'bg-green-600 border-green-600 text-white hover:bg-green-700 hover:border-green-700',
-  warning: 'bg-yellow-400 border-yellow-400 text-gray-900 hover:bg-yellow-500 hover:border-yellow-500',
-  danger: 'bg-red-600 border-red-600 text-white hover:bg-red-700 hover:border-red-700',
-  info: 'bg-cyan-500 border-cyan-500 text-gray-900 hover:bg-cyan-600 hover:border-cyan-600',
+  neutral: 'bg-neutral-500 border-neutral-500 text-white hover:bg-neutral-600 hover:border-neutral-600',
+  primary: 'bg-primary-600 border-primary-600 text-white hover:bg-primary-700 hover:border-primary-700',
+  success: 'bg-success-600 border-success-600 text-white hover:bg-success-700 hover:border-success-700',
+  warning: 'bg-warning-500 border-warning-500 text-white hover:bg-warning-600 hover:border-warning-600',
+  danger: 'bg-danger-600 border-danger-600 text-white hover:bg-danger-700 hover:border-danger-700',
+  info: 'bg-info-500 border-info-500 text-white hover:bg-info-600 hover:border-info-600',
 }
 
 const buttonOutlineVariantClassMap: Record<ButtonColor, string> = {
-  neutral: 'bg-transparent border-gray-400 text-gray-600 hover:bg-gray-50',
-  primary: 'bg-transparent border-blue-500 text-blue-600 hover:bg-blue-50',
-  success: 'bg-transparent border-green-500 text-green-600 hover:bg-green-50',
-  warning: 'bg-transparent border-yellow-400 text-yellow-600 hover:bg-yellow-50',
-  danger: 'bg-transparent border-red-500 text-red-600 hover:bg-red-50',
-  info: 'bg-transparent border-cyan-500 text-cyan-600 hover:bg-cyan-50',
+  neutral: 'bg-transparent border-neutral-400 text-neutral-600 hover:bg-neutral-50',
+  primary: 'bg-transparent border-primary-500 text-primary-600 hover:bg-primary-50',
+  success: 'bg-transparent border-success-500 text-success-600 hover:bg-success-50',
+  warning: 'bg-transparent border-warning-400 text-warning-600 hover:bg-warning-50',
+  danger: 'bg-transparent border-danger-500 text-danger-600 hover:bg-danger-50',
+  info: 'bg-transparent border-info-500 text-info-600 hover:bg-info-50',
 }
 
 const buttonGhostVariantClassMap: Record<ButtonColor, string> = {
-  neutral: 'border-transparent bg-transparent text-gray-600 hover:bg-gray-100',
-  primary: 'border-transparent bg-transparent text-blue-600 hover:bg-blue-100',
-  success: 'border-transparent bg-transparent text-green-600 hover:bg-green-100',
-  warning: 'border-transparent bg-transparent text-yellow-600 hover:bg-yellow-100',
-  danger: 'border-transparent bg-transparent text-red-600 hover:bg-red-100',
-  info: 'border-transparent bg-transparent text-cyan-600 hover:bg-cyan-100',
+  neutral: 'border-transparent bg-transparent text-neutral-600 hover:bg-neutral-100',
+  primary: 'border-transparent bg-transparent text-primary-600 hover:bg-primary-100',
+  success: 'border-transparent bg-transparent text-success-600 hover:bg-success-100',
+  warning: 'border-transparent bg-transparent text-warning-600 hover:bg-warning-100',
+  danger: 'border-transparent bg-transparent text-danger-600 hover:bg-danger-100',
+  info: 'border-transparent bg-transparent text-info-600 hover:bg-info-100',
 }
 
 const buttonLinkVariantClassMap: Record<ButtonColor, string> = {
-  neutral: 'border-transparent bg-transparent text-gray-600 hover:underline underline-offset-2',
-  primary: 'border-transparent bg-transparent text-blue-600 hover:underline underline-offset-2',
-  success: 'border-transparent bg-transparent text-green-600 hover:underline underline-offset-2',
-  warning: 'border-transparent bg-transparent text-yellow-600 hover:underline underline-offset-2',
-  danger: 'border-transparent bg-transparent text-red-600 hover:underline underline-offset-2',
-  info: 'border-transparent bg-transparent text-cyan-600 hover:underline underline-offset-2',
+  neutral: 'border-transparent bg-transparent text-neutral-600 hover:underline underline-offset-2',
+  primary: 'border-transparent bg-transparent text-primary-600 hover:underline underline-offset-2',
+  success: 'border-transparent bg-transparent text-success-600 hover:underline underline-offset-2',
+  warning: 'border-transparent bg-transparent text-warning-600 hover:underline underline-offset-2',
+  danger: 'border-transparent bg-transparent text-danger-600 hover:underline underline-offset-2',
+  info: 'border-transparent bg-transparent text-info-600 hover:underline underline-offset-2',
 }
 
 const buttonVariantClassMaps: Record<ButtonVariant, Record<ButtonColor, string>> = {
@@ -816,23 +811,109 @@ const buttonVariantClassMaps: Record<ButtonVariant, Record<ButtonColor, string>>
   link: buttonLinkVariantClassMap,
 }
 
+export function getAccordionHeaderClassName() {
+  return [
+    'w-full',
+    'text-left',
+    'px-4',
+    'py-2',
+    'font-medium',
+    'flex',
+    'items-center',
+    'justify-between',
+    'bg-primary-50',
+    'hover:bg-primary-100',
+    'focus:outline-none',
+    'focus-visible:ring-2',
+    'focus-visible:ring-primary-600',
+    'transition-colors',
+  ].join(' ')
+}
+
+export function getAccordionChevronClassName(isOpen: boolean) {
+  return [
+    'h-4',
+    'w-4',
+    'text-primary-600',
+    'transition-transform',
+    'duration-200',
+    'ease-out',
+    ...(isOpen ? ['rotate-180'] : []),
+  ].join(' ')
+}
+
+export function getAccordionBodyClassName() {
+  return 'px-4 py-2 flex flex-col gap-5'
+}
+
+export function getAccordionBodyAnimationClassName(isOpen: boolean) {
+  return isOpen ? 'animate-accordion-open' : 'animate-accordion-close'
+}
+
+export function getTabsRootClassName(orientation: 'horizontal' | 'vertical') {
+  return orientation === 'vertical' ? 'flex flex-row' : 'flex flex-col'
+}
+
+export function getTabsBarClassName(orientation: 'horizontal' | 'vertical') {
+  return orientation === 'vertical'
+    ? 'flex flex-col w-48 shrink-0'
+    : 'flex flex-row overflow-x-auto'
+}
+
+export function getTabsButtonClassName(isActive: boolean, orientation: 'horizontal' | 'vertical') {
+  const orientationClasses =
+    orientation === 'vertical'
+      ? 'text-left whitespace-normal break-words'
+      : 'shrink-0 whitespace-nowrap'
+
+  if (isActive) {
+    return [
+      'border-b-2',
+      'border-primary-600',
+      'text-primary-700',
+      'font-semibold',
+      'px-3',
+      'py-1.5',
+      'transition-colors',
+      orientationClasses,
+    ].join(' ')
+  }
+
+  return [
+    'text-app-text-muted',
+    'hover:text-app-text-strong',
+    'font-medium',
+    'px-3',
+    'py-1.5',
+    'transition-colors',
+    orientationClasses,
+  ].join(' ')
+}
+
+export function getTabsPanelClassName() {
+  return 'flex-1'
+}
+
+export function getLinkNodeClassName() {
+  return 'inline-flex items-center text-primary-600 underline hover:text-primary-800 transition-colors font-medium'
+}
+
 export function getButtonVariantClassName(
   color: ButtonColor,
   variant: ButtonVariant,
   fullWidth: boolean,
 ): string {
+  const fontWeight = variant === 'solid' ? 'font-semibold' : 'font-medium'
   const baseClasses = [
     'inline-flex',
     'items-center',
     'justify-center',
     'rounded-control',
     'border',
-    'px-4',
-    'py-3',
-    'sm:px-3.5',
-    'sm:py-2.5',
+    'px-3.5',
+    'py-2',
     'text-sm',
-    'font-semibold',
+    fontWeight,
     'leading-5',
     'transition-colors',
     'cursor-pointer',
@@ -845,4 +926,284 @@ export function getButtonVariantClassName(
   const variantClasses = buttonVariantClassMaps[variant][color]
 
   return [...baseClasses, widthClass, variantClasses].join(' ')
+}
+
+// --- Stat node styling functions (T8) ---
+
+const statAccentBorderClassMap: Record<ButtonColor, string> = {
+  neutral: 'border-neutral-400',
+  primary: 'border-primary-500',
+  success: 'border-success-500',
+  warning: 'border-warning-500',
+  danger: 'border-danger-500',
+  info: 'border-info-500',
+}
+
+const statAccentIconClassMap: Record<ButtonColor, string> = {
+  neutral: 'text-neutral-400',
+  primary: 'text-primary-500',
+  success: 'text-success-500',
+  warning: 'text-warning-500',
+  danger: 'text-danger-500',
+  info: 'text-info-500',
+}
+
+const statTintedBgClassMap: Record<ButtonColor, string> = {
+  neutral: 'bg-neutral-100',
+  primary: 'bg-primary-100',
+  success: 'bg-success-100',
+  warning: 'bg-warning-100',
+  danger: 'bg-danger-100',
+  info: 'bg-info-100',
+}
+
+const statTintedIconClassMap: Record<ButtonColor, string> = {
+  neutral: 'text-neutral-600',
+  primary: 'text-primary-600',
+  success: 'text-success-600',
+  warning: 'text-warning-600',
+  danger: 'text-danger-600',
+  info: 'text-info-600',
+}
+
+const statTintedLabelClassMap: Record<ButtonColor, string> = {
+  neutral: 'text-neutral-700',
+  primary: 'text-primary-700',
+  success: 'text-success-700',
+  warning: 'text-warning-700',
+  danger: 'text-danger-700',
+  info: 'text-info-700',
+}
+
+const statTintedValueClassMap: Record<ButtonColor, string> = {
+  neutral: 'text-neutral-800',
+  primary: 'text-primary-800',
+  success: 'text-success-800',
+  warning: 'text-warning-800',
+  danger: 'text-danger-800',
+  info: 'text-info-800',
+}
+
+export function getStatAccentRootClassName(color: ButtonColor): string {
+  return `border-l-4 pl-4 py-2 ${statAccentBorderClassMap[color]}`
+}
+
+export function getStatAccentIconClassName(color: ButtonColor): string {
+  return `size-8 shrink-0 ${statAccentIconClassMap[color]}`
+}
+
+export function getStatAccentLabelClassName(): string {
+  return 'text-sm font-medium text-app-text-muted'
+}
+
+export function getStatAccentValueClassName(): string {
+  return 'text-2xl font-semibold text-app-text-strong'
+}
+
+export function getStatTintedRootClassName(color: ButtonColor): string {
+  return `rounded-lg p-4 ${statTintedBgClassMap[color]}`
+}
+
+export function getStatTintedIconClassName(color: ButtonColor): string {
+  return `size-8 shrink-0 ${statTintedIconClassMap[color]}`
+}
+
+export function getStatTintedLabelClassName(color: ButtonColor): string {
+  return `text-sm font-medium ${statTintedLabelClassMap[color]}`
+}
+
+export function getStatTintedValueClassName(color: ButtonColor): string {
+  return `text-2xl font-semibold ${statTintedValueClassMap[color]}`
+}
+
+// T9 — Badge styling functions (D9 D10)
+
+const badgePillBgClassMap: Record<ButtonColor, string> = {
+  neutral: 'bg-neutral-100',
+  primary: 'bg-primary-100',
+  success: 'bg-success-100',
+  warning: 'bg-warning-100',
+  danger: 'bg-danger-100',
+  info: 'bg-info-100',
+}
+
+const badgePillTextClassMap: Record<ButtonColor, string> = {
+  neutral: 'text-neutral-700',
+  primary: 'text-primary-700',
+  success: 'text-success-700',
+  warning: 'text-warning-700',
+  danger: 'text-danger-700',
+  info: 'text-info-700',
+}
+
+const badgeCircleDotClassMap: Record<ButtonColor, string> = {
+  neutral: 'bg-neutral-500',
+  primary: 'bg-primary-500',
+  success: 'bg-success-500',
+  warning: 'bg-warning-500',
+  danger: 'bg-danger-500',
+  info: 'bg-info-500',
+}
+
+export function getBadgePillClassName(color: ButtonColor): string {
+  return `inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${badgePillBgClassMap[color]} ${badgePillTextClassMap[color]}`
+}
+
+export function getBadgeCircleDotClassName(color: ButtonColor): string {
+  return `inline-block h-2 w-2 rounded-full ${badgeCircleDotClassMap[color]}`
+}
+
+export function getBadgeCircleLabelClassName(): string {
+  return 'text-sm'
+}
+
+// T10 — Alert styling functions (D9 D10)
+
+const alertBgClassMap: Record<ButtonColor, string> = {
+  neutral: 'bg-neutral-100',
+  primary: 'bg-primary-100',
+  success: 'bg-success-100',
+  warning: 'bg-warning-100',
+  danger: 'bg-danger-100',
+  info: 'bg-info-100',
+}
+
+const alertTextClassMap: Record<ButtonColor, string> = {
+  neutral: 'text-neutral-700',
+  primary: 'text-primary-700',
+  success: 'text-success-700',
+  warning: 'text-warning-700',
+  danger: 'text-danger-700',
+  info: 'text-info-700',
+}
+
+export function getAlertClassName(color: ButtonColor): string {
+  return `flex items-start gap-3 rounded-md p-4 ${alertBgClassMap[color]}`
+}
+
+export function getAlertTitleClassName(color: ButtonColor): string {
+  return `${alertTextClassMap[color]} font-medium`
+}
+
+export function getAlertIconClassName(color: ButtonColor): string {
+  return `${alertTextClassMap[color]} size-5 shrink-0`
+}
+
+export function getAlertBodyClassName(color: ButtonColor): string {
+  return `${alertTextClassMap[color]} text-sm`
+}
+
+// T11 — Skeleton styling functions (D9 D10)
+
+export function getSkeletonBaseClassName(): string {
+  return 'bg-neutral-200'
+}
+
+export function getSkeletonAnimateClassName(animate: boolean): string {
+  return animate ? 'animate-pulse' : ''
+}
+
+// T12 — Input icon holder and icon styling functions (D9 D10 D7)
+
+export function getInputIconHolderClassName(): string {
+  return 'flex items-center justify-center px-3 bg-neutral-50 border-r border-app-border-soft shrink-0'
+}
+
+export function getInputIconClassName(): string {
+  return 'text-app-text-muted size-4 pointer-events-none'
+}
+
+export function getInputWithIconClassName(): string {
+  return 'flex-1 min-w-0 bg-white px-3 py-2 text-sm leading-5 text-app-text placeholder:text-app-text-muted focus-visible:outline-none'
+}
+
+export function getInputIconWrapperClassName(hasError: boolean): string {
+  return [
+    'flex',
+    'items-stretch',
+    'w-full',
+    'rounded-control',
+    'border',
+    'overflow-hidden',
+    hasError ? 'border-app-danger' : 'border-app-border-soft',
+    hasError ? 'focus-within:border-app-danger' : 'focus-within:border-app-accent',
+    hasError ? 'focus-within:ring-app-danger' : 'focus-within:ring-app-accent',
+    'focus-within:ring-2',
+  ].join(' ')
+}
+
+// T13 — File-manager styling functions (D9 D10 D8)
+
+export function getFileManagerRowClassName(): string {
+  return 'flex items-center justify-between py-2 border-b border-app-border-soft last:border-0'
+}
+
+export function getFileManagerRowFileNameClassName(): string {
+  return 'text-sm text-app-text flex-1 truncate'
+}
+
+export function getFileManagerRowActionClassName(variant: 'primary' | 'danger' | 'disabled'): string {
+  if (variant === 'primary') {
+    return 'flex items-center gap-1 text-sm text-primary-600 hover:text-primary-800 transition-colors'
+  }
+  if (variant === 'danger') {
+    return 'flex items-center gap-1 text-sm text-danger-600 hover:text-danger-700 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition-colors'
+  }
+  return 'flex items-center gap-1 text-sm text-neutral-300'
+}
+
+export function getFileManagerListErrorClassName(): string {
+  return 'text-sm text-danger-600'
+}
+
+export function getFileManagerListEmptyClassName(): string {
+  return 'text-sm text-app-text-muted'
+}
+
+export function getFileManagerListDividerClassName(): string {
+  return 'divide-y divide-app-border-soft'
+}
+
+export function getFileManagerErrorItemClassName(): string {
+  return 'text-sm text-danger-600'
+}
+
+const fileManagerDropZonePhaseClassMap: Record<string, string> = {
+  idle: 'border-neutral-300 bg-neutral-50 hover:bg-neutral-100',
+  'drag-over': 'border-primary-500 bg-primary-50',
+  uploading: 'border-info-400 bg-info-50 cursor-not-allowed',
+  success: 'border-success-500 bg-success-50',
+  error: 'border-danger-400 bg-danger-50',
+}
+
+export function getFileManagerDropZoneClassName(phase: 'idle' | 'drag-over' | 'uploading' | 'success' | 'error'): string {
+  return fileManagerDropZonePhaseClassMap[phase] ?? fileManagerDropZonePhaseClassMap.idle
+}
+
+const fileManagerDropZoneTextClassMap: Record<'muted' | 'info' | 'success', string> = {
+  muted: 'text-sm text-app-text-muted',
+  info: 'text-sm text-info-700',
+  success: 'text-sm text-success-700',
+}
+
+export function getFileManagerDropZoneTextClassName(intent: 'muted' | 'info' | 'success'): string {
+  return fileManagerDropZoneTextClassMap[intent]
+}
+
+export function getFileManagerDropZoneProgressTrackClassName(): string {
+  return 'w-full bg-info-200 rounded h-2'
+}
+
+export function getFileManagerDropZoneProgressFillClassName(): string {
+  return 'bg-info-600 h-2 rounded transition-all'
+}
+
+const fileManagerDropZoneIconColorClassMap: Record<'muted' | 'info' | 'success', string> = {
+  muted: 'text-app-text-muted',
+  info: 'text-info-700',
+  success: 'text-success-700',
+}
+
+export function getFileManagerDropZoneIconColorClassName(intent: 'muted' | 'info' | 'success'): string {
+  return fileManagerDropZoneIconColorClassMap[intent]
 }

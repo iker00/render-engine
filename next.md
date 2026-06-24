@@ -12,13 +12,12 @@
 
 ### Pendiente de decisión
 
-- (🚨 high - 🧠 medium) Añadir estado `onError` al formulario
+? (🚨 high - 🧠 medium) Añadir estado `onError` al formulario
 - Añadir `.describe()` en los schemas Zod para el schema del prompt
 - Subida de ficheros con componente de formulario attachment o file.
 - Permitir personalizar todos los literales del componente fileManager
 - Añadir mensajes personalizados todas las validaciones
-- IMPORTANTE: Si un input no es visible con "node.visibility" no debería de enviarse en el submit
-- 
+- Permtir que el nodo Link pueda tener componentes hijos para que los enlaces no sean únicamente textos 
 ---
 
 ### Descartado / ignorar por ahora

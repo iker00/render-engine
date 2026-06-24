@@ -60,7 +60,7 @@ function createRuntimePageState(
 }
 
 describe('SkeletonNode — variant rect (default)', () => {
-  it('renders a single [data-layout-node="skeleton"] element with bg-gray-200, h-4, block and animate-pulse when no props', () => {
+  it('renders a single [data-layout-node="skeleton"] element with bg-neutral-200, h-4, block and animate-pulse when no props', () => {
     const page: RuntimePageConfig = {
       id: 'home',
       layout: [{ type: 'skeleton' }],
@@ -68,7 +68,7 @@ describe('SkeletonNode — variant rect (default)', () => {
     const { container } = renderRuntimePage(page)
     const skeleton = container.querySelector('[data-layout-node="skeleton"]')
     expect(skeleton).toBeInTheDocument()
-    expect(skeleton).toHaveClass('bg-gray-200')
+    expect(skeleton).toHaveClass('bg-neutral-200')
     expect(skeleton).toHaveClass('h-4')
     expect(skeleton).toHaveClass('block')
     expect(skeleton).toHaveClass('animate-pulse')
@@ -76,7 +76,7 @@ describe('SkeletonNode — variant rect (default)', () => {
     expect(skeleton).not.toHaveClass('rounded-full')
   })
 
-  it('renders rect with w-32, h-8, rounded and bg-gray-200 when width, height and rounded are set', () => {
+  it('renders rect with w-32, h-8, rounded and bg-neutral-200 when width, height and rounded are set', () => {
     const page: RuntimePageConfig = {
       id: 'home',
       layout: [{ type: 'skeleton', props: { variant: 'rect', width: '32', height: '8', rounded: true } }],
@@ -87,7 +87,7 @@ describe('SkeletonNode — variant rect (default)', () => {
     expect(skeleton).toHaveClass('w-32')
     expect(skeleton).toHaveClass('h-8')
     expect(skeleton).toHaveClass('rounded')
-    expect(skeleton).toHaveClass('bg-gray-200')
+    expect(skeleton).toHaveClass('bg-neutral-200')
   })
 
   it('does not add animate-pulse to rect when animate: false', () => {
@@ -126,7 +126,7 @@ describe('SkeletonNode — variant rect (default)', () => {
 })
 
 describe('SkeletonNode — variant text', () => {
-  it('renders wrapper with flex, flex-col, gap-2 and animate-pulse containing 3 children with bg-gray-200, h-3 and w-full when lines: 3', () => {
+  it('renders wrapper with flex, flex-col, gap-2 and animate-pulse containing 3 children with bg-neutral-200, h-3 and w-full when lines: 3', () => {
     const page: RuntimePageConfig = {
       id: 'home',
       layout: [{ type: 'skeleton', props: { variant: 'text', lines: 3 } }],
@@ -141,7 +141,7 @@ describe('SkeletonNode — variant text', () => {
     const children = Array.from(wrapper!.children)
     expect(children).toHaveLength(3)
     for (const child of children) {
-      expect(child).toHaveClass('bg-gray-200')
+      expect(child).toHaveClass('bg-neutral-200')
       expect(child).toHaveClass('h-3')
       expect(child).toHaveClass('w-full')
     }
@@ -188,7 +188,7 @@ describe('SkeletonNode — variant text', () => {
 })
 
 describe('SkeletonNode — variant circle', () => {
-  it('renders a single element with w-12, h-12, rounded-full, bg-gray-200 and animate-pulse when no width', () => {
+  it('renders a single element with w-12, h-12, rounded-full, bg-neutral-200 and animate-pulse when no width', () => {
     const page: RuntimePageConfig = {
       id: 'home',
       layout: [{ type: 'skeleton', props: { variant: 'circle' } }],
@@ -199,7 +199,7 @@ describe('SkeletonNode — variant circle', () => {
     expect(skeleton).toHaveClass('w-12')
     expect(skeleton).toHaveClass('h-12')
     expect(skeleton).toHaveClass('rounded-full')
-    expect(skeleton).toHaveClass('bg-gray-200')
+    expect(skeleton).toHaveClass('bg-neutral-200')
     expect(skeleton).toHaveClass('animate-pulse')
   })
 

@@ -12,5 +12,6 @@ Documentación global del runtime declarativo: visión general, organización in
 |---|---|
 | [overview.md](./overview.md) | Visión global del runtime, qué resuelve, áreas funcionales principales. |
 | [organization.md](./organization.md) | Mapa de `src/config/`, `src/runtime/`, `src/queries/` y responsabilidades por módulo. |
+| [design-tokens.md](./design-tokens.md) | Paleta semántica CSS custom, tokens de aplicación, tipografía, espaciado, radios de esquina. |
 | [error-behavior.md](./error-behavior.md) | Cómo degrada el runtime ante config inválido, hash inválido, página inexistente, errores `development-only`. |
 | [limits.md](./limits.md) | Límites transversales actuales de v1 (lo que está intencionadamente fuera de alcance global). |

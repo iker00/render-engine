@@ -1,3 +1,5 @@
+import { getFileManagerErrorItemClassName } from '../../runtime-node-styling'
+
 interface FileManagerErrorListProps {
   errors: string[]
 }
@@ -10,7 +12,7 @@ export function FileManagerErrorList({ errors }: FileManagerErrorListProps) {
   return (
     <ul role="alert" className="mt-2 space-y-1">
       {errors.map((error, index) => (
-        <li key={index} className="text-sm text-red-600">
+        <li key={index} className={getFileManagerErrorItemClassName()}>
           {error}
         </li>
       ))}

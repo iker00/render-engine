@@ -32,7 +32,7 @@ El comportamiento de render depende de `props.variant`:
 ### `rect` (default)
 
 Se renderiza como un único bloque rectangular:
-- Clases base: `bg-gray-200 block`
+- Clases base: `bg-neutral-200 block`
 - Anchura: `w-{props.width}` si se declara; ninguna si no.
 - Altura: `h-{props.height}` si se declara; `h-4` por defecto.
 - Redondeo: `rounded` si `props.rounded === true`.
@@ -44,7 +44,7 @@ Ejemplo: `{ type: 'skeleton', props: { width: '32', height: '8', rounded: true }
 
 Se renderiza como un wrapper que contiene `props.lines` bloques apilados:
 - Wrapper: `flex flex-col gap-2` + `animate-pulse` salvo que `props.animate === false`.
-- Cada línea: `bg-gray-200 h-3` + `w-{props.width}` si se declara o `w-full` si no + `rounded` si `props.rounded === true`.
+- Cada línea: `bg-neutral-200 h-3` + `w-{props.width}` si se declara o `w-full` si no + `rounded` si `props.rounded === true`.
 - `props.height` se ignora (altura por línea es fija).
 
 Ejemplo: `{ type: 'skeleton', props: { variant: 'text', lines: 3, width: '1/2' } }` renderiza 3 líneas de skeleton de media anchura.
@@ -52,7 +52,7 @@ Ejemplo: `{ type: 'skeleton', props: { variant: 'text', lines: 3, width: '1/2' }
 ### `circle`
 
 Se renderiza como un único bloque circular:
-- Clases base: `bg-gray-200 rounded-full`
+- Clases base: `bg-neutral-200 rounded-full`
 - Dimensiones: `w-{props.width} h-{props.width}` si `props.width` se declara; `w-12 h-12` por defecto (círculo mediano).
 - `props.rounded` y `props.height` se ignoran.
 - Animación: `animate-pulse` salvo que `props.animate === false`.

@@ -1,6 +1,9 @@
 import type { RuntimeConfig } from '../../../config/runtime-config'
 import { createCollectionPaginationModel } from '../../runtime-collection-pagination'
 import {
+  getFileManagerListDividerClassName,
+  getFileManagerListEmptyClassName,
+  getFileManagerListErrorClassName,
   getRepeaterPaginationButtonClassName,
   getRepeaterPaginationControlsClassName,
 } from '../../runtime-node-styling'
@@ -50,7 +53,7 @@ export function FileManagerList({
   if (getOperationStatus === 'error') {
     return (
       <div className="mt-4">
-        <p className="text-sm text-red-600">Error al cargar los ficheros.</p>
+        <p className={getFileManagerListErrorClassName()}>Error al cargar los ficheros.</p>
       </div>
     )
   }
@@ -58,10 +61,10 @@ export function FileManagerList({
   return (
     <div className="mt-4">
       {page.totalItems === 0 ? (
-        <p className="text-sm text-gray-500">No hay ficheros subidos.</p>
+        <p className={getFileManagerListEmptyClassName()}>No hay ficheros subidos.</p>
       ) : (
         <>
-          <div className="divide-y divide-gray-200">
+          <div className={getFileManagerListDividerClassName()}>
             {page.visibleItems.map((file) => (
               <FileManagerRow
                 key={String(file[fileIdField])}
