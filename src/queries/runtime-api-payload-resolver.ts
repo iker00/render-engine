@@ -464,6 +464,13 @@ export function resolveBody(
     }
   }
 
+  if (resolvedBody.status === 'omit') {
+    return {
+      status: 'ready',
+      body: undefined,
+    }
+  }
+
   return {
     status: 'ready',
     body: resolvedBody.value,

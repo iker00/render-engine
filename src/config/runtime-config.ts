@@ -112,6 +112,9 @@ export type {
   CheckboxGroupLayoutNode,
   ChoiceGroupOptionLayout,
   FileManagerLayoutNode,
+  FormOnErrorAction,
+  FormOnSuccessAction,
+  RuntimeTokenRefreshConfig,
 } from './runtime-config-types'
 export type { RuntimeTranslationsConfig, RuntimeTranslationsLangMap } from './runtime-config-types'
 export { validateRuntimeConfig } from './validate-runtime-config'

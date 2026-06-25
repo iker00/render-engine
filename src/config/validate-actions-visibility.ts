@@ -893,7 +893,7 @@ export function validateWhenCondition(
   if (!hasValue) {
     return {
       status: 'ready',
-      when: rawWhen as RuntimeWhenCondition,
+      when: rawWhen as unknown as RuntimeWhenCondition,
     }
   }
 
@@ -906,7 +906,7 @@ export function validateWhenCondition(
 
     return {
       status: 'ready',
-      when: rawWhen as RuntimeWhenCondition,
+      when: rawWhen as unknown as RuntimeWhenCondition,
     }
   }
 
@@ -919,7 +919,7 @@ export function validateWhenCondition(
 
     return {
       status: 'ready',
-      when: rawWhen as RuntimeWhenCondition,
+      when: rawWhen as unknown as RuntimeWhenCondition,
     }
   }
 
