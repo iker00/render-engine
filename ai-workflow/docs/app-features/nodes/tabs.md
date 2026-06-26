@@ -58,12 +58,30 @@ Cuando `tabs` aparece como hijo de un nodo `form`:
 
 El nodo `tabs` fuera de form sigue comportándose exactamente igual que antes: solo el panel activo en el DOM, estado local del tab, sin relación con formularios.
 
-### Comportamiento visual de la barra de tabs
+### Comportamiento visual de la barra de tabs y el panel
+
+#### Barra de tabs
 
 La barra de tabs se adapta al espacio disponible según la `orientation`:
 
 - En orientación `vertical` (barra a la izquierda): la barra tiene un ancho máximo fijo (~192px). Las etiquetas que superen ese ancho se muestran en múltiples líneas dentro del botón, permitiendo wrapping y ruptura de palabras largas sin desbordar el ancho de la barra.
 - En orientación `horizontal` (barra encima del panel): cuando el conjunto de botones supera el ancho disponible del container padre, la barra permite scroll horizontal interno. En pantallas anchas con pocos tabs, el comportamiento visual es idéntico al anterior: sin scroll visible.
+
+#### Panel de contenido
+
+El panel del tab activo tiene un **borde perimetral** en los cuatro lados (`border-app-border-soft`, equivalente a `neutral-200`) y un **padding interno uniforme** (`p-4`, 1rem) en todos los lados. El fondo del panel mantiene el color heredado del contexto sin sobrescrituras.
+
+Los nodos hijos dentro del panel se apilan verticalmente con un espaciado uniforme (`gap-5`), replicando el mismo espaciado de secciones del runtime. Esto evita que los componentes queden pegados entre sí.
+
+#### Técnica "tab conectado"
+
+El tab activo aplica una técnica visual de "conexión" al panel que refuerza la relación entre la etiqueta y su contenido:
+
+- En orientación **`horizontal`** (barra encima del panel): el tab activo tiene borde en los lados superior, izquierdo y derecho (`border-app-border-soft`), pero **sin borde inferior**. Su base se funde visualmente con el borde superior del panel, creando una transición visual continua.
+
+- En orientación **`vertical`** (barra a la izquierda): el tab activo tiene borde en los lados superior, izquierdo e inferior (`border-app-border-soft`), pero **sin borde derecho**. Su lado derecho se funde visualmente con el borde izquierdo del panel, creando una transición visual continua.
+
+Los tabs inactivos no tienen borde visible; la combinación de `text-primary-700` (texto fuerte) + `font-semibold` (negrita) sigue siendo el indicador semántico del tab activo.
 
 ## Casos límite
 
