@@ -109,6 +109,7 @@ const runtimePageRootSchema = z
   .object({
     id: z.string().min(1),
     preloads: z.array(z.unknown()).optional(),
+    title: z.string().optional(),
     layout: z.array(layoutNodeSchema),
   })
   .strip()

@@ -665,6 +665,7 @@ export type LayoutNodeCollection = LayoutNode[]
 export interface RuntimePageConfig {
   id: string
   preloads?: RuntimePreloadConfig[]
+  title?: string
   layout: LayoutNodeCollection
 }
 

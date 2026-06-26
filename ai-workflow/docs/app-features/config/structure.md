@@ -20,7 +20,10 @@ Cada página debe incluir:
 - `preloads`: array opcional y ordenado de objetos declarativos de una sola clave.
 - `layout`: array ordenado obligatorio de elementos declarativos.
 
-La página ya no depende de `title` ni `description` fuera del árbol `layout`.
+Campos opcionales:
+- `title`: string opcional que controla `document.title` mientras la página está activa. Véase [[../navigation/page-model.md#title-del-documento]] para el comportamiento.
+
+La página ya no depende de `description` fuera del árbol `layout`.
 
 ## Shape de `preloads`
 - cada entrada debe ser un objeto con exactamente una clave no vacía cuyo nombre actúa como `operationName`

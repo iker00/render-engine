@@ -25,6 +25,7 @@
   "pages": [
     {
       "id": "home",
+      "title": "Inicio",
       "layout": [
         {
           "type": "heading",
@@ -120,6 +121,10 @@
             {
               "type": "button",
               "props": { "label": "Modal", "variant": "outline", "color": "warning", "fullWidth": true, "action": { "type": "navigateTo", "pageId": "modal-nodes" } }
+            },
+            {
+              "type": "button",
+              "props": { "label": "Gestor de ficheros (fileManager)", "variant": "outline", "color": "warning", "fullWidth": true, "action": { "type": "navigateTo", "pageId": "file-manager" } }
             }
           ]
         },
@@ -151,6 +156,10 @@
             {
               "type": "button",
               "props": { "label": "Repeater", "variant": "outline", "color": "info", "fullWidth": true, "action": { "type": "navigateTo", "pageId": "repeater" } }
+            },
+            {
+              "type": "button",
+              "props": { "label": "Tokens de autenticacion", "variant": "outline", "color": "info", "fullWidth": true, "action": { "type": "navigateTo", "pageId": "auth-tokens" } }
             }
           ]
         }
@@ -159,6 +168,7 @@
 
     {
       "id": "text-nodes",
+      "title": "Text nodes",
       "layout": [
         {
           "type": "container",
@@ -863,14 +873,77 @@
         },
 
         { "type": "divider" },
+        { "type": "heading", "props": { "text": "children: contenido compuesto", "level": 2 } },
+        { "type": "paragraph", "props": { "text": "En lugar de props.label, el link puede envolver nodos como contenido del anchor. Mutuamente excluyente con props.label e props.icon. Tipos permitidos: container, heading, paragraph, list, image, badge, alert, stat, divider, skeleton." } },
+
+        { "type": "heading", "props": { "text": "Tarjeta como link", "level": 3 } },
+        {
+          "type": "container",
+          "props": { "variant": "card", "gap": "sm" },
+          "children": [
+            { "type": "paragraph", "props": { "text": "{ \"type\": \"link\", \"props\": { \"href\": \"https://google.com\", \"target\": \"_blank\" }, \"children\": [ { \"type\": \"container\", \"props\": { \"variant\": \"card\" }, \"children\": [ { \"type\": \"heading\", \"props\": { \"text\": \"Titulo enlazado\", \"level\": 3 } }, { \"type\": \"paragraph\", \"props\": { \"text\": \"Click en cualquier parte navega.\" } } ] } ] }" } },
+            { "type": "divider", "props": { "variant": "dashed" } },
+            {
+              "type": "link",
+              "props": { "href": "https://google.com", "target": "_blank" },
+              "children": [
+                {
+                  "type": "container",
+                  "props": { "variant": "card", "gap": "sm" },
+                  "children": [
+                    { "type": "heading", "props": { "text": "Tarjeta enlazada", "level": 3, "icon": "external-link" } },
+                    { "type": "paragraph", "props": { "text": "Click en cualquier parte de esta tarjeta abre el enlace externo." } }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+
+        { "type": "heading", "props": { "text": "Badge como link interno", "level": 3 } },
+        {
+          "type": "container",
+          "props": { "variant": "card", "gap": "sm" },
+          "children": [
+            { "type": "paragraph", "props": { "text": "{ \"type\": \"link\", \"props\": { \"action\": { \"type\": \"navigateTo\", \"pageId\": \"home\" } }, \"children\": [ { \"type\": \"badge\", \"props\": { \"label\": \"Ir al inicio\", \"color\": \"primary\" } } ] }" } },
+            { "type": "divider", "props": { "variant": "dashed" } },
+            {
+              "type": "link",
+              "props": { "action": { "type": "navigateTo", "pageId": "home" } },
+              "children": [
+                { "type": "badge", "props": { "label": "Ir al inicio", "color": "primary" } }
+              ]
+            }
+          ]
+        },
+
+        { "type": "heading", "props": { "text": "Imagen como link", "level": 3 } },
+        {
+          "type": "container",
+          "props": { "variant": "card", "gap": "sm" },
+          "children": [
+            { "type": "paragraph", "props": { "text": "{ \"type\": \"link\", \"props\": { \"href\": \"https://picsum.photos/seed/linkdemo/800/400\", \"target\": \"_blank\" }, \"children\": [ { \"type\": \"image\", \"props\": { \"src\": \"https://picsum.photos/seed/linkdemo/800/400\", \"alt\": \"Imagen enlazada\" } } ] }" } },
+            { "type": "divider", "props": { "variant": "dashed" } },
+            {
+              "type": "link",
+              "props": { "href": "https://picsum.photos/seed/linkdemo/800/400", "target": "_blank" },
+              "children": [
+                { "type": "image", "props": { "src": "https://picsum.photos/seed/linkdemo/800/400", "alt": "Imagen enlazada" } }
+              ]
+            }
+          ]
+        },
+
+        { "type": "divider" },
         { "type": "heading", "props": { "text": "Props disponibles", "level": 2 } },
         {
           "type": "table",
           "props": {
             "headers": ["Prop", "Tipo", "Contexto", "Descripcion"],
             "rows": [
-              ["label", "string", "Obligatorio", "Texto visible. Admite interpolacion."],
-              ["icon", "string", "Opcional", "Nombre de icono Lucide. Se renderiza a la izquierda."],
+              ["label", "string", "XOR children", "Texto visible. Admite interpolacion."],
+              ["icon", "string", "Solo con label", "Nombre de icono Lucide. Se renderiza a la izquierda."],
+              ["children", "array", "XOR label", "Nodos del anchor. Tipos: container, heading, paragraph, list, image, badge, alert, stat, divider, skeleton."],
               ["href", "string", "XOR action", "URL externa. Admite referencia dinamica."],
               ["download", "string", "Solo con href", "Nombre de archivo sugerido para descarga."],
               ["target", "string", "Solo con href", "Atributo target del anchor (ej: _blank)."],
@@ -2372,6 +2445,305 @@
         { "type": "divider" },
         { "type": "heading", "props": { "text": "items.source soportados", "level": 2 } },
         { "type": "paragraph", "props": { "text": "Solo se aceptan: queries.{queryName}.data o queries.{queryName}.data.* (subcampo). No se permiten sources fuera de queries.*." } }
+      ]
+    },
+
+    {
+      "id": "file-manager",
+      "layout": [
+        {
+          "type": "container",
+          "props": { "direction": "row", "justify": "between", "align": "center" },
+          "children": [
+            { "type": "heading", "props": { "text": "Gestor de ficheros (fileManager)", "level": 1 } },
+            { "type": "button", "props": { "label": "Volver al inicio", "variant": "ghost", "action": { "type": "navigateTo", "pageId": "home" } } }
+          ]
+        },
+        { "type": "divider" },
+        { "type": "paragraph", "props": { "text": "Nodo standalone para subir, listar, visualizar, descargar y eliminar ficheros. Zona de arrastrar-y-soltar (DnD) con selector nativo como fallback. No participa en el submit del formulario contenedor." } },
+
+        { "type": "divider" },
+        { "type": "heading", "props": { "text": "Estructura JSON completa", "level": 2 } },
+        {
+          "type": "container",
+          "props": { "variant": "card", "gap": "sm" },
+          "children": [
+            { "type": "paragraph", "props": { "text": "{ \"type\": \"fileManager\", \"props\": { \"fieldName\": \"documentos\", \"fileField\": \"file\", \"listPath\": \"files\", \"fileIdField\": \"id\", \"fileNameField\": \"name\", \"multiple\": true, \"prefix\": \"EXP\", \"acceptExtension\": [\".pdf\", \".jpg\"], \"getOperation\": \"getDocuments\", \"uploadOperation\": \"uploadDocuments\", \"deleteOperation\": \"deleteDocument\", \"viewOperation\": \"viewDocument\", \"downloadOperation\": false, \"validations\": { \"accept\": [\"application/pdf\", \"image/jpeg\"], \"maxFileSize\": 2, \"maxTotalSize\": 10, \"maxFiles\": 10, \"validFileNames\": [\"^FACT_\\\\d{4}\\\\.pdf$\"] }, \"pagination\": { \"pageSize\": 5 } } }" } }
+          ]
+        },
+
+        { "type": "divider" },
+        { "type": "heading", "props": { "text": "Props principales", "level": 2 } },
+        {
+          "type": "table",
+          "props": {
+            "headers": ["Prop", "Default", "Descripcion"],
+            "rows": [
+              ["fieldName", "—", "Discriminador legacy. Obligatorio si alguna operacion esta omitida."],
+              ["fileField", "\"file\"", "Nombre del campo en el FormData que lleva el binario."],
+              ["listPath", "\"files\"", "Ruta dot-notation al array de ficheros en la respuesta."],
+              ["fileIdField", "\"id\"", "Campo del objeto fichero que actua como identificador unico."],
+              ["fileNameField", "\"name\"", "Campo del objeto fichero que se muestra como etiqueta en la lista."],
+              ["multiple", "true", "Si false, solo se puede seleccionar o arrastrar un fichero a la vez."],
+              ["prefix", "—", "Prefijo antepuesto al nombre del fichero antes de subir (prefix_nombre)."],
+              ["acceptExtension", "—", "Extensiones informativas en la zona DnD. No bloquea la subida."],
+              ["pagination.pageSize", "10", "Numero de ficheros por pagina en la lista."]
+            ]
+          }
+        },
+
+        { "type": "divider" },
+        { "type": "heading", "props": { "text": "Operaciones declarativas", "level": 2 } },
+        { "type": "paragraph", "props": { "text": "Cada operacion acepta tres valores: string (nombre de entrada en el catalogo api), false (deshabilita la funcionalidad) u omitida (comportamiento legacy, requiere fieldName)." } },
+        {
+          "type": "table",
+          "props": {
+            "headers": ["Prop", "Efecto si false", "Efecto si omitida"],
+            "rows": [
+              ["getOperation", "Lista vacia al montar", "Comportamiento legacy (requiere fieldName)"],
+              ["uploadOperation", "Zona DnD permanentemente oculta", "Comportamiento legacy (requiere fieldName)"],
+              ["deleteOperation", "Sin boton Eliminar", "Sin boton Eliminar"],
+              ["viewOperation", "Sin boton Ver", "Sin boton Ver (legacy)"],
+              ["downloadOperation", "Sin boton Descargar", "Sin boton Descargar (legacy)"]
+            ]
+          }
+        },
+        {
+          "type": "alert",
+          "props": { "type": "info", "message": "fieldName es obligatorio si alguna operacion esta omitida. Si todas estan declaradas como string o false, fieldName no es necesario." }
+        },
+
+        { "type": "divider" },
+        { "type": "heading", "props": { "text": "Validaciones client-side", "level": 2 } },
+        { "type": "paragraph", "props": { "text": "Las validaciones se evaluan antes de la subida. Los ficheros rechazados no llegan al servidor." } },
+        {
+          "type": "table",
+          "props": {
+            "headers": ["Prop", "Tipo", "Descripcion"],
+            "rows": [
+              ["accept", "string[]", "MIME types permitidos. Ej: [\"application/pdf\", \"image/jpeg\"]"],
+              ["maxFileSize", "number (MB)", "Tamano maximo por fichero. Ej: 2 = 2 MB, 0.5 = 512 KB"],
+              ["maxTotalSize", "number (MB)", "Tamano maximo acumulado del lote a subir"],
+              ["minFiles", "number", "Minimo de ficheros que deben estar subidos (informativo)"],
+              ["maxFiles", "number", "Maximo de ficheros permitidos contando los ya presentes"],
+              ["validFileNames", "string[]", "Patrones regex. El nombre debe coincidir con al menos uno"]
+            ]
+          }
+        },
+        {
+          "type": "container",
+          "props": { "variant": "card", "gap": "sm" },
+          "children": [
+            { "type": "heading", "props": { "text": "JSON de ejemplo", "level": 3 } },
+            { "type": "paragraph", "props": { "text": "\"validations\": { \"accept\": [\"application/pdf\"], \"maxFileSize\": 2, \"maxTotalSize\": 10, \"maxFiles\": 5, \"validFileNames\": [\"^FACT_\\\\d{4}\\\\.pdf$\"] }" } }
+          ]
+        },
+
+        { "type": "divider" },
+        { "type": "heading", "props": { "text": "Normalizacion del nombre de fichero", "level": 2 } },
+        { "type": "paragraph", "props": { "text": "Antes de subir, el nombre pasa automaticamente por estos pasos en orden." } },
+        {
+          "type": "table",
+          "props": {
+            "headers": ["Paso", "Que hace"],
+            "rows": [
+              ["1", "Sustituye caracteres invalidos en Windows (\\ / : * ? < > |) por _"],
+              ["2", "Elimina espacios y puntos al final del nombre"],
+              ["3", "Renombra a archivo_N si el nombre coincide con un nombre reservado de Windows (CON, NUL, PRN, COM1-9, LPT1-9...)"],
+              ["4", "Trunca el nombre base para que nombre + extension sea menor o igual a 255 caracteres"],
+              ["5", "Si prefix esta configurado, antepone prefix_ al nombre ya normalizado"]
+            ]
+          }
+        },
+        { "type": "alert", "props": { "type": "info", "message": "Ejemplo: archivo.pdf con prefix: EXP se envia al servidor como EXP_archivo.pdf" } },
+
+        { "type": "divider" },
+        { "type": "heading", "props": { "text": "Subida secuencial", "level": 2 } },
+        { "type": "paragraph", "props": { "text": "Los ficheros que pasan validaciones se suben de forma secuencial: una llamada a uploadOperation por fichero en el orden seleccionado." } },
+        {
+          "type": "table",
+          "props": {
+            "headers": ["Situacion", "Comportamiento"],
+            "rows": [
+              ["Subida en curso", "Muestra barra de progreso y contador subidos/total. La zona DnD no acepta nuevos ficheros."],
+              ["Exito de cada fichero", "Lista se actualiza desde listPath de la respuesta; barra y contador avanzan"],
+              ["Fallo a mitad de secuencia", "Secuencia se detiene; ficheros pendientes no se intentan; lista refleja los ya subidos"],
+              ["Exito completo", "Zona DnD muestra mensaje de exito; vuelve al estado de reposo tras unos segundos"],
+              ["multiple: false con fichero ya en lista", "Zona DnD permanentemente deshabilitada"]
+            ]
+          }
+        },
+
+        { "type": "divider" },
+        { "type": "heading", "props": { "text": "Forma de respuesta esperada", "level": 2 } },
+        { "type": "paragraph", "props": { "text": "Por defecto el nodo asume este shape. Los props listPath, fileIdField y fileNameField permiten adaptar el mapping a respuestas distintas." } },
+        {
+          "type": "container",
+          "props": { "variant": "card", "gap": "sm" },
+          "children": [
+            { "type": "paragraph", "props": { "text": "Exito:  { \"status\": \"OK\",    \"files\": [ { \"id\": 1, \"name\": \"doc.pdf\", \"size\": 204800 } ] }" } },
+            { "type": "paragraph", "props": { "text": "Error:  { \"status\": \"ERROR\", \"message\": \"Descripcion del error\" }" } }
+          ]
+        },
+
+        { "type": "divider" },
+        { "type": "heading", "props": { "text": "Independencia del formulario", "level": 2 } },
+        { "type": "alert", "props": { "type": "warning", "message": "fileManager no escribe en forms.*. Su estado no participa en el submit del formulario contenedor. Otros nodos pueden leer queries.{operationName}.data.* como cualquier referencia del runtime." } },
+
+        { "type": "divider" },
+        { "type": "heading", "props": { "text": "Validacion en bootstrap", "level": 2 } },
+        {
+          "type": "table",
+          "props": {
+            "headers": ["Condicion", "Resultado"],
+            "rows": [
+              ["Todas las operaciones ausentes o false sin via de interaccion", "Bootstrap rechaza el nodo"],
+              ["getOperation omitida sin fieldName", "Bootstrap rechaza el nodo"],
+              ["uploadOperation omitida sin fieldName", "Bootstrap rechaza el nodo"],
+              ["Operacion string que apunta a entrada inexistente en api", "Bootstrap rechaza el nodo"],
+              ["fileManager como hijo directo de form", "Bootstrap rechaza el nodo"],
+              ["fieldName repetido en dos instancias distintas", "Config completo rechazado"]
+            ]
+          }
+        }
+      ]
+    },
+
+    {
+      "id": "auth-tokens",
+      "layout": [
+        {
+          "type": "container",
+          "props": { "direction": "row", "justify": "between", "align": "center" },
+          "children": [
+            { "type": "heading", "props": { "text": "Tokens de autenticacion", "level": 1 } },
+            { "type": "button", "props": { "label": "Volver al inicio", "variant": "ghost", "action": { "type": "navigateTo", "pageId": "home" } } }
+          ]
+        },
+        { "type": "divider" },
+        { "type": "paragraph", "props": { "text": "Sistema declarativo para gestionar tokens de autenticacion nombrados con refresco automatico proactivo. Los tokens se declaran en el bloque raiz tokens y se inyectan manualmente en headers de operaciones." } },
+
+        { "type": "divider" },
+        { "type": "heading", "props": { "text": "Bloque raiz tokens", "level": 2 } },
+        { "type": "paragraph", "props": { "text": "El bloque raiz opcional tokens define un catalogo de tokens nombrados. Cada token tiene un valor inicial y, opcionalmente, configuracion de refresco." } },
+        {
+          "type": "container",
+          "props": { "variant": "card", "gap": "sm" },
+          "children": [
+            { "type": "paragraph", "props": { "text": "{ \"tokens\": { \"sessionToken\": { \"value\": \"initial-token-value\", \"refresh\": { \"operation\": \"refreshToken\", \"responsePath\": \"data.token\", \"intervalSeconds\": 300 } }, \"apiKey\": { \"value\": \"static-api-key\" } } }" } }
+          ]
+        },
+        {
+          "type": "table",
+          "props": {
+            "headers": ["Campo", "Tipo", "Descripcion"],
+            "rows": [
+              ["value", "string", "Valor inicial del token. No puede estar vacio."],
+              ["refresh.operation", "string", "Nombre de operacion en el catalogo api para refrescar el token."],
+              ["refresh.responsePath", "string", "Ruta dot-notation al nuevo valor en la respuesta. Ej: data.token, result.jwt"],
+              ["refresh.intervalSeconds", "number", "Cada cuantos segundos ejecutar el refresco automatico. Entero positivo."]
+            ]
+          }
+        },
+
+        { "type": "divider" },
+        { "type": "heading", "props": { "text": "Uso en headers", "level": 2 } },
+        { "type": "paragraph", "props": { "text": "La unica forma soportada es tokens.{tokenId}.value. Solo se puede usar en headers de operaciones." } },
+        {
+          "type": "container",
+          "props": { "variant": "card", "gap": "sm" },
+          "children": [
+            { "type": "heading", "props": { "text": "Operacion en api", "level": 3 } },
+            { "type": "paragraph", "props": { "text": "\"getUserProfile\": { \"method\": \"GET\", \"endpoint\": \"/api/user\", \"headers\": { \"Authorization\": \"Bearer tokens.sessionToken.value\" } }" } }
+          ]
+        },
+        {
+          "type": "container",
+          "props": { "variant": "card", "gap": "sm" },
+          "children": [
+            { "type": "heading", "props": { "text": "Submit de formulario", "level": 3 } },
+            { "type": "paragraph", "props": { "text": "\"submitAction\": { \"type\": \"executeOperation\", \"operationName\": \"saveUser\", \"body\": { \"name\": \"forms.myForm.name\" }, \"headers\": { \"Authorization\": \"Bearer tokens.sessionToken.value\" } }" } }
+          ]
+        },
+
+        { "type": "divider" },
+        { "type": "heading", "props": { "text": "Superficies soportadas y no soportadas", "level": 2 } },
+        {
+          "type": "table",
+          "props": {
+            "headers": ["Superficie", "Soportada"],
+            "rows": [
+              ["api.{op}.headers", "Si"],
+              ["button.props.action.headers", "Si"],
+              ["form.submitAction.headers", "Si"],
+              ["preloads[].headers", "Si"],
+              ["executeOperations[].headers", "Si"],
+              ["query, body, params", "No — error de validacion"],
+              ["visibility.reference", "No — error de validacion"],
+              ["defaultValue de campos de formulario", "No — error de validacion"],
+              ["heading.text, paragraph.text (superficies visibles)", "No — se degrada a string vacio"]
+            ]
+          }
+        },
+
+        { "type": "divider" },
+        { "type": "heading", "props": { "text": "Ciclo de vida del refresco", "level": 2 } },
+        { "type": "paragraph", "props": { "text": "Cuando un token tiene refresh declarado, el runtime lo gestiona automaticamente en background." } },
+        {
+          "type": "table",
+          "props": {
+            "headers": ["Fase", "Comportamiento"],
+            "rows": [
+              ["Arranque", "Se programa el primer refresco para dentro de intervalSeconds"],
+              ["Refresco exitoso", "Actualiza el token; reprograma el siguiente ciclo"],
+              ["Primer fallo", "Reintenta una sola vez inmediatamente"],
+              ["Segundo fallo consecutivo", "Token entra en estado de error; operaciones que lo usan fallan"],
+              ["Recuperacion", "Sigue intentando cada intervalSeconds; si un intento tiene exito vuelve a ready"],
+              ["Durante el refresco", "No bloquea operaciones en curso; siguen usando el valor anterior"]
+            ]
+          }
+        },
+        { "type": "alert", "props": { "type": "info", "message": "Multiples tokens se refrescan de forma independiente. El fallo de uno no afecta al ciclo de los demas. Los valores no se persisten entre sesiones: al recargar vuelven a su value declarado." } },
+
+        { "type": "divider" },
+        { "type": "heading", "props": { "text": "Errores relacionados con tokens", "level": 2 } },
+        {
+          "type": "table",
+          "props": {
+            "headers": ["Codigo", "Causa", "Efecto"],
+            "rows": [
+              ["request-build-failed", "Se referencia tokens.unknownId.value y el token no existe en la declaracion", "queries.{op}.status transita a error sin emitir peticion de red"],
+              ["token-refresh-failed", "El token esta en estado de error tras dos intentos de refresco fallidos", "queries.{op}.status transita a error; el valor del token no se expone en el mensaje de error"]
+            ]
+          }
+        },
+        { "type": "alert", "props": { "type": "warning", "message": "Los valores de tokens son sensibles: no aparecen en logs ni diagnosticos. No pueden interpolarse en superficies visibles (heading.text, etc.); cualquier intento se degrada a string vacio." } },
+
+        { "type": "divider" },
+        { "type": "heading", "props": { "text": "Token estatico (sin refresco)", "level": 2 } },
+        { "type": "paragraph", "props": { "text": "Un token sin el bloque refresh simplemente inyecta su valor fijo en los headers. Util para API keys o tokens de larga duracion." } },
+        {
+          "type": "container",
+          "props": { "columns": { "base": 1, "md": 2 }, "gap": "md" },
+          "children": [
+            {
+              "type": "container",
+              "props": { "variant": "card", "gap": "sm" },
+              "children": [
+                { "type": "heading", "props": { "text": "Declaracion", "level": 3 } },
+                { "type": "paragraph", "props": { "text": "{ \"tokens\": { \"apiKey\": { \"value\": \"my-static-api-key\" } } }" } }
+              ]
+            },
+            {
+              "type": "container",
+              "props": { "variant": "card", "gap": "sm" },
+              "children": [
+                { "type": "heading", "props": { "text": "Uso en headers", "level": 3 } },
+                { "type": "paragraph", "props": { "text": "\"headers\": { \"X-API-Key\": \"tokens.apiKey.value\" }" } }
+              ]
+            }
+          ]
+        }
       ]
     }
   ]

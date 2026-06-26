@@ -21,6 +21,7 @@ import {
 import type { RuntimeIterationContext } from '../runtime-references/runtime-reference-resolver'
 import { resolveRuntimeValueWithOptions } from '../runtime-references/runtime-reference-resolver'
 import { matchesVisibilityRule } from '../runtime-layout-visibility'
+import { RuntimeDocumentTitleEffect } from '../runtime-document-title'
 import { RuntimeStateContext } from './runtime-state-context'
 import { createRuntimeState, runtimeStateReducer } from './runtime-state-reducer'
 import { selectCurrentNavigationEntry, selectCurrentPage } from './runtime-state-selectors'
@@ -499,7 +500,12 @@ export function RuntimeStateProvider({ config, dataValues, activeLanguage, child
     })
   }, [activeNavigationEntry, config, dispatchAndSyncState, state.pageEntry])
 
-  return <RuntimeStateContext.Provider value={contextValue}>{children}</RuntimeStateContext.Provider>
+  return (
+    <RuntimeStateContext.Provider value={contextValue}>
+      <RuntimeDocumentTitleEffect />
+      {children}
+    </RuntimeStateContext.Provider>
+  )
 }
 
 export function useRuntimeState() {

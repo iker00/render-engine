@@ -45,7 +45,7 @@ Una vez declarados, los tokens se inyectan manualmente en operaciones:
       "method": "GET",
       "endpoint": "/api/user",
       "headers": {
-        "Authorization": "Bearer tokens.sessionToken.value"
+        "Authorization": "Bearer {{tokens.sessionToken.value}}"
       }
     }
   }

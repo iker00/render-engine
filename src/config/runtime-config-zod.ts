@@ -72,6 +72,7 @@ export const runtimePageShellSchema = z
   .object({
     id: nonEmptyStringSchema,
     preloads: z.array(z.unknown()).optional(),
+    title: z.string().optional(),
     layout: z.array(z.unknown()),
   })
   .strip()

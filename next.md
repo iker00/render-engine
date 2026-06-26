@@ -6,6 +6,8 @@
 - Eliminar la lectura de workflow.md de todas las skills
 - Hacer que el orquestador de implementación pase el promtp de la skill del subagente, y lo pase a los subagentes para mejorar el uso de caché.
 - Quitar el estado de las tareas en task.md ya que podemos verlo en status.md
+- Hacer que el paso de documentación haga commit
+- Definir una plantilla fija para cada tarea
 
 ---
 
@@ -18,6 +20,13 @@
 - Controlar el title de la página
 - Mejorar estilos del nodo tabs
 - Permitir variantes, types (alerts y badges) y colores condicionales.
+- Revisar los nodos interactivos para ver si tienen cursor: pointer.
+  - Tabs
+  - Buttons
+  - Acordeón
+  - Paginaciones
+- Añadir lazy load de componentes
+- ¿Opción para poner los iconos a la derecha?
 
 ---
 
