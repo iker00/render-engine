@@ -20,7 +20,7 @@ No es histórico acumulado ni sustituto de las fichas funcionales. El detalle es
 | Desarrollo local | estable | [development/](./app-features/development/index.md) | `0067` |
 | Subida de archivos | estable | [nodes/file-manager.md](./app-features/nodes/file-manager.md), [forms/validation-rules.md](./app-features/forms/validation-rules.md) | `0076` |
 | Theming declarativo | fuera de v1 | — | — |
-| Autenticación y permisos | fuera de v1 | — | — |
+| Tokens de autenticación | estable | [auth/tokens.md](./app-features/auth/tokens.md) | `0078` |
 | Procesamiento remoto de tablas | fuera de v1 | — | — |
 | Edición avanzada de tablas | fuera de v1 | — | — |
 | Validaciones remotas y cruzadas | fuera de v1 | — | — |

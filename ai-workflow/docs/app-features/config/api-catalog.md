@@ -52,7 +52,7 @@ Ejemplo:
 - `query` se mantiene plano; no existe soporte estable para nested params, claves repetidas ni arrays serializados en query string.
 - `body` puede contener objetos, arrays, strings, números, booleanos y `null` siempre que el árbol completo siga siendo JSON serializable.
 - `body: null` en la raíz es válido para métodos con body y significa petición explícita sin body JSON serializado.
-- `headers` se mantiene plano y solo admite valores string finales.
+- `headers` se mantiene plano y solo admite valores string finales. Además de referencias `queries.*`, `forms.*`, `params.*` e `item.*`, también admite `tokens.{tokenId}.value` para inyectar valores de autenticación. Véase [[../auth/tokens.md]] para configuración de tokens.
 - varias operaciones pueden reutilizar el mismo `endpoint` con distinto nombre o método sin colisionar.
 - la interpolación de `endpoint` no aplica a `preloads`.
 - `errorCondition` solo se evalúa si la respuesta HTTP es 200 con JSON válido; respuestas con otros códigos 4xx/5xx siguen usando el camino `http-error` existente.

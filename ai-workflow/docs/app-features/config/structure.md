@@ -12,6 +12,7 @@ La configuración parte de tres bloques principales:
 
 Bloques opcionales:
 - `translations`: objeto opcional que define un catálogo de traducciones por idioma. Su estructura es un mapa cuyas claves son strings arbitrarios (claves de traducción) y cuyos valores son mapas idioma-string. Véase [[../references/reference-resolution.md]] para superficies admitidas y semántica de fallback.
+- `tokens`: objeto opcional que define un catálogo de tokens de autenticación nombrados, cada uno con un valor inicial y refresco opcional proactivo. Véase [[../auth/tokens.md]] para configuración, ciclo de vida y refresco automático.
 
 ## Modelo de página
 Cada página debe incluir:

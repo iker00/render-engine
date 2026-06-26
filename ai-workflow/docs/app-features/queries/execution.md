@@ -19,6 +19,7 @@
 ## Semántica de errores tipados
 - si la operación no existe, el runtime deja `queries.{operationName}` en `status: error` con `code: operation-not-found` y no emite red
 - si faltan datos para resolver referencias en `query`, `body` o `headers`, el runtime deja `status: error` con `code: request-build-failed` y no emite red
+- si un header referencia un token en estado de error (tras dos intentos de refresco fallidos), el runtime deja `status: error` con `code: token-refresh-failed` y no emite red. El mensaje de error no expone el valor del token.
 - si la llamada falla por red, el runtime usa `code: network-error`
 - si la respuesta HTTP no es `ok`, el runtime usa `code: http-error`
 - si la respuesta satisfactoria trae JSON inválido, el runtime usa `code: invalid-json-response`
