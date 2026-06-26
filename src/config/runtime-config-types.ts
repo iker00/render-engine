@@ -602,14 +602,14 @@ export interface LinkLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayo
   type: 'link'
   id?: string
   props: {
-    label: string
+    label?: string
     href?: string
     download?: string
     target?: string
     action?: NavigateToRuntimeUiAction | GoBackRuntimeUiAction
     icon?: string
   }
-  children?: unknown
+  children?: LayoutNodeCollection
 }
 
 export interface FileManagerLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayoutFields {

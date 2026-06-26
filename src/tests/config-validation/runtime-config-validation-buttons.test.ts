@@ -988,7 +988,7 @@ describe('validateRuntimeConfig', () => {
     })
   })
 
-  it('rejects a link node without props.label', () => {
+  it('rejects a link node without props.label and without children', () => {
     expect(
       validateRuntimeConfig(
         createConfigWithPages([
@@ -1010,12 +1010,12 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].props.label".',
+        message: 'Page "home" has an invalid layout at "layout[0]": link nodes must have either props.label or children.',
       },
     })
   })
 
-  it('rejects a link node with empty props (no label)', () => {
+  it('rejects a link node with empty props (no label, no children)', () => {
     expect(
       validateRuntimeConfig(
         createConfigWithPages([
@@ -1035,7 +1035,7 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].props.label".',
+        message: 'Page "home" has an invalid layout at "layout[0]": link nodes must have either props.label or children.',
       },
     })
   })
@@ -1377,7 +1377,29 @@ describe('validateRuntimeConfig', () => {
     }
   })
 
-  it('does not propagate children from a link node', () => {
+  it('propagates children when link has valid children and no props.label', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithPages([
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'link',
+              props: { href: 'https://example.com' },
+              children: [{ type: 'paragraph', props: { text: 'Click me' } }],
+            },
+          ],
+        },
+      ]),
+    )
+    expect(result.status).toBe('ready')
+    if (result.status === 'ready') {
+      const node = result.config.pages[0].layout[0] as Record<string, unknown>
+      expect(Array.isArray(node.children)).toBe(true)
+    }
+  })
+
+  it('does not include children key when link uses props.label and no children', () => {
     const result = validateRuntimeConfig(
       createConfigWithPages([
         {
@@ -1386,7 +1408,6 @@ describe('validateRuntimeConfig', () => {
             {
               type: 'link',
               props: { label: 'Go', href: 'https://example.com' },
-              children: [{ type: 'paragraph', props: { text: 'Ignored' } }],
             },
           ],
         },
@@ -1397,6 +1418,446 @@ describe('validateRuntimeConfig', () => {
       const node = result.config.pages[0].layout[0] as Record<string, unknown>
       expect(node.children).toBeUndefined()
     }
+  })
+
+  it('accepts a link with children containing a single paragraph and props.href', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithPages([
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'link',
+              props: { href: 'https://example.com' },
+              children: [{ type: 'paragraph', props: { text: 'Click me' } }],
+            },
+          ],
+        },
+      ]),
+    )
+    expect(result.status).toBe('ready')
+    if (result.status === 'ready') {
+      const node = result.config.pages[0].layout[0] as { type: string; props: Record<string, unknown>; children: unknown[] }
+      expect(node.type).toBe('link')
+      expect(Array.isArray(node.children)).toBe(true)
+      expect(node.children).toHaveLength(1)
+      expect((node.children[0] as { type: string }).type).toBe('paragraph')
+      expect(node.props.label).toBeUndefined()
+    }
+  })
+
+  it('accepts a link with children containing container wrapping heading and paragraph, with navigateTo action', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithPages([
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'link',
+              props: { action: { type: 'navigateTo', pageId: 'details' } },
+              children: [
+                {
+                  type: 'container',
+                  children: [
+                    { type: 'heading', props: { text: 'Title', level: 2 } },
+                    { type: 'paragraph', props: { text: 'Body' } },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+        { id: 'details', layout: [] },
+      ]),
+    )
+    expect(result.status).toBe('ready')
+    if (result.status === 'ready') {
+      const node = result.config.pages[0].layout[0] as { type: string; children: unknown[] }
+      expect(node.type).toBe('link')
+      expect(Array.isArray(node.children)).toBe(true)
+      expect(node.children).toHaveLength(1)
+    }
+  })
+
+  it('accepts a link with children containing a single divider', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithPages([
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'link',
+              props: { href: 'https://example.com' },
+              children: [{ type: 'divider' }],
+            },
+          ],
+        },
+      ]),
+    )
+    expect(result.status).toBe('ready')
+  })
+
+  it('accepts a link with children containing a container without its own children', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithPages([
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'link',
+              props: { href: 'https://example.com' },
+              children: [{ type: 'container' }],
+            },
+          ],
+        },
+      ]),
+    )
+    expect(result.status).toBe('ready')
+  })
+
+  it('accepts a link with children, props.target "_blank" and props.href', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithPages([
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'link',
+              props: { href: 'https://example.com', target: '_blank' },
+              children: [{ type: 'paragraph', props: { text: 'Open' } }],
+            },
+          ],
+        },
+      ]),
+    )
+    expect(result.status).toBe('ready')
+  })
+
+  it('accepts a link with children, props.download and props.href', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithPages([
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'link',
+              props: { href: 'https://example.com/file.pdf', download: 'file.pdf' },
+              children: [{ type: 'paragraph', props: { text: 'Download' } }],
+            },
+          ],
+        },
+      ]),
+    )
+    expect(result.status).toBe('ready')
+  })
+
+  it('accepts a link with props.label and props.icon without children (no regression)', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithPages([
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'link',
+              props: { label: 'Visit', href: 'https://example.com', icon: 'ExternalLink' },
+            },
+          ],
+        },
+      ]),
+    )
+    expect(result.status).toBe('ready')
+    if (result.status === 'ready') {
+      const node = result.config.pages[0].layout[0] as { props: { label: string; icon?: string } }
+      expect(node.props.label).toBe('Visit')
+      expect(node.props.icon).toBe('ExternalLink')
+    }
+  })
+
+  it('rejects a link with both children and props.label', () => {
+    expect(
+      validateRuntimeConfig(
+        createConfigWithPages([
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'link',
+                props: { label: 'Go', href: 'https://example.com' },
+                children: [{ type: 'paragraph', props: { text: 'Click' } }],
+              },
+            ],
+          },
+        ]),
+      ),
+    ).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message: 'Page "home" has an invalid layout at "layout[0]": link nodes cannot have both props.label and children.',
+      },
+    })
+  })
+
+  it('rejects a link with both children and props.icon', () => {
+    expect(
+      validateRuntimeConfig(
+        createConfigWithPages([
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'link',
+                props: { icon: 'Star', href: 'https://example.com' },
+                children: [{ type: 'paragraph', props: { text: 'Click' } }],
+              },
+            ],
+          },
+        ]),
+      ),
+    ).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message: 'Page "home" has an invalid layout at "layout[0]": link nodes cannot have both props.icon and children.',
+      },
+    })
+  })
+
+  it('rejects a link without children and without props.label', () => {
+    expect(
+      validateRuntimeConfig(
+        createConfigWithPages([
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'link',
+                props: { href: 'https://example.com' },
+              },
+            ],
+          },
+        ]),
+      ),
+    ).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message: 'Page "home" has an invalid layout at "layout[0]": link nodes must have either props.label or children.',
+      },
+    })
+  })
+
+  it('rejects a link with empty children array', () => {
+    expect(
+      validateRuntimeConfig(
+        createConfigWithPages([
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'link',
+                props: { href: 'https://example.com' },
+                children: [],
+              },
+            ],
+          },
+        ]),
+      ),
+    ).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message: 'Page "home" has an invalid layout at "layout[0].children": link children cannot be empty.',
+      },
+    })
+  })
+
+  it('rejects a link with children containing a directly prohibited type (button)', () => {
+    expect(
+      validateRuntimeConfig(
+        createConfigWithPages([
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'link',
+                props: { href: 'https://example.com' },
+                children: [{ type: 'button', props: { label: 'Click' } }],
+              },
+            ],
+          },
+        ]),
+      ),
+    ).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message:
+          'Page "home" has an invalid layout at "layout[0].children[0]": link children may only be container, heading, paragraph, list, image, badge, alert, stat, divider or skeleton nodes.',
+      },
+    })
+  })
+
+  it('rejects a link with children containing a container whose children include a button (deep validation)', () => {
+    expect(
+      validateRuntimeConfig(
+        createConfigWithPages([
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'link',
+                props: { href: 'https://example.com' },
+                children: [
+                  {
+                    type: 'container',
+                    children: [
+                      { type: 'paragraph', props: { text: 'OK' } },
+                      { type: 'button', props: { label: 'Nope' } },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ]),
+      ),
+    ).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message:
+          'Page "home" has an invalid layout at "layout[0].children[0].children[1]": link children may only be container, heading, paragraph, list, image, badge, alert, stat, divider or skeleton nodes.',
+      },
+    })
+  })
+
+  it('rejects a link with a nested link inside children', () => {
+    expect(
+      validateRuntimeConfig(
+        createConfigWithPages([
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'link',
+                props: { href: 'https://example.com' },
+                children: [{ type: 'link', props: { label: 'Inner', href: 'https://inner.com' } }],
+              },
+            ],
+          },
+        ]),
+      ),
+    ).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message:
+          'Page "home" has an invalid layout at "layout[0].children[0]": link children may only be container, heading, paragraph, list, image, badge, alert, stat, divider or skeleton nodes.',
+      },
+    })
+  })
+
+  it('rejects a link with a repeater inside children', () => {
+    expect(
+      validateRuntimeConfig(
+        createConfigWithPages([
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'link',
+                props: { href: 'https://example.com' },
+                children: [
+                  {
+                    type: 'repeater',
+                    props: {
+                      items: { source: 'queries.list.data', key: 'id' },
+                      template: [{ type: 'paragraph', props: { text: 'item.name' } }],
+                    },
+                  },
+                ],
+              },
+            ],
+          },
+        ]),
+      ),
+    ).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message:
+          'Page "home" has an invalid layout at "layout[0].children[0]": link children may only be container, heading, paragraph, list, image, badge, alert, stat, divider or skeleton nodes.',
+      },
+    })
+  })
+
+  it('rejects a link with children and props.action: navigateTo when props.download is also present', () => {
+    expect(
+      validateRuntimeConfig(
+        createConfigWithPages([
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'link',
+                props: {
+                  action: { type: 'navigateTo', pageId: 'details' },
+                  download: 'file.pdf',
+                },
+                children: [{ type: 'paragraph', props: { text: 'Click' } }],
+              },
+            ],
+          },
+          { id: 'details', layout: [] },
+        ]),
+      ),
+    ).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message: 'Page "home" has an invalid layout at "layout[0].props.download": download requires props.href.',
+      },
+    })
+  })
+
+  it('rejects a link with children and props.action: navigateTo when props.target is also present', () => {
+    expect(
+      validateRuntimeConfig(
+        createConfigWithPages([
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'link',
+                props: {
+                  action: { type: 'navigateTo', pageId: 'details' },
+                  target: '_blank',
+                },
+                children: [{ type: 'paragraph', props: { text: 'Click' } }],
+              },
+            ],
+          },
+          { id: 'details', layout: [] },
+        ]),
+      ),
+    ).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message: 'Page "home" has an invalid layout at "layout[0].props.target": target requires props.href.',
+      },
+    })
   })
 
   it('accepts a button node with an executeOperations action with two valid entries', () => {

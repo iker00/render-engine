@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import type { ReactNode } from 'react'
 import type { LinkLayoutNode } from '../../config/runtime-config'
 import {
   resolveRuntimeTextReference,
@@ -13,9 +14,10 @@ import { getLinkNodeClassName } from '../runtime-node-styling'
 interface LinkNodeProps {
   node: LinkLayoutNode
   iterationContext?: RuntimeIterationContext
+  renderedChildren?: ReactNode
 }
 
-export function LinkNode({ node, iterationContext }: LinkNodeProps) {
+export function LinkNode({ node, iterationContext, renderedChildren }: LinkNodeProps) {
   const state = useRuntimeState()
   const config = useRuntimeConfig()
   const { executeQueryOperation, goBackPage, navigateToPage, openModal, closeModal, resetForm } = useRuntimeStateActions()
@@ -57,8 +59,12 @@ export function LinkNode({ node, iterationContext }: LinkNodeProps) {
       }
       className={getLinkNodeClassName()}
     >
-      <IconNode name={icon} className="size-4 shrink-0 inline-block align-middle mr-1" />
-      {label}
+      {node.children !== undefined ? renderedChildren : (
+        <>
+          <IconNode name={icon} className="size-4 shrink-0 inline-block align-middle mr-1" />
+          {label}
+        </>
+      )}
     </a>
   )
 }

@@ -608,7 +608,7 @@ export const linkNodeSchema = z
     layout: layoutNodeLayoutSchema.optional(),
     props: z
       .object({
-        label: z.string(),
+        label: z.string().optional(),
         href: z.string().optional(),
         download: z.string().optional(),
         target: z.string().optional(),
@@ -616,6 +616,7 @@ export const linkNodeSchema = z
         icon: z.string().optional(),
       })
       .strip(),
+    children: z.array(z.unknown()).optional(),
   })
   .strip()
 

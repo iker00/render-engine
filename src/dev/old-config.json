@@ -68,11 +68,34 @@
           }
         },
         {
-          "type": "image",
+          "type": "link",
           "props": {
-            "src": "https://picsum.photos/seed/picsum/1920/1080",
-            "alt": "Imagen de ejemplo"
-          }
+            "href": "https://www.google.es"
+          },
+          "children": [
+            {
+              "type": "container",
+              "props": {
+                "direction": "column",
+                "gap": "sm"
+              },
+              "children": [
+                {
+                  "type": "image",
+                  "props": {
+                    "src": "https://picsum.photos/seed/picsum/1920/1080",
+                    "alt": "Imagen de ejemplo"
+                  }
+                },
+                {
+                  "type": "paragraph",
+                  "props": {
+                    "text": "Enlace a www.google.es"
+                  }
+                }
+              ]
+            }
+          ]
         },
         {
           "type": "table",
@@ -1102,17 +1125,42 @@
                         }
                       },
                       {
-                        "type": "button",
+                        "type": "container",
                         "props": {
-                          "label": "Editar",
-                          "action": {
-                            "type": "navigateTo",
-                            "pageId": "post-form",
-                            "params": {
-                              "postId": "item.id"
+                          "direction": "row",
+                          "gap": "sm",
+                          "justify": "end"
+                        },
+                        "children": [
+                          {
+                            "type": "button",
+                            "props": {
+                              "label": "Editar",
+                              "action": {
+                                "type": "navigateTo",
+                                "pageId": "post-form",
+                                "params": {
+                                  "postId": "item.id"
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "type": "button",
+                            "props": {
+                              "label": "Eliminar",
+                              "variant": "ghost",
+                              "color": "danger",
+                              "action": {
+                                "type": "navigateTo",
+                                "pageId": "post-form",
+                                "params": {
+                                  "postId": "item.id"
+                                }
+                              }
                             }
                           }
-                        }
+                        ]
                       }
                     ]
                   }

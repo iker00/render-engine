@@ -770,6 +770,216 @@ describe('link node render', () => {
     expect(anchor.className).not.toContain('text-blue-600')
     expect(anchor.className).not.toContain('hover:text-blue-800')
   })
+
+  describe('link node con children', () => {
+    it('renders children as anchor content when link declares children with a paragraph and props.href', () => {
+      renderRuntimePage({
+        id: 'link-children-paragraph',
+        layout: [
+          {
+            type: 'link',
+            props: { href: 'https://example.com' },
+            children: [
+              {
+                type: 'paragraph',
+                props: { text: 'Hola' },
+              },
+            ],
+          },
+        ],
+      })
+
+      const anchor = screen.getByRole('link')
+      expect(anchor).toHaveAttribute('data-layout-node', 'link')
+      expect(anchor).toHaveAttribute('href', 'https://example.com')
+      // Children rendered inside the anchor
+      expect(anchor.querySelector('[data-layout-node="paragraph"]')).not.toBeNull()
+      expect(anchor).toHaveTextContent('Hola')
+      // No label text outside of children
+      expect(anchor.childNodes.length).toBeGreaterThan(0)
+    })
+
+    it('renders a container wrapping heading and paragraph as full tree inside the anchor', () => {
+      renderRuntimePage({
+        id: 'link-children-container',
+        layout: [
+          {
+            type: 'link',
+            props: { href: 'https://example.com' },
+            children: [
+              {
+                type: 'container',
+                children: [
+                  { type: 'heading', props: { text: 'Title', level: 2 } },
+                  { type: 'paragraph', props: { text: 'Description' } },
+                ],
+              },
+            ],
+          },
+        ],
+      })
+
+      const anchor = screen.getByRole('link')
+      expect(anchor).toHaveAttribute('data-layout-node', 'link')
+      expect(anchor.querySelector('[data-layout-node="heading"]')).not.toBeNull()
+      expect(anchor.querySelector('[data-layout-node="paragraph"]')).not.toBeNull()
+      expect(anchor).toHaveTextContent('Title')
+      expect(anchor).toHaveTextContent('Description')
+    })
+
+    it('renders decorative href="#/pageId" and delegates click to runtime when link has children and navigateTo action', () => {
+      const config: RuntimeConfig = {
+        api: {},
+        initialPage: 'home',
+        pages: [
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'link',
+                props: { action: { type: 'navigateTo', pageId: 'details' } },
+                children: [
+                  { type: 'paragraph', props: { text: 'Go to details' } },
+                ],
+              },
+            ],
+          },
+          {
+            id: 'details',
+            layout: [
+              { type: 'heading', props: { text: 'Details page', level: 1 } },
+            ],
+          },
+        ],
+      }
+
+      render(
+        <RuntimeStateProvider config={config}>
+          <RuntimePage />
+        </RuntimeStateProvider>,
+      )
+
+      const anchor = screen.getByRole('link')
+      expect(anchor).toHaveAttribute('href', '#/details')
+
+      fireEvent.click(anchor)
+
+      expect(screen.getByTestId('runtime-page')).toHaveAttribute('data-runtime-page-id', 'details')
+      expect(screen.getByRole('heading', { name: 'Details page', level: 1 })).toBeInTheDocument()
+    })
+
+    it('renders target attribute on anchor when link has children and props.target="_blank"', () => {
+      renderRuntimePage({
+        id: 'link-children-target',
+        layout: [
+          {
+            type: 'link',
+            props: { href: 'https://example.com', target: '_blank' },
+            children: [
+              { type: 'paragraph', props: { text: 'Open' } },
+            ],
+          },
+        ],
+      })
+
+      const anchor = screen.getByRole('link')
+      expect(anchor).toHaveAttribute('target', '_blank')
+      expect(anchor).toHaveAttribute('data-layout-node', 'link')
+    })
+
+    it('renders download attribute on anchor when link has children and props.download', () => {
+      renderRuntimePage({
+        id: 'link-children-download',
+        layout: [
+          {
+            type: 'link',
+            props: { href: 'https://example.com/file.pdf', download: 'file.pdf' },
+            children: [
+              { type: 'paragraph', props: { text: 'Download' } },
+            ],
+          },
+        ],
+      })
+
+      const anchor = screen.getByRole('link')
+      expect(anchor).toHaveAttribute('download', 'file.pdf')
+      expect(anchor).toHaveAttribute('data-layout-node', 'link')
+    })
+
+    it('does not render an icon svg when link declares children (no icon in children mode)', () => {
+      renderRuntimePage({
+        id: 'link-children-no-icon',
+        layout: [
+          {
+            type: 'link',
+            props: { href: 'https://example.com' },
+            children: [
+              { type: 'paragraph', props: { text: 'No icon' } },
+            ],
+          },
+        ],
+      })
+
+      const anchor = screen.getByRole('link')
+      // No svg directly inside anchor (no IconNode rendered)
+      expect(anchor.querySelector('svg')).toBeNull()
+    })
+
+    it('non-regression: link with props.label renders label text and icon when props.icon is set', () => {
+      renderRuntimePage({
+        id: 'link-label-non-regression',
+        layout: [
+          {
+            type: 'link',
+            props: { label: 'Visit site', href: 'https://example.com', icon: 'ExternalLink' },
+          },
+        ],
+      })
+
+      const anchor = screen.getByRole('link', { name: 'Visit site' })
+      expect(anchor).toHaveAttribute('href', 'https://example.com')
+      expect(anchor.querySelector('svg')).not.toBeNull()
+      expect(anchor).toHaveTextContent('Visit site')
+    })
+
+    it('non-regression: link with props.label without icon renders label text and no svg', () => {
+      renderRuntimePage({
+        id: 'link-label-no-icon-non-regression',
+        layout: [
+          {
+            type: 'link',
+            props: { label: 'Plain link', href: 'https://example.com' },
+          },
+        ],
+      })
+
+      const anchor = screen.getByRole('link', { name: 'Plain link' })
+      expect(anchor).toHaveTextContent('Plain link')
+      expect(anchor.querySelector('svg')).toBeNull()
+    })
+
+    it('hides link with children when visibility rule evaluates to hidden', () => {
+      const activePage: RuntimePageConfig = {
+        id: 'link-children-hidden',
+        layout: [
+          {
+            type: 'link',
+            props: { href: 'https://example.com' },
+            children: [{ type: 'paragraph', props: { text: 'Hidden link content' } }],
+            visibility: { reference: 'queries.myQuery.data', operator: 'isTruthy' },
+          },
+        ],
+      }
+      const state = createRuntimePageState(activePage, {
+        myQuery: { status: 'success', data: null, error: null },
+      })
+
+      renderRuntimePageWithState(activePage, state)
+
+      expect(screen.queryByRole('link')).not.toBeInTheDocument()
+      expect(screen.queryByText('Hidden link content')).not.toBeInTheDocument()
+    })
+  })
 })
 
 describe('button node with props.icon', () => {

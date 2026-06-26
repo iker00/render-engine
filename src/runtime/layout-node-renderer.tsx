@@ -88,7 +88,7 @@ export function LayoutNodeRenderer({ node, renderedChildren, iterationContext }:
       renderedNode = <ButtonNode node={node} iterationContext={iterationContext} />
       break
     case 'link':
-      renderedNode = <LinkNode node={node} iterationContext={iterationContext} />
+      renderedNode = <LinkNode node={node} iterationContext={iterationContext} renderedChildren={renderedChildren} />
       break
     case 'modal':
       renderedNode = <ModalNode node={node} iterationContext={iterationContext}>{renderedChildren}</ModalNode>

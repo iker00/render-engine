@@ -77,6 +77,7 @@ import {
 
 const collectionPathSegmentPattern = /^[A-Za-z0-9_-]+$/
 const modalAllowedChildTypes = new Set(['container', 'form', 'heading', 'paragraph', 'list', 'image', 'table', 'button', 'repeater', 'accordion', 'fileManager'])
+const linkAllowedChildTypes = new Set(['container', 'heading', 'paragraph', 'list', 'image', 'badge', 'alert', 'stat', 'divider', 'skeleton'])
 
 export function validateLayoutCollection(
   rawNodes: unknown,
@@ -1457,31 +1458,75 @@ export function validateLinkNode(
 
   if (visibilityResult.status === 'error') return visibilityResult
 
-  const { href, download, target, action, icon } = parseResult.data.props
+  const { href, download, target, action, label, icon } = parseResult.data.props
+  const hasChildren = parseResult.data.children !== undefined
+  const hasLabel = label !== undefined
+  const hasIcon = icon !== undefined
   const hasHref = href !== undefined
   const hasAction = action !== undefined
 
-  // Cross-validation: href and action are mutually exclusive
+  // Cross-validation (1): children and props.label are mutually exclusive
+  if (hasChildren && hasLabel) {
+    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}": link nodes cannot have both props.label and children.`)
+  }
+
+  // Cross-validation (2): children and props.icon are mutually exclusive
+  if (hasChildren && hasIcon) {
+    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}": link nodes cannot have both props.icon and children.`)
+  }
+
+  // Cross-validation (3): must have either props.label or children
+  if (!hasChildren && !hasLabel) {
+    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}": link nodes must have either props.label or children.`)
+  }
+
+  // Cross-validation (4): children cannot be empty
+  if (hasChildren && parseResult.data.children!.length === 0) {
+    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.children": link children cannot be empty.`)
+  }
+
+  // Cross-validation (5 & 6): validate children types (direct and recursive)
+  let children: LayoutNodeCollection | undefined
+
+  if (hasChildren) {
+    // Check direct type restriction before full validation
+    const directTypeCheck = checkLinkChildrenAllowedTypes(parseResult.data.children!, `${path}.children`, pageId)
+
+    if (directTypeCheck.status === 'error') {
+      return directTypeCheck
+    }
+
+    // Full validation of children
+    const childrenResult = validateLayoutCollection(parseResult.data.children!, `${path}.children`, pageId)
+
+    if (childrenResult.status === 'error') {
+      return childrenResult
+    }
+
+    children = childrenResult.nodes
+  }
+
+  // Cross-validation (7): href and action are mutually exclusive
   if (hasHref && hasAction) {
     return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}": link nodes cannot have both props.href and props.action.`)
   }
 
-  // Cross-validation: must have either href or action
+  // Cross-validation (7): must have either href or action
   if (!hasHref && !hasAction) {
     return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}": link nodes must have either props.href or props.action.`)
   }
 
-  // Cross-validation: download requires href
+  // Cross-validation (7): download requires href
   if (download !== undefined && !hasHref) {
     return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.download": download requires props.href.`)
   }
 
-  // Cross-validation: target requires href
+  // Cross-validation (7): target requires href
   if (target !== undefined && !hasHref) {
     return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.target": target requires props.href.`)
   }
 
-  // Cross-validation: action.type must be navigateTo or goBack
+  // Cross-validation (7): action.type must be navigateTo or goBack
   let validatedAction: LinkLayoutNode['props']['action'] | undefined
   if (hasAction) {
     const rawAction = action as Record<string, unknown>
@@ -1499,27 +1544,63 @@ export function validateLinkNode(
     validatedAction = linkActionResult.action as LinkLayoutNode['props']['action']
   }
 
-  const props: LinkLayoutNode['props'] = {
-    label: parseResult.data.props.label,
-  }
+  const props: LinkLayoutNode['props'] = {}
 
+  if (label !== undefined) props.label = label
   if (href !== undefined) props.href = href
   if (download !== undefined) props.download = download
   if (target !== undefined) props.target = target
   if (validatedAction !== undefined) props.action = validatedAction
   if (icon !== undefined) props.icon = icon
 
+  const node: LinkLayoutNode = {
+    type: 'link',
+    id: parseResult.data.id,
+    queryStateFeedback: feedbackResult.queryStateFeedback,
+    visibility: visibilityResult.visibility,
+    layout: parseResult.data.layout,
+    props,
+  }
+
+  if (children !== undefined) {
+    node.children = children
+  }
+
   return {
     status: 'ready',
-    node: {
-      type: 'link',
-      id: parseResult.data.id,
-      queryStateFeedback: feedbackResult.queryStateFeedback,
-      visibility: visibilityResult.visibility,
-      layout: parseResult.data.layout,
-      props,
-    },
+    node,
   }
+}
+
+function checkLinkChildrenAllowedTypes(
+  children: unknown[],
+  basePath: string,
+  pageId: string,
+): { status: 'ready' } | { status: 'error'; error: RuntimeConfigError } {
+  for (let i = 0; i < children.length; i += 1) {
+    const child = children[i]
+
+    if (!isRecord(child)) {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${basePath}[${i}]": link children may only be container, heading, paragraph, list, image, badge, alert, stat, divider or skeleton nodes.`)
+    }
+
+    const childType = typeof child.type === 'string' ? child.type : undefined
+
+    if (!childType || !linkAllowedChildTypes.has(childType)) {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${basePath}[${i}]": link children may only be container, heading, paragraph, list, image, badge, alert, stat, divider or skeleton nodes.`)
+    }
+
+    // Recurse into container children
+    if (childType === 'container' && child.children !== undefined) {
+      const nestedCheck = checkLinkChildrenAllowedTypes(child.children as unknown[], `${basePath}[${i}].children`, pageId)
+
+      if (nestedCheck.status === 'error') {
+        return nestedCheck
+      }
+    }
+  }
+
+  return { status: 'ready' }
 }
 
 function validateTableHeaders(
