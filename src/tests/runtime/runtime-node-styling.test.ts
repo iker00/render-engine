@@ -765,10 +765,9 @@ describe('runtime node styling', () => {
       expect(cn).not.toContain('w-48')
     })
 
-    it('getTabsButtonClassName active horizontal includes primary tokens, font-semibold, px-3 py-1.5, shrink-0, whitespace-nowrap and transition-colors (D6 D7 D8 D10)', () => {
+    it('getTabsButtonClassName active horizontal includes text-primary-700, font-semibold, px-3 py-1.5, shrink-0, whitespace-nowrap, transition-colors and border-app-border-soft (D6 D7 D8 D10)', () => {
       const cn = getTabsButtonClassName(true, 'horizontal')
 
-      expect(cn).toContain('border-primary-600')
       expect(cn).toContain('text-primary-700')
       expect(cn).toContain('font-semibold')
       expect(cn).toContain('transition-colors')
@@ -776,6 +775,8 @@ describe('runtime node styling', () => {
       expect(cn).toContain('py-1.5')
       expect(cn).toContain('shrink-0')
       expect(cn).toContain('whitespace-nowrap')
+      expect(cn).toContain('border-app-border-soft')
+      expect(cn).not.toContain('border-primary-600')
       expect(cn).not.toMatch(/blue-/)
       expect(cn).not.toContain('font-medium')
     })
@@ -812,8 +813,64 @@ describe('runtime node styling', () => {
       expect(cn).not.toContain('shrink-0')
     })
 
-    it('getTabsPanelClassName returns flex-1', () => {
-      expect(getTabsPanelClassName()).toBe('flex-1')
+    it('getTabsPanelClassName includes flex-1 border border-app-border-soft p-4 flex flex-col gap-5 and no bg-', () => {
+      const cn = getTabsPanelClassName()
+
+      expect(cn).toContain('flex-1')
+      expect(cn).toContain('border')
+      expect(cn).toContain('border-app-border-soft')
+      expect(cn).toContain('p-4')
+      expect(cn).toContain('flex')
+      expect(cn).toContain('flex-col')
+      expect(cn).toContain('gap-5')
+      expect(cn).not.toContain('bg-')
+    })
+
+    it('getTabsButtonClassName active horizontal applies border to top left and right sides and not to bottom (connected tab technique)', () => {
+      const cn = getTabsButtonClassName(true, 'horizontal')
+
+      expect(cn).toContain('border-t')
+      expect(cn).toContain('border-l')
+      expect(cn).toContain('border-r')
+      expect(cn).not.toMatch(/border-b/)
+    })
+
+    it('getTabsButtonClassName active vertical applies border to top left and bottom sides and not to right (connected tab technique)', () => {
+      const cn = getTabsButtonClassName(true, 'vertical')
+
+      expect(cn).toContain('border-t')
+      expect(cn).toContain('border-l')
+      expect(cn).toContain('border-b')
+      expect(cn).not.toMatch(/border-r/)
+      expect(cn).toContain('border-app-border-soft')
+      expect(cn).not.toContain('border-primary-600')
+    })
+
+    it('getTabsButtonClassName active horizontal and vertical overlap the panel border by 1px with relative z-10 and bg-app-background', () => {
+      const cnH = getTabsButtonClassName(true, 'horizontal')
+      const cnV = getTabsButtonClassName(true, 'vertical')
+
+      expect(cnH).toContain('-mb-px')
+      expect(cnH).toContain('relative')
+      expect(cnH).toContain('z-10')
+      expect(cnH).toContain('bg-app-background')
+      expect(cnH).not.toContain('-mr-px')
+
+      expect(cnV).toContain('-mr-px')
+      expect(cnV).toContain('relative')
+      expect(cnV).toContain('z-10')
+      expect(cnV).toContain('bg-app-background')
+      expect(cnV).not.toContain('-mb-px')
+    })
+
+    it('getTabsButtonClassName inactive horizontal and vertical do not contain border-app-border-soft or border-primary-600', () => {
+      const cnH = getTabsButtonClassName(false, 'horizontal')
+      const cnV = getTabsButtonClassName(false, 'vertical')
+
+      expect(cnH).not.toContain('border-app-border-soft')
+      expect(cnH).not.toContain('border-primary-600')
+      expect(cnV).not.toContain('border-app-border-soft')
+      expect(cnV).not.toContain('border-primary-600')
     })
   })
 

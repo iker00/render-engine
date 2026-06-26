@@ -2,13 +2,16 @@
   "api": {
     "buscarPersona": {
       "method": "POST",
-      "endpoint": "http://localhost:3002/api/PersonaNegocio/BuscarPersona",
+      "endpoint": "http://vmwspresaawa1:2802/ss/aa/v1/business/SeguridadCiudadana/ADE/Gestion/1.0.0.0/PersonaNegocio/BuscarPersona",
       "body": {
         "BuscarPersonaEntradaDTO": {
           "Descripcion": "forms.search.desc",
           "DocIdent": "forms.search.doc",
           "Nombre": "forms.search.name"
         }
+      },
+      "header": {
+        "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJFbmNVc3VhcmlvIjoiNThkZTNkM2YwNzExNmIyMzY1NmY0ZGNkZWE1MDcwMGZiMGEwNmVjOWUxNDVlOGI3NDUzYWJkYzYxNmVhN2IyYyIsIkVuY0d1aWQiOiI3Q3hiT1g0RHpzMWhXQWJYYjkrNCs5ZWk0TURZWnlOOUdzaXVlRWZROEo0SjN4OThhMXpjVTR4NlhHbVJRN3B2IiwiTG9naW5BdCI6IjIwMjYtMDYtMjRUMDk6MzI6MzUuMjI0MDAwMFoiLCJDcmVhdGVkQXQiOiIyMDI2LTA2LTI0VDA5OjMyOjM1LjIyNDAwMDBaIiwiRXhwaXJlc0F0IjoiMjAyNi0wNi0yNFQxMDowMjozNS4yMjQwMDAwWiIsIm5iZiI6MTc4MjI5MzU1NSwiZXhwIjoxNzgyMjk1MzU1LCJpYXQiOjE3ODIyOTM1NTUsImlzcyI6Imh0dHBzOi8vYW5pbXNhLmVzIiwiYXVkIjoiand0QXV0aGVudGljYXRpb24ifQ.IvB1g74uFsYsUZHuJR8HNniLctNAUk-Ug7fxGGEzk58"
       }
     }
   },

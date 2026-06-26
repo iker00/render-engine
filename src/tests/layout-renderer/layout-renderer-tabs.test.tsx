@@ -1225,7 +1225,7 @@ describe('TabsNode — bar sizing and overflow', () => {
 })
 
 describe('TabsNode — T6 semantic tokens and centralized styling', () => {
-  it('active horizontal tab button has border-primary-600, text-primary-700, font-semibold and transition-colors (D10 D6 D8)', () => {
+  it('active horizontal tab button has text-primary-700, font-semibold, transition-colors and three-sided border with border-app-border-soft (D10 D6 D8)', () => {
     const page: RuntimePageConfig = {
       id: 'home',
       layout: [
@@ -1245,10 +1245,13 @@ describe('TabsNode — T6 semantic tokens and centralized styling', () => {
     renderRuntimePage(page)
 
     const activeBtn = screen.getByRole('button', { name: 'Active Tab' })
-    expect(activeBtn).toHaveClass('border-primary-600')
+    expect(activeBtn).not.toHaveClass('border-primary-600')
     expect(activeBtn).toHaveClass('text-primary-700')
     expect(activeBtn).toHaveClass('font-semibold')
     expect(activeBtn).toHaveClass('transition-colors')
+    expect(activeBtn).toHaveClass('border-t')
+    expect(activeBtn).toHaveClass('border-l')
+    expect(activeBtn).toHaveClass('border-r')
     expect(activeBtn.className).not.toMatch(/blue-/)
   })
 

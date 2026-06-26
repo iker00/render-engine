@@ -857,7 +857,7 @@ export function getTabsRootClassName(orientation: 'horizontal' | 'vertical') {
 export function getTabsBarClassName(orientation: 'horizontal' | 'vertical') {
   return orientation === 'vertical'
     ? 'flex flex-col w-48 shrink-0'
-    : 'flex flex-row overflow-x-auto'
+    : 'flex flex-row overflow-x-auto scrollbar-hide'
 }
 
 export function getTabsButtonClassName(isActive: boolean, orientation: 'horizontal' | 'vertical') {
@@ -867,9 +867,19 @@ export function getTabsButtonClassName(isActive: boolean, orientation: 'horizont
       : 'shrink-0 whitespace-nowrap'
 
   if (isActive) {
+    const borderClasses =
+      orientation === 'vertical'
+        ? ['border-t', 'border-l', 'border-b', 'border-app-border-soft']
+        : ['border-t', 'border-l', 'border-r', 'border-app-border-soft']
+
+    const overlapClass = orientation === 'vertical' ? '-mr-px' : '-mb-px'
+
     return [
-      'border-b-2',
-      'border-primary-600',
+      ...borderClasses,
+      overlapClass,
+      'relative',
+      'z-10',
+      'bg-app-background',
       'text-primary-700',
       'font-semibold',
       'px-3',
@@ -891,7 +901,7 @@ export function getTabsButtonClassName(isActive: boolean, orientation: 'horizont
 }
 
 export function getTabsPanelClassName() {
-  return 'flex-1'
+  return 'flex-1 border border-app-border-soft p-4 flex flex-col gap-5'
 }
 
 export function getLinkNodeClassName() {
