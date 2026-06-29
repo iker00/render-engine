@@ -22,7 +22,7 @@ export function LinkNode({ node, iterationContext, renderedChildren }: LinkNodeP
   const config = useRuntimeConfig()
   const { executeQueryOperation, goBackPage, navigateToPage, openModal, closeModal, resetForm } = useRuntimeStateActions()
   const { href, download, target, action, icon } = node.props
-  const label = resolveRuntimeTextReference(node.props.label, state, 'link.props.label', { iterationContext })
+  const label = resolveRuntimeTextReference(node.props.label ?? '', state, 'link.props.label', { iterationContext })
   const resolvedHref = href !== undefined
     ? resolveRuntimeTextReference(href, state, 'link.props.href', { iterationContext })
     : undefined

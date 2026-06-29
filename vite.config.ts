@@ -1,7 +1,23 @@
-import { defineConfig } from 'vite'
+import {defineConfig} from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
+    plugins: [react(), tailwindcss()],
+    build: {
+        cssCodeSplit: false,
+        rollupOptions: {
+            input: 'src/main.tsx',
+            output: {
+                entryFileNames: 'index.js',
+                chunkFileNames: '[name]-[hash].js',
+                assetFileNames: (assetInfo) => {
+                    if (assetInfo.name?.endsWith('.css')) {
+                        return 'index.css'
+                    }
+                    return '[name]-[hash][extname]'
+                }
+            }
+        }
+    }
 })

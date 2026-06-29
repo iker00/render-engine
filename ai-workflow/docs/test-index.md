@@ -98,6 +98,8 @@ src/tests/
 - `runtime-api-multipart.test.ts` — construcción de FormData en el builder de requests, manejo de files en multipart/form-data, flatness de body con escalares (~nuevo)
 - `runtime-file-manager-normalize-name.test.ts` — normalización de nombre de fichero: caracteres inválidos Windows, espacios al final, nombres reservados, truncado a 255 caracteres, prefijo (~nuevo)
 - `runtime-file-manager-hook.test.tsx` — comportamiento del nodo fileManager: subida secuencial, validaciones client-side, lista paginada, botones Ver/Descargar/Eliminar, precarga, integración con queries state (~nuevo)
+- `runtime-node-components-map.test.tsx` — mapa central de componentes de nodo: cobertura de todas las 24 claves, valores truthy, rama eager activa en modo test (~nuevo)
+- `runtime-lazy-node.test.tsx` — wrapper LazyNode con Suspense + error boundary: success, suspense (null), error (indicador con role="alert"), contención por instancia (~nuevo)
 - `runtime-table-processing.test.ts` — filtrado, ordenación y procesamiento local de tablas
 - `runtime-ui-actions.test.tsx` — ejecución de acciones UI (clicks, submit) y delegación al executor compartido
 
@@ -111,3 +113,4 @@ src/tests/
 - `dev-runtime-keyboard.test.ts` — atajos de teclado del dev runtime
 - `dev-runtime-monaco-editor.test.tsx` — integración del editor Monaco
 - `dev-runtime-bundle.test.ts` — bundle del dev runtime (gate de producción)
+- `runtime-nodes-bundle.test.ts` — gate de code splitting de nodos: verifica que cada nodo produce su chunk independiente en build de producción (~nuevo)

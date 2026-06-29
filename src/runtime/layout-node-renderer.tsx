@@ -6,30 +6,8 @@ import { useRuntimeLayoutContext } from './runtime-layout-context'
 import { getGridChildSpanClassName } from './runtime-node-styling'
 import { useRuntimeState } from './runtime-state/runtime-state-provider'
 import { LayoutRenderer } from './layout-renderer'
-import { AccordionNode } from './nodes/accordion-layout-node'
-import { FileManagerNode } from './nodes/file-manager-layout-node'
-import { AlertNode } from './nodes/alert-layout-node'
-import { BadgeNode } from './nodes/badge-layout-node'
-import { DividerNode } from './nodes/divider-layout-node'
-import { SkeletonNode } from './nodes/skeleton-layout-node'
-import { StatNode } from './nodes/stat-layout-node'
-import { ButtonNode } from './nodes/button-layout-node'
-import { LinkNode } from './nodes/link-layout-node'
-import { CheckboxGroupNode } from './nodes/checkbox-group-layout-node'
-import { ContainerNode } from './nodes/container-layout-node'
-import { FormNode } from './nodes/form-layout-node'
-import { HeadingNode } from './nodes/heading-layout-node'
-import { ImageNode } from './nodes/image-layout-node'
-import { InputNode } from './nodes/input-layout-node'
-import { ListNode } from './nodes/list-layout-node'
-import { ModalNode } from './nodes/modal-layout-node'
-import { ParagraphNode } from './nodes/paragraph-layout-node'
-import { RadioGroupNode } from './nodes/radio-group-layout-node'
-import { RepeaterNode } from './nodes/repeater-layout-node'
-import { SelectNode } from './nodes/select-layout-node'
-import { TableNode } from './nodes/table-layout-node'
-import { TabsNode } from './nodes/tabs-layout-node'
-import { TextareaNode } from './nodes/textarea-layout-node'
+import { NodeComponents } from './nodes/node-components-map'
+import { LazyNode } from './lazy-node'
 
 export interface LayoutNodeRendererProps {
   node: LayoutNode
@@ -63,79 +41,129 @@ export function LayoutNodeRenderer({ node, renderedChildren, iterationContext }:
   let renderedNode: ReactNode
 
   switch (node.type) {
-    case 'container':
+    case 'container': {
+      const ContainerNode = NodeComponents.container
       renderedNode = <ContainerNode node={node}>{renderedChildren}</ContainerNode>
       break
-    case 'repeater':
+    }
+    case 'repeater': {
+      const RepeaterNode = NodeComponents.repeater
       renderedNode = <RepeaterNode node={node} />
       break
-    case 'heading':
+    }
+    case 'heading': {
+      const HeadingNode = NodeComponents.heading
       renderedNode = <HeadingNode node={node} iterationContext={iterationContext} />
       break
-    case 'paragraph':
+    }
+    case 'paragraph': {
+      const ParagraphNode = NodeComponents.paragraph
       renderedNode = <ParagraphNode node={node} iterationContext={iterationContext} />
       break
-    case 'list':
+    }
+    case 'list': {
+      const ListNode = NodeComponents.list
       renderedNode = <ListNode node={node} iterationContext={iterationContext} />
       break
-    case 'image':
+    }
+    case 'image': {
+      const ImageNode = NodeComponents.image
       renderedNode = <ImageNode node={node} iterationContext={iterationContext} />
       break
-    case 'table':
+    }
+    case 'table': {
+      const TableNode = NodeComponents.table
       renderedNode = <TableNode node={node} iterationContext={iterationContext} />
       break
-    case 'button':
+    }
+    case 'button': {
+      const ButtonNode = NodeComponents.button
       renderedNode = <ButtonNode node={node} iterationContext={iterationContext} />
       break
-    case 'link':
+    }
+    case 'link': {
+      const LinkNode = NodeComponents.link
       renderedNode = <LinkNode node={node} iterationContext={iterationContext} renderedChildren={renderedChildren} />
       break
-    case 'modal':
+    }
+    case 'modal': {
+      const ModalNode = NodeComponents.modal
       renderedNode = <ModalNode node={node} iterationContext={iterationContext}>{renderedChildren}</ModalNode>
       break
-    case 'form':
+    }
+    case 'form': {
+      const FormNode = NodeComponents.form
       renderedNode = <FormNode node={node} iterationContext={iterationContext}>{renderedChildren}</FormNode>
       break
-    case 'input':
+    }
+    case 'input': {
+      const InputNode = NodeComponents.input
       renderedNode = <InputNode node={node} iterationContext={iterationContext} />
       break
-    case 'textarea':
+    }
+    case 'textarea': {
+      const TextareaNode = NodeComponents.textarea
       renderedNode = <TextareaNode node={node} iterationContext={iterationContext} />
       break
-    case 'select':
+    }
+    case 'select': {
+      const SelectNode = NodeComponents.select
       renderedNode = <SelectNode node={node} iterationContext={iterationContext} />
       break
-    case 'radioGroup':
+    }
+    case 'radioGroup': {
+      const RadioGroupNode = NodeComponents.radioGroup
       renderedNode = <RadioGroupNode node={node} iterationContext={iterationContext} />
       break
-    case 'checkboxGroup':
+    }
+    case 'checkboxGroup': {
+      const CheckboxGroupNode = NodeComponents.checkboxGroup
       renderedNode = <CheckboxGroupNode node={node} iterationContext={iterationContext} />
       break
-    case 'tabs':
+    }
+    case 'tabs': {
+      const TabsNode = NodeComponents.tabs
       renderedNode = <TabsNode node={node} iterationContext={iterationContext} />
       break
-    case 'accordion':
+    }
+    case 'accordion': {
+      const AccordionNode = NodeComponents.accordion
       renderedNode = <AccordionNode node={node} iterationContext={iterationContext} />
       break
-    case 'badge':
+    }
+    case 'badge': {
+      const BadgeNode = NodeComponents.badge
       renderedNode = <BadgeNode node={node} iterationContext={iterationContext} />
       break
-    case 'alert':
+    }
+    case 'alert': {
+      const AlertNode = NodeComponents.alert
       renderedNode = <AlertNode node={node} iterationContext={iterationContext} />
       break
-    case 'stat':
+    }
+    case 'stat': {
+      const StatNode = NodeComponents.stat
       renderedNode = <StatNode node={node} iterationContext={iterationContext} />
       break
-    case 'divider':
+    }
+    case 'divider': {
+      const DividerNode = NodeComponents.divider
       renderedNode = <DividerNode node={node} iterationContext={iterationContext} />
       break
-    case 'skeleton':
+    }
+    case 'skeleton': {
+      const SkeletonNode = NodeComponents.skeleton
       renderedNode = <SkeletonNode node={node} iterationContext={iterationContext} />
       break
-    case 'fileManager':
+    }
+    case 'fileManager': {
+      const FileManagerNode = NodeComponents.fileManager
       renderedNode = <FileManagerNode node={node} iterationContext={iterationContext} />
       break
+    }
   }
+
+  renderedNode = <LazyNode>{renderedNode}</LazyNode>
 
   const gridChildSpanClassName =
     node.type === 'repeater' || node.type === 'modal'

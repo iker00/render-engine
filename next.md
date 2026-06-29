@@ -16,7 +16,6 @@
 - Añadir `.describe()` en los schemas Zod para el schema del prompt
 - Subida de ficheros con componente de formulario attachment o file.
 - Permitir personalizar todos los literales del componente fileManager
-- Añadir mensajes personalizados todas las validaciones
 - Permitir variantes, types (alerts y badges) y colores condicionales.
 - Añadir lazy load de componentes
 - ¿Opción para poner los iconos a la derecha?
