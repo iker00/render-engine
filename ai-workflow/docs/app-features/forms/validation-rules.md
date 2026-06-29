@@ -66,8 +66,40 @@ Los ficheros rechazados **no llegan al servidor**. Los errores desaparecen al in
 - Cuando un campo con error vuelve a editarse, el runtime reevalúa localmente sus reglas visibles y solo limpia el error cuando el valor actual deja de incumplir la primera regla fallida.
 - Un campo oculto por `visibility` o `queryStateFeedback` no bloquea el submit (ver [[lifecycle.md#Campos ocultos]]) y además cualquier referencia a ese campo en el payload se omite del wire format al ejecutar el submit.
 
+## Mensajes de error personalizados
+
+Cada regla de validación puede declarar un campo `message` opcional que sustituye al mensaje por defecto del runtime. El mensaje se interpola antes de mostrarse:
+
+- `{{value}}`: sustituido por el valor de la regla convertido a string. Si la regla no tiene un valor numérico significativo (ej. `required: { value: true }`), se interpola como string vacío.
+- `{{translations.someKey}}`: resuelto mediante el catálogo de traducciones del proyecto, con fallback a clave literal en desarrollo / string vacío en producción.
+- Cualquier otro placeholder no soportado (ej. `{{forms.someForm.someField}}`) se interpola como string vacío sin romper el resto del mensaje.
+
+Si `message` no está declarado en una regla, el runtime muestra el mensaje por defecto:
+- `required`: `"Required"`
+- `minLength`: `"Must be at least N characters."`
+- `maxLength`: `"Must be at most N characters."`
+- `min`: `"Must be at least N."`
+- `max`: `"Must be at most N."`
+- `minSelections`: `"Select at least N options."`
+- `maxSelections`: `"Select no more than N options."`
+
+Ejemplos:
+```json
+{
+  "validations": {
+    "minLength": { "value": 3, "message": "Mínimo {{value}} caracteres" },
+    "required": { "value": true, "message": "Este campo es obligatorio" },
+    "maxLength": { "value": 100, "message": "{{translations.max_length_error}}" }
+  }
+}
+```
+
+Casos límite:
+- `message: ""` (string vacío): se muestra string vacío como error, no se usa el mensaje por defecto.
+- `message: "{{value}}"` y `value: 0`: se interpola como `"0"` (el cero no se trata como vacío).
+- `message: "{{value}} es requerido"` y `value: true`: se interpola como `" es requerido"` (boolean true produce string vacío).
+
 ## Qué no hace todavía
 - No valida al cambiar de página ni por desmontaje del formulario.
 - No rehidrata campos ni recalcula errores solo porque cambien `params.*`, `queries.*` o el catálogo dinámico de opciones mientras el formulario sigue montado.
 - No expone un estado agregado de `isValid`, `isSubmitting` o `submitErrors` separado de `forms.*` y `queries.*`.
-- No activa todavía `message` como copy visible personalizado por regla aunque el contrato ya reserve ese hueco.

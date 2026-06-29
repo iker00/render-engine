@@ -248,6 +248,295 @@ describe('runtime form validations', () => {
       },
     })
   })
+
+  it('uses custom message for a required field when message is declared', () => {
+    const state: RuntimeState = {
+      ...baseState,
+      forms: {
+        testForm: {
+          username: { value: '', error: null, touched: false, dirty: false, defaultValue: '' },
+        },
+      },
+    }
+
+    const result = validateFormFields({
+      formId: 'testForm',
+      fieldDefinitions: [
+        {
+          fieldId: 'username',
+          type: 'input',
+          validations: { required: { value: true, message: 'Este campo es obligatorio' } },
+          multiple: false,
+          defaultValue: '',
+        },
+      ],
+      state,
+    })
+
+    expect(result).toEqual({
+      isValid: false,
+      errorsByFieldId: { username: 'Este campo es obligatorio' },
+    })
+  })
+
+  it('substitutes {{value}} in custom message for a minLength rule', () => {
+    const state: RuntimeState = {
+      ...baseState,
+      forms: {
+        testForm: {
+          username: { value: 'ab', error: null, touched: false, dirty: false, defaultValue: '' },
+        },
+      },
+    }
+
+    const result = validateFormFields({
+      formId: 'testForm',
+      fieldDefinitions: [
+        {
+          fieldId: 'username',
+          type: 'input',
+          validations: { minLength: { value: 3, message: 'Mínimo {{value}} caracteres' } },
+          multiple: false,
+          defaultValue: '',
+        },
+      ],
+      state,
+    })
+
+    expect(result).toEqual({
+      isValid: false,
+      errorsByFieldId: { username: 'Mínimo 3 caracteres' },
+    })
+  })
+
+  it('substitutes {{value}} with empty string for a required rule when rule.value is true', () => {
+    const state: RuntimeState = {
+      ...baseState,
+      forms: {
+        testForm: {
+          username: { value: '', error: null, touched: false, dirty: false, defaultValue: '' },
+        },
+      },
+    }
+
+    const result = validateFormFields({
+      formId: 'testForm',
+      fieldDefinitions: [
+        {
+          fieldId: 'username',
+          type: 'input',
+          validations: { required: { value: true, message: '{{value}} es requerido' } },
+          multiple: false,
+          defaultValue: '',
+        },
+      ],
+      state,
+    })
+
+    expect(result).toEqual({
+      isValid: false,
+      errorsByFieldId: { username: ' es requerido' },
+    })
+  })
+
+  it('resolves {{translations.key}} in custom message from the active language catalog', () => {
+    const state: RuntimeState = {
+      ...baseState,
+      modal: { activeModalId: null, activeIterationKey: null },
+      i18n: {
+        translations: {
+          max_length_error: { en: 'Maximum length exceeded', es: 'Longitud máxima superada' },
+        },
+        activeLanguage: 'en',
+      },
+      tokens: {},
+      forms: {
+        testForm: {
+          bio: { value: 'a'.repeat(101), error: null, touched: false, dirty: false, defaultValue: '' },
+        },
+      },
+    }
+
+    const result = validateFormFields({
+      formId: 'testForm',
+      fieldDefinitions: [
+        {
+          fieldId: 'bio',
+          type: 'input',
+          validations: { maxLength: { value: 100, message: '{{translations.max_length_error}}' } },
+          multiple: false,
+          defaultValue: '',
+        },
+      ],
+      state,
+    })
+
+    expect(result).toEqual({
+      isValid: false,
+      errorsByFieldId: { bio: 'Maximum length exceeded' },
+    })
+  })
+
+  it('substitutes {{value}} in custom message for a min rule on a number input field', () => {
+    const state: RuntimeState = {
+      ...baseState,
+      forms: {
+        testForm: {
+          age: { value: '2', error: null, touched: false, dirty: false, defaultValue: '' },
+        },
+      },
+    }
+
+    const result = validateFormFields({
+      formId: 'testForm',
+      fieldDefinitions: [
+        {
+          fieldId: 'age',
+          type: 'input',
+          inputType: 'number',
+          validations: { min: { value: 5, message: 'Mínimo {{value}}' } },
+          multiple: false,
+          defaultValue: '',
+        },
+      ],
+      state,
+    })
+
+    expect(result).toEqual({
+      isValid: false,
+      errorsByFieldId: { age: 'Mínimo 5' },
+    })
+  })
+
+  it('substitutes {{value}} in custom message for a minSelections rule on a multiple select field', () => {
+    const state: RuntimeState = {
+      ...baseState,
+      forms: {
+        testForm: {
+          tags: { value: [], error: null, touched: false, dirty: false, defaultValue: [] },
+        },
+      },
+    }
+
+    const result = validateFormFields({
+      formId: 'testForm',
+      fieldDefinitions: [
+        {
+          fieldId: 'tags',
+          type: 'checkboxGroup',
+          validations: { minSelections: { value: 2, message: 'Selecciona al menos {{value}}' } },
+          items: [
+            { label: 'A', value: 'a' },
+            { label: 'B', value: 'b' },
+          ],
+          multiple: true,
+          defaultValue: [],
+        },
+      ],
+      state,
+    })
+
+    expect(result).toEqual({
+      isValid: false,
+      errorsByFieldId: { tags: 'Selecciona al menos 2' },
+    })
+  })
+
+  it('returns the default runtime message when no custom message is declared on the rule', () => {
+    const state: RuntimeState = {
+      ...baseState,
+      forms: {
+        testForm: {
+          username: { value: 'ab', error: null, touched: false, dirty: false, defaultValue: '' },
+        },
+      },
+    }
+
+    const result = validateFormFields({
+      formId: 'testForm',
+      fieldDefinitions: [
+        {
+          fieldId: 'username',
+          type: 'input',
+          validations: { minLength: { value: 3 } },
+          multiple: false,
+          defaultValue: '',
+        },
+      ],
+      state,
+    })
+
+    expect(result).toEqual({
+      isValid: false,
+      errorsByFieldId: { username: 'Must be at least 3 characters.' },
+    })
+  })
+
+  it('stores empty string as the error when message is an explicit empty string for a failing rule', () => {
+    const state: RuntimeState = {
+      ...baseState,
+      forms: {
+        testForm: {
+          username: { value: '', error: null, touched: false, dirty: false, defaultValue: '' },
+        },
+      },
+    }
+
+    const result = validateFormFields({
+      formId: 'testForm',
+      fieldDefinitions: [
+        {
+          fieldId: 'username',
+          type: 'input',
+          validations: { required: { value: true, message: '' } },
+          multiple: false,
+          defaultValue: '',
+        },
+      ],
+      state,
+    })
+
+    expect(result).toEqual({
+      isValid: false,
+      errorsByFieldId: { username: '' },
+    })
+  })
+
+  it('preserves the existing stored error for a hidden field without re-formatting the message', () => {
+    const state: RuntimeState = {
+      ...baseState,
+      forms: {
+        testForm: {
+          username: { value: '', error: 'Este campo es obligatorio', touched: true, dirty: true, defaultValue: '' },
+          role: { value: 'editor', error: null, touched: false, dirty: false, defaultValue: 'editor' },
+        },
+      },
+    }
+
+    const result = validateFormFields({
+      formId: 'testForm',
+      fieldDefinitions: [
+        {
+          fieldId: 'username',
+          type: 'input',
+          validations: { required: { value: true, message: 'Este campo es obligatorio' } },
+          visibility: {
+            reference: 'forms.testForm.role',
+            operator: 'equals',
+            value: 'admin',
+          },
+          multiple: false,
+          defaultValue: '',
+        },
+      ],
+      state,
+    })
+
+    expect(result).toEqual({
+      isValid: true,
+      errorsByFieldId: { username: 'Este campo es obligatorio' },
+    })
+  })
 })
 
 function makeFile(name: string, type: string, size: number): File {

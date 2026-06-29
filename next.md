@@ -18,11 +18,6 @@
 - Permitir personalizar todos los literales del componente fileManager
 - Añadir mensajes personalizados todas las validaciones
 - Permitir variantes, types (alerts y badges) y colores condicionales.
-- Revisar los nodos interactivos para ver si tienen cursor: pointer.
-  - Tabs
-  - Buttons
-  - Acordeón
-  - Paginaciones
 - Añadir lazy load de componentes
 - ¿Opción para poner los iconos a la derecha?
 

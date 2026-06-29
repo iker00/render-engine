@@ -10,8 +10,36 @@ import type {
 import { isLayoutNodeVisible } from './runtime-layout-visibility'
 import { normalizeChoiceFieldValue } from './runtime-collection-sources'
 import type { RuntimeIterationContext } from './runtime-references/runtime-reference-resolver'
+import { resolveRuntimeTextReference } from './runtime-references/runtime-reference-resolver'
 import { selectFormFieldState } from './runtime-state/runtime-state-selectors'
 import type { RuntimeState } from './runtime-state/runtime-state-types'
+
+const VALUE_PLACEHOLDER_PATTERN = /\{\{\s*value\s*\}\}/g
+
+export function formatValidationMessage({
+  rule,
+  defaultMessage,
+  state,
+  iterationContext,
+}: {
+  rule: { value: number | true; message?: string }
+  defaultMessage: string
+  state: RuntimeState
+  iterationContext?: RuntimeIterationContext
+}): string {
+  if (rule.message === undefined) {
+    return defaultMessage
+  }
+
+  if (rule.message === '') {
+    return ''
+  }
+
+  const valueStr = typeof rule.value === 'number' ? String(rule.value) : ''
+  const substituted = rule.message.replace(VALUE_PLACEHOLDER_PATTERN, valueStr)
+
+  return resolveRuntimeTextReference(substituted, state, 'form.validation.message', { iterationContext })
+}
 
 export interface ResolvedFormFieldDefinition {
   fieldId: string
@@ -49,11 +77,18 @@ export function validateFormFields({
       continue
     }
 
-    const error = getFirstVisibleValidationError(fieldDefinition, currentValue)
-    errorsByFieldId[fieldDefinition.fieldId] = error
+    const errorResult = getFirstVisibleValidationError(fieldDefinition, currentValue)
 
-    if (error !== null) {
+    if (errorResult !== null) {
+      errorsByFieldId[fieldDefinition.fieldId] = formatValidationMessage({
+        rule: errorResult.rule,
+        defaultMessage: errorResult.defaultMessage,
+        state,
+        iterationContext,
+      })
       isValid = false
+    } else {
+      errorsByFieldId[fieldDefinition.fieldId] = null
     }
   }
 
@@ -76,46 +111,55 @@ export function resolveFormFieldValue(fieldDefinition: ResolvedFormFieldDefiniti
   return fieldState?.value ?? fieldDefinition.defaultValue
 }
 
-export function getFirstVisibleValidationError(fieldDefinition: ResolvedFormFieldDefinition, value: unknown): string | null {
+export interface ValidationErrorResult {
+  ruleName: string
+  rule: { value: number | true; message?: string }
+  defaultMessage: string
+}
+
+export function getFirstVisibleValidationError(
+  fieldDefinition: ResolvedFormFieldDefinition,
+  value: unknown,
+): ValidationErrorResult | null {
   for (const [ruleName, rule] of Object.entries(fieldDefinition.validations ?? {})) {
     switch (ruleName) {
       case 'required':
         if (!passesRequiredValidation(fieldDefinition, value)) {
-          return 'Required'
+          return { ruleName, rule, defaultMessage: 'Required' }
         }
         break
       case 'minLength':
         if (typeof value === 'string' && value.length < rule.value) {
-          return `Must be at least ${rule.value} characters.`
+          return { ruleName, rule, defaultMessage: `Must be at least ${rule.value} characters.` }
         }
         break
       case 'maxLength':
         if (typeof value === 'string' && value.length > rule.value) {
-          return `Must be at most ${rule.value} characters.`
+          return { ruleName, rule, defaultMessage: `Must be at most ${rule.value} characters.` }
         }
         break
       case 'min': {
         const numericValue = parseNumericFieldValue(value)
         if (numericValue !== null && numericValue < rule.value) {
-          return `Must be at least ${formatNumericRuleValue(rule.value)}.`
+          return { ruleName, rule, defaultMessage: `Must be at least ${formatNumericRuleValue(rule.value)}.` }
         }
         break
       }
       case 'max': {
         const numericValue = parseNumericFieldValue(value)
         if (numericValue !== null && numericValue > rule.value) {
-          return `Must be at most ${formatNumericRuleValue(rule.value)}.`
+          return { ruleName, rule, defaultMessage: `Must be at most ${formatNumericRuleValue(rule.value)}.` }
         }
         break
       }
       case 'minSelections':
         if (Array.isArray(value) && value.length < rule.value) {
-          return `Select at least ${rule.value} options.`
+          return { ruleName, rule, defaultMessage: `Select at least ${rule.value} options.` }
         }
         break
       case 'maxSelections':
         if (Array.isArray(value) && value.length > rule.value) {
-          return `Select no more than ${rule.value} options.`
+          return { ruleName, rule, defaultMessage: `Select no more than ${rule.value} options.` }
         }
         break
     }
@@ -163,7 +207,18 @@ export function getValidationErrorForEditedField({
   }
 
   const nextResolvedValue = resolveFormFieldValue(fieldDefinition, formId, nextState)
-  return getFirstVisibleValidationError(fieldDefinition, nextResolvedValue)
+  const errorResult = getFirstVisibleValidationError(fieldDefinition, nextResolvedValue)
+
+  if (errorResult === null) {
+    return null
+  }
+
+  return formatValidationMessage({
+    rule: errorResult.rule,
+    defaultMessage: errorResult.defaultMessage,
+    state: nextState,
+    iterationContext,
+  })
 }
 
 function passesRequiredValidation(fieldDefinition: ResolvedFormFieldDefinition, value: unknown) {

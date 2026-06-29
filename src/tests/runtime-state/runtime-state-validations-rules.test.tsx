@@ -453,6 +453,164 @@ describe('Runtime shared state store', () => {
     ).toBe('Select at least 2 options.')
   })
 
+  it('returns custom message when getValidationErrorForEditedField finds a failing rule with message declared', () => {
+    const fieldDefinition: ResolvedFormFieldDefinition = {
+      fieldId: 'username',
+      type: 'input',
+      validations: {
+        minLength: { value: 3, message: 'Mínimo {{value}} caracteres' },
+      },
+      multiple: false,
+      defaultValue: '',
+      inputType: 'text',
+    }
+
+    const state: RuntimeState = {
+      navigation: {
+        currentPageId: 'home',
+        history: [{ entryId: 0, pageId: 'home', params: {} }],
+        lastError: null,
+      },
+      forms: {
+        profileForm: {
+          username: {
+            value: 'ab',
+            error: 'Mínimo 3 caracteres',
+            touched: true,
+            dirty: true,
+            defaultValue: '',
+          },
+        },
+      },
+      queries: {},
+      pageEntry: {
+        entryId: 0,
+        pageId: 'home',
+        params: {},
+        preloadNames: [],
+        status: 'idle',
+      },
+    }
+
+    expect(
+      getValidationErrorForEditedField({
+        fieldDefinition,
+        formId: 'profileForm',
+        state,
+        nextValue: 'a',
+      }),
+    ).toBe('Mínimo 3 caracteres')
+  })
+
+  it('returns null when getValidationErrorForEditedField finds the next value satisfies the rule with message declared', () => {
+    const fieldDefinition: ResolvedFormFieldDefinition = {
+      fieldId: 'username',
+      type: 'input',
+      validations: {
+        minLength: { value: 3, message: 'Mínimo {{value}} caracteres' },
+      },
+      multiple: false,
+      defaultValue: '',
+      inputType: 'text',
+    }
+
+    const state: RuntimeState = {
+      navigation: {
+        currentPageId: 'home',
+        history: [{ entryId: 0, pageId: 'home', params: {} }],
+        lastError: null,
+      },
+      forms: {
+        profileForm: {
+          username: {
+            value: 'a',
+            error: 'Mínimo 3 caracteres',
+            touched: true,
+            dirty: true,
+            defaultValue: '',
+          },
+        },
+      },
+      queries: {},
+      pageEntry: {
+        entryId: 0,
+        pageId: 'home',
+        params: {},
+        preloadNames: [],
+        status: 'idle',
+      },
+    }
+
+    expect(
+      getValidationErrorForEditedField({
+        fieldDefinition,
+        formId: 'profileForm',
+        state,
+        nextValue: 'abc',
+      }),
+    ).toBeNull()
+  })
+
+  it('resolves {{translations.key}} in the inline reevaluation error message via the active language catalog', () => {
+    const fieldDefinition: ResolvedFormFieldDefinition = {
+      fieldId: 'username',
+      type: 'input',
+      validations: {
+        required: { value: true, message: '{{translations.field_required}}' },
+      },
+      multiple: false,
+      defaultValue: '',
+      inputType: 'text',
+    }
+
+    const state: RuntimeState = {
+      navigation: {
+        currentPageId: 'home',
+        history: [{ entryId: 0, pageId: 'home', params: {} }],
+        lastError: null,
+      },
+      forms: {
+        profileForm: {
+          username: {
+            value: '',
+            error: null,
+            touched: true,
+            dirty: true,
+            defaultValue: '',
+          },
+        },
+      },
+      queries: {},
+      pageEntry: {
+        entryId: 0,
+        pageId: 'home',
+        params: {},
+        preloadNames: [],
+        status: 'idle',
+      },
+      modal: {
+        activeModalId: null,
+        activeIterationKey: null,
+      },
+      i18n: {
+        translations: {
+          field_required: { en: 'This field is required', es: 'Este campo es obligatorio' },
+        },
+        activeLanguage: 'en',
+      },
+      tokens: {},
+    }
+
+    expect(
+      getValidationErrorForEditedField({
+        fieldDefinition,
+        formId: 'profileForm',
+        state,
+        nextValue: '',
+      }),
+    ).toBe('This field is required')
+  })
+
   it('reevaluates field errors locally instead of clearing them blindly while editing', async () => {
     const config: RuntimeConfig = {
       api: {},
