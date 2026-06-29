@@ -17,8 +17,6 @@
 - Subida de ficheros con componente de formulario attachment o file.
 - Permitir personalizar todos los literales del componente fileManager
 - Añadir mensajes personalizados todas las validaciones
-- Controlar el title de la página
-- Mejorar estilos del nodo tabs
 - Permitir variantes, types (alerts y badges) y colores condicionales.
 - Revisar los nodos interactivos para ver si tienen cursor: pointer.
   - Tabs

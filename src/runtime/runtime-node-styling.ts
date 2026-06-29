@@ -542,6 +542,7 @@ export function getTableFilterResetButtonClassName() {
     'leading-5',
     'text-app-text-strong',
     'transition-colors',
+    'cursor-pointer',
     'hover:bg-app-surface-subtle',
     'focus-visible:outline',
     'focus-visible:outline-2',
@@ -564,6 +565,7 @@ export function getTableSortButtonClassName(isActive = false) {
     'tracking-[0.16em]',
     isActive ? 'text-app-accent' : 'text-app-text-strong',
     'transition-colors',
+    'cursor-pointer',
     'hover:text-app-accent',
     'focus-visible:outline',
     'focus-visible:outline-2',
@@ -673,6 +675,7 @@ export function getRepeaterPaginationButtonClassName() {
     'leading-5',
     'text-app-text-strong',
     'transition-colors',
+    'cursor-pointer',
     'hover:bg-app-surface-subtle',
     'disabled:cursor-not-allowed',
     'disabled:border-app-border-soft',
@@ -744,7 +747,7 @@ export function getChoiceOptionClassName(optionLayout: ChoiceGroupOptionLayout =
 }
 
 export function getModalOverlayClassName() {
-  return 'fixed inset-0 z-50 flex items-center justify-center bg-black/50'
+  return 'fixed inset-0 z-50 flex items-center justify-center bg-black/50 cursor-pointer'
 }
 
 const modalPanelSizeClassMap: Record<string, string> = {
@@ -764,6 +767,7 @@ export function getModalPanelClassName(size: 'sm' | 'md' | 'lg' = 'md') {
     'bg-white',
     'p-6',
     'shadow-shell',
+    'cursor-auto',
     'sm:p-8',
   ].join(' ')
 }
@@ -822,6 +826,7 @@ export function getAccordionHeaderClassName() {
     'items-center',
     'justify-between',
     'bg-primary-50',
+    'cursor-pointer',
     'hover:bg-primary-100',
     'focus:outline-none',
     'focus-visible:ring-2',
@@ -885,6 +890,7 @@ export function getTabsButtonClassName(isActive: boolean, orientation: 'horizont
       'px-3',
       'py-1.5',
       'transition-colors',
+      'cursor-pointer',
       orientationClasses,
     ].join(' ')
   }
@@ -896,6 +902,7 @@ export function getTabsButtonClassName(isActive: boolean, orientation: 'horizont
     'px-3',
     'py-1.5',
     'transition-colors',
+    'cursor-pointer',
     orientationClasses,
   ].join(' ')
 }
@@ -1154,7 +1161,7 @@ export function getFileManagerRowFileNameClassName(): string {
 
 export function getFileManagerRowActionClassName(variant: 'primary' | 'danger' | 'disabled'): string {
   if (variant === 'primary') {
-    return 'flex items-center gap-1 text-sm text-primary-600 hover:text-primary-800 transition-colors'
+    return 'flex items-center gap-1 text-sm text-primary-600 hover:text-primary-800 cursor-pointer transition-colors'
   }
   if (variant === 'danger') {
     return 'flex items-center gap-1 text-sm text-danger-600 hover:text-danger-700 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition-colors'
@@ -1179,11 +1186,11 @@ export function getFileManagerErrorItemClassName(): string {
 }
 
 const fileManagerDropZonePhaseClassMap: Record<string, string> = {
-  idle: 'border-neutral-300 bg-neutral-50 hover:bg-neutral-100',
-  'drag-over': 'border-primary-500 bg-primary-50',
+  idle: 'border-neutral-300 bg-neutral-50 cursor-pointer hover:bg-neutral-100',
+  'drag-over': 'border-primary-500 bg-primary-50 cursor-pointer',
   uploading: 'border-info-400 bg-info-50 cursor-not-allowed',
-  success: 'border-success-500 bg-success-50',
-  error: 'border-danger-400 bg-danger-50',
+  success: 'border-success-500 bg-success-50 cursor-pointer',
+  error: 'border-danger-400 bg-danger-50 cursor-pointer',
 }
 
 export function getFileManagerDropZoneClassName(phase: 'idle' | 'drag-over' | 'uploading' | 'success' | 'error'): string {
