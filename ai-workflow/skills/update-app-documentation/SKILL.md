@@ -18,7 +18,7 @@ Esta skill debe comportarse como una fase documental posterior al código: revis
 - La implementación contradice materialmente la `spec.md` → realinear spec e implementación antes de documentar
 
 ## Leer reglas VCS 
-- [ ] `ai-workflow/docs/vcs.md` y aplicar lo que pide.
+- [ ] `ai-workflow/docs/vcs.md` y aplicar lo que pide
 
 ## Leer siempre
 - [ ] `ai-workflow/docs/workflow.md`

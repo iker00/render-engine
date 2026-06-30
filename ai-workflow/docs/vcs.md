@@ -95,7 +95,7 @@ Al finalizar implementación y documentación (cuando código, tests y documenta
 
 3. **Pushear y crear el Merge Request**:
    ```
-   git push -o merge_request.create -o merge_request.target=dev -o merge_request.title="<mismo patrón que el commit>" -o merge_request.description="<contenido de spec.md>" origin <nombre-rama>
+   git push -o merge_request.create -o merge_request.target=dev -o merge_request.title="<mismo patrón que el commit>" -o merge_request.description="<contenido de ai-workflow/features/NNNN-feature-name/spec.md>" origin <nombre-rama>
    ```
    - Título: mismo patrón que el mensaje de commit.
    - Descripción: contenido de `spec.md`.
