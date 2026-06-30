@@ -404,6 +404,7 @@ export const buttonNodeSchema = z
         variant: z.enum(supportedButtonVariants).optional(),
         fullWidth: z.boolean().optional(),
         icon: z.string().optional(),
+        iconPosition: z.enum(['left', 'right']).optional(),
       })
       .strip(),
   })
@@ -443,6 +444,7 @@ export const inputNodeSchema = z
         inputType: z.enum(supportedInputTypes).optional(),
         placeholder: z.string().optional(),
         icon: z.string().optional(),
+        iconPosition: z.enum(['left', 'right']).optional(),
       })
       .strip(),
   })
@@ -615,6 +617,7 @@ export const linkNodeSchema = z
         target: z.string().optional(),
         action: z.unknown().optional(),
         icon: z.string().optional(),
+        iconPosition: z.enum(['left', 'right']).optional(),
       })
       .strip(),
     children: z.array(z.unknown()).optional(),

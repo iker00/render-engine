@@ -6,7 +6,8 @@
 
 ## Contrato (`props`)
 - `props.label`: string obligatorio, literal, referencia dinámica completa o string visible interpolado con `{{...}}`.
-- `props.icon`: string opcional, nombre del icono Lucide React (ej. `"Search"`, `"User"`, `"ArrowRight"`). Se renderiza a la izquierda del label. Si el nombre no resuelve a un icono conocido, se ignora silenciosamente.
+- `props.icon`: string opcional, nombre del icono Lucide React (ej. `"Search"`, `"User"`, `"ArrowRight"`). Se renderiza a la izquierda del label por defecto. Si el nombre no resuelve a un icono conocido, se ignora silenciosamente.
+- `props.iconPosition`: string opcional, enum cerrado `"left" | "right"`, default `"left"`. Controla el posicionamiento del icono declarado con `props.icon`. Solo tiene efecto cuando `props.icon` está declarado y resuelve a un icono conocido; en caso contrario se ignora silenciosamente.
 - `props.action`: opcional; sin `action` solo es válido dentro del subárbol de un `form` y actúa como submit implícito.
 - `props.action.type`: `navigateTo | goBack | executeOperation | executeOperations | resetForm | openModal | closeModal`.
 - `props.color`: opcional, enum cerrado de seis valores semánticos: `neutral | primary | success | warning | danger | info`, default `primary`.
@@ -97,4 +98,5 @@ Idéntica a la establecida en `badge`, `alert` y `stat`:
 - Si `button.props.color` toma un valor fuera del enum cerrado (`neutral | primary | success | warning | danger | info`), el config completo se rechaza antes del render con código `invalid-layout` y ruta exacta.
 - Si `button.props.variant` toma un valor fuera del enum cerrado (`solid | outline | ghost | link`), el config completo se rechaza antes del render con código `invalid-layout` y ruta exacta.
 - Si `button.props.fullWidth` no es un valor booleano, el config completo se rechaza antes del render con código `invalid-layout` y ruta exacta.
+- Si `button.props.iconPosition` toma un valor fuera del enum cerrado (`"left" | "right"`), el config completo se rechaza antes del render con código `invalid-layout` y ruta exacta.
 - Un botón sin `color` ni `variant` explícitos se comporta como `color: primary` y `variant: solid`.

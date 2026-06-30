@@ -21,7 +21,7 @@ export function LinkNode({ node, iterationContext, renderedChildren }: LinkNodeP
   const state = useRuntimeState()
   const config = useRuntimeConfig()
   const { executeQueryOperation, goBackPage, navigateToPage, openModal, closeModal, resetForm } = useRuntimeStateActions()
-  const { href, download, target, action, icon } = node.props
+  const { href, download, target, action, icon, iconPosition } = node.props
   const label = resolveRuntimeTextReference(node.props.label ?? '', state, 'link.props.label', { iterationContext })
   const resolvedHref = href !== undefined
     ? resolveRuntimeTextReference(href, state, 'link.props.href', { iterationContext })
@@ -60,10 +60,19 @@ export function LinkNode({ node, iterationContext, renderedChildren }: LinkNodeP
       className={getLinkNodeClassName()}
     >
       {node.children !== undefined ? renderedChildren : (
-        <>
-          <IconNode name={icon} className="size-4 shrink-0 inline-block align-middle mr-1" />
-          {label}
-        </>
+        iconPosition === 'right'
+          ? (
+            <>
+              {label}
+              <IconNode name={icon} className="size-4 shrink-0 inline-block align-middle ml-1" />
+            </>
+          )
+          : (
+            <>
+              <IconNode name={icon} className="size-4 shrink-0 inline-block align-middle mr-1" />
+              {label}
+            </>
+          )
       )}
     </a>
   )

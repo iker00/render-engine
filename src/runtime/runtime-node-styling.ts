@@ -1122,8 +1122,9 @@ export function getSkeletonAnimateClassName(animate: boolean): string {
 
 // T12 — Input icon holder and icon styling functions (D9 D10 D7)
 
-export function getInputIconHolderClassName(): string {
-  return 'flex items-center justify-center px-3 bg-neutral-50 border-r border-app-border-soft shrink-0'
+export function getInputIconHolderClassName(position: 'left' | 'right' = 'left'): string {
+  const borderClass = position === 'right' ? 'border-l' : 'border-r'
+  return `flex items-center justify-center px-3 bg-neutral-50 ${borderClass} border-app-border-soft shrink-0`
 }
 
 export function getInputIconClassName(): string {

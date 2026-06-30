@@ -23,9 +23,11 @@ Esta skill debe comportarse como la fase de alineamiento de un flujo guiado por 
 - El usuario quiere explorar sin comprometerse a una spec → `explore-feature-scope`
 - La feature requiere decisiones técnicas antes de especificar → `generate-feature-design`
 
+## Leer reglas VCS
+- `ai-workflow/docs/vcs.md`
+
 ## Leer siempre
 - `ai-workflow/docs/workflow.md`
-- `ai-workflow/docs/vcs.md`
 - `ai-workflow/docs/context.md`
 - `ai-workflow/docs/app-features/index.md`
 - solo las fichas de `ai-workflow/docs/app-features/` que el índice marque como relevantes para la petición
