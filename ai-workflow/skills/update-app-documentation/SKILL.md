@@ -19,6 +19,7 @@ Esta skill debe comportarse como una fase documental posterior al código: revis
 
 ## Leer siempre
 - `ai-workflow/docs/workflow.md`
+- `ai-workflow/docs/vcs.md`
 - `ai-workflow/features/NNNN-feature-name/spec.md`
 - `ai-workflow/features/NNNN-feature-name/tasks.md`
 - `ai-workflow/features/NNNN-feature-name/status.yaml`

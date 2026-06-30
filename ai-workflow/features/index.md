@@ -15,6 +15,7 @@ La exploración previa, cuando hace falta, se hace conversacionalmente con `expl
 La política completa está definida en el documento de workflow del proyecto.
 
 ## Planificadas
+- `0088-form-file-input`: nuevo nodo `fileInput` para seleccionar ficheros como campo de formulario. Selector nativo, preview inmediata (miniatura para imágenes, lista para documentos), validaciones client-side reutilizadas de `runtime-form-validations`, soporte de `capture` para cámara en móvil, y submit como `multipart/form-data`.
 
 ## Archivadas
 - `0035-image-node-api-source`: archivada. Se descarta por ahora porque el caso de imágenes privadas encaja mejor con URLs protegidas o firmadas desde backend que con una carga remota específica integrada en el nodo `image`.
