@@ -57,6 +57,7 @@ export function InputNode({ node, iterationContext }: InputNodeProps) {
     resolvedIconName &&
     (LucideIcons as Record<string, unknown>)[resolvedIconName] !== undefined,
   )
+  const iconPosition = node.props.iconPosition ?? 'left'
 
   const hasError = error !== null
 
@@ -90,13 +91,27 @@ export function InputNode({ node, iterationContext }: InputNodeProps) {
       <span className={getFieldLabelClassName()}>{label}</span>
       {iconResolved ? (
         <span className={getInputIconWrapperClassName(hasError)}>
-          <span className={getInputIconHolderClassName()}>
-            <IconNode name={iconName} className={getInputIconClassName()} />
-          </span>
-          <input
-            {...sharedInputProps}
-            className={getInputWithIconClassName()}
-          />
+          {iconPosition === 'right' ? (
+            <>
+              <input
+                {...sharedInputProps}
+                className={getInputWithIconClassName()}
+              />
+              <span className={getInputIconHolderClassName('right')}>
+                <IconNode name={iconName} className={getInputIconClassName()} />
+              </span>
+            </>
+          ) : (
+            <>
+              <span className={getInputIconHolderClassName('left')}>
+                <IconNode name={iconName} className={getInputIconClassName()} />
+              </span>
+              <input
+                {...sharedInputProps}
+                className={getInputWithIconClassName()}
+              />
+            </>
+          )}
         </span>
       ) : (
         <input {...sharedInputProps} className={getFieldControlClassName(hasError)} />

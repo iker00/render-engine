@@ -2957,4 +2957,283 @@ describe('validateRuntimeConfig', () => {
       }
     })
   })
+
+  describe('button props.iconPosition', () => {
+    it('accepts iconPosition: "left" and the normalized node preserves it', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithPages([
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'button',
+                props: {
+                  label: 'Search',
+                  action: { type: 'goBack' },
+                  icon: 'Search',
+                  iconPosition: 'left',
+                },
+              },
+            ],
+          },
+        ]),
+      )
+
+      expect(result.status).toBe('ready')
+      if (result.status !== 'ready') throw new Error('Expected ready')
+
+      expect(result.page.layout[0]).toMatchObject({
+        type: 'button',
+        props: { label: 'Search', iconPosition: 'left' },
+      })
+    })
+
+    it('accepts iconPosition: "right" and the normalized node preserves it', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithPages([
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'button',
+                props: {
+                  label: 'Next',
+                  action: { type: 'goBack' },
+                  icon: 'ArrowRight',
+                  iconPosition: 'right',
+                },
+              },
+            ],
+          },
+        ]),
+      )
+
+      expect(result.status).toBe('ready')
+      if (result.status !== 'ready') throw new Error('Expected ready')
+
+      expect(result.page.layout[0]).toMatchObject({
+        type: 'button',
+        props: { label: 'Next', iconPosition: 'right' },
+      })
+    })
+
+    it('without iconPosition, the normalized node does not include the iconPosition key', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithPages([
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'button',
+                props: {
+                  label: 'Search',
+                  action: { type: 'goBack' },
+                  icon: 'Search',
+                },
+              },
+            ],
+          },
+        ]),
+      )
+
+      expect(result.status).toBe('ready')
+      if (result.status !== 'ready') throw new Error('Expected ready')
+
+      expect(result.page.layout[0]).not.toHaveProperty('props.iconPosition')
+    })
+
+    it('rejects iconPosition with a value outside the enum with code invalid-layout and the exact path', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithPages([
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'button',
+                props: {
+                  label: 'Broken',
+                  action: { type: 'goBack' },
+                  iconPosition: 'center',
+                },
+              },
+            ],
+          },
+        ]),
+      )
+
+      expect(result.status).toBe('error')
+      if (result.status !== 'error') throw new Error('Expected error')
+
+      expect(result.error.code).toBe('invalid-layout')
+      expect(result.error.message).toContain('layout[0].props.iconPosition')
+    })
+
+    it('accepts iconPosition declared without icon and the normalized node preserves iconPosition', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithPages([
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'button',
+                props: {
+                  label: 'Next',
+                  action: { type: 'goBack' },
+                  iconPosition: 'right',
+                },
+              },
+            ],
+          },
+        ]),
+      )
+
+      expect(result.status).toBe('ready')
+      if (result.status !== 'ready') throw new Error('Expected ready')
+
+      expect(result.page.layout[0]).toMatchObject({
+        type: 'button',
+        props: { label: 'Next', iconPosition: 'right' },
+      })
+    })
+  })
+
+  describe('link props.iconPosition', () => {
+    it('accepts props.label and iconPosition: "right" and the normalized node preserves iconPosition', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithPages([
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'link',
+                props: {
+                  label: 'Visit',
+                  href: 'https://example.com',
+                  icon: 'ExternalLink',
+                  iconPosition: 'right',
+                },
+              },
+            ],
+          },
+        ]),
+      )
+
+      expect(result.status).toBe('ready')
+      if (result.status !== 'ready') throw new Error('Expected ready')
+
+      expect(result.page.layout[0]).toMatchObject({
+        type: 'link',
+        props: { label: 'Visit', iconPosition: 'right' },
+      })
+    })
+
+    it('without iconPosition, the normalized node does not include the iconPosition key', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithPages([
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'link',
+                props: {
+                  label: 'Visit',
+                  href: 'https://example.com',
+                },
+              },
+            ],
+          },
+        ]),
+      )
+
+      expect(result.status).toBe('ready')
+      if (result.status !== 'ready') throw new Error('Expected ready')
+
+      expect(result.page.layout[0]).not.toHaveProperty('props.iconPosition')
+    })
+
+    it('rejects iconPosition with a value outside the enum with code invalid-layout and the exact path', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithPages([
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'link',
+                props: {
+                  label: 'Visit',
+                  href: 'https://example.com',
+                  iconPosition: 'center',
+                },
+              },
+            ],
+          },
+        ]),
+      )
+
+      expect(result.status).toBe('error')
+      if (result.status !== 'error') throw new Error('Expected error')
+
+      expect(result.error.code).toBe('invalid-layout')
+      expect(result.error.message).toContain('layout[0].props.iconPosition')
+    })
+
+    it('rejects link with children and iconPosition declared with the icon+children diagnostic message', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithPages([
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'link',
+                props: {
+                  href: 'https://example.com',
+                  iconPosition: 'right',
+                },
+                children: [
+                  {
+                    type: 'paragraph',
+                    props: { text: 'Click here' },
+                  },
+                ],
+              },
+            ],
+          },
+        ]),
+      )
+
+      expect(result.status).toBe('error')
+      if (result.status !== 'error') throw new Error('Expected error')
+
+      expect(result.error.code).toBe('invalid-layout')
+      expect(result.error.message).toContain('link nodes cannot have both props.icon and children.')
+    })
+
+    it('accepts props.label and iconPosition declared without icon and the normalized node preserves iconPosition', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithPages([
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'link',
+                props: {
+                  label: 'Visit',
+                  href: 'https://example.com',
+                  iconPosition: 'right',
+                },
+              },
+            ],
+          },
+        ]),
+      )
+
+      expect(result.status).toBe('ready')
+      if (result.status !== 'ready') throw new Error('Expected ready')
+
+      expect(result.page.layout[0]).toMatchObject({
+        type: 'link',
+        props: { label: 'Visit', iconPosition: 'right' },
+      })
+    })
+  })
 })

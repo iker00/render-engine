@@ -311,6 +311,7 @@ export interface InputLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLay
     inputType?: 'text' | 'email' | 'password' | 'search' | 'tel' | 'url' | 'number' | 'date' | 'datetime-local'
     placeholder?: string
     icon?: string
+    iconPosition?: 'left' | 'right'
   }
   children?: unknown
 }
@@ -594,6 +595,7 @@ export interface ButtonLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLa
     variant?: ButtonVariant
     fullWidth?: boolean
     icon?: string
+    iconPosition?: 'left' | 'right'
   }
   children?: unknown
 }
@@ -608,6 +610,7 @@ export interface LinkLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayo
     target?: string
     action?: NavigateToRuntimeUiAction | GoBackRuntimeUiAction
     icon?: string
+    iconPosition?: 'left' | 'right'
   }
   children?: LayoutNodeCollection
 }

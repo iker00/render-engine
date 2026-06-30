@@ -1330,6 +1330,10 @@ function validateButtonNode(
       return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.fullWidth".`)
     }
 
+    if (issuePath[0] === 'props' && issuePath[1] === 'iconPosition') {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.iconPosition".`)
+    }
+
     const layoutIssue = mapLayoutNodeIssue(pageId, path, issuePath)
 
     if (layoutIssue) {
@@ -1371,6 +1375,19 @@ function validateButtonNode(
     action = actionResult.action
   }
 
+  const buttonProps: ButtonLayoutNode['props'] = {
+    label: parseResult.data.props.label,
+    action,
+    color: parseResult.data.props.color,
+    variant: parseResult.data.props.variant,
+    fullWidth: parseResult.data.props.fullWidth,
+    icon: parseResult.data.props.icon,
+  }
+
+  if (parseResult.data.props.iconPosition !== undefined) {
+    buttonProps.iconPosition = parseResult.data.props.iconPosition
+  }
+
   return {
     status: 'ready',
     node: {
@@ -1379,14 +1396,7 @@ function validateButtonNode(
       queryStateFeedback: feedbackResult.queryStateFeedback,
       visibility: visibilityResult.visibility,
       layout: parseResult.data.layout,
-      props: {
-        label: parseResult.data.props.label,
-        action,
-        color: parseResult.data.props.color,
-        variant: parseResult.data.props.variant,
-        fullWidth: parseResult.data.props.fullWidth,
-        icon: parseResult.data.props.icon,
-      },
+      props: buttonProps,
     },
   }
 }
@@ -1439,6 +1449,10 @@ export function validateLinkNode(
       return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.action".`)
     }
 
+    if (issuePath[0] === 'props' && issuePath[1] === 'iconPosition') {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.iconPosition".`)
+    }
+
     return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props".`)
   }
 
@@ -1458,10 +1472,11 @@ export function validateLinkNode(
 
   if (visibilityResult.status === 'error') return visibilityResult
 
-  const { href, download, target, action, label, icon } = parseResult.data.props
+  const { href, download, target, action, label, icon, iconPosition } = parseResult.data.props
   const hasChildren = parseResult.data.children !== undefined
   const hasLabel = label !== undefined
   const hasIcon = icon !== undefined
+  const hasIconPosition = iconPosition !== undefined
   const hasHref = href !== undefined
   const hasAction = action !== undefined
 
@@ -1472,6 +1487,11 @@ export function validateLinkNode(
 
   // Cross-validation (2): children and props.icon are mutually exclusive
   if (hasChildren && hasIcon) {
+    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}": link nodes cannot have both props.icon and children.`)
+  }
+
+  // Cross-validation (2b): children and props.iconPosition are mutually exclusive
+  if (hasChildren && hasIconPosition) {
     return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}": link nodes cannot have both props.icon and children.`)
   }
 
@@ -1552,6 +1572,7 @@ export function validateLinkNode(
   if (target !== undefined) props.target = target
   if (validatedAction !== undefined) props.action = validatedAction
   if (icon !== undefined) props.icon = icon
+  if (iconPosition !== undefined) props.iconPosition = iconPosition
 
   const node: LinkLayoutNode = {
     type: 'link',

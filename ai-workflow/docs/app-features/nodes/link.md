@@ -11,7 +11,8 @@ Nodo que se renderiza siempre como un elemento `<a>` HTML semántico. Permite en
 | Prop | Tipo | Requerido | Descripción |
 |---|---|---|---|
 | `props.label` | `string` | condicional | Texto visible del enlace. Obligatorio si no hay `children`. Admite literal, referencia dinámica completa o interpolación `{{...}}`. |
-| `props.icon` | `string` | no | Nombre del icono Lucide React (ej. `"ExternalLink"`). Se renderiza a la izquierda del label. Solo aplicable cuando se usa `props.label`. Si el nombre no resuelve, se ignora silenciosamente. |
+| `props.icon` | `string` | no | Nombre del icono Lucide React (ej. `"ExternalLink"`). Se renderiza a la izquierda del label por defecto. Solo aplicable cuando se usa `props.label`. Si el nombre no resuelve, se ignora silenciosamente. |
+| `props.iconPosition` | `string` | no | Enum cerrado `"left" | "right"`, default `"left"`. Controla el posicionamiento del icono declarado con `props.icon`. Solo aplicable en modo `props.label`. Sin efecto en modo `children`. |
 | `props.href` | `string` | condicional | URL de destino. Obligatorio si no hay `props.action`. Admite literal o referencia dinámica completa (`queries.*`, `item.*`, etc.). |
 | `props.download` | `string` | no | Nombre de fichero sugerido al navegador. Activa el atributo `download` del anchor. Solo aplicable junto a `props.href`. |
 | `props.target` | `string` | no | Valor del atributo `target` del anchor (p.ej. `"_blank"`). Solo aplicable junto a `props.href`. Sin valor, el anchor no lleva atributo `target`. |
@@ -71,6 +72,7 @@ Sin parámetros adicionales. Ejecuta navegación hacia atrás del runtime.
 
 - Debe declararse exactamente uno de `props.label` o `children`. Si se declaran ambos, el config se rechaza con diagnóstico `link nodes cannot have both props.label and children.` Si ninguno está presente, el config se rechaza con diagnóstico `link nodes must have either props.label or children.`
 - `props.icon` sin `props.label` rechaza el config con diagnóstico `link nodes cannot have both props.icon and children.` (cuando `children` está presente).
+- `props.iconPosition` declarado junto con `children` rechaza el config con el mismo diagnóstico que la restricción existente `icon + children`: `link nodes cannot have both props.icon and children.` (la restricción se aplica a ambas propiedades de forma conjunta).
 - Si `children` está presente, debe no estar vacío. Un array vacío `children: []` rechaza el config con diagnóstico `link children cannot be empty.`
 - Si `children` está presente, todos los nodos dentro (en cualquier profundidad) deben pertenecer al subconjunto cerrado: `container`, `heading`, `paragraph`, `list`, `image`, `badge`, `alert`, `stat`, `divider`, `skeleton`. Cualquier otro tipo rechaza el config con diagnóstico exacto incluyendo la ruta del nodo prohibido, p.ej. `link children may only be container, heading, paragraph, list, image, badge, alert, stat, divider or skeleton nodes.`
 - `props.href` y `props.action` son mutuamente excluyentes. Si se declaran ambos, el config se rechaza con `invalid-layout` y diagnóstico de ruta `{path}`.
@@ -80,6 +82,7 @@ Sin parámetros adicionales. Ejecuta navegación hacia atrás del runtime.
 - `props.action.type` distinto de `navigateTo` o `goBack` rechaza el config con `invalid-layout` y diagnóstico `{path}.props.action.type`.
 - `props.action.pageId` apuntando a una página inexistente rechaza el config con `invalid-layout`, igual que en `button`.
 - `props.action` de tipo `navigateTo` sin `pageId` rechaza el config con `invalid-layout`.
+- Si `link.props.iconPosition` toma un valor fuera del enum cerrado (`"left" | "right"`), el config completo se rechaza antes del render con código `invalid-layout` y ruta exacta.
 - `visibility`, `queryStateFeedback` y `layout.span` siguen el contrato transversal estándar.
 
 ## Lo que está fuera de alcance (v1)

@@ -1090,6 +1090,146 @@ describe('button node with props.icon', () => {
     const button = screen.getByRole('button', { name: 'Plain' })
     expect(button.querySelector('svg')).toBeNull()
   })
+
+  it('renders the svg after the label when props.iconPosition is "right" and icon resolves', () => {
+    renderRuntimePage({
+      id: 'button-icon-right',
+      layout: [
+        {
+          type: 'button',
+          props: {
+            label: 'Submit',
+            icon: 'ArrowRight',
+            iconPosition: 'right',
+            action: { type: 'goBack' },
+          },
+        },
+      ],
+    })
+
+    const button = screen.getByRole('button', { name: 'Submit' })
+    const svg = button.querySelector('svg')
+    expect(svg).not.toBeNull()
+    const children = Array.from(button.childNodes)
+    const svgIndex = children.findIndex((n) => n.nodeName === 'svg')
+    const textIndex = children.findIndex(
+      (n) => n.nodeType === Node.TEXT_NODE && n.textContent?.includes('Submit'),
+    )
+    expect(svgIndex).toBeGreaterThan(textIndex)
+  })
+
+  it('renders the svg before the label when props.iconPosition is "left"', () => {
+    renderRuntimePage({
+      id: 'button-icon-left',
+      layout: [
+        {
+          type: 'button',
+          props: {
+            label: 'Search',
+            icon: 'Search',
+            iconPosition: 'left',
+            action: { type: 'goBack' },
+          },
+        },
+      ],
+    })
+
+    const button = screen.getByRole('button', { name: 'Search' })
+    const children = Array.from(button.childNodes)
+    const svgIndex = children.findIndex((n) => n.nodeName === 'svg')
+    const textIndex = children.findIndex(
+      (n) => n.nodeType === Node.TEXT_NODE && n.textContent?.includes('Search'),
+    )
+    expect(svgIndex).toBeLessThan(textIndex)
+  })
+
+  it('renders the svg before the label when props.iconPosition is absent (no regression)', () => {
+    renderRuntimePage({
+      id: 'button-icon-no-position',
+      layout: [
+        {
+          type: 'button',
+          props: {
+            label: 'Find',
+            icon: 'Search',
+            action: { type: 'goBack' },
+          },
+        },
+      ],
+    })
+
+    const button = screen.getByRole('button', { name: 'Find' })
+    const children = Array.from(button.childNodes)
+    const svgIndex = children.findIndex((n) => n.nodeName === 'svg')
+    const textIndex = children.findIndex(
+      (n) => n.nodeType === Node.TEXT_NODE && n.textContent?.includes('Find'),
+    )
+    expect(svgIndex).toBeLessThan(textIndex)
+  })
+
+  it('renders without svg when props.iconPosition is "right" but props.icon is absent (silent ignore)', () => {
+    renderRuntimePage({
+      id: 'button-icon-right-no-icon',
+      layout: [
+        {
+          type: 'button',
+          props: {
+            label: 'Click',
+            iconPosition: 'right',
+            action: { type: 'goBack' },
+          },
+        },
+      ],
+    })
+
+    const button = screen.getByRole('button', { name: 'Click' })
+    expect(button.querySelector('svg')).toBeNull()
+  })
+
+  it('renders without svg when props.iconPosition is "right" and props.icon does not resolve (silent degradation)', () => {
+    renderRuntimePage({
+      id: 'button-icon-right-unknown',
+      layout: [
+        {
+          type: 'button',
+          props: {
+            label: 'Click',
+            icon: 'NonExistentIconXyz',
+            iconPosition: 'right',
+            action: { type: 'goBack' },
+          },
+        },
+      ],
+    })
+
+    const button = screen.getByRole('button', { name: 'Click' })
+    expect(button.querySelector('svg')).toBeNull()
+  })
+
+  it('preserves color, variant and fullWidth classes regardless of iconPosition (non-regression visual)', () => {
+    renderRuntimePage({
+      id: 'button-icon-right-classes',
+      layout: [
+        {
+          type: 'button',
+          props: {
+            label: 'Submit',
+            icon: 'ArrowRight',
+            iconPosition: 'right',
+            variant: 'outline',
+            color: 'danger',
+            fullWidth: true,
+            action: { type: 'goBack' },
+          },
+        },
+      ],
+    })
+
+    const button = screen.getByRole('button', { name: 'Submit' })
+    expect(button.className).toContain('outline')
+    expect(button.className).toMatch(/danger|red/)
+    expect(button.className).toContain('w-full')
+  })
 })
 
 describe('link node with props.icon', () => {
@@ -1174,6 +1314,145 @@ describe('link node with props.icon', () => {
 
     const anchor = screen.getByRole('link', { name: 'Plain link' })
     expect(anchor.querySelector('svg')).toBeNull()
+  })
+
+  it('renders the svg after the label when props.iconPosition is "right" and icon resolves', () => {
+    renderRuntimePage({
+      id: 'link-icon-right',
+      layout: [
+        {
+          type: 'link',
+          props: {
+            label: 'External',
+            href: 'https://example.com',
+            icon: 'ExternalLink',
+            iconPosition: 'right',
+          },
+        },
+      ],
+    })
+
+    const anchor = screen.getByRole('link', { name: 'External' })
+    const svg = anchor.querySelector('svg')
+    expect(svg).not.toBeNull()
+    const children = Array.from(anchor.childNodes)
+    const svgIndex = children.findIndex((n) => n.nodeName === 'svg')
+    const textIndex = children.findIndex(
+      (n) => n.nodeType === Node.TEXT_NODE && n.textContent?.includes('External'),
+    )
+    expect(svgIndex).toBeGreaterThan(textIndex)
+  })
+
+  it('renders the svg before the label when props.iconPosition is "left"', () => {
+    renderRuntimePage({
+      id: 'link-icon-left',
+      layout: [
+        {
+          type: 'link',
+          props: {
+            label: 'Visit',
+            href: 'https://example.com',
+            icon: 'ExternalLink',
+            iconPosition: 'left',
+          },
+        },
+      ],
+    })
+
+    const anchor = screen.getByRole('link', { name: 'Visit' })
+    const children = Array.from(anchor.childNodes)
+    const svgIndex = children.findIndex((n) => n.nodeName === 'svg')
+    const textIndex = children.findIndex(
+      (n) => n.nodeType === Node.TEXT_NODE && n.textContent?.includes('Visit'),
+    )
+    expect(svgIndex).toBeLessThan(textIndex)
+  })
+
+  it('renders the svg before the label when props.iconPosition is absent (no regression)', () => {
+    renderRuntimePage({
+      id: 'link-icon-no-position',
+      layout: [
+        {
+          type: 'link',
+          props: {
+            label: 'Go',
+            href: 'https://example.com',
+            icon: 'ExternalLink',
+          },
+        },
+      ],
+    })
+
+    const anchor = screen.getByRole('link', { name: 'Go' })
+    const children = Array.from(anchor.childNodes)
+    const svgIndex = children.findIndex((n) => n.nodeName === 'svg')
+    const textIndex = children.findIndex(
+      (n) => n.nodeType === Node.TEXT_NODE && n.textContent?.includes('Go'),
+    )
+    expect(svgIndex).toBeLessThan(textIndex)
+  })
+
+  it('renders without svg when props.iconPosition is "right" but props.icon is absent (silent ignore)', () => {
+    renderRuntimePage({
+      id: 'link-icon-right-no-icon',
+      layout: [
+        {
+          type: 'link',
+          props: {
+            label: 'Navigate',
+            href: 'https://example.com',
+            iconPosition: 'right',
+          },
+        },
+      ],
+    })
+
+    const anchor = screen.getByRole('link', { name: 'Navigate' })
+    expect(anchor.querySelector('svg')).toBeNull()
+    expect(anchor).toHaveTextContent('Navigate')
+  })
+
+  it('renders without svg when props.iconPosition is "right" and props.icon does not resolve (silent degradation)', () => {
+    renderRuntimePage({
+      id: 'link-icon-right-unknown',
+      layout: [
+        {
+          type: 'link',
+          props: {
+            label: 'Click',
+            href: 'https://example.com',
+            icon: 'NonExistentIconXyz',
+            iconPosition: 'right',
+          },
+        },
+      ],
+    })
+
+    const anchor = screen.getByRole('link', { name: 'Click' })
+    expect(anchor.querySelector('svg')).toBeNull()
+  })
+
+  it('applies ml-1 to the icon when props.iconPosition is "right" (margin on right side)', () => {
+    renderRuntimePage({
+      id: 'link-icon-right-margin',
+      layout: [
+        {
+          type: 'link',
+          props: {
+            label: 'Open',
+            href: 'https://example.com',
+            icon: 'ExternalLink',
+            iconPosition: 'right',
+          },
+        },
+      ],
+    })
+
+    const anchor = screen.getByRole('link', { name: 'Open' })
+    const svg = anchor.querySelector('svg')
+    expect(svg).not.toBeNull()
+    expect(svg?.getAttribute('class')).toContain('ml-1')
+    expect(svg?.getAttribute('class')).not.toContain('mr-1')
   })
 })
 

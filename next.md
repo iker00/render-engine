@@ -8,6 +8,7 @@
 - Quitar el estado de las tareas en task.md ya que podemos verlo en status.md
 - Hacer que el paso de documentación haga commit
 - Definir una plantilla fija para cada tarea
+- Mejora subagente implementación: Optimiza la skill implement-task-test-first para reducir el tiempo por subagente. El orquestador debe leer una sola vez los ficheros invariantes (todos los de ai-workflow/standards/, más architecture.md, conventions.md y test-index.md) y pasarlos inline en el prompt de cada subagente, en lugar de que cada subagente los redescubra y lea de cero. El contenido de subagent-prompt.md también debe ir inline. El subagente solo debería leer los ficheros propios de la tarea (spec, design si existe, el bloque de su task_id, y el código/tests del área afectada).
 
 ---
 
@@ -17,10 +18,10 @@
 - Subida de ficheros con componente de formulario attachment o file.
 - Permitir personalizar todos los literales del componente fileManager
 - Permitir variantes, types (alerts y badges) y colores condicionales.
-- Añadir lazy load de componentes
 - ¿Opción para poner los iconos a la derecha?
 
 ---
 
 ### Descartado / ignorar por ahora
+
 
