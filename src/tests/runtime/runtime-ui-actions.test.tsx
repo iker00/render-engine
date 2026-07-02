@@ -162,7 +162,9 @@ describe('executeRuntimeUiAction', () => {
       handlers,
     )
 
-    expect(handlers.resetForm).toHaveBeenCalledWith('search-form')
+    expect(handlers.resetForm).toHaveBeenCalledWith('search-form', {
+      preserveFieldIds: undefined,
+    })
     expect(handlers.navigateToPage).not.toHaveBeenCalled()
     expect(handlers.goBackPage).not.toHaveBeenCalled()
     expect(handlers.executeQueryOperation).not.toHaveBeenCalled()
