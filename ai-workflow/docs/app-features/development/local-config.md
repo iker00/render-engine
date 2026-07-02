@@ -1,6 +1,6 @@
-> Cuándo leer: cargar configuración en desarrollo, prioridad de `data-config`, errores de bootstrap, ejemplos locales con `api`/`preloads`.
+> Cuándo leer: cargar configuración en desarrollo, prioridad de `data-config`, errores de bootstrap, ejemplos locales con `api`/`preloads`, sistema de mocks.
 > Tamaño: corto.
-> Relacionados: [[../config/structure.md]], [[../config/validation.md]].
+> Relacionados: [[../config/structure.md]], [[../config/validation.md]], [[../../guia-completa-proyecto.md]].
 
 # Configuración local del runtime
 
@@ -38,6 +38,28 @@ Además de cargar la configuración, el runtime permite pre-cargar datos en quer
 - reduce la fricción para desarrollar el runtime
 - permite validar el punto de entrada del runtime antes de integrarlo con backend
 - deja una base estable para evolucionar el contrato de configuración sin acoplarlo todavía al árbol React completo
+
+## Sistema de mocks con `mockResponse`
+
+Para desarrollar completamente offline cuando el servidor API no está disponible, existe un sistema de mocks integrado en el motor:
+
+- `RuntimeApiOperation` acepta un campo opcional `mockResponse?: unknown`
+- Cuando está presente y el engine corre en modo desarrollo (`import.meta.env.DEV`), la operación devuelve directamente esos datos sin realizar ninguna llamada HTTP
+- En builds de producción (`import.meta.env.DEV === false`) el campo es ignorado aunque esté en el config, gracias a tree-shaking de Vite
+
+### Infraestructura dev en `src/dev/`
+
+```
+src/dev/
+  tests-config/    ← un JSON por pantalla (versión dev del config de producción)
+  mocks/           ← un JSON por operación API (nombre fichero = nombre operación)
+  dev-settings.json ← controla qué página arranca en el dev local
+  dev-config.ts    ← orquestador: auto-fusiona configs y mocks con import.meta.glob
+```
+
+El orquestador auto-descubre todos los ficheros de `tests-config/` y `mocks/` e inyecta `mockResponse` en las operaciones que tengan fichero mock correspondiente.
+
+Para la guía completa de uso, paso a producción y gotchas, ver [[../../guia-completa-proyecto.md]].
 
 ## Límites de v1
 - no sustituye la integración real con backend

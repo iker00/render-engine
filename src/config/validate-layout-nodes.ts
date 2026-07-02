@@ -2376,7 +2376,7 @@ function isValidCollectionProjectionPath(value: unknown): value is string {
 }
 
 function isValidRepeaterItemKeyPath(value: unknown): value is string {
-  if (value === '$key') {
+  if (value === '$key' || value === '$index') {
     return true
   }
 

@@ -1,0 +1,58 @@
+{
+  "FichaPersonaDTO": {
+    "DatosIdentificativosDTO": {
+      "NombreCompleto": "García López, Juan Antonio",
+      "FNacimiento": "15/03/1985",
+      "DocIdentidadPrincipal": "12345678A",
+      "Telefono": "648 123 456",
+      "Direccion": "Calle Mayor 12, 2º B — 31001 Pamplona",
+      "MedioPrincipal": null,
+      "DocumentosIdentidadDTO": [
+        {
+          "TipoDocumento": "DNI",
+          "DocIdent": "12345678A",
+          "Pais": "España"
+        },
+        {
+          "TipoDocumento": "Pasaporte",
+          "DocIdent": "XAB123456",
+          "Pais": "España"
+        }
+      ]
+    },
+    "PersonasRelacionadasDTO": [
+      {
+        "Id": 104,
+        "NombreCompleto": "García Fernández, Laura"
+      },
+      {
+        "Id": 105,
+        "NombreCompleto": "López Sánchez, Miguel"
+      }
+    ],
+    "UltimosHechos": [
+      {
+        "Id": 1,
+        "TipoHecho": "Orden pública",
+        "Fecha": "01/07/2026",
+        "ResumenHecho": "Altercado en vía pública - Plaza del Castillo",
+        "Lugar": "Plaza del Castillo s/n, Pamplona"
+      },
+      {
+        "Id": 2,
+        "TipoHecho": "Tráfico",
+        "Fecha": "15/06/2026",
+        "ResumenHecho": "Conducción bajo los efectos del alcohol",
+        "Lugar": "Av. Pío XII, Pamplona"
+      },
+      {
+        "Id": 3,
+        "TipoHecho": "Patrimonio",
+        "Fecha": "02/05/2026",
+        "ResumenHecho": "Hurto en establecimiento comercial",
+        "Lugar": "C/ Estafeta 44, Pamplona"
+      }
+    ],
+    "Medios": []
+  }
+}

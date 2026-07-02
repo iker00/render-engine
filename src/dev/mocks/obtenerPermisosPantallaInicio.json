@@ -1,0 +1,9 @@
+{
+  "PermisosPantallaInicioDTO": {
+    "PermisoConsultaPersonas": true,
+    "PermisoConsultaBandas": true,
+    "PermisoCreacionHecho": true,
+    "PermisoConsultaHechosHistorial": true,
+    "PermisoConsultaPersonasHistorial": true
+  }
+}

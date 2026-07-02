@@ -1,0 +1,46 @@
+{
+  "HistorialPersonasPorUsernameSalidaDTO": {
+    "HistorialPersonasDTO": [
+      {
+        "Id": 2,
+        "NombreLargo": "Manuel Benitez Ruíz"
+      },
+      {
+        "Id": 19156874,
+        "NombreLargo": "JAVIER RONCAL BAZTAN"
+      },
+      {
+        "Id": 19166584,
+        "NombreLargo": "M. VICTORIA MORENTE GAITA"
+      },
+      {
+        "Id": 19167126,
+        "NombreLargo": "ROQUE VICTOR CARRILLO MELGAR"
+      },
+      {
+        "Id": 19166237,
+        "NombreLargo": "VICTOR ALFONSO CABRERA CABRERA"
+      },
+      {
+        "Id": 19166776,
+        "NombreLargo": "VICTOR HUGO HINOJOSA PACHECO"
+      },
+      {
+        "Id": 19167127,
+        "NombreLargo": "ROQUE VICTOR CARRILLO MELGAR"
+      },
+      {
+        "Id": 19167129,
+        "NombreLargo": "ROQUE VICTOR CARRILLO MELGAR"
+      },
+      {
+        "Id": 19167775,
+        "NombreLargo": "VICTOR RONCAL ASTIZ"
+      },
+      {
+        "Id": 19166236,
+        "NombreLargo": "VICTOR ALFONSO CABRERA CABRERA"
+      }
+    ]
+  }
+}

@@ -105,6 +105,7 @@ export const runtimeApiOperationShellSchema = z
   .object({
     method: z.enum(supportedApiMethods),
     endpoint: nonEmptyStringSchema,
+    mockResponse: z.unknown().optional(),
     query: runtimeApiQuerySchema.optional(),
     body: runtimeApiBodySchema.optional(),
     headers: runtimeApiHeadersSchema.optional(),
@@ -382,6 +383,7 @@ export const resetFormRuntimeUiActionSchema = z
   .object({
     type: z.literal('resetForm'),
     formId: nonEmptyStringSchema,
+    preserveFieldIds: z.array(nonEmptyStringSchema).optional(),
   })
   .strip()
 

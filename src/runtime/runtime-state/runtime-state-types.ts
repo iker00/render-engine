@@ -121,7 +121,7 @@ export type RuntimeStateAction =
       type: 'forms/set-error'
       payload: { formId: string; fieldId: string; error: string | null; defaultValue?: unknown }
     }
-  | { type: 'forms/reset'; payload: { formId: string } }
+  | { type: 'forms/reset'; payload: { formId: string; preserveFieldIds?: string[] } }
   | { type: 'forms/remove'; payload: { formId: string } }
   | { type: 'queries/initialize'; payload: { queryName: string } }
   | { type: 'queries/set-loading'; payload: { queryName: string; requestSignature?: string | null } }

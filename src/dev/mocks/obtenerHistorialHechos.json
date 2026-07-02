@@ -1,0 +1,22 @@
+{
+  "HistorialHechosPorUsernameSalidaDTO": {
+    "HistorialHechosDTO": [
+      {
+        "Id": 1,
+        "ResumenHecho": "Hurto menor modificado",
+        "Lugar": "Hurto menor 8",
+        "FechaHoraHecho": "20230404000000",
+        "FechaHoraHechoFormateada": "04/04/2023 0:00",
+        "TipoHechoCop": "Hurto menor en parque"
+      },
+      {
+        "Id": 2,
+        "ResumenHecho": "Robo plaza mayor",
+        "Lugar": "Robo con violencia",
+        "FechaHoraHecho": "20231008104500",
+        "FechaHoraHechoFormateada": "08/10/2023 10:45",
+        "TipoHechoCop": "Robo con violencia en plaza mayor"
+      }
+    ]
+  }
+}

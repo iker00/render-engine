@@ -4,7 +4,7 @@
       "method": "POST",
       "endpoint": "/api/ss/Ade/v1/operations/A3E7F2B1-8C4D-4A9E-B6F0-2D5C8E1A7B30/ObtenerPermisosPantallaInicio",
       "headers": {
-        "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJFbmNVc3VhcmlvIjoiNThkZTNkM2YwNzExNmIyMzY1NmY0ZGNkZWE1MDcwMGZiMGEwNmVjOWUxNDVlOGI3NDUzYWJkYzYxNmVhN2IyYyIsIkVuY0d1aWQiOiI1K2g0TmE4dUd2eit0Y0dTZFhETmxaU04rK1lGR0dpMGh4LzFrY0hROVF3b1NxTEVVa0RWZDRGN1pacWtkenJOIiwiTG9naW5BdCI6IjIwMjYtMDctMDJUMDg6MTA6MjcuNzk0MDAwMFoiLCJDcmVhdGVkQXQiOiIyMDI2LTA3LTAyVDA4OjEwOjI3Ljc5NDAwMDBaIiwiRXhwaXJlc0F0IjoiMjAyNi0wNy0wMlQwODo0MDoyNy43OTQwMDAwWiIsIm5iZiI6MTc4Mjk3OTgyOCwiZXhwIjoxNzgyOTgxNjI3LCJpYXQiOjE3ODI5Nzk4MjgsImlzcyI6Imh0dHBzOi8vYW5pbXNhLmVzIiwiYXVkIjoiand0QXV0aGVudGljYXRpb24ifQ.9H4bBuMePsAlCYBRkSsaIEaYRtEXSwDDNDnB4aKsUN4"
+        "Authorization": "Bearer TOKEN"
       },
       "body": {
         "PermisosPantallaInicioEntradaDTO": {}
@@ -14,7 +14,7 @@
       "method": "POST",
       "endpoint": "/api/ss/Ade/v1/operations/D8F2C614-4A9B-4E7D-9F31-2B6E5A8C1D40/ObtenerHistorialHechosPorUsername",
       "headers": {
-        "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJFbmNVc3VhcmlvIjoiNThkZTNkM2YwNzExNmIyMzY1NmY0ZGNkZWE1MDcwMGZiMGEwNmVjOWUxNDVlOGI3NDUzYWJkYzYxNmVhN2IyYyIsIkVuY0d1aWQiOiI1K2g0TmE4dUd2eit0Y0dTZFhETmxaU04rK1lGR0dpMGh4LzFrY0hROVF3b1NxTEVVa0RWZDRGN1pacWtkenJOIiwiTG9naW5BdCI6IjIwMjYtMDctMDJUMDg6MTA6MjcuNzk0MDAwMFoiLCJDcmVhdGVkQXQiOiIyMDI2LTA3LTAyVDA4OjEwOjI3Ljc5NDAwMDBaIiwiRXhwaXJlc0F0IjoiMjAyNi0wNy0wMlQwODo0MDoyNy43OTQwMDAwWiIsIm5iZiI6MTc4Mjk3OTgyOCwiZXhwIjoxNzgyOTgxNjI3LCJpYXQiOjE3ODI5Nzk4MjgsImlzcyI6Imh0dHBzOi8vYW5pbXNhLmVzIiwiYXVkIjoiand0QXV0aGVudGljYXRpb24ifQ.9H4bBuMePsAlCYBRkSsaIEaYRtEXSwDDNDnB4aKsUN4"
+        "Authorization": "Bearer TOKEN"
       },
       "body": {
         "Username": "session.username"
@@ -24,7 +24,7 @@
       "method": "POST",
       "endpoint": "/api/ss/Ade/v1/operations/E7B4F926-6C3D-4A8F-B2E1-5D7A9C3F6B80/ObtenerHistorialPersonasPorUsername",
       "headers": {
-        "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJFbmNVc3VhcmlvIjoiNThkZTNkM2YwNzExNmIyMzY1NmY0ZGNkZWE1MDcwMGZiMGEwNmVjOWUxNDVlOGI3NDUzYWJkYzYxNmVhN2IyYyIsIkVuY0d1aWQiOiI1K2g0TmE4dUd2eit0Y0dTZFhETmxaU04rK1lGR0dpMGh4LzFrY0hROVF3b1NxTEVVa0RWZDRGN1pacWtkenJOIiwiTG9naW5BdCI6IjIwMjYtMDctMDJUMDg6MTA6MjcuNzk0MDAwMFoiLCJDcmVhdGVkQXQiOiIyMDI2LTA3LTAyVDA4OjEwOjI3Ljc5NDAwMDBaIiwiRXhwaXJlc0F0IjoiMjAyNi0wNy0wMlQwODo0MDoyNy43OTQwMDAwWiIsIm5iZiI6MTc4Mjk3OTgyOCwiZXhwIjoxNzgyOTgxNjI3LCJpYXQiOjE3ODI5Nzk4MjgsImlzcyI6Imh0dHBzOi8vYW5pbXNhLmVzIiwiYXVkIjoiand0QXV0aGVudGljYXRpb24ifQ.9H4bBuMePsAlCYBRkSsaIEaYRtEXSwDDNDnB4aKsUN4"
+        "Authorization": "Bearer TOKEN"
       },
       "body": {
         "Username": "session.username"
@@ -75,8 +75,7 @@
               "type": "heading",
               "props": {
                 "text": "Inicio",
-                "level": 1,
-                "icon": "arrow-left"
+                "level": 1
               }
             },
             {
@@ -92,7 +91,10 @@
                   "props": {
                     "label": "Consulta de personas",
                     "icon": "users",
-                    "href": "<PORTAL_URL_BUSCAR_PERSONA>"
+                    "action": {
+                      "type": "navigateTo",
+                      "pageId": "buscar-persona"
+                    }
                   },
                   "visibility": {
                     "reference": "queries.obtenerPermisosPantallaInicio.data.PermisosPantallaInicioDTO.PermisoConsultaPersonas",
@@ -105,7 +107,7 @@
                   "props": {
                     "label": "Consulta de bandas",
                     "icon": "shield",
-                    "href": "<PORTAL_URL_BUSCAR_BANDA>"
+                    "href": "#"
                   },
                   "visibility": {
                     "reference": "queries.obtenerPermisosPantallaInicio.data.PermisosPantallaInicioDTO.PermisoConsultaBandas",
@@ -118,7 +120,7 @@
                   "props": {
                     "label": "Crear hecho",
                     "icon": "plus",
-                    "href": "<PORTAL_URL_CREAR_HECHO>"
+                    "href": "#"
                   },
                   "visibility": {
                     "reference": "queries.obtenerPermisosPantallaInicio.data.PermisosPantallaInicioDTO.PermisoCreacionHecho",
@@ -232,7 +234,7 @@
                             "type": "link",
                             "props": {
                               "label": "Ver hecho",
-                              "href": "<PORTAL_URL_FICHA_HECHO>?hechoId={{item.Id}}"
+                              "href": "#"
                             }
                           }
                         ]
@@ -330,7 +332,13 @@
                             "type": "link",
                             "props": {
                               "label": "{{item.NombreLargo}}",
-                              "href": "<PORTAL_URL_FICHA_PERSONA>?personaId={{item.Id}}"
+                              "action": {
+                                "type": "navigateTo",
+                                "pageId": "ficha-persona",
+                                "params": {
+                                  "personaId": "item.Id"
+                                }
+                              }
                             }
                           }
                         ]

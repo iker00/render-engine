@@ -320,7 +320,9 @@ function resolveRepeaterIterations(node: RepeaterLayoutNode, sourceItems: Repeat
     const entry = sourceItems.entries[index]
     let effectiveKey: string | null = null
 
-    if (keyPath === '$key') {
+    if (keyPath === '$index') {
+      effectiveKey = String(index)
+    } else if (keyPath === '$key') {
       if (entry.dictKey === undefined) {
         reportRepeaterKeyDiagnostic(node, index, 'invalid')
         continue

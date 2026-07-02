@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
-import devConfigJson from '../dev/config.json'
+import devConfigJson from '../dev/dev-config'
 import devDataValuesJson from '../dev/data-values.json'
 import { AppShell } from '../app/app-shell'
 import { readRuntimeConfig, type RuntimeConfig } from '../app/bootstrap/read-runtime-config'
@@ -37,7 +37,7 @@ if (import.meta.hot) {
   // DevRuntimeReady's state, so the new config never reaches `currentConfig`
   // through the initialConfig prop. Forward the update directly to the mounted
   // component so it can re-apply via the same migration path as the drawer.
-  import.meta.hot.accept('../dev/config.json', (newModule) => {
+  import.meta.hot.accept('../dev/dev-config', (newModule) => {
     if (newModule && activeConfigHmrApply) {
       activeConfigHmrApply((newModule as unknown as { default: unknown }).default)
     }

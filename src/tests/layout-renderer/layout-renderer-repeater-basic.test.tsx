@@ -139,6 +139,50 @@ describe('RuntimePage', () => {
     expect(within(lists[1]).getAllByRole('listitem').map((item) => item.textContent)).toEqual(['gamma'])
   })
 
+  it('iterates a primitive array with key "$index", resolving item to each scalar value', () => {
+    const activePage: RuntimePageConfig = {
+      id: 'medios',
+      layout: [
+        {
+          type: 'repeater',
+          props: {
+            items: {
+              source: 'queries.ficha.data.Medios',
+              key: '$index',
+            },
+            template: [
+              {
+                type: 'paragraph',
+                props: {
+                  text: 'item',
+                },
+              },
+            ],
+          },
+        },
+      ],
+    }
+
+    renderRuntimePageWithState(
+      activePage,
+      createRuntimePageState(activePage, {
+        ficha: {
+          status: 'success',
+          data: {
+            Medios: ['876b2745-aaaa', '9e737714-bbbb', '12345678-cccc'],
+          },
+          error: null,
+        },
+      }),
+    )
+
+    expect(screen.getAllByRole('paragraph').map((p) => p.textContent)).toEqual([
+      '876b2745-aaaa',
+      '9e737714-bbbb',
+      '12345678-cccc',
+    ])
+  })
+
   it('renders only the first effective page for paginated repeaters without changing item context', () => {
     const activePage: RuntimePageConfig = {
       id: 'posts',

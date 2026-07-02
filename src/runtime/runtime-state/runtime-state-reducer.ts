@@ -223,7 +223,7 @@ export function runtimeStateReducer(stateIn: RuntimeState, action: RuntimeStateA
         ...state,
         forms: {
           ...state.forms,
-          [action.payload.formId]: resetRuntimeForm(state.forms[action.payload.formId]),
+          [action.payload.formId]: resetRuntimeForm(state.forms[action.payload.formId], action.payload.preserveFieldIds),
         },
       }
     case 'forms/remove':
@@ -406,13 +406,17 @@ function updateRuntimeFormFieldValue(fieldState: RuntimeFormFieldState | undefin
   }
 }
 
-function resetRuntimeForm(formState: RuntimeFormState | undefined): RuntimeFormState {
+function resetRuntimeForm(formState: RuntimeFormState | undefined, preserveFieldIds?: string[]): RuntimeFormState {
   if (!formState) {
     return {}
   }
 
+  const preservedFieldIds = new Set(preserveFieldIds ?? [])
+
   return Object.entries(formState).reduce<RuntimeFormState>((nextFormState, [fieldId, fieldState]) => {
-    nextFormState[fieldId] = createRuntimeFormFieldState(fieldState.defaultValue)
+    nextFormState[fieldId] = preservedFieldIds.has(fieldId)
+      ? fieldState
+      : createRuntimeFormFieldState(fieldState.defaultValue)
     return nextFormState
   }, {})
 }

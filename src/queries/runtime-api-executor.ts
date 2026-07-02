@@ -80,6 +80,10 @@ export async function executeBuiltRuntimeApiRequest({
   request,
   fetch: fetchImplementation = fetch,
 }: ExecuteBuiltRuntimeApiRequestOptions): Promise<RuntimeApiExecutionResult> {
+  if (import.meta.env.DEV && request.operation.mockResponse !== undefined) {
+    return { status: 'success', data: request.operation.mockResponse }
+  }
+
   let response: Response
 
   try {

@@ -660,11 +660,12 @@ export function useRuntimeStateActions() {
   )
 
   const resetForm = useCallback(
-    (formId: string) => {
+    (formId: string, options?: { preserveFieldIds?: string[] }) => {
       dispatchAndSyncState({
         type: 'forms/reset',
         payload: {
           formId,
+          preserveFieldIds: options?.preserveFieldIds,
         },
       })
     },

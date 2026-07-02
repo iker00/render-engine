@@ -1,0 +1,249 @@
+{
+  "api": {
+    "buscarPersona": {
+      "method": "POST",
+      "endpoint": "/api/ss/ADE/v1/operations/F8E2A1B3-4C5D-6E7F-8A9B-0C1D2E3F4A5B/BuscarPersona",
+      "headers": {
+        "Authorization": "Bearer TOKEN"
+      },
+      "body": {
+        "BuscarPersonaEntradaDTO": {
+          "Descripcion": "forms.search.desc",
+          "DocIdent": "forms.search.doc",
+          "Nombre": "forms.search.name"
+        }
+      }
+    }
+  },
+  "pages": [
+    {
+      "id": "buscar-persona",
+      "layout": [
+        {
+          "type": "container",
+          "props": {
+            "direction": "row",
+            "align": "center",
+            "justify": "between"
+          },
+          "children": [
+            {
+              "type": "button",
+              "props": {
+                "label": "Volver",
+                "icon": "arrow-left",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "inicio"
+                }
+              }
+            },
+            {
+              "type": "heading",
+              "props": {
+                "text": "Búsqueda de personas",
+                "level": 1
+              }
+            }
+          ]
+        },
+        {
+          "type": "form",
+          "id": "search",
+          "submitAction": {
+            "type": "executeOperation",
+            "operationName": "buscarPersona"
+          },
+          "children": [
+            {
+              "type": "radioGroup",
+              "props": {
+                "fieldId": "searchType",
+                "label": "Tipo de búsqueda",
+                "defaultValue": "image",
+                "optionLayout": "inline",
+                "items": [
+                  {
+                    "label": "Imagen",
+                    "value": "image"
+                  },
+                  {
+                    "label": "Descripción",
+                    "value": "description"
+                  },
+                  {
+                    "label": "Datos personales",
+                    "value": "data"
+                  }
+                ]
+              }
+            },
+            {
+              "type": "paragraph",
+              "props": {
+                "text": "TODO: AÑADIR CAMPO ADJUNTAR FOTO"
+              },
+              "visibility": {
+                "reference": "forms.search.searchType",
+                "operator": "equals",
+                "value": "image"
+              }
+            },
+            {
+              "type": "textarea",
+              "props": {
+                "fieldId": "desc",
+                "label": "Descripción"
+              },
+              "visibility": {
+                "reference": "forms.search.searchType",
+                "operator": "equals",
+                "value": "description"
+              }
+            },
+            {
+              "type": "input",
+              "props": {
+                "fieldId": "doc",
+                "label": "Documento"
+              },
+              "visibility": {
+                "reference": "forms.search.searchType",
+                "operator": "equals",
+                "value": "data"
+              }
+            },
+            {
+              "type": "input",
+              "props": {
+                "fieldId": "name",
+                "label": "Nombre"
+              },
+              "visibility": {
+                "reference": "forms.search.searchType",
+                "operator": "equals",
+                "value": "data"
+              }
+            },
+            {
+              "type": "container",
+              "props": {
+                "direction": "row",
+                "gap": "sm"
+              },
+              "children": [
+                {
+                  "type": "button",
+                  "props": {
+                    "label": "Limpiar",
+                    "action": {
+                      "type": "resetForm",
+                      "formId": "search",
+                      "preserveFieldIds": ["searchType"]
+                    }
+                  }
+                },
+                {
+                  "type": "button",
+                  "props": {
+                    "label": "Buscar",
+                    "icon": "search"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Resultados",
+            "level": 2
+          },
+          "queryStateFeedback": {
+            "query": "buscarPersona",
+            "states": {
+              "idle": {
+                "mode": "hide"
+              }
+            }
+          }
+        },
+        {
+          "type": "repeater",
+          "props": {
+            "items": {
+              "source": "queries.buscarPersona.data.DatosIdentBusquedaPersonaDTO.ResultadosBusquedaPersonaDTO",
+              "key": "Id"
+            },
+            "template": [
+              {
+                "type": "container",
+                "props": {
+                  "direction": "row",
+                  "align": "center",
+                  "justify": "between",
+                  "gap": "md"
+                },
+                "children": [
+                  {
+                    "type": "paragraph",
+                    "props": {
+                      "text": "{{item.DocIdent}}"
+                    }
+                  },
+                  {
+                    "type": "link",
+                    "props": {
+                      "label": "{{item.NombreCompleto}}",
+                      "action": {
+                        "type": "navigateTo",
+                        "pageId": "ficha-persona",
+                        "params": {
+                          "personaId": "item.Id"
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "queryStateFeedback": {
+            "query": "buscarPersona",
+            "states": {
+              "idle": {
+                "mode": "hide"
+              },
+              "loading": {
+                "mode": "fallback",
+                "fallback": [
+                  {
+                    "type": "skeleton",
+                    "props": {
+                      "variant": "rect",
+                      "height": "8"
+                    }
+                  }
+                ]
+              },
+              "empty": {
+                "mode": "fallback",
+                "fallback": [
+                  {
+                    "type": "alert",
+                    "props": {
+                      "message": "No se encontraron personas con los criterios indicados.",
+                      "type": "warning"
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "initialPage": "buscar-persona"
+}

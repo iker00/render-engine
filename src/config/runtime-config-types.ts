@@ -52,6 +52,7 @@ export interface RuntimeApiErrorCondition {
 export interface RuntimeApiOperation extends RuntimeApiRequestParams {
   method: RuntimeApiMethod
   endpoint: string
+  mockResponse?: unknown
   errorCondition?: RuntimeApiErrorCondition
   errorMessagePath?: string
   errorCodePath?: string
@@ -550,6 +551,7 @@ export interface ExecuteOperationsRuntimeUiAction {
 export interface ResetFormRuntimeUiAction {
   type: 'resetForm'
   formId: string
+  preserveFieldIds?: string[]
 }
 
 export interface OpenModalRuntimeUiAction {
