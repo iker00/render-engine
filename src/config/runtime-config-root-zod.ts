@@ -7,6 +7,7 @@ import {
   checkboxGroupNodeSchema,
   containerNodeSchema,
   dividerNodeSchema,
+  fileInputNodeSchema,
   fileManagerNodeSchema,
   formNodeSchema,
   headingNodeSchema,
@@ -54,6 +55,7 @@ const layoutNodeSchema: z.ZodType<unknown> = z.lazy(() =>
     dividerNodeSchema,
     skeletonNodeSchema,
     fileManagerNodeSchema,
+    fileInputNodeSchema,
   ]),
 )
 

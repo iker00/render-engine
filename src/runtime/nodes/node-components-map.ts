@@ -6,6 +6,7 @@ import { ButtonNode } from './button-layout-node'
 import { CheckboxGroupNode } from './checkbox-group-layout-node'
 import { ContainerNode } from './container-layout-node'
 import { DividerNode } from './divider-layout-node'
+import { FileInputNode } from './file-input-layout-node'
 import { FileManagerNode } from './file-manager-layout-node'
 import { FormNode } from './form-layout-node'
 import { HeadingNode } from './heading-layout-node'
@@ -38,6 +39,7 @@ const eagerMap = {
   checkboxGroup: CheckboxGroupNode as AnyComponent,
   container: ContainerNode as AnyComponent,
   divider: DividerNode as AnyComponent,
+  fileInput: FileInputNode as AnyComponent,
   fileManager: FileManagerNode as AnyComponent,
   form: FormNode as AnyComponent,
   heading: HeadingNode as AnyComponent,
@@ -69,6 +71,9 @@ const lazyMap = {
   ),
   container: React.lazy(() => import('./container-layout-node').then((m) => ({ default: m.ContainerNode }))),
   divider: React.lazy(() => import('./divider-layout-node').then((m) => ({ default: m.DividerNode }))),
+  fileInput: React.lazy(() =>
+    import('./file-input-layout-node').then((m) => ({ default: m.FileInputNode })),
+  ),
   fileManager: React.lazy(() =>
     import('./file-manager-layout-node').then((m) => ({ default: m.FileManagerNode })),
   ),

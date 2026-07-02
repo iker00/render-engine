@@ -3,6 +3,7 @@ import type {
   InputLayoutNode,
   LayoutNode,
   RadioGroupLayoutNode,
+  RuntimeFileInputValidations,
   RuntimeFileManagerValidations,
   RuntimeFormFieldValidations,
   SelectLayoutNode,
@@ -43,8 +44,9 @@ export function formatValidationMessage({
 
 export interface ResolvedFormFieldDefinition {
   fieldId: string
-  type: 'input' | 'textarea' | 'select' | 'radioGroup' | 'checkboxGroup'
+  type: 'input' | 'textarea' | 'select' | 'radioGroup' | 'checkboxGroup' | 'fileInput'
   validations?: RuntimeFormFieldValidations
+  fileValidations?: RuntimeFileInputValidations
   queryStateFeedback?: LayoutNode['queryStateFeedback']
   visibility?: LayoutNode['visibility']
   items?: SelectLayoutNode['props']['items'] | RadioGroupLayoutNode['props']['items'] | CheckboxGroupLayoutNode['props']['items']
@@ -121,6 +123,10 @@ export function getFirstVisibleValidationError(
   fieldDefinition: ResolvedFormFieldDefinition,
   value: unknown,
 ): ValidationErrorResult | null {
+  if (fieldDefinition.type === 'fileInput') {
+    return getFirstFileInputValidationError(fieldDefinition.fileValidations, value)
+  }
+
   for (const [ruleName, rule] of Object.entries(fieldDefinition.validations ?? {})) {
     switch (ruleName) {
       case 'required':
@@ -219,6 +225,32 @@ export function getValidationErrorForEditedField({
     state: nextState,
     iterationContext,
   })
+}
+
+function getFirstFileInputValidationError(
+  fileValidations: RuntimeFileInputValidations | undefined,
+  value: unknown,
+): ValidationErrorResult | null {
+  const files = Array.isArray(value) ? value : []
+
+  if (fileValidations?.required !== undefined) {
+    if (files.length === 0) {
+      return { ruleName: 'required', rule: fileValidations.required, defaultMessage: 'Required' }
+    }
+  }
+
+  if (fileValidations?.minFiles !== undefined) {
+    const { value: minCount } = fileValidations.minFiles
+    if (files.length < minCount) {
+      return {
+        ruleName: 'minFiles',
+        rule: fileValidations.minFiles,
+        defaultMessage: `Select at least ${minCount} files.`,
+      }
+    }
+  }
+
+  return null
 }
 
 function passesRequiredValidation(fieldDefinition: ResolvedFormFieldDefinition, value: unknown) {

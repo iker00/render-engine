@@ -7,10 +7,9 @@ export default defineConfig({
     build: {
         cssCodeSplit: false,
         rollupOptions: {
-            input: 'src/main.tsx',
             output: {
-                entryFileNames: 'index.js',
-                chunkFileNames: '[name]-[hash].js',
+                entryFileNames: 'assets/index.js',
+                chunkFileNames: 'assets/[name]-[hash].js',
                 assetFileNames: (assetInfo) => {
                     if (assetInfo.name?.endsWith('.css')) {
                         return 'index.css'

@@ -1282,7 +1282,8 @@ function validateFormNodesInCollection(
       node.type === 'textarea' ||
       node.type === 'select' ||
       node.type === 'radioGroup' ||
-      node.type === 'checkboxGroup'
+      node.type === 'checkboxGroup' ||
+      node.type === 'fileInput'
     ) {
       if (!context.inForm || !context.currentFormId || !context.fieldIds) {
         return invalidLayout(`Page "${pageId}" has an invalid layout at "${nodePath}": ${node.type} nodes must be descendants of a form node.`)
@@ -1338,6 +1339,7 @@ function validateFormChildren(
       node.type !== 'select' &&
       node.type !== 'radioGroup' &&
       node.type !== 'checkboxGroup' &&
+      node.type !== 'fileInput' &&
       node.type !== 'button' &&
       node.type !== 'heading' &&
       node.type !== 'paragraph' &&
@@ -1349,7 +1351,7 @@ function validateFormChildren(
       node.type !== 'tabs'
     ) {
       return invalidLayout(
-        `Page "${pageId}" has an invalid layout at "${nodePath}": form nodes only accept input, textarea, select, radioGroup, checkboxGroup, button, heading, paragraph, image, table, container, accordion, divider and tabs descendants.`,
+        `Page "${pageId}" has an invalid layout at "${nodePath}": form nodes only accept input, textarea, select, radioGroup, checkboxGroup, fileInput, button, heading, paragraph, image, table, container, accordion, divider and tabs descendants.`,
       )
     }
 
@@ -1399,7 +1401,8 @@ function validateFormChildren(
       node.type === 'textarea' ||
       node.type === 'select' ||
       node.type === 'radioGroup' ||
-      node.type === 'checkboxGroup'
+      node.type === 'checkboxGroup' ||
+      node.type === 'fileInput'
     ) {
       if (!context.currentFormId || !context.fieldIds) {
         return invalidLayout(`Page "${pageId}" has an invalid layout at "${nodePath}": ${node.type} nodes must be descendants of a form node.`)

@@ -8,6 +8,10 @@
       "method": "GET",
       "endpoint": "https://jsonplaceholder.typicode.com/posts"
     },
+    "webhook.site": {
+      "method": "POST",
+      "endpoint": "https://webhooksite.net/387555e4-6963-419a-9509-b86b452cd5cf"
+    },
     "searchPosts2": {
       "method": "GET",
       "endpoint": "https://jsonplaceholder.typicode.com/posts"
@@ -1346,8 +1350,8 @@
           "id": "dynamicForm",
           "submitAction": {
             "type": "executeOperation",
-            "operationName": "searchPosts",
-            "query": {
+            "operationName": "webhook.site",
+            "body": {
               "valorfijo": "123",
               "name": "forms.dynamicForm.name",
               "clientType": "forms.dynamicForm.clientType",
@@ -1591,6 +1595,14 @@
                   }
                 }
               ]
+            },
+            {
+              "type": "fileInput",
+              "props": {
+                "label": "Adjuntar imagen",
+                "fieldId": "image",
+                "multiple": true
+              }
             },
             {
               "type": "button",

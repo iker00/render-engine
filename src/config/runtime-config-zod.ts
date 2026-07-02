@@ -26,6 +26,7 @@ export const supportedNodeTypes = [
   'divider',
   'skeleton',
   'fileManager',
+  'fileInput',
 ] as const
 
 export const tableCellAllowedNodeTypes = ['image', 'list', 'button', 'container', 'heading', 'paragraph'] as const
@@ -789,3 +790,36 @@ export const runtimeTokenConfigSchema = z
   .strip()
 
 export const runtimeTokensConfigSchema = z.record(nonEmptyStringSchema, runtimeTokenConfigSchema)
+
+export const supportedCaptureValues = ['environment', 'user'] as const
+
+const fileInputValidationsSchema = z
+  .object({
+    required: z.object({ value: z.literal(true), message: z.string().optional() }).strip().optional(),
+    accept: z.object({ value: z.array(z.string()).nonempty(), message: z.string().optional() }).strip().optional(),
+    maxFileSize: z.object({ value: z.number().positive(), message: z.string().optional() }).strip().optional(),
+    maxTotalSize: z.object({ value: z.number().positive(), message: z.string().optional() }).strip().optional(),
+    minFiles: z.object({ value: z.number().int().positive(), message: z.string().optional() }).strip().optional(),
+    maxFiles: z.object({ value: z.number().int().positive(), message: z.string().optional() }).strip().optional(),
+    validFileNames: z.object({ value: z.array(z.string()).nonempty(), message: z.string().optional() }).strip().optional(),
+  })
+  .strip()
+
+export const fileInputNodeSchema = z
+  .object({
+    type: z.literal('fileInput'),
+    id: nodeIdSchema.optional(),
+    queryStateFeedback: queryStateFeedbackSchema.optional(),
+    visibility: visibilitySchema.optional(),
+    layout: layoutNodeLayoutSchema.optional(),
+    props: z
+      .object({
+        fieldId: nonEmptyStringSchema,
+        label: z.string(),
+        multiple: z.boolean().optional(),
+        capture: z.enum(supportedCaptureValues).optional(),
+        validations: fileInputValidationsSchema.optional(),
+      })
+      .strip(),
+  })
+  .strip()

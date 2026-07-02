@@ -112,6 +112,8 @@ export type {
   CheckboxGroupLayoutNode,
   ChoiceGroupOptionLayout,
   FileManagerLayoutNode,
+  FileInputLayoutNode,
+  RuntimeFileInputValidations,
   FormOnErrorAction,
   FormOnSuccessAction,
   RuntimeTokenRefreshConfig,

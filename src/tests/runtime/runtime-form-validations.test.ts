@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import type { RuntimeIterationContext } from '../../runtime/runtime-references/runtime-reference-resolver'
 import type { ResolvedFormFieldDefinition } from '../../runtime/runtime-form-validations'
-import { evaluateFileManagerBatch, validateFormFields } from '../../runtime/runtime-form-validations'
-import type { RuntimeFileManagerValidations } from '../../config/runtime-config-types'
+import { evaluateFileManagerBatch, resolveFormFieldValue, validateFormFields } from '../../runtime/runtime-form-validations'
+import type { RuntimeFileInputValidations, RuntimeFileManagerValidations } from '../../config/runtime-config-types'
 import type { RuntimeState } from '../../runtime/runtime-state/runtime-state-types'
 
 const baseState: RuntimeState = {
@@ -783,5 +783,248 @@ describe('evaluateFileManagerBatch', () => {
     expect(result.rejection?.ruleName).toBe('accept')
     // first per-file rejection is invalidFile (second in batch)
     expect(result.acceptedFiles).toEqual([validFile, anotherValidFile])
+  })
+})
+
+describe('fileInput submit validation', () => {
+  function createFileInputField(
+    fieldId: string,
+    fileValidations?: RuntimeFileInputValidations,
+    options: Partial<Pick<ResolvedFormFieldDefinition, 'visibility' | 'queryStateFeedback'>> = {},
+  ): ResolvedFormFieldDefinition {
+    return {
+      fieldId,
+      type: 'fileInput',
+      fileValidations,
+      multiple: true,
+      defaultValue: [],
+      ...options,
+    }
+  }
+
+  function makeStateWithFiles(formId: string, fieldId: string, files: File[]): RuntimeState {
+    return {
+      ...baseState,
+      forms: {
+        [formId]: {
+          [fieldId]: {
+            value: files,
+            error: null,
+            touched: false,
+            dirty: false,
+            defaultValue: [],
+          },
+        },
+      },
+    }
+  }
+
+  it('produces Required error and isValid false when required is true and value is empty array', () => {
+    const file1 = new File(['content'], 'photo.png', { type: 'image/png' })
+    const stateEmpty = makeStateWithFiles('uploadForm', 'attachments', [])
+    const stateWithFile = makeStateWithFiles('uploadForm', 'attachments', [file1])
+
+    const fieldDef = createFileInputField('attachments', { required: { value: true } })
+
+    const resultEmpty = validateFormFields({
+      formId: 'uploadForm',
+      fieldDefinitions: [fieldDef],
+      state: stateEmpty,
+    })
+
+    expect(resultEmpty).toEqual({
+      isValid: false,
+      errorsByFieldId: { attachments: 'Required' },
+    })
+
+    const resultWithFile = validateFormFields({
+      formId: 'uploadForm',
+      fieldDefinitions: [fieldDef],
+      state: stateWithFile,
+    })
+
+    expect(resultWithFile).toEqual({
+      isValid: true,
+      errorsByFieldId: { attachments: null },
+    })
+  })
+
+  it('does not produce error when required is absent and value is empty array', () => {
+    const state = makeStateWithFiles('uploadForm', 'attachments', [])
+    const fieldDef = createFileInputField('attachments', undefined)
+
+    const result = validateFormFields({
+      formId: 'uploadForm',
+      fieldDefinitions: [fieldDef],
+      state,
+    })
+
+    expect(result).toEqual({
+      isValid: true,
+      errorsByFieldId: { attachments: null },
+    })
+  })
+
+  it('produces minFiles error with default message when file count is below minimum', () => {
+    const file1 = new File(['content'], 'photo.png', { type: 'image/png' })
+    const file2 = new File(['content'], 'photo2.png', { type: 'image/png' })
+
+    const stateOneFile = makeStateWithFiles('uploadForm', 'attachments', [file1])
+    const stateTwoFiles = makeStateWithFiles('uploadForm', 'attachments', [file1, file2])
+
+    const fieldDef = createFileInputField('attachments', { minFiles: { value: 2 } })
+
+    const resultOneFile = validateFormFields({
+      formId: 'uploadForm',
+      fieldDefinitions: [fieldDef],
+      state: stateOneFile,
+    })
+
+    expect(resultOneFile).toEqual({
+      isValid: false,
+      errorsByFieldId: { attachments: 'Select at least 2 files.' },
+    })
+
+    const resultTwoFiles = validateFormFields({
+      formId: 'uploadForm',
+      fieldDefinitions: [fieldDef],
+      state: stateTwoFiles,
+    })
+
+    expect(resultTwoFiles).toEqual({
+      isValid: true,
+      errorsByFieldId: { attachments: null },
+    })
+  })
+
+  it('uses custom message for required rule when message is declared', () => {
+    const state = makeStateWithFiles('uploadForm', 'attachments', [])
+    const fieldDef = createFileInputField('attachments', {
+      required: { value: true, message: 'Sube al menos un fichero' },
+    })
+
+    const result = validateFormFields({
+      formId: 'uploadForm',
+      fieldDefinitions: [fieldDef],
+      state,
+    })
+
+    expect(result).toEqual({
+      isValid: false,
+      errorsByFieldId: { attachments: 'Sube al menos un fichero' },
+    })
+  })
+
+  it('does not produce error for file-only rules (accept, maxFileSize) when value is empty and required is absent', () => {
+    const state = makeStateWithFiles('uploadForm', 'attachments', [])
+    const fieldDef = createFileInputField('attachments', {
+      accept: { value: ['image/jpeg', 'image/png'] },
+      maxFileSize: { value: 5 },
+      maxTotalSize: { value: 20 },
+      maxFiles: { value: 4 },
+      validFileNames: { value: ['^IMG_\\d+\\.jpg$'] },
+    })
+
+    const result = validateFormFields({
+      formId: 'uploadForm',
+      fieldDefinitions: [fieldDef],
+      state,
+    })
+
+    expect(result).toEqual({
+      isValid: true,
+      errorsByFieldId: { attachments: null },
+    })
+  })
+
+  it('does not block submit when fileInput is hidden by visibility even if required and value is empty', () => {
+    const state: RuntimeState = {
+      ...baseState,
+      forms: {
+        uploadForm: {
+          role: {
+            value: 'editor',
+            error: null,
+            touched: false,
+            dirty: false,
+            defaultValue: 'editor',
+          },
+          attachments: {
+            value: [],
+            error: null,
+            touched: false,
+            dirty: false,
+            defaultValue: [],
+          },
+        },
+      },
+    }
+
+    const fieldDef = createFileInputField(
+      'attachments',
+      { required: { value: true } },
+      {
+        visibility: {
+          reference: 'forms.uploadForm.role',
+          operator: 'equals',
+          value: 'admin',
+        },
+      },
+    )
+
+    const result = validateFormFields({
+      formId: 'uploadForm',
+      fieldDefinitions: [fieldDef],
+      state,
+    })
+
+    expect(result.isValid).toBe(true)
+  })
+})
+
+describe('resolveFormFieldValue for fileInput', () => {
+  it('returns File array from store when the field exists with files', () => {
+    const file = new File(['content'], 'photo.png', { type: 'image/png' })
+    const state: RuntimeState = {
+      ...baseState,
+      forms: {
+        uploadForm: {
+          attachments: {
+            value: [file],
+            error: null,
+            touched: false,
+            dirty: false,
+            defaultValue: [],
+          },
+        },
+      },
+    }
+
+    const fieldDef: ResolvedFormFieldDefinition = {
+      fieldId: 'attachments',
+      type: 'fileInput',
+      multiple: true,
+      defaultValue: [],
+    }
+
+    const result = resolveFormFieldValue(fieldDef, 'uploadForm', state)
+    expect(result).toEqual([file])
+  })
+
+  it('returns empty array as defaultValue when the field is not in store', () => {
+    const state: RuntimeState = {
+      ...baseState,
+      forms: {},
+    }
+
+    const fieldDef: ResolvedFormFieldDefinition = {
+      fieldId: 'attachments',
+      type: 'fileInput',
+      multiple: true,
+      defaultValue: [],
+    }
+
+    const result = resolveFormFieldValue(fieldDef, 'uploadForm', state)
+    expect(result).toEqual([])
   })
 })

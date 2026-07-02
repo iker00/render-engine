@@ -39,7 +39,9 @@
 - `min` y `max` solo aplican a `inputType: 'number'`, comparando contra el valor numérico efectivo del campo cuando existe.
 - `minSelections` y `maxSelections` solo aplican a `select.multiple` y `checkboxGroup`, contando la selección efectiva después de normalizar el catálogo visible.
 
-## Validaciones de ficheros (fileManager)
+## Validaciones de ficheros (fileManager y fileInput)
+
+### fileManager
 
 El nodo `fileManager` extiende `runtime-form-validations` con reglas específicas para ficheros `File[]` que se evalúan **previas a la subida**, con error inline en la zona DnD si alguna validación falla. Estas reglas **no escriben en `forms.*`**; el estado de error vive en el estado local del nodo.
 
@@ -57,6 +59,31 @@ Validaciones implícitas adicionales:
 - Nombre duplicado: rechazado si el nombre ya existe en la lista actual.
 
 Los ficheros rechazados **no llegan al servidor**. Los errores desaparecen al intentar una nueva selección o drop.
+
+### fileInput
+
+El nodo `fileInput` como campo de formulario extiende también `runtime-form-validations` con las mismas reglas de fichero que `fileManager`, pero con semántica distinta:
+- Las reglas se evalúan **al seleccionar ficheros**, con error inline si alguna validación falla.
+- Los errores **escriben en `forms.{formId}.{fieldId}.error`**, como cualquier otro field node.
+- Los ficheros rechazados no entran en la selección final (`forms.{formId}.{fieldId}.value`).
+- Las reglas de fichero (`accept`, `maxFileSize`, `maxTotalSize`, `maxFiles`, `validFileNames`) se evalúan al seleccionar, **no en submit**. Si pasan al seleccionar, no se reevalúan en submit.
+- `required` y `minFiles` se evalúan en submit (ver [[submit.md]]), no al seleccionar: controlan si hay la cantidad mínima de ficheros para que el submit sea válido.
+
+| Regla | Aplica | Comportamiento |
+|---|---|---|
+| `required` | boolean | Al menos un fichero debe estar seleccionado para que el submit sea válido. Bloquea submit. |
+| `minFiles` | `number` | Mínimo de ficheros requeridos. Bloquea submit si no se alcanza. |
+| `accept` | `string[]` de MIME types | Ficheros con MIME type no incluido se rechazan al seleccionar. Ej.: `["application/pdf", "image/jpeg"]`. |
+| `maxFileSize` | `number` en MB | Ficheros que superen el límite individual se rechazan al seleccionar. Ej.: `2` = máximo 2 MB por fichero. |
+| `maxTotalSize` | `number` en MB | Si el lote total supera el límite, se rechaza el lote completo al seleccionar. Ej.: `10` = máximo 10 MB acumulados. |
+| `maxFiles` | `number` | Máximo de ficheros selectables. Si se alcanza, el selector se deshabilita. |
+| `validFileNames` | `string[]` de regex | Ficheros cuyo nombre no coincide con ningún patrón regex se rechazan al seleccionar. Ej.: `["^FACT_\\d{4}\\.pdf$"]`. |
+
+Validaciones implícitas adicionales:
+- Fichero de 0 bytes: rechazado automáticamente al seleccionar.
+- Nombre duplicado: rechazado si el nombre ya existe en la lista actual.
+
+Todos los mensajes de validación reutilizan el sistema de mensajes personalizados descrito más arriba.
 
 ## Errores y visibilidad
 - Si un campo visible requerido falla, el runtime escribe `Required` en `forms.{formId}.{fieldId}.error` y bloquea el submit.

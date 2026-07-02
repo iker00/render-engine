@@ -5,6 +5,7 @@ import type {
   StatLayoutNode,
   DividerLayoutNode,
   SkeletonLayoutNode,
+  FileInputLayoutNode,
   FileManagerLayoutNode,
   ButtonLayoutNode,
   ContainerLayoutNode,
@@ -42,6 +43,7 @@ import {
   statNodeSchema,
   dividerNodeSchema,
   skeletonNodeSchema,
+  fileInputNodeSchema,
   fileManagerNodeSchema,
   buttonNodeSchema,
   containerNodeSchema,
@@ -170,6 +172,8 @@ export function validateLayoutNode(
       return validateDividerNode(rawNode, path, pageId)
     case 'skeleton':
       return validateSkeletonNode(rawNode, path, pageId)
+    case 'fileInput':
+      return validateFileInputNode(rawNode, path, pageId)
     case 'fileManager':
       return validateFileManagerNode(rawNode, path, pageId)
   }
@@ -2344,6 +2348,108 @@ function validateSkeletonNode(
       visibility: visibilityResult.visibility,
       layout: parseResult.data.layout,
       props: parseResult.data.props,
+    },
+  }
+}
+
+function validateFileInputNode(
+  rawNode: Record<string, unknown>,
+  path: string,
+  pageId: string,
+): { status: 'ready'; node: FileInputLayoutNode } | { status: 'error'; error: RuntimeConfigError } {
+  const parseResult = fileInputNodeSchema.safeParse(rawNode)
+
+  if (!parseResult.success) {
+    const issue = parseResult.error.issues[0]
+    const issuePath = issue?.path ?? []
+
+    const feedbackIssue = mapQueryStateFeedbackIssue(pageId, path, issue)
+    if (feedbackIssue) return feedbackIssue
+
+    const visibilityIssue = mapVisibilityIssue(pageId, path, issue)
+    if (visibilityIssue) return visibilityIssue
+
+    const layoutIssue = mapLayoutNodeIssue(pageId, path, issuePath)
+    if (layoutIssue) return layoutIssue
+
+    if (issuePath[0] === 'id') {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.id".`)
+    }
+
+    if (issuePath[0] === 'props' && issuePath[1] === 'fieldId') {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.fieldId".`)
+    }
+
+    if (issuePath[0] === 'props' && issuePath[1] === 'label') {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.label".`)
+    }
+
+    if (issuePath[0] === 'props' && issuePath[1] === 'multiple') {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.multiple".`)
+    }
+
+    if (issuePath[0] === 'props' && issuePath[1] === 'capture') {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.capture".`)
+    }
+
+    if (issuePath[0] === 'props' && issuePath[1] === 'validations') {
+      const validationKey = issuePath[2]
+      if (typeof validationKey === 'string') {
+        return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.validations.${validationKey}".`)
+      }
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.validations".`)
+    }
+
+    if (issuePath[0] === 'props') {
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props".`)
+    }
+
+    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}".`)
+  }
+
+  const feedbackResult = validateQueryStateFeedback(
+    parseResult.data.queryStateFeedback as LayoutNodeFeedbackFields['queryStateFeedback'],
+    `${path}.queryStateFeedback`,
+    pageId,
+  )
+
+  if (feedbackResult.status === 'error') return feedbackResult
+
+  const visibilityResult = validateVisibility(
+    parseResult.data.visibility as LayoutNodeFeedbackFields['visibility'],
+    `${path}.visibility`,
+    pageId,
+  )
+
+  if (visibilityResult.status === 'error') return visibilityResult
+
+  const rawProps = parseResult.data.props
+  const props: FileInputLayoutNode['props'] = {
+    fieldId: rawProps.fieldId,
+    label: rawProps.label,
+  }
+
+  if (rawProps.multiple !== undefined) {
+    props.multiple = rawProps.multiple
+  }
+
+  if (rawProps.capture !== undefined) {
+    props.capture = rawProps.capture
+  }
+
+  if (rawProps.validations !== undefined) {
+    props.validations = rawProps.validations as FileInputLayoutNode['props']['validations']
+  }
+
+  return {
+    status: 'ready',
+    node: {
+      type: 'fileInput',
+      id: parseResult.data.id,
+      queryStateFeedback: feedbackResult.queryStateFeedback,
+      visibility: visibilityResult.visibility,
+      layout: parseResult.data.layout,
+      props,
     },
   }
 }

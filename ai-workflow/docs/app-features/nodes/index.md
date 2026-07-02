@@ -47,6 +47,7 @@ Los conceptos transversales (`visibility`, `queryStateFeedback`, referencias din
 | [textarea.md](./textarea.md) | Entrada multilínea. |
 | [select.md](./select.md) | Selección simple o múltiple, shapes de `items` manuales o dinámicos. |
 | [choice-groups.md](./choice-groups.md) | `radioGroup` y `checkboxGroup`, `optionLayout: vertical | inline`. |
+| [file-input.md](./file-input.md) | Selector de ficheros dentro de formulario, preview inmediata, validaciones client-side, serialización multipart en submit. |
 
 ## Nodos de gestión de ficheros
 

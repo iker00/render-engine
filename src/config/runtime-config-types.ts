@@ -23,6 +23,7 @@ export type LayoutNodeType =
   | 'divider'
   | 'skeleton'
   | 'fileManager'
+  | 'fileInput'
 export type RuntimeApiMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
 export type RuntimeApiQueryValue = string | number | boolean
 export type RuntimeApiQuery = Record<string, RuntimeApiQueryValue>
@@ -293,6 +294,16 @@ export interface RuntimeFileManagerValidations {
   maxFileSize?: { value: number; message?: string }
   maxTotalSize?: { value: number; message?: string }
   minFiles?: { value: number; message?: string }
+  maxFiles?: { value: number; message?: string }
+  validFileNames?: { value: string[]; message?: string }
+}
+
+export interface RuntimeFileInputValidations {
+  required?: RuntimeRequiredValidationRule
+  accept?: { value: string[]; message?: string }
+  maxFileSize?: { value: number; message?: string }
+  maxTotalSize?: { value: number; message?: string }
+  minFiles?: RuntimeNumericValidationRule
   maxFiles?: { value: number; message?: string }
   validFileNames?: { value: string[]; message?: string }
 }
@@ -615,6 +626,19 @@ export interface LinkLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayo
   children?: LayoutNodeCollection
 }
 
+export interface FileInputLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayoutFields {
+  type: 'fileInput'
+  id?: string
+  props: {
+    fieldId: string
+    label: string
+    multiple?: boolean
+    capture?: 'environment' | 'user'
+    validations?: RuntimeFileInputValidations
+  }
+  children?: unknown
+}
+
 export interface FileManagerLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayoutFields {
   type: 'fileManager'
   id?: string
@@ -661,6 +685,7 @@ export type LayoutNode =
   | StatLayoutNode
   | DividerLayoutNode
   | SkeletonLayoutNode
+  | FileInputLayoutNode
   | FileManagerLayoutNode
 
 export type LayoutNodeCollection = LayoutNode[]

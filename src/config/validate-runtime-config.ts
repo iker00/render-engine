@@ -18,6 +18,7 @@ import { validateRuntimeApiRequestParams, validateActionTargets } from './valida
 import { validateLayoutCollection } from './validate-layout-nodes'
 import { validateFormSemantics, validateExecutionRequestParams } from './validate-form-nodes'
 import { validateFileManagerSemantics } from './validate-file-manager-nodes'
+import { validateFileInputSemantics } from './validate-file-input-nodes'
 import { validateTranslations } from './validate-translations'
 import { validateTokensConfig } from './validate-tokens-config'
 
@@ -204,6 +205,12 @@ export function validateRuntimeConfig(rawConfig: unknown): RuntimeConfigValidati
 
   if (fileManagerSemanticsError) {
     return fileManagerSemanticsError
+  }
+
+  const fileInputSemanticsError = validateFileInputSemantics(config)
+
+  if (fileInputSemanticsError) {
+    return fileInputSemanticsError
   }
 
   const modalRefsError = validateModalReferences(config)

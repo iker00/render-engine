@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef } from 'react'
 import type { FormEvent, ReactNode } from 'react'
 import type {
   CheckboxGroupLayoutNode,
+  FileInputLayoutNode,
   FormLayoutNode,
   FormOnErrorAction,
   FormOnSuccessAction,
@@ -9,6 +10,7 @@ import type {
   LayoutNode,
   LayoutNodeCollection,
   RadioGroupLayoutNode,
+  RuntimeApiFileField,
   SelectLayoutNode,
   TextareaLayoutNode,
 } from '../../config/runtime-config'
@@ -230,6 +232,21 @@ export function FormNode({ node, children, iterationContext }: FormNodeProps) {
     )
     const hiddenFormFields: RuntimeApiHiddenFormFields = { formId: node.id, fieldIds: hiddenFieldIds }
 
+    // Collect files from visible fileInput fields
+    const fileEntries: RuntimeApiFileField[] = []
+    for (const fieldDefinition of visibleFieldDefinitions) {
+      if (fieldDefinition.type !== 'fileInput') continue
+      const fieldState = selectFormFieldState(snapshotState, node.id, fieldDefinition.fieldId)
+      const value = fieldState?.value ?? fieldDefinition.defaultValue
+      if (!Array.isArray(value)) continue
+      for (const entry of value) {
+        if (entry instanceof File) {
+          fileEntries.push({ name: fieldDefinition.fieldId, file: entry })
+        }
+      }
+    }
+    const filesParam = fileEntries.length > 0 ? { files: fileEntries } : {}
+
     const submitAction = node.submitAction
 
     if (submitAction.type === 'executeOperations') {
@@ -245,6 +262,7 @@ export function FormNode({ node, children, iterationContext }: FormNodeProps) {
               query: entry.query,
               body: entry.body,
               headers: entry.headers,
+              ...filesParam,
             },
             iterationContext,
             hiddenFormFields,
@@ -275,6 +293,7 @@ export function FormNode({ node, children, iterationContext }: FormNodeProps) {
         query: submitAction.query,
         body: submitAction.body,
         headers: submitAction.headers,
+        ...filesParam,
       },
       iterationContext,
       hiddenFormFields,
@@ -341,6 +360,10 @@ export function collectResolvedFormFieldDefinitions(
     ) {
       fields.push(resolveResolvedFormFieldDefinition(node, state, iterationContext))
     }
+
+    if (node.type === 'fileInput') {
+      fields.push(resolveFileInputFieldDefinition(node))
+    }
   }
 
   return fields
@@ -376,13 +399,26 @@ export function collectAllFormFieldIds(nodes: LayoutNodeCollection): string[] {
       node.type === 'textarea' ||
       node.type === 'select' ||
       node.type === 'radioGroup' ||
-      node.type === 'checkboxGroup'
+      node.type === 'checkboxGroup' ||
+      node.type === 'fileInput'
     ) {
       fieldIds.push(node.props.fieldId)
     }
   }
 
   return fieldIds
+}
+
+function resolveFileInputFieldDefinition(node: FileInputLayoutNode): ResolvedFormFieldDefinition {
+  return {
+    fieldId: node.props.fieldId,
+    type: 'fileInput',
+    fileValidations: node.props.validations,
+    queryStateFeedback: node.queryStateFeedback,
+    visibility: node.visibility,
+    multiple: node.props.multiple ?? true,
+    defaultValue: [],
+  }
 }
 
 export function resolveResolvedFormFieldDefinition(

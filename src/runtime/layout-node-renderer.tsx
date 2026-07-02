@@ -156,6 +156,11 @@ export function LayoutNodeRenderer({ node, renderedChildren, iterationContext }:
       renderedNode = <SkeletonNode node={node} iterationContext={iterationContext} />
       break
     }
+    case 'fileInput': {
+      const FileInputNode = NodeComponents.fileInput
+      renderedNode = <FileInputNode node={node} iterationContext={iterationContext} />
+      break
+    }
     case 'fileManager': {
       const FileManagerNode = NodeComponents.fileManager
       renderedNode = <FileManagerNode node={node} iterationContext={iterationContext} />
