@@ -639,6 +639,32 @@ export interface FileInputLayoutNode extends LayoutNodeFeedbackFields, LayoutNod
   children?: unknown
 }
 
+export type FileManagerLabelKey =
+  | 'dropzoneIdle'
+  | 'dropzoneAcceptedFormats'
+  | 'dropzoneUploading'
+  | 'dropzoneProgress'
+  | 'dropzoneSuccess'
+  | 'dropzoneMaxFilesReached'
+  | 'dropzoneAriaLabel'
+  | 'listLoadError'
+  | 'listEmpty'
+  | 'paginationPrevious'
+  | 'paginationNext'
+  | 'rowViewLabel'
+  | 'rowViewAriaLabel'
+  | 'rowViewUnavailableAriaLabel'
+  | 'rowDownloadLabel'
+  | 'rowDownloadAriaLabel'
+  | 'rowDownloadUnavailableAriaLabel'
+  | 'rowDeleteLabel'
+  | 'rowDeleteAriaLabel'
+  | 'uploadFileError'
+  | 'uploadListPathMissing'
+  | 'deleteError'
+
+export type FileManagerLabels = Partial<Record<FileManagerLabelKey, string>>
+
 export interface FileManagerLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayoutFields {
   type: 'fileManager'
   id?: string
@@ -658,6 +684,7 @@ export interface FileManagerLayoutNode extends LayoutNodeFeedbackFields, LayoutN
     downloadOperation?: string | false
     validations?: RuntimeFileManagerValidations
     pagination?: { pageSize?: number }
+    labels?: FileManagerLabels
   }
 }
 

@@ -15,8 +15,6 @@ import { resolveRuntimeTextReference } from './runtime-references/runtime-refere
 import { selectFormFieldState } from './runtime-state/runtime-state-selectors'
 import type { RuntimeState } from './runtime-state/runtime-state-types'
 
-const VALUE_PLACEHOLDER_PATTERN = /\{\{\s*value\s*\}\}/g
-
 export function formatValidationMessage({
   rule,
   defaultMessage,
@@ -37,9 +35,11 @@ export function formatValidationMessage({
   }
 
   const valueStr = typeof rule.value === 'number' ? String(rule.value) : ''
-  const substituted = rule.message.replace(VALUE_PLACEHOLDER_PATTERN, valueStr)
 
-  return resolveRuntimeTextReference(substituted, state, 'form.validation.message', { iterationContext })
+  return resolveRuntimeTextReference(rule.message, state, 'form.validation.message', {
+    iterationContext,
+    localPlaceholders: { value: valueStr },
+  })
 }
 
 export interface ResolvedFormFieldDefinition {
@@ -310,10 +310,47 @@ export interface FileManagerValidationResult {
   rejection?: FileManagerRejection
 }
 
+// Resolves the override `message` of a file rule the same way standard form rules do (formatValidationMessage),
+// sharing the central interpolation engine. Kept as a separate helper because file rule values can be `string[]`
+// (accept, validFileNames), unlike formatValidationMessage's `number | true`, and because the diagnostic surface
+// is different ('fileManager.props.validations.message' vs 'form.validation.message').
+function formatFileRuleMessage({
+  ruleValue,
+  message,
+  defaultMessage,
+  state,
+  iterationContext,
+}: {
+  ruleValue: unknown
+  message: string | undefined
+  defaultMessage: string
+  state: RuntimeState
+  iterationContext?: RuntimeIterationContext
+}): string {
+  if (message === undefined) {
+    return defaultMessage
+  }
+
+  if (message === '') {
+    return ''
+  }
+
+  return resolveRuntimeTextReference(message, state, 'fileManager.props.validations.message', {
+    iterationContext,
+    localPlaceholders: { value: normalizeFileRuleValue(ruleValue) },
+  })
+}
+
+function normalizeFileRuleValue(ruleValue: unknown): string {
+  return typeof ruleValue === 'number' ? String(ruleValue) : ''
+}
+
 export function evaluateFileManagerBatch(
   validations: RuntimeFileManagerValidations | undefined,
   existingFiles: File[],
   incomingBatch: File[],
+  state: RuntimeState,
+  iterationContext?: RuntimeIterationContext,
 ): FileManagerValidationResult {
   const acceptedFiles: File[] = []
   let firstPerFileRejection: FileManagerRejectionPerFile | undefined
@@ -323,7 +360,7 @@ export function evaluateFileManagerBatch(
 
   // Step 1: per-file evaluation
   for (const file of incomingBatch) {
-    const rejection = evaluatePerFileRules(validations, file, acceptedNames)
+    const rejection = evaluatePerFileRules(validations, file, acceptedNames, state, iterationContext)
     if (rejection !== undefined) {
       if (firstPerFileRejection === undefined) {
         firstPerFileRejection = rejection
@@ -346,7 +383,13 @@ export function evaluateFileManagerBatch(
         rejection: {
           scope: 'batch',
           ruleName: 'maxFiles',
-          message: message ?? `Se ha superado el número máximo de ficheros permitidos (${value}).`,
+          message: formatFileRuleMessage({
+            ruleValue: value,
+            message,
+            defaultMessage: `Se ha superado el número máximo de ficheros permitidos (${value}).`,
+            state,
+            iterationContext,
+          }),
         },
       }
     }
@@ -362,7 +405,13 @@ export function evaluateFileManagerBatch(
         rejection: {
           scope: 'batch',
           ruleName: 'maxTotalSize',
-          message: message ?? `El tamaño total del lote supera el límite (${value} MB).`,
+          message: formatFileRuleMessage({
+            ruleValue: value,
+            message,
+            defaultMessage: `El tamaño total del lote supera el límite (${value} MB).`,
+            state,
+            iterationContext,
+          }),
         },
       }
     }
@@ -378,6 +427,8 @@ function evaluatePerFileRules(
   validations: RuntimeFileManagerValidations | undefined,
   file: File,
   existingNames: Set<string>,
+  state: RuntimeState,
+  iterationContext?: RuntimeIterationContext,
 ): FileManagerRejectionPerFile | undefined {
   const fileName = file.name
 
@@ -413,7 +464,13 @@ function evaluatePerFileRules(
         scope: 'per-file',
         file,
         ruleName: 'accept',
-        message: message ?? `El fichero "${fileName}" no es de un tipo válido.`,
+        message: formatFileRuleMessage({
+          ruleValue: value,
+          message,
+          defaultMessage: `El fichero "${fileName}" no es de un tipo válido.`,
+          state,
+          iterationContext,
+        }),
       }
     }
   }
@@ -427,7 +484,13 @@ function evaluatePerFileRules(
         scope: 'per-file',
         file,
         ruleName: 'maxFileSize',
-        message: message ?? `El fichero "${fileName}" supera el tamaño máximo permitido (${value} MB).`,
+        message: formatFileRuleMessage({
+          ruleValue: value,
+          message,
+          defaultMessage: `El fichero "${fileName}" supera el tamaño máximo permitido (${value} MB).`,
+          state,
+          iterationContext,
+        }),
       }
     }
   }
@@ -441,7 +504,13 @@ function evaluatePerFileRules(
         scope: 'per-file',
         file,
         ruleName: 'validFileNames',
-        message: message ?? `El nombre del fichero "${fileName}" no coincide con los patrones permitidos.`,
+        message: formatFileRuleMessage({
+          ruleValue: value,
+          message,
+          defaultMessage: `El nombre del fichero "${fileName}" no coincide con los patrones permitidos.`,
+          state,
+          iterationContext,
+        }),
       }
     }
   }

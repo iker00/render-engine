@@ -24,6 +24,7 @@ export interface RuntimeIterationContext {
 
 interface ResolveRuntimeReferenceOptions {
   iterationContext?: RuntimeIterationContext
+  localPlaceholders?: Record<string, string>
 }
 
 const RUNTIME_TEMPLATE_PLACEHOLDER_DETECTOR = /\{\{[\s\S]*?\}\}/
@@ -140,6 +141,10 @@ function resolveRuntimeInterpolatedVisibleValue(
 
     if (referenceValue.length === 0) {
       return ''
+    }
+
+    if (options.localPlaceholders && Object.hasOwn(options.localPlaceholders, referenceValue)) {
+      return options.localPlaceholders[referenceValue]
     }
 
     const result = resolveRuntimeReference(referenceValue, state, options)

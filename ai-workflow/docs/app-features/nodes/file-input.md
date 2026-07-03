@@ -16,13 +16,13 @@ Nodo de entrada de formulario que permite seleccionar uno o varios ficheros desd
 | `label` | string | — | **Sí** | Etiqueta del campo, literal, referencia dinámica o string visible interpolado. |
 | `multiple` | boolean | `true` | No | Si `false`, el selector limita la selección a un único fichero. |
 | `capture` | `"environment" \| "user"` | — | No | Abre la cámara del dispositivo en móviles: `"environment"` (trasera) o `"user"` (frontal). Ignorado en desktop. Si declarado, `validations.accept` **debe** incluir al menos un MIME `image/*` o `video/*`. |
-| `validations.required` | `boolean \| { value: boolean; message?: string }` | — | No | Al menos un fichero debe estar seleccionado al hacer submit. Forma extendida con mensaje personalizado soportada. |
-| `validations.accept` | `{ value: string[]; message?: string }` | — | No | MIME types permitidos (ej.: `["image/jpeg", "image/png"]`). Se aplica como atributo HTML `accept` y como regla de validación client-side. Forma extendida con mensaje obligatoria. |
-| `validations.maxFileSize` | `{ value: number; message?: string }` | — | No | Tamaño máximo por fichero en MB. Forma extendida con mensaje obligatoria. |
-| `validations.maxTotalSize` | `{ value: number; message?: string }` | — | No | Tamaño máximo acumulado del lote en MB. Forma extendida con mensaje obligatoria. |
-| `validations.minFiles` | `{ value: number; message?: string }` | — | No | Mínimo de ficheros que deben estar seleccionados para que el submit sea válido. Forma extendida con mensaje obligatoria. |
-| `validations.maxFiles` | `{ value: number; message?: string }` | — | No | Máximo de ficheros selectables. Si se alcanza, el selector queda deshabilitado. Forma extendida con mensaje obligatoria. |
-| `validations.validFileNames` | `{ value: string[]; message?: string }` | — | No | Patrones regex. El nombre del fichero debe coincidir con al menos uno. Forma extendida con mensaje obligatoria. |
+| `validations.required` | `boolean \| { value: boolean; message?: string }` | — | No | Al menos un fichero debe estar seleccionado al hacer submit. El campo `message` opcional soporta `{{translations.*}}` e interpolación. |
+| `validations.accept` | `{ value: string[]; message?: string }` | — | No | MIME types permitidos (ej.: `{ value: ["image/jpeg", "image/png"] }`). Se aplica como atributo HTML `accept` y como regla de validación client-side. El campo `message` opcional soporta `{{translations.*}}` e interpolación. |
+| `validations.maxFileSize` | `{ value: number; message?: string }` | — | No | Tamaño máximo por fichero en MB. El campo `message` opcional soporta `{{value}}`, `{{translations.*}}` e interpolación. |
+| `validations.maxTotalSize` | `{ value: number; message?: string }` | — | No | Tamaño máximo acumulado del lote en MB. El campo `message` opcional soporta `{{value}}`, `{{translations.*}}` e interpolación. |
+| `validations.minFiles` | `{ value: number; message?: string }` | — | No | Mínimo de ficheros que deben estar seleccionados para que el submit sea válido. El campo `message` opcional soporta `{{value}}`, `{{translations.*}}` e interpolación. |
+| `validations.maxFiles` | `{ value: number; message?: string }` | — | No | Máximo de ficheros selectables. Si se alcanza, el selector queda deshabilitado. El campo `message` opcional soporta `{{value}}`, `{{translations.*}}` e interpolación. |
+| `validations.validFileNames` | `{ value: string[]; message?: string }` | — | No | Patrones regex. El nombre del fichero debe coincidir con al menos uno. El campo `message` opcional soporta `{{translations.*}}` e interpolación. |
 
 ### Ejemplo de contrato JSON
 
@@ -38,11 +38,11 @@ Nodo de entrada de formulario que permite seleccionar uno o varios ficheros desd
       "required": { "value": true, "message": "Sube al menos un documento" },
       "accept": {
         "value": ["image/jpeg", "image/png", "application/pdf"],
-        "message": "Solo se aceptan JPG, PNG o PDF"
+        "message": "{{translations.accepted_formats}}"
       },
-      "maxFileSize": { "value": 5, "message": "Máximo 5 MB por fichero" },
+      "maxFileSize": { "value": 5, "message": "Máximo {{value}} MB por fichero" },
       "maxTotalSize": { "value": 20, "message": "Máximo 20 MB en total" },
-      "maxFiles": { "value": 4, "message": "Máximo 4 ficheros" }
+      "maxFiles": { "value": 4, "message": "Máximo {{value}} ficheros" }
     }
   }
 }

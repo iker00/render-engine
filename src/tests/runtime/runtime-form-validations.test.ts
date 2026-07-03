@@ -553,7 +553,7 @@ describe('evaluateFileManagerBatch', () => {
     const file1 = makeFile('doc.pdf', 'application/pdf', 1000)
     const file2 = makeFile('image.jpg', 'image/jpeg', 2000)
 
-    const result = evaluateFileManagerBatch(undefined, [], [file1, file2])
+    const result = evaluateFileManagerBatch(undefined, [], [file1, file2], baseState)
 
     expect(result.acceptedFiles).toEqual([file1, file2])
     expect(result.rejection).toBeUndefined()
@@ -562,7 +562,7 @@ describe('evaluateFileManagerBatch', () => {
   it('rejects a zero-byte file with scope per-file and ruleName zero-bytes', () => {
     const emptyFile = makeZeroByteFile('empty.pdf')
 
-    const result = evaluateFileManagerBatch(undefined, [], [emptyFile])
+    const result = evaluateFileManagerBatch(undefined, [], [emptyFile], baseState)
 
     expect(result.rejection).toBeDefined()
     expect(result.rejection?.scope).toBe('per-file')
@@ -575,7 +575,7 @@ describe('evaluateFileManagerBatch', () => {
     const existing = makeFile('doc.pdf', 'application/pdf', 1000)
     const duplicate = makeFile('doc.pdf', 'application/pdf', 500)
 
-    const result = evaluateFileManagerBatch(undefined, [existing], [duplicate])
+    const result = evaluateFileManagerBatch(undefined, [existing], [duplicate], baseState)
 
     expect(result.rejection?.scope).toBe('per-file')
     expect(result.rejection?.ruleName).toBe('duplicate-name')
@@ -587,7 +587,7 @@ describe('evaluateFileManagerBatch', () => {
     const file1 = makeFile('doc.pdf', 'application/pdf', 1000)
     const file2 = makeFile('doc.pdf', 'application/pdf', 2000)
 
-    const result = evaluateFileManagerBatch(undefined, [], [file1, file2])
+    const result = evaluateFileManagerBatch(undefined, [], [file1, file2], baseState)
 
     expect(result.rejection?.scope).toBe('per-file')
     expect(result.rejection?.ruleName).toBe('duplicate-name')
@@ -600,7 +600,7 @@ describe('evaluateFileManagerBatch', () => {
     }
     const invalidFile = makeFile('doc.txt', 'text/plain', 1000)
 
-    const result = evaluateFileManagerBatch(validations, [], [invalidFile])
+    const result = evaluateFileManagerBatch(validations, [], [invalidFile], baseState)
 
     expect(result.rejection?.scope).toBe('per-file')
     expect(result.rejection?.ruleName).toBe('accept')
@@ -614,7 +614,7 @@ describe('evaluateFileManagerBatch', () => {
     }
     const validFile = makeFile('doc.pdf', 'application/pdf', 1000)
 
-    const result = evaluateFileManagerBatch(validations, [], [validFile])
+    const result = evaluateFileManagerBatch(validations, [], [validFile], baseState)
 
     expect(result.rejection).toBeUndefined()
     expect(result.acceptedFiles).toEqual([validFile])
@@ -626,7 +626,7 @@ describe('evaluateFileManagerBatch', () => {
     }
     const bigFile = makeFile('big.pdf', 'application/pdf', 2000)
 
-    const result = evaluateFileManagerBatch(validations, [], [bigFile])
+    const result = evaluateFileManagerBatch(validations, [], [bigFile], baseState)
 
     expect(result.rejection?.scope).toBe('per-file')
     expect(result.rejection?.ruleName).toBe('maxFileSize')
@@ -640,7 +640,7 @@ describe('evaluateFileManagerBatch', () => {
     }
     const file = makeFile('doc.pdf', 'application/pdf', 1000)
 
-    const result = evaluateFileManagerBatch(validations, [], [file])
+    const result = evaluateFileManagerBatch(validations, [], [file], baseState)
 
     expect(result.rejection).toBeUndefined()
     expect(result.acceptedFiles).toEqual([file])
@@ -652,7 +652,7 @@ describe('evaluateFileManagerBatch', () => {
     }
     const validFile = makeFile('FACT_2024_001.pdf', 'application/pdf', 1000)
 
-    const result = evaluateFileManagerBatch(validations, [], [validFile])
+    const result = evaluateFileManagerBatch(validations, [], [validFile], baseState)
 
     expect(result.rejection).toBeUndefined()
     expect(result.acceptedFiles).toEqual([validFile])
@@ -664,7 +664,7 @@ describe('evaluateFileManagerBatch', () => {
     }
     const invalidFile = makeFile('document.pdf', 'application/pdf', 1000)
 
-    const result = evaluateFileManagerBatch(validations, [], [invalidFile])
+    const result = evaluateFileManagerBatch(validations, [], [invalidFile], baseState)
 
     expect(result.rejection?.scope).toBe('per-file')
     expect(result.rejection?.ruleName).toBe('validFileNames')
@@ -680,7 +680,7 @@ describe('evaluateFileManagerBatch', () => {
     const file1 = makeFile('new1.pdf', 'application/pdf', 1000)
     const file2 = makeFile('new2.pdf', 'application/pdf', 1000)
 
-    const result = evaluateFileManagerBatch(validations, [existing], [file1, file2])
+    const result = evaluateFileManagerBatch(validations, [existing], [file1, file2], baseState)
 
     expect(result.rejection?.scope).toBe('batch')
     expect(result.rejection?.ruleName).toBe('maxFiles')
@@ -696,7 +696,7 @@ describe('evaluateFileManagerBatch', () => {
     const file1 = makeFile('new1.pdf', 'application/pdf', 800)
     const file2 = makeFile('new2.pdf', 'application/pdf', 800)
 
-    const result = evaluateFileManagerBatch(validations, [existing], [file1, file2])
+    const result = evaluateFileManagerBatch(validations, [existing], [file1, file2], baseState)
 
     expect(result.rejection?.scope).toBe('batch')
     expect(result.rejection?.ruleName).toBe('maxTotalSize')
@@ -710,7 +710,7 @@ describe('evaluateFileManagerBatch', () => {
     }
     const file = makeFile('doc.pdf', 'application/pdf', 1000)
 
-    const result = evaluateFileManagerBatch(validations, [], [file])
+    const result = evaluateFileManagerBatch(validations, [], [file], baseState)
 
     expect(result.rejection).toBeUndefined()
     expect(result.acceptedFiles).toEqual([file])
@@ -722,7 +722,7 @@ describe('evaluateFileManagerBatch', () => {
     }
     const invalidFile = makeFile('doc.txt', 'text/plain', 1000)
 
-    const result = evaluateFileManagerBatch(validations, [], [invalidFile])
+    const result = evaluateFileManagerBatch(validations, [], [invalidFile], baseState)
 
     expect(result.rejection?.message).toBe('Solo PDF permitidos')
   })
@@ -734,7 +734,7 @@ describe('evaluateFileManagerBatch', () => {
     const file1 = makeFile('a.pdf', 'application/pdf', 1000)
     const file2 = makeFile('b.pdf', 'application/pdf', 1000)
 
-    const result = evaluateFileManagerBatch(validations, [], [file1, file2])
+    const result = evaluateFileManagerBatch(validations, [], [file1, file2], baseState)
 
     expect(result.rejection?.message).toBe('Máximo 1 fichero')
   })
@@ -746,7 +746,7 @@ describe('evaluateFileManagerBatch', () => {
     }
     const file = makeFile('doc.txt', 'text/plain', 1000)
 
-    const result = evaluateFileManagerBatch(validations, [], [file])
+    const result = evaluateFileManagerBatch(validations, [], [file], baseState)
 
     expect(result.rejection?.ruleName).toBe('accept')
   })
@@ -761,7 +761,7 @@ describe('evaluateFileManagerBatch', () => {
     const validFile = makeFile('valid.pdf', 'application/pdf', 1000)
 
     // existing + valid = 2 > maxFiles(1), but invalidMime would also be rejected per-file
-    const result = evaluateFileManagerBatch(validations, [existing], [invalidMime, validFile])
+    const result = evaluateFileManagerBatch(validations, [existing], [invalidMime, validFile], baseState)
 
     // batch rejection should win
     expect(result.rejection?.scope).toBe('batch')
@@ -777,12 +777,116 @@ describe('evaluateFileManagerBatch', () => {
     const invalidFile = makeFile('doc.txt', 'text/plain', 1000)
     const anotherValidFile = makeFile('report.pdf', 'application/pdf', 2000)
 
-    const result = evaluateFileManagerBatch(validations, [], [validFile, invalidFile, anotherValidFile])
+    const result = evaluateFileManagerBatch(validations, [], [validFile, invalidFile, anotherValidFile], baseState)
 
     expect(result.rejection?.scope).toBe('per-file')
     expect(result.rejection?.ruleName).toBe('accept')
     // first per-file rejection is invalidFile (second in batch)
     expect(result.acceptedFiles).toEqual([validFile, anotherValidFile])
+  })
+
+  it('resolves {{translations.key}} inside a custom accept message from the active language catalog', () => {
+    const state: RuntimeState = {
+      ...baseState,
+      modal: { activeModalId: null, activeIterationKey: null },
+      i18n: {
+        translations: {
+          tipoNoValido: { en: 'Invalid file type', es: 'Tipo de fichero no válido' },
+        },
+        activeLanguage: 'en',
+      },
+      tokens: {},
+    }
+    const validations: RuntimeFileManagerValidations = {
+      accept: { value: ['application/pdf'], message: '{{translations.tipoNoValido}}' },
+    }
+    const invalidFile = makeFile('doc.txt', 'text/plain', 1000)
+
+    const result = evaluateFileManagerBatch(validations, [], [invalidFile], state)
+
+    expect(result.rejection?.message).toBe('Invalid file type')
+  })
+
+  it('substitutes {{value}} in a custom maxFileSize message with the configured limit', () => {
+    const validations: RuntimeFileManagerValidations = {
+      maxFileSize: { value: 2, message: 'Máximo {{value}} MB' },
+    }
+    const bigFile = makeFile('big.pdf', 'application/pdf', 3 * 1024 * 1024)
+
+    const result = evaluateFileManagerBatch(validations, [], [bigFile], baseState)
+
+    expect(result.rejection?.message).toBe('Máximo 2 MB')
+  })
+
+  it('resolves {{translations.key}} inside a custom maxTotalSize message (batch scope)', () => {
+    const state: RuntimeState = {
+      ...baseState,
+      modal: { activeModalId: null, activeIterationKey: null },
+      i18n: {
+        translations: {
+          excedido: { en: 'Total size exceeded', es: 'Tamaño total excedido' },
+        },
+        activeLanguage: 'en',
+      },
+      tokens: {},
+    }
+    const validations: RuntimeFileManagerValidations = {
+      maxTotalSize: { value: 0.001, message: '{{translations.excedido}}' },
+    }
+    const file = makeFile('big.pdf', 'application/pdf', 2000)
+
+    const result = evaluateFileManagerBatch(validations, [], [file], state)
+
+    expect(result.rejection?.scope).toBe('batch')
+    expect(result.rejection?.message).toBe('Total size exceeded')
+  })
+
+  it('substitutes {{value}} in a custom maxFiles message with the configured limit (batch scope)', () => {
+    const validations: RuntimeFileManagerValidations = {
+      maxFiles: { value: 3, message: '{{value}} máx' },
+    }
+    const file1 = makeFile('a.pdf', 'application/pdf', 1000)
+    const file2 = makeFile('b.pdf', 'application/pdf', 1000)
+    const file3 = makeFile('c.pdf', 'application/pdf', 1000)
+    const file4 = makeFile('d.pdf', 'application/pdf', 1000)
+
+    const result = evaluateFileManagerBatch(validations, [], [file1, file2, file3, file4], baseState)
+
+    expect(result.rejection?.scope).toBe('batch')
+    expect(result.rejection?.message).toBe('3 máx')
+  })
+
+  it('returns a validFileNames custom message without placeholders as-is', () => {
+    const validations: RuntimeFileManagerValidations = {
+      validFileNames: { value: ['^FACT_\\d{4}_\\d{3}\\.pdf$'], message: 'Nombre de fichero no permitido' },
+    }
+    const invalidFile = makeFile('document.pdf', 'application/pdf', 1000)
+
+    const result = evaluateFileManagerBatch(validations, [], [invalidFile], baseState)
+
+    expect(result.rejection?.message).toBe('Nombre de fichero no permitido')
+  })
+
+  it('returns an explicit empty string message for accept instead of falling back to the default', () => {
+    const validations: RuntimeFileManagerValidations = {
+      accept: { value: ['application/pdf'], message: '' },
+    }
+    const invalidFile = makeFile('doc.txt', 'text/plain', 1000)
+
+    const result = evaluateFileManagerBatch(validations, [], [invalidFile], baseState)
+
+    expect(result.rejection?.message).toBe('')
+  })
+
+  it('keeps the hardcoded Spanish message for zero-bytes and duplicate-name, which do not support override', () => {
+    const emptyFile = makeZeroByteFile('empty.pdf')
+    const zeroBytesResult = evaluateFileManagerBatch(undefined, [], [emptyFile], baseState)
+    expect(zeroBytesResult.rejection?.message).toBe('El fichero "empty.pdf" tiene 0 bytes.')
+
+    const existing = makeFile('doc.pdf', 'application/pdf', 1000)
+    const duplicate = makeFile('doc.pdf', 'application/pdf', 500)
+    const duplicateResult = evaluateFileManagerBatch(undefined, [existing], [duplicate], baseState)
+    expect(duplicateResult.rejection?.message).toBe('Ya se ha subido un fichero con el nombre "doc.pdf".')
   })
 })
 

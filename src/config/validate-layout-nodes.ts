@@ -2514,6 +2514,15 @@ function validateFileManagerNode(
       return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.validations".`)
     }
 
+    if (issuePath[0] === 'props' && issuePath[1] === 'labels') {
+      if (issue.code === 'unrecognized_keys' && Array.isArray(issue.keys) && issue.keys.length > 0) {
+        return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.labels.${issue.keys[0]}".`)
+      }
+      const labelKey = issuePath[2]
+      const labelSuffix = typeof labelKey === 'string' ? `.${labelKey}` : ''
+      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.labels${labelSuffix}".`)
+    }
+
     return mapLeafNodeIssue(pageId, path, issuePath)
   }
 

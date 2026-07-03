@@ -47,12 +47,12 @@ El nodo `fileManager` extiende `runtime-form-validations` con reglas específica
 
 | Regla | Aplica | Comportamiento |
 |---|---|---|
-| `accept` | `string[]` de MIME types | Ficheros con MIME type no incluido se rechazan. Ej.: `["application/pdf", "image/jpeg"]`. |
-| `maxFileSize` | `number` en MB | Ficheros que superen el límite individual se rechazan. Ej.: `2` = máximo 2 MB por fichero. |
-| `maxTotalSize` | `number` en MB | Si el lote total supera el límite, se rechaza el lote completo. Ej.: `10` = máximo 10 MB acumulados. |
+| `accept` | `{ value: string[]; message?: string }` | Ficheros con MIME type no incluido se rechazan. Ej.: `{ value: ["application/pdf", "image/jpeg"] }`. El campo `message` es opcional y soporta `{{translations.*}}` e interpolación. |
+| `maxFileSize` | `{ value: number; message?: string }` | Ficheros que superen el límite individual se rechazan. Ej.: `{ value: 2 }` = máximo 2 MB por fichero. El campo `message` es opcional y soporta `{{value}}`, `{{translations.*}}` e interpolación. |
+| `maxTotalSize` | `{ value: number; message?: string }` | Si el lote total supera el límite, se rechaza el lote completo. Ej.: `{ value: 10 }` = máximo 10 MB acumulados. El campo `message` es opcional y soporta `{{value}}`, `{{translations.*}}` e interpolación. |
 | `minFiles` | `number` | Mínimo de ficheros que deben estar subidos (informativo; no bloquea submit del formulario contenedor). |
-| `maxFiles` | `number` | Máximo de ficheros permitidos contando los ya presentes. Si se alcanza, la zona DnD se deshabilita. |
-| `validFileNames` | `string[]` de regex | Ficheros cuyo nombre no coincide con ningún patrón regex se rechazan. Ej.: `["^FACT_\\d{4}\\.pdf$"]`. |
+| `maxFiles` | `{ value: number; message?: string }` | Máximo de ficheros permitidos contando los ya presentes. Si se alcanza, la zona DnD se deshabilita. El campo `message` es opcional y soporta `{{value}}`, `{{translations.*}}` e interpolación. |
+| `validFileNames` | `{ value: string[]; message?: string }` | Ficheros cuyo nombre no coincide con ningún patrón regex se rechazan. Ej.: `{ value: ["^FACT_\\d{4}\\.pdf$"] }`. El campo `message` es opcional y soporta `{{translations.*}}` e interpolación. |
 
 Validaciones implícitas adicionales:
 - Fichero de 0 bytes: rechazado automáticamente.
@@ -68,22 +68,21 @@ El nodo `fileInput` como campo de formulario extiende también `runtime-form-val
 - Los ficheros rechazados no entran en la selección final (`forms.{formId}.{fieldId}.value`).
 - Las reglas de fichero (`accept`, `maxFileSize`, `maxTotalSize`, `maxFiles`, `validFileNames`) se evalúan al seleccionar, **no en submit**. Si pasan al seleccionar, no se reevalúan en submit.
 - `required` y `minFiles` se evalúan en submit (ver [[submit.md]]), no al seleccionar: controlan si hay la cantidad mínima de ficheros para que el submit sea válido.
+- Todos los mensajes de validación reutilizan el sistema de mensajes personalizados descrito más arriba.
 
 | Regla | Aplica | Comportamiento |
 |---|---|---|
-| `required` | boolean | Al menos un fichero debe estar seleccionado para que el submit sea válido. Bloquea submit. |
-| `minFiles` | `number` | Mínimo de ficheros requeridos. Bloquea submit si no se alcanza. |
-| `accept` | `string[]` de MIME types | Ficheros con MIME type no incluido se rechazan al seleccionar. Ej.: `["application/pdf", "image/jpeg"]`. |
-| `maxFileSize` | `number` en MB | Ficheros que superen el límite individual se rechazan al seleccionar. Ej.: `2` = máximo 2 MB por fichero. |
-| `maxTotalSize` | `number` en MB | Si el lote total supera el límite, se rechaza el lote completo al seleccionar. Ej.: `10` = máximo 10 MB acumulados. |
-| `maxFiles` | `number` | Máximo de ficheros selectables. Si se alcanza, el selector se deshabilita. |
-| `validFileNames` | `string[]` de regex | Ficheros cuyo nombre no coincide con ningún patrón regex se rechazan al seleccionar. Ej.: `["^FACT_\\d{4}\\.pdf$"]`. |
+| `required` | `boolean \| { value: boolean; message?: string }` | Al menos un fichero debe estar seleccionado para que el submit sea válido. Bloquea submit. El campo `message` es opcional y soporta `{{translations.*}}` e interpolación. |
+| `minFiles` | `{ value: number; message?: string }` | Mínimo de ficheros requeridos. Bloquea submit si no se alcanza. El campo `message` es opcional y soporta `{{value}}`, `{{translations.*}}` e interpolación. |
+| `accept` | `{ value: string[]; message?: string }` | Ficheros con MIME type no incluido se rechazan al seleccionar. Ej.: `{ value: ["application/pdf", "image/jpeg"] }`. El campo `message` es opcional y soporta `{{translations.*}}` e interpolación. |
+| `maxFileSize` | `{ value: number; message?: string }` | Ficheros que superen el límite individual se rechazan al seleccionar. Ej.: `{ value: 2 }` = máximo 2 MB por fichero. El campo `message` es opcional y soporta `{{value}}`, `{{translations.*}}` e interpolación. |
+| `maxTotalSize` | `{ value: number; message?: string }` | Si el lote total supera el límite, se rechaza el lote completo al seleccionar. Ej.: `{ value: 10 }` = máximo 10 MB acumulados. El campo `message` es opcional y soporta `{{value}}`, `{{translations.*}}` e interpolación. |
+| `maxFiles` | `{ value: number; message?: string }` | Máximo de ficheros selectables. Si se alcanza, el selector se deshabilita. El campo `message` es opcional y soporta `{{value}}`, `{{translations.*}}` e interpolación. |
+| `validFileNames` | `{ value: string[]; message?: string }` | Ficheros cuyo nombre no coincide con ningún patrón regex se rechazan al seleccionar. Ej.: `{ value: ["^FACT_\\d{4}\\.pdf$"] }`. El campo `message` es opcional y soporta `{{translations.*}}` e interpolación. |
 
 Validaciones implícitas adicionales:
 - Fichero de 0 bytes: rechazado automáticamente al seleccionar.
 - Nombre duplicado: rechazado si el nombre ya existe en la lista actual.
-
-Todos los mensajes de validación reutilizan el sistema de mensajes personalizados descrito más arriba.
 
 ## Errores y visibilidad
 - Si un campo visible requerido falla, el runtime escribe `Required` en `forms.{formId}.{fieldId}.error` y bloquea el submit.

@@ -4,6 +4,7 @@ import {
   resolveRuntimeImageAlt,
   resolveRuntimeImageSource,
   resolveRuntimeReference,
+  resolveRuntimeTextReference,
   resolveRuntimeVisibleValue,
 } from '../../runtime/runtime-references/runtime-reference-resolver'
 import type { RuntimeState } from '../../runtime/runtime-state/runtime-state-types'
@@ -1506,6 +1507,73 @@ describe('Runtime reference resolution', () => {
       expect(
         resolveRuntimeVisibleValue('Bearer: {{tokens.session.value}}', stateWithReadyToken, 'heading.props.text'),
       ).toBe('Bearer: abc')
+    })
+  })
+
+  describe('localPlaceholders', () => {
+    const stateWithTranslations: RuntimeState = {
+      ...runtimeState,
+      modal: {
+        activeModalId: null,
+        activeIterationKey: null,
+      },
+      i18n: {
+        translations: {
+          foo: { es: 'Zorro', en: 'Fox' },
+        },
+        activeLanguage: 'es',
+      },
+    }
+
+    it('substitutes a local placeholder verbatim without re-parsing it as a reference', () => {
+      expect(
+        resolveRuntimeVisibleValue('Error al subir "{{fileName}}"', stateWithTranslations, 'heading.props.text', {
+          localPlaceholders: { fileName: 'foo.pdf' },
+        }),
+      ).toBe('Error al subir "foo.pdf"')
+    })
+
+    it('resolves several local placeholders within the same pass', () => {
+      expect(
+        resolveRuntimeVisibleValue(
+          'Total {{completed}}/{{total}} — {{percent}}%',
+          stateWithTranslations,
+          'heading.props.text',
+          { localPlaceholders: { completed: '2', total: '5', percent: '40' } },
+        ),
+      ).toBe('Total 2/5 — 40%')
+    })
+
+    it('degrades a placeholder name absent from localPlaceholders and unsupported as a reference to empty string', () => {
+      expect(
+        resolveRuntimeVisibleValue('Total {{completed}}/{{total}}', stateWithTranslations, 'heading.props.text', {
+          localPlaceholders: { completed: '2' },
+        }),
+      ).toBe('Total 2/')
+    })
+
+    it('keeps resolving {{translations.*}} through the catalog while localPlaceholders holds unrelated keys', () => {
+      expect(
+        resolveRuntimeVisibleValue('{{translations.foo}}', stateWithTranslations, 'heading.props.text', {
+          localPlaceholders: { fileName: 'foo.pdf' },
+        }),
+      ).toBe('Zorro')
+    })
+
+    it('does not re-interpolate a localPlaceholders value that itself contains {{translations.foo}}', () => {
+      expect(
+        resolveRuntimeVisibleValue('Nombre: {{fileName}}', stateWithTranslations, 'heading.props.text', {
+          localPlaceholders: { fileName: '{{translations.foo}}' },
+        }),
+      ).toBe('Nombre: {{translations.foo}}')
+    })
+
+    it('propagates localPlaceholders from resolveRuntimeTextReference through resolveRuntimeVisibleValue', () => {
+      expect(
+        resolveRuntimeTextReference('Error al subir "{{fileName}}"', stateWithTranslations, 'heading.props.text', {
+          localPlaceholders: { fileName: 'bar.pdf' },
+        }),
+      ).toBe('Error al subir "bar.pdf"')
     })
   })
 })
