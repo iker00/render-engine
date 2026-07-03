@@ -15,7 +15,6 @@
 ### Pendiente de decisión
 
 - Añadir `.describe()` en los schemas Zod para el schema del prompt
-- Subida de ficheros con componente de formulario attachment o file.
 - Permitir personalizar todos los literales del componente fileManager
 - Permitir variantes, types (alerts y badges) y colores condicionales.
 - ¿Opción para poner los iconos a la derecha?

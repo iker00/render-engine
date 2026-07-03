@@ -80,7 +80,7 @@ export function FileInputNode({ node }: FileInputNodeProps) {
     // For single mode, treat existing files as empty so the new selection replaces the value.
     const existingForEval = isMultiple ? currentFiles : []
 
-    const result = evaluateFileManagerBatch(validations, existingForEval, incoming)
+    const result = evaluateFileManagerBatch(validations, existingForEval, incoming, state)
 
     let nextFiles: File[]
     if (isMultiple) {

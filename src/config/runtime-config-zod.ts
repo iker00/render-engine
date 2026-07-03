@@ -740,6 +740,33 @@ const fileManagerValidationsSchema = z
 
 const fileManagerOperationSchema = z.union([z.string(), z.literal(false)]).optional()
 
+const fileManagerLabelsSchema = z
+  .object({
+    dropzoneIdle: z.string().optional(),
+    dropzoneAcceptedFormats: z.string().optional(),
+    dropzoneUploading: z.string().optional(),
+    dropzoneProgress: z.string().optional(),
+    dropzoneSuccess: z.string().optional(),
+    dropzoneMaxFilesReached: z.string().optional(),
+    dropzoneAriaLabel: z.string().optional(),
+    listLoadError: z.string().optional(),
+    listEmpty: z.string().optional(),
+    paginationPrevious: z.string().optional(),
+    paginationNext: z.string().optional(),
+    rowViewLabel: z.string().optional(),
+    rowViewAriaLabel: z.string().optional(),
+    rowViewUnavailableAriaLabel: z.string().optional(),
+    rowDownloadLabel: z.string().optional(),
+    rowDownloadAriaLabel: z.string().optional(),
+    rowDownloadUnavailableAriaLabel: z.string().optional(),
+    rowDeleteLabel: z.string().optional(),
+    rowDeleteAriaLabel: z.string().optional(),
+    uploadFileError: z.string().optional(),
+    uploadListPathMissing: z.string().optional(),
+    deleteError: z.string().optional(),
+  })
+  .strict()
+
 export const fileManagerNodeSchema = z
   .object({
     type: z.literal('fileManager'),
@@ -769,6 +796,7 @@ export const fileManagerNodeSchema = z
           })
           .strip()
           .optional(),
+        labels: fileManagerLabelsSchema.optional(),
       })
       .strip(),
   })

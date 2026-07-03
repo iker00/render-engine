@@ -1,4 +1,5 @@
 import type { RuntimeConfig } from '../../../config/runtime-config'
+import type { FileManagerLabelKey } from '../../../config/runtime-config-types'
 import { createCollectionPaginationModel } from '../../runtime-collection-pagination'
 import {
   getFileManagerListDividerClassName,
@@ -24,6 +25,7 @@ interface FileManagerListProps {
   getOperationStatus: string | null
   config: RuntimeConfig
   state: RuntimeState
+  resolvedLabels: Partial<Record<FileManagerLabelKey, string>>
   onDelete: (file: Record<string, unknown>) => void
   onNextPage: () => void
   onPreviousPage: () => void
@@ -43,6 +45,7 @@ export function FileManagerList({
   getOperationStatus,
   config,
   state,
+  resolvedLabels,
   onDelete,
   onNextPage,
   onPreviousPage,
@@ -53,7 +56,7 @@ export function FileManagerList({
   if (getOperationStatus === 'error') {
     return (
       <div className="mt-4">
-        <p className={getFileManagerListErrorClassName()}>Error al cargar los ficheros.</p>
+        <p className={getFileManagerListErrorClassName()}>{resolvedLabels.listLoadError}</p>
       </div>
     )
   }
@@ -61,7 +64,7 @@ export function FileManagerList({
   return (
     <div className="mt-4">
       {page.totalItems === 0 ? (
-        <p className={getFileManagerListEmptyClassName()}>No hay ficheros subidos.</p>
+        <p className={getFileManagerListEmptyClassName()}>{resolvedLabels.listEmpty}</p>
       ) : (
         <>
           <div className={getFileManagerListDividerClassName()}>
@@ -78,6 +81,7 @@ export function FileManagerList({
                 deletingFileId={deletingFileId}
                 config={config}
                 state={state}
+                resolvedLabels={resolvedLabels}
                 onDelete={onDelete}
               />
             ))}
@@ -91,7 +95,7 @@ export function FileManagerList({
                 disabled={!page.canGoPrevious}
                 onClick={onPreviousPage}
               >
-                Anterior
+                {resolvedLabels.paginationPrevious}
               </button>
               <button
                 type="button"
@@ -99,7 +103,7 @@ export function FileManagerList({
                 disabled={!page.canGoNext}
                 onClick={onNextPage}
               >
-                Siguiente
+                {resolvedLabels.paginationNext}
               </button>
             </div>
           )}
