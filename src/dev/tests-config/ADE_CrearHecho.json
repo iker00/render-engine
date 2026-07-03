@@ -1,0 +1,307 @@
+{
+  "api": {
+    "obtenerDatosFormularioCreacionHecho": {
+      "method": "POST",
+      "endpoint": "/api/ss/Ade/v1/operations/E2F8A614-3B9C-4D7E-9F21-6A5B8C1D40E7/ObtenerDatosFormularioCreacionHecho",
+      "headers": {
+        "Authorization": "Bearer TOKEN"
+      },
+      "body": {}
+    },
+    "crearHecho": {
+      "method": "POST",
+      "endpoint": "/api/ss/Ade/v1/operations/A7B3C941-2E8D-4F6A-9C1B-5D8E2F4A6C70/CrearHecho",
+      "headers": {
+        "Authorization": "Bearer TOKEN"
+      },
+      "body": {
+        "CrearHechoEntradaDTO": {
+          "Lugar": "forms.crearHecho.lugar",
+          "FechaHecho": "forms.crearHecho.fechaHecho",
+          "HoraHecho": "forms.crearHecho.horaHecho",
+          "IdTipoHecho": "forms.crearHecho.idTipoHecho",
+          "IdOrigenHecho": "forms.crearHecho.idOrigenHecho",
+          "ResumenHecho": "forms.crearHecho.resumenHecho",
+          "Agente": "forms.crearHecho.agente",
+          "Agente1": "forms.crearHecho.agente1"
+        }
+      }
+    }
+  },
+  "pages": [
+    {
+      "id": "crear-hecho",
+      "preloads": [
+        {
+          "obtenerDatosFormularioCreacionHecho": {}
+        }
+      ],
+      "layout": [
+        {
+          "type": "container",
+          "props": {
+            "direction": "column",
+            "gap": "lg"
+          },
+          "children": [
+            {
+              "type": "heading",
+              "props": {
+                "text": "Informe de actividad",
+                "level": 1
+              }
+            },
+            {
+              "type": "heading",
+              "props": {
+                "text": "Información del hecho",
+                "level": 2
+              }
+            },
+            {
+              "type": "container",
+              "props": {
+                "variant": "card",
+                "gap": "md"
+              },
+              "queryStateFeedback": {
+                "query": "obtenerDatosFormularioCreacionHecho",
+                "states": {
+                  "loading": {
+                    "mode": "fallback",
+                    "fallback": [
+                      {
+                        "type": "skeleton",
+                        "props": {
+                          "variant": "rect",
+                          "height": "32"
+                        }
+                      }
+                    ]
+                  },
+                  "error": {
+                    "mode": "fallback",
+                    "fallback": [
+                      {
+                        "type": "alert",
+                        "props": {
+                          "title": "Error al cargar",
+                          "message": "Error al cargar los datos del formulario.",
+                          "type": "danger"
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              "children": [
+                {
+                  "type": "paragraph",
+                  "props": {
+                    "text": "* Datos obligatorios"
+                  }
+                },
+                {
+                  "type": "form",
+                  "id": "crearHecho",
+                  "submitAction": {
+                    "type": "executeOperation",
+                    "operationName": "crearHecho"
+                  },
+                  "children": [
+                    {
+                      "type": "input",
+                      "props": {
+                        "fieldId": "lugar",
+                        "label": "Lugar",
+                        "validations": {
+                          "required": true
+                        }
+                      }
+                    },
+                    {
+                      "type": "input",
+                      "props": {
+                        "fieldId": "fechaHecho",
+                        "label": "Fecha hecho",
+                        "inputType": "date",
+                        "validations": {
+                          "required": true
+                        }
+                      }
+                    },
+                    {
+                      "type": "input",
+                      "props": {
+                        "fieldId": "horaHecho",
+                        "label": "Hora hecho",
+                        "placeholder": "HH:mm",
+                        "validations": {
+                          "required": true
+                        }
+                      }
+                    },
+                    {
+                      "type": "select",
+                      "props": {
+                        "fieldId": "idTipoHecho",
+                        "label": "Tipo de hecho",
+                        "placeholder": "Seleccione un tipo",
+                        "items": {
+                          "source": "queries.obtenerDatosFormularioCreacionHecho.data.DatosFormularioCreacionHechoSalidaDTO.TiposHechoDTO",
+                          "label": "Nombre",
+                          "value": "Id"
+                        },
+                        "validations": {
+                          "required": true
+                        }
+                      }
+                    },
+                    {
+                      "type": "select",
+                      "props": {
+                        "fieldId": "idOrigenHecho",
+                        "label": "Origen hecho",
+                        "placeholder": "Seleccione un origen",
+                        "items": {
+                          "source": "queries.obtenerDatosFormularioCreacionHecho.data.DatosFormularioCreacionHechoSalidaDTO.OrigenesHechoDTO",
+                          "label": "Nombre",
+                          "value": "Id"
+                        },
+                        "validations": {
+                          "required": true
+                        }
+                      }
+                    },
+                    {
+                      "type": "textarea",
+                      "props": {
+                        "fieldId": "resumenHecho",
+                        "label": "Resumen",
+                        "validations": {
+                          "required": true
+                        }
+                      }
+                    },
+                    {
+                      "type": "input",
+                      "props": {
+                        "fieldId": "agente",
+                        "label": "Agente",
+                        "validations": {
+                          "required": true
+                        }
+                      }
+                    },
+                    {
+                      "type": "input",
+                      "props": {
+                        "fieldId": "agente1",
+                        "label": "Agente 1"
+                      }
+                    },
+                    {
+                      "type": "button",
+                      "props": {
+                        "label": "Guardar →",
+                        "variant": "primary",
+                        "icon": "save"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "container",
+                  "props": {
+                    "direction": "column",
+                    "gap": "sm"
+                  },
+                  "queryStateFeedback": {
+                    "query": "crearHecho",
+                    "states": {
+                      "idle": {
+                        "mode": "hide"
+                      },
+                      "loading": {
+                        "mode": "fallback",
+                        "fallback": [
+                          {
+                            "type": "skeleton",
+                            "props": {
+                              "variant": "rect",
+                              "height": "8"
+                            }
+                          }
+                        ]
+                      },
+                      "success": {
+                        "mode": "fallback",
+                        "fallback": [
+                          {
+                            "type": "alert",
+                            "props": {
+                              "title": "Hecho guardado",
+                              "message": "El hecho se ha guardado correctamente.",
+                              "type": "success"
+                            }
+                          },
+                          {
+                            "type": "link",
+                            "props": {
+                              "label": "Ver ficha",
+                              "action": {
+                                "type": "navigateTo",
+                                "pageId": "ficha-hecho",
+                                "params": {
+                                  "hechoId": "queries.crearHecho.data.CrearHechoSalidaDTO.HechoCreadoDTO.Id"
+                                }
+                              }
+                            }
+                          }
+                        ]
+                      },
+                      "error": {
+                        "mode": "fallback",
+                        "fallback": [
+                          {
+                            "type": "alert",
+                            "props": {
+                              "title": "No se pudo guardar",
+                              "message": "{{queries.crearHecho.error.message}}",
+                              "type": "danger"
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "children": []
+                },
+                {
+                  "type": "container",
+                  "props": {
+                    "direction": "row",
+                    "gap": "md",
+                    "justify": "end"
+                  },
+                  "children": [
+                    {
+                      "type": "link",
+                      "props": {
+                        "label": "Cancelar",
+                        "action": {
+                          "type": "navigateTo",
+                          "pageId": "inicio"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
