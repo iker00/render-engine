@@ -17,8 +17,8 @@ Esta skill debe comportarse como una fase documental posterior al código: revis
 - `status.yaml` tiene bloqueos abiertos que invaliden el cierre documental → resolver el bloqueo primero
 - La implementación contradice materialmente la `spec.md` → realinear spec e implementación antes de documentar
 
-## Leer reglas VCS 
-- [ ] `ai-workflow/docs/vcs.md` y aplicar lo que pide
+## Reglas VCS
+Leer `ai-workflow/docs/vcs.md` y aplicar la sección **"Fase update-app-documentation"** cuando corresponda. Ejecutar directamente sin pedir confirmación.
 
 ## Leer siempre
 - [ ] `ai-workflow/docs/workflow.md`

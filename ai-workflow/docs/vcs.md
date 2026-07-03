@@ -67,13 +67,11 @@ fix(tests): ...
 - No incluir IDs de tarea ni tickets si el nombre de feature ya da el contexto suficiente.
 - No añadir a Claude como coautor.
 
-## Señal de cierre: status.yaml completado
-
-Cuando `status.yaml` marca `feature_status: completed` y `documentation.done: true`, la feature está lista para commit. **En ese momento, proceder inmediatamente a hacer el commit único sin esperar confirmación adicional.**
-
-## Cierre de feature y commit único
+## Fase update-app-documentation
 
 **IMPORTANTE: Esta es la última fase. Una vez aquí, se hace UN ÚNICO COMMIT con TODO.**
+
+Cuando `status.yaml` marca `feature_status: completed` y `documentation.done: true`, la feature está lista para commit. Proceder inmediatamente sin pedir confirmación adicional.
 
 Al finalizar implementación y documentación (cuando código, tests y documentación están completos, reflejado en `status.yaml`):
 
