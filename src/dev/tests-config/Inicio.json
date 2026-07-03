@@ -1,10 +1,15 @@
 {
+  "tokens": {
+    "token": {
+      "value": "#bearer_token#"
+    }
+  },
   "api": {
     "obtenerPermisosPantallaInicio": {
       "method": "POST",
       "endpoint": "http://vmwspresaawa1:2802/ss/aa/v1/business/SeguridadCiudadana/ADE/Gestion/1.0.0.0/PantallaInicioNegocio/ObtenerPermisosPantallaInicio",
       "headers": {
-        "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJFbmNVc3VhcmlvIjoiNThkZTNkM2YwNzExNmIyMzY1NmY0ZGNkZWE1MDcwMGZiMGEwNmVjOWUxNDVlOGI3NDUzYWJkYzYxNmVhN2IyYyIsIkVuY0d1aWQiOiJqaDE5bXpoTTFONzlqb1dPZVZ1N09sT1Q5ZWhBblFyZkNiWU9Ba1FZZ1hZVFF1cFZLSmlHSW1aR213UExORHNXIiwiTG9naW5BdCI6IjIwMjYtMDctMDFUMTA6MzU6MzQuNjI5MDAwMFoiLCJDcmVhdGVkQXQiOiIyMDI2LTA3LTAxVDEwOjM1OjM0LjYyOTAwMDBaIiwiRXhwaXJlc0F0IjoiMjAyNi0wNy0wMVQxMTowNTozNC42MjkwMDAwWiIsIm5iZiI6MTc4MjkwMjEzNCwiZXhwIjoxNzgyOTAzOTM0LCJpYXQiOjE3ODI5MDIxMzQsImlzcyI6Imh0dHBzOi8vYW5pbXNhLmVzIiwiYXVkIjoiand0QXV0aGVudGljYXRpb24ifQ.vtmn201dJnDMb0AjZeo8Yn7ArxNHvms-RuXTOEfoAZE"
+        "Authorization": "Bearer {{tokens.token.value}}"
       },
       "body": {
         "PermisosPantallaInicioEntradaDTO": {}
@@ -14,7 +19,7 @@
       "method": "POST",
       "endpoint": "http://vmwspresaawa1:2802/ss/aa/v1/business/SeguridadCiudadana/ADE/Gestion/1.0.0.0/HechoNegocio/ObtenerHistorialHechosPorUsername",
       "headers": {
-        "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJFbmNVc3VhcmlvIjoiNThkZTNkM2YwNzExNmIyMzY1NmY0ZGNkZWE1MDcwMGZiMGEwNmVjOWUxNDVlOGI3NDUzYWJkYzYxNmVhN2IyYyIsIkVuY0d1aWQiOiJqaDE5bXpoTTFONzlqb1dPZVZ1N09sT1Q5ZWhBblFyZkNiWU9Ba1FZZ1hZVFF1cFZLSmlHSW1aR213UExORHNXIiwiTG9naW5BdCI6IjIwMjYtMDctMDFUMTA6MzU6MzQuNjI5MDAwMFoiLCJDcmVhdGVkQXQiOiIyMDI2LTA3LTAxVDEwOjM1OjM0LjYyOTAwMDBaIiwiRXhwaXJlc0F0IjoiMjAyNi0wNy0wMVQxMTowNTozNC42MjkwMDAwWiIsIm5iZiI6MTc4MjkwMjEzNCwiZXhwIjoxNzgyOTAzOTM0LCJpYXQiOjE3ODI5MDIxMzQsImlzcyI6Imh0dHBzOi8vYW5pbXNhLmVzIiwiYXVkIjoiand0QXV0aGVudGljYXRpb24ifQ.vtmn201dJnDMb0AjZeo8Yn7ArxNHvms-RuXTOEfoAZE"
+        "Authorization": "Bearer {{tokens.token.value}}"
       },
       "body": {
         "Username": "session.username"
@@ -24,7 +29,7 @@
       "method": "POST",
       "endpoint": "http://vmwspresaawa1:2802/ss/aa/v1/business/SeguridadCiudadana/ADE/Gestion/1.0.0.0/PersonaNegocio/ObtenerHistorialPersonasPorUsername",
       "headers": {
-        "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJFbmNVc3VhcmlvIjoiNThkZTNkM2YwNzExNmIyMzY1NmY0ZGNkZWE1MDcwMGZiMGEwNmVjOWUxNDVlOGI3NDUzYWJkYzYxNmVhN2IyYyIsIkVuY0d1aWQiOiJqaDE5bXpoTTFONzlqb1dPZVZ1N09sT1Q5ZWhBblFyZkNiWU9Ba1FZZ1hZVFF1cFZLSmlHSW1aR213UExORHNXIiwiTG9naW5BdCI6IjIwMjYtMDctMDFUMTA6MzU6MzQuNjI5MDAwMFoiLCJDcmVhdGVkQXQiOiIyMDI2LTA3LTAxVDEwOjM1OjM0LjYyOTAwMDBaIiwiRXhwaXJlc0F0IjoiMjAyNi0wNy0wMVQxMTowNTozNC42MjkwMDAwWiIsIm5iZiI6MTc4MjkwMjEzNCwiZXhwIjoxNzgyOTAzOTM0LCJpYXQiOjE3ODI5MDIxMzQsImlzcyI6Imh0dHBzOi8vYW5pbXNhLmVzIiwiYXVkIjoiand0QXV0aGVudGljYXRpb24ifQ.vtmn201dJnDMb0AjZeo8Yn7ArxNHvms-RuXTOEfoAZE"
+        "Authorization": "Bearer {{tokens.token.value}}"
       },
       "body": {
         "Username": "session.username"

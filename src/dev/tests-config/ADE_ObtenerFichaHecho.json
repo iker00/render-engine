@@ -1,10 +1,15 @@
 {
+  "tokens": {
+    "token": {
+      "value": "#bearer_token#"
+    }
+  },
   "api": {
     "obtenerFichaHecho": {
       "method": "POST",
       "endpoint": "/api/ss/Ade/v1/operations/E4B82A91-6F3C-4D15-A8E2-9C7F1B3D5E60/ObtenerFichaHecho",
       "headers": {
-        "Authorization": "Bearer TOKEN"
+        "Authorization": "Bearer {{tokens.token.value}}"
       },
       "body": {
         "Id": "params.hechoId"
@@ -602,7 +607,7 @@
                             "url": "/api/ss/Ade/v1/operations/C776EC3B-8809-48F3-BD81-48467D7B6074/ObtenerMedio/Binary",
                             "method": "POST",
                             "headers": {
-                              "Authorization": "Bearer TOKEN"
+                              "Authorization": "Bearer {{tokens.token.value}}"
                             },
                             "body": {
                               "PublicId": "item"

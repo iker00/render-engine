@@ -1,10 +1,15 @@
 {
+  "tokens": {
+    "token": {
+      "value": "#bearer_token#"
+    }
+  },
   "api": {
     "obtenerPermisosPantallaInicio": {
       "method": "POST",
       "endpoint": "/api/ss/Ade/v1/operations/A3E7F2B1-8C4D-4A9E-B6F0-2D5C8E1A7B30/ObtenerPermisosPantallaInicio",
       "headers": {
-        "Authorization": "Bearer TOKEN"
+        "Authorization": "Bearer {{tokens.token.value}}"
       },
       "body": {
         "PermisosPantallaInicioEntradaDTO": {}
@@ -14,7 +19,7 @@
       "method": "POST",
       "endpoint": "/api/ss/Ade/v1/operations/D8F2C614-4A9B-4E7D-9F31-2B6E5A8C1D40/ObtenerHistorialHechosPorUsername",
       "headers": {
-        "Authorization": "Bearer TOKEN"
+        "Authorization": "Bearer {{tokens.token.value}}"
       },
       "body": {
         "Username": "session.username"
@@ -24,7 +29,7 @@
       "method": "POST",
       "endpoint": "/api/ss/Ade/v1/operations/E7B4F926-6C3D-4A8F-B2E1-5D7A9C3F6B80/ObtenerHistorialPersonasPorUsername",
       "headers": {
-        "Authorization": "Bearer TOKEN"
+        "Authorization": "Bearer {{tokens.token.value}}"
       },
       "body": {
         "Username": "session.username"

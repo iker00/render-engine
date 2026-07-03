@@ -1,10 +1,15 @@
 {
+  "tokens": {
+    "token": {
+      "value": "#bearer_token#"
+    }
+  },
   "api": {
     "obtenerDatosFormularioCreacionHecho": {
       "method": "POST",
       "endpoint": "/api/ss/Ade/v1/operations/E2F8A614-3B9C-4D7E-9F21-6A5B8C1D40E7/ObtenerDatosFormularioCreacionHecho",
       "headers": {
-        "Authorization": "Bearer TOKEN"
+        "Authorization": "Bearer {{tokens.token.value}}"
       },
       "body": {}
     },
@@ -12,7 +17,7 @@
       "method": "POST",
       "endpoint": "/api/ss/Ade/v1/operations/A7B3C941-2E8D-4F6A-9C1B-5D8E2F4A6C70/CrearHecho",
       "headers": {
-        "Authorization": "Bearer TOKEN"
+        "Authorization": "Bearer {{tokens.token.value}}"
       },
       "body": {
         "CrearHechoEntradaDTO": {

@@ -1,10 +1,15 @@
 {
+  "tokens": {
+    "token": {
+      "value": "#bearer_token#"
+    }
+  },
   "api": {
     "buscarPersona": {
       "method": "POST",
       "endpoint": "/api/ss/ADE/v1/operations/F8E2A1B3-4C5D-6E7F-8A9B-0C1D2E3F4A5B/BuscarPersona",
       "headers": {
-        "Authorization": "Bearer TOKEN"
+        "Authorization": "Bearer {{tokens.token.value}}"
       },
       "body": {
         "BuscarPersonaEntradaDTO": {
@@ -139,7 +144,9 @@
                     "action": {
                       "type": "resetForm",
                       "formId": "search",
-                      "preserveFieldIds": ["searchType"]
+                      "preserveFieldIds": [
+                        "searchType"
+                      ]
                     }
                   }
                 },
