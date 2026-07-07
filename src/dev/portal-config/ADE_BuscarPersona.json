@@ -7,7 +7,7 @@
   "api": {
     "buscarPersona": {
       "method": "POST",
-      "endpoint": "/api/ss/ADE/v1/operations/F8E2A1B3-4C5D-6E7F-8A9B-0C1D2E3F4A5B/BuscarPersona",
+      "endpoint": "https://pre-frontapi.pamplona.es/ss/ADE/v1/operations/F8E2A1B3-4C5D-6E7F-8A9B-0C1D2E3F4A5B/BuscarPersona",
       "headers": {
         "Authorization": "Bearer {{tokens.token.value}}"
       },
@@ -202,13 +202,7 @@
                     "type": "link",
                     "props": {
                       "label": "{{item.NombreCompleto}}",
-                      "action": {
-                        "type": "navigateTo",
-                        "pageId": "ficha-persona",
-                        "params": {
-                          "idPersona": "item.Id"
-                        }
-                      }
+                      "href": "<PORTAL_URL_FICHA_PERSONA>?personaId={{item.Id}}"
                     }
                   }
                 ]

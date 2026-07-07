@@ -7,7 +7,7 @@
   "api": {
     "obtenerDatosFormularioCreacionHecho": {
       "method": "POST",
-      "endpoint": "/api/ss/Ade/v1/operations/E2F8A614-3B9C-4D7E-9F21-6A5B8C1D40E7/ObtenerDatosFormularioCreacionHecho",
+      "endpoint": "https://pre-frontapi.pamplona.es/ss/Ade/v1/operations/E2F8A614-3B9C-4D7E-9F21-6A5B8C1D40E7/ObtenerDatosFormularioCreacionHecho",
       "headers": {
         "Authorization": "Bearer {{tokens.token.value}}"
       },
@@ -15,7 +15,7 @@
     },
     "crearHecho": {
       "method": "POST",
-      "endpoint": "/api/ss/Ade/v1/operations/A7B3C941-2E8D-4F6A-9C1B-5D8E2F4A6C70/CrearHecho",
+      "endpoint": "https://pre-frontapi.pamplona.es/ss/Ade/v1/operations/A7B3C941-2E8D-4F6A-9C1B-5D8E2F4A6C70/CrearHecho",
       "headers": {
         "Authorization": "Bearer {{tokens.token.value}}"
       },
@@ -294,10 +294,7 @@
                       "type": "link",
                       "props": {
                         "label": "Cancelar",
-                        "action": {
-                          "type": "navigateTo",
-                          "pageId": "inicio"
-                        }
+                        "href": "<PORTAL_URL_PANTALLA_INICIO>"
                       }
                     }
                   ]

@@ -1,0 +1,36 @@
+{
+  "BuscarBandaSalidaDTO": {
+    "ResultadosBusquedaBandaDTO": [
+      {
+        "Id": 1,
+        "Nombre": "Los Yakuza",
+        "Descripcion": "Banda dedicada a hurtos menores",
+        "FAlta": "20220203"
+      },
+      {
+        "Id": 6,
+        "Nombre": "Los kamikaces",
+        "Descripcion": "Banda peligrosa",
+        "FAlta": "20220224192543",
+        "UAlta": "JRUFOMAR",
+        "Username": "JRUFOMAR"
+      },
+      {
+        "Id": 8,
+        "Nombre": "Los niños",
+        "Descripcion": "Banda juvenil, pequeños hurtos",
+        "FAlta": "20220506084414",
+        "UAlta": "JRUFOMAR",
+        "Username": "JRUFOMAR"
+      },
+      {
+        "Id": 13,
+        "Nombre": "Los moteros de Madrid",
+        "Descripcion": "Banda con actividades ilícitas de Madrid",
+        "FAlta": "20230112103416",
+        "UAlta": "JRUFOMAR",
+        "Username": "JRUFOMAR"
+      }
+    ]
+  }
+}

@@ -1,0 +1,622 @@
+{
+  "tokens": {
+    "token": {
+      "value": "#bearer_token#"
+    }
+  },
+  "api": {
+    "obtenerFichaHecho": {
+      "method": "POST",
+      "endpoint": "https://pre-frontapi.pamplona.es/ss/Ade/v1/operations/E4B82A91-6F3C-4D15-A8E2-9C7F1B3D5E60/ObtenerFichaHecho",
+      "headers": {
+        "Authorization": "Bearer {{tokens.token.value}}"
+      },
+      "body": {
+        "Id": "params.hechoId"
+      }
+    }
+  },
+  "pages": [
+    {
+      "id": "ficha-hecho",
+      "preloads": [
+        {
+          "obtenerFichaHecho": {}
+        }
+      ],
+      "layout": [
+        {
+          "type": "container",
+          "props": {
+            "direction": "row",
+            "align": "center",
+            "justify": "between"
+          },
+          "queryStateFeedback": {
+            "query": "obtenerFichaHecho",
+            "states": {
+              "loading": {
+                "mode": "fallback",
+                "fallback": [
+                  {
+                    "type": "skeleton",
+                    "props": {
+                      "variant": "rect",
+                      "width": "1/3",
+                      "height": "8"
+                    }
+                  }
+                ]
+              },
+              "error": {
+                "mode": "fallback",
+                "fallback": [
+                  {
+                    "type": "alert",
+                    "props": {
+                      "message": "Error al cargar los datos del hecho.",
+                      "type": "danger"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "children": [
+            {
+              "type": "button",
+              "props": {
+                "label": "Volver",
+                "icon": "arrow-left",
+                "action": {
+                  "type": "goBack"
+                }
+              }
+            },
+            {
+              "type": "heading",
+              "props": {
+                "text": "{{queries.obtenerFichaHecho.data.FichaHechoDTO.HechoDatosIdentificativosDTO.ResumenHecho}}",
+                "level": 1
+              }
+            }
+          ]
+        },
+        {
+          "type": "container",
+          "props": {
+            "variant": "card",
+            "gap": "md"
+          },
+          "queryStateFeedback": {
+            "query": "obtenerFichaHecho",
+            "states": {
+              "loading": {
+                "mode": "fallback",
+                "fallback": [
+                  {
+                    "type": "container",
+                    "props": {
+                      "gap": "md"
+                    },
+                    "children": [
+                      {
+                        "type": "skeleton",
+                        "props": {
+                          "variant": "rect",
+                          "width": "1/4",
+                          "height": "6"
+                        }
+                      },
+                      {
+                        "type": "container",
+                        "props": {
+                          "columns": 2,
+                          "gap": "md"
+                        },
+                        "children": [
+                          {
+                            "type": "skeleton",
+                            "props": {
+                              "variant": "rect",
+                              "height": "16",
+                              "rounded": true
+                            }
+                          },
+                          {
+                            "type": "skeleton",
+                            "props": {
+                              "variant": "rect",
+                              "height": "16",
+                              "rounded": true
+                            }
+                          },
+                          {
+                            "type": "skeleton",
+                            "props": {
+                              "variant": "rect",
+                              "height": "16",
+                              "rounded": true
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          },
+          "children": [
+            {
+              "type": "heading",
+              "props": {
+                "text": "Datos identificativos",
+                "level": 2,
+                "icon": "file-text"
+              }
+            },
+            {
+              "type": "container",
+              "props": {
+                "columns": 2,
+                "gap": "md"
+              },
+              "children": [
+                {
+                  "type": "stat",
+                  "props": {
+                    "label": "Lugar",
+                    "value": "{{queries.obtenerFichaHecho.data.FichaHechoDTO.HechoDatosIdentificativosDTO.Lugar}}"
+                  }
+                },
+                {
+                  "type": "stat",
+                  "props": {
+                    "label": "Fecha del hecho",
+                    "value": "{{queries.obtenerFichaHecho.data.FichaHechoDTO.HechoDatosIdentificativosDTO.FechaHecho}}"
+                  }
+                },
+                {
+                  "type": "stat",
+                  "layout": {
+                    "span": 2
+                  },
+                  "props": {
+                    "label": "Resumen",
+                    "value": "{{queries.obtenerFichaHecho.data.FichaHechoDTO.HechoDatosIdentificativosDTO.ResumenHecho}}"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "container",
+          "props": {
+            "variant": "card",
+            "gap": "md"
+          },
+          "queryStateFeedback": {
+            "query": "obtenerFichaHecho",
+            "states": {
+              "loading": {
+                "mode": "fallback",
+                "fallback": [
+                  {
+                    "type": "skeleton",
+                    "props": {
+                      "variant": "rect",
+                      "width": "1/4",
+                      "height": "6"
+                    }
+                  },
+                  {
+                    "type": "container",
+                    "props": {
+                      "columns": 3,
+                      "gap": "md"
+                    },
+                    "children": [
+                      {
+                        "type": "skeleton",
+                        "props": {
+                          "variant": "rect",
+                          "height": "20",
+                          "rounded": true
+                        }
+                      },
+                      {
+                        "type": "skeleton",
+                        "props": {
+                          "variant": "rect",
+                          "height": "20",
+                          "rounded": true
+                        }
+                      },
+                      {
+                        "type": "skeleton",
+                        "props": {
+                          "variant": "rect",
+                          "height": "20",
+                          "rounded": true
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          },
+          "children": [
+            {
+              "type": "heading",
+              "props": {
+                "text": "Personas relacionadas",
+                "level": 2,
+                "icon": "users"
+              }
+            },
+            {
+              "type": "container",
+              "props": {
+                "direction": "row",
+                "gap": "md",
+                "wrap": "wrap"
+              },
+              "children": [
+                {
+                  "type": "repeater",
+                  "props": {
+                    "items": {
+                      "source": "queries.obtenerFichaHecho.data.FichaHechoDTO.PersonasRelacionadasDTO",
+                      "key": "IdPersonasHecho"
+                    },
+                    "template": [
+                      {
+                        "type": "container",
+                        "props": {
+                          "direction": "column",
+                          "gap": "sm",
+                          "variant": "card"
+                        },
+                        "children": [
+                          {
+                            "type": "paragraph",
+                            "props": {
+                              "text": "{{item.NombreCompleto}}"
+                            }
+                          },
+                          {
+                            "type": "container",
+                            "props": {
+                              "direction": "row",
+                              "align": "center",
+                              "gap": "sm"
+                            },
+                            "children": [
+                              {
+                                "type": "badge",
+                                "props": {
+                                  "label": "{{item.TipoImplicacion}}",
+                                  "color": "primary"
+                                }
+                              },
+                              {
+                                "type": "paragraph",
+                                "props": {
+                                  "text": "{{item.DocIdent}}"
+                                }
+                              }
+                            ]
+                          },
+                          {
+                            "type": "link",
+                            "props": {
+                              "label": "Ver ficha",
+                              "href": "<PORTAL_URL_FICHA_PERSONA>?personaId={{item.IdPersona}}"
+                            },
+                            "visibility": {
+                              "reference": "item.IdPersona",
+                              "operator": "isTruthy"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "container",
+          "props": {
+            "variant": "card",
+            "gap": "md"
+          },
+          "queryStateFeedback": {
+            "query": "obtenerFichaHecho",
+            "states": {
+              "loading": {
+                "mode": "fallback",
+                "fallback": [
+                  {
+                    "type": "skeleton",
+                    "props": {
+                      "variant": "text",
+                      "lines": 3
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "children": [
+            {
+              "type": "heading",
+              "props": {
+                "text": "Direcciones",
+                "level": 2,
+                "icon": "map-pin"
+              }
+            },
+            {
+              "type": "repeater",
+              "props": {
+                "items": {
+                  "source": "queries.obtenerFichaHecho.data.FichaHechoDTO.DireccionesDTO",
+                  "key": "IdDireccionEntidad"
+                },
+                "template": [
+                  {
+                    "type": "container",
+                    "props": {
+                      "direction": "row",
+                      "align": "center",
+                      "gap": "md"
+                    },
+                    "children": [
+                      {
+                        "type": "paragraph",
+                        "props": {
+                          "text": "{{item.Direccion}}"
+                        }
+                      },
+                      {
+                        "type": "badge",
+                        "props": {
+                          "label": "Principal",
+                          "color": "success"
+                        },
+                        "visibility": {
+                          "reference": "item.EsPrincipal",
+                          "operator": "equals",
+                          "value": true
+                        }
+                      },
+                      {
+                        "type": "badge",
+                        "props": {
+                          "label": "Favorito",
+                          "color": "warning"
+                        },
+                        "visibility": {
+                          "reference": "item.Favorito",
+                          "operator": "equals",
+                          "value": true
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "type": "container",
+          "props": {
+            "variant": "card",
+            "gap": "md"
+          },
+          "queryStateFeedback": {
+            "query": "obtenerFichaHecho",
+            "states": {
+              "loading": {
+                "mode": "fallback",
+                "fallback": [
+                  {
+                    "type": "skeleton",
+                    "props": {
+                      "variant": "text",
+                      "lines": 3
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "children": [
+            {
+              "type": "heading",
+              "props": {
+                "text": "Vehículos",
+                "level": 2,
+                "icon": "car"
+              }
+            },
+            {
+              "type": "repeater",
+              "props": {
+                "items": {
+                  "source": "queries.obtenerFichaHecho.data.FichaHechoDTO.VehiculosDTO",
+                  "key": "IdVehiculoEntidad"
+                },
+                "template": [
+                  {
+                    "type": "container",
+                    "props": {
+                      "variant": "card",
+                      "columns": 3,
+                      "gap": "sm"
+                    },
+                    "children": [
+                      {
+                        "type": "stat",
+                        "props": {
+                          "label": "Matrícula",
+                          "value": "{{item.Matricula}}"
+                        }
+                      },
+                      {
+                        "type": "stat",
+                        "props": {
+                          "label": "Marca",
+                          "value": "{{item.Marca}}"
+                        }
+                      },
+                      {
+                        "type": "stat",
+                        "props": {
+                          "label": "Modelo",
+                          "value": "{{item.Modelo}}"
+                        }
+                      },
+                      {
+                        "type": "stat",
+                        "props": {
+                          "label": "Color",
+                          "value": "{{item.Color}}"
+                        }
+                      },
+                      {
+                        "type": "stat",
+                        "layout": {
+                          "span": 2
+                        },
+                        "props": {
+                          "label": "Bastidor",
+                          "value": "{{item.Bastidor}}"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "type": "container",
+          "props": {
+            "variant": "card",
+            "gap": "md"
+          },
+          "queryStateFeedback": {
+            "query": "obtenerFichaHecho",
+            "states": {
+              "loading": {
+                "mode": "fallback",
+                "fallback": [
+                  {
+                    "type": "skeleton",
+                    "props": {
+                      "variant": "rect",
+                      "width": "1/4",
+                      "height": "6"
+                    }
+                  },
+                  {
+                    "type": "container",
+                    "props": {
+                      "columns": 3,
+                      "gap": "md"
+                    },
+                    "children": [
+                      {
+                        "type": "skeleton",
+                        "props": {
+                          "variant": "rect",
+                          "height": "32",
+                          "rounded": true
+                        }
+                      },
+                      {
+                        "type": "skeleton",
+                        "props": {
+                          "variant": "rect",
+                          "height": "32",
+                          "rounded": true
+                        }
+                      },
+                      {
+                        "type": "skeleton",
+                        "props": {
+                          "variant": "rect",
+                          "height": "32",
+                          "rounded": true
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          },
+          "children": [
+            {
+              "type": "heading",
+              "props": {
+                "text": "Fotos",
+                "level": 2,
+                "icon": "image"
+              }
+            },
+            {
+              "type": "container",
+              "props": {
+                "columns": {
+                  "base": 2,
+                  "md": 3,
+                  "lg": 4
+                },
+                "gap": "md"
+              },
+              "children": [
+                {
+                  "type": "repeater",
+                  "props": {
+                    "items": {
+                      "source": "queries.obtenerFichaHecho.data.FichaHechoDTO.Medios",
+                      "key": "$index"
+                    },
+                    "template": [
+                      {
+                        "type": "image",
+                        "props": {
+                          "alt": "Foto del hecho",
+                          "fetch": {
+                            "url": "https://pre-frontapi.pamplona.es/ss/Ade/v1/operations/C776EC3B-8809-48F3-BD81-48467D7B6074/ObtenerMedio/Binary",
+                            "method": "POST",
+                            "headers": {
+                              "Authorization": "Bearer {{tokens.token.value}}"
+                            },
+                            "body": {
+                              "PublicId": "item"
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
