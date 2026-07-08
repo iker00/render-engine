@@ -95,7 +95,7 @@ describe('executeRuntimeBinaryFetch', () => {
     const result = await executeRuntimeBinaryFetch({
       fetchConfig,
       state: baseState,
-      iterationContext: { item: { id: '42' }, key: '42' },
+      iterationContext: { item: { id: '42' }, key: '42', itemIndex: 0 },
       fetch: mockFetch,
     })
 
@@ -116,7 +116,7 @@ describe('executeRuntimeBinaryFetch', () => {
     const result = await executeRuntimeBinaryFetch({
       fetchConfig,
       state: baseState,
-      iterationContext: { item: { id: '42' }, key: '42' },
+      iterationContext: { item: { id: '42' }, key: '42', itemIndex: 0 },
       fetch: mockFetch,
     })
 

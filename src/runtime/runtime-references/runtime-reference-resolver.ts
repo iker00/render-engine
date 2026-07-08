@@ -20,6 +20,7 @@ export interface RuntimeIterationContext {
   item: unknown
   key: string
   itemKey?: string
+  itemIndex: number
 }
 
 interface ResolveRuntimeReferenceOptions {
@@ -262,6 +263,19 @@ function resolveSupportedReferenceValue(
         return {
           found: true,
           value: iterationContext.itemKey,
+        } as const
+      }
+
+      return {
+        found: false,
+      } as const
+    }
+
+    if (reference.path.length === 1 && reference.path[0] === '$index') {
+      if (iterationContext?.itemIndex !== undefined) {
+        return {
+          found: true,
+          value: iterationContext.itemIndex,
         } as const
       }
 
