@@ -97,6 +97,8 @@ const iterationContext = {
     tags: ['news', 'featured'],
     stats: null,
   },
+  key: 'post-1',
+  itemIndex: 0,
 }
 
 const interpolationRuntimeState: RuntimeState = {
@@ -1065,7 +1067,7 @@ describe('Runtime reference resolution', () => {
     })
 
     it('resolves item.$key to the dictionary key when the iteration context provides itemKey', () => {
-      const iterationContextWithKey = { item: { name: 'Ada' }, key: 'entry-1', itemKey: 'vinfopol' }
+      const iterationContextWithKey = { item: { name: 'Ada' }, key: 'entry-1', itemKey: 'vinfopol', itemIndex: 0 }
 
       expect(resolveRuntimeReference('item.$key', runtimeState, { iterationContext: iterationContextWithKey })).toEqual({
         status: 'resolved',
@@ -1075,7 +1077,7 @@ describe('Runtime reference resolution', () => {
     })
 
     it('resolves item.$key as missing when iteration context does not provide itemKey (array source)', () => {
-      const iterationContextWithoutKey = { item: { name: 'Ada' }, key: 'entry-1' }
+      const iterationContextWithoutKey = { item: { name: 'Ada' }, key: 'entry-1', itemIndex: 0 }
 
       expect(resolveRuntimeReference('item.$key', runtimeState, { iterationContext: iterationContextWithoutKey })).toEqual({
         status: 'missing',
@@ -1092,7 +1094,7 @@ describe('Runtime reference resolution', () => {
 
     it('degrades item.$key to empty string in text surfaces when itemKey is absent', () => {
       const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
-      const iterationContextWithoutKey = { item: { name: 'Ada' }, key: 'entry-1' }
+      const iterationContextWithoutKey = { item: { name: 'Ada' }, key: 'entry-1', itemIndex: 0 }
 
       expect(
         resolveRuntimeVisibleValue('item.$key', runtimeState, 'heading.props.text', {
@@ -1104,7 +1106,7 @@ describe('Runtime reference resolution', () => {
     })
 
     it('resolves {{item.$key}} interpolated as the dictionary key string', () => {
-      const iterationContextWithKey = { item: { name: 'Ada' }, key: 'entry-1', itemKey: 'vinfopol' }
+      const iterationContextWithKey = { item: { name: 'Ada' }, key: 'entry-1', itemKey: 'vinfopol', itemIndex: 0 }
 
       expect(
         resolveRuntimeVisibleValue('Source: {{item.$key}}', runtimeState, 'heading.props.text', {
@@ -1118,6 +1120,7 @@ describe('Runtime reference resolution', () => {
         item: { name: 'Ada', $key: 'internal-value' },
         key: 'entry-1',
         itemKey: 'vinfopol',
+        itemIndex: 0,
       }
 
       expect(
@@ -1507,6 +1510,62 @@ describe('Runtime reference resolution', () => {
       expect(
         resolveRuntimeVisibleValue('Bearer: {{tokens.session.value}}', stateWithReadyToken, 'heading.props.text'),
       ).toBe('Bearer: abc')
+    })
+  })
+
+  describe('T0092-T3 item.$index parser and resolver contract', () => {
+    it('classifies item.$index as a supported reference when iteration context is enabled', () => {
+      expect(parseRuntimeReference('item.$index', { allowItemReference: true })).toMatchObject({
+        kind: 'reference',
+        status: 'supported',
+        namespace: 'item',
+        path: ['$index'],
+      })
+    })
+
+    it('classifies item.$index as unsupported outside explicit iteration context', () => {
+      expect(parseRuntimeReference('item.$index', { allowItemReference: false })).toMatchObject({
+        kind: 'reference',
+        status: 'unsupported',
+        namespace: 'item',
+        path: ['$index'],
+      })
+    })
+
+    it('classifies item.$index.algo as invalid', () => {
+      expect(parseRuntimeReference('item.$index.algo', { allowItemReference: true })).toMatchObject({
+        kind: 'reference',
+        status: 'invalid',
+        namespace: 'item',
+      })
+    })
+
+    it('resolves item.$index to the numeric index with precedence over a literal $index property', () => {
+      const iterationContextWithIndex = {
+        item: { $index: 'shadow' },
+        key: '0',
+        itemIndex: 2,
+      }
+
+      expect(resolveRuntimeReference('item.$index', runtimeState, { iterationContext: iterationContextWithIndex })).toEqual({
+        status: 'resolved',
+        value: 2,
+        reference: parseRuntimeReference('item.$index', { allowItemReference: true }),
+      })
+    })
+
+    it('resolves item.$index to 0 when itemIndex is 0', () => {
+      const iterationContextWithZeroIndex = {
+        item: {},
+        key: '0',
+        itemIndex: 0,
+      }
+
+      expect(resolveRuntimeReference('item.$index', runtimeState, { iterationContext: iterationContextWithZeroIndex })).toEqual({
+        status: 'resolved',
+        value: 0,
+        reference: parseRuntimeReference('item.$index', { allowItemReference: true }),
+      })
     })
   })
 

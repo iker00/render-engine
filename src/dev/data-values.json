@@ -4,5 +4,11 @@
       "title": "test",
       "body": "This is a test post"
     }
+  ],
+  "indexTest": [
+    "a",
+    "b",
+    "c",
+    "d"
   ]
 }
