@@ -1,0 +1,369 @@
+{
+  "FichaBandaDTO": {
+    "Id": 1,
+    "BandaDatosIdentificativosDTO": {
+      "Nombre": "Los Yakuza",
+      "Descripcion": "Banda dedicada a hurtos menores",
+      "Direccion": "PLAZA CONSISTORIAL s/n, 2º, 31010 - BARAÑAIN (NAVARRA)"
+    },
+    "PersonasRelacionadasDTO": [
+      {
+        "IdPersona": 2,
+        "IdPersonasBanda": 2,
+        "Nombre": "Manuel",
+        "Apellido1": "Benitez",
+        "Apellido2": "Ruíz",
+        "NombreCompleto": "Manuel Benitez Ruíz",
+        "DocIdent": "38548716A"
+      },
+      {
+        "IdPersona": 3,
+        "IdPersonasBanda": 3,
+        "Nombre": "Fernando (Yakuza)",
+        "Apellido1": "Castro",
+        "Apellido2": "Roldán",
+        "NombreCompleto": "Fernando (Yakuza) Castro Roldán"
+      },
+      {
+        "IdPersona": 1,
+        "IdPersonasBanda": 59,
+        "Nombre": "Antonio Manuel",
+        "Apellido1": "Marín",
+        "Apellido2": "García",
+        "NombreCompleto": "Antonio Manuel Marín García",
+        "DocIdent": "73424513A"
+      }
+    ],
+    "DireccionesDTO": [
+      {
+        "IdDireccionEntidad": 157,
+        "Direccion": "PLAZA CONSISTORIAL s/n, 2º, 31010 - BARAÑAIN (NAVARRA)",
+        "EsPrincipal": true,
+        "Favorito": true
+      },
+      {
+        "IdDireccionEntidad": 158,
+        "Direccion": "AVENIDA BAJA NAVARRA 2, 31003 - Pamplona / Iruña (NAVARRA)",
+        "Favorito": true
+      },
+      {
+        "IdDireccionEntidad": 146,
+        "Direccion": "AVENIDA BAYONA 1 3, 31011 - Pamplona / Iruña (NAVARRA)",
+        "Favorito": true
+      },
+      {
+        "IdDireccionEntidad": 91,
+        "Direccion": "PLAZA DE LOS FUEROS 4, PLANTA BAJA E4 Ñ 1, 31514 - VALTIERRA (NAVARRA)",
+        "Favorito": true
+      },
+      {
+        "IdDireccionEntidad": 90,
+        "Direccion": "CALLE COMUNIDAD DE NAVARRA 2, PLANTA BAJA, 31010 - BARAÑAIN (NAVARRA)",
+        "Favorito": true
+      },
+      {
+        "IdDireccionEntidad": 89,
+        "Direccion": "AVENIDA CARLOS III 2 A E5 S05 Ñ, 31002 - Pamplona / Iruña (NAVARRA)",
+        "Favorito": true
+      },
+      {
+        "IdDireccionEntidad": 163,
+        "Direccion": "AVENIDA BAYONA 1 BIS, 31011 - Pamplona / Iruña (NAVARRA)"
+      },
+      {
+        "IdDireccionEntidad": 162,
+        "Direccion": "AVENIDA CONDE OLIVETO 3, 31003 - Pamplona / Iruña (NAVARRA)"
+      },
+      {
+        "IdDireccionEntidad": 161,
+        "Direccion": "AVENIDA CONDE OLIVETO 1, 31003 - Pamplona / Iruña (NAVARRA)"
+      },
+      {
+        "IdDireccionEntidad": 160,
+        "Direccion": "AVENIDA BAYONA 0 B, 31008 - Pamplona / Iruña (NAVARRA)"
+      },
+      {
+        "IdDireccionEntidad": 159,
+        "Direccion": "AVENIDA BARAÑAIN 0, - Pamplona / Iruña (NAVARRA)"
+      },
+      {
+        "IdDireccionEntidad": 147,
+        "Direccion": "CALLE SAN PEDRO 45, PLANTA BAJA, 31797 - ULTZAMA                        (NAVARRA)"
+      },
+      {
+        "IdDireccionEntidad": 92,
+        "Direccion": "CALLE SAN ANDRES 14, PLANTA BAJA, 31280 - ANCIN (NAVARRA)"
+      }
+    ],
+    "VehiculosDTO": [
+      {
+        "IdVehiculoEntidad": 27,
+        "Matricula": "8989JHU",
+        "Marca": "Opel",
+        "Modelo": "Scort",
+        "Color": "Rojo",
+        "Bastidor": "Bdsdfsdfafasd",
+        "EsPrincipal": true,
+        "Favorito": true
+      },
+      {
+        "IdVehiculoEntidad": 8,
+        "Matricula": "4000BXL",
+        "Marca": "OPEL",
+        "Modelo": "ZAFIRA",
+        "Color": "NO DISPONIBLE",
+        "Bastidor": "W0L0TGF7522221625",
+        "Favorito": true
+      },
+      {
+        "IdVehiculoEntidad": 7,
+        "Matricula": "0194FPY",
+        "Marca": "SKODA",
+        "Modelo": "FABIA 1.4 5V",
+        "Color": "NO DISPONIBLE",
+        "Bastidor": "TMBNC26Y064601903",
+        "Favorito": true
+      }
+    ],
+    "HechosDTO": [
+      {
+        "Id": 1,
+        "Lugar": "Hurto menor 8",
+        "ResumenHecho": "Hurto menor modificado",
+        "FechaHecho": "07/02/2022 0:00"
+      },
+      {
+        "Id": 2,
+        "Lugar": "Robo con violencia",
+        "ResumenHecho": "Robo plaza mayor",
+        "FechaHecho": "07/02/2022 0:00"
+      },
+      {
+        "Id": 1675,
+        "Lugar": "CTRA. CEMENTERIO 1",
+        "ResumenHecho": "FELICITACIÓN A CIUDADANA EN EL DÍA DEL PATRÓN DE LA POLICÍA.\r\n\r\nEl día 02 de junio se produjo un atropello con resultado de lesiones de gravedad, atestado nº 1197-2019.\r\nEn dicho atropello Dª. JENNIFER HERNÁNDEZ MORENO, con DNI nº 72801161C y teléfono de contacto 626802434, estuvo en todo momento, dando ánimos y apoyo moral a la peatona atropellada. La situación era muy complicada y, a pesar de ello, Dª. Jennifer Hernández demostrando una gran altura moral, estuvo en todo momento pendiente de la peatona atropellada . La peatona quedó especialmente agradecida a dicha ciudadana. \r\nEs por ello que por parte de éste equipo instructor se solicita que, el día del patrón de la policía municipal, Dª. Jennifer Hernández García sea públicamente felicitada.",
+        "FechaHecho": "28/07/2022 12:09"
+      },
+      {
+        "Id": 21,
+        "Lugar": "C/ GAYARRE, JULIAN ",
+        "ResumenHecho": "ATESTADOS JUDICIALES -  Juzgado de Guardia",
+        "FechaHecho": "25/07/2022 12:10"
+      },
+      {
+        "Id": 11839,
+        "Lugar": "C/ ASTOBIZKAR, MONTE 1",
+        "ResumenHecho": "PROBLEMAS ENTRE INQUILINOS DE VIVIENDA",
+        "FechaHecho": "28/07/2022 12:13"
+      },
+      {
+        "Id": 12000,
+        "Lugar": "C/ ASTOBIZKAR, MONTE 1",
+        "ResumenHecho": "PROBLEMAS ENTRE INQUILINOS DE VIVIENDA",
+        "FechaHecho": "28/07/2022 12:13"
+      },
+      {
+        "Id": 12041,
+        "Lugar": "C/ ASTOBIZKAR, MONTE 1",
+        "ResumenHecho": "PROBLEMAS ENTRE INQUILINOS DE VIVIENDA",
+        "FechaHecho": "28/07/2022 12:13"
+      },
+      {
+        "Id": 12105,
+        "Lugar": "C/ ASTOBIZKAR, MONTE 1",
+        "ResumenHecho": "PROBLEMAS ENTRE INQUILINOS DE VIVIENDA",
+        "FechaHecho": "28/07/2022 12:13"
+      },
+      {
+        "Id": 15459,
+        "Lugar": "C/ UREDERRA, RIO  2",
+        "ResumenHecho": "PERSONA GOLPEANDO PUERTA EN INTERIOR COMUNIDAD",
+        "FechaHecho": "20/10/2022 9:51"
+      },
+      {
+        "Id": 15460,
+        "Lugar": "C/ YANGUAS Y MIRANDA ",
+        "ResumenHecho": "DAÑOS A MOTOCICLETA.",
+        "FechaHecho": "20/10/2022 9:53"
+      },
+      {
+        "Id": 15461,
+        "Lugar": "PL MUNARRIZ, FELISA ",
+        "ResumenHecho": "ACTA DE APREHENSIÓN DE DROGA",
+        "FechaHecho": "20/10/2022 9:55"
+      },
+      {
+        "Id": 15462,
+        "Lugar": "C/ URROBI, RIO  6",
+        "ResumenHecho": "3 denuncias sala de juegos",
+        "FechaHecho": "20/10/2022 10:01"
+      },
+      {
+        "Id": 16491,
+        "Lugar": "VUELTA DEL CASTILLO (BANCO4)",
+        "ResumenHecho": "IDENTIFICACIÓN DE JOVENES 4",
+        "FechaHecho": "19/01/2024 9:32"
+      },
+      {
+        "Id": 16513,
+        "Lugar": "Plaza mayor",
+        "ResumenHecho": "Banda juvenil estafando a una pareja de ancianos",
+        "FechaHecho": "10/09/2024 8:54"
+      },
+      {
+        "Id": 16514,
+        "Lugar": "Plaza nueva",
+        "ResumenHecho": "Agresión sexual a menor",
+        "FechaHecho": "10/09/2024 9:10"
+      },
+      {
+        "Id": 16515,
+        "Lugar": "Calle Río",
+        "ResumenHecho": "Estafa en el teatro",
+        "FechaHecho": "10/09/2024 9:14"
+      },
+      {
+        "Id": 16517,
+        "Lugar": "La tercera y última intervención, que acabará en 2025, es también la de mayor importe que resta por realizar. Consiste en la sustitución de calderas de producción de agua caliente, así como los elementos necesarios para su correcto funcionamiento y para ello está previsto un presupuesto de 271.423 euros, con un plazo de ejecución de 5 meses. Ya está redactado el proyecto de sustitución firmado por AM Ingenieros, S.L y próximamente Pamplona Centro Histórico (PCH) licitará las obras.",
+        "ResumenHecho": "Piscina 34º y cubiertas, ya intervenidas\r\nHasta la fecha el Consistorio ha realizado una inversión de 521.552 euros en varias intervenciones que se desglosan en 419.751 euros para la piscina de 34º; 38.459 euros en la reparación de la zona de cubierta de ese vaso y 63.342 euros en el resto de actuaciones. La intervención más importante, las obras en la piscina a 34º, ha supuesto la renovación del sistema de climatización. En general las cubiertas presentan problemas en la impermeabilización, habiéndose rehabilitado la cubierta del Edificio 3 en su totalidad y, en el Edificio 2, la zona de la cubierta sobre la piscina de 34º. \r\n\r\nPara el vaso de aquagym y vaso de pileta, se ha sustituido la centralita única que compartían ambos vasos por una con dos mezcladoras independientes (frente a la anterior que controlaba de forma simultanea e igual aquagym y pileta) lo que permite ajustar los parámetros en cada vaso en función de sus necesidades específicas, ya que ambos vasos tienen afluencias de usuarios y actividades muy diferentes. La centralita controla los niveles de cloro, pH y otros parámetros del agua. Además, se ha sustituido una bomba e intercambiador de ACS que se había agotado su vida útil.",
+        "FechaHecho": "01/10/2024 12:22"
+      },
+      {
+        "Id": 16539,
+        "Lugar": "AVENIDA BAJA NAVARRA 2,   C",
+        "ResumenHecho": "jlkjljlkjjk",
+        "FechaHecho": "10/10/2024 13:13"
+      },
+      {
+        "Id": 16540,
+        "Lugar": "prueba 1",
+        "ResumenHecho": "prueba 1",
+        "FechaHecho": "10/10/2024 13:18"
+      },
+      {
+        "Id": 16541,
+        "Lugar": "prueba 2",
+        "ResumenHecho": "prueba 2",
+        "FechaHecho": "10/10/2024 13:18"
+      },
+      {
+        "Id": 16542,
+        "Lugar": "prueba 3",
+        "ResumenHecho": "prueba 3",
+        "FechaHecho": "10/10/2024 13:20"
+      },
+      {
+        "Id": 16543,
+        "Lugar": "prueba 4",
+        "ResumenHecho": "prueba 4",
+        "FechaHecho": "10/10/2024 13:20"
+      },
+      {
+        "Id": 16544,
+        "Lugar": "prueba 5",
+        "ResumenHecho": "prueba 5",
+        "FechaHecho": "10/10/2024 13:23"
+      },
+      {
+        "Id": 16545,
+        "Lugar": "prueba 6",
+        "ResumenHecho": "prueba 6",
+        "FechaHecho": "10/10/2024 13:24"
+      },
+      {
+        "Id": 16546,
+        "Lugar": "lkj",
+        "ResumenHecho": "ljj",
+        "FechaHecho": "10/10/2024 13:37"
+      },
+      {
+        "Id": 16547,
+        "Lugar": "prueba 7",
+        "ResumenHecho": "prueba 7",
+        "FechaHecho": "10/10/2024 13:49"
+      },
+      {
+        "Id": 16548,
+        "Lugar": "prueba 8",
+        "ResumenHecho": "prueba 8",
+        "FechaHecho": "10/10/2024 13:50"
+      },
+      {
+        "Id": 16549,
+        "Lugar": "prueba 9 Mod",
+        "ResumenHecho": "prueba 9",
+        "FechaHecho": "10/10/2024 13:51"
+      },
+      {
+        "Id": 16550,
+        "Lugar": "prueba 10",
+        "ResumenHecho": "prueba 10",
+        "FechaHecho": "10/10/2024 14:10"
+      },
+      {
+        "Id": 16551,
+        "Lugar": "prueba 11",
+        "ResumenHecho": "prueba 11",
+        "FechaHecho": "10/10/2024 14:11"
+      },
+      {
+        "Id": 16552,
+        "Lugar": "AVENIDA BAJA NAVARRA 2,   Ñ 565",
+        "ResumenHecho": "jlkjkjjkjkj",
+        "FechaHecho": "10/10/2024 14:42"
+      },
+      {
+        "Id": 16553,
+        "Lugar": "jlkjk",
+        "ResumenHecho": "lkjlkjlkj",
+        "FechaHecho": "10/10/2024 14:42"
+      },
+      {
+        "Id": 16554,
+        "Lugar": "kjlk",
+        "ResumenHecho": "jlkjlkj",
+        "FechaHecho": "11/10/2024 7:45"
+      },
+      {
+        "Id": 16555,
+        "Lugar": "jlkjk",
+        "ResumenHecho": "klj",
+        "FechaHecho": "11/10/2024 7:52"
+      },
+      {
+        "Id": 16556,
+        "Lugar": "jlkjlkj",
+        "ResumenHecho": "kjlj",
+        "FechaHecho": "11/10/2024 7:53"
+      },
+      {
+        "Id": 16557,
+        "Lugar": "lkj",
+        "ResumenHecho": "lkj",
+        "FechaHecho": "11/10/2024 7:59"
+      },
+      {
+        "Id": 16558,
+        "Lugar": "lkj",
+        "ResumenHecho": "lkj",
+        "FechaHecho": "11/10/2024 10:14"
+      },
+      {
+        "Id": 16559,
+        "Lugar": "lkj",
+        "ResumenHecho": "lkjkjljpopoipokkkk",
+        "FechaHecho": "11/10/2024 10:15"
+      }
+    ],
+    "Medios": [
+      "124b7ad6-58ab-47c3-a47c-924fef0da7f3",
+      "83b61d7a-555b-4935-9cbd-7571666870f4",
+      "d3acb6f3-44f3-4705-8275-c7ba843ddc47",
+      "fe2a7b36-ed88-4b58-b273-3c2cff0de37e",
+      "5a804159-9b02-4c65-8686-45d0ef15cf72",
+      "a62fd211-a316-4984-bd8a-21014c92805d",
+      "6483f0ea-1472-4634-848f-8a3ce8d89c0e",
+      "866c896b-db23-425d-b563-fbb3318fb74d"
+    ]
+  }
+}

@@ -11,7 +11,9 @@
       "headers": {
         "Authorization": "Bearer {{tokens.token.value}}"
       },
-      "body": {}
+      "body": {
+        "NoValidarPermisosTramiteWeb": false
+      }
     },
     "crearHecho": {
       "method": "POST",
@@ -91,7 +93,7 @@
                         "type": "alert",
                         "props": {
                           "title": "Error al cargar",
-                          "message": "Error al cargar los datos del formulario.",
+                          "message": "{{queries.obtenerDatosFormularioCreacionHecho.error.message}}",
                           "type": "danger"
                         }
                       }
@@ -140,7 +142,7 @@
                       "props": {
                         "fieldId": "horaHecho",
                         "label": "Hora hecho",
-                        "placeholder": "HH:mm",
+                        "inputType": "time",
                         "validations": {
                           "required": true
                         }
@@ -254,13 +256,7 @@
                             "type": "link",
                             "props": {
                               "label": "Ver ficha",
-                              "action": {
-                                "type": "navigateTo",
-                                "pageId": "ficha-hecho",
-                                "params": {
-                                  "hechoId": "queries.crearHecho.data.CrearHechoSalidaDTO.HechoCreadoDTO.Id"
-                                }
-                              }
+                              "href": "/carpetaciudadana/detallegenerico.aspx?tram=427&sec=19/#?hechoId={{queries.crearHecho.data.CrearHechoSalidaDTO.HechoCreadoDTO.Id}}"
                             }
                           }
                         ]
@@ -294,7 +290,7 @@
                       "type": "link",
                       "props": {
                         "label": "Cancelar",
-                        "href": "<PORTAL_URL_PANTALLA_INICIO>"
+                        "href": "/carpetaciudadana/detallegenerico.aspx?tram=427&sec=16"
                       }
                     }
                   ]
@@ -305,5 +301,6 @@
         }
       ]
     }
-  ]
+  ],
+  "initialPage": "crear-hecho"
 }

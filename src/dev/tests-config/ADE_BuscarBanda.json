@@ -105,6 +105,19 @@
                       "label": "Descripción",
                       "value": "{{item.Descripcion}}"
                     }
+                  },
+                  {
+                    "type": "link",
+                    "props": {
+                      "label": "Ver ficha",
+                      "action": {
+                        "type": "navigateTo",
+                        "pageId": "ficha-banda",
+                        "params": {
+                          "bandaId": "item.Id"
+                        }
+                      }
+                    }
                   }
                 ]
               }

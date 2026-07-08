@@ -105,6 +105,13 @@
                       "label": "Descripción",
                       "value": "{{item.Descripcion}}"
                     }
+                  },
+                  {
+                    "type": "link",
+                    "props": {
+                      "label": "Ver ficha",
+                      "href": "/carpetaciudadana/detallegenerico.aspx?tram=427&sec=18/#?bandaId={{item.Id}}"
+                    }
                   }
                 ]
               }

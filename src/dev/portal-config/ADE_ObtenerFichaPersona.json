@@ -1,7 +1,7 @@
 {
   "tokens": {
     "token": {
-      "value": "#bearer_token#"
+      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJFbmNVc3VhcmlvIjoiNThkZTNkM2YwNzExNmIyMzY1NmY0ZGNkZWE1MDcwMGZiMGEwNmVjOWUxNDVlOGI3NDUzYWJkYzYxNmVhN2IyYyIsIkVuY0d1aWQiOiJETFQzTzAyK1YvNkl0TE9BQXdjV0hFZTJqNVBFa2MybHYzR3cvZUJTVXozMHFNeUNWc053b3h5N3JCajkycHZqIiwiTG9naW5BdCI6IjIwMjYtMDctMDdUMDY6MTU6MjAuMzM3MDAwMFoiLCJDcmVhdGVkQXQiOiIyMDI2LTA3LTA3VDA2OjE1OjIwLjMzNzAwMDBaIiwiRXhwaXJlc0F0IjoiMjAyNi0wNy0wN1QwNjo0NToyMC4zMzcwMDAwWiIsIm5iZiI6MTc4MzQwNDkyMCwiZXhwIjoxNzgzNDA2NzIwLCJpYXQiOjE3ODM0MDQ5MjAsImlzcyI6Imh0dHBzOi8vYW5pbXNhLmVzIiwiYXVkIjoiand0QXV0aGVudGljYXRpb24ifQ.45nhwqjpRQKGiej3nNCRWN4y270bGWcGGUyUz_9pvOc"
     }
   },
   "api": {
@@ -380,7 +380,7 @@
                             "type": "link",
                             "props": {
                               "label": "Ver ficha",
-                              "href": "<PORTAL_URL_FICHA_PERSONA>?personaId={{item.Id}}"
+                              "href": "/carpetaciudadana/detallegenerico.aspx?tram=427&sec=15/#?personaId={{item.Id}}"
                             }
                           }
                         ]

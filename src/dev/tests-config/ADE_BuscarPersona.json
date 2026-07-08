@@ -206,7 +206,7 @@
                         "type": "navigateTo",
                         "pageId": "ficha-persona",
                         "params": {
-                          "idPersona": "item.Id"
+                          "personaId": "item.Id"
                         }
                       }
                     }

@@ -125,7 +125,10 @@
                   "props": {
                     "label": "Consulta de bandas",
                     "icon": "shield",
-                    "href": "#"
+                    "action": {
+                      "type": "navigateTo",
+                      "pageId": "buscar-banda"
+                    }
                   },
                   "visibility": {
                     "reference": "queries.obtenerPermisosPantallaInicio.data.PermisosPantallaInicioDTO.PermisoConsultaBandas",

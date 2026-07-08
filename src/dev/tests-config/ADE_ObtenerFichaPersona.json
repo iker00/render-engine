@@ -12,7 +12,7 @@
         "Authorization": "Bearer {{tokens.token.value}}"
       },
       "body": {
-        "Id": "params.idPersona"
+        "Id": "params.personaId"
       }
     }
   },
@@ -384,7 +384,7 @@
                                 "type": "navigateTo",
                                 "pageId": "ficha-persona",
                                 "params": {
-                                  "idPersona": "item.Id"
+                                  "personaId": "item.Id"
                                 }
                               }
                             }

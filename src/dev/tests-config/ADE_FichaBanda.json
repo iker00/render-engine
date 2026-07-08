@@ -5,23 +5,31 @@
     }
   },
   "api": {
-    "obtenerFichaHecho": {
+    "obtenerFichaBanda": {
       "method": "POST",
-      "endpoint": "https://pre-frontapi.pamplona.es/ss/Ade/v1/operations/E4B82A91-6F3C-4D15-A8E2-9C7F1B3D5E60/ObtenerFichaHecho",
+      "endpoint": "/api/ss/Ade/v1/operations/4959D4E9-5B07-4798-82A3-1E341C6693C8/ObtenerFichaBanda",
       "headers": {
         "Authorization": "Bearer {{tokens.token.value}}"
       },
       "body": {
-        "Id": "params.hechoId"
+        "Id": "params.bandaId"
       }
     }
   },
   "pages": [
     {
-      "id": "ficha-hecho",
+      "id": "ficha-banda",
       "preloads": [
         {
-          "obtenerFichaHecho": {}
+          "obtenerFichaBanda": {
+            "body": {
+              "Id": "params.bandaId"
+            },
+            "when": {
+              "reference": "params.bandaId",
+              "operator": "isTruthy"
+            }
+          }
         }
       ],
       "layout": [
@@ -33,7 +41,7 @@
             "justify": "between"
           },
           "queryStateFeedback": {
-            "query": "obtenerFichaHecho",
+            "query": "obtenerFichaBanda",
             "states": {
               "loading": {
                 "mode": "fallback",
@@ -54,7 +62,7 @@
                   {
                     "type": "alert",
                     "props": {
-                      "message": "Error al cargar los datos del hecho.",
+                      "message": "Error al cargar los datos de la banda.",
                       "type": "danger"
                     }
                   }
@@ -76,8 +84,9 @@
             {
               "type": "heading",
               "props": {
-                "text": "{{queries.obtenerFichaHecho.data.FichaHechoDTO.HechoDatosIdentificativosDTO.ResumenHecho}}",
-                "level": 1
+                "text": "{{queries.obtenerFichaBanda.data.FichaBandaDTO.BandaDatosIdentificativosDTO.Nombre}}",
+                "level": 1,
+                "icon": "users"
               }
             }
           ]
@@ -89,7 +98,7 @@
             "gap": "md"
           },
           "queryStateFeedback": {
-            "query": "obtenerFichaHecho",
+            "query": "obtenerFichaBanda",
             "states": {
               "loading": {
                 "mode": "fallback",
@@ -133,6 +142,9 @@
                           },
                           {
                             "type": "skeleton",
+                            "layout": {
+                              "span": 2
+                            },
                             "props": {
                               "variant": "rect",
                               "height": "16",
@@ -153,7 +165,7 @@
               "props": {
                 "text": "Datos identificativos",
                 "level": 2,
-                "icon": "file-text"
+                "icon": "users"
               }
             },
             {
@@ -166,15 +178,15 @@
                 {
                   "type": "stat",
                   "props": {
-                    "label": "Lugar",
-                    "value": "{{queries.obtenerFichaHecho.data.FichaHechoDTO.HechoDatosIdentificativosDTO.Lugar}}"
+                    "label": "Nombre",
+                    "value": "{{queries.obtenerFichaBanda.data.FichaBandaDTO.BandaDatosIdentificativosDTO.Nombre}}"
                   }
                 },
                 {
                   "type": "stat",
                   "props": {
-                    "label": "Fecha del hecho",
-                    "value": "{{queries.obtenerFichaHecho.data.FichaHechoDTO.HechoDatosIdentificativosDTO.FechaHecho}}"
+                    "label": "Dirección principal",
+                    "value": "{{queries.obtenerFichaBanda.data.FichaBandaDTO.BandaDatosIdentificativosDTO.Direccion}}"
                   }
                 },
                 {
@@ -183,8 +195,8 @@
                     "span": 2
                   },
                   "props": {
-                    "label": "Resumen",
-                    "value": "{{queries.obtenerFichaHecho.data.FichaHechoDTO.HechoDatosIdentificativosDTO.ResumenHecho}}"
+                    "label": "Descripción",
+                    "value": "{{queries.obtenerFichaBanda.data.FichaBandaDTO.BandaDatosIdentificativosDTO.Descripcion}}"
                   }
                 }
               ]
@@ -198,7 +210,7 @@
             "gap": "md"
           },
           "queryStateFeedback": {
-            "query": "obtenerFichaHecho",
+            "query": "obtenerFichaBanda",
             "states": {
               "loading": {
                 "mode": "fallback",
@@ -254,7 +266,7 @@
               "props": {
                 "text": "Personas relacionadas",
                 "level": 2,
-                "icon": "users"
+                "icon": "user"
               }
             },
             {
@@ -269,8 +281,8 @@
                   "type": "repeater",
                   "props": {
                     "items": {
-                      "source": "queries.obtenerFichaHecho.data.FichaHechoDTO.PersonasRelacionadasDTO",
-                      "key": "IdPersonasHecho"
+                      "source": "queries.obtenerFichaBanda.data.FichaBandaDTO.PersonasRelacionadasDTO",
+                      "key": "IdPersona"
                     },
                     "template": [
                       {
@@ -288,37 +300,22 @@
                             }
                           },
                           {
-                            "type": "container",
+                            "type": "paragraph",
                             "props": {
-                              "direction": "row",
-                              "align": "center",
-                              "gap": "sm"
-                            },
-                            "children": [
-                              {
-                                "type": "badge",
-                                "props": {
-                                  "label": "{{item.TipoImplicacion}}",
-                                  "color": "primary"
-                                }
-                              },
-                              {
-                                "type": "paragraph",
-                                "props": {
-                                  "text": "{{item.DocIdent}}"
-                                }
-                              }
-                            ]
+                              "text": "{{item.DocIdent}}"
+                            }
                           },
                           {
                             "type": "link",
                             "props": {
                               "label": "Ver ficha",
-                              "href": "/carpetaciudadana/detallegenerico.aspx?tram=427&sec=15/#?personaId={{item.IdPersona}}"
-                            },
-                            "visibility": {
-                              "reference": "item.IdPersona",
-                              "operator": "isTruthy"
+                              "action": {
+                                "type": "navigateTo",
+                                "pageId": "ficha-persona",
+                                "params": {
+                                  "personaId": "item.IdPersona"
+                                }
+                              }
                             }
                           }
                         ]
@@ -337,7 +334,139 @@
             "gap": "md"
           },
           "queryStateFeedback": {
-            "query": "obtenerFichaHecho",
+            "query": "obtenerFichaBanda",
+            "states": {
+              "loading": {
+                "mode": "fallback",
+                "fallback": [
+                  {
+                    "type": "skeleton",
+                    "props": {
+                      "variant": "rect",
+                      "width": "1/4",
+                      "height": "6"
+                    }
+                  },
+                  {
+                    "type": "skeleton",
+                    "props": {
+                      "variant": "text",
+                      "lines": 5
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "children": [
+            {
+              "type": "heading",
+              "props": {
+                "text": "Hechos",
+                "level": 2,
+                "icon": "file-text"
+              }
+            },
+            {
+              "type": "repeater",
+              "props": {
+                "items": {
+                  "source": "queries.obtenerFichaBanda.data.FichaBandaDTO.HechosDTO",
+                  "key": "Id"
+                },
+                "pagination": {
+                  "enabled": true,
+                  "pageSize": 10,
+                  "controls": {
+                    "variant": "previousNext"
+                  }
+                },
+                "template": [
+                  {
+                    "type": "container",
+                    "props": {
+                      "variant": "card",
+                      "columns": 12,
+                      "gap": "sm"
+                    },
+                    "children": [
+                      {
+                        "type": "container",
+                        "layout": {
+                          "span": 11
+                        },
+                        "props": {
+                          "gap": "sm"
+                        },
+                        "children": [
+                          {
+                            "type": "container",
+                            "props": {
+                              "direction": "row",
+                              "align": "center",
+                              "gap": "sm"
+                            },
+                            "children": [
+                              {
+                                "type": "badge",
+                                "props": {
+                                  "label": "{{item.TipoHecho}}",
+                                  "color": "neutral"
+                                }
+                              },
+                              {
+                                "type": "paragraph",
+                                "props": {
+                                  "text": "{{item.FechaHecho}}"
+                                }
+                              }
+                            ]
+                          },
+                          {
+                            "type": "paragraph",
+                            "props": {
+                              "text": "{{item.ResumenHecho}}"
+                            }
+                          },
+                          {
+                            "type": "paragraph",
+                            "props": {
+                              "text": "{{item.Lugar}}"
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "type": "link",
+                        "layout": {
+                          "span": 1
+                        },
+                        "props": {
+                          "label": "Ver",
+                          "action": {
+                            "type": "navigateTo",
+                            "pageId": "ficha-hecho",
+                            "params": {
+                              "hechoId": "item.Id"
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "type": "container",
+          "props": {
+            "variant": "card",
+            "gap": "md"
+          },
+          "queryStateFeedback": {
+            "query": "obtenerFichaBanda",
             "states": {
               "loading": {
                 "mode": "fallback",
@@ -366,7 +495,7 @@
               "type": "repeater",
               "props": {
                 "items": {
-                  "source": "queries.obtenerFichaHecho.data.FichaHechoDTO.DireccionesDTO",
+                  "source": "queries.obtenerFichaBanda.data.FichaBandaDTO.DireccionesDTO",
                   "key": "IdDireccionEntidad"
                 },
                 "template": [
@@ -422,7 +551,7 @@
             "gap": "md"
           },
           "queryStateFeedback": {
-            "query": "obtenerFichaHecho",
+            "query": "obtenerFichaBanda",
             "states": {
               "loading": {
                 "mode": "fallback",
@@ -451,7 +580,7 @@
               "type": "repeater",
               "props": {
                 "items": {
-                  "source": "queries.obtenerFichaHecho.data.FichaHechoDTO.VehiculosDTO",
+                  "source": "queries.obtenerFichaBanda.data.FichaBandaDTO.VehiculosDTO",
                   "key": "IdVehiculoEntidad"
                 },
                 "template": [
@@ -515,7 +644,7 @@
             "gap": "md"
           },
           "queryStateFeedback": {
-            "query": "obtenerFichaHecho",
+            "query": "obtenerFichaBanda",
             "states": {
               "loading": {
                 "mode": "fallback",
@@ -589,16 +718,16 @@
                   "type": "repeater",
                   "props": {
                     "items": {
-                      "source": "queries.obtenerFichaHecho.data.FichaHechoDTO.Medios",
+                      "source": "queries.obtenerFichaBanda.data.FichaBandaDTO.Medios",
                       "key": "$index"
                     },
                     "template": [
                       {
                         "type": "image",
                         "props": {
-                          "alt": "Foto del hecho",
+                          "alt": "Foto de la banda",
                           "fetch": {
-                            "url": "https://pre-frontapi.pamplona.es/ss/Ade/v1/operations/C776EC3B-8809-48F3-BD81-48467D7B6074/ObtenerMedio/Binary",
+                            "url": "/api/ss/Ade/v1/operations/C776EC3B-8809-48F3-BD81-48467D7B6074/ObtenerMedio/Binary",
                             "method": "POST",
                             "headers": {
                               "Authorization": "Bearer {{tokens.token.value}}"
@@ -619,5 +748,5 @@
       ]
     }
   ],
-  "initialPage": "ficha-hecho"
+  "initialPage": "ficha-banda"
 }

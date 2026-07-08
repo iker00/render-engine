@@ -12,9 +12,7 @@
         "Authorization": "Bearer {{tokens.token.value}}"
       },
       "body": {
-        "PermisosPantallaInicioEntradaDTO": {
-          "NoValidarPermisosTramiteWeb": false
-        }
+        "NoValidarPermisosTramiteWeb": false
       }
     },
     "obtenerHistorialHechos": {
@@ -111,7 +109,7 @@
                   "props": {
                     "label": "Consulta de personas",
                     "icon": "users",
-                    "href": "<PORTAL_URL_BUSCAR_PERSONA>"
+                    "href": "/carpetaciudadana/detallegenerico.aspx?tram=427&sec=14"
                   },
                   "visibility": {
                     "reference": "queries.obtenerPermisosPantallaInicio.data.PermisosPantallaInicioDTO.PermisoConsultaPersonas",
@@ -124,7 +122,7 @@
                   "props": {
                     "label": "Consulta de bandas",
                     "icon": "shield",
-                    "href": "<PORTAL_URL_BUSCAR_BANDA>"
+                    "href": "/carpetaciudadana/detallegenerico.aspx?tram=427&sec=17"
                   },
                   "visibility": {
                     "reference": "queries.obtenerPermisosPantallaInicio.data.PermisosPantallaInicioDTO.PermisoConsultaBandas",
@@ -137,7 +135,7 @@
                   "props": {
                     "label": "Crear hecho",
                     "icon": "plus",
-                    "href": "<PORTAL_URL_CREAR_HECHO>"
+                    "href": "/carpetaciudadana/detallegenerico.aspx?tram=427&sec=20"
                   },
                   "visibility": {
                     "reference": "queries.obtenerPermisosPantallaInicio.data.PermisosPantallaInicioDTO.PermisoCreacionHecho",
@@ -251,7 +249,7 @@
                             "type": "link",
                             "props": {
                               "label": "Ver hecho",
-                              "href": "<PORTAL_URL_FICHA_HECHO>?hechoId={{item.Id}}"
+                              "href": "/carpetaciudadana/detallegenerico.aspx?tram=427&sec=19/#?hechoId={{item.Id}}"
                             }
                           }
                         ]
@@ -349,7 +347,7 @@
                             "type": "link",
                             "props": {
                               "label": "{{item.NombreLargo}}",
-                              "href": "<PORTAL_URL_FICHA_PERSONA>?personaId={{item.Id}}"
+                              "href": "/carpetaciudadana/detallegenerico.aspx?tram=427&sec=15/#?personaId={{item.Id}}"
                             }
                           }
                         ]

@@ -624,5 +624,6 @@
         }
       ]
     }
-  ]
+  ],
+  "initialPage": "ficha-hecho"
 }

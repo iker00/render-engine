@@ -5,42 +5,43 @@
     }
   },
   "api": {
-    "obtenerDatosFormularioCreacionHecho": {
+    "obtenerDatosFormularioEdicionHecho": {
       "method": "POST",
       "endpoint": "/api/ss/Ade/v1/operations/E2F8A614-3B9C-4D7E-9F21-6A5B8C1D40E7/ObtenerDatosFormularioCreacionHecho",
       "headers": {
         "Authorization": "Bearer {{tokens.token.value}}"
       },
       "body": {
-        "NoValidarPermisosTramiteWeb": false
+        "Id": "params.hechoId"
       }
     },
-    "crearHecho": {
+    "modificarHecho": {
       "method": "POST",
-      "endpoint": "/api/ss/Ade/v1/operations/A7B3C941-2E8D-4F6A-9C1B-5D8E2F4A6C70/CrearHecho",
+      "endpoint": "/api/ss/Ade/v1/operations/00000000-0000-4000-8000-000000000021/ModificarHecho",
       "headers": {
         "Authorization": "Bearer {{tokens.token.value}}"
       },
       "body": {
-        "CrearHechoEntradaDTO": {
-          "Lugar": "forms.crearHecho.lugar",
-          "FechaHecho": "forms.crearHecho.fechaHecho",
-          "HoraHecho": "forms.crearHecho.horaHecho",
-          "IdTipoHecho": "forms.crearHecho.idTipoHecho",
-          "IdOrigenHecho": "forms.crearHecho.idOrigenHecho",
-          "ResumenHecho": "forms.crearHecho.resumenHecho",
-          "Agente": "forms.crearHecho.agente",
-          "Agente1": "forms.crearHecho.agente1"
+        "ModificarHechoEntradaDTO": {
+          "Id": "params.hechoId",
+          "Lugar": "forms.editarHecho.lugar",
+          "FechaHecho": "forms.editarHecho.fechaHecho",
+          "HoraHecho": "forms.editarHecho.horaHecho",
+          "IdTipoHecho": "forms.editarHecho.idTipoHecho",
+          "IdOrigenHecho": "forms.editarHecho.idOrigenHecho",
+          "ResumenHecho": "forms.editarHecho.resumenHecho",
+          "Agente": "forms.editarHecho.agente",
+          "Agente1": "forms.editarHecho.agente1"
         }
       }
     }
   },
   "pages": [
     {
-      "id": "crear-hecho",
+      "id": "editar-hecho",
       "preloads": [
         {
-          "obtenerDatosFormularioCreacionHecho": {}
+          "obtenerDatosFormularioEdicionHecho": {}
         }
       ],
       "layout": [
@@ -61,7 +62,7 @@
             {
               "type": "heading",
               "props": {
-                "text": "Información del hecho",
+                "text": "Editar hecho",
                 "level": 2
               }
             },
@@ -72,7 +73,7 @@
                 "gap": "md"
               },
               "queryStateFeedback": {
-                "query": "obtenerDatosFormularioCreacionHecho",
+                "query": "obtenerDatosFormularioEdicionHecho",
                 "states": {
                   "loading": {
                     "mode": "fallback",
@@ -93,7 +94,7 @@
                         "type": "alert",
                         "props": {
                           "title": "Error al cargar",
-                          "message": "{{queries.obtenerDatosFormularioCreacionHecho.error.message}}",
+                          "message": "{{queries.obtenerDatosFormularioEdicionHecho.error.message}}",
                           "type": "danger"
                         }
                       }
@@ -110,10 +111,10 @@
                 },
                 {
                   "type": "form",
-                  "id": "crearHecho",
+                  "id": "editarHecho",
                   "submitAction": {
                     "type": "executeOperation",
-                    "operationName": "crearHecho"
+                    "operationName": "modificarHecho"
                   },
                   "children": [
                     {
@@ -155,7 +156,7 @@
                         "label": "Tipo de hecho",
                         "placeholder": "Seleccione un tipo",
                         "items": {
-                          "source": "queries.obtenerDatosFormularioCreacionHecho.data.DatosFormularioCreacionHechoSalidaDTO.TiposHechoDTO",
+                          "source": "queries.obtenerDatosFormularioEdicionHecho.data.DatosFormularioCreacionHechoSalidaDTO.TiposHechoDTO",
                           "label": "Nombre",
                           "value": "Id"
                         },
@@ -171,7 +172,7 @@
                         "label": "Origen hecho",
                         "placeholder": "Seleccione un origen",
                         "items": {
-                          "source": "queries.obtenerDatosFormularioCreacionHecho.data.DatosFormularioCreacionHechoSalidaDTO.OrigenesHechoDTO",
+                          "source": "queries.obtenerDatosFormularioEdicionHecho.data.DatosFormularioCreacionHechoSalidaDTO.OrigenesHechoDTO",
                           "label": "Nombre",
                           "value": "Id"
                         },
@@ -210,7 +211,7 @@
                     {
                       "type": "button",
                       "props": {
-                        "label": "Guardar →",
+                        "label": "Guardar cambios →",
                         "color": "primary",
                         "icon": "save"
                       }
@@ -224,7 +225,7 @@
                     "gap": "sm"
                   },
                   "queryStateFeedback": {
-                    "query": "crearHecho",
+                    "query": "modificarHecho",
                     "states": {
                       "idle": {
                         "mode": "hide"
@@ -247,8 +248,8 @@
                           {
                             "type": "alert",
                             "props": {
-                              "title": "Hecho guardado",
-                              "message": "El hecho se ha guardado correctamente.",
+                              "title": "Hecho actualizado",
+                              "message": "Los cambios se han guardado correctamente.",
                               "type": "success"
                             }
                           },
@@ -260,7 +261,7 @@
                                 "type": "navigateTo",
                                 "pageId": "ficha-hecho",
                                 "params": {
-                                  "hechoId": "queries.crearHecho.data.CrearHechoSalidaDTO.HechoCreadoDTO.Id"
+                                  "hechoId": "params.hechoId"
                                 }
                               }
                             }
@@ -274,7 +275,7 @@
                             "type": "alert",
                             "props": {
                               "title": "No se pudo guardar",
-                              "message": "{{queries.crearHecho.error.message}}",
+                              "message": "{{queries.modificarHecho.error.message}}",
                               "type": "danger"
                             }
                           }
@@ -298,7 +299,10 @@
                         "label": "Cancelar",
                         "action": {
                           "type": "navigateTo",
-                          "pageId": "inicio"
+                          "pageId": "ficha-hecho",
+                          "params": {
+                            "hechoId": "params.hechoId"
+                          }
                         }
                       }
                     }
@@ -311,5 +315,5 @@
       ]
     }
   ],
-  "initialPage": "crear-hecho"
+  "initialPage": "editar-hecho"
 }
