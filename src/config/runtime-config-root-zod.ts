@@ -20,6 +20,8 @@ import {
   radioGroupNodeSchema,
   repeaterNodeSchema,
   runtimeApiOperationShellSchema,
+  runtimeTokensConfigSchema,
+  runtimeTranslationsSchema,
   selectNodeSchema,
   skeletonNodeSchema,
   statNodeSchema,
@@ -121,5 +123,7 @@ export const runtimeConfigRootSchema = z
     api: z.record(z.string(), runtimeApiOperationShellSchema),
     pages: z.array(runtimePageRootSchema),
     initialPage: z.string().min(1),
+    translations: runtimeTranslationsSchema.optional(),
+    tokens: runtimeTokensConfigSchema.optional(),
   })
   .strip()
