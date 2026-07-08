@@ -314,7 +314,7 @@
                             "type": "link",
                             "props": {
                               "label": "Ver ficha",
-                              "href": "/carpetaciudadana/detallegenerico.aspx?tram=427&sec=15/#?personaId={{item.IdPersona}}"
+                              "href": "/carpetaciudadana/detallegenerico.aspx?tram=427&sec=15#/?personaId={{item.IdPersona}}"
                             },
                             "visibility": {
                               "reference": "item.IdPersona",

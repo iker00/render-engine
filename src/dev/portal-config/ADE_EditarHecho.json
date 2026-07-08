@@ -257,7 +257,7 @@
                             "type": "link",
                             "props": {
                               "label": "Ver ficha",
-                              "href": "/carpetaciudadana/detallegenerico.aspx?tram=427&sec=19/#?hechoId={{params.hechoId}}"
+                              "href": "/carpetaciudadana/detallegenerico.aspx?tram=427&sec=19#/?hechoId={{params.hechoId}}"
                             }
                           }
                         ]
@@ -291,7 +291,7 @@
                       "type": "link",
                       "props": {
                         "label": "Cancelar",
-                        "href": "/carpetaciudadana/detallegenerico.aspx?tram=427&sec=19/#?hechoId={{params.hechoId}}"
+                        "href": "/carpetaciudadana/detallegenerico.aspx?tram=427&sec=19#/?hechoId={{params.hechoId}}"
                       }
                     }
                   ]

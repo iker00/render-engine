@@ -202,7 +202,7 @@
                     "type": "link",
                     "props": {
                       "label": "{{item.NombreCompleto}}",
-                      "href": "/carpetaciudadana/detallegenerico.aspx?tram=427&sec=15/#?personaId={{item.Id}}"
+                      "href": "/carpetaciudadana/detallegenerico.aspx?tram=427&sec=15#/?personaId={{item.Id}}"
                     }
                   }
                 ]

@@ -309,7 +309,7 @@
                             "type": "link",
                             "props": {
                               "label": "Ver ficha",
-                              "href": "/carpetaciudadana/detallegenerico.aspx?tram=427&sec=15/#?personaId={{item.IdPersona}}"
+                              "href": "/carpetaciudadana/detallegenerico.aspx?tram=427&sec=15#/?personaId={{item.IdPersona}}"
                             }
                           }
                         ]
@@ -437,7 +437,7 @@
                         },
                         "props": {
                           "label": "Ver",
-                          "href": "/carpetaciudadana/detallegenerico.aspx?tram=427&sec=19/#?hechoId={{item.Id}}"
+                          "href": "/carpetaciudadana/detallegenerico.aspx?tram=427&sec=19#/?hechoId={{item.Id}}"
                         }
                       }
                     ]

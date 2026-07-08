@@ -22,7 +22,7 @@
         "Authorization": "Bearer {{tokens.token.value}}"
       },
       "body": {
-        "Username": "session.username"
+        "Username": ""
       }
     },
     "obtenerHistorialPersonas": {
@@ -32,7 +32,7 @@
         "Authorization": "Bearer {{tokens.token.value}}"
       },
       "body": {
-        "Username": "session.username"
+        "Username": ""
       }
     }
   },
@@ -249,7 +249,7 @@
                             "type": "link",
                             "props": {
                               "label": "Ver hecho",
-                              "href": "/carpetaciudadana/detallegenerico.aspx?tram=427&sec=19/#?hechoId={{item.Id}}"
+                              "href": "/carpetaciudadana/detallegenerico.aspx?tram=427&sec=19#/?hechoId={{item.Id}}"
                             }
                           }
                         ]
@@ -347,7 +347,7 @@
                             "type": "link",
                             "props": {
                               "label": "{{item.NombreLargo}}",
-                              "href": "/carpetaciudadana/detallegenerico.aspx?tram=427&sec=15/#?personaId={{item.Id}}"
+                              "href": "/carpetaciudadana/detallegenerico.aspx?tram=427&sec=15#/?personaId={{item.Id}}"
                             }
                           }
                         ]
