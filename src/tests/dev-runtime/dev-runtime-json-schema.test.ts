@@ -32,4 +32,16 @@ describe('getRuntimeConfigJsonSchema', () => {
     const schemaStr = JSON.stringify(schema)
     expect(schemaStr).toContain('skeleton')
   })
+
+  it('schema includes translations as a root property', () => {
+    const schema = getRuntimeConfigJsonSchema()
+    const props = schema.properties as Record<string, unknown>
+    expect(props['translations']).toBeDefined()
+  })
+
+  it('schema includes tokens as a root property', () => {
+    const schema = getRuntimeConfigJsonSchema()
+    const props = schema.properties as Record<string, unknown>
+    expect(props['tokens']).toBeDefined()
+  })
 })
