@@ -599,4 +599,157 @@ describe('validateRuntimeConfig', () => {
       },
     })
   })
+
+  it('accepts inputType time with validations.required', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithFormLayout({
+        children: [
+          {
+            type: 'input',
+            props: {
+              fieldId: 'startTime',
+              label: 'Start time',
+              inputType: 'time',
+              validations: {
+                required: true,
+              },
+            },
+          },
+        ],
+      }),
+    )
+
+    expect(result.status).toBe('ready')
+    if (result.status !== 'ready') throw new Error('Expected ready')
+
+    const formNode = result.page.layout[0]
+    if (formNode.type !== 'form') throw new Error('Expected form')
+
+    expect(formNode.children?.[0]).toMatchObject({
+      type: 'input',
+      props: {
+        fieldId: 'startTime',
+        inputType: 'time',
+        validations: {
+          required: { value: true },
+        },
+      },
+    })
+  })
+
+  it('rejects inputType time with validations.minLength', () => {
+    expect(
+      validateRuntimeConfig(
+        createConfigWithFormLayout({
+          children: [
+            {
+              type: 'input',
+              props: {
+                fieldId: 'startTime',
+                label: 'Start time',
+                inputType: 'time',
+                validations: {
+                  minLength: 3,
+                },
+              },
+            },
+          ],
+        }),
+      ),
+    ).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message: 'Page "home" has an invalid layout at "layout[0].children[0].props.validations.minLength".',
+      },
+    })
+  })
+
+  it('rejects inputType time with validations.maxLength', () => {
+    expect(
+      validateRuntimeConfig(
+        createConfigWithFormLayout({
+          children: [
+            {
+              type: 'input',
+              props: {
+                fieldId: 'startTime',
+                label: 'Start time',
+                inputType: 'time',
+                validations: {
+                  maxLength: 10,
+                },
+              },
+            },
+          ],
+        }),
+      ),
+    ).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message: 'Page "home" has an invalid layout at "layout[0].children[0].props.validations.maxLength".',
+      },
+    })
+  })
+
+  it('rejects inputType time with validations.min', () => {
+    expect(
+      validateRuntimeConfig(
+        createConfigWithFormLayout({
+          children: [
+            {
+              type: 'input',
+              props: {
+                fieldId: 'startTime',
+                label: 'Start time',
+                inputType: 'time',
+                validations: {
+                  min: 5,
+                },
+              },
+            },
+          ],
+        }),
+      ),
+    ).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message: 'Page "home" has an invalid layout at "layout[0].children[0].props.validations.min".',
+      },
+    })
+  })
+
+  it('rejects inputType time with validations.max', () => {
+    expect(
+      validateRuntimeConfig(
+        createConfigWithFormLayout({
+          children: [
+            {
+              type: 'input',
+              props: {
+                fieldId: 'startTime',
+                label: 'Start time',
+                inputType: 'time',
+                validations: {
+                  max: 10,
+                },
+              },
+            },
+          ],
+        }),
+      ),
+    ).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message: 'Page "home" has an invalid layout at "layout[0].children[0].props.validations.max".',
+      },
+    })
+  })
 })

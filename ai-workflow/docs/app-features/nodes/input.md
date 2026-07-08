@@ -17,10 +17,10 @@
   - `props.validations.min`: número o `{ value: number, message?: string }`, solo para `inputType: 'number'`.
   - `props.validations.max`: número o `{ value: number, message?: string }`, solo para `inputType: 'number'`.
 - `props.defaultValue`: literal JSON simple o referencia dinámica completa soportada por el runtime.
-- `props.inputType`: `text | email | password | search | tel | url | number | date | datetime-local`.
+- `props.inputType`: `text | email | password | search | tel | url | number | date | datetime-local | time`.
 
 ## Reglas de render
-- `input` cubre entrada de una sola línea con `inputType` acotado y ya soporta `text`, `email`, `password`, `search`, `tel`, `url`, `number`, `date` y `datetime-local`.
+- `input` cubre entrada de una sola línea con `inputType` acotado y ya soporta `text`, `email`, `password`, `search`, `tel`, `url`, `number`, `date`, `datetime-local` y `time`.
 - `input` lee y escribe exclusivamente en `forms.{formId}.{fieldId}`; su label admite literal, referencia completa o interpolación parcial visible.
 - `input` comparte borde sobrio, fondo blanco, foco por `ring` sobre el propio borde y ausencia de sombra propia en reposo, con padding y altura percibida más contenidos.
 - El control `<input>` renderiza un `id` estable con el patrón `${formId}-${fieldId}`. Cuando hay error activo, incluye `aria-describedby="${formId}-${fieldId}-error"` apuntando al span de error, que lleva el mismo `id`. Cuando no hay error, el atributo `aria-describedby` no está presente.

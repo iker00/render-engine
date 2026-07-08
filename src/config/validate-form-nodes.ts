@@ -814,7 +814,8 @@ function supportsTextLengthValidations(target: FormFieldValidationTarget) {
     target.type === 'input' &&
     target.inputType !== 'number' &&
     target.inputType !== 'date' &&
-    target.inputType !== 'datetime-local'
+    target.inputType !== 'datetime-local' &&
+    target.inputType !== 'time'
   )
 }
 

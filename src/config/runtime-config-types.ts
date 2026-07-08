@@ -319,7 +319,7 @@ export interface InputLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLay
   type: 'input'
   id?: string
   props: FormFieldLayoutNodeProps & {
-    inputType?: 'text' | 'email' | 'password' | 'search' | 'tel' | 'url' | 'number' | 'date' | 'datetime-local'
+    inputType?: 'text' | 'email' | 'password' | 'search' | 'tel' | 'url' | 'number' | 'date' | 'datetime-local' | 'time'
     placeholder?: string
     icon?: string
     iconPosition?: 'left' | 'right'

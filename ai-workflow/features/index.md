@@ -15,12 +15,15 @@ La exploración previa, cuando hace falta, se hace conversacionalmente con `expl
 La política completa está definida en el documento de workflow del proyecto.
 
 ## Planificadas
-- `0088-form-file-input`: nuevo nodo `fileInput` para seleccionar ficheros como campo de formulario. Selector nativo, preview inmediata (miniatura para imágenes, lista para documentos), validaciones client-side reutilizadas de `runtime-form-validations`, soporte de `capture` para cámara en móvil, y submit como `multipart/form-data`.
 
 ## Archivadas
 - `0035-image-node-api-source`: archivada. Se descarta por ahora porque el caso de imágenes privadas encaja mejor con URLs protegidas o firmadas desde backend que con una carga remota específica integrada en el nodo `image`.
 
 ## Completadas
+- `0091-input-type-time`: amplía el enum `inputType` del nodo `input` con el valor `time` para permitir la entrada de horas mediante el selector nativo del navegador (`<input type="time">`). El valor se almacena como string `HH:MM` en `forms.{formId}.{fieldId}`. Soporta `defaultValue`, `required`, `icon` e `iconPosition` con la misma semántica que el resto de tipos. Las validaciones `minLength`, `maxLength`, `min` y `max` no aplican a `time` y se rechazan en config.
+- `0090-file-manager-custom-literals`: permite personalizar todos los textos visibles y aria-labels del nodo `fileManager` mediante un bloque `props.literals` declarativo en el JSON de configuración, con valores por defecto en español y soporte de interpolación `{{translations.*}}`.
+- `0089-icon-position`: añade `props.iconPosition` (`left | right`, default `left`) a los nodos `input`, `button` y `link` para controlar la posición del icono declarado con `props.icon`.
+- `0088-form-file-input`: nuevo nodo `fileInput` para seleccionar ficheros como campo de formulario. Selector nativo, preview inmediata (miniatura para imágenes, lista para documentos), validaciones client-side reutilizadas de `runtime-form-validations`, soporte de `capture` para cámara en móvil, y submit como `multipart/form-data`.
 - `0087-runtime-nodes-code-splitting`: code splitting de todos los nodos del runtime via `React.lazy()` en el dispatcher central (`layout-node-renderer`) para reducir el bundle JS inicial. Fallback `null` durante carga de chunk; error boundary por nodo ante fallo de descarga. Sin cambios en contrato JSON ni comportamiento de nodos.
 - `0086-form-validation-custom-messages`: activa el campo `message` en cada regla de validación de formulario para mostrar un texto personalizado en lugar del mensaje por defecto, con interpolación de `{{value}}` (valor de la regla, vacío si no aplica) y `{{translations.*}}` (catálogo existente).
 - `0085-cursor-pointer-interactive-nodes`: añade `cursor: pointer` (clase Tailwind) a todos los elementos interactivos clickables del runtime — botones, tabs, accordion, controles de paginación (repeater y table), cabeceras ordenables, botón de reset de filtros, acciones del fileManager, zona DnD del fileManager y backdrop del modal. Sin cambios en contrato JSON, validación ni lógica funcional.

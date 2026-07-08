@@ -711,4 +711,92 @@ describe('Runtime shared state store', () => {
       expect(screen.queryByText('Select no more than 3 options.')).not.toBeInTheDocument()
     })
   })
+
+  it('blocks submit with required error for empty time field and allows submit with a valid time value', async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: {
+          'content-type': 'application/json',
+        },
+      }),
+    )
+
+    const config: RuntimeConfig = {
+      api: {
+        submitProfile: {
+          method: 'POST',
+          endpoint: '/api/profile',
+        },
+      },
+      initialPage: 'home',
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'form',
+              id: 'scheduleForm',
+              submitAction: {
+                type: 'executeOperation',
+                operationName: 'submitProfile',
+              },
+              children: [
+                {
+                  type: 'input',
+                  props: {
+                    fieldId: 'startTime',
+                    label: 'Start time',
+                    inputType: 'time',
+                    defaultValue: '',
+                    validations: {
+                      required: { value: true },
+                    },
+                  },
+                },
+                {
+                  type: 'button',
+                  props: {
+                    label: 'Submit schedule',
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    }
+
+    globalThis.fetch = fetchMock
+
+    render(
+      <RuntimeStateProvider config={config}>
+        <RuntimePage />
+      </RuntimeStateProvider>,
+    )
+
+    const timeInput = document.getElementById('scheduleForm-startTime') as HTMLInputElement
+    expect(timeInput).toHaveAttribute('type', 'time')
+    expect(timeInput).toHaveAttribute('id', 'scheduleForm-startTime')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Submit schedule' }))
+
+    await waitFor(() => {
+      expect(screen.getByText('Required')).toBeInTheDocument()
+      expect(timeInput).toHaveAttribute('aria-describedby', 'scheduleForm-startTime-error')
+      expect(document.getElementById('scheduleForm-startTime-error')).toBeInTheDocument()
+    })
+    expect(fetchMock).not.toHaveBeenCalled()
+
+    fireEvent.change(timeInput, { target: { value: '09:00' } })
+
+    await waitFor(() => {
+      expect(screen.queryByText('Required')).not.toBeInTheDocument()
+      expect(timeInput).not.toHaveAttribute('aria-describedby')
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Submit schedule' }))
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+  })
 })
