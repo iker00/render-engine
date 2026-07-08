@@ -22,7 +22,7 @@
         "Authorization": "Bearer {{tokens.token.value}}"
       },
       "body": {
-        "Username": "session.username"
+        "Username": ""
       }
     },
     "obtenerHistorialPersonas": {
@@ -32,7 +32,7 @@
         "Authorization": "Bearer {{tokens.token.value}}"
       },
       "body": {
-        "Username": "session.username"
+        "Username": ""
       }
     }
   },

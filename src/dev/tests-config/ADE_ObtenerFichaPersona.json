@@ -522,7 +522,13 @@
                         },
                         "props": {
                           "label": "Ver",
-                          "href": "#"
+                          "action": {
+                            "type": "navigateTo",
+                            "pageId": "ficha-hecho",
+                            "params": {
+                              "hechoId": "item.Id"
+                            }
+                          }
                         }
                       }
                     ]

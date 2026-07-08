@@ -516,7 +516,7 @@
                         },
                         "props": {
                           "label": "Ver",
-                          "href": "#"
+                          "href": "/carpetaciudadana/detallegenerico.aspx?tram=427&sec=19#/?hechoId={{item.Id}}"
                         }
                       }
                     ]
