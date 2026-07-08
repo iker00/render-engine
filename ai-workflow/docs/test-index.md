@@ -38,7 +38,7 @@ src/tests/
 - `runtime-config-validation-api-operations.test.ts` — operaciones API: métodos, query/body/headers, extra keys, body trees (~490 líneas)
 - `runtime-config-validation-visibility.test.ts` — reglas de visibility: operadores, referencias (incluido `params.{paramName}`), valores, extra keys (~807 líneas)
 - `runtime-config-validation-navigate-params.test.ts` — navigateTo.params, validaciones de params y colecciones antes de render (~310 líneas)
-- `runtime-config-validation-repeater.test.ts` — nodo repeater: fuente, key, template, paginación (~390 líneas)
+- `runtime-config-validation-repeater.test.ts` — nodo repeater: fuente, key (incluido `$index`), template, paginación (~560 líneas)
 - `runtime-config-validation-containers.test.ts` — contrato de layout de contenedores (~959 líneas)
 - `runtime-config-validation-image-table.test.ts` — validación de nodos image y table (~635 líneas)
 - `runtime-config-validation-modal.test.ts` — validación de nodo modal: shape, children permitidos, unicidad de id, referencias modalId, prohibición de defaultOpen en repeater (~700 líneas)
@@ -59,7 +59,7 @@ src/tests/
 - `layout-renderer-forms.test.tsx` — forms declarativos, orden de campos, labels interpolados, semántica de secciones (~640 líneas)
 - `layout-renderer-grid-spans.test.tsx` — layout.span, columnas responsive, span clamping, fallbacks móvil (~550 líneas)
 - `layout-renderer-forms-fields.test.tsx` — tipos de campo expandidos, opciones dinámicas, labels/valores interpolados, defaults lazy (~1100 líneas)
-- `layout-renderer-repeater-basic.test.tsx` — iteraciones, orden de colección, resolución item.*, key diagnostics (~230 líneas)
+- `layout-renderer-repeater-basic.test.tsx` — iteraciones, orden de colección, resolución item.*, key diagnostics, `$index` key e `item.$index` sintético (~1077 líneas)
 - `layout-renderer-repeater-pagination.test.tsx` — controles previousNext, numbered, scroll, grid row (~530 líneas)
 - `layout-renderer-repeater-state.test.tsx` — resets por colección/pageSize, repeaters independientes, scalar items, qsf+visibility (~400 líneas)
 - `layout-renderer-modal.test.tsx` — render condicional del modal, apertura/cierre por botón/ESC/overlay, tamaños, defaultOpen, visibility, focus trap (~500 líneas)
@@ -87,7 +87,7 @@ src/tests/
 - `runtime-button-navigation.test.tsx` — navegación declarativa desde botones
 - `runtime-page-entry-preloads.test.tsx` — precarga de operaciones al entrar en página
 - `runtime-api-execution.test.ts` — ejecución de operaciones y ciclo de vida de queries
-- `runtime-reference-resolution.test.tsx` — resolución de referencias declarativas (`forms.*`, `queries.*`, `item.*`, `params.*`)
+- `runtime-reference-resolution.test.tsx` — resolución de referencias declarativas (`forms.*`, `queries.*`, `item.*`, `item.$index`, `params.*`) (~1638 líneas)
 - `runtime-layout-visibility.test.ts` — reglas de visibilidad por condición: operadores, referencias (incluido `params.{paramName}`) y semántica de ausencia (~889 líneas)
 - `runtime-form-validations.test.ts` — validaciones locales de formulario en submit
 - `runtime-api-payload-omission.test.ts` — omisión de claves en payload cuando referencia un campo oculto del propio form (unit tests) (~320 líneas)

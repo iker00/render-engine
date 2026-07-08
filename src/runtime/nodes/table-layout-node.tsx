@@ -179,7 +179,7 @@ export function TableNode({ node, iterationContext }: TableNodeProps) {
             {visibleRows.map((row, rowIndex) => {
               const rowItem = rowItemMap.get(row)
               const rowIterationContext: RuntimeIterationContext | undefined =
-                rowItem !== undefined ? { item: rowItem, key: String(rowIndex) } : undefined
+                rowItem !== undefined ? { item: rowItem, key: String(rowIndex), itemIndex: rowIndex } : undefined
 
               return (
                 <tr key={`row-${rowIndex}`} className={getTableBodyRowClassName()}>
