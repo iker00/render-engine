@@ -1,0 +1,861 @@
+{
+    "DatosFormularioCreacionPersonaSalidaDTO": {
+      "TiposDocumentosIdentificativosDTO": [
+        {
+          "Id": 1,
+          "Nombre": "DNI",
+          "IdPais": 108
+        },
+        {
+          "Id": 2,
+          "Nombre": "NIE",
+          "IdPais": 108
+        },
+        {
+          "Id": 3,
+          "Nombre": "PASAPORTE",
+          "IdPais": 108
+        },
+        {
+          "Id": 7,
+          "Nombre": "PASAPORTE GENÉRICO"
+        }
+      ],
+      "PaisesDTO": [
+        {
+          "Id": 354,
+          "Nombre": "354"
+        },
+        {
+          "Id": 401,
+          "Nombre": "AFGANISTAN"
+        },
+        {
+          "Id": 101,
+          "Nombre": "ALBANIA"
+        },
+        {
+          "Id": 126,
+          "Nombre": "ALEMANIA"
+        },
+        {
+          "Id": 124,
+          "Nombre": "ANDORRA"
+        },
+        {
+          "Id": 202,
+          "Nombre": "ANGOLA"
+        },
+        {
+          "Id": 966,
+          "Nombre": "ANTIG TERRIT SOBERANIA ESPAÑOL"
+        },
+        {
+          "Id": 310,
+          "Nombre": "ANTIGUA Y BARBUDA"
+        },
+        {
+          "Id": 555,
+          "Nombre": "APáTRIDAS"
+        },
+        {
+          "Id": 402,
+          "Nombre": "ARABIA SAUDITA"
+        },
+        {
+          "Id": 203,
+          "Nombre": "ARGELIA"
+        },
+        {
+          "Id": 340,
+          "Nombre": "ARGENTINA"
+        },
+        {
+          "Id": 148,
+          "Nombre": "ARMENIA"
+        },
+        {
+          "Id": 501,
+          "Nombre": "AUSTRALIA"
+        },
+        {
+          "Id": 102,
+          "Nombre": "AUSTRIA"
+        },
+        {
+          "Id": 442,
+          "Nombre": "AZERBAIYAN"
+        },
+        {
+          "Id": 311,
+          "Nombre": "BAHAMAS"
+        },
+        {
+          "Id": 403,
+          "Nombre": "BAHREIN"
+        },
+        {
+          "Id": 404,
+          "Nombre": "BANGLADESH"
+        },
+        {
+          "Id": 312,
+          "Nombre": "BARBADOS"
+        },
+        {
+          "Id": 103,
+          "Nombre": "BELGICA"
+        },
+        {
+          "Id": 313,
+          "Nombre": "BELICE"
+        },
+        {
+          "Id": 204,
+          "Nombre": "BENIN"
+        },
+        {
+          "Id": 138,
+          "Nombre": "BIELORRUSIA"
+        },
+        {
+          "Id": 341,
+          "Nombre": "BOLIVIA"
+        },
+        {
+          "Id": 145,
+          "Nombre": "BOSNIA Y HERZEGOVINA"
+        },
+        {
+          "Id": 205,
+          "Nombre": "BOTSWANA"
+        },
+        {
+          "Id": 342,
+          "Nombre": "BRASIL"
+        },
+        {
+          "Id": 439,
+          "Nombre": "BRUNEI"
+        },
+        {
+          "Id": 104,
+          "Nombre": "BULGARIA"
+        },
+        {
+          "Id": 201,
+          "Nombre": "BURKINA FASO"
+        },
+        {
+          "Id": 206,
+          "Nombre": "BURUNDI"
+        },
+        {
+          "Id": 207,
+          "Nombre": "CABO VERDE"
+        },
+        {
+          "Id": 417,
+          "Nombre": "CAMBOYA"
+        },
+        {
+          "Id": 208,
+          "Nombre": "CAMERUN"
+        },
+        {
+          "Id": 301,
+          "Nombre": "CANADA"
+        },
+        {
+          "Id": 246,
+          "Nombre": "CHAD"
+        },
+        {
+          "Id": 344,
+          "Nombre": "CHILE"
+        },
+        {
+          "Id": 407,
+          "Nombre": "CHINA"
+        },
+        {
+          "Id": 106,
+          "Nombre": "CHIPRE"
+        },
+        {
+          "Id": 343,
+          "Nombre": "COLOMBIA"
+        },
+        {
+          "Id": 209,
+          "Nombre": "COMORES"
+        },
+        {
+          "Id": 210,
+          "Nombre": "CONGO"
+        },
+        {
+          "Id": 430,
+          "Nombre": "COREA"
+        },
+        {
+          "Id": 431,
+          "Nombre": "COREA DEL NORTE (REP. POP)"
+        },
+        {
+          "Id": 211,
+          "Nombre": "COSTA DE MARFIL"
+        },
+        {
+          "Id": 314,
+          "Nombre": "COSTA RICA"
+        },
+        {
+          "Id": 146,
+          "Nombre": "CROACIA"
+        },
+        {
+          "Id": 315,
+          "Nombre": "CUBA"
+        },
+        {
+          "Id": 107,
+          "Nombre": "DINAMARCA"
+        },
+        {
+          "Id": 212,
+          "Nombre": "DJIBOUTI"
+        },
+        {
+          "Id": 316,
+          "Nombre": "DOMINICA"
+        },
+        {
+          "Id": 345,
+          "Nombre": "ECUADOR"
+        },
+        {
+          "Id": 213,
+          "Nombre": "EGIPTO"
+        },
+        {
+          "Id": 317,
+          "Nombre": "EL SALVADOR"
+        },
+        {
+          "Id": 408,
+          "Nombre": "EMIRATOS ARABES UNIDOS"
+        },
+        {
+          "Id": 253,
+          "Nombre": "ERITREA"
+        },
+        {
+          "Id": 147,
+          "Nombre": "ESLOVENIA"
+        },
+        {
+          "Id": 108,
+          "Nombre": "ESPAÑA"
+        },
+        {
+          "Id": 302,
+          "Nombre": "ESTADOS UNIDOS DE AMERICA"
+        },
+        {
+          "Id": 141,
+          "Nombre": "ESTONIA"
+        },
+        {
+          "Id": 214,
+          "Nombre": "ETIOPIA"
+        },
+        {
+          "Id": 502,
+          "Nombre": "FIJI"
+        },
+        {
+          "Id": 409,
+          "Nombre": "FILIPINAS"
+        },
+        {
+          "Id": 109,
+          "Nombre": "FINLANDIA"
+        },
+        {
+          "Id": 110,
+          "Nombre": "FRANCIA"
+        },
+        {
+          "Id": 215,
+          "Nombre": "GABON"
+        },
+        {
+          "Id": 216,
+          "Nombre": "GAMBIA"
+        },
+        {
+          "Id": 139,
+          "Nombre": "GEORGIA"
+        },
+        {
+          "Id": 217,
+          "Nombre": "GHANA"
+        },
+        {
+          "Id": 318,
+          "Nombre": "GRANADA"
+        },
+        {
+          "Id": 111,
+          "Nombre": "GRECIA"
+        },
+        {
+          "Id": 319,
+          "Nombre": "GUATEMALA"
+        },
+        {
+          "Id": 218,
+          "Nombre": "GUINEA"
+        },
+        {
+          "Id": 220,
+          "Nombre": "GUINEA ECUATORIAL"
+        },
+        {
+          "Id": 219,
+          "Nombre": "GUINEA-BISSAU"
+        },
+        {
+          "Id": 346,
+          "Nombre": "GUYANA"
+        },
+        {
+          "Id": 320,
+          "Nombre": "HAITI"
+        },
+        {
+          "Id": 321,
+          "Nombre": "HONDURAS"
+        },
+        {
+          "Id": 112,
+          "Nombre": "HUNGRIA"
+        },
+        {
+          "Id": 410,
+          "Nombre": "INDIA"
+        },
+        {
+          "Id": 411,
+          "Nombre": "INDONESIA"
+        },
+        {
+          "Id": 413,
+          "Nombre": "IRAN"
+        },
+        {
+          "Id": 412,
+          "Nombre": "IRAQ"
+        },
+        {
+          "Id": 113,
+          "Nombre": "IRLANDA"
+        },
+        {
+          "Id": 114,
+          "Nombre": "ISLANDIA"
+        },
+        {
+          "Id": 513,
+          "Nombre": "ISLAS COOK"
+        },
+        {
+          "Id": 440,
+          "Nombre": "ISLAS MARSHALL"
+        },
+        {
+          "Id": 506,
+          "Nombre": "ISLAS SALOMON"
+        },
+        {
+          "Id": 414,
+          "Nombre": "ISRAEL"
+        },
+        {
+          "Id": 115,
+          "Nombre": "ITALIA"
+        },
+        {
+          "Id": 322,
+          "Nombre": "JAMAICA"
+        },
+        {
+          "Id": 415,
+          "Nombre": "JAPON"
+        },
+        {
+          "Id": 416,
+          "Nombre": "JORDANIA"
+        },
+        {
+          "Id": 443,
+          "Nombre": "KAZAJSTAN"
+        },
+        {
+          "Id": 221,
+          "Nombre": "KENIA"
+        },
+        {
+          "Id": 444,
+          "Nombre": "KIRGUISTAN"
+        },
+        {
+          "Id": 418,
+          "Nombre": "KUWAIT"
+        },
+        {
+          "Id": 419,
+          "Nombre": "LAOS"
+        },
+        {
+          "Id": 222,
+          "Nombre": "LESOTHO"
+        },
+        {
+          "Id": 136,
+          "Nombre": "LETONIA"
+        },
+        {
+          "Id": 420,
+          "Nombre": "LIBANO"
+        },
+        {
+          "Id": 223,
+          "Nombre": "LIBERIA"
+        },
+        {
+          "Id": 224,
+          "Nombre": "LIBIA"
+        },
+        {
+          "Id": 116,
+          "Nombre": "LIECHTENSTEIN"
+        },
+        {
+          "Id": 142,
+          "Nombre": "LITUANIA"
+        },
+        {
+          "Id": 117,
+          "Nombre": "LUXEMBURGO"
+        },
+        {
+          "Id": 156,
+          "Nombre": "MACEDONIA"
+        },
+        {
+          "Id": 225,
+          "Nombre": "MADAGASCAR"
+        },
+        {
+          "Id": 421,
+          "Nombre": "MALASIA"
+        },
+        {
+          "Id": 226,
+          "Nombre": "MALAWI"
+        },
+        {
+          "Id": 422,
+          "Nombre": "MALDIVAS"
+        },
+        {
+          "Id": 227,
+          "Nombre": "MALI"
+        },
+        {
+          "Id": 118,
+          "Nombre": "MALTA"
+        },
+        {
+          "Id": 228,
+          "Nombre": "MARRUECOS"
+        },
+        {
+          "Id": 229,
+          "Nombre": "MAURICIO"
+        },
+        {
+          "Id": 230,
+          "Nombre": "MAURITANIA"
+        },
+        {
+          "Id": 303,
+          "Nombre": "MEXICO"
+        },
+        {
+          "Id": 511,
+          "Nombre": "MICRONESIA"
+        },
+        {
+          "Id": 137,
+          "Nombre": "MOLDAVA"
+        },
+        {
+          "Id": 119,
+          "Nombre": "MONACO"
+        },
+        {
+          "Id": 423,
+          "Nombre": "MONGOLIA"
+        },
+        {
+          "Id": 158,
+          "Nombre": "MONTENEGRO"
+        },
+        {
+          "Id": 231,
+          "Nombre": "MOZAMBIQUE"
+        },
+        {
+          "Id": 405,
+          "Nombre": "MYANMAR"
+        },
+        {
+          "Id": 232,
+          "Nombre": "NAMIBIA"
+        },
+        {
+          "Id": 515,
+          "Nombre": "NAURU"
+        },
+        {
+          "Id": 503,
+          "Nombre": "NAURU"
+        },
+        {
+          "Id": 424,
+          "Nombre": "NEPAL"
+        },
+        {
+          "Id": 323,
+          "Nombre": "NICARAGUA"
+        },
+        {
+          "Id": 233,
+          "Nombre": "NIGER"
+        },
+        {
+          "Id": 234,
+          "Nombre": "NIGERIA"
+        },
+        {
+          "Id": 999,
+          "Nombre": "NO CONSTA"
+        },
+        {
+          "Id": 120,
+          "Nombre": "NORUEGA"
+        },
+        {
+          "Id": 504,
+          "Nombre": "NUEVA ZELANDA"
+        },
+        {
+          "Id": 425,
+          "Nombre": "OMAN"
+        },
+        {
+          "Id": 121,
+          "Nombre": "PAISES BAJOS"
+        },
+        {
+          "Id": 299,
+          "Nombre": "PAISES DE AFRICA SIN RELACIONE"
+        },
+        {
+          "Id": 399,
+          "Nombre": "PAISES DE AMERICA SIN RELACION"
+        },
+        {
+          "Id": 499,
+          "Nombre": "PAISES DE ASIA SIN RELACIONES"
+        },
+        {
+          "Id": 199,
+          "Nombre": "PAISES DE EUROPA SIN RELACIONE"
+        },
+        {
+          "Id": 599,
+          "Nombre": "PAISES DE OCEANIA SIN RELACION"
+        },
+        {
+          "Id": 426,
+          "Nombre": "PAKISTAN"
+        },
+        {
+          "Id": 516,
+          "Nombre": "PALAOS"
+        },
+        {
+          "Id": 324,
+          "Nombre": "PANAMA"
+        },
+        {
+          "Id": 505,
+          "Nombre": "PAPUA NUEVA GUINEA"
+        },
+        {
+          "Id": 347,
+          "Nombre": "PARAGUAY"
+        },
+        {
+          "Id": 348,
+          "Nombre": "PERU"
+        },
+        {
+          "Id": 122,
+          "Nombre": "POLONIA"
+        },
+        {
+          "Id": 123,
+          "Nombre": "PORTUGAL"
+        },
+        {
+          "Id": 427,
+          "Nombre": "QATAR"
+        },
+        {
+          "Id": 125,
+          "Nombre": "REINO UNIDO"
+        },
+        {
+          "Id": 250,
+          "Nombre": "REP. DEMOCRATICA DEL CONGO"
+        },
+        {
+          "Id": 235,
+          "Nombre": "REPUBLICA CENTROAFRICANA"
+        },
+        {
+          "Id": 143,
+          "Nombre": "REPUBLICA CHECA"
+        },
+        {
+          "Id": 326,
+          "Nombre": "REPUBLICA DOMINICANA"
+        },
+        {
+          "Id": 144,
+          "Nombre": "REPUBLICA ESLOVACA"
+        },
+        {
+          "Id": 237,
+          "Nombre": "RUANDA"
+        },
+        {
+          "Id": 128,
+          "Nombre": "RUMANIA"
+        },
+        {
+          "Id": 154,
+          "Nombre": "RUSIA"
+        },
+        {
+          "Id": 507,
+          "Nombre": "SAMOA"
+        },
+        {
+          "Id": 329,
+          "Nombre": "SAN CRISTOBAL Y NIEVES"
+        },
+        {
+          "Id": 129,
+          "Nombre": "SAN MARINO"
+        },
+        {
+          "Id": 325,
+          "Nombre": "SAN VICENTE Y LAS GRANADINAS"
+        },
+        {
+          "Id": 328,
+          "Nombre": "SANTA LUCIA"
+        },
+        {
+          "Id": 130,
+          "Nombre": "SANTA SEDE"
+        },
+        {
+          "Id": 238,
+          "Nombre": "SANTO TOME Y PRINCIPE"
+        },
+        {
+          "Id": 239,
+          "Nombre": "SENEGAL"
+        },
+        {
+          "Id": 157,
+          "Nombre": "SERBIA"
+        },
+        {
+          "Id": 240,
+          "Nombre": "SEYCHELLES"
+        },
+        {
+          "Id": 241,
+          "Nombre": "SIERRA LEONA"
+        },
+        {
+          "Id": 66,
+          "Nombre": "SIN ESPECIFICAR"
+        },
+        {
+          "Id": 432,
+          "Nombre": "SINGAPUR"
+        },
+        {
+          "Id": 433,
+          "Nombre": "SIRIA"
+        },
+        {
+          "Id": 242,
+          "Nombre": "SOMALIA"
+        },
+        {
+          "Id": 434,
+          "Nombre": "SRI LANKA"
+        },
+        {
+          "Id": 236,
+          "Nombre": "SUDAFRICA"
+        },
+        {
+          "Id": 243,
+          "Nombre": "SUDAN"
+        },
+        {
+          "Id": 131,
+          "Nombre": "SUECIA"
+        },
+        {
+          "Id": 132,
+          "Nombre": "SUIZA"
+        },
+        {
+          "Id": 349,
+          "Nombre": "SURINAM"
+        },
+        {
+          "Id": 244,
+          "Nombre": "SWAZILANDIA"
+        },
+        {
+          "Id": 445,
+          "Nombre": "TADYIKISTAN"
+        },
+        {
+          "Id": 435,
+          "Nombre": "TAILANDIA"
+        },
+        {
+          "Id": 438,
+          "Nombre": "TAIWAN"
+        },
+        {
+          "Id": 245,
+          "Nombre": "TANZANIA"
+        },
+        {
+          "Id": 449,
+          "Nombre": "TERRITORIOS PALESTINOS"
+        },
+        {
+          "Id": 517,
+          "Nombre": "TIMOR ORIENTAL"
+        },
+        {
+          "Id": 247,
+          "Nombre": "TOGO"
+        },
+        {
+          "Id": 508,
+          "Nombre": "TONGA"
+        },
+        {
+          "Id": 327,
+          "Nombre": "TRINIDAD Y TOBAGO"
+        },
+        {
+          "Id": 248,
+          "Nombre": "TUNEZ"
+        },
+        {
+          "Id": 446,
+          "Nombre": "TURKMENISTAN"
+        },
+        {
+          "Id": 436,
+          "Nombre": "TURQUIA"
+        },
+        {
+          "Id": 512,
+          "Nombre": "TUVALU"
+        },
+        {
+          "Id": 135,
+          "Nombre": "UCRANIA"
+        },
+        {
+          "Id": 249,
+          "Nombre": "UGANDA"
+        },
+        {
+          "Id": 350,
+          "Nombre": "URUGUAY"
+        },
+        {
+          "Id": 447,
+          "Nombre": "UZBEKISTAN"
+        },
+        {
+          "Id": 509,
+          "Nombre": "VANUATU"
+        },
+        {
+          "Id": 351,
+          "Nombre": "VENEZUELA"
+        },
+        {
+          "Id": 437,
+          "Nombre": "VIETNAM"
+        },
+        {
+          "Id": 441,
+          "Nombre": "YEMEN"
+        },
+        {
+          "Id": 251,
+          "Nombre": "ZAMBIA"
+        },
+        {
+          "Id": 252,
+          "Nombre": "ZIMBABWE"
+        }
+      ],
+      "TiposTelefonoDTO": [
+        {
+          "Id": 3,
+          "Nombre": "Casa"
+        },
+        {
+          "Id": 4,
+          "Nombre": "Movil"
+        },
+        {
+          "Id": 5,
+          "Nombre": "Trabajo"
+        }
+      ]
+    }
+  }

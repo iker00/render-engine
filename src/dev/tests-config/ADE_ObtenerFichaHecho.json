@@ -64,16 +64,6 @@
           },
           "children": [
             {
-              "type": "button",
-              "props": {
-                "label": "Volver",
-                "icon": "arrow-left",
-                "action": {
-                  "type": "goBack"
-                }
-              }
-            },
-            {
               "type": "heading",
               "props": {
                 "text": "{{queries.obtenerFichaHecho.data.FichaHechoDTO.HechoDatosIdentificativosDTO.ResumenHecho}}",

@@ -52,16 +52,6 @@
           },
           "children": [
             {
-              "type": "button",
-              "props": {
-                "label": "Volver",
-                "icon": "arrow-left",
-                "action": {
-                  "type": "goBack"
-                }
-              }
-            },
-            {
               "type": "heading",
               "props": {
                 "text": "{{queries.obtenerFichaPersona.data.FichaPersonaDTO.DatosIdentificativosDTO.NombreCompleto}}",

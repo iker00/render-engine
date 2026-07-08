@@ -1,0 +1,400 @@
+{
+  "tokens": {
+    "token": {
+      "value": "#bearer_token#"
+    }
+  },
+  "api": {
+    "obtenerDatosFormularioCreacionPersona": {
+      "method": "POST",
+      "endpoint": "/api/ss/Ade/v1/operations/D8F3A619-4E2B-5C7D-9A41-6E0B8D2F5C73/ObtenerDatosFormularioCreacionPersona",
+      "headers": {
+        "Authorization": "Bearer {{tokens.token.value}}"
+      },
+      "body": {
+        "NoValidarPermisosTramiteWeb": false
+      }
+    },
+    "crearPersona": {
+      "method": "POST",
+      "endpoint": "/api/ss/Ade/v1/operations/C4E8A912-6D3B-4F7A-8E1C-9D2B5F6A7E30/CrearPersona",
+      "headers": {
+        "Authorization": "Bearer {{tokens.token.value}}"
+      },
+      "body": {
+        "CrearPersonaEntradaDTO": {
+          "Nombre": "forms.crearPersona.nombre",
+          "Apellido1": "forms.crearPersona.apellido1",
+          "Apellido2": "forms.crearPersona.apellido2",
+          "Apodo": "forms.crearPersona.apodo",
+          "Email": "forms.crearPersona.email",
+          "FechaNacimiento": "forms.crearPersona.fechaNacimiento",
+          "IdPaisNacimiento": "forms.crearPersona.idPaisNacimiento",
+          "Nacionalidad": "forms.crearPersona.nacionalidad",
+          "Nacionalidad2": "forms.crearPersona.nacionalidad2",
+          "IdTipoDocumento": "forms.crearPersona.idTipoDocumento",
+          "DocIdent": "forms.crearPersona.docIdent",
+          "IdTipoTelefono": "forms.crearPersona.idTipoTelefono",
+          "Telefono": "forms.crearPersona.telefono"
+        }
+      }
+    }
+  },
+  "pages": [
+    {
+      "id": "crear-persona",
+      "preloads": [
+        {
+          "obtenerDatosFormularioCreacionPersona": {}
+        }
+      ],
+      "layout": [
+        {
+          "type": "container",
+          "props": {
+            "direction": "column",
+            "gap": "lg"
+          },
+          "children": [
+            {
+              "type": "heading",
+              "props": {
+                "text": "Informe de actividad",
+                "level": 1
+              }
+            },
+            {
+              "type": "heading",
+              "props": {
+                "text": "Información de la persona",
+                "level": 2
+              }
+            },
+            {
+              "type": "container",
+              "props": {
+                "variant": "card",
+                "gap": "md"
+              },
+              "queryStateFeedback": {
+                "query": "obtenerDatosFormularioCreacionPersona",
+                "states": {
+                  "loading": {
+                    "mode": "fallback",
+                    "fallback": [
+                      {
+                        "type": "skeleton",
+                        "props": {
+                          "variant": "rect",
+                          "height": "32"
+                        }
+                      }
+                    ]
+                  },
+                  "error": {
+                    "mode": "fallback",
+                    "fallback": [
+                      {
+                        "type": "alert",
+                        "props": {
+                          "title": "Error al cargar",
+                          "message": "Error al cargar los datos del formulario.",
+                          "type": "danger"
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              "children": [
+                {
+                  "type": "paragraph",
+                  "props": {
+                    "text": "* Datos obligatorios"
+                  }
+                },
+                {
+                  "type": "form",
+                  "id": "crearPersona",
+                  "submitAction": {
+                    "type": "executeOperation",
+                    "operationName": "crearPersona"
+                  },
+                  "children": [
+                    {
+                      "type": "radioGroup",
+                      "props": {
+                        "fieldId": "tieneDocumento",
+                        "label": "Documento Identificación",
+                        "optionLayout": "inline",
+                        "items": [
+                          {
+                            "label": "Sí",
+                            "value": "si"
+                          },
+                          {
+                            "label": "No",
+                            "value": "no"
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "type": "container",
+                      "props": {
+                        "direction": "column",
+                        "gap": "md"
+                      },
+                      "visibility": {
+                        "reference": "forms.crearPersona.tieneDocumento",
+                        "operator": "equals",
+                        "value": "si"
+                      },
+                      "children": [
+                        {
+                          "type": "select",
+                          "props": {
+                            "fieldId": "idTipoDocumento",
+                            "label": "Tipo de documento",
+                            "placeholder": "Seleccione un tipo",
+                            "items": {
+                              "source": "queries.obtenerDatosFormularioCreacionPersona.data.DatosFormularioCreacionPersonaSalidaDTO.TiposDocumentosIdentificativosDTO",
+                              "label": "Nombre",
+                              "value": "Id"
+                            },
+                            "validations": {
+                              "required": true
+                            }
+                          }
+                        },
+                        {
+                          "type": "input",
+                          "props": {
+                            "fieldId": "docIdent",
+                            "label": "Documento de Identidad",
+                            "validations": {
+                              "required": true
+                            }
+                          },
+                          "visibility": {
+                            "reference": "forms.crearPersona.idTipoDocumento",
+                            "operator": "isTruthy"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "container",
+                      "props": {
+                        "direction": "column",
+                        "gap": "md"
+                      },
+                      "visibility": {
+                        "reference": "forms.crearPersona.tieneDocumento",
+                        "operator": "isTruthy"
+                      },
+                      "children": [
+                        {
+                          "type": "input",
+                          "props": {
+                            "fieldId": "nombre",
+                            "label": "Nombre",
+                            "validations": {
+                              "required": true
+                            }
+                          }
+                        },
+                        {
+                          "type": "input",
+                          "props": {
+                            "fieldId": "apellido1",
+                            "label": "Primer apellido",
+                            "validations": {
+                              "required": true
+                            }
+                          }
+                        },
+                        {
+                          "type": "input",
+                          "props": {
+                            "fieldId": "apellido2",
+                            "label": "Segundo apellido"
+                          }
+                        },
+                        {
+                          "type": "input",
+                          "props": {
+                            "fieldId": "fechaNacimiento",
+                            "label": "Fecha nacimiento",
+                            "inputType": "date"
+                          }
+                        },
+                        {
+                          "type": "input",
+                          "props": {
+                            "fieldId": "apodo",
+                            "label": "Apodo"
+                          }
+                        },
+                        {
+                          "type": "select",
+                          "props": {
+                            "fieldId": "idPaisNacimiento",
+                            "label": "País de Nacimiento",
+                            "placeholder": "Seleccione un país",
+                            "items": {
+                              "source": "queries.obtenerDatosFormularioCreacionPersona.data.DatosFormularioCreacionPersonaSalidaDTO.PaisesDTO",
+                              "label": "Nombre",
+                              "value": "Id"
+                            }
+                          }
+                        },
+                        {
+                          "type": "select",
+                          "props": {
+                            "fieldId": "idTipoTelefono",
+                            "label": "Tipo de teléfono",
+                            "placeholder": "Seleccione un tipo",
+                            "items": {
+                              "source": "queries.obtenerDatosFormularioCreacionPersona.data.DatosFormularioCreacionPersonaSalidaDTO.TiposTelefonoDTO",
+                              "label": "Nombre",
+                              "value": "Id"
+                            }
+                          }
+                        },
+                        {
+                          "type": "input",
+                          "props": {
+                            "fieldId": "telefono",
+                            "label": "Teléfono"
+                          }
+                        },
+                        {
+                          "type": "input",
+                          "props": {
+                            "fieldId": "email",
+                            "label": "Email"
+                          }
+                        },
+                        {
+                          "type": "input",
+                          "props": {
+                            "fieldId": "nacionalidad",
+                            "label": "Nacionalidad"
+                          }
+                        },
+                        {
+                          "type": "input",
+                          "props": {
+                            "fieldId": "nacionalidad2",
+                            "label": "Otra nacionalidad"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "button",
+                      "props": {
+                        "label": "Guardar →",
+                        "color": "primary",
+                        "icon": "save"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "container",
+                  "props": {
+                    "direction": "column",
+                    "gap": "sm"
+                  },
+                  "queryStateFeedback": {
+                    "query": "crearPersona",
+                    "states": {
+                      "idle": {
+                        "mode": "hide"
+                      },
+                      "loading": {
+                        "mode": "fallback",
+                        "fallback": [
+                          {
+                            "type": "skeleton",
+                            "props": {
+                              "variant": "rect",
+                              "height": "8"
+                            }
+                          }
+                        ]
+                      },
+                      "success": {
+                        "mode": "fallback",
+                        "fallback": [
+                          {
+                            "type": "alert",
+                            "props": {
+                              "title": "Persona guardada",
+                              "message": "La persona se ha guardado correctamente.",
+                              "type": "success"
+                            }
+                          },
+                          {
+                            "type": "link",
+                            "props": {
+                              "label": "Ver ficha",
+                              "action": {
+                                "type": "navigateTo",
+                                "pageId": "ficha-persona",
+                                "params": {
+                                  "personaId": "queries.crearPersona.data.CrearPersonaSalidaDTO.PersonaCreadaDTO.Id"
+                                }
+                              }
+                            }
+                          }
+                        ]
+                      },
+                      "error": {
+                        "mode": "fallback",
+                        "fallback": [
+                          {
+                            "type": "alert",
+                            "props": {
+                              "title": "No se pudo guardar",
+                              "message": "{{queries.crearPersona.error.message}}",
+                              "type": "danger"
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "children": []
+                },
+                {
+                  "type": "container",
+                  "props": {
+                    "direction": "row",
+                    "gap": "md",
+                    "justify": "end"
+                  },
+                  "children": [
+                    {
+                      "type": "link",
+                      "props": {
+                        "label": "Cancelar",
+                        "action": {
+                          "type": "navigateTo",
+                          "pageId": "inicio"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "initialPage": "crear-persona"
+}

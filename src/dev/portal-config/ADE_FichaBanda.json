@@ -72,16 +72,6 @@
           },
           "children": [
             {
-              "type": "button",
-              "props": {
-                "label": "Volver",
-                "icon": "arrow-left",
-                "action": {
-                  "type": "goBack"
-                }
-              }
-            },
-            {
               "type": "heading",
               "props": {
                 "text": "{{queries.obtenerFichaBanda.data.FichaBandaDTO.BandaDatosIdentificativosDTO.Nombre}}",
