@@ -7,6 +7,7 @@
 ## Contrato (`props`)
 - `props.fieldId`: string obligatorio y único dentro del `form` contenedor.
 - `props.label`: string obligatorio, literal, referencia dinámica completa o string visible interpolado con `{{...}}`.
+- `props.tooltip`: string opcional, literal, referencia dinámica completa o string visible interpolado con `{{...}}`. Cuando resuelve a un string no vacío, se renderiza un icono de información (`HelpCircle`) junto al texto del label con un tooltip flotante accesible (hover y focus). En `labelPosition: inline`, el icono acompaña al label en su posición inline. Cuando está ausente o resuelve a vacío, no se renderiza nada adicional.
 - `props.labelPosition`: enum cerrado `top | inline`, default `top`.
     - `top`: label encima del control, siguiendo la disposición habitual de los demás campos del catálogo.
     - `inline`: label a la derecha del control en la misma línea.

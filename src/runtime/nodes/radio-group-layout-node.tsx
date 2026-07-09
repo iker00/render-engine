@@ -16,6 +16,7 @@ import {
 import { getValidationErrorForEditedField } from '../runtime-form-validations'
 import { useRuntimeState, useRuntimeStateActions } from '../runtime-state/runtime-state-provider'
 import { selectFormFieldState } from '../runtime-state/runtime-state-selectors'
+import { FieldTooltip } from './field-tooltip'
 
 interface RadioGroupNodeProps {
   node: RadioGroupLayoutNode
@@ -34,6 +35,9 @@ export function RadioGroupNode({ node, iterationContext }: RadioGroupNodeProps) 
   const fieldState = selectFormFieldState(state, formContext.formId, node.props.fieldId)
   const fieldDefinition = resolveResolvedFormFieldDefinition(node, state, iterationContext)
   const label = resolveRuntimeTextReference(node.props.label, state, 'radioGroup.props.label', { iterationContext })
+  const tooltip = node.props.tooltip !== undefined
+    ? resolveRuntimeTextReference(node.props.tooltip, state, 'radioGroup.props.tooltip', { iterationContext })
+    : ''
   const defaultValue = fieldDefinition.defaultValue
   const items = resolveChoiceCollectionItems(node.props.items, state, 'radioGroup.props.items', { iterationContext })
   const value = normalizeChoiceFieldValue(node.props.items, state, fieldState?.value ?? defaultValue, {
@@ -52,7 +56,7 @@ export function RadioGroupNode({ node, iterationContext }: RadioGroupNodeProps) 
       data-layout-node="radio-group"
       aria-describedby={error !== null ? errorId : undefined}
     >
-      <legend className={getFieldLabelClassName()}>{label}</legend>
+      <legend className={getFieldLabelClassName()}>{label}<FieldTooltip text={tooltip} /></legend>
       <div className={getChoiceGroupClassName(optionLayout)}>
         {items.map((item, index) => (
           <label key={`${node.props.fieldId}-${index}-${item.value}`} className={getChoiceOptionClassName(optionLayout)}>

@@ -1,7 +1,10 @@
 import { useEffect, useRef } from 'react'
 import type React from 'react'
 import type { FileInputLayoutNode } from '../../config/runtime-config'
-import type { RuntimeIterationContext } from '../runtime-references/runtime-reference-resolver'
+import {
+  resolveRuntimeTextReference,
+  type RuntimeIterationContext,
+} from '../runtime-references/runtime-reference-resolver'
 import { useOptionalFormContext } from '../form-context'
 import { useRuntimeState, useRuntimeStateActions } from '../runtime-state/runtime-state-provider'
 import { selectFormFieldState } from '../runtime-state/runtime-state-selectors'
@@ -11,6 +14,7 @@ import {
   getFieldLabelClassName,
   getFieldWrapperClassName,
 } from '../runtime-node-styling'
+import { FieldTooltip } from './field-tooltip'
 
 interface FileInputNodeProps {
   node: FileInputLayoutNode
@@ -41,6 +45,9 @@ export function FileInputNode({ node }: FileInputNodeProps) {
 
   const { formId } = formContext
   const { fieldId, label, multiple, capture, validations } = node.props
+  const tooltip = node.props.tooltip !== undefined
+    ? resolveRuntimeTextReference(node.props.tooltip, state, 'fileInput.props.tooltip', {})
+    : ''
   const isMultiple = multiple !== false // default is true
 
   const fieldState = selectFormFieldState(state, formId, fieldId)
@@ -116,7 +123,7 @@ export function FileInputNode({ node }: FileInputNodeProps) {
   return (
     <div className={getFieldWrapperClassName()} data-layout-node="fileInput">
       <label htmlFor={inputId} className={getFieldLabelClassName()}>
-        {label}
+        {label}<FieldTooltip text={tooltip} />
       </label>
       <input
         id={inputId}

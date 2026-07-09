@@ -48,6 +48,7 @@ src/tests/
 - `runtime-config-validation-file-manager.test.ts` — validación del nodo `fileManager`: operaciones (getOperation/uploadOperation/deleteOperation/viewOperation/downloadOperation) como string/false/omitida, fieldName requerido cuando omitida, validaciones (accept/maxFileSize/maxTotalSize/minFiles/maxFiles/validFileNames), pagination.pageSize, bootstrap checks (~nuevo)
 - `runtime-config-validation-toggle.test.ts` — validación del nodo `toggle`: shape con props mínimos, labelPosition, defaultValue boolean/referencia, validations.required aceptado, reglas no aplicables rechazadas, form-only, transversales, repeater, fieldId duplicado (~nuevo)
 - `runtime-config-validation-hidden.test.ts` — validación del nodo `hidden`: shape con fieldId y value (string/number/boolean/referencia), rechazo de props prohibidos (label/validations/defaultValue/placeholder/icon/iconPosition), rechazo de visibility y queryStateFeedback, form-only, repeater, fieldId duplicado (~nuevo)
+- `runtime-config-validation-tooltip.test.ts` — validación de `props.tooltip` en los siete field nodes: aceptación como string (vacío, no vacío, interpolado), rechazo como número/boolean/array, aceptación sin tooltip sin regresión (~nuevo)
 
 ## layout-renderer/
 
@@ -72,6 +73,7 @@ src/tests/
 - `layout-renderer-file-manager.test.tsx` — render del nodo `fileManager`: zona DnD, selector nativo, subida secuencial, barra de progreso, validaciones client-side (accept/maxFileSize/maxTotalSize/maxFiles/validFileNames/duplicados/0 bytes), lista paginada, botones Ver/Descargar/Eliminar, precarga con getOperation, independencia del formulario, transversales (visibility/queryStateFeedback/layout.span) (~nuevo)
 - `layout-renderer-toggle.test.tsx` — render del nodo `toggle`: role="switch", aria-checked, defaultValue, labelPosition (top/inline), click toggling, required (exige true), submit bloqueado/permitido, aria-describedby, visibility, repeater con item.*, payload boolean, reevaluación, layout.span, queryStateFeedback (~nuevo)
 - `layout-renderer-hidden.test.tsx` — render del nodo `hidden`: sin DOM visible, value literal (string/number/boolean), value referencia dinámica, inicialización no lazy al montar form, no bloquea submit, incluido en payload, repeater con item.*, dentro de container con visibility oculta sigue inicializado y en payload (~nuevo)
+- `layout-renderer-tooltip.test.tsx` — render del componente `FieldTooltip` aislado (icono, accesibilidad, no-render con texto vacío/undefined) e integración del tooltip en los siete field nodes (input, textarea, select, radioGroup, checkboxGroup, toggle top/inline, fileInput), interpolación, string vacío, referencia no resuelta, coexistencia con icon, no interferencia con validación/submit (~nuevo)
 
 ## runtime-state/
 

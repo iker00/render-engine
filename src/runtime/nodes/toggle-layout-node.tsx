@@ -13,6 +13,7 @@ import {
 import { getValidationErrorForEditedField } from '../runtime-form-validations'
 import { useRuntimeState, useRuntimeStateActions } from '../runtime-state/runtime-state-provider'
 import { selectFormFieldState } from '../runtime-state/runtime-state-selectors'
+import { FieldTooltip } from './field-tooltip'
 
 interface ToggleNodeProps {
   node: ToggleLayoutNode
@@ -31,6 +32,9 @@ export function ToggleNode({ node, iterationContext }: ToggleNodeProps) {
   const fieldState = selectFormFieldState(state, formContext.formId, node.props.fieldId)
   const fieldDefinition = resolveToggleFieldDefinition(node, state, iterationContext)
   const label = resolveRuntimeTextReference(node.props.label, state, 'toggle.props.label', { iterationContext })
+  const tooltip = node.props.tooltip !== undefined
+    ? resolveRuntimeTextReference(node.props.tooltip, state, 'toggle.props.tooltip', { iterationContext })
+    : ''
   const defaultValue = fieldDefinition.defaultValue
   const value =
     typeof fieldState?.value === 'boolean'
@@ -79,11 +83,11 @@ export function ToggleNode({ node, iterationContext }: ToggleNodeProps) {
       {isInline ? (
         <div className="flex flex-row items-center gap-3">
           {toggleButton}
-          <span className={getFieldLabelClassName()}>{label}</span>
+          <span className={getFieldLabelClassName()}>{label}<FieldTooltip text={tooltip} /></span>
         </div>
       ) : (
         <>
-          <span className={getFieldLabelClassName()}>{label}</span>
+          <span className={getFieldLabelClassName()}>{label}<FieldTooltip text={tooltip} /></span>
           {toggleButton}
         </>
       )}

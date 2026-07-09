@@ -10,6 +10,7 @@
 - `props.placeholder`: string opcional, literal o string visible interpolado con `{{...}}`. Aparece como texto de ayuda cuando el campo está vacío, usando el atributo HTML nativo `placeholder`.
 - `props.icon`: string opcional, nombre del icono Lucide React (ej. `"Mail"`, `"Search"`). Se renderiza visualmente dentro del campo a la izquierda del área de texto por defecto. Si el nombre no resuelve, se ignora silenciosamente. El icono es puramente decorativo: no afecta al valor, validación ni submit del formulario.
 - `props.iconPosition`: string opcional, enum cerrado `"left" | "right"`, default `"left"`. Controla el posicionamiento del icono declarado con `props.icon`. Solo tiene efecto cuando `props.icon` está declarado y resuelve a un icono conocido; en caso contrario se ignora silenciosamente.
+- `props.tooltip`: string opcional, literal, referencia dinámica completa o string visible interpolado con `{{...}}`. Cuando resuelve a un string no vacío, se renderiza un icono de información (`HelpCircle`) junto al texto del label con un tooltip flotante accesible (hover y focus). Cuando está ausente o resuelve a vacío, no se renderiza nada adicional.
 - `props.validations`: objeto opcional y ordenado por declaración.
   - `props.validations.required`: `true` o `{ value: true, message?: string }`.
   - `props.validations.minLength`: número o `{ value: number, message?: string }`, solo para `input` textuales.
