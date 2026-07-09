@@ -27,6 +27,8 @@ export const supportedNodeTypes = [
   'skeleton',
   'fileManager',
   'fileInput',
+  'toggle',
+  'hidden',
 ] as const
 
 export const tableCellAllowedNodeTypes = ['image', 'list', 'button', 'container', 'heading', 'paragraph'] as const
@@ -797,6 +799,38 @@ export const fileManagerNodeSchema = z
           .strip()
           .optional(),
         labels: fileManagerLabelsSchema.optional(),
+      })
+      .strip(),
+  })
+  .strip()
+
+export const supportedToggleLabelPositions = ['top', 'inline'] as const
+
+export const toggleNodeSchema = z
+  .object({
+    type: z.literal('toggle'),
+    queryStateFeedback: queryStateFeedbackSchema.optional(),
+    visibility: visibilitySchema.optional(),
+    layout: layoutNodeLayoutSchema.optional(),
+    props: z
+      .object({
+        fieldId: nonEmptyStringSchema,
+        label: z.string(),
+        labelPosition: z.enum(supportedToggleLabelPositions).optional(),
+        defaultValue: z.union([z.boolean(), z.string()]).optional(),
+        validations: formFieldValidationsSchema.optional(),
+      })
+      .strip(),
+  })
+  .strip()
+
+export const hiddenNodeSchema = z
+  .object({
+    type: z.literal('hidden'),
+    props: z
+      .object({
+        fieldId: nonEmptyStringSchema,
+        value: z.union([z.string(), z.number(), z.boolean()]),
       })
       .strip(),
   })

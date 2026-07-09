@@ -166,12 +166,22 @@ export function LayoutNodeRenderer({ node, renderedChildren, iterationContext }:
       renderedNode = <FileManagerNode node={node} iterationContext={iterationContext} />
       break
     }
+    case 'toggle': {
+      const ToggleNode = NodeComponents.toggle
+      renderedNode = <ToggleNode node={node} iterationContext={iterationContext} />
+      break
+    }
+    case 'hidden': {
+      const HiddenNode = NodeComponents.hidden
+      renderedNode = <HiddenNode node={node} iterationContext={iterationContext} />
+      break
+    }
   }
 
   renderedNode = <LazyNode>{renderedNode}</LazyNode>
 
   const gridChildSpanClassName =
-    node.type === 'repeater' || node.type === 'modal'
+    node.type === 'repeater' || node.type === 'modal' || node.type === 'hidden'
       ? null
       : getGridChildSpanClassName(node.layout?.span, parentGridColumns)
 

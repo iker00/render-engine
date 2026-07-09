@@ -28,6 +28,8 @@ import {
   tabsNodeSchema,
   tableNodeSchema,
   textareaNodeSchema,
+  toggleNodeSchema,
+  hiddenNodeSchema,
 } from './runtime-config-zod'
 
 // Lazy recursive schema — resolved at parse time, after all loose schemas are initialized
@@ -58,6 +60,8 @@ const layoutNodeSchema: z.ZodType<unknown> = z.lazy(() =>
     skeletonNodeSchema,
     fileManagerNodeSchema,
     fileInputNodeSchema,
+    toggleNodeSchema,
+    hiddenNodeSchema,
   ]),
 )
 

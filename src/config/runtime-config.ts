@@ -117,6 +117,8 @@ export type {
   FormOnErrorAction,
   FormOnSuccessAction,
   RuntimeTokenRefreshConfig,
+  HiddenLayoutNode,
+  ToggleLayoutNode
 } from './runtime-config-types'
 export type { RuntimeTranslationsConfig, RuntimeTranslationsLangMap } from './runtime-config-types'
 export { validateRuntimeConfig } from './validate-runtime-config'
