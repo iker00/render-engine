@@ -8,6 +8,7 @@
 - `props.fieldId`: string obligatorio y único dentro del `form` contenedor.
 - `props.label`: string obligatorio, literal, referencia dinámica completa o string visible interpolado con `{{...}}`.
 - `props.placeholder`: string opcional, literal o string visible interpolado con `{{...}}`. Solo aplica a selección simple (`multiple` ausente o `false`); se renderiza como opción deshabilitada al inicio del listado cuando el campo está vacío. No aplica a selección múltiple (`multiple: true`).
+- `props.tooltip`: string opcional, literal, referencia dinámica completa o string visible interpolado con `{{...}}`. Cuando resuelve a un string no vacío, se renderiza un icono de información (`HelpCircle`) junto al texto del label con un tooltip flotante accesible (hover y focus). Cuando está ausente o resuelve a vacío, no se renderiza nada adicional.
 - `props.validations`: objeto opcional y ordenado por declaración.
   - `props.validations.required`: `true` o `{ value: true, message?: string }`.
   - `props.validations.minSelections`: número o `{ value: number, message?: string }`, solo cuando `props.multiple: true`.

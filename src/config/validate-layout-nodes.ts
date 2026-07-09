@@ -2435,6 +2435,10 @@ function validateFileInputNode(
     label: rawProps.label,
   }
 
+  if (rawProps.tooltip !== undefined) {
+    props.tooltip = rawProps.tooltip
+  }
+
   if (rawProps.multiple !== undefined) {
     props.multiple = rawProps.multiple
   }

@@ -14,6 +14,7 @@ import {
 import { getValidationErrorForEditedField } from '../runtime-form-validations'
 import { useRuntimeState, useRuntimeStateActions } from '../runtime-state/runtime-state-provider'
 import { selectFormFieldState } from '../runtime-state/runtime-state-selectors'
+import { FieldTooltip } from './field-tooltip'
 
 interface TextareaNodeProps {
   node: TextareaLayoutNode
@@ -32,6 +33,9 @@ export function TextareaNode({ node, iterationContext }: TextareaNodeProps) {
   const fieldState = selectFormFieldState(state, formContext.formId, node.props.fieldId)
   const fieldDefinition = resolveResolvedFormFieldDefinition(node, state, iterationContext)
   const label = resolveRuntimeTextReference(node.props.label, state, 'textarea.props.label', { iterationContext })
+  const tooltip = node.props.tooltip !== undefined
+    ? resolveRuntimeTextReference(node.props.tooltip, state, 'textarea.props.tooltip', { iterationContext })
+    : ''
   const placeholder = node.props.placeholder !== undefined
     ? resolveRuntimeTextReference(node.props.placeholder, state, 'textarea.props.placeholder', { iterationContext })
     : ''
@@ -46,7 +50,7 @@ export function TextareaNode({ node, iterationContext }: TextareaNodeProps) {
 
   return (
     <label className={getFieldWrapperClassName()} data-layout-node="textarea">
-      <span className={getFieldLabelClassName()}>{label}</span>
+      <span className={getFieldLabelClassName()}>{label}<FieldTooltip text={tooltip} /></span>
       <textarea
         id={`${formContext.formId}-${node.props.fieldId}`}
         className={`${getFieldControlClassName(error !== null)} min-h-28 resize-y sm:min-h-32`}

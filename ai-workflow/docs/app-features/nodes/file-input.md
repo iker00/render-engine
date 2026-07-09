@@ -14,6 +14,7 @@ Nodo de entrada de formulario que permite seleccionar uno o varios ficheros desd
 |---|---|---|---|---|
 | `fieldId` | string | — | **Sí** | Identificador único del campo dentro del formulario. Usado como clave en `forms.{formId}.{fieldId}` y como nombre del campo en el FormData multipart. |
 | `label` | string | — | **Sí** | Etiqueta del campo, literal, referencia dinámica o string visible interpolado. |
+| `tooltip` | string | — | No | Texto de ayuda contextual, literal, referencia dinámica o string visible interpolado. Cuando resuelve a un string no vacío, se renderiza un icono de información (`HelpCircle`) junto al texto del label con un tooltip flotante accesible (hover y focus). Cuando está ausente o resuelve a vacío, no se renderiza nada adicional. |
 | `multiple` | boolean | `true` | No | Si `false`, el selector limita la selección a un único fichero. |
 | `capture` | `"environment" \| "user"` | — | No | Abre la cámara del dispositivo en móviles: `"environment"` (trasera) o `"user"` (frontal). Ignorado en desktop. Si declarado, `validations.accept` **debe** incluir al menos un MIME `image/*` o `video/*`. |
 | `validations.required` | `boolean \| { value: boolean; message?: string }` | — | No | Al menos un fichero debe estar seleccionado al hacer submit. El campo `message` opcional soporta `{{translations.*}}` e interpolación. |
