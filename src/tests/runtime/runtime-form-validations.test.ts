@@ -539,6 +539,518 @@ describe('runtime form validations', () => {
   })
 })
 
+describe('pattern, email, and url validation rules', () => {
+  it('does not produce error when pattern regex matches the field value', () => {
+    const state: RuntimeState = {
+      ...baseState,
+      forms: {
+        testForm: {
+          code: { value: '12345', error: null, touched: false, dirty: false, defaultValue: '' },
+        },
+      },
+    }
+
+    const result = validateFormFields({
+      formId: 'testForm',
+      fieldDefinitions: [
+        {
+          fieldId: 'code',
+          type: 'input',
+          validations: { pattern: { value: '^\\d{5}$' } },
+          multiple: false,
+          defaultValue: '',
+        },
+      ],
+      state,
+    })
+
+    expect(result).toEqual({
+      isValid: true,
+      errorsByFieldId: { code: null },
+    })
+  })
+
+  it('produces Invalid format error when pattern regex does not match the field value', () => {
+    const state: RuntimeState = {
+      ...baseState,
+      forms: {
+        testForm: {
+          code: { value: 'abc', error: null, touched: false, dirty: false, defaultValue: '' },
+        },
+      },
+    }
+
+    const result = validateFormFields({
+      formId: 'testForm',
+      fieldDefinitions: [
+        {
+          fieldId: 'code',
+          type: 'input',
+          validations: { pattern: { value: '^\\d{5}$' } },
+          multiple: false,
+          defaultValue: '',
+        },
+      ],
+      state,
+    })
+
+    expect(result).toEqual({
+      isValid: false,
+      errorsByFieldId: { code: 'Invalid format.' },
+    })
+  })
+
+  it('does not produce error for pattern when the field is empty', () => {
+    const state: RuntimeState = {
+      ...baseState,
+      forms: {
+        testForm: {
+          code: { value: '', error: null, touched: false, dirty: false, defaultValue: '' },
+        },
+      },
+    }
+
+    const result = validateFormFields({
+      formId: 'testForm',
+      fieldDefinitions: [
+        {
+          fieldId: 'code',
+          type: 'input',
+          validations: { pattern: { value: '^\\d{5}$' } },
+          multiple: false,
+          defaultValue: '',
+        },
+      ],
+      state,
+    })
+
+    expect(result).toEqual({
+      isValid: true,
+      errorsByFieldId: { code: null },
+    })
+  })
+
+  it('uses custom message for pattern when message is declared', () => {
+    const state: RuntimeState = {
+      ...baseState,
+      forms: {
+        testForm: {
+          code: { value: 'abc', error: null, touched: false, dirty: false, defaultValue: '' },
+        },
+      },
+    }
+
+    const result = validateFormFields({
+      formId: 'testForm',
+      fieldDefinitions: [
+        {
+          fieldId: 'code',
+          type: 'input',
+          validations: { pattern: { value: '^\\d{5}$', message: 'Introduce un código postal válido' } },
+          multiple: false,
+          defaultValue: '',
+        },
+      ],
+      state,
+    })
+
+    expect(result).toEqual({
+      isValid: false,
+      errorsByFieldId: { code: 'Introduce un código postal válido' },
+    })
+  })
+
+  it('does not auto-anchor pattern: "\\d+" accepts "abc123def" as partial match', () => {
+    const state: RuntimeState = {
+      ...baseState,
+      forms: {
+        testForm: {
+          code: { value: 'abc123def', error: null, touched: false, dirty: false, defaultValue: '' },
+        },
+      },
+    }
+
+    const result = validateFormFields({
+      formId: 'testForm',
+      fieldDefinitions: [
+        {
+          fieldId: 'code',
+          type: 'input',
+          validations: { pattern: { value: '\\d+' } },
+          multiple: false,
+          defaultValue: '',
+        },
+      ],
+      state,
+    })
+
+    expect(result).toEqual({
+      isValid: true,
+      errorsByFieldId: { code: null },
+    })
+  })
+
+  it('does not produce error when email is valid', () => {
+    const state: RuntimeState = {
+      ...baseState,
+      forms: {
+        testForm: {
+          email: { value: 'user@example.com', error: null, touched: false, dirty: false, defaultValue: '' },
+        },
+      },
+    }
+
+    const result = validateFormFields({
+      formId: 'testForm',
+      fieldDefinitions: [
+        {
+          fieldId: 'email',
+          type: 'input',
+          validations: { email: { value: true } },
+          multiple: false,
+          defaultValue: '',
+        },
+      ],
+      state,
+    })
+
+    expect(result).toEqual({
+      isValid: true,
+      errorsByFieldId: { email: null },
+    })
+  })
+
+  it('produces Invalid email address error when email is invalid', () => {
+    const state: RuntimeState = {
+      ...baseState,
+      forms: {
+        testForm: {
+          email: { value: 'noarroba', error: null, touched: false, dirty: false, defaultValue: '' },
+        },
+      },
+    }
+
+    const result = validateFormFields({
+      formId: 'testForm',
+      fieldDefinitions: [
+        {
+          fieldId: 'email',
+          type: 'input',
+          validations: { email: { value: true } },
+          multiple: false,
+          defaultValue: '',
+        },
+      ],
+      state,
+    })
+
+    expect(result).toEqual({
+      isValid: false,
+      errorsByFieldId: { email: 'Invalid email address.' },
+    })
+  })
+
+  it('rejects email without dot in domain', () => {
+    const state: RuntimeState = {
+      ...baseState,
+      forms: {
+        testForm: {
+          email: { value: 'user@example', error: null, touched: false, dirty: false, defaultValue: '' },
+        },
+      },
+    }
+
+    const result = validateFormFields({
+      formId: 'testForm',
+      fieldDefinitions: [
+        {
+          fieldId: 'email',
+          type: 'input',
+          validations: { email: { value: true } },
+          multiple: false,
+          defaultValue: '',
+        },
+      ],
+      state,
+    })
+
+    expect(result).toEqual({
+      isValid: false,
+      errorsByFieldId: { email: 'Invalid email address.' },
+    })
+  })
+
+  it('does not produce error for email when the field is empty', () => {
+    const state: RuntimeState = {
+      ...baseState,
+      forms: {
+        testForm: {
+          email: { value: '', error: null, touched: false, dirty: false, defaultValue: '' },
+        },
+      },
+    }
+
+    const result = validateFormFields({
+      formId: 'testForm',
+      fieldDefinitions: [
+        {
+          fieldId: 'email',
+          type: 'input',
+          validations: { email: { value: true } },
+          multiple: false,
+          defaultValue: '',
+        },
+      ],
+      state,
+    })
+
+    expect(result).toEqual({
+      isValid: true,
+      errorsByFieldId: { email: null },
+    })
+  })
+
+  it('uses custom message for email when message is declared', () => {
+    const state: RuntimeState = {
+      ...baseState,
+      forms: {
+        testForm: {
+          email: { value: 'noarroba', error: null, touched: false, dirty: false, defaultValue: '' },
+        },
+      },
+    }
+
+    const result = validateFormFields({
+      formId: 'testForm',
+      fieldDefinitions: [
+        {
+          fieldId: 'email',
+          type: 'input',
+          validations: { email: { value: true, message: 'Dirección de email no válida' } },
+          multiple: false,
+          defaultValue: '',
+        },
+      ],
+      state,
+    })
+
+    expect(result).toEqual({
+      isValid: false,
+      errorsByFieldId: { email: 'Dirección de email no válida' },
+    })
+  })
+
+  it('does not produce error when url is valid http', () => {
+    const state: RuntimeState = {
+      ...baseState,
+      forms: {
+        testForm: {
+          website: { value: 'http://example.com', error: null, touched: false, dirty: false, defaultValue: '' },
+        },
+      },
+    }
+
+    const result = validateFormFields({
+      formId: 'testForm',
+      fieldDefinitions: [
+        {
+          fieldId: 'website',
+          type: 'input',
+          validations: { url: { value: true } },
+          multiple: false,
+          defaultValue: '',
+        },
+      ],
+      state,
+    })
+
+    expect(result).toEqual({
+      isValid: true,
+      errorsByFieldId: { website: null },
+    })
+  })
+
+  it('does not produce error when url is valid https', () => {
+    const state: RuntimeState = {
+      ...baseState,
+      forms: {
+        testForm: {
+          website: { value: 'https://example.com', error: null, touched: false, dirty: false, defaultValue: '' },
+        },
+      },
+    }
+
+    const result = validateFormFields({
+      formId: 'testForm',
+      fieldDefinitions: [
+        {
+          fieldId: 'website',
+          type: 'input',
+          validations: { url: { value: true } },
+          multiple: false,
+          defaultValue: '',
+        },
+      ],
+      state,
+    })
+
+    expect(result).toEqual({
+      isValid: true,
+      errorsByFieldId: { website: null },
+    })
+  })
+
+  it('produces Invalid URL error for ftp protocol', () => {
+    const state: RuntimeState = {
+      ...baseState,
+      forms: {
+        testForm: {
+          website: { value: 'ftp://files.com', error: null, touched: false, dirty: false, defaultValue: '' },
+        },
+      },
+    }
+
+    const result = validateFormFields({
+      formId: 'testForm',
+      fieldDefinitions: [
+        {
+          fieldId: 'website',
+          type: 'input',
+          validations: { url: { value: true } },
+          multiple: false,
+          defaultValue: '',
+        },
+      ],
+      state,
+    })
+
+    expect(result).toEqual({
+      isValid: false,
+      errorsByFieldId: { website: 'Invalid URL.' },
+    })
+  })
+
+  it('produces Invalid URL error for non-parseable string', () => {
+    const state: RuntimeState = {
+      ...baseState,
+      forms: {
+        testForm: {
+          website: { value: 'not-a-url', error: null, touched: false, dirty: false, defaultValue: '' },
+        },
+      },
+    }
+
+    const result = validateFormFields({
+      formId: 'testForm',
+      fieldDefinitions: [
+        {
+          fieldId: 'website',
+          type: 'input',
+          validations: { url: { value: true } },
+          multiple: false,
+          defaultValue: '',
+        },
+      ],
+      state,
+    })
+
+    expect(result).toEqual({
+      isValid: false,
+      errorsByFieldId: { website: 'Invalid URL.' },
+    })
+  })
+
+  it('produces Invalid URL error for url without double slash (https:dsadas.com)', () => {
+    const state: RuntimeState = {
+      ...baseState,
+      forms: {
+        testForm: {
+          website: { value: 'https:dsadas.com', error: null, touched: false, dirty: false, defaultValue: '' },
+        },
+      },
+    }
+
+    const result = validateFormFields({
+      formId: 'testForm',
+      fieldDefinitions: [
+        {
+          fieldId: 'website',
+          type: 'input',
+          validations: { url: { value: true } },
+          multiple: false,
+          defaultValue: '',
+        },
+      ],
+      state,
+    })
+
+    expect(result).toEqual({
+      isValid: false,
+      errorsByFieldId: { website: 'Invalid URL.' },
+    })
+  })
+
+  it('does not produce error for url when the field is empty', () => {
+    const state: RuntimeState = {
+      ...baseState,
+      forms: {
+        testForm: {
+          website: { value: '', error: null, touched: false, dirty: false, defaultValue: '' },
+        },
+      },
+    }
+
+    const result = validateFormFields({
+      formId: 'testForm',
+      fieldDefinitions: [
+        {
+          fieldId: 'website',
+          type: 'input',
+          validations: { url: { value: true } },
+          multiple: false,
+          defaultValue: '',
+        },
+      ],
+      state,
+    })
+
+    expect(result).toEqual({
+      isValid: true,
+      errorsByFieldId: { website: null },
+    })
+  })
+
+  it('uses custom message for url when message is declared', () => {
+    const state: RuntimeState = {
+      ...baseState,
+      forms: {
+        testForm: {
+          website: { value: 'not-a-url', error: null, touched: false, dirty: false, defaultValue: '' },
+        },
+      },
+    }
+
+    const result = validateFormFields({
+      formId: 'testForm',
+      fieldDefinitions: [
+        {
+          fieldId: 'website',
+          type: 'input',
+          validations: { url: { value: true, message: 'Introduce una URL válida' } },
+          multiple: false,
+          defaultValue: '',
+        },
+      ],
+      state,
+    })
+
+    expect(result).toEqual({
+      isValid: false,
+      errorsByFieldId: { website: 'Introduce una URL válida' },
+    })
+  })
+})
+
 function makeFile(name: string, type: string, size: number): File {
   const content = new Uint8Array(size)
   return new File([content], name, { type })

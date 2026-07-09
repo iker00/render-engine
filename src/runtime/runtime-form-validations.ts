@@ -8,7 +8,7 @@ import type {
   RuntimeFormFieldValidations,
   SelectLayoutNode,
 } from '../config/runtime-config'
-import { isLayoutNodeVisible } from './runtime-layout-visibility'
+import { isLayoutNodeVisible, matchesVisibilityRule } from './runtime-layout-visibility'
 import { normalizeChoiceFieldValue } from './runtime-collection-sources'
 import type { RuntimeIterationContext } from './runtime-references/runtime-reference-resolver'
 import { resolveRuntimeTextReference } from './runtime-references/runtime-reference-resolver'
@@ -21,7 +21,7 @@ export function formatValidationMessage({
   state,
   iterationContext,
 }: {
-  rule: { value: number | true; message?: string }
+  rule: { value: number | true | string; message?: string }
   defaultMessage: string
   state: RuntimeState
   iterationContext?: RuntimeIterationContext
@@ -44,7 +44,7 @@ export function formatValidationMessage({
 
 export interface ResolvedFormFieldDefinition {
   fieldId: string
-  type: 'input' | 'textarea' | 'select' | 'radioGroup' | 'checkboxGroup' | 'fileInput'
+  type: 'input' | 'textarea' | 'select' | 'radioGroup' | 'checkboxGroup' | 'fileInput' | 'toggle'
   validations?: RuntimeFormFieldValidations
   fileValidations?: RuntimeFileInputValidations
   queryStateFeedback?: LayoutNode['queryStateFeedback']
@@ -79,7 +79,7 @@ export function validateFormFields({
       continue
     }
 
-    const errorResult = getFirstVisibleValidationError(fieldDefinition, currentValue)
+    const errorResult = getFirstVisibleValidationError(fieldDefinition, currentValue, state, iterationContext)
 
     if (errorResult !== null) {
       errorsByFieldId[fieldDefinition.fieldId] = formatValidationMessage({
@@ -115,19 +115,27 @@ export function resolveFormFieldValue(fieldDefinition: ResolvedFormFieldDefiniti
 
 export interface ValidationErrorResult {
   ruleName: string
-  rule: { value: number | true; message?: string }
+  rule: { value: number | true | string; message?: string }
   defaultMessage: string
 }
 
 export function getFirstVisibleValidationError(
   fieldDefinition: ResolvedFormFieldDefinition,
   value: unknown,
+  state?: RuntimeState,
+  iterationContext?: RuntimeIterationContext,
 ): ValidationErrorResult | null {
   if (fieldDefinition.type === 'fileInput') {
     return getFirstFileInputValidationError(fieldDefinition.fileValidations, value)
   }
 
   for (const [ruleName, rule] of Object.entries(fieldDefinition.validations ?? {})) {
+    if (rule.when !== undefined && state !== undefined) {
+      if (!matchesVisibilityRule(rule.when, state, iterationContext)) {
+        continue
+      }
+    }
+
     switch (ruleName) {
       case 'required':
         if (!passesRequiredValidation(fieldDefinition, value)) {
@@ -166,6 +174,21 @@ export function getFirstVisibleValidationError(
       case 'maxSelections':
         if (Array.isArray(value) && value.length > rule.value) {
           return { ruleName, rule, defaultMessage: `Select no more than ${rule.value} options.` }
+        }
+        break
+      case 'pattern':
+        if (!passesPatternValidation(value, rule.value)) {
+          return { ruleName, rule, defaultMessage: 'Invalid format.' }
+        }
+        break
+      case 'email':
+        if (!passesEmailValidation(value)) {
+          return { ruleName, rule, defaultMessage: 'Invalid email address.' }
+        }
+        break
+      case 'url':
+        if (!passesUrlValidation(value)) {
+          return { ruleName, rule, defaultMessage: 'Invalid URL.' }
         }
         break
     }
@@ -213,7 +236,7 @@ export function getValidationErrorForEditedField({
   }
 
   const nextResolvedValue = resolveFormFieldValue(fieldDefinition, formId, nextState)
-  const errorResult = getFirstVisibleValidationError(fieldDefinition, nextResolvedValue)
+  const errorResult = getFirstVisibleValidationError(fieldDefinition, nextResolvedValue, nextState, iterationContext)
 
   if (errorResult === null) {
     return null
@@ -254,6 +277,10 @@ function getFirstFileInputValidationError(
 }
 
 function passesRequiredValidation(fieldDefinition: ResolvedFormFieldDefinition, value: unknown) {
+  if (fieldDefinition.type === 'toggle') {
+    return value === true
+  }
+
   if (fieldDefinition.multiple) {
     return Array.isArray(value) && value.length > 0
   }
@@ -263,6 +290,49 @@ function passesRequiredValidation(fieldDefinition: ResolvedFormFieldDefinition, 
   }
 
   return typeof value === 'string' && value.trim().length > 0
+}
+
+function passesPatternValidation(value: unknown, pattern: unknown) {
+  if (typeof value !== 'string' || value === '') {
+    return true
+  }
+
+  if (typeof pattern !== 'string') {
+    return true
+  }
+
+  return new RegExp(pattern).test(value)
+}
+
+function passesEmailValidation(value: unknown) {
+  if (typeof value !== 'string' || value === '') {
+    return true
+  }
+
+  const atIndex = value.indexOf('@')
+  if (atIndex < 1) {
+    return false
+  }
+
+  const domain = value.slice(atIndex + 1)
+  if (domain.length === 0 || !domain.includes('.')) {
+    return false
+  }
+
+  return true
+}
+
+function passesUrlValidation(value: unknown) {
+  if (typeof value !== 'string' || value === '') {
+    return true
+  }
+
+  try {
+    const parsed = new URL(value)
+    return (parsed.protocol === 'http:' || parsed.protocol === 'https:') && value.includes('//')
+  } catch {
+    return false
+  }
 }
 
 function parseNumericFieldValue(value: unknown) {

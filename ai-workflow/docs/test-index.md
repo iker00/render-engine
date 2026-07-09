@@ -46,6 +46,8 @@ src/tests/
 - `runtime-config-validation-stat.test.ts` — validación del nodo `stat`: aceptación con label/value/variant/color/transversales/children ignorados, rechazo de label ausente o no string, value ausente o no string, variant inválido, color inválido, layout.span inválido (~nuevo)
 - `runtime-config-validation-divider.test.ts` — validación del nodo `divider`: aceptación sin props, con todas las variantes, con transversales (visibility/queryStateFeedback/layout.span), con children silenciosamente descartados, dentro de container; rechazo de variant inválido y layout.span fuera de rango (~nuevo)
 - `runtime-config-validation-file-manager.test.ts` — validación del nodo `fileManager`: operaciones (getOperation/uploadOperation/deleteOperation/viewOperation/downloadOperation) como string/false/omitida, fieldName requerido cuando omitida, validaciones (accept/maxFileSize/maxTotalSize/minFiles/maxFiles/validFileNames), pagination.pageSize, bootstrap checks (~nuevo)
+- `runtime-config-validation-toggle.test.ts` — validación del nodo `toggle`: shape con props mínimos, labelPosition, defaultValue boolean/referencia, validations.required aceptado, reglas no aplicables rechazadas, form-only, transversales, repeater, fieldId duplicado (~nuevo)
+- `runtime-config-validation-hidden.test.ts` — validación del nodo `hidden`: shape con fieldId y value (string/number/boolean/referencia), rechazo de props prohibidos (label/validations/defaultValue/placeholder/icon/iconPosition), rechazo de visibility y queryStateFeedback, form-only, repeater, fieldId duplicado (~nuevo)
 
 ## layout-renderer/
 
@@ -68,6 +70,8 @@ src/tests/
 - `layout-renderer-stat.test.tsx` — render del nodo `stat`: variantes accent/tinted, paleta de seis colores (borde y fondo/texto), label/value visibles, interpolación, transversales (visibility/queryStateFeedback/layout.span), integración repeater con item.* y form (~nuevo)
 - `layout-renderer-divider.test.tsx` — render del nodo `divider`: data-layout-node, variantes solid/dashed/dotted/invisible (clases Tailwind), visibility (visible/oculto), layout.span dentro de container con columns, repetición en repeater, ausencia de children en el DOM (~nuevo)
 - `layout-renderer-file-manager.test.tsx` — render del nodo `fileManager`: zona DnD, selector nativo, subida secuencial, barra de progreso, validaciones client-side (accept/maxFileSize/maxTotalSize/maxFiles/validFileNames/duplicados/0 bytes), lista paginada, botones Ver/Descargar/Eliminar, precarga con getOperation, independencia del formulario, transversales (visibility/queryStateFeedback/layout.span) (~nuevo)
+- `layout-renderer-toggle.test.tsx` — render del nodo `toggle`: role="switch", aria-checked, defaultValue, labelPosition (top/inline), click toggling, required (exige true), submit bloqueado/permitido, aria-describedby, visibility, repeater con item.*, payload boolean, reevaluación, layout.span, queryStateFeedback (~nuevo)
+- `layout-renderer-hidden.test.tsx` — render del nodo `hidden`: sin DOM visible, value literal (string/number/boolean), value referencia dinámica, inicialización no lazy al montar form, no bloquea submit, incluido en payload, repeater con item.*, dentro de container con visibility oculta sigue inicializado y en payload (~nuevo)
 
 ## runtime-state/
 
@@ -81,6 +85,7 @@ src/tests/
 - `runtime-state-validations-rules.test.tsx` — reglas avanzadas: length/number/multiselect, inicialización lazy, revalidación en edición (~520 líneas)
 - `runtime-state-validations-dynamic-select.test.tsx` — select dinámico: limpieza de valor, submit con empty, formularios declarativos (~270 líneas)
 - `runtime-state-modal.test.tsx` — estado del modal, acción open/close, regla uno a la vez, cierre por navegación/page-entry, identidad por iteración (~350 líneas)
+- `runtime-state-validations-when.test.tsx` — validación condicional `when`: required/minLength/pattern con condición cumplida/no cumplida, varias reglas con when sin match, mezcla con/sin when, retrocompatibilidad sin when, reevaluación local, referencia queries.*, referencia ausente (~nuevo)
 
 ## runtime/
 
@@ -98,7 +103,7 @@ src/tests/
 - `runtime-api-multipart.test.ts` — construcción de FormData en el builder de requests, manejo de files en multipart/form-data, flatness de body con escalares (~nuevo)
 - `runtime-file-manager-normalize-name.test.ts` — normalización de nombre de fichero: caracteres inválidos Windows, espacios al final, nombres reservados, truncado a 255 caracteres, prefijo (~nuevo)
 - `runtime-file-manager-hook.test.tsx` — comportamiento del nodo fileManager: subida secuencial, validaciones client-side, lista paginada, botones Ver/Descargar/Eliminar, precarga, integración con queries state (~nuevo)
-- `runtime-node-components-map.test.tsx` — mapa central de componentes de nodo: cobertura de todas las 24 claves, valores truthy, rama eager activa en modo test (~nuevo)
+- `runtime-node-components-map.test.tsx` — mapa central de componentes de nodo: cobertura de todas las 26 claves, valores truthy, rama eager activa en modo test (~nuevo)
 - `runtime-lazy-node.test.tsx` — wrapper LazyNode con Suspense + error boundary: success, suspense (null), error (indicador con role="alert"), contención por instancia (~nuevo)
 - `runtime-table-processing.test.ts` — filtrado, ordenación y procesamiento local de tablas
 - `runtime-ui-actions.test.tsx` — ejecución de acciones UI (clicks, submit) y delegación al executor compartido

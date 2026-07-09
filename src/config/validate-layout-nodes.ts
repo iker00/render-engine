@@ -74,6 +74,8 @@ import {
   validateSelectNode,
   validateRadioGroupNode,
   validateCheckboxGroupNode,
+  validateToggleNode,
+  validateHiddenNode,
   validateCollectionSource,
 } from './validate-form-nodes'
 
@@ -176,6 +178,10 @@ export function validateLayoutNode(
       return validateFileInputNode(rawNode, path, pageId)
     case 'fileManager':
       return validateFileManagerNode(rawNode, path, pageId)
+    case 'toggle':
+      return validateToggleNode(rawNode, path, pageId)
+    case 'hidden':
+      return validateHiddenNode(rawNode, path, pageId)
   }
 
   return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.type".`)

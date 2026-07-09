@@ -12,14 +12,17 @@
 - `max`
 - `minSelections`
 - `maxSelections`
+- `pattern`
+- `email`
+- `url`
 - un único mensaje visible por campo según la primera regla fallida en el orden declarado dentro de `props.validations`
 
 ## Qué valida realmente
 - El runtime solo aplica validación declarativa local a nivel de formulario.
 - La superficie declarativa vigente entra por `props.validations`; `props.required` ya no forma parte del contrato soportado.
 - `required` conserva su semántica histórica, pero ahora vive dentro del mismo catálogo que el resto de reglas.
-- No existe todavía validación remota, validación cruzada entre campos ni catálogo declarativo de mensajes personalizados efectivos en UI.
-- La forma extendida de cada regla ya admite `message`, pero en esta iteración el runtime sigue mostrando mensajes por defecto.
+- No existe todavía validación remota ni validación cruzada entre campos.
+- La forma extendida de cada regla admite `message` para mostrar un texto personalizado en lugar del mensaje por defecto.
 
 ## Cuándo valida
 - La validación se ejecuta al hacer submit del `form`.
@@ -33,11 +36,16 @@
 
 ## Semántica por tipo de campo
 - `input` y `textarea` `required` consideran inválidos `''` y strings compuestos solo por espacios.
+- `toggle` `required` exige que el valor sea `true` (activado). Un toggle en `false` con `required` falla la validación.
 - `select` simple y `radioGroup` `required` consideran inválido `''` aunque exista una opción placeholder visible en el caso de `select`.
 - `select.multiple` y `checkboxGroup` `required` consideran inválido `[]`.
 - `minLength` y `maxLength` solo aplican a `input` textuales y `textarea`, usando la longitud efectiva del string actual sin trim adicional.
 - `min` y `max` solo aplican a `inputType: 'number'`, comparando contra el valor numérico efectivo del campo cuando existe.
 - `minSelections` y `maxSelections` solo aplican a `select.multiple` y `checkboxGroup`, contando la selección efectiva después de normalizar el catálogo visible.
+- `pattern` solo aplica a `input` textuales (`inputType` text, email, password, search, tel, url) y `textarea`. Valida el valor contra una expresión regular JavaScript sin flags ni anclaje automático. Si el campo está vacío, `pattern` no falla. Si el pattern no compila como `RegExp` válido, el config se rechaza antes del render. Shape: `string` o `{ value: string, message?: string }`.
+- `email` solo aplica a `input` textuales y `textarea`. Valida formato básico de email (presencia de `@`, al menos un carácter antes y después, dominio con al menos un punto). Si el campo está vacío, `email` no falla. Shape: `true` o `{ value: true, message?: string }`.
+- `url` solo aplica a `input` textuales y `textarea`. Valida que el string sea parseable como URL válida con protocolo `http` o `https`. Si el campo está vacío, `url` no falla. Shape: `true` o `{ value: true, message?: string }`.
+- `pattern`, `email` y `url` se rechazan en `input` con `inputType` `number`, `date`, `datetime-local`, `time` y en `select`, `radioGroup`, `checkboxGroup`, `toggle`.
 
 ## Validaciones de ficheros (fileManager y fileInput)
 
@@ -108,6 +116,9 @@ Si `message` no está declarado en una regla, el runtime muestra el mensaje por 
 - `max`: `"Must be at most N."`
 - `minSelections`: `"Select at least N options."`
 - `maxSelections`: `"Select no more than N options."`
+- `pattern`: `"Invalid format."`
+- `email`: `"Invalid email address."`
+- `url`: `"Invalid URL."`
 
 Ejemplos:
 ```json
@@ -124,6 +135,36 @@ Casos límite:
 - `message: ""` (string vacío): se muestra string vacío como error, no se usa el mensaje por defecto.
 - `message: "{{value}}"` y `value: 0`: se interpola como `"0"` (el cero no se trata como vacío).
 - `message: "{{value}} es requerido"` y `value: true`: se interpola como `" es requerido"` (boolean true produce string vacío).
+
+## Validación condicional (`when`)
+
+Cualquier regla de validación en su forma extendida (objeto con `value` y opcionalmente `message`) puede incluir un campo `when` que condiciona la evaluación de esa regla.
+
+El shape de `when` es idéntico al shape de condición de `visibility`:
+- `reference`: referencia runtime completa no vacía. Admite las mismas familias que `visibility`: `params.*`, `item.*`, `forms.*`, `queries.*`.
+- `operator`: `equals | notEquals | isTruthy | isFalsy | greaterThan | lessThan`.
+- `value`: obligatorio para `equals`, `notEquals`, `greaterThan`, `lessThan`; prohibido para `isTruthy`, `isFalsy`.
+
+Comportamiento:
+- Cuando `when` está presente y la condición se cumple, la regla se evalúa normalmente.
+- Cuando `when` está presente y la condición no se cumple, la regla se omite como si no estuviera declarada.
+- Cuando `when` no está presente, la regla se evalúa siempre (retrocompatibilidad).
+- Si todas las reglas de un campo tienen `when` y ninguna condición se cumple, el campo pasa la validación como si no tuviera reglas.
+- Una referencia válida pero ausente sigue la misma semántica que `visibility`: `isFalsy` la considera falsa, `isTruthy` no hace match, el resto de operadores no hace match.
+
+La evaluación de `when` reutiliza la misma función de evaluación de condiciones que `visibility`, `submitAction.onSuccess[*].when`, `preloads[*].when` y `operations[*].when`.
+
+Las formas cortas de las reglas no se modifican: `required: true` sigue funcionando sin `when`. Solo la forma extendida (`required: { value: true, when: {...} }`) admite condición.
+
+`when` aplica a todas las reglas de validación: `required`, `minLength`, `maxLength`, `min`, `max`, `minSelections`, `maxSelections`, `pattern`, `email`, `url`.
+
+Validación de shape de `when` en config:
+- `when.reference` fuera del alcance soportado rechaza el config antes del render.
+- `when.operator` fuera del catálogo rechaza el config.
+- `when` con `isTruthy` o `isFalsy` y `value` declarado rechaza el config.
+- `when` con `equals`, `notEquals`, `greaterThan` o `lessThan` y `value` omitido rechaza el config.
+- `when` con `equals` o `notEquals` y `value` no escalar rechaza el config.
+- `when` con `greaterThan` o `lessThan` y `value` no numérico rechaza el config.
 
 ## Qué no hace todavía
 - No valida al cambiar de página ni por desmontaje del formulario.

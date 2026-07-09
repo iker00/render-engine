@@ -24,6 +24,8 @@ export type LayoutNodeType =
   | 'skeleton'
   | 'fileManager'
   | 'fileInput'
+  | 'toggle'
+  | 'hidden'
 export type RuntimeApiMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
 export type RuntimeApiQueryValue = string | number | boolean
 export type RuntimeApiQuery = Record<string, RuntimeApiQueryValue>
@@ -268,15 +270,32 @@ export type RuntimeFormValidationRuleName =
   | 'max'
   | 'minSelections'
   | 'maxSelections'
+  | 'pattern'
+  | 'email'
+  | 'url'
 
 export interface RuntimeRequiredValidationRule {
   value: true
   message?: string
+  when?: RuntimeWhenCondition
 }
 
 export interface RuntimeNumericValidationRule {
   value: number
   message?: string
+  when?: RuntimeWhenCondition
+}
+
+export interface RuntimePatternValidationRule {
+  value: string
+  message?: string
+  when?: RuntimeWhenCondition
+}
+
+export interface RuntimeBooleanFlagValidationRule {
+  value: true
+  message?: string
+  when?: RuntimeWhenCondition
 }
 
 export interface RuntimeFormFieldValidations {
@@ -287,6 +306,9 @@ export interface RuntimeFormFieldValidations {
   max?: RuntimeNumericValidationRule
   minSelections?: RuntimeNumericValidationRule
   maxSelections?: RuntimeNumericValidationRule
+  pattern?: RuntimePatternValidationRule
+  email?: RuntimeBooleanFlagValidationRule
+  url?: RuntimeBooleanFlagValidationRule
 }
 
 export interface RuntimeFileManagerValidations {
@@ -639,6 +661,29 @@ export interface FileInputLayoutNode extends LayoutNodeFeedbackFields, LayoutNod
   children?: unknown
 }
 
+export type ToggleLabelPosition = 'top' | 'inline'
+
+export interface ToggleLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayoutFields {
+  type: 'toggle'
+  id?: string
+  props: {
+    fieldId: string
+    label: string
+    labelPosition?: ToggleLabelPosition
+    defaultValue?: boolean | string
+    validations?: RuntimeFormFieldValidations
+  }
+  children?: unknown
+}
+
+export interface HiddenLayoutNode {
+  type: 'hidden'
+  props: {
+    fieldId: string
+    value: string | number | boolean
+  }
+}
+
 export type FileManagerLabelKey =
   | 'dropzoneIdle'
   | 'dropzoneAcceptedFormats'
@@ -713,6 +758,8 @@ export type LayoutNode =
   | DividerLayoutNode
   | SkeletonLayoutNode
   | FileInputLayoutNode
+  | ToggleLayoutNode
+  | HiddenLayoutNode
   | FileManagerLayoutNode
 
 export type LayoutNodeCollection = LayoutNode[]
