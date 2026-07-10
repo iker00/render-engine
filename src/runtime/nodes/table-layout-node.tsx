@@ -509,6 +509,7 @@ function resolveTableRows(
           iterationContext: {
             item,
             key: String(rowIndex),
+            itemIndex: rowIndex,
           },
         }),
       )

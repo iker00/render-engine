@@ -3023,7 +3023,7 @@
         {
           "type": "paragraph",
           "props": {
-            "text": "Todos los campos (input, textarea, select, radioGroup, checkboxGroup) solo son validos dentro de un nodo form. El form requiere un id unico."
+            "text": "Todos los campos (input, textarea, select, radioGroup, checkboxGroup, toggle, hidden, fileInput) solo son validos dentro de un nodo form. El form requiere un id unico."
           }
         },
         {
@@ -3108,6 +3108,26 @@
                     "inputType": "search",
                     "placeholder": "Buscar...",
                     "icon": "search"
+                  }
+                },
+                {
+                  "type": "input",
+                  "props": {
+                    "fieldId": "phoneField",
+                    "label": "Telefono (icono derecha)",
+                    "inputType": "tel",
+                    "placeholder": "+34 600 000 000",
+                    "icon": "phone",
+                    "iconPosition": "right"
+                  }
+                },
+                {
+                  "type": "input",
+                  "props": {
+                    "fieldId": "timeField",
+                    "label": "Hora",
+                    "inputType": "time",
+                    "icon": "clock"
                   }
                 }
               ]
@@ -3347,6 +3367,427 @@
             {
               "type": "heading",
               "props": {
+                "text": "toggle",
+                "level": 2
+              }
+            },
+            {
+              "type": "paragraph",
+              "props": {
+                "text": "Interruptor booleano on/off. Props: fieldId, label, tooltip (opcional), labelPosition (top | inline, default top), defaultValue (boolean), validations.required (exige true para pasar)."
+              }
+            },
+            {
+              "type": "container",
+              "props": {
+                "columns": {
+                  "base": 1,
+                  "md": 2
+                },
+                "gap": "md"
+              },
+              "children": [
+                {
+                  "type": "container",
+                  "props": {
+                    "variant": "card",
+                    "gap": "sm"
+                  },
+                  "children": [
+                    {
+                      "type": "paragraph",
+                      "props": {
+                        "text": "{ \"type\": \"toggle\", \"props\": { \"fieldId\": \"newsletter\", \"label\": \"Recibir newsletter\", \"defaultValue\": true } }"
+                      }
+                    },
+                    {
+                      "type": "divider",
+                      "props": {
+                        "variant": "dashed"
+                      }
+                    },
+                    {
+                      "type": "toggle",
+                      "props": {
+                        "fieldId": "newsletterField",
+                        "label": "Recibir newsletter",
+                        "defaultValue": true
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "container",
+                  "props": {
+                    "variant": "card",
+                    "gap": "sm"
+                  },
+                  "children": [
+                    {
+                      "type": "paragraph",
+                      "props": {
+                        "text": "{ \"type\": \"toggle\", \"props\": { \"fieldId\": \"terms\", \"label\": \"Acepto los terminos\", \"labelPosition\": \"inline\", \"validations\": { \"required\": { \"value\": true, \"message\": \"Debes aceptar los terminos\" } } } }"
+                      }
+                    },
+                    {
+                      "type": "divider",
+                      "props": {
+                        "variant": "dashed"
+                      }
+                    },
+                    {
+                      "type": "toggle",
+                      "props": {
+                        "fieldId": "termsField",
+                        "label": "Acepto los terminos",
+                        "labelPosition": "inline",
+                        "validations": {
+                          "required": {
+                            "value": true,
+                            "message": "Debes aceptar los terminos"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "divider"
+            },
+            {
+              "type": "heading",
+              "props": {
+                "text": "hidden",
+                "level": 2
+              }
+            },
+            {
+              "type": "paragraph",
+              "props": {
+                "text": "Campo sin render que aporta un valor fijo o dinamico al payload del submit. No tiene label, placeholder, validaciones ni representacion visual. Se inicializa al montar el form (no lazy) y siempre se incluye en el payload."
+              }
+            },
+            {
+              "type": "container",
+              "props": {
+                "variant": "card",
+                "gap": "sm"
+              },
+              "children": [
+                {
+                  "type": "paragraph",
+                  "props": {
+                    "text": "{ \"type\": \"hidden\", \"props\": { \"fieldId\": \"source\", \"value\": \"web-app\" } }"
+                  }
+                },
+                {
+                  "type": "divider",
+                  "props": {
+                    "variant": "dashed"
+                  }
+                },
+                {
+                  "type": "paragraph",
+                  "props": {
+                    "text": "Este nodo no produce ningun elemento DOM. El campo \"source\" se incluye en el payload con valor \"web-app\" al hacer submit."
+                  }
+                },
+                {
+                  "type": "hidden",
+                  "props": {
+                    "fieldId": "sourceField",
+                    "value": "web-app"
+                  }
+                }
+              ]
+            },
+            {
+              "type": "container",
+              "props": {
+                "variant": "card",
+                "gap": "sm"
+              },
+              "children": [
+                {
+                  "type": "paragraph",
+                  "props": {
+                    "text": "{ \"type\": \"hidden\", \"props\": { \"fieldId\": \"userId\", \"value\": \"params.userId\" } }"
+                  }
+                },
+                {
+                  "type": "divider",
+                  "props": {
+                    "variant": "dashed"
+                  }
+                },
+                {
+                  "type": "paragraph",
+                  "props": {
+                    "text": "Referencia dinamica: el valor se resuelve desde params.userId al inicializarse el form. Si el param no existe, el valor queda sin resolver."
+                  }
+                },
+                {
+                  "type": "hidden",
+                  "props": {
+                    "fieldId": "userIdField",
+                    "value": "params.userId"
+                  }
+                }
+              ]
+            },
+            {
+              "type": "divider"
+            },
+            {
+              "type": "heading",
+              "props": {
+                "text": "fileInput",
+                "level": 2
+              }
+            },
+            {
+              "type": "paragraph",
+              "props": {
+                "text": "Selector de ficheros dentro de formulario. Preview inmediata (miniatura para imagenes, nombre+icono para otros), validaciones client-side al seleccionar, serialización multipart/form-data en submit. Props: fieldId, label, tooltip (opcional), multiple (default true), capture (environment | user, movil), validations (required, accept, maxFileSize, maxTotalSize, minFiles, maxFiles, validFileNames)."
+              }
+            },
+            {
+              "type": "container",
+              "props": {
+                "variant": "card",
+                "gap": "sm"
+              },
+              "children": [
+                {
+                  "type": "paragraph",
+                  "props": {
+                    "text": "{ \"type\": \"fileInput\", \"props\": { \"fieldId\": \"avatar\", \"label\": \"Foto de perfil\", \"multiple\": false, \"validations\": { \"accept\": { \"value\": [\"image/jpeg\", \"image/png\"], \"message\": \"Solo JPG o PNG\" }, \"maxFileSize\": { \"value\": 2, \"message\": \"Maximo {{value}} MB\" } } } }"
+                  }
+                },
+                {
+                  "type": "divider",
+                  "props": {
+                    "variant": "dashed"
+                  }
+                },
+                {
+                  "type": "fileInput",
+                  "props": {
+                    "fieldId": "avatarField",
+                    "label": "Foto de perfil",
+                    "multiple": false,
+                    "validations": {
+                      "accept": {
+                        "value": ["image/jpeg", "image/png"],
+                        "message": "Solo JPG o PNG"
+                      },
+                      "maxFileSize": {
+                        "value": 2,
+                        "message": "Maximo {{value}} MB"
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "type": "container",
+              "props": {
+                "variant": "card",
+                "gap": "sm"
+              },
+              "children": [
+                {
+                  "type": "paragraph",
+                  "props": {
+                    "text": "{ \"type\": \"fileInput\", \"props\": { \"fieldId\": \"docs\", \"label\": \"Documentos adjuntos\", \"validations\": { \"required\": true, \"maxFiles\": { \"value\": 3, \"message\": \"Maximo {{value}} ficheros\" }, \"maxTotalSize\": { \"value\": 10, \"message\": \"Maximo 10 MB en total\" } } } }"
+                  }
+                },
+                {
+                  "type": "divider",
+                  "props": {
+                    "variant": "dashed"
+                  }
+                },
+                {
+                  "type": "fileInput",
+                  "props": {
+                    "fieldId": "docsField",
+                    "label": "Documentos adjuntos",
+                    "validations": {
+                      "required": { "value": true },
+                      "maxFiles": {
+                        "value": 3,
+                        "message": "Maximo {{value}} ficheros"
+                      },
+                      "maxTotalSize": {
+                        "value": 10,
+                        "message": "Maximo 10 MB en total"
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "type": "divider"
+            },
+            {
+              "type": "heading",
+              "props": {
+                "text": "tooltip en campos de formulario",
+                "level": 2
+              }
+            },
+            {
+              "type": "paragraph",
+              "props": {
+                "text": "Todos los campos de formulario (input, textarea, select, radioGroup, checkboxGroup, toggle, fileInput) soportan props.tooltip. Cuando resuelve a un string no vacio, se renderiza un icono de informacion (HelpCircle) junto al label con un tooltip flotante accesible (hover y focus)."
+              }
+            },
+            {
+              "type": "container",
+              "props": {
+                "columns": {
+                  "base": 1,
+                  "md": 2
+                },
+                "gap": "md"
+              },
+              "children": [
+                {
+                  "type": "container",
+                  "props": {
+                    "variant": "card",
+                    "gap": "sm"
+                  },
+                  "children": [
+                    {
+                      "type": "paragraph",
+                      "props": {
+                        "text": "{ \"type\": \"input\", \"props\": { \"fieldId\": \"cif\", \"label\": \"CIF\", \"tooltip\": \"Codigo de Identificacion Fiscal de la empresa\" } }"
+                      }
+                    },
+                    {
+                      "type": "divider",
+                      "props": {
+                        "variant": "dashed"
+                      }
+                    },
+                    {
+                      "type": "input",
+                      "props": {
+                        "fieldId": "cifField",
+                        "label": "CIF",
+                        "tooltip": "Codigo de Identificacion Fiscal de la empresa"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "container",
+                  "props": {
+                    "variant": "card",
+                    "gap": "sm"
+                  },
+                  "children": [
+                    {
+                      "type": "paragraph",
+                      "props": {
+                        "text": "{ \"type\": \"select\", \"props\": { \"fieldId\": \"region\", \"label\": \"Region\", \"tooltip\": \"Selecciona la comunidad autonoma\", \"items\": [...] } }"
+                      }
+                    },
+                    {
+                      "type": "divider",
+                      "props": {
+                        "variant": "dashed"
+                      }
+                    },
+                    {
+                      "type": "select",
+                      "props": {
+                        "fieldId": "regionField",
+                        "label": "Region",
+                        "tooltip": "Selecciona la comunidad autonoma",
+                        "items": [
+                          { "label": "Madrid", "value": "mad" },
+                          { "label": "Cataluna", "value": "cat" },
+                          { "label": "Andalucia", "value": "and" },
+                          { "label": "Pais Vasco", "value": "pvs" }
+                        ]
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "container",
+                  "props": {
+                    "variant": "card",
+                    "gap": "sm"
+                  },
+                  "children": [
+                    {
+                      "type": "paragraph",
+                      "props": {
+                        "text": "{ \"type\": \"textarea\", \"props\": { \"fieldId\": \"obs\", \"label\": \"Observaciones\", \"tooltip\": \"Informacion adicional que consideres relevante\" } }"
+                      }
+                    },
+                    {
+                      "type": "divider",
+                      "props": {
+                        "variant": "dashed"
+                      }
+                    },
+                    {
+                      "type": "textarea",
+                      "props": {
+                        "fieldId": "obsField",
+                        "label": "Observaciones",
+                        "tooltip": "Informacion adicional que consideres relevante"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "container",
+                  "props": {
+                    "variant": "card",
+                    "gap": "sm"
+                  },
+                  "children": [
+                    {
+                      "type": "paragraph",
+                      "props": {
+                        "text": "{ \"type\": \"toggle\", \"props\": { \"fieldId\": \"marketing\", \"label\": \"Comunicaciones comerciales\", \"tooltip\": \"Recibirás ofertas y novedades por email\", \"labelPosition\": \"inline\" } }"
+                      }
+                    },
+                    {
+                      "type": "divider",
+                      "props": {
+                        "variant": "dashed"
+                      }
+                    },
+                    {
+                      "type": "toggle",
+                      "props": {
+                        "fieldId": "marketingField",
+                        "label": "Comunicaciones comerciales",
+                        "tooltip": "Recibiras ofertas y novedades por email",
+                        "labelPosition": "inline"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "divider"
+            },
+            {
+              "type": "heading",
+              "props": {
                 "text": "Las 5 shapes de select items",
                 "level": 2
               }
@@ -3487,7 +3928,7 @@
         {
           "type": "paragraph",
           "props": {
-            "text": "Las validaciones se declaran en props.validations. Reglas: required, minLength, maxLength, min, max, minSelections, maxSelections. Cada regla acepta el valor directo o { value, message }."
+            "text": "Las validaciones se declaran en props.validations. Reglas: required, minLength, maxLength, min, max, minSelections, maxSelections, pattern, email, url. Cada regla acepta el valor directo o { value, message }. Cualquier regla en forma extendida puede incluir when para condicionar su evaluacion."
           }
         },
         {
@@ -3645,6 +4086,200 @@
                       "required": true,
                       "minSelections": 2,
                       "maxSelections": 3
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "type": "heading",
+              "props": {
+                "text": "pattern (expresion regular)",
+                "level": 2
+              }
+            },
+            {
+              "type": "container",
+              "props": {
+                "variant": "card",
+                "gap": "sm"
+              },
+              "children": [
+                {
+                  "type": "paragraph",
+                  "props": {
+                    "text": "validations: { pattern: { value: \"^[A-Z]{2}\\\\d{6}$\", message: \"Formato: 2 letras mayusculas + 6 digitos\" } }"
+                  }
+                },
+                {
+                  "type": "divider",
+                  "props": {
+                    "variant": "dashed"
+                  }
+                },
+                {
+                  "type": "input",
+                  "props": {
+                    "fieldId": "codeVal",
+                    "label": "Codigo de referencia",
+                    "placeholder": "Ej: AB123456",
+                    "validations": {
+                      "pattern": {
+                        "value": "^[A-Z]{2}\\d{6}$",
+                        "message": "Formato: 2 letras mayusculas + 6 digitos"
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "type": "heading",
+              "props": {
+                "text": "email",
+                "level": 2
+              }
+            },
+            {
+              "type": "container",
+              "props": {
+                "variant": "card",
+                "gap": "sm"
+              },
+              "children": [
+                {
+                  "type": "paragraph",
+                  "props": {
+                    "text": "validations: { required: true, email: { value: true, message: \"Introduce un email valido\" } }"
+                  }
+                },
+                {
+                  "type": "divider",
+                  "props": {
+                    "variant": "dashed"
+                  }
+                },
+                {
+                  "type": "input",
+                  "props": {
+                    "fieldId": "contactEmailVal",
+                    "label": "Email de contacto",
+                    "inputType": "email",
+                    "placeholder": "nombre@empresa.com",
+                    "validations": {
+                      "required": true,
+                      "email": {
+                        "value": true,
+                        "message": "Introduce un email valido"
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "type": "heading",
+              "props": {
+                "text": "url",
+                "level": 2
+              }
+            },
+            {
+              "type": "container",
+              "props": {
+                "variant": "card",
+                "gap": "sm"
+              },
+              "children": [
+                {
+                  "type": "paragraph",
+                  "props": {
+                    "text": "validations: { url: { value: true, message: \"La URL debe empezar por http:// o https://\" } }"
+                  }
+                },
+                {
+                  "type": "divider",
+                  "props": {
+                    "variant": "dashed"
+                  }
+                },
+                {
+                  "type": "input",
+                  "props": {
+                    "fieldId": "websiteVal",
+                    "label": "Sitio web",
+                    "inputType": "url",
+                    "placeholder": "https://ejemplo.com",
+                    "validations": {
+                      "url": {
+                        "value": true,
+                        "message": "La URL debe empezar por http:// o https://"
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "type": "heading",
+              "props": {
+                "text": "Validacion condicional (when)",
+                "level": 2
+              }
+            },
+            {
+              "type": "paragraph",
+              "props": {
+                "text": "Cualquier regla en forma extendida puede incluir un campo when que condiciona su evaluacion. El shape de when es identico al de visibility: reference + operator + value. Si la condicion no se cumple, la regla se omite."
+              }
+            },
+            {
+              "type": "container",
+              "props": {
+                "variant": "card",
+                "gap": "sm"
+              },
+              "children": [
+                {
+                  "type": "paragraph",
+                  "props": {
+                    "text": "validations: { required: { value: true, message: \"Obligatorio si es empresa\", when: { reference: \"forms.validationsDemo.clientTypeVal\", operator: \"equals\", value: \"company\" } } }"
+                  }
+                },
+                {
+                  "type": "divider",
+                  "props": {
+                    "variant": "dashed"
+                  }
+                },
+                {
+                  "type": "radioGroup",
+                  "props": {
+                    "fieldId": "clientTypeVal",
+                    "label": "Tipo de cliente",
+                    "optionLayout": "inline",
+                    "items": [
+                      { "label": "Particular", "value": "individual" },
+                      { "label": "Empresa", "value": "company" }
+                    ]
+                  }
+                },
+                {
+                  "type": "input",
+                  "props": {
+                    "fieldId": "companyNameVal",
+                    "label": "Razon social",
+                    "placeholder": "Solo obligatorio si es empresa",
+                    "validations": {
+                      "required": {
+                        "value": true,
+                        "message": "Obligatorio si es empresa",
+                        "when": {
+                          "reference": "forms.validationsDemo.clientTypeVal",
+                          "operator": "equals",
+                          "value": "company"
+                        }
+                      }
                     }
                   }
                 }
@@ -3949,7 +4584,7 @@
         {
           "type": "paragraph",
           "props": {
-            "text": "Los hijos de form estan restringidos a: input, textarea, select, radioGroup, checkboxGroup, button, heading, paragraph, image, table, container, accordion, tabs, divider. Nodos como alert, badge, stat, modal, repeater o link NO son validos dentro de form."
+            "text": "Los hijos de form estan restringidos a: input, textarea, select, radioGroup, checkboxGroup, toggle, hidden, fileInput, button, heading, paragraph, image, table, container, accordion, tabs, divider. Nodos como alert, badge, stat, modal, repeater o link NO son validos dentro de form."
           }
         }
       ]
