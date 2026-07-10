@@ -94,7 +94,9 @@ describe('validateRuntimeConfig — button color, variant and fullWidth', () => 
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].props.color".',
+        message: `Page "home" has an invalid layout at "layout[0].props.color".
+  → button("Save")
+  Node: {"type":"button","props":{"label":"Save"}}`,
       },
     })
   })
@@ -118,7 +120,9 @@ describe('validateRuntimeConfig — button color, variant and fullWidth', () => 
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].props.variant".',
+        message: `Page "home" has an invalid layout at "layout[0].props.variant".
+  → button("Save")
+  Node: {"type":"button","props":{"label":"Save"}}`,
       },
     })
   })
@@ -142,7 +146,9 @@ describe('validateRuntimeConfig — button color, variant and fullWidth', () => 
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].props.fullWidth".',
+        message: `Page "home" has an invalid layout at "layout[0].props.fullWidth".
+  → button("Save")
+  Node: {"type":"button","props":{"label":"Save"}}`,
       },
     })
   })
@@ -166,7 +172,9 @@ describe('validateRuntimeConfig — button color, variant and fullWidth', () => 
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].props.color".',
+        message: `Page "home" has an invalid layout at "layout[0].props.color".
+  → button("Save")
+  Node: {"type":"button","props":{"label":"Save"}}`,
       },
     })
   })

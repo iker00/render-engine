@@ -226,6 +226,7 @@ function projectObjectCollectionToTextItems(
         iterationContext: {
           item,
           key: String(index),
+          itemIndex: index,
         },
       }))
       continue
@@ -305,6 +306,7 @@ function projectObjectCollectionToSelectItems(
           iterationContext: {
             item,
             key: String(index),
+            itemIndex: index,
           },
         })
       : normalizeCollectionItemPathText(item, labelPath)
@@ -325,6 +327,7 @@ function projectObjectCollectionToSelectItems(
           iterationContext: {
             item,
             key: String(index),
+            itemIndex: index,
           },
         }),
       })

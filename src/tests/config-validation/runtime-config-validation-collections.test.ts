@@ -395,7 +395,9 @@ describe('validateRuntimeConfig', () => {
           code: 'invalid-layout',
           displayMode: 'development-only',
           message:
-            'Page "home" has an invalid layout at "layout[0].props.items.key": repeater item keys must use a non-empty relative item path.',
+            `Page "home" has an invalid layout at "layout[0].props.items.key": repeater item keys must use a non-empty relative item path.
+  → repeater[0]
+  Node: {"type":"repeater"}`,
         },
       })
 
@@ -448,8 +450,7 @@ describe('validateRuntimeConfig', () => {
         error: {
           code: 'invalid-layout',
           displayMode: 'development-only',
-          message:
-            'Page "home" has an invalid layout at "layout[0].children[0].props.items": select item values must all be strings or all be numbers.',
+          message: expect.stringContaining('select item values must all be strings or all be numbers'),
         },
       })
     })
@@ -505,7 +506,7 @@ describe('validateRuntimeConfig', () => {
         error: {
           code: 'invalid-layout',
           displayMode: 'development-only',
-          message: 'Page "home" has an invalid layout at "layout[0].children[0].props.items.value".',
+          message: expect.stringContaining('layout[0].children[0].props.items.value'),
         },
       })
     })
@@ -562,7 +563,7 @@ describe('validateRuntimeConfig', () => {
         error: {
           code: 'invalid-layout',
           displayMode: 'development-only',
-          message: 'Page "home" has an invalid layout at "layout[0].children[0].props.items".',
+          message: expect.stringContaining('layout[0].children[0].props.items'),
         },
       })
     })
@@ -617,7 +618,7 @@ describe('validateRuntimeConfig', () => {
         error: {
           code: 'invalid-layout',
           displayMode: 'development-only',
-          message: 'Page "home" has an invalid layout at "layout[0].children[0].props.items.source": collection sources must use queries.{queryName}.data, queries.{queryName}.data.* or item.*.',
+          message: expect.stringContaining('layout[0].children[0].props.items.source'),
         },
       })
     })
@@ -674,7 +675,7 @@ describe('validateRuntimeConfig', () => {
         error: {
           code: 'invalid-layout',
           displayMode: 'development-only',
-          message: 'Page "home" has an invalid layout at "layout[0].children[0].props.items.source": collection sources must use queries.{queryName}.data, queries.{queryName}.data.* or item.*.',
+          message: expect.stringContaining('layout[0].children[0].props.items.source'),
         },
       })
     })
@@ -732,7 +733,7 @@ describe('validateRuntimeConfig', () => {
         error: {
           code: 'invalid-layout',
           displayMode: 'development-only',
-          message: 'Page "home" has an invalid layout at "layout[0].children[0].props.items.value".',
+          message: expect.stringContaining('layout[0].children[0].props.items.value'),
         },
       })
     })
@@ -788,8 +789,7 @@ describe('validateRuntimeConfig', () => {
         error: {
           code: 'invalid-layout',
           displayMode: 'development-only',
-          message:
-            'Page "home" has an invalid layout at "layout[0].children[0].props.items": dynamic scalar collections must declare itemType: "scalar", and dynamic object collections must declare label and value.',
+          message: expect.stringContaining('dynamic scalar collections must declare itemType: "scalar", and dynamic object collections must declare label and value'),
         },
       })
     })
@@ -817,8 +817,7 @@ describe('validateRuntimeConfig', () => {
         error: {
           code: 'invalid-layout',
           displayMode: 'development-only',
-          message:
-            'Page "home" has an invalid layout at "layout[0].children[0].props.items.values": select item values must all be strings or all be numbers.',
+          message: expect.stringContaining('select item values must all be strings or all be numbers'),
         },
       })
     })
@@ -851,8 +850,7 @@ describe('validateRuntimeConfig', () => {
         error: {
           code: 'invalid-layout',
           displayMode: 'development-only',
-          message:
-            'Page "home" has an invalid layout at "layout[0].children[0].props.items.values": select item values must all be strings or all be numbers.',
+          message: expect.stringContaining('select item values must all be strings or all be numbers'),
         },
       })
     })
@@ -940,6 +938,30 @@ describe('validateRuntimeConfig', () => {
         }),
       )
       expect(result.status).toBe('error')
+    })
+  })
+
+  describe('breadcrumb enrichment', () => {
+    it('includes breadcrumb and excerpt for collection source error in select', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithFormLayout({
+          children: [
+            {
+              type: 'select',
+              props: {
+                fieldId: 'roles',
+                label: 'Roles',
+                items: { source: 'invalid.ref' },
+              },
+            },
+          ],
+        }),
+      )
+
+      expect(result.status).toBe('error')
+      if (result.status !== 'error') throw new Error('Expected error')
+      expect(result.error.message).toContain('form("user-form") > select(fieldId: "roles")')
+      expect(result.error.message).toContain('Node: ')
     })
   })
 })

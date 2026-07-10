@@ -679,7 +679,7 @@ export interface ToggleLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLa
   children?: unknown
 }
 
-export interface HiddenLayoutNode {
+export interface HiddenLayoutNode extends LayoutNodeFeedbackFields {
   type: 'hidden'
   props: {
     fieldId: string

@@ -235,7 +235,9 @@ describe('validateRuntimeConfig', () => {
         error: {
           code: 'invalid-layout',
           displayMode: 'development-only',
-          message: 'Page "home" has an invalid layout at "layout[0].props.columns".',
+          message: `Page "home" has an invalid layout at "layout[0].props.columns".
+  → container[0]
+  Node: {"type":"container"}`,
         },
       })
 
@@ -255,7 +257,9 @@ describe('validateRuntimeConfig', () => {
         error: {
           code: 'invalid-layout',
           displayMode: 'development-only',
-          message: 'Page "home" has an invalid layout at "layout[0].props.align".',
+          message: `Page "home" has an invalid layout at "layout[0].props.align".
+  → container[0]
+  Node: {"type":"container"}`,
         },
       })
 
@@ -275,7 +279,9 @@ describe('validateRuntimeConfig', () => {
         error: {
           code: 'invalid-layout',
           displayMode: 'development-only',
-          message: 'Page "home" has an invalid layout at "layout[0].props.justify".',
+          message: `Page "home" has an invalid layout at "layout[0].props.justify".
+  → container[0]
+  Node: {"type":"container"}`,
         },
       })
 
@@ -295,7 +301,9 @@ describe('validateRuntimeConfig', () => {
         error: {
           code: 'invalid-layout',
           displayMode: 'development-only',
-          message: 'Page "home" has an invalid layout at "layout[0].props.wrap".',
+          message: `Page "home" has an invalid layout at "layout[0].props.wrap".
+  → container[0]
+  Node: {"type":"container"}`,
         },
       })
     })
@@ -318,7 +326,9 @@ describe('validateRuntimeConfig', () => {
         error: {
           code: 'invalid-layout',
           displayMode: 'development-only',
-          message: 'Page "home" has an invalid layout at "layout[0].props.wrap": container nodes cannot declare "wrap" when "columns" is present.',
+          message: `Page "home" has an invalid layout at "layout[0].props.wrap": container nodes cannot declare "wrap" when "columns" is present.
+  → container[0]
+  Node: {"type":"container"}`,
         },
       })
 
@@ -342,7 +352,9 @@ describe('validateRuntimeConfig', () => {
         error: {
           code: 'invalid-layout',
           displayMode: 'development-only',
-          message: 'Page "home" has an invalid layout at "layout[0].props.wrap": container nodes cannot declare "wrap" when "columns" is present.',
+          message: `Page "home" has an invalid layout at "layout[0].props.wrap": container nodes cannot declare "wrap" when "columns" is present.
+  → container[0]
+  Node: {"type":"container"}`,
         },
       })
     })
@@ -774,7 +786,9 @@ describe('validateRuntimeConfig', () => {
         error: {
           code: 'invalid-layout',
           displayMode: 'development-only',
-          message: 'Page "home" has an invalid layout at "layout[0].props.variant".',
+          message: `Page "home" has an invalid layout at "layout[0].props.variant".
+  → container[0]
+  Node: {"type":"container"}`,
         },
       })
 
@@ -794,7 +808,9 @@ describe('validateRuntimeConfig', () => {
         error: {
           code: 'invalid-layout',
           displayMode: 'development-only',
-          message: 'Page "home" has an invalid layout at "layout[0].layout.span".',
+          message: `Page "home" has an invalid layout at "layout[0].layout.span".
+  → container[0]
+  Node: {"type":"container"}`,
         },
       })
 
@@ -818,7 +834,9 @@ describe('validateRuntimeConfig', () => {
         error: {
           code: 'invalid-layout',
           displayMode: 'development-only',
-          message: 'Page "home" has an invalid layout at "layout[0].layout.span".',
+          message: `Page "home" has an invalid layout at "layout[0].layout.span".
+  → heading("Welcome")
+  Node: {"type":"heading","props":{"text":"Welcome"}}`,
         },
       })
 
@@ -845,7 +863,9 @@ describe('validateRuntimeConfig', () => {
         error: {
           code: 'invalid-layout',
           displayMode: 'development-only',
-          message: 'Page "home" has an invalid layout at "layout[0].layout.span".',
+          message: `Page "home" has an invalid layout at "layout[0].layout.span".
+  → repeater[0]
+  Node: {"type":"repeater"}`,
         },
       })
     })
@@ -870,7 +890,9 @@ describe('validateRuntimeConfig', () => {
         error: {
           code: 'invalid-layout',
           displayMode: 'development-only',
-          message: 'Page "home" has an invalid layout at "layout[0].props.columns".',
+          message: `Page "home" has an invalid layout at "layout[0].props.columns".
+  → container[0]
+  Node: {"type":"container"}`,
         },
       })
 
@@ -897,7 +919,9 @@ describe('validateRuntimeConfig', () => {
         error: {
           code: 'invalid-layout',
           displayMode: 'development-only',
-          message: 'Page "home" has an invalid layout at "layout[0].layout.span".',
+          message: `Page "home" has an invalid layout at "layout[0].layout.span".
+  → heading("Welcome")
+  Node: {"type":"heading","props":{"text":"Welcome"}}`,
         },
       })
     })
@@ -922,7 +946,9 @@ describe('validateRuntimeConfig', () => {
           error: {
             code: 'invalid-layout',
             displayMode: 'development-only',
-            message: 'Page "home" has an invalid layout at "layout[0].props.columns".',
+            message: `Page "home" has an invalid layout at "layout[0].props.columns".
+  → container[0]
+  Node: {"type":"container"}`,
           },
         })
       }
@@ -950,7 +976,9 @@ describe('validateRuntimeConfig', () => {
           error: {
             code: 'invalid-layout',
             displayMode: 'development-only',
-            message: 'Page "home" has an invalid layout at "layout[0].layout.span".',
+            message: `Page "home" has an invalid layout at "layout[0].layout.span".
+  → heading("Welcome")
+  Node: {"type":"heading","props":{"text":"Welcome"}}`,
           },
         })
       }

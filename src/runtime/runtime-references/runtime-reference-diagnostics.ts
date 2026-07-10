@@ -35,6 +35,14 @@ export type RuntimeReferenceSurface =
   | 'form.validation.message'
   | `fileManager.props.labels.${string}`
   | 'fileManager.props.validations.message'
+  | 'toggle.props.label'
+  | 'input.props.tooltip'
+  | 'textarea.props.tooltip'
+  | 'select.props.tooltip'
+  | 'radioGroup.props.tooltip'
+  | 'checkboxGroup.props.tooltip'
+  | 'toggle.props.tooltip'
+  | 'fileInput.props.tooltip'
 
 export function reportRuntimeReferenceDiagnostic(
   result: RuntimeReferenceResolutionResult,

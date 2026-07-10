@@ -33,6 +33,8 @@ import {
   toggleNodeSchema,
 } from './runtime-config-zod'
 import { invalidLayout } from './runtime-config-validation-errors'
+import type { BreadcrumbSegment } from './validation-breadcrumb'
+import { enrichedInvalidLayout, enrichedInvalidLayoutFromNode, enrichErrorResult, buildBreadcrumbSegmentFromNode } from './validation-breadcrumb'
 import { hasRuntimeTemplateDelimiter, parseRuntimeReference } from '../runtime/runtime-references/runtime-reference-parser'
 import { isTokensReference } from './runtime-reference-namespace-guards'
 import {
@@ -70,6 +72,7 @@ export function validateFormNode(
   rawNode: Record<string, unknown>,
   path: string,
   pageId: string,
+  breadcrumb: BreadcrumbSegment[] = [],
 ): { status: 'ready'; node: FormLayoutNode } | { status: 'error'; error: RuntimeConfigError } {
   const parseResult = formNodeSchema.safeParse(rawNode)
 
@@ -78,45 +81,45 @@ export function validateFormNode(
     const feedbackIssue = mapQueryStateFeedbackIssue(pageId, path, issue)
 
     if (feedbackIssue) {
-      return feedbackIssue
+      return enrichErrorResult(feedbackIssue, breadcrumb, rawNode)
     }
 
     const visibilityIssue = mapVisibilityIssue(pageId, path, issue)
 
     if (visibilityIssue) {
-      return visibilityIssue
+      return enrichErrorResult(visibilityIssue, breadcrumb, rawNode)
     }
 
     const issuePath = issue?.path ?? []
 
     if (issuePath[0] === 'id') {
-      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.id".`)
+      return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}.id".`, breadcrumb, rawNode)
     }
 
     if (issuePath[0] === 'submitAction') {
       const field = issuePath[1]
-      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.submitAction${field ? `.${String(field)}` : ''}".`)
+      return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}.submitAction${field ? `.${String(field)}` : ''}".`, breadcrumb, rawNode)
     }
 
     if (issuePath[0] === 'resetOnSuccess') {
-      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.resetOnSuccess".`)
+      return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}.resetOnSuccess".`, breadcrumb, rawNode)
     }
 
     if (issuePath[0] === 'persistOnUnmount') {
-      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.persistOnUnmount".`)
+      return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}.persistOnUnmount".`, breadcrumb, rawNode)
     }
 
     if (issuePath[0] === 'children') {
-      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.children".`)
+      return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}.children".`, breadcrumb, rawNode)
     }
 
-    const layoutIssue = mapLayoutNodeIssue(pageId, path, issuePath)
+    const layoutIssue = mapLayoutNodeIssue(pageId, path, issuePath, breadcrumb, rawNode)
 
     if (layoutIssue) {
       return layoutIssue
     }
 
-    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}".`)
+    return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}".`, breadcrumb, rawNode)
   }
 
   const feedbackResult = validateQueryStateFeedback(
@@ -126,7 +129,7 @@ export function validateFormNode(
   )
 
   if (feedbackResult.status === 'error') {
-    return feedbackResult
+    return enrichErrorResult(feedbackResult, breadcrumb, rawNode)
   }
 
   const visibilityResult = validateVisibility(
@@ -136,7 +139,7 @@ export function validateFormNode(
   )
 
   if (visibilityResult.status === 'error') {
-    return visibilityResult
+    return enrichErrorResult(visibilityResult, breadcrumb, rawNode)
   }
 
   let children: LayoutNodeCollection | undefined
@@ -148,7 +151,7 @@ export function validateFormNode(
     const submitActionResult = validateFormSubmitAction(parseResult.data.submitAction, `${path}.submitAction`, pageId)
 
     if (submitActionResult.status === 'error') {
-      return submitActionResult
+      return enrichErrorResult(submitActionResult, breadcrumb, rawNode)
     }
 
     submitAction = submitActionResult.action
@@ -157,7 +160,7 @@ export function validateFormNode(
   }
 
   if (parseResult.data.children !== undefined) {
-    const childrenResult = validateLayoutCollection(parseResult.data.children, `${path}.children`, pageId)
+    const childrenResult = validateLayoutCollection(parseResult.data.children, `${path}.children`, pageId, breadcrumb)
 
     if (childrenResult.status === 'error') {
       return childrenResult
@@ -188,6 +191,7 @@ export function validateInputNode(
   rawNode: Record<string, unknown>,
   path: string,
   pageId: string,
+  breadcrumb: BreadcrumbSegment[] = [],
 ): { status: 'ready'; node: InputLayoutNode } | { status: 'error'; error: RuntimeConfigError } {
   const parseResult = inputNodeSchema.safeParse(rawNode)
 
@@ -195,16 +199,16 @@ export function validateInputNode(
     const feedbackIssue = mapQueryStateFeedbackIssue(pageId, path, parseResult.error.issues[0])
 
     if (feedbackIssue) {
-      return feedbackIssue
+      return enrichErrorResult(feedbackIssue, breadcrumb, rawNode)
     }
 
     const visibilityIssue = mapVisibilityIssue(pageId, path, parseResult.error.issues[0])
 
     if (visibilityIssue) {
-      return visibilityIssue
+      return enrichErrorResult(visibilityIssue, breadcrumb, rawNode)
     }
 
-    return mapLeafNodeIssue(pageId, path, parseResult.error.issues[0]?.path ?? [])
+    return mapLeafNodeIssue(pageId, path, parseResult.error.issues[0]?.path ?? [], breadcrumb, rawNode)
   }
 
   const feedbackResult = validateQueryStateFeedback(
@@ -214,7 +218,7 @@ export function validateInputNode(
   )
 
   if (feedbackResult.status === 'error') {
-    return feedbackResult
+    return enrichErrorResult(feedbackResult, breadcrumb, rawNode)
   }
 
   const visibilityResult = validateVisibility(
@@ -224,15 +228,15 @@ export function validateInputNode(
   )
 
   if (visibilityResult.status === 'error') {
-    return visibilityResult
+    return enrichErrorResult(visibilityResult, breadcrumb, rawNode)
   }
 
   if (Array.isArray(parseResult.data.props.defaultValue)) {
-    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.defaultValue": input fields do not accept array literal defaultValue.`)
+    return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.defaultValue": input fields do not accept array literal defaultValue.`, breadcrumb, rawNode)
   }
 
   if (typeof parseResult.data.props.defaultValue === 'string' && isTokensReference(parseResult.data.props.defaultValue)) {
-    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.defaultValue": tokens.* references are not supported in defaultValue.`)
+    return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.defaultValue": tokens.* references are not supported in defaultValue.`, breadcrumb, rawNode)
   }
 
   const validationsResult = validateFormFieldValidations(
@@ -244,6 +248,8 @@ export function validateInputNode(
     },
     path,
     pageId,
+    breadcrumb,
+    rawNode,
   )
 
   if (validationsResult.status === 'error') {
@@ -269,6 +275,7 @@ export function validateTextareaNode(
   rawNode: Record<string, unknown>,
   path: string,
   pageId: string,
+  breadcrumb: BreadcrumbSegment[] = [],
 ): { status: 'ready'; node: TextareaLayoutNode } | { status: 'error'; error: RuntimeConfigError } {
   const parseResult = textareaNodeSchema.safeParse(rawNode)
 
@@ -276,16 +283,16 @@ export function validateTextareaNode(
     const feedbackIssue = mapQueryStateFeedbackIssue(pageId, path, parseResult.error.issues[0])
 
     if (feedbackIssue) {
-      return feedbackIssue
+      return enrichErrorResult(feedbackIssue, breadcrumb, rawNode)
     }
 
     const visibilityIssue = mapVisibilityIssue(pageId, path, parseResult.error.issues[0])
 
     if (visibilityIssue) {
-      return visibilityIssue
+      return enrichErrorResult(visibilityIssue, breadcrumb, rawNode)
     }
 
-    return mapLeafNodeIssue(pageId, path, parseResult.error.issues[0]?.path ?? [])
+    return mapLeafNodeIssue(pageId, path, parseResult.error.issues[0]?.path ?? [], breadcrumb, rawNode)
   }
 
   const feedbackResult = validateQueryStateFeedback(
@@ -295,7 +302,7 @@ export function validateTextareaNode(
   )
 
   if (feedbackResult.status === 'error') {
-    return feedbackResult
+    return enrichErrorResult(feedbackResult, breadcrumb, rawNode)
   }
 
   const visibilityResult = validateVisibility(
@@ -305,18 +312,18 @@ export function validateTextareaNode(
   )
 
   if (visibilityResult.status === 'error') {
-    return visibilityResult
+    return enrichErrorResult(visibilityResult, breadcrumb, rawNode)
   }
 
   if (Array.isArray(parseResult.data.props.defaultValue)) {
-    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.defaultValue": textarea fields do not accept array literal defaultValue.`)
+    return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.defaultValue": textarea fields do not accept array literal defaultValue.`, breadcrumb, rawNode)
   }
 
   if (typeof parseResult.data.props.defaultValue === 'string' && isTokensReference(parseResult.data.props.defaultValue)) {
-    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.defaultValue": tokens.* references are not supported in defaultValue.`)
+    return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.defaultValue": tokens.* references are not supported in defaultValue.`, breadcrumb, rawNode)
   }
 
-  const validationsResult = validateFormFieldValidations(rawNode.props, parseResult.data.props.validations, { type: 'textarea' }, path, pageId)
+  const validationsResult = validateFormFieldValidations(rawNode.props, parseResult.data.props.validations, { type: 'textarea' }, path, pageId, breadcrumb, rawNode)
 
   if (validationsResult.status === 'error') {
     return validationsResult
@@ -341,6 +348,7 @@ export function validateSelectNode(
   rawNode: Record<string, unknown>,
   path: string,
   pageId: string,
+  breadcrumb: BreadcrumbSegment[] = [],
 ): { status: 'ready'; node: SelectLayoutNode } | { status: 'error'; error: RuntimeConfigError } {
   const parseResult = selectNodeSchema.safeParse(rawNode)
 
@@ -348,16 +356,16 @@ export function validateSelectNode(
     const feedbackIssue = mapQueryStateFeedbackIssue(pageId, path, parseResult.error.issues[0])
 
     if (feedbackIssue) {
-      return feedbackIssue
+      return enrichErrorResult(feedbackIssue, breadcrumb, rawNode)
     }
 
     const visibilityIssue = mapVisibilityIssue(pageId, path, parseResult.error.issues[0])
 
     if (visibilityIssue) {
-      return visibilityIssue
+      return enrichErrorResult(visibilityIssue, breadcrumb, rawNode)
     }
 
-    return mapLeafNodeIssue(pageId, path, parseResult.error.issues[0]?.path ?? [])
+    return mapLeafNodeIssue(pageId, path, parseResult.error.issues[0]?.path ?? [], breadcrumb, rawNode)
   }
 
   const feedbackResult = validateQueryStateFeedback(
@@ -367,7 +375,7 @@ export function validateSelectNode(
   )
 
   if (feedbackResult.status === 'error') {
-    return feedbackResult
+    return enrichErrorResult(feedbackResult, breadcrumb, rawNode)
   }
 
   const visibilityResult = validateVisibility(
@@ -377,10 +385,10 @@ export function validateSelectNode(
   )
 
   if (visibilityResult.status === 'error') {
-    return visibilityResult
+    return enrichErrorResult(visibilityResult, breadcrumb, rawNode)
   }
 
-  const itemsResult = validateSelectItemsContract(parseResult.data.props.items, `${path}.props.items`, pageId)
+  const itemsResult = validateSelectItemsContract(parseResult.data.props.items, `${path}.props.items`, pageId, breadcrumb, rawNode)
 
   if (itemsResult.status === 'error') {
     return itemsResult
@@ -391,6 +399,8 @@ export function validateSelectNode(
     `${path}.props.defaultValue`,
     pageId,
     parseResult.data.props.multiple === true,
+    breadcrumb,
+    rawNode,
   )
 
   if (defaultValueIssue) {
@@ -406,6 +416,8 @@ export function validateSelectNode(
     },
     path,
     pageId,
+    breadcrumb,
+    rawNode,
   )
 
   if (validationsResult.status === 'error') {
@@ -432,6 +444,7 @@ export function validateRadioGroupNode(
   rawNode: Record<string, unknown>,
   path: string,
   pageId: string,
+  breadcrumb: BreadcrumbSegment[] = [],
 ): { status: 'ready'; node: RadioGroupLayoutNode } | { status: 'error'; error: RuntimeConfigError } {
   const parseResult = radioGroupNodeSchema.safeParse(rawNode)
 
@@ -439,16 +452,16 @@ export function validateRadioGroupNode(
     const feedbackIssue = mapQueryStateFeedbackIssue(pageId, path, parseResult.error.issues[0])
 
     if (feedbackIssue) {
-      return feedbackIssue
+      return enrichErrorResult(feedbackIssue, breadcrumb, rawNode)
     }
 
     const visibilityIssue = mapVisibilityIssue(pageId, path, parseResult.error.issues[0])
 
     if (visibilityIssue) {
-      return visibilityIssue
+      return enrichErrorResult(visibilityIssue, breadcrumb, rawNode)
     }
 
-    return mapLeafNodeIssue(pageId, path, parseResult.error.issues[0]?.path ?? [])
+    return mapLeafNodeIssue(pageId, path, parseResult.error.issues[0]?.path ?? [], breadcrumb, rawNode)
   }
 
   const feedbackResult = validateQueryStateFeedback(
@@ -458,7 +471,7 @@ export function validateRadioGroupNode(
   )
 
   if (feedbackResult.status === 'error') {
-    return feedbackResult
+    return enrichErrorResult(feedbackResult, breadcrumb, rawNode)
   }
 
   const visibilityResult = validateVisibility(
@@ -468,10 +481,10 @@ export function validateRadioGroupNode(
   )
 
   if (visibilityResult.status === 'error') {
-    return visibilityResult
+    return enrichErrorResult(visibilityResult, breadcrumb, rawNode)
   }
 
-  const itemsResult = validateSelectItemsContract(parseResult.data.props.items, `${path}.props.items`, pageId)
+  const itemsResult = validateSelectItemsContract(parseResult.data.props.items, `${path}.props.items`, pageId, breadcrumb, rawNode)
 
   if (itemsResult.status === 'error') {
     return itemsResult
@@ -482,6 +495,8 @@ export function validateRadioGroupNode(
     `${path}.props.defaultValue`,
     pageId,
     false,
+    breadcrumb,
+    rawNode,
   )
 
   if (defaultValueIssue) {
@@ -496,6 +511,8 @@ export function validateRadioGroupNode(
     },
     path,
     pageId,
+    breadcrumb,
+    rawNode,
   )
 
   if (validationsResult.status === 'error') {
@@ -522,6 +539,7 @@ export function validateCheckboxGroupNode(
   rawNode: Record<string, unknown>,
   path: string,
   pageId: string,
+  breadcrumb: BreadcrumbSegment[] = [],
 ): { status: 'ready'; node: CheckboxGroupLayoutNode } | { status: 'error'; error: RuntimeConfigError } {
   const parseResult = checkboxGroupNodeSchema.safeParse(rawNode)
 
@@ -529,16 +547,16 @@ export function validateCheckboxGroupNode(
     const feedbackIssue = mapQueryStateFeedbackIssue(pageId, path, parseResult.error.issues[0])
 
     if (feedbackIssue) {
-      return feedbackIssue
+      return enrichErrorResult(feedbackIssue, breadcrumb, rawNode)
     }
 
     const visibilityIssue = mapVisibilityIssue(pageId, path, parseResult.error.issues[0])
 
     if (visibilityIssue) {
-      return visibilityIssue
+      return enrichErrorResult(visibilityIssue, breadcrumb, rawNode)
     }
 
-    return mapLeafNodeIssue(pageId, path, parseResult.error.issues[0]?.path ?? [])
+    return mapLeafNodeIssue(pageId, path, parseResult.error.issues[0]?.path ?? [], breadcrumb, rawNode)
   }
 
   const feedbackResult = validateQueryStateFeedback(
@@ -548,7 +566,7 @@ export function validateCheckboxGroupNode(
   )
 
   if (feedbackResult.status === 'error') {
-    return feedbackResult
+    return enrichErrorResult(feedbackResult, breadcrumb, rawNode)
   }
 
   const visibilityResult = validateVisibility(
@@ -558,10 +576,10 @@ export function validateCheckboxGroupNode(
   )
 
   if (visibilityResult.status === 'error') {
-    return visibilityResult
+    return enrichErrorResult(visibilityResult, breadcrumb, rawNode)
   }
 
-  const itemsResult = validateSelectItemsContract(parseResult.data.props.items, `${path}.props.items`, pageId)
+  const itemsResult = validateSelectItemsContract(parseResult.data.props.items, `${path}.props.items`, pageId, breadcrumb, rawNode)
 
   if (itemsResult.status === 'error') {
     return itemsResult
@@ -572,6 +590,8 @@ export function validateCheckboxGroupNode(
     `${path}.props.defaultValue`,
     pageId,
     true,
+    breadcrumb,
+    rawNode,
   )
 
   if (defaultValueIssue) {
@@ -586,6 +606,8 @@ export function validateCheckboxGroupNode(
     },
     path,
     pageId,
+    breadcrumb,
+    rawNode,
   )
 
   if (validationsResult.status === 'error') {
@@ -612,6 +634,7 @@ export function validateToggleNode(
   rawNode: Record<string, unknown>,
   path: string,
   pageId: string,
+  breadcrumb: BreadcrumbSegment[] = [],
 ): { status: 'ready'; node: ToggleLayoutNode } | { status: 'error'; error: RuntimeConfigError } {
   const parseResult = toggleNodeSchema.safeParse(rawNode)
 
@@ -619,16 +642,16 @@ export function validateToggleNode(
     const feedbackIssue = mapQueryStateFeedbackIssue(pageId, path, parseResult.error.issues[0])
 
     if (feedbackIssue) {
-      return feedbackIssue
+      return enrichErrorResult(feedbackIssue, breadcrumb, rawNode)
     }
 
     const visibilityIssue = mapVisibilityIssue(pageId, path, parseResult.error.issues[0])
 
     if (visibilityIssue) {
-      return visibilityIssue
+      return enrichErrorResult(visibilityIssue, breadcrumb, rawNode)
     }
 
-    return mapLeafNodeIssue(pageId, path, parseResult.error.issues[0]?.path ?? [])
+    return mapLeafNodeIssue(pageId, path, parseResult.error.issues[0]?.path ?? [], breadcrumb, rawNode)
   }
 
   const feedbackResult = validateQueryStateFeedback(
@@ -638,7 +661,7 @@ export function validateToggleNode(
   )
 
   if (feedbackResult.status === 'error') {
-    return feedbackResult
+    return enrichErrorResult(feedbackResult, breadcrumb, rawNode)
   }
 
   const visibilityResult = validateVisibility(
@@ -648,18 +671,18 @@ export function validateToggleNode(
   )
 
   if (visibilityResult.status === 'error') {
-    return visibilityResult
+    return enrichErrorResult(visibilityResult, breadcrumb, rawNode)
   }
 
   if (typeof parseResult.data.props.defaultValue === 'string') {
     const ref = parseRuntimeReference(parseResult.data.props.defaultValue, { allowItemReference: true })
 
     if (ref.kind !== 'reference' || ref.status !== 'supported') {
-      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.defaultValue".`)
+      return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.defaultValue".`, breadcrumb, rawNode)
     }
   }
 
-  const validationsResult = validateFormFieldValidations(rawNode.props, parseResult.data.props.validations, { type: 'toggle' }, path, pageId)
+  const validationsResult = validateFormFieldValidations(rawNode.props, parseResult.data.props.validations, { type: 'toggle' }, path, pageId, breadcrumb, rawNode)
 
   if (validationsResult.status === 'error') {
     return validationsResult
@@ -686,14 +709,15 @@ export function validateHiddenNode(
   rawNode: Record<string, unknown>,
   path: string,
   pageId: string,
+  breadcrumb: BreadcrumbSegment[] = [],
 ): { status: 'ready'; node: HiddenLayoutNode } | { status: 'error'; error: RuntimeConfigError } {
   // Reject prohibited transversals on the node itself
   if (Object.hasOwn(rawNode, 'visibility')) {
-    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.visibility": hidden nodes do not support visibility.`)
+    return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}.visibility": hidden nodes do not support visibility.`, breadcrumb, rawNode)
   }
 
   if (Object.hasOwn(rawNode, 'queryStateFeedback')) {
-    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.queryStateFeedback": hidden nodes do not support queryStateFeedback.`)
+    return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}.queryStateFeedback": hidden nodes do not support queryStateFeedback.`, breadcrumb, rawNode)
   }
 
   // Reject prohibited props
@@ -701,7 +725,7 @@ export function validateHiddenNode(
   if (isRecord(rawProps)) {
     for (const prop of hiddenProhibitedProps) {
       if (Object.hasOwn(rawProps, prop)) {
-        return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.${prop}": hidden nodes do not support ${prop}.`)
+        return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.${prop}": hidden nodes do not support ${prop}.`, breadcrumb, rawNode)
       }
     }
   }
@@ -709,7 +733,7 @@ export function validateHiddenNode(
   const parseResult = hiddenNodeSchema.safeParse(rawNode)
 
   if (!parseResult.success) {
-    return mapLeafNodeIssue(pageId, path, parseResult.error.issues[0]?.path ?? [])
+    return mapLeafNodeIssue(pageId, path, parseResult.error.issues[0]?.path ?? [], breadcrumb, rawNode)
   }
 
   return {
@@ -730,9 +754,11 @@ export function validateFormFieldValidations(
   target: FormFieldValidationTarget,
   path: string,
   pageId: string,
+  breadcrumb: BreadcrumbSegment[] = [],
+  rawNode?: Record<string, unknown>,
 ): { status: 'ready'; validations: RuntimeFormFieldValidations | undefined } | { status: 'error'; error: RuntimeConfigError } {
   if (isRecord(rawProps) && Object.hasOwn(rawProps, 'required')) {
-    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.required": use props.validations.required instead.`)
+    return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.required": use props.validations.required instead.`, breadcrumb, rawNode)
   }
 
   if (typeof rawValidations === 'undefined') {
@@ -743,14 +769,14 @@ export function validateFormFieldValidations(
   }
 
   if (!isRecord(rawValidations)) {
-    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.validations".`)
+    return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.validations".`, breadcrumb, rawNode)
   }
 
   const validations: RuntimeFormFieldValidations = {}
 
   for (const [ruleName, rawRule] of Object.entries(rawValidations)) {
     if (!supportedFormValidationRuleNames.has(ruleName as RuntimeFormValidationRuleName)) {
-      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.validations.${ruleName}".`)
+      return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.validations.${ruleName}".`, breadcrumb, rawNode)
     }
 
     const rulePath = `${path}.props.validations.${ruleName}`
@@ -760,20 +786,20 @@ export function validateFormFieldValidations(
       | { status: 'error'; error: RuntimeConfigError }
 
     if (ruleName === 'required') {
-      validationResult = validateRequiredRule(rawRule, rulePath, pageId)
+      validationResult = validateRequiredRule(rawRule, rulePath, pageId, breadcrumb, rawNode)
     } else if (ruleName === 'pattern') {
-      validationResult = validatePatternRule(rawRule, rulePath, pageId)
+      validationResult = validatePatternRule(rawRule, rulePath, pageId, breadcrumb, rawNode)
     } else if (ruleName === 'email' || ruleName === 'url') {
-      validationResult = validateBooleanFlagRule(rawRule, rulePath, pageId)
+      validationResult = validateBooleanFlagRule(rawRule, rulePath, pageId, breadcrumb, rawNode)
     } else {
-      validationResult = validateNumericRule(rawRule, rulePath, pageId)
+      validationResult = validateNumericRule(rawRule, rulePath, pageId, breadcrumb, rawNode)
     }
 
     if (validationResult.status === 'error') {
       return validationResult
     }
 
-    const compatibilityError = validateValidationCompatibility(ruleName as RuntimeFormValidationRuleName, validationResult.rule, target, path, pageId)
+    const compatibilityError = validateValidationCompatibility(ruleName as RuntimeFormValidationRuleName, validationResult.rule, target, path, pageId, breadcrumb, rawNode)
 
     if (compatibilityError) {
       return compatibilityError
@@ -813,7 +839,7 @@ export function validateFormFieldValidations(
     }
   }
 
-  const rangesError = validateValidationRanges(validations, `${path}.props.validations`, pageId)
+  const rangesError = validateValidationRanges(validations, `${path}.props.validations`, pageId, breadcrumb, rawNode)
 
   if (rangesError) {
     return rangesError
@@ -829,6 +855,8 @@ function validateRequiredRule(
   rawRule: unknown,
   path: string,
   pageId: string,
+  breadcrumb: BreadcrumbSegment[] = [],
+  rawNode?: Record<string, unknown>,
 ): { status: 'ready'; rule: RuntimeRequiredValidationRule } | { status: 'error'; error: RuntimeConfigError } {
   if (rawRule === true) {
     return {
@@ -838,21 +866,21 @@ function validateRequiredRule(
   }
 
   if (!isRecord(rawRule)) {
-    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}".`)
+    return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}".`, breadcrumb, rawNode)
   }
 
   if (rawRule.value !== true) {
-    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.value".`)
+    return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}.value".`, breadcrumb, rawNode)
   }
 
   if (typeof rawRule.message !== 'undefined' && typeof rawRule.message !== 'string') {
-    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.message".`)
+    return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}.message".`, breadcrumb, rawNode)
   }
 
   const whenResult = validateWhenCondition(rawRule.when, `${path}.when`, pageId, { allowItem: true })
 
   if (whenResult.status === 'error') {
-    return whenResult
+    return enrichErrorResult(whenResult, breadcrumb, rawNode)
   }
 
   const rule: RuntimeRequiredValidationRule = typeof rawRule.message === 'string' ? { value: true, message: rawRule.message } : { value: true }
@@ -871,10 +899,12 @@ function validateNumericRule(
   rawRule: unknown,
   path: string,
   pageId: string,
+  breadcrumb: BreadcrumbSegment[] = [],
+  rawNode?: Record<string, unknown>,
 ): { status: 'ready'; rule: RuntimeNumericValidationRule } | { status: 'error'; error: RuntimeConfigError } {
   if (typeof rawRule === 'number') {
     if (!Number.isFinite(rawRule) || rawRule < 0) {
-      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}".`)
+      return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}".`, breadcrumb, rawNode)
     }
 
     return {
@@ -884,21 +914,21 @@ function validateNumericRule(
   }
 
   if (!isRecord(rawRule)) {
-    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}".`)
+    return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}".`, breadcrumb, rawNode)
   }
 
   if (typeof rawRule.value !== 'number' || !Number.isFinite(rawRule.value) || rawRule.value < 0) {
-    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.value".`)
+    return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}.value".`, breadcrumb, rawNode)
   }
 
   if (typeof rawRule.message !== 'undefined' && typeof rawRule.message !== 'string') {
-    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.message".`)
+    return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}.message".`, breadcrumb, rawNode)
   }
 
   const whenResult = validateWhenCondition(rawRule.when, `${path}.when`, pageId, { allowItem: true })
 
   if (whenResult.status === 'error') {
-    return whenResult
+    return enrichErrorResult(whenResult, breadcrumb, rawNode)
   }
 
   const rule: RuntimeNumericValidationRule = typeof rawRule.message === 'string' ? { value: rawRule.value, message: rawRule.message } : { value: rawRule.value }
@@ -917,16 +947,18 @@ function validatePatternRule(
   rawRule: unknown,
   path: string,
   pageId: string,
+  breadcrumb: BreadcrumbSegment[] = [],
+  rawNode?: Record<string, unknown>,
 ): { status: 'ready'; rule: RuntimePatternValidationRule } | { status: 'error'; error: RuntimeConfigError } {
   if (typeof rawRule === 'string') {
     if (rawRule.length === 0) {
-      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}".`)
+      return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}".`, breadcrumb, rawNode)
     }
 
     try {
       new RegExp(rawRule)
     } catch {
-      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.value".`)
+      return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}.value".`, breadcrumb, rawNode)
     }
 
     return {
@@ -936,27 +968,27 @@ function validatePatternRule(
   }
 
   if (!isRecord(rawRule)) {
-    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}".`)
+    return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}".`, breadcrumb, rawNode)
   }
 
   if (typeof rawRule.value !== 'string' || rawRule.value.length === 0) {
-    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.value".`)
+    return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}.value".`, breadcrumb, rawNode)
   }
 
   try {
     new RegExp(rawRule.value)
   } catch {
-    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.value".`)
+    return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}.value".`, breadcrumb, rawNode)
   }
 
   if (typeof rawRule.message !== 'undefined' && typeof rawRule.message !== 'string') {
-    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.message".`)
+    return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}.message".`, breadcrumb, rawNode)
   }
 
   const whenResult = validateWhenCondition(rawRule.when, `${path}.when`, pageId, { allowItem: true })
 
   if (whenResult.status === 'error') {
-    return whenResult
+    return enrichErrorResult(whenResult, breadcrumb, rawNode)
   }
 
   const rule: RuntimePatternValidationRule = typeof rawRule.message === 'string' ? { value: rawRule.value, message: rawRule.message } : { value: rawRule.value }
@@ -975,6 +1007,8 @@ function validateBooleanFlagRule(
   rawRule: unknown,
   path: string,
   pageId: string,
+  breadcrumb: BreadcrumbSegment[] = [],
+  rawNode?: Record<string, unknown>,
 ): { status: 'ready'; rule: RuntimeBooleanFlagValidationRule } | { status: 'error'; error: RuntimeConfigError } {
   if (rawRule === true) {
     return {
@@ -984,21 +1018,21 @@ function validateBooleanFlagRule(
   }
 
   if (!isRecord(rawRule)) {
-    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}".`)
+    return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}".`, breadcrumb, rawNode)
   }
 
   if (rawRule.value !== true) {
-    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.value".`)
+    return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}.value".`, breadcrumb, rawNode)
   }
 
   if (typeof rawRule.message !== 'undefined' && typeof rawRule.message !== 'string') {
-    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.message".`)
+    return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}.message".`, breadcrumb, rawNode)
   }
 
   const whenResult = validateWhenCondition(rawRule.when, `${path}.when`, pageId, { allowItem: true })
 
   if (whenResult.status === 'error') {
-    return whenResult
+    return enrichErrorResult(whenResult, breadcrumb, rawNode)
   }
 
   const rule: RuntimeBooleanFlagValidationRule = typeof rawRule.message === 'string' ? { value: true, message: rawRule.message } : { value: true }
@@ -1019,6 +1053,8 @@ function validateValidationCompatibility(
   target: FormFieldValidationTarget,
   path: string,
   pageId: string,
+  breadcrumb: BreadcrumbSegment[] = [],
+  rawNode?: Record<string, unknown>,
 ) {
   if (ruleName === 'required') {
     return null
@@ -1026,7 +1062,7 @@ function validateValidationCompatibility(
 
   if ((ruleName === 'minLength' || ruleName === 'maxLength') && supportsTextLengthValidations(target)) {
     if (!Number.isInteger((rule as RuntimeNumericValidationRule).value)) {
-      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.validations.${ruleName}.value".`)
+      return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.validations.${ruleName}.value".`, breadcrumb, rawNode)
     }
 
     return null
@@ -1038,7 +1074,7 @@ function validateValidationCompatibility(
 
   if ((ruleName === 'minSelections' || ruleName === 'maxSelections') && supportsSelectionCardinalityValidations(target)) {
     if (!Number.isInteger((rule as RuntimeNumericValidationRule).value)) {
-      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.validations.${ruleName}.value".`)
+      return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.validations.${ruleName}.value".`, breadcrumb, rawNode)
     }
 
     return null
@@ -1048,24 +1084,26 @@ function validateValidationCompatibility(
     return null
   }
 
-  return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.validations.${ruleName}".`)
+  return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.validations.${ruleName}".`, breadcrumb, rawNode)
 }
 
 function validateValidationRanges(
   validations: RuntimeFormFieldValidations,
   path: string,
   pageId: string,
+  breadcrumb: BreadcrumbSegment[] = [],
+  rawNode?: Record<string, unknown>,
 ) {
   if (
     validations.minLength &&
     validations.maxLength &&
     validations.minLength.value > validations.maxLength.value
   ) {
-    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}": minLength cannot be greater than maxLength.`)
+    return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}": minLength cannot be greater than maxLength.`, breadcrumb, rawNode)
   }
 
   if (validations.min && validations.max && validations.min.value > validations.max.value) {
-    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}": min cannot be greater than max.`)
+    return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}": min cannot be greater than max.`, breadcrumb, rawNode)
   }
 
   if (
@@ -1073,7 +1111,7 @@ function validateValidationRanges(
     validations.maxSelections &&
     validations.minSelections.value > validations.maxSelections.value
   ) {
-    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}": minSelections cannot be greater than maxSelections.`)
+    return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}": minSelections cannot be greater than maxSelections.`, breadcrumb, rawNode)
   }
 
   return null
@@ -1115,6 +1153,8 @@ export function validateSelectItemsContract(
   rawItems: unknown,
   path: string,
   pageId: string,
+  breadcrumb: BreadcrumbSegment[] = [],
+  rawNode?: Record<string, unknown>,
 ): { status: 'ready'; items: SelectLayoutNode['props']['items'] } | { status: 'error'; error: RuntimeConfigError } {
   if (Array.isArray(rawItems)) {
     const items: SelectLayoutNode['props']['items'] = []
@@ -1125,7 +1165,7 @@ export function validateSelectItemsContract(
       if (!itemResult.success) {
         const issuePath = itemResult.error.issues[0]?.path ?? []
         const formattedPath = issuePath.map(formatPathSegment).join('')
-        return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}[${index}]${formattedPath}".`)
+        return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}[${index}]${formattedPath}".`, breadcrumb, rawNode)
       }
 
       items.push(itemResult.data)
@@ -1135,6 +1175,8 @@ export function validateSelectItemsContract(
       (items as Array<{ label: string; value: string | number }>).map((item) => item.value),
       path,
       pageId,
+      breadcrumb,
+      rawNode,
     )
 
     if (scalarValuesIssue) {
@@ -1148,35 +1190,37 @@ export function validateSelectItemsContract(
   }
 
   if (!isRecord(rawItems)) {
-    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}".`)
+    return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}".`, breadcrumb, rawNode)
   }
 
   const hasSource = 'source' in rawItems
   const hasValues = 'values' in rawItems
 
   if (hasSource && hasValues) {
-    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}".`)
+    return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}".`, breadcrumb, rawNode)
   }
 
   if (hasSource) {
     const sourceResult = validateCollectionSource(rawItems.source, `${path}.source`, pageId, { allowItemReference: true })
 
     if (sourceResult.status === 'error') {
-      return sourceResult
+      return enrichErrorResult(sourceResult, breadcrumb, rawNode)
     }
 
     if (rawItems.itemType !== undefined && rawItems.itemType !== 'scalar') {
-      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.itemType".`)
+      return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}.itemType".`, breadcrumb, rawNode)
     }
 
     if ((rawItems.label === undefined) !== (rawItems.value === undefined)) {
-      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}".`)
+      return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}".`, breadcrumb, rawNode)
     }
 
     if (rawItems.label === undefined && rawItems.value === undefined) {
       if (rawItems.itemType !== 'scalar') {
-        return invalidLayout(
+        return enrichedInvalidLayout(
           `Page "${pageId}" has an invalid layout at "${path}": dynamic scalar collections must declare itemType: "scalar", and dynamic object collections must declare label and value.`,
+          breadcrumb,
+          rawNode,
         )
       }
 
@@ -1190,15 +1234,15 @@ export function validateSelectItemsContract(
     }
 
     if (!isValidCollectionProjectionPath(rawItems.label)) {
-      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.label".`)
+      return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}.label".`, breadcrumb, rawNode)
     }
 
     if (!isValidCollectionProjectionPath(rawItems.value)) {
-      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.value".`)
+      return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}.value".`, breadcrumb, rawNode)
     }
 
     if (rawItems.itemType !== undefined) {
-      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}".`)
+      return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}".`, breadcrumb, rawNode)
     }
 
     return {
@@ -1212,17 +1256,17 @@ export function validateSelectItemsContract(
   }
 
   if (!hasValues) {
-    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}".`)
+    return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}".`, breadcrumb, rawNode)
   }
 
   if (!Array.isArray(rawItems.values)) {
-    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.values".`)
+    return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}.values".`, breadcrumb, rawNode)
   }
 
   const values = rawItems.values
 
   if (values.every((value) => typeof value === 'string' || typeof value === 'number')) {
-    const scalarValuesIssue = validateSelectScalarValues(values, `${path}.values`, pageId)
+    const scalarValuesIssue = validateSelectScalarValues(values, `${path}.values`, pageId, breadcrumb, rawNode)
 
     if (scalarValuesIssue) {
       return scalarValuesIssue
@@ -1238,16 +1282,16 @@ export function validateSelectItemsContract(
 
   if (values.every((value) => isRecord(value))) {
     if (!isValidCollectionProjectionPath(rawItems.label)) {
-      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.label".`)
+      return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}.label".`, breadcrumb, rawNode)
     }
 
     if (!isValidCollectionProjectionPath(rawItems.value)) {
-      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.value".`)
+      return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}.value".`, breadcrumb, rawNode)
     }
 
     const projectedValueTypeIssue = hasRuntimeTemplateDelimiter(rawItems.value)
       ? null
-      : validateManualSelectObjectValueTypes(values as RuntimeCollectionObjectItem[], rawItems.value, `${path}.values`, pageId)
+      : validateManualSelectObjectValueTypes(values as RuntimeCollectionObjectItem[], rawItems.value, `${path}.values`, pageId, breadcrumb, rawNode)
 
     if (projectedValueTypeIssue) {
       return projectedValueTypeIssue
@@ -1264,7 +1308,7 @@ export function validateSelectItemsContract(
   }
 
   const invalidIndex = values.findIndex((value) => !isRecord(value) && typeof value !== 'string' && typeof value !== 'number')
-  return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.values[${Math.max(invalidIndex, 0)}]".`)
+  return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}.values[${Math.max(invalidIndex, 0)}]".`, breadcrumb, rawNode)
 }
 
 export function validateCollectionSource(
@@ -1272,6 +1316,7 @@ export function validateCollectionSource(
   path: string,
   pageId: string,
   options: { allowItemReference?: boolean } = {},
+  breadcrumb: BreadcrumbSegment[] = [],
 ): { status: 'ready'; source: string } | { status: 'error'; error: RuntimeConfigError } {
   if (!isNonEmptyString(rawSource)) {
     return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}".`)
@@ -1294,6 +1339,8 @@ export function validateChoiceFieldDefaultValue(
   path: string,
   pageId: string,
   isMultiple: boolean,
+  breadcrumb: BreadcrumbSegment[] = [],
+  rawNode?: Record<string, unknown>,
 ): { status: 'error'; error: RuntimeConfigError } | null {
   if (typeof defaultValue === 'undefined') {
     return null
@@ -1301,15 +1348,15 @@ export function validateChoiceFieldDefaultValue(
 
   if (Array.isArray(defaultValue)) {
     if (!isMultiple) {
-      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}": single choice fields do not accept array literal defaultValue.`)
+      return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}": single choice fields do not accept array literal defaultValue.`, breadcrumb, rawNode)
     }
 
-    return validateMultipleChoiceDefaultValue(defaultValue, path, pageId)
+    return validateMultipleChoiceDefaultValue(defaultValue, path, pageId, breadcrumb, rawNode)
   }
 
   if (!isMultiple) {
     if (typeof defaultValue === 'string' && isTokensReference(defaultValue)) {
-      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}": tokens.* references are not supported in defaultValue.`)
+      return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}": tokens.* references are not supported in defaultValue.`, breadcrumb, rawNode)
     }
 
     return null
@@ -1323,8 +1370,10 @@ export function validateChoiceFieldDefaultValue(
     }
   }
 
-  return invalidLayout(
+  return enrichedInvalidLayout(
     `Page "${pageId}" has an invalid layout at "${path}": multiple choice fields only accept array literals or supported runtime references.`,
+    breadcrumb,
+    rawNode,
   )
 }
 
@@ -1332,6 +1381,8 @@ function validateMultipleChoiceDefaultValue(
   defaultValue: unknown[],
   path: string,
   pageId: string,
+  breadcrumb: BreadcrumbSegment[] = [],
+  rawNode?: Record<string, unknown>,
 ): { status: 'error'; error: RuntimeConfigError } | null {
   let valueType: 'string' | 'number' | null = null
 
@@ -1339,8 +1390,10 @@ function validateMultipleChoiceDefaultValue(
     const item = defaultValue[index]
 
     if (typeof item !== 'string' && typeof item !== 'number') {
-      return invalidLayout(
+      return enrichedInvalidLayout(
         `Page "${pageId}" has an invalid layout at "${path}[${index}]": multiple choice defaultValue arrays only accept string or number members.`,
+        breadcrumb,
+        rawNode,
       )
     }
 
@@ -1352,8 +1405,10 @@ function validateMultipleChoiceDefaultValue(
     }
 
     if (valueType !== currentType) {
-      return invalidLayout(
+      return enrichedInvalidLayout(
         `Page "${pageId}" has an invalid layout at "${path}": multiple choice defaultValue arrays must contain only strings or only numbers.`,
+        breadcrumb,
+        rawNode,
       )
     }
   }
@@ -1379,6 +1434,7 @@ export function validateFormSemantics(
       operationNames,
       pageIds,
       modalIds,
+      breadcrumb: [],
     })
 
     if (error) {
@@ -1417,7 +1473,7 @@ export function validateExecutionRequestParams(
   config: import('./runtime-config-types').RuntimeConfig,
 ): { status: 'error'; error: RuntimeConfigError } | null {
   for (const page of config.pages) {
-    const error = validateExecutionRequestParamsInCollection(page.layout, 'layout', page.id, config.api)
+    const error = validateExecutionRequestParamsInCollection(page.layout, 'layout', page.id, config.api, [])
 
     if (error) {
       return error
@@ -1436,6 +1492,7 @@ interface FormValidationContext {
   operationNames: ReadonlySet<string>
   pageIds: ReadonlySet<string>
   modalIds: ReadonlySet<string>
+  breadcrumb: BreadcrumbSegment[]
 }
 
 function validateFormNodesInCollection(
@@ -1447,8 +1504,10 @@ function validateFormNodesInCollection(
   for (let index = 0; index < nodes.length; index += 1) {
     const node = nodes[index]
     const nodePath = `${path}[${index}]`
+    const nodeSegment = buildBreadcrumbSegmentFromNode(node, index)
+    const nodeBreadcrumb = [...context.breadcrumb, nodeSegment]
     const fallbackError = validateFallbackCollections(node, nodePath, (fallbackNodes, fallbackPath) =>
-      validateFormNodesInCollection(fallbackNodes, fallbackPath, pageId, context),
+      validateFormNodesInCollection(fallbackNodes, fallbackPath, pageId, { ...context, breadcrumb: nodeBreadcrumb }),
     )
 
     if (fallbackError) {
@@ -1457,18 +1516,20 @@ function validateFormNodesInCollection(
 
     if (node.type === 'form') {
       if (context.formIds.has(node.id)) {
-        return invalidLayout(`Page "${pageId}" has an invalid layout at "${nodePath}.id": duplicate form id "${node.id}".`)
+        return enrichedInvalidLayoutFromNode(`Page "${pageId}" has an invalid layout at "${nodePath}.id": duplicate form id "${node.id}".`, nodeBreadcrumb, node)
       }
 
       context.formIds.add(node.id)
 
       if (node.resetOnSuccess === true && node.submitAction === undefined) {
-        return invalidLayout(`Page "${pageId}" has an invalid layout at "${nodePath}.resetOnSuccess": resetOnSuccess requires submitAction.`)
+        return enrichedInvalidLayoutFromNode(`Page "${pageId}" has an invalid layout at "${nodePath}.resetOnSuccess": resetOnSuccess requires submitAction.`, nodeBreadcrumb, node)
       }
 
       if (node.submitAction?.type === 'executeOperation' && !context.operationNames.has(node.submitAction.operationName)) {
-        return invalidLayout(
+        return enrichedInvalidLayoutFromNode(
           `Page "${pageId}" has an invalid layout at "${nodePath}.submitAction.operationName": unknown operation "${node.submitAction.operationName}".`,
+          nodeBreadcrumb,
+          node,
         )
       }
 
@@ -1507,6 +1568,7 @@ function validateFormNodesInCollection(
         inForm: true,
         currentFormId: node.id,
         fieldIds: new Set<string>(),
+        breadcrumb: nodeBreadcrumb,
       })
 
       if (childrenError) {
@@ -1517,7 +1579,7 @@ function validateFormNodesInCollection(
     }
 
     if (node.type === 'container' && node.children) {
-      const childrenError = validateFormNodesInCollection(node.children, `${nodePath}.children`, pageId, context)
+      const childrenError = validateFormNodesInCollection(node.children, `${nodePath}.children`, pageId, { ...context, breadcrumb: nodeBreadcrumb })
 
       if (childrenError) {
         return childrenError
@@ -1527,7 +1589,7 @@ function validateFormNodesInCollection(
     }
 
     if (node.type === 'modal' && node.children) {
-      const childrenError = validateFormNodesInCollection(node.children, `${nodePath}.children`, pageId, context)
+      const childrenError = validateFormNodesInCollection(node.children, `${nodePath}.children`, pageId, { ...context, breadcrumb: nodeBreadcrumb })
 
       if (childrenError) {
         return childrenError
@@ -1537,7 +1599,7 @@ function validateFormNodesInCollection(
     }
 
     if (node.type === 'repeater') {
-      const templateError = validateFormNodesInCollection(node.props.template, `${nodePath}.props.template`, pageId, context)
+      const templateError = validateFormNodesInCollection(node.props.template, `${nodePath}.props.template`, pageId, { ...context, breadcrumb: nodeBreadcrumb })
 
       if (templateError) {
         return templateError
@@ -1554,7 +1616,7 @@ function validateFormNodesInCollection(
             item.children,
             `${nodePath}.props.items[${itemIndex}].children`,
             pageId,
-            context,
+            { ...context, breadcrumb: nodeBreadcrumb },
           )
 
           if (itemChildrenError) {
@@ -1577,12 +1639,14 @@ function validateFormNodesInCollection(
       node.type === 'hidden'
     ) {
       if (!context.inForm || !context.currentFormId || !context.fieldIds) {
-        return invalidLayout(`Page "${pageId}" has an invalid layout at "${nodePath}": ${node.type} nodes must be descendants of a form node.`)
+        return enrichedInvalidLayoutFromNode(`Page "${pageId}" has an invalid layout at "${nodePath}": ${node.type} nodes must be descendants of a form node.`, nodeBreadcrumb, node)
       }
 
       if (context.fieldIds.has(node.props.fieldId)) {
-        return invalidLayout(
+        return enrichedInvalidLayoutFromNode(
           `Page "${pageId}" has an invalid layout at "${nodePath}.props.fieldId": duplicate fieldId "${node.props.fieldId}" in form "${context.currentFormId}".`,
+          nodeBreadcrumb,
+          node,
         )
       }
 
@@ -1592,8 +1656,10 @@ function validateFormNodesInCollection(
     }
 
     if (node.type === 'button' && node.props.action === undefined && !context.inForm) {
-      return invalidLayout(
+      return enrichedInvalidLayoutFromNode(
         `Page "${pageId}" has an invalid layout at "${nodePath}": button nodes without an action must be descendants of a form node.`,
+        nodeBreadcrumb,
+        node,
       )
     }
   }
@@ -1610,8 +1676,10 @@ function validateFormChildren(
   for (let index = 0; index < nodes.length; index += 1) {
     const node = nodes[index]
     const nodePath = `${path}[${index}]`
+    const nodeSegment = buildBreadcrumbSegmentFromNode(node, index)
+    const nodeBreadcrumb = [...context.breadcrumb, nodeSegment]
     const fallbackError = validateFallbackCollections(node, nodePath, (fallbackNodes, fallbackPath) =>
-      validateFormChildren(fallbackNodes, fallbackPath, pageId, context),
+      validateFormChildren(fallbackNodes, fallbackPath, pageId, { ...context, breadcrumb: nodeBreadcrumb }),
     )
 
     if (fallbackError) {
@@ -1619,8 +1687,10 @@ function validateFormChildren(
     }
 
     if (node.type === 'fileManager') {
-      return invalidLayout(
+      return enrichedInvalidLayoutFromNode(
         `Page "${pageId}" has an invalid layout at "${nodePath}": "fileManager" is not allowed inside a form.`,
+        nodeBreadcrumb,
+        node,
       )
     }
 
@@ -1643,13 +1713,15 @@ function validateFormChildren(
       node.type !== 'divider' &&
       node.type !== 'tabs'
     ) {
-      return invalidLayout(
+      return enrichedInvalidLayoutFromNode(
         `Page "${pageId}" has an invalid layout at "${nodePath}": form nodes only accept input, textarea, select, radioGroup, checkboxGroup, fileInput, toggle, hidden, button, heading, paragraph, image, table, container, accordion, divider and tabs descendants.`,
+        nodeBreadcrumb,
+        node,
       )
     }
 
     if (node.type === 'container' && node.children) {
-      const childrenError = validateFormChildren(node.children, `${nodePath}.children`, pageId, context)
+      const childrenError = validateFormChildren(node.children, `${nodePath}.children`, pageId, { ...context, breadcrumb: nodeBreadcrumb })
 
       if (childrenError) {
         return childrenError
@@ -1659,7 +1731,7 @@ function validateFormChildren(
     }
 
     if (node.type === 'accordion' && node.children) {
-      const childrenError = validateFormChildren(node.children, `${nodePath}.children`, pageId, context)
+      const childrenError = validateFormChildren(node.children, `${nodePath}.children`, pageId, { ...context, breadcrumb: nodeBreadcrumb })
 
       if (childrenError) {
         return childrenError
@@ -1677,7 +1749,7 @@ function validateFormChildren(
             item.children,
             `${nodePath}.props.items[${itemIndex}].children`,
             pageId,
-            context,
+            { ...context, breadcrumb: nodeBreadcrumb },
           )
 
           if (itemChildrenError) {
@@ -1700,12 +1772,14 @@ function validateFormChildren(
       node.type === 'hidden'
     ) {
       if (!context.currentFormId || !context.fieldIds) {
-        return invalidLayout(`Page "${pageId}" has an invalid layout at "${nodePath}": ${node.type} nodes must be descendants of a form node.`)
+        return enrichedInvalidLayoutFromNode(`Page "${pageId}" has an invalid layout at "${nodePath}": ${node.type} nodes must be descendants of a form node.`, nodeBreadcrumb, node)
       }
 
       if (context.fieldIds.has(node.props.fieldId)) {
-        return invalidLayout(
+        return enrichedInvalidLayoutFromNode(
           `Page "${pageId}" has an invalid layout at "${nodePath}.props.fieldId": duplicate fieldId "${node.props.fieldId}" in form "${context.currentFormId}".`,
+          nodeBreadcrumb,
+          node,
         )
       }
 
@@ -1720,6 +1794,8 @@ function validateSelectScalarValues(
   items: Array<string | number>,
   path: string,
   pageId: string,
+  breadcrumb: BreadcrumbSegment[] = [],
+  rawNode?: Record<string, unknown>,
 ): { status: 'error'; error: RuntimeConfigError } | null {
   let valueType: 'string' | 'number' | null = null
 
@@ -1736,7 +1812,7 @@ function validateSelectScalarValues(
     }
 
     if (valueType !== currentType) {
-      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}": select item values must all be strings or all be numbers.`)
+      return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}": select item values must all be strings or all be numbers.`, breadcrumb, rawNode)
     }
   }
 
@@ -1748,6 +1824,8 @@ function validateManualSelectObjectValueTypes(
   valuePath: string,
   path: string,
   pageId: string,
+  breadcrumb: BreadcrumbSegment[] = [],
+  rawNode?: Record<string, unknown>,
 ): { status: 'error'; error: RuntimeConfigError } | null {
   let valueType: 'string' | 'number' | null = null
 
@@ -1770,7 +1848,7 @@ function validateManualSelectObjectValueTypes(
     }
 
     if (valueType !== currentType) {
-      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}": select item values must all be strings or all be numbers.`)
+      return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}": select item values must all be strings or all be numbers.`, breadcrumb, rawNode)
     }
   }
 
@@ -1782,16 +1860,19 @@ function validateExecutionRequestParamsInCollection(
   path: string,
   pageId: string,
   api: import('./runtime-config-types').RuntimeApiConfig,
+  breadcrumb: BreadcrumbSegment[],
 ): { status: 'error'; error: RuntimeConfigError } | null {
   for (let index = 0; index < nodes.length; index += 1) {
     const node = nodes[index]
     const nodePath = `${path}[${index}]`
+    const nodeSegment = buildBreadcrumbSegmentFromNode(node, index)
+    const nodeBreadcrumb = [...breadcrumb, nodeSegment]
 
     if (node.type === 'button' && node.props.action?.type === 'executeOperation') {
       const operation = api[node.props.action.operationName]
 
       if (operation?.method === 'GET' && node.props.action.body !== undefined) {
-        return invalidLayout(`Page "${pageId}" has an invalid layout at "${nodePath}.props.action.body": GET operations do not support body.`)
+        return enrichedInvalidLayoutFromNode(`Page "${pageId}" has an invalid layout at "${nodePath}.props.action.body": GET operations do not support body.`, nodeBreadcrumb, node)
       }
     }
 
@@ -1801,7 +1882,7 @@ function validateExecutionRequestParamsInCollection(
         const operation = api[entry.operationName]
 
         if (operation?.method === 'GET' && entry.body !== undefined) {
-          return invalidLayout(`Page "${pageId}" has an invalid layout at "${nodePath}.props.action.operations[${entryIndex}].body": GET operations do not support body.`)
+          return enrichedInvalidLayoutFromNode(`Page "${pageId}" has an invalid layout at "${nodePath}.props.action.operations[${entryIndex}].body": GET operations do not support body.`, nodeBreadcrumb, node)
         }
       }
     }
@@ -1810,7 +1891,7 @@ function validateExecutionRequestParamsInCollection(
       const operation = api[node.submitAction.operationName]
 
       if (operation?.method === 'GET' && node.submitAction.body !== undefined) {
-        return invalidLayout(`Page "${pageId}" has an invalid layout at "${nodePath}.submitAction.body": GET operations do not support body.`)
+        return enrichedInvalidLayoutFromNode(`Page "${pageId}" has an invalid layout at "${nodePath}.submitAction.body": GET operations do not support body.`, nodeBreadcrumb, node)
       }
     }
 
@@ -1820,7 +1901,7 @@ function validateExecutionRequestParamsInCollection(
         const operation = api[entry.operationName]
 
         if (operation?.method === 'GET' && entry.body !== undefined) {
-          return invalidLayout(`Page "${pageId}" has an invalid layout at "${nodePath}.submitAction.operations[${entryIndex}].body": GET operations do not support body.`)
+          return enrichedInvalidLayoutFromNode(`Page "${pageId}" has an invalid layout at "${nodePath}.submitAction.operations[${entryIndex}].body": GET operations do not support body.`, nodeBreadcrumb, node)
         }
       }
     }
@@ -1834,7 +1915,7 @@ function validateExecutionRequestParamsInCollection(
           const operation = api[action.operationName]
 
           if (operation?.method === 'GET' && action.body !== undefined) {
-            return invalidLayout(`Page "${pageId}" has an invalid layout at "${actionPath}.body": GET operations do not support body.`)
+            return enrichedInvalidLayoutFromNode(`Page "${pageId}" has an invalid layout at "${actionPath}.body": GET operations do not support body.`, nodeBreadcrumb, node)
           }
         }
 
@@ -1844,7 +1925,7 @@ function validateExecutionRequestParamsInCollection(
             const operation = api[entry.operationName]
 
             if (operation?.method === 'GET' && entry.body !== undefined) {
-              return invalidLayout(`Page "${pageId}" has an invalid layout at "${actionPath}.operations[${entryIndex}].body": GET operations do not support body.`)
+              return enrichedInvalidLayoutFromNode(`Page "${pageId}" has an invalid layout at "${actionPath}.operations[${entryIndex}].body": GET operations do not support body.`, nodeBreadcrumb, node)
             }
           }
         }
@@ -1860,7 +1941,7 @@ function validateExecutionRequestParamsInCollection(
           const operation = api[action.operationName]
 
           if (operation?.method === 'GET' && action.body !== undefined) {
-            return invalidLayout(`Page "${pageId}" has an invalid layout at "${actionPath}.body": GET operations do not support body.`)
+            return enrichedInvalidLayoutFromNode(`Page "${pageId}" has an invalid layout at "${actionPath}.body": GET operations do not support body.`, nodeBreadcrumb, node)
           }
         }
 
@@ -1870,7 +1951,7 @@ function validateExecutionRequestParamsInCollection(
             const operation = api[entry.operationName]
 
             if (operation?.method === 'GET' && entry.body !== undefined) {
-              return invalidLayout(`Page "${pageId}" has an invalid layout at "${actionPath}.operations[${entryIndex}].body": GET operations do not support body.`)
+              return enrichedInvalidLayoutFromNode(`Page "${pageId}" has an invalid layout at "${actionPath}.operations[${entryIndex}].body": GET operations do not support body.`, nodeBreadcrumb, node)
             }
           }
         }
@@ -1878,7 +1959,7 @@ function validateExecutionRequestParamsInCollection(
     }
 
     if ((node.type === 'container' || node.type === 'form' || node.type === 'modal') && node.children) {
-      const childError = validateExecutionRequestParamsInCollection(node.children, `${nodePath}.children`, pageId, api)
+      const childError = validateExecutionRequestParamsInCollection(node.children, `${nodePath}.children`, pageId, api, nodeBreadcrumb)
 
       if (childError) {
         return childError
@@ -1886,7 +1967,7 @@ function validateExecutionRequestParamsInCollection(
     }
 
     if (node.type === 'repeater') {
-      const childError = validateExecutionRequestParamsInCollection(node.props.template, `${nodePath}.props.template`, pageId, api)
+      const childError = validateExecutionRequestParamsInCollection(node.props.template, `${nodePath}.props.template`, pageId, api, nodeBreadcrumb)
 
       if (childError) {
         return childError
@@ -1903,6 +1984,7 @@ function validateExecutionRequestParamsInCollection(
             `${nodePath}.props.items[${itemIndex}].children`,
             pageId,
             api,
+            nodeBreadcrumb,
           )
 
           if (childError) {

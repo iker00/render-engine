@@ -435,3 +435,40 @@ describe('validateRuntimeConfig — fileInput node: capture + accept cross-check
     expect(result.status).toBe('ready')
   })
 })
+
+// ─── Second-pass breadcrumb enrichment tests ─────────────────────────────────
+
+describe('validateRuntimeConfig — second-pass fileInput errors include breadcrumb', () => {
+  it('capture + accept invalid includes breadcrumb with form > fileInput path', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithFileInput(
+        createFileInputNode({
+          capture: 'environment',
+          validations: { accept: { value: ['application/pdf'] } },
+        }),
+      ),
+    )
+    expect(result.status).toBe('error')
+    if (result.status !== 'error') throw new Error('Expected error')
+    expect(result.error.message).toContain('capture requires at least one image/* or video/*')
+    expect(result.error.message).toContain('\n  → ')
+    expect(result.error.message).toContain('form("test-form")')
+    expect(result.error.message).toContain('fileInput(fieldId: "documents")')
+    expect(result.error.message).toContain('\n  Node: ')
+    expect(result.error.message).toContain('"type":"fileInput"')
+  })
+
+  it('capture with no accept declared includes breadcrumb', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithFileInput(
+        createFileInputNode({ capture: 'environment' }),
+      ),
+    )
+    expect(result.status).toBe('error')
+    if (result.status !== 'error') throw new Error('Expected error')
+    expect(result.error.message).toContain('capture')
+    expect(result.error.message).toContain('\n  → ')
+    expect(result.error.message).toContain('fileInput(fieldId: "documents")')
+    expect(result.error.message).toContain('\n  Node: ')
+  })
+})
