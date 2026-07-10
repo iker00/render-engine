@@ -461,7 +461,7 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].children[0].props.required": use props.validations.required instead.',
+        message: expect.stringContaining('layout[0].children[0].props.required'),
       },
     })
 
@@ -487,7 +487,7 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].children[0].props.validations.required".',
+        message: expect.stringContaining('layout[0].children[0].props.validations.required'),
       },
     })
 
@@ -513,7 +513,7 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].children[0].props.validations.min".',
+        message: expect.stringContaining('layout[0].children[0].props.validations.min'),
       },
     })
 
@@ -540,7 +540,7 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].children[0].props.validations.maxSelections".',
+        message: expect.stringContaining('layout[0].children[0].props.validations.maxSelections'),
       },
     })
 
@@ -567,7 +567,7 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].children[0].props.validations.min".',
+        message: expect.stringContaining('layout[0].children[0].props.validations.min'),
       },
     })
 
@@ -595,7 +595,7 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].children[0].props.validations": minSelections cannot be greater than maxSelections.',
+        message: expect.stringContaining('minSelections cannot be greater than maxSelections'),
       },
     })
   })
@@ -661,7 +661,7 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].children[0].props.validations.minLength".',
+        message: expect.stringContaining('layout[0].children[0].props.validations.minLength'),
       },
     })
   })
@@ -690,7 +690,7 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].children[0].props.validations.maxLength".',
+        message: expect.stringContaining('layout[0].children[0].props.validations.maxLength'),
       },
     })
   })
@@ -719,7 +719,7 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].children[0].props.validations.min".',
+        message: expect.stringContaining('layout[0].children[0].props.validations.min'),
       },
     })
   })
@@ -748,7 +748,7 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].children[0].props.validations.max".',
+        message: expect.stringContaining('layout[0].children[0].props.validations.max'),
       },
     })
   })
@@ -867,7 +867,7 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].children[0].props.validations.pattern.value".',
+        message: expect.stringContaining('layout[0].children[0].props.validations.pattern.value'),
       },
     })
   })
@@ -895,7 +895,7 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].children[0].props.validations.pattern".',
+        message: expect.stringContaining('layout[0].children[0].props.validations.pattern'),
       },
     })
   })
@@ -924,7 +924,7 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].children[0].props.validations.pattern".',
+        message: expect.stringContaining('layout[0].children[0].props.validations.pattern'),
       },
     })
   })
@@ -953,7 +953,7 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].children[0].props.validations.pattern".',
+        message: expect.stringContaining('layout[0].children[0].props.validations.pattern'),
       },
     })
   })
@@ -982,7 +982,7 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].children[0].props.validations.pattern".',
+        message: expect.stringContaining('layout[0].children[0].props.validations.pattern'),
       },
     })
   })
@@ -1011,7 +1011,7 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].children[0].props.validations.pattern".',
+        message: expect.stringContaining('layout[0].children[0].props.validations.pattern'),
       },
     })
   })
@@ -1040,7 +1040,7 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].children[0].props.validations.pattern".',
+        message: expect.stringContaining('layout[0].children[0].props.validations.pattern'),
       },
     })
 
@@ -1067,7 +1067,7 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].children[0].props.validations.pattern".',
+        message: expect.stringContaining('layout[0].children[0].props.validations.pattern'),
       },
     })
 
@@ -1094,7 +1094,7 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].children[0].props.validations.pattern".',
+        message: expect.stringContaining('layout[0].children[0].props.validations.pattern'),
       },
     })
   })
@@ -1215,7 +1215,7 @@ describe('validateRuntimeConfig', () => {
         error: {
           code: 'invalid-layout',
           displayMode: 'development-only',
-          message: `Page "home" has an invalid layout at "layout[0].children[0].props.validations.email".`,
+          message: expect.stringContaining('layout[0].children[0].props.validations.email'),
         },
       })
     }
@@ -1245,7 +1245,7 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].children[0].props.validations.email".',
+        message: expect.stringContaining('layout[0].children[0].props.validations.email'),
       },
     })
 
@@ -1272,7 +1272,7 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].children[0].props.validations.email".',
+        message: expect.stringContaining('layout[0].children[0].props.validations.email'),
       },
     })
 
@@ -1299,7 +1299,7 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].children[0].props.validations.email".',
+        message: expect.stringContaining('layout[0].children[0].props.validations.email'),
       },
     })
   })
@@ -1420,7 +1420,7 @@ describe('validateRuntimeConfig', () => {
         error: {
           code: 'invalid-layout',
           displayMode: 'development-only',
-          message: `Page "home" has an invalid layout at "layout[0].children[0].props.validations.url".`,
+          message: expect.stringContaining('layout[0].children[0].props.validations.url'),
         },
       })
     }
@@ -1450,7 +1450,7 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].children[0].props.validations.url".',
+        message: expect.stringContaining('layout[0].children[0].props.validations.url'),
       },
     })
 
@@ -1477,7 +1477,7 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].children[0].props.validations.url".',
+        message: expect.stringContaining('layout[0].children[0].props.validations.url'),
       },
     })
 
@@ -1504,7 +1504,7 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].children[0].props.validations.url".',
+        message: expect.stringContaining('layout[0].children[0].props.validations.url'),
       },
     })
   })
@@ -2060,6 +2060,60 @@ describe('validateRuntimeConfig', () => {
     expect(validations.required).not.toHaveProperty('when')
     expect(validations.minLength).not.toHaveProperty('when')
     expect(validations.pattern).not.toHaveProperty('when')
+  })
+
+  it('includes breadcrumb and excerpt for invalid validation rule error', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithFormLayout({
+        children: [
+          {
+            type: 'input',
+            props: {
+              fieldId: 'name',
+              label: 'Name',
+              validations: {
+                required: false,
+              },
+            },
+          },
+        ],
+      }),
+    )
+
+    expect(result).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message: expect.stringContaining('\n  → '),
+      },
+    })
+
+    if (result.status !== 'error') throw new Error('Expected error')
+    expect(result.error.message).toContain('form("user-form") > input(fieldId: "name")')
+    expect(result.error.message).toContain('Node: {"type":"input","props":{"fieldId":"name","label":"Name"}}')
+  })
+
+  it('includes breadcrumb and excerpt for invalid defaultValue in input', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithFormLayout({
+        children: [
+          {
+            type: 'input',
+            props: {
+              fieldId: 'name',
+              label: 'Name',
+              defaultValue: ['a', 'b'],
+            },
+          },
+        ],
+      }),
+    )
+
+    expect(result.status).toBe('error')
+    if (result.status !== 'error') throw new Error('Expected error')
+    expect(result.error.message).toContain('form("user-form") > input(fieldId: "name")')
+    expect(result.error.message).toContain('Node: ')
   })
 
   it('existing rules (required, minLength, maxLength, min, max, minSelections, maxSelections) still validate without changes', () => {

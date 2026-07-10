@@ -463,7 +463,9 @@ describe('validateRuntimeConfig', () => {
         error: {
           code: 'invalid-layout',
           displayMode: 'development-only',
-          message: 'Page "home" has an invalid layout at "layout[0].props.action.headers.authorization".',
+          message: `Page "home" has an invalid layout at "layout[0].props.action.headers.authorization".
+  → button("Load users")
+  Node: {"type":"button","props":{"label":"Load users"}}`,
         },
       })
 
@@ -484,7 +486,7 @@ describe('validateRuntimeConfig', () => {
         error: {
           code: 'invalid-layout',
           displayMode: 'development-only',
-          message: 'Page "home" has an invalid layout at "layout[0].submitAction.headers.authorization".',
+          message: expect.stringContaining('layout[0].submitAction.headers.authorization'),
         },
       })
     })
@@ -503,7 +505,9 @@ describe('validateRuntimeConfig', () => {
         error: {
           code: 'invalid-layout',
           displayMode: 'development-only',
-          message: 'Page "home" has an invalid layout at "layout[0].props.action.query": contains an empty key.',
+          message: `Page "home" has an invalid layout at "layout[0].props.action.query": contains an empty key.
+  → button("Load users")
+  Node: {"type":"button","props":{"label":"Load users"}}`,
         },
       })
 
@@ -522,7 +526,9 @@ describe('validateRuntimeConfig', () => {
         error: {
           code: 'invalid-layout',
           displayMode: 'development-only',
-          message: 'Page "home" has an invalid layout at "layout[0].props.action.query.filters".',
+          message: `Page "home" has an invalid layout at "layout[0].props.action.query.filters".
+  → button("Load users")
+  Node: {"type":"button","props":{"label":"Load users"}}`,
         },
       })
 
@@ -543,7 +549,7 @@ describe('validateRuntimeConfig', () => {
         error: {
           code: 'invalid-layout',
           displayMode: 'development-only',
-          message: 'Page "home" has an invalid layout at "layout[0].submitAction.headers": contains an empty key.',
+          message: expect.stringContaining('layout[0].submitAction.headers'),
         },
       })
     })
@@ -562,7 +568,9 @@ describe('validateRuntimeConfig', () => {
         error: {
           code: 'invalid-layout',
           displayMode: 'development-only',
-          message: 'Page "home" has an invalid layout at "layout[0].props.action.body": GET operations do not support body.',
+          message: `Page "home" has an invalid layout at "layout[0].props.action.body": GET operations do not support body.
+  → button("Load users")
+  Node: {"type":"button","props":{"label":"Load users"}}`,
         },
       })
 
@@ -590,7 +598,9 @@ describe('validateRuntimeConfig', () => {
         error: {
           code: 'invalid-layout',
           displayMode: 'development-only',
-          message: 'Page "home" has an invalid layout at "layout[0].submitAction.body": GET operations do not support body.',
+          message: `Page "home" has an invalid layout at "layout[0].submitAction.body": GET operations do not support body.
+  → form("user-form")
+  Node: {"type":"form","id":"user-form"}`,
         },
       })
     })

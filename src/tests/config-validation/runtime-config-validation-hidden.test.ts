@@ -169,6 +169,14 @@ describe('validateRuntimeConfig — hidden node', () => {
     })
   })
 
+  it('includes breadcrumb with hidden(fieldId: "token") for prohibited prop error', () => {
+    const result = validateRuntimeConfig(createHiddenInForm({ fieldId: 'token', value: 'abc', label: 'Token' }))
+    expect(result.status).toBe('error')
+    if (result.status !== 'error') throw new Error('Expected error')
+    expect(result.error.message).toContain('form("user-form") > hidden(fieldId: "token")')
+    expect(result.error.message).toContain('Node: ')
+  })
+
   it('rejects hidden outside a form', () => {
     const result = validateRuntimeConfig(
       createConfigWithPages([
@@ -188,7 +196,9 @@ describe('validateRuntimeConfig — hidden node', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0]": hidden nodes must be descendants of a form node.',
+        message: `Page "home" has an invalid layout at "layout[0]": hidden nodes must be descendants of a form node.
+  → hidden(fieldId: "token")
+  Node: {"type":"hidden","props":{"fieldId":"token"}}`,
       },
     })
   })

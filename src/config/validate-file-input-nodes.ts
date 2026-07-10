@@ -4,13 +4,14 @@ import type {
   LayoutNodeCollection,
   RuntimeConfigError,
 } from './runtime-config-types'
-import { invalidLayout } from './runtime-config-validation-errors'
+import type { BreadcrumbSegment } from './validation-breadcrumb'
+import { buildBreadcrumbSegmentFromNode, enrichedInvalidLayoutFromNode } from './validation-breadcrumb'
 
 export function validateFileInputSemantics(
   config: { pages: Array<{ id: string; layout: LayoutNodeCollection }> },
 ): { status: 'error'; error: RuntimeConfigError } | null {
   for (const page of config.pages) {
-    const error = validateFileInputNodesInCollection(page.layout, 'layout', page.id)
+    const error = validateFileInputNodesInCollection(page.layout, 'layout', page.id, [])
 
     if (error) {
       return error
@@ -24,13 +25,16 @@ function validateFileInputNodesInCollection(
   nodes: LayoutNodeCollection,
   path: string,
   pageId: string,
+  breadcrumb: BreadcrumbSegment[],
 ): { status: 'error'; error: RuntimeConfigError } | null {
   for (let index = 0; index < nodes.length; index += 1) {
     const node = nodes[index]
     const nodePath = `${path}[${index}]`
+    const nodeSegment = buildBreadcrumbSegmentFromNode(node, index)
+    const nodeBreadcrumb = [...breadcrumb, nodeSegment]
 
     if (node.type === 'fileInput') {
-      const error = validateFileInputCaptureAccept(node, nodePath, pageId)
+      const error = validateFileInputCaptureAccept(node, nodePath, pageId, nodeBreadcrumb)
 
       if (error) {
         return error
@@ -39,7 +43,7 @@ function validateFileInputNodesInCollection(
       continue
     }
 
-    const childError = visitNodeChildren(node, nodePath, pageId)
+    const childError = visitNodeChildren(node, nodePath, pageId, nodeBreadcrumb)
 
     if (childError) {
       return childError
@@ -53,16 +57,17 @@ function visitNodeChildren(
   node: LayoutNode,
   nodePath: string,
   pageId: string,
+  breadcrumb: BreadcrumbSegment[],
 ): { status: 'error'; error: RuntimeConfigError } | null {
   if (
     (node.type === 'container' || node.type === 'form' || node.type === 'modal' || node.type === 'accordion') &&
     node.children
   ) {
-    return validateFileInputNodesInCollection(node.children, `${nodePath}.children`, pageId)
+    return validateFileInputNodesInCollection(node.children, `${nodePath}.children`, pageId, breadcrumb)
   }
 
   if (node.type === 'repeater') {
-    return validateFileInputNodesInCollection(node.props.template, `${nodePath}.props.template`, pageId)
+    return validateFileInputNodesInCollection(node.props.template, `${nodePath}.props.template`, pageId, breadcrumb)
   }
 
   if (node.type === 'tabs') {
@@ -74,6 +79,7 @@ function visitNodeChildren(
           item.children,
           `${nodePath}.props.items[${itemIndex}].children`,
           pageId,
+          breadcrumb,
         )
 
         if (itemError) {
@@ -93,6 +99,7 @@ function visitNodeChildren(
         [...rule.fallback],
         `${nodePath}.queryStateFeedback.states.${stateName}.fallback`,
         pageId,
+        breadcrumb,
       )
 
       if (fallbackError) {
@@ -108,6 +115,7 @@ function validateFileInputCaptureAccept(
   node: FileInputLayoutNode,
   path: string,
   pageId: string,
+  breadcrumb: BreadcrumbSegment[],
 ): { status: 'error'; error: RuntimeConfigError } | null {
   if (!node.props.capture) {
     return null
@@ -119,8 +127,10 @@ function validateFileInputCaptureAccept(
     !acceptValues ||
     !acceptValues.some((mime) => mime.startsWith('image/') || mime.startsWith('video/'))
   ) {
-    return invalidLayout(
+    return enrichedInvalidLayoutFromNode(
       `Page "${pageId}" has an invalid layout at "${path}.props.capture": capture requires at least one image/* or video/* MIME type in validations.accept.`,
+      breadcrumb,
+      node,
     )
   }
 

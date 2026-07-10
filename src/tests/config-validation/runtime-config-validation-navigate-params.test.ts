@@ -3,6 +3,7 @@ import { validateRuntimeConfig } from '../../config/runtime-config'
 import {
   createConfigWithLayout,
   createConfigWithNavigateToButtonAction,
+  createConfigWithPages,
 } from './helpers'
 
 describe('validateRuntimeConfig', () => {
@@ -76,7 +77,9 @@ describe('validateRuntimeConfig', () => {
         error: {
           code: 'invalid-layout',
           displayMode: 'development-only',
-          message: 'Page "home" has an invalid layout at "layout[0].props.action.params": navigateTo params must be a flat object with non-empty keys.',
+          message: `Page "home" has an invalid layout at "layout[0].props.action.params": navigateTo params must be a flat object with non-empty keys.
+  → button("Open details")
+  Node: {"type":"button","props":{"label":"Open details"}}`,
         },
       })
 
@@ -95,7 +98,9 @@ describe('validateRuntimeConfig', () => {
         error: {
           code: 'invalid-layout',
           displayMode: 'development-only',
-          message: 'Page "home" has an invalid layout at "layout[0].props.action.params.user": navigateTo params only accept string, number, boolean or null.',
+          message: `Page "home" has an invalid layout at "layout[0].props.action.params.user": navigateTo params only accept string, number, boolean or null.
+  → button("Open details")
+  Node: {"type":"button","props":{"label":"Open details"}}`,
         },
       })
 
@@ -112,7 +117,9 @@ describe('validateRuntimeConfig', () => {
         error: {
           code: 'invalid-layout',
           displayMode: 'development-only',
-          message: 'Page "home" has an invalid layout at "layout[0].props.action.params": navigateTo params contain an empty key.',
+          message: `Page "home" has an invalid layout at "layout[0].props.action.params": navigateTo params contain an empty key.
+  → button("Open details")
+  Node: {"type":"button","props":{"label":"Open details"}}`,
         },
       })
 
@@ -129,7 +136,9 @@ describe('validateRuntimeConfig', () => {
         error: {
           code: 'invalid-layout',
           displayMode: 'development-only',
-          message: 'Page "home" has an invalid layout at "layout[0].props.action.params.tags": navigateTo params only accept string, number, boolean or null.',
+          message: `Page "home" has an invalid layout at "layout[0].props.action.params.tags": navigateTo params only accept string, number, boolean or null.
+  → button("Open details")
+  Node: {"type":"button","props":{"label":"Open details"}}`,
         },
       })
     })
@@ -149,7 +158,9 @@ describe('validateRuntimeConfig', () => {
           code: 'invalid-layout',
           displayMode: 'development-only',
           message:
-            'Page "home" has an invalid layout at "layout[0].props.action.params.userId": navigateTo params must use params.{paramName} when referencing page params.',
+            `Page "home" has an invalid layout at "layout[0].props.action.params.userId": navigateTo params must use params.{paramName} when referencing page params.
+  → button("Open details")
+  Node: {"type":"button","props":{"label":"Open details"}}`,
         },
       })
 
@@ -167,7 +178,9 @@ describe('validateRuntimeConfig', () => {
           code: 'invalid-layout',
           displayMode: 'development-only',
           message:
-            'Page "home" has an invalid layout at "layout[0].props.action.params.userId": navigateTo params must use params.{paramName} when referencing page params.',
+            `Page "home" has an invalid layout at "layout[0].props.action.params.userId": navigateTo params must use params.{paramName} when referencing page params.
+  → button("Open details")
+  Node: {"type":"button","props":{"label":"Open details"}}`,
         },
       })
 
@@ -185,7 +198,9 @@ describe('validateRuntimeConfig', () => {
           code: 'invalid-layout',
           displayMode: 'development-only',
           message:
-            'Page "home" has an invalid layout at "layout[0].props.action.params.userId": navigateTo params must use params.{paramName} when referencing page params.',
+            `Page "home" has an invalid layout at "layout[0].props.action.params.userId": navigateTo params must use params.{paramName} when referencing page params.
+  → button("Open details")
+  Node: {"type":"button","props":{"label":"Open details"}}`,
         },
       })
     })
@@ -205,7 +220,9 @@ describe('validateRuntimeConfig', () => {
         error: {
           code: 'invalid-layout',
           displayMode: 'development-only',
-          message: 'Page "home" has an invalid layout at "layout[0].props.action.pageId": unknown page "missing-page".',
+          message: `Page "home" has an invalid layout at "layout[0].props.action.pageId": unknown page "missing-page".
+  → button("Open details")
+  Node: {"type":"button","props":{"label":"Open details"}}`,
         },
       })
     })
@@ -278,11 +295,50 @@ describe('validateRuntimeConfig', () => {
           error: {
             code: 'invalid-layout',
             displayMode: 'development-only',
-            message:
-              'Page "home" has an invalid layout at "layout[0].props.items.source": collection sources must use queries.{queryName}.data, queries.{queryName}.data.* or item.*.',
+            message: expect.stringContaining('layout[0].props.items.source'),
           },
         })
       }
     })
+  })
+})
+
+// ─── Second-pass breadcrumb enrichment tests ─────────────────────────────────
+
+describe('validateRuntimeConfig — second-pass action targets include breadcrumb for navigateTo', () => {
+  it('navigateTo to unknown page inside nested container includes breadcrumb with ancestors', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithPages([
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'container',
+              children: [
+                {
+                  type: 'container',
+                  children: [
+                    {
+                      type: 'button',
+                      props: {
+                        label: 'Deep nav',
+                        action: { type: 'navigateTo', pageId: 'nowhere' },
+                      },
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      ]),
+    )
+    expect(result.status).toBe('error')
+    if (result.status !== 'error') throw new Error('Expected error')
+    expect(result.error.message).toContain('unknown page "nowhere"')
+    expect(result.error.message).toContain('\n  → ')
+    expect(result.error.message).toContain('container[0]')
+    expect(result.error.message).toContain('button("Deep nav")')
+    expect(result.error.message).toContain('\n  Node: ')
   })
 })

@@ -83,7 +83,9 @@ describe('validateRuntimeConfig — modal node shape', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].props.label".',
+        message: `Page "home" has an invalid layout at "layout[0].props.label".
+  → modal("my-modal")
+  Node: {"type":"modal","id":"my-modal"}`,
       },
     })
   })
@@ -97,7 +99,9 @@ describe('validateRuntimeConfig — modal node shape', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].props.label".',
+        message: `Page "home" has an invalid layout at "layout[0].props.label".
+  → modal("my-modal")
+  Node: {"type":"modal","id":"my-modal"}`,
       },
     })
   })
@@ -169,7 +173,9 @@ describe('validateRuntimeConfig — modal node shape', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].id".',
+        message: `Page "home" has an invalid layout at "layout[0].id".
+  → modal[0]
+  Node: {"type":"modal"}`,
       },
     })
   })
@@ -181,7 +187,9 @@ describe('validateRuntimeConfig — modal node shape', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].id".',
+        message: `Page "home" has an invalid layout at "layout[0].id".
+  → modal("   ")
+  Node: {"type":"modal","id":"   "}`,
       },
     })
   })
@@ -193,7 +201,9 @@ describe('validateRuntimeConfig — modal node shape', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].id".',
+        message: `Page "home" has an invalid layout at "layout[0].id".
+  → modal[0]
+  Node: {"type":"modal"}`,
       },
     })
   })
@@ -207,7 +217,9 @@ describe('validateRuntimeConfig — modal node shape', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].props.size".',
+        message: `Page "home" has an invalid layout at "layout[0].props.size".
+  → modal("my-modal")
+  Node: {"type":"modal","id":"my-modal"}`,
       },
     })
   })
@@ -221,7 +233,9 @@ describe('validateRuntimeConfig — modal node shape', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].props.defaultOpen".',
+        message: `Page "home" has an invalid layout at "layout[0].props.defaultOpen".
+  → modal("my-modal")
+  Node: {"type":"modal","id":"my-modal"}`,
       },
     })
   })
@@ -281,7 +295,9 @@ describe('validateRuntimeConfig — modal cross-validation', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "details" has an invalid layout at "layout[0].id": duplicate modal id "my-modal".',
+        message: `Page "details" has an invalid layout at "layout[0].id": duplicate modal id "my-modal".
+  → modal("my-modal")
+  Node: {"type":"modal","id":"my-modal"}`,
       },
     })
   })
@@ -313,7 +329,9 @@ describe('validateRuntimeConfig — modal cross-validation', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].props.action.modalId": unknown modal "missing-modal".',
+        message: `Page "home" has an invalid layout at "layout[0].props.action.modalId": unknown modal "missing-modal".
+  → button("Open")
+  Node: {"type":"button","props":{"label":"Open"}}`,
       },
     })
   })
@@ -335,7 +353,9 @@ describe('validateRuntimeConfig — modal cross-validation', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].props.action.modalId": unknown modal "gone".',
+        message: `Page "home" has an invalid layout at "layout[0].props.action.modalId": unknown modal "gone".
+  → button("Close")
+  Node: {"type":"button","props":{"label":"Close"}}`,
       },
     })
   })
@@ -358,7 +378,9 @@ describe('validateRuntimeConfig — modal cross-validation', () => {
         code: 'invalid-layout',
         displayMode: 'development-only',
         message:
-          'Page "home" has an invalid layout at "layout[0].props.template[0].props.defaultOpen": modal defaultOpen is not supported inside a repeater template.',
+          `Page "home" has an invalid layout at "layout[0].props.template[0].props.defaultOpen": modal defaultOpen is not supported inside a repeater template.
+  → repeater[0] > modal("my-modal")
+  Node: {"type":"modal","id":"my-modal"}`,
       },
     })
   })
@@ -418,5 +440,88 @@ describe('validateRuntimeConfig — modal cross-validation', () => {
       ]),
     )
     expect(result.status).toBe('ready')
+  })
+})
+
+// ─── Second-pass breadcrumb enrichment tests ─────────────────────────────────
+
+describe('validateRuntimeConfig — second-pass modal errors include breadcrumb', () => {
+  it('duplicate modal id includes breadcrumb of the modal node', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithPages([
+        { id: 'home', layout: [createModalNode()] },
+        { id: 'details', layout: [createModalNode()] },
+      ]),
+    )
+    expect(result.status).toBe('error')
+    if (result.status !== 'error') throw new Error('Expected error')
+    expect(result.error.message).toContain('duplicate modal id "my-modal"')
+    expect(result.error.message).toContain('\n  → ')
+    expect(result.error.message).toContain('modal("my-modal")')
+    expect(result.error.message).toContain('\n  Node: ')
+    expect(result.error.message).toContain('"type":"modal"')
+  })
+
+  it('openModal referencing unknown modal includes breadcrumb of the button', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithLayout([
+        {
+          type: 'button',
+          props: {
+            label: 'Open missing',
+            action: { type: 'openModal', modalId: 'missing-modal' },
+          },
+        },
+      ]),
+    )
+    expect(result.status).toBe('error')
+    if (result.status !== 'error') throw new Error('Expected error')
+    expect(result.error.message).toContain('unknown modal "missing-modal"')
+    expect(result.error.message).toContain('\n  → ')
+    expect(result.error.message).toContain('button("Open missing")')
+    expect(result.error.message).toContain('\n  Node: ')
+    expect(result.error.message).toContain('"type":"button"')
+  })
+
+  it('defaultOpen in repeater template includes breadcrumb with repeater > modal ancestors', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithLayout([
+        {
+          type: 'repeater',
+          props: {
+            items: { source: 'queries.list.data', key: 'id' },
+            template: [{ type: 'modal', id: 'rep-modal', props: { defaultOpen: true } }],
+          },
+        },
+      ]),
+    )
+    expect(result.status).toBe('error')
+    if (result.status !== 'error') throw new Error('Expected error')
+    expect(result.error.message).toContain('modal defaultOpen is not supported inside a repeater template')
+    expect(result.error.message).toContain('\n  → ')
+    expect(result.error.message).toContain('repeater[0]')
+    expect(result.error.message).toContain('modal("rep-modal")')
+    expect(result.error.message).toContain('\n  Node: ')
+    expect(result.error.message).toContain('"type":"modal"')
+  })
+
+  it('closeModal referencing unknown modal includes breadcrumb of the button', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithLayout([
+        {
+          type: 'button',
+          props: {
+            label: 'Close missing',
+            action: { type: 'closeModal', modalId: 'gone' },
+          },
+        },
+      ]),
+    )
+    expect(result.status).toBe('error')
+    if (result.status !== 'error') throw new Error('Expected error')
+    expect(result.error.message).toContain('unknown modal "gone"')
+    expect(result.error.message).toContain('\n  → ')
+    expect(result.error.message).toContain('button("Close missing")')
+    expect(result.error.message).toContain('\n  Node: ')
   })
 })

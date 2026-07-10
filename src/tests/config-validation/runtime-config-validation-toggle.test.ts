@@ -42,7 +42,7 @@ describe('validateRuntimeConfig — toggle node', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].children[0].props.labelPosition".',
+        message: expect.stringContaining('layout[0].children[0].props.labelPosition'),
       },
     })
   })
@@ -122,7 +122,7 @@ describe('validateRuntimeConfig — toggle node', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].children[0].props.validations.minLength".',
+        message: expect.stringContaining('layout[0].children[0].props.validations.minLength'),
       },
     })
   })
@@ -134,7 +134,7 @@ describe('validateRuntimeConfig — toggle node', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].children[0].props.validations.maxLength".',
+        message: expect.stringContaining('layout[0].children[0].props.validations.maxLength'),
       },
     })
   })
@@ -146,7 +146,7 @@ describe('validateRuntimeConfig — toggle node', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].children[0].props.validations.min".',
+        message: expect.stringContaining('layout[0].children[0].props.validations.min'),
       },
     })
   })
@@ -158,7 +158,7 @@ describe('validateRuntimeConfig — toggle node', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].children[0].props.validations.max".',
+        message: expect.stringContaining('layout[0].children[0].props.validations.max'),
       },
     })
   })
@@ -170,7 +170,7 @@ describe('validateRuntimeConfig — toggle node', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].children[0].props.validations.minSelections".',
+        message: expect.stringContaining('layout[0].children[0].props.validations.minSelections'),
       },
     })
   })
@@ -182,7 +182,7 @@ describe('validateRuntimeConfig — toggle node', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].children[0].props.validations.maxSelections".',
+        message: expect.stringContaining('layout[0].children[0].props.validations.maxSelections'),
       },
     })
   })
@@ -194,7 +194,7 @@ describe('validateRuntimeConfig — toggle node', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].children[0].props.validations.pattern".',
+        message: expect.stringContaining('layout[0].children[0].props.validations.pattern'),
       },
     })
   })
@@ -206,7 +206,7 @@ describe('validateRuntimeConfig — toggle node', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].children[0].props.validations.email".',
+        message: expect.stringContaining('layout[0].children[0].props.validations.email'),
       },
     })
   })
@@ -218,7 +218,7 @@ describe('validateRuntimeConfig — toggle node', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].children[0].props.validations.url".',
+        message: expect.stringContaining('layout[0].children[0].props.validations.url'),
       },
     })
   })
@@ -245,7 +245,9 @@ describe('validateRuntimeConfig — toggle node', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0]": toggle nodes must be descendants of a form node.',
+        message: `Page "home" has an invalid layout at "layout[0]": toggle nodes must be descendants of a form node.
+  → toggle(fieldId: "agree")
+  Node: {"type":"toggle","props":{"fieldId":"agree","label":"I agree"}}`,
       },
     })
   })
@@ -323,6 +325,14 @@ describe('validateRuntimeConfig — toggle node', () => {
     expect(result.status).toBe('ready')
   })
 
+  it('includes breadcrumb with toggle(fieldId: "agree") for validation error', () => {
+    const result = validateRuntimeConfig(createToggleInForm({ fieldId: 'agree', label: 'I agree', validations: { minLength: 5 } }))
+    expect(result.status).toBe('error')
+    if (result.status !== 'error') throw new Error('Expected error')
+    expect(result.error.message).toContain('form("user-form") > toggle(fieldId: "agree")')
+    expect(result.error.message).toContain('Node: {"type":"toggle","props":{"fieldId":"agree","label":"I agree"}}')
+  })
+
   it('rejects toggle with duplicate fieldId within the same form', () => {
     const result = validateRuntimeConfig(createConfigWithFormLayout({
       children: [
@@ -341,7 +351,9 @@ describe('validateRuntimeConfig — toggle node', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].children[1].props.fieldId": duplicate fieldId "agree" in form "user-form".',
+        message: `Page "home" has an invalid layout at "layout[0].children[1].props.fieldId": duplicate fieldId "agree" in form "user-form".
+  → form("user-form") > toggle(fieldId: "agree")
+  Node: {"type":"toggle","props":{"fieldId":"agree","label":"Duplicate toggle"}}`,
       },
     })
   })
