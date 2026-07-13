@@ -38,6 +38,14 @@
                 "text": "Búsqueda de personas",
                 "level": 1
               }
+            },
+            {
+              "type": "link",
+              "props": {
+                "label": "Crear persona",
+                "icon": "plus",
+                "href": "/carpetaciudadana/detallegenerico.aspx?tram=427&sec=21"
+              }
             }
           ]
         },

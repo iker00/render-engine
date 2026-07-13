@@ -157,13 +157,32 @@
               },
               "children": [
                 {
+                  "type": "image",
+                  "props": {
+                    "alt": "Avatar del usuario",
+                    "fetch": {
+                      "url": "https://pre-frontapi.pamplona.es/ss/Ade/v1/operations/C776EC3B-8809-48F3-BD81-48467D7B6074/ObtenerMedio/Binary",
+                      "method": "POST",
+                      "headers": {
+                        "Authorization": "Bearer {{tokens.token.value}}"
+                      },
+                      "body": {
+                        "PublicId": "queries.obtenerFichaPersona.data.FichaPersonaDTO.DatosIdentificativosDTO.MedioPrincipal"
+                      }
+                    }
+                  },
+                  "layout": {
+                    "span": 3
+                  }
+                },
+                {
                   "type": "container",
                   "props": {
                     "columns": 2,
                     "gap": "md"
                   },
                   "layout": {
-                    "span": 12
+                    "span": 9
                   },
                   "children": [
                     {
@@ -331,6 +350,15 @@
                     "text": "Personas relacionadas",
                     "level": 2,
                     "icon": "users"
+                  }
+                },
+                {
+                  "type": "button",
+                  "props": {
+                    "label": "Añadir persona",
+                    "color": "primary",
+                    "variant": "solid",
+                    "icon": "plus"
                   }
                 }
               ]
@@ -513,6 +541,140 @@
                   }
                 ]
               }
+            }
+          ]
+        },
+        {
+          "type": "container",
+          "props": {
+            "variant": "card",
+            "gap": "md"
+          },
+          "queryStateFeedback": {
+            "query": "obtenerFichaPersona",
+            "states": {
+              "loading": {
+                "mode": "fallback",
+                "fallback": [
+                  {
+                    "type": "container",
+                    "props": {
+                      "gap": "md"
+                    },
+                    "children": [
+                      {
+                        "type": "skeleton",
+                        "props": {
+                          "variant": "rect",
+                          "width": "1/4",
+                          "height": "6"
+                        }
+                      },
+                      {
+                        "type": "container",
+                        "props": {
+                          "columns": 3,
+                          "gap": "md"
+                        },
+                        "children": [
+                          {
+                            "type": "skeleton",
+                            "props": {
+                              "variant": "rect",
+                              "height": "32",
+                              "rounded": true
+                            }
+                          },
+                          {
+                            "type": "skeleton",
+                            "props": {
+                              "variant": "rect",
+                              "height": "32",
+                              "rounded": true
+                            }
+                          },
+                          {
+                            "type": "skeleton",
+                            "props": {
+                              "variant": "rect",
+                              "height": "32",
+                              "rounded": true
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          },
+          "children": [
+            {
+              "type": "container",
+              "props": {
+                "direction": "row",
+                "justify": "between"
+              },
+              "children": [
+                {
+                  "type": "heading",
+                  "props": {
+                    "text": "Fotos",
+                    "level": 2,
+                    "icon": "image"
+                  }
+                },
+                {
+                  "type": "button",
+                  "props": {
+                    "label": "Añadir foto",
+                    "color": "primary",
+                    "variant": "solid",
+                    "icon": "plus"
+                  }
+                }
+              ]
+            },
+            {
+              "type": "container",
+              "props": {
+                "columns": {
+                  "base": 2,
+                  "md": 3,
+                  "lg": 4
+                },
+                "gap": "md"
+              },
+              "children": [
+                {
+                  "type": "repeater",
+                  "props": {
+                    "items": {
+                      "source": "queries.obtenerFichaPersona.data.FichaPersonaDTO.Medios",
+                      "key": "$index"
+                    },
+                    "template": [
+                      {
+                        "type": "image",
+                        "props": {
+                          "alt": "Foto de la persona",
+                          "fetch": {
+                            "url": "https://pre-frontapi.pamplona.es/ss/Ade/v1/operations/C776EC3B-8809-48F3-BD81-48467D7B6074/ObtenerMedio/Binary",
+                            "method": "POST",
+                            "headers": {
+                              "Authorization": "Bearer {{tokens.token.value}}"
+                            },
+                            "body": {
+                              "PublicId": "item"
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
             }
           ]
         }

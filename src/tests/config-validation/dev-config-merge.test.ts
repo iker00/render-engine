@@ -21,4 +21,17 @@ describe('dev-config merge', () => {
       }),
     })
   })
+
+  it('merges tokens so Authorization headers can resolve in development', () => {
+    expect(devConfig.tokens).toMatchObject({
+      token: {
+        value: '#bearer_token#',
+      },
+    })
+    expect(devConfig.api.obtenerPermisosPantallaInicio).toMatchObject({
+      mockResponse: expect.objectContaining({
+        PermisosPantallaInicioDTO: expect.any(Object),
+      }),
+    })
+  })
 })

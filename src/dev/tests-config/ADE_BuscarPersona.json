@@ -38,6 +38,17 @@
                 "text": "Búsqueda de personas",
                 "level": 1
               }
+            },
+            {
+              "type": "link",
+              "props": {
+                "label": "Crear persona",
+                "icon": "plus",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "crear-persona"
+                }
+              }
             }
           ]
         },

@@ -34,9 +34,18 @@ const mocksByOperation: Record<string, unknown> = Object.fromEntries(
 
 const mergedApi: Record<string, unknown> = {}
 const mergedPages: unknown[] = []
+const mergedTokens: Record<string, unknown> = {}
 
 for (const mod of Object.values(configModules)) {
-  const config = mod.default as { api?: Record<string, unknown>; pages?: unknown[] }
+  const config = mod.default as {
+    api?: Record<string, unknown>
+    pages?: unknown[]
+    tokens?: Record<string, unknown>
+  }
+
+  for (const [tokenId, token] of Object.entries(config.tokens ?? {})) {
+    mergedTokens[tokenId] = token
+  }
 
   for (const [opName, op] of Object.entries(config.api ?? {})) {
     mergedApi[opName] =
@@ -52,4 +61,5 @@ export default {
   api: mergedApi,
   pages: mergedPages,
   initialPage: settings.initialPage,
+  ...(Object.keys(mergedTokens).length > 0 ? { tokens: mergedTokens } : {}),
 }
