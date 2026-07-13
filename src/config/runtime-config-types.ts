@@ -333,6 +333,7 @@ export interface RuntimeFileInputValidations {
 export interface FormFieldLayoutNodeProps {
   fieldId: string
   label: string
+  tooltip?: string
   validations?: RuntimeFormFieldValidations
   defaultValue?: RuntimeConfigValue | unknown[]
 }
@@ -654,6 +655,7 @@ export interface FileInputLayoutNode extends LayoutNodeFeedbackFields, LayoutNod
   props: {
     fieldId: string
     label: string
+    tooltip?: string
     multiple?: boolean
     capture?: 'environment' | 'user'
     validations?: RuntimeFileInputValidations
@@ -669,6 +671,7 @@ export interface ToggleLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLa
   props: {
     fieldId: string
     label: string
+    tooltip?: string
     labelPosition?: ToggleLabelPosition
     defaultValue?: boolean | string
     validations?: RuntimeFormFieldValidations

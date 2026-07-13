@@ -248,8 +248,9 @@ describe('validateRuntimeConfig', () => {
     })
 
     it('rejects invalid table column local capability metadata with focused diagnostic paths', () => {
-      const cases: Array<{ headers?: string[]; columns: unknown; path: string }> = [
-        { columns: [{ id: '', filterable: true }], path: 'props.columns[0].id' },
+      const enrichmentSuffix = `\n  → table[0]\n  Node: {"type":"table"}`
+      const cases: Array<{ headers?: string[]; columns: unknown; path: string; enriched?: boolean }> = [
+        { columns: [{ id: '', filterable: true }], path: 'props.columns[0].id', enriched: true },
         { columns: [{ id: 'Missing', filterable: true }], path: 'props.columns[0].id' },
         { columns: [{ id: 'Name', filterable: true }, { id: 'Name', sortable: true }], path: 'props.columns[1].id' },
         {
@@ -257,14 +258,14 @@ describe('validateRuntimeConfig', () => {
           columns: [{ id: 'Name', filterable: true }],
           path: 'props.columns[0].id',
         },
-        { columns: [{ id: 'Name', filterable: false }], path: 'props.columns[0].filterable' },
-        { columns: [{ id: 'Name', filterable: true, filterPlaceholder: '' }], path: 'props.columns[0].filterPlaceholder' },
+        { columns: [{ id: 'Name', filterable: false }], path: 'props.columns[0].filterable', enriched: true },
+        { columns: [{ id: 'Name', filterable: true, filterPlaceholder: '' }], path: 'props.columns[0].filterPlaceholder', enriched: true },
         { columns: [{ id: 'Name', sortable: true, filterPlaceholder: 'Buscar nombre' }], path: 'props.columns[0].filterPlaceholder' },
-        { columns: [{ id: 'Name', sortable: false }], path: 'props.columns[0].sortable' },
+        { columns: [{ id: 'Name', sortable: false }], path: 'props.columns[0].sortable', enriched: true },
         { columns: [{ id: 'Name' }], path: 'props.columns[0]' },
       ]
 
-      for (const { headers = ['Name', 'Role'], columns, path } of cases) {
+      for (const { headers = ['Name', 'Role'], columns, path, enriched } of cases) {
 
         expect(
           validateRuntimeConfig(
@@ -284,7 +285,7 @@ describe('validateRuntimeConfig', () => {
           error: {
             code: 'invalid-layout',
             displayMode: 'development-only',
-            message: `Page "home" has an invalid layout at "layout[0].${path}".`,
+            message: `Page "home" has an invalid layout at "layout[0].${path}".${enriched ? enrichmentSuffix : ''}`,
           },
         })
       }
@@ -308,7 +309,7 @@ describe('validateRuntimeConfig', () => {
           error: {
             code: 'invalid-layout',
             displayMode: 'development-only',
-            message: `Page "home" has an invalid layout at "layout[0].props.columns[0].${key}".`,
+            message: `Page "home" has an invalid layout at "layout[0].props.columns[0].${key}".\n  → table[0]\n  Node: {"type":"table"}`,
           },
         })
       }
@@ -419,7 +420,7 @@ describe('validateRuntimeConfig', () => {
           error: {
             code: 'invalid-layout',
             displayMode: 'development-only',
-            message: `Page "home" has an invalid layout at "layout[0].${path}".`,
+            message: `Page "home" has an invalid layout at "layout[0].${path}".\n  → table[0]\n  Node: {"type":"table"}`,
           },
         })
       }
@@ -442,7 +443,9 @@ describe('validateRuntimeConfig', () => {
         error: {
           code: 'invalid-layout',
           displayMode: 'development-only',
-          message: 'Page "home" has an invalid layout at "layout[0].props.src".',
+          message: `Page "home" has an invalid layout at "layout[0].props.src".
+  → image[0]
+  Node: {"type":"image"}`,
         },
       })
 
@@ -462,7 +465,9 @@ describe('validateRuntimeConfig', () => {
         error: {
           code: 'invalid-layout',
           displayMode: 'development-only',
-          message: 'Page "home" has an invalid layout at "layout[0].props.alt".',
+          message: `Page "home" has an invalid layout at "layout[0].props.alt".
+  → image[0]
+  Node: {"type":"image"}`,
         },
       })
     })

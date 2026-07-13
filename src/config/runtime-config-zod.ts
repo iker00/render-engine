@@ -431,6 +431,7 @@ const formFieldNodePropsSchema = z
   .object({
     fieldId: nonEmptyStringSchema,
     label: z.string(),
+    tooltip: z.string().optional(),
     validations: formFieldValidationsSchema.optional(),
     defaultValue: formFieldDefaultValueSchema.optional(),
   })
@@ -816,6 +817,7 @@ export const toggleNodeSchema = z
       .object({
         fieldId: nonEmptyStringSchema,
         label: z.string(),
+        tooltip: z.string().optional(),
         labelPosition: z.enum(supportedToggleLabelPositions).optional(),
         defaultValue: z.union([z.boolean(), z.string()]).optional(),
         validations: formFieldValidationsSchema.optional(),
@@ -878,6 +880,7 @@ export const fileInputNodeSchema = z
       .object({
         fieldId: nonEmptyStringSchema,
         label: z.string(),
+        tooltip: z.string().optional(),
         multiple: z.boolean().optional(),
         capture: z.enum(supportedCaptureValues).optional(),
         validations: fileInputValidationsSchema.optional(),

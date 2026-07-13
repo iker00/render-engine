@@ -363,7 +363,9 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].queryStateFeedback.states.pending".',
+        message: `Page "home" has an invalid layout at "layout[0].queryStateFeedback.states.pending".
+  → paragraph("Users loaded")
+  Node: {"type":"paragraph","props":{"text":"Users loaded"}}`,
       },
     })
   })
@@ -398,7 +400,9 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].queryStateFeedback.states.idle.fallback".',
+        message: `Page "home" has an invalid layout at "layout[0].queryStateFeedback.states.idle.fallback".
+  → paragraph("Users loaded")
+  Node: {"type":"paragraph","props":{"text":"Users loaded"}}`,
       },
     })
   })
@@ -433,7 +437,9 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].queryStateFeedback.states.loading.fallback".',
+        message: `Page "home" has an invalid layout at "layout[0].queryStateFeedback.states.loading.fallback".
+  → paragraph("Users loaded")
+  Node: {"type":"paragraph","props":{"text":"Users loaded"}}`,
       },
     })
   })
@@ -476,7 +482,9 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].queryStateFeedback.states.loading.fallback[0].props.alt".',
+        message: `Page "home" has an invalid layout at "layout[0].queryStateFeedback.states.loading.fallback[0].props.alt".
+  → paragraph("Users loaded") > image[0]
+  Node: {"type":"image"}`,
       },
     })
   })

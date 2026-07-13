@@ -734,3 +734,77 @@ describe('props.labels', () => {
     }
   })
 })
+
+// ─── Second-pass breadcrumb enrichment tests ─────────────────────────────────
+
+describe('validateRuntimeConfig — second-pass fileManager errors include breadcrumb', () => {
+  it('operation not declared in api includes breadcrumb with fileManager(operationName: "x")', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithFileManagerAndApi(
+        createFileManagerNode({ uploadOperation: 'noExiste' }),
+      ),
+    )
+    expect(result.status).toBe('error')
+    if (result.status !== 'error') throw new Error('Expected error')
+    expect(result.error.message).toContain('"noExiste" is not declared in api')
+    expect(result.error.message).toContain('\n  → ')
+    expect(result.error.message).toContain('fileManager(fieldName: "documentos")')
+    expect(result.error.message).toContain('\n  Node: ')
+    expect(result.error.message).toContain('"type":"fileManager"')
+  })
+
+  it('fileManager inside container shows breadcrumb with container ancestor', () => {
+    const result = validateRuntimeConfig({
+      api: {},
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'container',
+              children: [
+                createFileManagerNode({ uploadOperation: 'missingOp' }),
+              ],
+            },
+          ],
+        },
+      ],
+      initialPage: 'home',
+    })
+    expect(result.status).toBe('error')
+    if (result.status !== 'error') throw new Error('Expected error')
+    expect(result.error.message).toContain('"missingOp" is not declared in api')
+    expect(result.error.message).toContain('\n  → ')
+    expect(result.error.message).toContain('container[0]')
+    expect(result.error.message).toContain('fileManager(fieldName: "documentos")')
+    expect(result.error.message).toContain('\n  Node: ')
+  })
+
+  it('fileManager inside repeater template shows breadcrumb with repeater ancestor', () => {
+    const result = validateRuntimeConfig({
+      api: {},
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'repeater',
+              props: {
+                items: { source: 'queries.docs.data', key: 'id' },
+                template: [
+                  createFileManagerNode({ uploadOperation: 'gone' }),
+                ],
+              },
+            },
+          ],
+        },
+      ],
+      initialPage: 'home',
+    })
+    expect(result.status).toBe('error')
+    if (result.status !== 'error') throw new Error('Expected error')
+    expect(result.error.message).toContain('"gone" is not declared in api')
+    expect(result.error.message).toContain('repeater[0]')
+    expect(result.error.message).toContain('fileManager(fieldName: "documentos")')
+  })
+})

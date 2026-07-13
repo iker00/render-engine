@@ -287,7 +287,9 @@ describe('validateRuntimeConfig', () => {
         error: {
           code: 'invalid-layout',
           displayMode: 'development-only',
-          message: 'Page "home" has an invalid layout at "layout[0].visibility.operator".',
+          message: `Page "home" has an invalid layout at "layout[0].visibility.operator".
+  → heading("Welcome")
+  Node: {"type":"heading","props":{"text":"Welcome"}}`,
         },
       })
     })
@@ -440,7 +442,9 @@ describe('validateRuntimeConfig', () => {
         error: {
           code: 'invalid-layout',
           displayMode: 'development-only',
-          message: 'Page "home" has an invalid layout at "layout[0].visibility.value": operator "isTruthy" does not accept value.',
+          message: `Page "home" has an invalid layout at "layout[0].visibility.value": operator "isTruthy" does not accept value.
+  → heading("Welcome")
+  Node: {"type":"heading","props":{"text":"Welcome"}}`,
         },
       })
 
@@ -465,7 +469,9 @@ describe('validateRuntimeConfig', () => {
         error: {
           code: 'invalid-layout',
           displayMode: 'development-only',
-          message: 'Page "home" has an invalid layout at "layout[0].visibility.value": operator "lessThan" requires value.',
+          message: `Page "home" has an invalid layout at "layout[0].visibility.value": operator "lessThan" requires value.
+  → heading("Welcome")
+  Node: {"type":"heading","props":{"text":"Welcome"}}`,
         },
       })
     })
@@ -531,7 +537,9 @@ describe('validateRuntimeConfig', () => {
         error: {
           code: 'invalid-layout',
           displayMode: 'development-only',
-          message: 'Page "home" has an invalid layout at "layout[0].visibility.value": operator "equals" only accepts string, number, boolean or null.',
+          message: `Page "home" has an invalid layout at "layout[0].visibility.value": operator "equals" only accepts string, number, boolean or null.
+  → heading("Welcome")
+  Node: {"type":"heading","props":{"text":"Welcome"}}`,
         },
       })
 
@@ -556,7 +564,9 @@ describe('validateRuntimeConfig', () => {
         error: {
           code: 'invalid-layout',
           displayMode: 'development-only',
-          message: 'Page "home" has an invalid layout at "layout[0].visibility.value": operator "notEquals" only accepts string, number, boolean or null.',
+          message: `Page "home" has an invalid layout at "layout[0].visibility.value": operator "notEquals" only accepts string, number, boolean or null.
+  → heading("Welcome")
+  Node: {"type":"heading","props":{"text":"Welcome"}}`,
         },
       })
 
@@ -581,7 +591,9 @@ describe('validateRuntimeConfig', () => {
         error: {
           code: 'invalid-layout',
           displayMode: 'development-only',
-          message: 'Page "home" has an invalid layout at "layout[0].visibility.value": operator "greaterThan" only accepts numeric thresholds.',
+          message: `Page "home" has an invalid layout at "layout[0].visibility.value": operator "greaterThan" only accepts numeric thresholds.
+  → heading("Welcome")
+  Node: {"type":"heading","props":{"text":"Welcome"}}`,
         },
       })
     })
@@ -819,7 +831,7 @@ describe('validateRuntimeConfig', () => {
       expect(result.status).toBe('error')
       if (result.status === 'error') {
         expect(result.error.message).toBe(
-          'Page "home" has an invalid layout at "layout[0].visibility.reference": tokens.* references are not supported in visibility or when conditions.',
+          `Page "home" has an invalid layout at "layout[0].visibility.reference": tokens.* references are not supported in visibility or when conditions.\n  → heading("Hello")\n  Node: {"type":"heading","props":{"text":"Hello"}}`,
         )
       }
     })

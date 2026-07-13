@@ -23,6 +23,8 @@ import type {
   LayoutNodeCollection,
   LayoutNodeFeedbackFields,
 } from './runtime-config-types'
+import type { BreadcrumbSegment } from './validation-breadcrumb'
+import { buildBreadcrumbSegmentFromNode, enrichedInvalidLayoutFromNode } from './validation-breadcrumb'
 import {
   closeModalRuntimeUiActionSchema,
   executeOperationRuntimeUiActionSchema,
@@ -480,20 +482,24 @@ export function validateActionTargets(
   const operationNames = new Set(Object.keys(config.api))
 
   for (const page of config.pages) {
-    const invalidTarget = findInvalidActionTarget(page.layout, 'layout', pageIds, operationNames)
+    const invalidTarget = findInvalidActionTarget(page.layout, 'layout', pageIds, operationNames, [])
 
     if (!invalidTarget) {
       continue
     }
 
     if (invalidTarget.type === 'navigateTo') {
-      return invalidLayout(
+      return enrichedInvalidLayoutFromNode(
         `Page "${page.id}" has an invalid layout at "${invalidTarget.path}.pageId": unknown page "${invalidTarget.target}".`,
+        invalidTarget.breadcrumb,
+        invalidTarget.node,
       )
     }
 
-    return invalidLayout(
+    return enrichedInvalidLayoutFromNode(
       `Page "${page.id}" has an invalid layout at "${invalidTarget.path}.operationName": unknown operation "${invalidTarget.target}".`,
+      invalidTarget.breadcrumb,
+      invalidTarget.node,
     )
   }
 
@@ -725,11 +731,14 @@ function findInvalidActionTarget(
   path: string,
   pageIds: ReadonlySet<string>,
   operationNames: ReadonlySet<string>,
-): { path: string; type: 'navigateTo' | 'executeOperation'; target: string } | null {
+  breadcrumb: BreadcrumbSegment[],
+): { path: string; type: 'navigateTo' | 'executeOperation'; target: string; breadcrumb: BreadcrumbSegment[]; node: LayoutNode } | null {
   for (let index = 0; index < nodes.length; index += 1) {
     const node = nodes[index]
     const nodePath = `${path}[${index}]`
-    const fallbackTarget = findInvalidTargetInFallbackCollections(node, nodePath, pageIds, operationNames)
+    const nodeSegment = buildBreadcrumbSegmentFromNode(node, index)
+    const nodeBreadcrumb = [...breadcrumb, nodeSegment]
+    const fallbackTarget = findInvalidTargetInFallbackCollections(node, nodePath, pageIds, operationNames, nodeBreadcrumb)
 
     if (fallbackTarget) {
       return fallbackTarget
@@ -744,6 +753,8 @@ function findInvalidActionTarget(
         path: `${nodePath}.props.action`,
         type: 'navigateTo',
         target: node.props.action.pageId,
+        breadcrumb: nodeBreadcrumb,
+        node,
       }
     }
 
@@ -756,6 +767,8 @@ function findInvalidActionTarget(
         path: `${nodePath}.props.action`,
         type: 'executeOperation',
         target: node.props.action.operationName,
+        breadcrumb: nodeBreadcrumb,
+        node,
       }
     }
 
@@ -768,11 +781,13 @@ function findInvalidActionTarget(
         path: `${nodePath}.props.action`,
         type: 'navigateTo',
         target: node.props.action.pageId,
+        breadcrumb: nodeBreadcrumb,
+        node,
       }
     }
 
     if ((node.type === 'container' || node.type === 'form' || node.type === 'modal') && node.children) {
-      const childResult = findInvalidActionTarget(node.children, `${nodePath}.children`, pageIds, operationNames)
+      const childResult = findInvalidActionTarget(node.children, `${nodePath}.children`, pageIds, operationNames, nodeBreadcrumb)
 
       if (childResult) {
         return childResult
@@ -780,7 +795,7 @@ function findInvalidActionTarget(
     }
 
     if (node.type === 'repeater') {
-      const childResult = findInvalidActionTarget(node.props.template, `${nodePath}.props.template`, pageIds, operationNames)
+      const childResult = findInvalidActionTarget(node.props.template, `${nodePath}.props.template`, pageIds, operationNames, nodeBreadcrumb)
 
       if (childResult) {
         return childResult
@@ -796,6 +811,7 @@ function findInvalidTargetInFallbackCollections(
   nodePath: string,
   pageIds: ReadonlySet<string>,
   operationNames: ReadonlySet<string>,
+  breadcrumb: BreadcrumbSegment[],
 ) {
   if (!node.queryStateFeedback) {
     return null
@@ -811,6 +827,7 @@ function findInvalidTargetInFallbackCollections(
       `${nodePath}.queryStateFeedback.states.${stateName}.fallback`,
       pageIds,
       operationNames,
+      breadcrumb,
     )
 
     if (childResult) {
