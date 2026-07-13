@@ -23,6 +23,9 @@ export type LayoutNodeType =
   | 'divider'
   | 'skeleton'
   | 'fileManager'
+  | 'fileInput'
+  | 'toggle'
+  | 'hidden'
 export type RuntimeApiMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
 export type RuntimeApiQueryValue = string | number | boolean
 export type RuntimeApiQuery = Record<string, RuntimeApiQueryValue>
@@ -268,15 +271,32 @@ export type RuntimeFormValidationRuleName =
   | 'max'
   | 'minSelections'
   | 'maxSelections'
+  | 'pattern'
+  | 'email'
+  | 'url'
 
 export interface RuntimeRequiredValidationRule {
   value: true
   message?: string
+  when?: RuntimeWhenCondition
 }
 
 export interface RuntimeNumericValidationRule {
   value: number
   message?: string
+  when?: RuntimeWhenCondition
+}
+
+export interface RuntimePatternValidationRule {
+  value: string
+  message?: string
+  when?: RuntimeWhenCondition
+}
+
+export interface RuntimeBooleanFlagValidationRule {
+  value: true
+  message?: string
+  when?: RuntimeWhenCondition
 }
 
 export interface RuntimeFormFieldValidations {
@@ -287,6 +307,9 @@ export interface RuntimeFormFieldValidations {
   max?: RuntimeNumericValidationRule
   minSelections?: RuntimeNumericValidationRule
   maxSelections?: RuntimeNumericValidationRule
+  pattern?: RuntimePatternValidationRule
+  email?: RuntimeBooleanFlagValidationRule
+  url?: RuntimeBooleanFlagValidationRule
 }
 
 export interface RuntimeFileManagerValidations {
@@ -294,6 +317,16 @@ export interface RuntimeFileManagerValidations {
   maxFileSize?: { value: number; message?: string }
   maxTotalSize?: { value: number; message?: string }
   minFiles?: { value: number; message?: string }
+  maxFiles?: { value: number; message?: string }
+  validFileNames?: { value: string[]; message?: string }
+}
+
+export interface RuntimeFileInputValidations {
+  required?: RuntimeRequiredValidationRule
+  accept?: { value: string[]; message?: string }
+  maxFileSize?: { value: number; message?: string }
+  maxTotalSize?: { value: number; message?: string }
+  minFiles?: RuntimeNumericValidationRule
   maxFiles?: { value: number; message?: string }
   validFileNames?: { value: string[]; message?: string }
 }
@@ -309,9 +342,10 @@ export interface InputLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLay
   type: 'input'
   id?: string
   props: FormFieldLayoutNodeProps & {
-    inputType?: 'text' | 'email' | 'password' | 'search' | 'tel' | 'url' | 'number' | 'date' | 'datetime-local'
+    inputType?: 'text' | 'email' | 'password' | 'search' | 'tel' | 'url' | 'number' | 'date' | 'datetime-local' | 'time'
     placeholder?: string
     icon?: string
+    iconPosition?: 'left' | 'right'
   }
   children?: unknown
 }
@@ -596,6 +630,7 @@ export interface ButtonLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLa
     variant?: ButtonVariant
     fullWidth?: boolean
     icon?: string
+    iconPosition?: 'left' | 'right'
   }
   children?: unknown
 }
@@ -604,15 +639,78 @@ export interface LinkLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayo
   type: 'link'
   id?: string
   props: {
-    label: string
+    label?: string
     href?: string
     download?: string
     target?: string
     action?: NavigateToRuntimeUiAction | GoBackRuntimeUiAction
     icon?: string
+    iconPosition?: 'left' | 'right'
+  }
+  children?: LayoutNodeCollection
+}
+
+export interface FileInputLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayoutFields {
+  type: 'fileInput'
+  id?: string
+  props: {
+    fieldId: string
+    label: string
+    multiple?: boolean
+    capture?: 'environment' | 'user'
+    validations?: RuntimeFileInputValidations
   }
   children?: unknown
 }
+
+export type ToggleLabelPosition = 'top' | 'inline'
+
+export interface ToggleLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayoutFields {
+  type: 'toggle'
+  id?: string
+  props: {
+    fieldId: string
+    label: string
+    labelPosition?: ToggleLabelPosition
+    defaultValue?: boolean | string
+    validations?: RuntimeFormFieldValidations
+  }
+  children?: unknown
+}
+
+export interface HiddenLayoutNode {
+  type: 'hidden'
+  props: {
+    fieldId: string
+    value: string | number | boolean
+  }
+}
+
+export type FileManagerLabelKey =
+  | 'dropzoneIdle'
+  | 'dropzoneAcceptedFormats'
+  | 'dropzoneUploading'
+  | 'dropzoneProgress'
+  | 'dropzoneSuccess'
+  | 'dropzoneMaxFilesReached'
+  | 'dropzoneAriaLabel'
+  | 'listLoadError'
+  | 'listEmpty'
+  | 'paginationPrevious'
+  | 'paginationNext'
+  | 'rowViewLabel'
+  | 'rowViewAriaLabel'
+  | 'rowViewUnavailableAriaLabel'
+  | 'rowDownloadLabel'
+  | 'rowDownloadAriaLabel'
+  | 'rowDownloadUnavailableAriaLabel'
+  | 'rowDeleteLabel'
+  | 'rowDeleteAriaLabel'
+  | 'uploadFileError'
+  | 'uploadListPathMissing'
+  | 'deleteError'
+
+export type FileManagerLabels = Partial<Record<FileManagerLabelKey, string>>
 
 export interface FileManagerLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayoutFields {
   type: 'fileManager'
@@ -633,6 +731,7 @@ export interface FileManagerLayoutNode extends LayoutNodeFeedbackFields, LayoutN
     downloadOperation?: string | false
     validations?: RuntimeFileManagerValidations
     pagination?: { pageSize?: number }
+    labels?: FileManagerLabels
   }
 }
 
@@ -660,6 +759,9 @@ export type LayoutNode =
   | StatLayoutNode
   | DividerLayoutNode
   | SkeletonLayoutNode
+  | FileInputLayoutNode
+  | ToggleLayoutNode
+  | HiddenLayoutNode
   | FileManagerLayoutNode
 
 export type LayoutNodeCollection = LayoutNode[]
@@ -667,6 +769,7 @@ export type LayoutNodeCollection = LayoutNode[]
 export interface RuntimePageConfig {
   id: string
   preloads?: RuntimePreloadConfig[]
+  title?: string
   layout: LayoutNodeCollection
 }
 

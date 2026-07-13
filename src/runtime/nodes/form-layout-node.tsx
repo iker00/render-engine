@@ -2,20 +2,26 @@ import { useEffect, useMemo, useRef } from 'react'
 import type { FormEvent, ReactNode } from 'react'
 import type {
   CheckboxGroupLayoutNode,
+  FileInputLayoutNode,
   FormLayoutNode,
   FormOnErrorAction,
   FormOnSuccessAction,
+  HiddenLayoutNode,
   InputLayoutNode,
   LayoutNode,
   LayoutNodeCollection,
   RadioGroupLayoutNode,
+  RuntimeApiFileField,
   SelectLayoutNode,
   TextareaLayoutNode,
+  ToggleLayoutNode,
 } from '../../config/runtime-config'
 import { FormContextProvider } from '../form-context'
 import { isLayoutNodeVisible, matchesVisibilityRule } from '../runtime-layout-visibility'
 import type { RuntimeIterationContext } from '../runtime-references/runtime-reference-resolver'
-import { resolveRuntimeValueWithOptions } from '../runtime-references/runtime-reference-resolver'
+import {
+  resolveRuntimeValueWithOptions,
+} from '../runtime-references/runtime-reference-resolver'
 import { getFormNodeClassName } from '../runtime-node-styling'
 import { normalizeChoiceFieldValue } from '../runtime-collection-sources'
 import { type ResolvedFormFieldDefinition, validateFormFields } from '../runtime-form-validations'
@@ -64,23 +70,40 @@ export function FormNode({ node, children, iterationContext }: FormNodeProps) {
     [fieldDefinitions, iterationContext, node.id, state],
   )
 
+  const hiddenFieldDefs = useMemo(
+    () => collectHiddenFieldDefinitions(node.children ?? [], state, iterationContext),
+    [node.children, state, iterationContext],
+  )
+  const hiddenFieldsNeedingInitialization = useMemo(
+    () =>
+      hiddenFieldDefs.filter(
+        (def) => selectFormFieldState(state, node.id, def.fieldId) === null,
+      ),
+    [hiddenFieldDefs, node.id, state],
+  )
+
   useEffect(() => {
-    if (fieldsNeedingInitialization.length === 0) {
+    const regularEntries = fieldsNeedingInitialization.map((fieldDefinition) => [
+      fieldDefinition.fieldId,
+      { defaultValue: fieldDefinition.defaultValue },
+    ] as const)
+
+    const hiddenEntries = hiddenFieldsNeedingInitialization.map((def) => [
+      def.fieldId,
+      { defaultValue: def.value },
+    ] as const)
+
+    const allEntries = [...regularEntries, ...hiddenEntries]
+
+    if (allEntries.length === 0) {
       return
     }
 
     initializeForm(
       node.id,
-      Object.fromEntries(
-        fieldsNeedingInitialization.map((fieldDefinition) => [
-          fieldDefinition.fieldId,
-          {
-            defaultValue: fieldDefinition.defaultValue,
-          },
-        ]),
-      ),
+      Object.fromEntries(allEntries),
     )
-  }, [fieldsNeedingInitialization, initializeForm, node.id])
+  }, [fieldsNeedingInitialization, hiddenFieldsNeedingInitialization, initializeForm, node.id])
 
   useEffect(() => {
     if (node.persistOnUnmount) {
@@ -224,11 +247,27 @@ export function FormNode({ node, children, iterationContext }: FormNodeProps) {
     }
 
     const visibleFieldIds = new Set(visibleFieldDefinitions.map((f) => f.fieldId))
+    const hiddenTypeFieldIds = collectHiddenNodeFieldIds(node.children ?? [])
     const hiddenFieldIds = new Set(
       collectAllFormFieldIds(node.children ?? [])
-        .filter((id) => !visibleFieldIds.has(id)),
+        .filter((id) => !visibleFieldIds.has(id) && !hiddenTypeFieldIds.has(id)),
     )
     const hiddenFormFields: RuntimeApiHiddenFormFields = { formId: node.id, fieldIds: hiddenFieldIds }
+
+    // Collect files from visible fileInput fields
+    const fileEntries: RuntimeApiFileField[] = []
+    for (const fieldDefinition of visibleFieldDefinitions) {
+      if (fieldDefinition.type !== 'fileInput') continue
+      const fieldState = selectFormFieldState(snapshotState, node.id, fieldDefinition.fieldId)
+      const value = fieldState?.value ?? fieldDefinition.defaultValue
+      if (!Array.isArray(value)) continue
+      for (const entry of value) {
+        if (entry instanceof File) {
+          fileEntries.push({ name: fieldDefinition.fieldId, file: entry })
+        }
+      }
+    }
+    const filesParam = fileEntries.length > 0 ? { files: fileEntries } : {}
 
     const submitAction = node.submitAction
 
@@ -245,6 +284,7 @@ export function FormNode({ node, children, iterationContext }: FormNodeProps) {
               query: entry.query,
               body: entry.body,
               headers: entry.headers,
+              ...filesParam,
             },
             iterationContext,
             hiddenFormFields,
@@ -275,6 +315,7 @@ export function FormNode({ node, children, iterationContext }: FormNodeProps) {
         query: submitAction.query,
         body: submitAction.body,
         headers: submitAction.headers,
+        ...filesParam,
       },
       iterationContext,
       hiddenFormFields,
@@ -341,6 +382,14 @@ export function collectResolvedFormFieldDefinitions(
     ) {
       fields.push(resolveResolvedFormFieldDefinition(node, state, iterationContext))
     }
+
+    if (node.type === 'fileInput') {
+      fields.push(resolveFileInputFieldDefinition(node))
+    }
+
+    if (node.type === 'toggle') {
+      fields.push(resolveToggleFieldDefinition(node, state, iterationContext))
+    }
   }
 
   return fields
@@ -376,13 +425,50 @@ export function collectAllFormFieldIds(nodes: LayoutNodeCollection): string[] {
       node.type === 'textarea' ||
       node.type === 'select' ||
       node.type === 'radioGroup' ||
-      node.type === 'checkboxGroup'
+      node.type === 'checkboxGroup' ||
+      node.type === 'fileInput' ||
+      node.type === 'toggle' ||
+      node.type === 'hidden'
     ) {
       fieldIds.push(node.props.fieldId)
     }
   }
 
   return fieldIds
+}
+
+function resolveFileInputFieldDefinition(node: FileInputLayoutNode): ResolvedFormFieldDefinition {
+  return {
+    fieldId: node.props.fieldId,
+    type: 'fileInput',
+    fileValidations: node.props.validations,
+    queryStateFeedback: node.queryStateFeedback,
+    visibility: node.visibility,
+    multiple: node.props.multiple ?? true,
+    defaultValue: [],
+  }
+}
+
+export function resolveToggleFieldDefinition(
+  node: ToggleLayoutNode,
+  state: ReturnType<typeof useRuntimeState>,
+  iterationContext?: RuntimeIterationContext,
+): ResolvedFormFieldDefinition {
+  const resolvedValue = resolveRuntimeValueWithOptions(node.props.defaultValue, state, { iterationContext })
+  const defaultValue =
+    resolvedValue.status === 'resolved' && typeof resolvedValue.value === 'boolean'
+      ? resolvedValue.value
+      : false
+
+  return {
+    fieldId: node.props.fieldId,
+    type: 'toggle',
+    validations: node.props.validations,
+    queryStateFeedback: node.queryStateFeedback,
+    visibility: node.visibility,
+    multiple: false,
+    defaultValue,
+  }
 }
 
 export function resolveResolvedFormFieldDefinition(
@@ -508,4 +594,84 @@ function isPlaceholderFieldDefault(value: unknown) {
   }
 
   return Array.isArray(value) && value.length === 0
+}
+
+/**
+ * Walks the form subtree ignoring parent visibility and collects hidden-type
+ * nodes with their resolved values. Used to initialize hidden fields at form
+ * mount independently of whether ancestor containers are visible.
+ */
+export function collectHiddenFieldDefinitions(
+  nodes: LayoutNodeCollection,
+  state: ReturnType<typeof useRuntimeState>,
+  iterationContext?: RuntimeIterationContext,
+): Array<{ fieldId: string; value: unknown }> {
+  const fields: Array<{ fieldId: string; value: unknown }> = []
+
+  for (const node of nodes) {
+    if (node.type === 'container') {
+      fields.push(...collectHiddenFieldDefinitions(node.children ?? [], state, iterationContext))
+      continue
+    }
+
+    if (node.type === 'repeater') {
+      fields.push(...collectHiddenFieldDefinitions(node.props.template, state, iterationContext))
+      continue
+    }
+
+    if (node.type === 'tabs') {
+      for (const item of node.props.items) {
+        fields.push(...collectHiddenFieldDefinitions(item.children ?? [], state, iterationContext))
+      }
+      continue
+    }
+
+    if (node.type === 'hidden') {
+      const resolvedValue = resolveRuntimeValueWithOptions(node.props.value, state, { iterationContext })
+      const value = resolvedValue.status === 'resolved' ? resolvedValue.value : node.props.value
+      fields.push({ fieldId: node.props.fieldId, value })
+    }
+  }
+
+  return fields
+}
+
+/**
+ * Collects the field IDs of all hidden-type nodes in the form subtree.
+ * These IDs must never be included in the "hidden fields" set that causes
+ * payload omission at submit time.
+ */
+export function collectHiddenNodeFieldIds(nodes: LayoutNodeCollection): Set<string> {
+  const fieldIds = new Set<string>()
+
+  for (const node of nodes) {
+    if (node.type === 'container') {
+      for (const id of collectHiddenNodeFieldIds(node.children ?? [])) {
+        fieldIds.add(id)
+      }
+      continue
+    }
+
+    if (node.type === 'repeater') {
+      for (const id of collectHiddenNodeFieldIds(node.props.template)) {
+        fieldIds.add(id)
+      }
+      continue
+    }
+
+    if (node.type === 'tabs') {
+      for (const item of node.props.items) {
+        for (const id of collectHiddenNodeFieldIds(item.children ?? [])) {
+          fieldIds.add(id)
+        }
+      }
+      continue
+    }
+
+    if (node.type === 'hidden') {
+      fieldIds.add(node.props.fieldId)
+    }
+  }
+
+  return fieldIds
 }

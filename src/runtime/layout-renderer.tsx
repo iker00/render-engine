@@ -25,7 +25,7 @@ export function LayoutRenderer({ nodes, iterationContext }: LayoutRendererProps)
 }
 
 function hasChildren(node: LayoutNode): node is Extract<LayoutNode, { children?: LayoutNodeCollection }> {
-  return node.type === 'container' || node.type === 'form' || node.type === 'modal'
+  return node.type === 'container' || node.type === 'form' || node.type === 'modal' || node.type === 'link'
 }
 
 function getLayoutNodeKey(node: LayoutNode, index: number) {

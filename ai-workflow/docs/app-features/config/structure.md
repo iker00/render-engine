@@ -12,6 +12,7 @@ La configuración parte de tres bloques principales:
 
 Bloques opcionales:
 - `translations`: objeto opcional que define un catálogo de traducciones por idioma. Su estructura es un mapa cuyas claves son strings arbitrarios (claves de traducción) y cuyos valores son mapas idioma-string. Véase [[../references/reference-resolution.md]] para superficies admitidas y semántica de fallback.
+- `tokens`: objeto opcional que define un catálogo de tokens de autenticación nombrados, cada uno con un valor inicial y refresco opcional proactivo. Véase [[../auth/tokens.md]] para configuración, ciclo de vida y refresco automático.
 
 ## Modelo de página
 Cada página debe incluir:
@@ -19,7 +20,10 @@ Cada página debe incluir:
 - `preloads`: array opcional y ordenado de objetos declarativos de una sola clave.
 - `layout`: array ordenado obligatorio de elementos declarativos.
 
-La página ya no depende de `title` ni `description` fuera del árbol `layout`.
+Campos opcionales:
+- `title`: string opcional que controla `document.title` mientras la página está activa. Véase [[../navigation/page-model.md#title-del-documento]] para el comportamiento.
+
+La página ya no depende de `description` fuera del árbol `layout`.
 
 ## Shape de `preloads`
 - cada entrada debe ser un objeto con exactamente una clave no vacía cuyo nombre actúa como `operationName`

@@ -465,7 +465,7 @@ describe('validateRuntimeConfig', () => {
     })
 
     it('rejects "$"-prefixed key values other than the exact literals "$key" and "$index"', () => {
-      for (const key of ['$key.id', '$key.$key', 'meta.$key', '$other', '$', '$index.id', '$indexed']) {
+      for (const key of ['$key.id', '$key.$key', 'meta.$key', '$index.algo', '$index.$key', 'meta.$index', '$other', '$', '$index.id', '$indexed']) {
         expect(
           validateRuntimeConfig(
             createConfigWithLayout([

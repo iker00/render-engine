@@ -1,5 +1,5 @@
 import type { LayoutNode, RuntimeConfig } from '../config/runtime-config'
-import type { RuntimeState } from '../runtime/runtime-state/runtime-state-types'
+import type { RuntimeState, RuntimeTokenState } from '../runtime/runtime-state/runtime-state-types'
 
 type FormFieldMap = Map<string, Set<string>>
 
@@ -21,13 +21,26 @@ export function migrateRuntimeStateAcrossConfig(
   )
   const nextPageEntry = buildPageEntry(resolvedPageId, resolvedParams, nextConfig)
 
+  const nextTokens: Record<string, RuntimeTokenState> = nextConfig.tokens
+    ? Object.fromEntries(
+        Object.entries(nextConfig.tokens).map(([tokenId, tokenConfig]) => [
+          tokenId,
+          { value: tokenConfig.value, status: 'ready' as const, failedAttempts: 0 },
+        ]),
+      )
+    : {}
+
   return {
     navigation: nextNavigation,
     forms: nextForms,
     queries: nextQueries,
     pageEntry: nextPageEntry,
     modal: prevState.modal,
-    i18n: prevState.i18n,
+    i18n: {
+      translations: nextConfig.translations ?? {},
+      activeLanguage: prevState.i18n.activeLanguage,
+    },
+    tokens: nextTokens,
   }
 }
 

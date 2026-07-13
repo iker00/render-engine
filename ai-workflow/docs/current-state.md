@@ -11,16 +11,16 @@ No es histórico acumulado ni sustituto de las fichas funcionales. El detalle es
 |---|---|---|---|
 | Runtime | estable | [runtime/](./app-features/runtime/index.md) | `0081` |
 | Contrato JSON | estable | [config/](./app-features/config/index.md) | `0060` |
-| Referencias y strings dinámicas | estable | [references/](./app-features/references/index.md) | `0060` |
-| Catálogo de nodos | estable | [nodes/](./app-features/nodes/index.md) | `0071` |
-| Formularios y validación | estable | [forms/](./app-features/forms/index.md) | `0077` |
+| Referencias y strings dinámicas | estable | [references/](./app-features/references/index.md) | `0092` |
+| Catálogo de nodos | estable | [nodes/](./app-features/nodes/index.md) | `0094` |
+| Formularios y validación | estable | [forms/](./app-features/forms/index.md) | `0094` |
 | Queries, preloads y feedback | estable | [queries/](./app-features/queries/index.md) | `0073` |
 | Navegación y páginas | estable | [navigation/](./app-features/navigation/index.md) | `0046` |
 | Accesibilidad | estable | [nodes/](./app-features/nodes/index.md), [queries/](./app-features/queries/index.md), [navigation/](./app-features/navigation/index.md) | `0046` |
-| Desarrollo local | estable | [development/](./app-features/development/index.md) | `0067` |
-| Subida de archivos | estable | [nodes/file-manager.md](./app-features/nodes/file-manager.md), [forms/validation-rules.md](./app-features/forms/validation-rules.md) | `0076` |
+| Desarrollo local | estable | [development/](./app-features/development/index.md) | `0093` |
+| Subida de archivos | estable | [nodes/file-manager.md](./app-features/nodes/file-manager.md), [nodes/file-input.md](./app-features/nodes/file-input.md), [forms/validation-rules.md](./app-features/forms/validation-rules.md) | `0090` |
 | Theming declarativo | fuera de v1 | — | — |
-| Autenticación y permisos | fuera de v1 | — | — |
+| Tokens de autenticación | estable | [auth/tokens.md](./app-features/auth/tokens.md) | `0078` |
 | Procesamiento remoto de tablas | fuera de v1 | — | — |
 | Edición avanzada de tablas | fuera de v1 | — | — |
 | Validaciones remotas y cruzadas | fuera de v1 | — | — |

@@ -249,8 +249,9 @@ function DevRuntimeReady({ initialConfig, initialConfigText, dataValues }: DevRu
 
   async function handleCopy() {
     const text = editorBuffer ?? initialConfigText
+    const minified = JSON.stringify(JSON.parse(text))
     if (navigator.clipboard?.writeText) {
-      await navigator.clipboard.writeText(text)
+      await navigator.clipboard.writeText(minified)
     } else {
       const textarea = document.createElement('textarea')
       textarea.value = text

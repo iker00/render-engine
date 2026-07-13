@@ -667,3 +667,70 @@ describe('validateRuntimeConfig — fileManager node: cross-checks (T7)', () => 
     expect(result.status).toBe('ready')
   })
 })
+
+// ─── props.labels (T4) ────────────────────────────────────────────────────────
+
+describe('props.labels', () => {
+  it('accepts a fileManager node with labels omitted (no regression)', () => {
+    const result = validateRuntimeConfig(createConfigWithLayout([createFileManagerNode()]))
+    expect(result.status).toBe('ready')
+  })
+
+  it('accepts labels with one or several recognized keys as strings, including empty string', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithLayout([
+        createFileManagerNode({
+          labels: {
+            dropzoneIdle: 'Suelta aquí',
+            dropzoneAcceptedFormats: 'Formatos: {{formats}}',
+            listEmpty: '',
+            rowDeleteLabel: 'Eliminar',
+          },
+        }),
+      ]),
+    )
+    expect(result.status).toBe('ready')
+  })
+
+  it('accepts labels as an empty object', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithLayout([createFileManagerNode({ labels: {} })]),
+    )
+    expect(result.status).toBe('ready')
+  })
+
+  it('rejects labels with an unknown key with path ending in props.labels.dropzoneidle', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithLayout([
+        createFileManagerNode({ labels: { dropzoneidle: 'Suelta aquí' } }),
+      ]),
+    )
+    expect(result.status).toBe('error')
+    if (result.status === 'error') {
+      expect(result.error.code).toBe('invalid-layout')
+      expect(result.error.message).toContain('props.labels.dropzoneidle')
+    }
+  })
+
+  it('rejects labels.dropzoneIdle as a non-string value with path ending in props.labels.dropzoneIdle', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithLayout([createFileManagerNode({ labels: { dropzoneIdle: 42 } })]),
+    )
+    expect(result.status).toBe('error')
+    if (result.status === 'error') {
+      expect(result.error.code).toBe('invalid-layout')
+      expect(result.error.message).toContain('props.labels.dropzoneIdle')
+    }
+  })
+
+  it('rejects labels declared as a non-object value with path ending in props.labels', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithLayout([createFileManagerNode({ labels: 'no-es-objeto' })]),
+    )
+    expect(result.status).toBe('error')
+    if (result.status === 'error') {
+      expect(result.error.code).toBe('invalid-layout')
+      expect(result.error.message).toContain('props.labels')
+    }
+  })
+})

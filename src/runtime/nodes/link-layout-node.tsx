@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import type { ReactNode } from 'react'
 import type { LinkLayoutNode } from '../../config/runtime-config'
 import {
   resolveRuntimeTextReference,
@@ -13,14 +14,15 @@ import { getLinkNodeClassName } from '../runtime-node-styling'
 interface LinkNodeProps {
   node: LinkLayoutNode
   iterationContext?: RuntimeIterationContext
+  renderedChildren?: ReactNode
 }
 
-export function LinkNode({ node, iterationContext }: LinkNodeProps) {
+export function LinkNode({ node, iterationContext, renderedChildren }: LinkNodeProps) {
   const state = useRuntimeState()
   const config = useRuntimeConfig()
   const { executeQueryOperation, goBackPage, navigateToPage, openModal, closeModal, resetForm } = useRuntimeStateActions()
-  const { href, download, target, action, icon } = node.props
-  const label = resolveRuntimeTextReference(node.props.label, state, 'link.props.label', { iterationContext })
+  const { href, download, target, action, icon, iconPosition } = node.props
+  const label = resolveRuntimeTextReference(node.props.label ?? '', state, 'link.props.label', { iterationContext })
   const resolvedHref = href !== undefined
     ? resolveRuntimeTextReference(href, state, 'link.props.href', { iterationContext })
     : undefined
@@ -57,8 +59,21 @@ export function LinkNode({ node, iterationContext }: LinkNodeProps) {
       }
       className={getLinkNodeClassName()}
     >
-      <IconNode name={icon} className="size-4 shrink-0 inline-block align-middle mr-1" />
-      {label}
+      {node.children !== undefined ? renderedChildren : (
+        iconPosition === 'right'
+          ? (
+            <>
+              {label}
+              <IconNode name={icon} className="size-4 shrink-0 inline-block align-middle ml-1" />
+            </>
+          )
+          : (
+            <>
+              <IconNode name={icon} className="size-4 shrink-0 inline-block align-middle mr-1" />
+              {label}
+            </>
+          )
+      )}
     </a>
   )
 }

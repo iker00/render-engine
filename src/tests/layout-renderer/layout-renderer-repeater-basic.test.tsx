@@ -626,4 +626,496 @@ describe('RuntimePage', () => {
 
     consoleWarnSpy.mockRestore()
   })
+
+  describe('T0092-T2 $index as React key', () => {
+    it('renders one expansion per string element when key is "$index" over an array of strings', () => {
+      const activePage: RuntimePageConfig = {
+        id: 'tags',
+        layout: [
+          {
+            type: 'repeater',
+            props: {
+              items: {
+                source: 'queries.tags.data',
+                key: '$index',
+              },
+              template: [
+                {
+                  type: 'paragraph',
+                  props: {
+                    text: 'item',
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      }
+
+      renderRuntimePageWithState(
+        activePage,
+        createRuntimePageState(activePage, {
+          tags: {
+            status: 'success',
+            data: ['a', 'b', 'c'],
+            error: null,
+          },
+        }),
+      )
+
+      expect(screen.getAllByRole('paragraph').map((p) => p.textContent)).toEqual(['a', 'b', 'c'])
+    })
+
+    it('renders one expansion per object element when key is "$index" and resolves item.title', () => {
+      const activePage: RuntimePageConfig = {
+        id: 'posts',
+        layout: [
+          {
+            type: 'repeater',
+            props: {
+              items: {
+                source: 'queries.posts.data',
+                key: '$index',
+              },
+              template: [
+                {
+                  type: 'heading',
+                  props: {
+                    text: 'item.title',
+                    level: 2,
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      }
+
+      renderRuntimePageWithState(
+        activePage,
+        createRuntimePageState(activePage, {
+          posts: {
+            status: 'success',
+            data: [
+              { title: 'First post' },
+              { title: 'Second post' },
+              { title: 'Third post' },
+            ],
+            error: null,
+          },
+        }),
+      )
+
+      expect(screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)).toEqual([
+        'First post',
+        'Second post',
+        'Third post',
+      ])
+    })
+
+    it('renders one expansion per entry when key is "$index" over a plain object with ordinal position as React key', () => {
+      const activePage: RuntimePageConfig = {
+        id: 'sources',
+        layout: [
+          {
+            type: 'repeater',
+            props: {
+              items: {
+                source: 'queries.results.data',
+                key: '$index',
+              },
+              template: [
+                {
+                  type: 'paragraph',
+                  props: {
+                    text: 'item.label',
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      }
+
+      renderRuntimePageWithState(
+        activePage,
+        createRuntimePageState(activePage, {
+          results: {
+            status: 'success',
+            data: {
+              alpha: { label: 'Alpha label' },
+              beta: { label: 'Beta label' },
+              gamma: { label: 'Gamma label' },
+            },
+            error: null,
+          },
+        }),
+      )
+
+      expect(screen.getAllByRole('paragraph').map((p) => p.textContent)).toEqual([
+        'Alpha label',
+        'Beta label',
+        'Gamma label',
+      ])
+    })
+
+    it('renders iterations normally for null or primitive items when key is "$index"', () => {
+      const activePage: RuntimePageConfig = {
+        id: 'mixed',
+        layout: [
+          {
+            type: 'repeater',
+            props: {
+              items: {
+                source: 'queries.items.data',
+                key: '$index',
+              },
+              template: [
+                {
+                  type: 'paragraph',
+                  props: {
+                    text: 'item',
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      }
+
+      renderRuntimePageWithState(
+        activePage,
+        createRuntimePageState(activePage, {
+          items: {
+            status: 'success',
+            data: ['hello', null, 42, true],
+            error: null,
+          },
+        }),
+      )
+
+      const paragraphs = screen.getAllByRole('paragraph')
+      expect(paragraphs).toHaveLength(4)
+      expect(paragraphs[0].textContent).toBe('hello')
+      expect(paragraphs[1].textContent).toBe('')
+      expect(paragraphs[2].textContent).toBe('42')
+      expect(paragraphs[3].textContent).toBe('true')
+    })
+
+    it('renders all iterations for duplicate values when key is "$index" because indices are inherently unique', () => {
+      const activePage: RuntimePageConfig = {
+        id: 'dupes',
+        layout: [
+          {
+            type: 'repeater',
+            props: {
+              items: {
+                source: 'queries.tags.data',
+                key: '$index',
+              },
+              template: [
+                {
+                  type: 'paragraph',
+                  props: {
+                    text: 'item',
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      }
+
+      renderRuntimePageWithState(
+        activePage,
+        createRuntimePageState(activePage, {
+          tags: {
+            status: 'success',
+            data: ['a', 'a', 'b'],
+            error: null,
+          },
+        }),
+      )
+
+      const paragraphs = screen.getAllByRole('paragraph')
+      expect(paragraphs).toHaveLength(3)
+      expect(paragraphs.map((p) => p.textContent)).toEqual(['a', 'a', 'b'])
+    })
+
+    it('applies pageSize correctly when key is "$index" and shows only first page items', () => {
+      const activePage: RuntimePageConfig = {
+        id: 'paged',
+        layout: [
+          {
+            type: 'repeater',
+            props: {
+              items: {
+                source: 'queries.items.data',
+                key: '$index',
+              },
+              pagination: {
+                enabled: true,
+                pageSize: 2,
+              },
+              template: [
+                {
+                  type: 'paragraph',
+                  props: {
+                    text: 'item.title',
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      }
+
+      renderRuntimePageWithState(
+        activePage,
+        createRuntimePageState(activePage, {
+          items: {
+            status: 'success',
+            data: [
+              { title: 'Item 1' },
+              { title: 'Item 2' },
+              { title: 'Item 3' },
+              { title: 'Item 4' },
+              { title: 'Item 5' },
+            ],
+            error: null,
+          },
+        }),
+      )
+
+      expect(screen.getAllByRole('paragraph').map((p) => p.textContent)).toEqual(['Item 1', 'Item 2'])
+      expect(screen.queryByText('Item 3')).not.toBeInTheDocument()
+    })
+  })
+
+  describe('T0092-T3 item.$index synthetic reference', () => {
+    it('renders {{item.$index}} as the numeric index within each iteration when key is "id" (not "$index")', () => {
+      const activePage: RuntimePageConfig = {
+        id: 'posts',
+        layout: [
+          {
+            type: 'repeater',
+            props: {
+              items: {
+                source: 'queries.posts.data',
+                key: 'id',
+              },
+              template: [
+                {
+                  type: 'paragraph',
+                  props: {
+                    text: '{{item.$index}}: {{item.title}}',
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      }
+
+      renderRuntimePageWithState(
+        activePage,
+        createRuntimePageState(activePage, {
+          posts: {
+            status: 'success',
+            data: [
+              { id: 'a', title: 'First' },
+              { id: 'b', title: 'Second' },
+              { id: 'c', title: 'Third' },
+            ],
+            error: null,
+          },
+        }),
+      )
+
+      expect(screen.getAllByRole('paragraph').map((p) => p.textContent)).toEqual([
+        '0: First',
+        '1: Second',
+        '2: Third',
+      ])
+    })
+
+    it('renders {{item.$index}} when key is "$index"', () => {
+      const activePage: RuntimePageConfig = {
+        id: 'tags',
+        layout: [
+          {
+            type: 'repeater',
+            props: {
+              items: {
+                source: 'queries.tags.data',
+                key: '$index',
+              },
+              template: [
+                {
+                  type: 'paragraph',
+                  props: {
+                    text: '{{item.$index}}: {{item}}',
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      }
+
+      renderRuntimePageWithState(
+        activePage,
+        createRuntimePageState(activePage, {
+          tags: {
+            status: 'success',
+            data: ['a', 'b', 'c'],
+            error: null,
+          },
+        }),
+      )
+
+      expect(screen.getAllByRole('paragraph').map((p) => p.textContent)).toEqual([
+        '0: a',
+        '1: b',
+        '2: c',
+      ])
+    })
+
+    it('renders {{item.$index}} as ordinal position for plain object source', () => {
+      const activePage: RuntimePageConfig = {
+        id: 'sources',
+        layout: [
+          {
+            type: 'repeater',
+            props: {
+              items: {
+                source: 'queries.results.data',
+                key: '$key',
+              },
+              template: [
+                {
+                  type: 'paragraph',
+                  props: {
+                    text: '{{item.$index}}: {{item.label}}',
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      }
+
+      renderRuntimePageWithState(
+        activePage,
+        createRuntimePageState(activePage, {
+          results: {
+            status: 'success',
+            data: {
+              alpha: { label: 'Alpha' },
+              beta: { label: 'Beta' },
+              gamma: { label: 'Gamma' },
+            },
+            error: null,
+          },
+        }),
+      )
+
+      expect(screen.getAllByRole('paragraph').map((p) => p.textContent)).toEqual([
+        '0: Alpha',
+        '1: Beta',
+        '2: Gamma',
+      ])
+    })
+
+    it('gives item.$index precedence over a literal $index property in the item value', () => {
+      const activePage: RuntimePageConfig = {
+        id: 'posts',
+        layout: [
+          {
+            type: 'repeater',
+            props: {
+              items: {
+                source: 'queries.posts.data',
+                key: 'id',
+              },
+              template: [
+                {
+                  type: 'paragraph',
+                  props: {
+                    text: '{{item.$index}}',
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      }
+
+      renderRuntimePageWithState(
+        activePage,
+        createRuntimePageState(activePage, {
+          posts: {
+            status: 'success',
+            data: [
+              { id: 'a', $index: 'shadow-value' },
+              { id: 'b', $index: 99 },
+            ],
+            error: null,
+          },
+        }),
+      )
+
+      expect(screen.getAllByRole('paragraph').map((p) => p.textContent)).toEqual(['0', '1'])
+    })
+
+    it('exposes {{item.$index}} as absolute position in paginated repeater on second page', () => {
+      const activePage: RuntimePageConfig = {
+        id: 'paged',
+        layout: [
+          {
+            type: 'repeater',
+            props: {
+              items: {
+                source: 'queries.items.data',
+                key: 'id',
+              },
+              pagination: {
+                enabled: true,
+                pageSize: 3,
+              },
+              template: [
+                {
+                  type: 'paragraph',
+                  props: {
+                    text: '{{item.$index}}',
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      }
+
+      renderRuntimePageWithState(
+        activePage,
+        createRuntimePageState(activePage, {
+          items: {
+            status: 'success',
+            data: [
+              { id: 'a' },
+              { id: 'b' },
+              { id: 'c' },
+              { id: 'd' },
+              { id: 'e' },
+              { id: 'f' },
+            ],
+            error: null,
+          },
+        }),
+      )
+
+      // First page shows items with index 0, 1, 2
+      expect(screen.getAllByRole('paragraph').map((p) => p.textContent)).toEqual(['0', '1', '2'])
+    })
+  })
 })

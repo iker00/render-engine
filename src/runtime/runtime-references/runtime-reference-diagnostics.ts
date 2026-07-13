@@ -32,6 +32,9 @@ export type RuntimeReferenceSurface =
   | 'input.props.placeholder'
   | 'textarea.props.placeholder'
   | 'select.props.placeholder'
+  | 'form.validation.message'
+  | `fileManager.props.labels.${string}`
+  | 'fileManager.props.validations.message'
 
 export function reportRuntimeReferenceDiagnostic(
   result: RuntimeReferenceResolutionResult,

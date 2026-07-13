@@ -1,0 +1,26 @@
+phase: implementation
+risk_level: low
+requires_design: false
+blocked_by: []
+artifacts:
+  spec: ready
+  design: not_required
+  tasks: ready
+  notes: optional
+implementation:
+  ready: true
+  completed_task_ids: [T1, T2]
+  in_progress_task_id: null
+validation:
+  tests_green: false
+  coverage_gate_passed: true
+  notes: >
+    2 pre-existing failures unrelated to feature 0085:
+    app-shell.test.tsx (confirmed failing before this feature) and
+    dev-runtime.test.tsx clipboard copy (broken by commit 831c54d, minify change).
+    Feature 0085 tests (runtime-node-styling.test.ts) all green.
+    Coverage thresholds passed.
+documentation:
+  ready: true
+  done: true
+feature_status: completed

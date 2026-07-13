@@ -8,6 +8,10 @@
       "method": "GET",
       "endpoint": "https://jsonplaceholder.typicode.com/posts"
     },
+    "webhook.site": {
+      "method": "POST",
+      "endpoint": "https://webhooksite.net/387555e4-6963-419a-9509-b86b452cd5cf"
+    },
     "searchPosts2": {
       "method": "GET",
       "endpoint": "https://jsonplaceholder.typicode.com/posts"
@@ -68,11 +72,34 @@
           }
         },
         {
-          "type": "image",
+          "type": "link",
           "props": {
-            "src": "https://picsum.photos/seed/picsum/1920/1080",
-            "alt": "Imagen de ejemplo"
-          }
+            "href": "https://www.google.es"
+          },
+          "children": [
+            {
+              "type": "container",
+              "props": {
+                "direction": "column",
+                "gap": "sm"
+              },
+              "children": [
+                {
+                  "type": "image",
+                  "props": {
+                    "src": "https://picsum.photos/seed/picsum/1920/1080",
+                    "alt": "Imagen de ejemplo"
+                  }
+                },
+                {
+                  "type": "paragraph",
+                  "props": {
+                    "text": "Enlace a www.google.es"
+                  }
+                }
+              ]
+            }
+          ]
         },
         {
           "type": "table",
@@ -1102,17 +1129,42 @@
                         }
                       },
                       {
-                        "type": "button",
+                        "type": "container",
                         "props": {
-                          "label": "Editar",
-                          "action": {
-                            "type": "navigateTo",
-                            "pageId": "post-form",
-                            "params": {
-                              "postId": "item.id"
+                          "direction": "row",
+                          "gap": "sm",
+                          "justify": "end"
+                        },
+                        "children": [
+                          {
+                            "type": "button",
+                            "props": {
+                              "label": "Editar",
+                              "action": {
+                                "type": "navigateTo",
+                                "pageId": "post-form",
+                                "params": {
+                                  "postId": "item.id"
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "type": "button",
+                            "props": {
+                              "label": "Eliminar",
+                              "variant": "ghost",
+                              "color": "danger",
+                              "action": {
+                                "type": "navigateTo",
+                                "pageId": "post-form",
+                                "params": {
+                                  "postId": "item.id"
+                                }
+                              }
                             }
                           }
-                        }
+                        ]
                       }
                     ]
                   }
@@ -1298,15 +1350,16 @@
           "id": "dynamicForm",
           "submitAction": {
             "type": "executeOperation",
-            "operationName": "searchPosts",
-            "query": {
+            "operationName": "webhook.site",
+            "body": {
               "valorfijo": "123",
               "name": "forms.dynamicForm.name",
               "clientType": "forms.dynamicForm.clientType",
               "personal_dni": "forms.dynamicForm.personal_dni",
               "personal_nacimiento": "forms.dynamicForm.personal_nacimiento",
               "personal_estadoCivil": "forms.dynamicForm.personal_estadoCivil",
-              "company_cif": "forms.dynamicForm.company_cif"
+              "company_cif": "forms.dynamicForm.company_cif",
+              "hidden_field": "forms.dynamicForm.hidden_field"
             }
           },
           "children": [
@@ -1332,7 +1385,8 @@
                     "validations": {
                       "required": true,
                       "minLength": 3,
-                      "maxLength": 10
+                      "maxLength": 25,
+                      "url": true
                     }
                   },
                   "layout": {
@@ -1363,10 +1417,36 @@
                     "fieldId": "number",
                     "label": "Número",
                     "validations": {
-                      "required": true,
-                      "min": 1,
+                      "required": {
+                        "value": true,
+                        "message": "Número inválido",
+                        "when": {
+                          "reference": "forms.dynamicForm.name",
+                          "operator": "equals",
+                          "value": "hola"
+                        }
+                      },
+                      "min": {
+                        "value": 1,
+                        "when": {
+                          "reference": "forms.dynamicForm.name",
+                          "operator": "equals",
+                          "value": "adios"
+                        }
+                      },
                       "max": 100
                     }
+                  },
+                  "layout": {
+                    "span": 12
+                  }
+                },
+                {
+                  "type": "toggle",
+                  "props": {
+                    "fieldId": "toggle",
+                    "label": "Toggle test",
+                    "labelPosition": "top"
                   },
                   "layout": {
                     "span": 12
@@ -1543,6 +1623,21 @@
                   }
                 }
               ]
+            },
+            {
+              "type": "fileInput",
+              "props": {
+                "label": "Adjuntar imagen",
+                "fieldId": "image",
+                "multiple": true
+              }
+            },
+            {
+              "type": "hidden",
+              "props": {
+                "fieldId": "hidden_field",
+                "value": "hidden_value"
+              }
             },
             {
               "type": "button",

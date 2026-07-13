@@ -17,25 +17,26 @@ Esta skill debe comportarse como una fase documental posterior al código: revis
 - `status.yaml` tiene bloqueos abiertos que invaliden el cierre documental → resolver el bloqueo primero
 - La implementación contradice materialmente la `spec.md` → realinear spec e implementación antes de documentar
 
+
 ## Leer siempre
-- `ai-workflow/docs/workflow.md`
-- `ai-workflow/features/NNNN-feature-name/spec.md`
-- `ai-workflow/features/NNNN-feature-name/tasks.md`
-- `ai-workflow/features/NNNN-feature-name/status.yaml`
-- `ai-workflow/features/NNNN-feature-name/notes.md` si existe
-- `ai-workflow/docs/context.md`
-- `ai-workflow/docs/app-features/index.md`
-- solo las fichas de `ai-workflow/docs/app-features/` que el índice marque como relevantes para la feature implementada
-- `ai-workflow/docs/current-state.md` si existe
-- `ai-workflow/features/index.md` si existe
-- el código y los tests ya modificados por la implementación
+- [ ] `ai-workflow/docs/workflow.md`
+- [ ] `ai-workflow/features/NNNN-feature-name/spec.md`
+- [ ] `ai-workflow/features/NNNN-feature-name/tasks.md`
+- [ ] `ai-workflow/features/NNNN-feature-name/status.yaml`
+- [ ] `ai-workflow/features/NNNN-feature-name/notes.md` si existe
+- [ ] `ai-workflow/docs/context.md`
+- [ ] `ai-workflow/docs/app-features/index.md`
+- [ ] solo las fichas de `ai-workflow/docs/app-features/` que el índice marque como relevantes para la feature implementada
+- [ ] `ai-workflow/docs/current-state.md` si existe
+- [ ] `ai-workflow/features/index.md` si existe
+- [ ] el código y los tests ya modificados por la implementación
 
 ## Leer si aplica
-- `ai-workflow/docs/architecture.md` si la implementación consolidó una decisión arquitectónica estable.
-- `ai-workflow/docs/conventions.md` si la implementación consolidó una convención repetible.
-- `ai-workflow/docs/test-index.md` si la implementación añadió, movió o eliminó ficheros de test.
-- `README.md` si hace falta ajustar información breve de entrada.
-- `ai-workflow/docs/index.md` solo como mapa documental auxiliar si no está claro qué contexto adicional seleccionar.
+- [ ] `ai-workflow/docs/architecture.md` si la implementación consolidó una decisión arquitectónica estable.
+- [ ] `ai-workflow/docs/conventions.md` si la implementación consolidó una convención repetible.
+- [ ] `ai-workflow/docs/test-index.md` si la implementación añadió, movió o eliminó ficheros de test.
+- [ ] `README.md` si hace falta ajustar información breve de entrada.
+- [ ] `ai-workflow/docs/index.md` solo como mapa documental auxiliar si no está claro qué contexto adicional seleccionar.
 
 ## Objetivo
 Actualizar la documentación para que describa el comportamiento estable realmente implementado, usando el índice de features como puerta de entrada y manteniendo el contexto corto.
@@ -90,10 +91,11 @@ Antes de empezar, comprobar el gate documental:
 - falta contexto para decidir si una capacidad ya es estable o sigue siendo parcial
 
 ## Terminado cuando
-- la documentación afectada refleja el comportamiento estable real
-- el índice `ai-workflow/docs/app-features/index.md` sigue siendo una puerta de entrada fiable
-- `current-state.md` y `context.md` solo se tocan cuando realmente corresponde
-- `status.yaml` refleja el cierre documental real de la feature o del alcance tratado
-- queda cerrado el estado documental explícito de la tarea
-- la feature puede quedar marcada como `completed` directamente desde esta pasada si ya no queda trabajo pendiente
-- no se han introducido cambios de código en esta pasada
+1. la documentación afectada refleja el comportamiento estable real
+2. el índice `ai-workflow/docs/app-features/index.md` sigue siendo una puerta de entrada fiable
+3. `current-state.md` y `context.md` solo se tocan cuando realmente corresponde
+4. `status.yaml` refleja el cierre documental real de la feature o del alcance tratado
+5. queda cerrado el estado documental explícito de la tarea
+6. la feature puede quedar marcada como `completed` directamente desde esta pasada si ya no queda trabajo pendiente
+7. no se han introducido cambios de código en esta pasada
+8. Leer `ai-workflow/docs/vcs.md` y aplicar la sección **"Fase update-app-documentation"** cuando corresponda. Ejecutar directamente sin pedir confirmación.

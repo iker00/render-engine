@@ -23,6 +23,9 @@ Esta skill debe comportarse como la fase de alineamiento de un flujo guiado por 
 - El usuario quiere explorar sin comprometerse a una spec → `explore-feature-scope`
 - La feature requiere decisiones técnicas antes de especificar → `generate-feature-design`
 
+## Reglas VCS
+Leer `ai-workflow/docs/vcs.md` y aplicar la sección **"Fase generate-feature-spec"** antes de tocar ningún artefacto. Ejecutar directamente sin pedir confirmación.
+
 ## Leer siempre
 - `ai-workflow/docs/workflow.md`
 - `ai-workflow/docs/context.md`
