@@ -10,6 +10,10 @@ import {
   getStatTintedIconClassName,
   getStatTintedLabelClassName,
   getStatTintedValueClassName,
+  getStatPlainRootClassName,
+  getStatPlainIconClassName,
+  getStatPlainLabelClassName,
+  getStatPlainValueClassName,
 } from '../runtime-node-styling'
 import { IconNode } from './icon-node'
 
@@ -34,6 +38,20 @@ export function StatNode({ node, iterationContext }: StatNodeProps) {
           <div>
             <p className={getStatTintedLabelClassName(color)}>{label}</p>
             <p className={getStatTintedValueClassName(color)}>{value}</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (variant === 'plain') {
+    return (
+      <div data-layout-node="stat" className={getStatPlainRootClassName()}>
+        <div className="flex items-center gap-3">
+          <IconNode name={icon} className={getStatPlainIconClassName()} />
+          <div>
+            <p className={getStatPlainLabelClassName()}>{label}</p>
+            <p className={getStatPlainValueClassName()}>{value}</p>
           </div>
         </div>
       </div>

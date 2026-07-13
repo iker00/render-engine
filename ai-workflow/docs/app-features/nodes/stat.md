@@ -1,10 +1,10 @@
-> Cuándo leer: si la tarea toca el nodo `stat` — métrica o KPI con cabecera descriptiva y valor principal, variantes `accent` y `tinted`, paleta semántica cerrada.
+> Cuándo leer: si la tarea toca el nodo `stat` — métrica o KPI con cabecera descriptiva y valor principal, variantes `accent`, `tinted` y `plain`, paleta semántica cerrada.
 > Tamaño: medio.
 > Relacionados: [[../references/visibility.md]], [[../references/query-state-feedback.md]], [[../config/validation.md]].
 
 # Nodo `stat`
 
-Nodo hoja de presentación pura que renderiza una métrica o KPI con una cabecera descriptiva (`label`) y un valor principal (`value`). Soporta dos variantes de estilo (`accent` y `tinted`) y una paleta semántica cerrada de seis colores. No es interactivo ni acepta acciones.
+Nodo hoja de presentación pura que renderiza una métrica o KPI con una cabecera descriptiva (`label`) y un valor principal (`value`). Soporta tres variantes de estilo (`accent`, `tinted` y `plain`) y una paleta semántica cerrada de seis colores. No es interactivo ni acepta acciones.
 
 ## Props
 
@@ -13,8 +13,8 @@ Nodo hoja de presentación pura que renderiza una métrica o KPI con una cabecer
 | `props.label` | `string` | sí | — | Texto de cabecera descriptivo. Admite literal, referencia dinámica completa o interpolación `{{...}}`. |
 | `props.value` | `string` | sí | — | Valor principal a mostrar. Admite literal, referencia dinámica completa o interpolación `{{...}}`. |
 | `props.icon` | `string` | no | — | Nombre del icono Lucide React (ej. `"TrendingUp"`). Se renderiza a la izquierda del bloque label/value. Si el nombre no resuelve, se ignora silenciosamente. |
-| `props.variant` | `"accent" \| "tinted"` | no | `"accent"` | Estilo visual del stat. |
-| `props.color` | `"neutral" \| "primary" \| "success" \| "warning" \| "danger" \| "info"` | no | `"neutral"` | Color semántico aplicado. |
+| `props.variant` | `"accent" \| "tinted" \| "plain"` | no | `"accent"` | Estilo visual del stat. |
+| `props.color` | `"neutral" \| "primary" \| "success" \| "warning" \| "danger" \| "info"` | no | `"neutral"` | Color semántico aplicado. En `plain` se acepta en config pero no altera el render (mismo criterio de tolerancia que `accent` respecto al texto). |
 
 ## Campos transversales
 
@@ -50,6 +50,12 @@ Renderiza un `<div data-layout-node="stat">` con fondo de color suave derivado d
 | `danger` | `bg-danger-100` | `text-danger-600` | `text-danger-800 font-bold` |
 | `info` | `bg-info-100` | `text-info-600` | `text-info-800 font-bold` |
 
+## Variante `plain`
+
+Renderiza un `<div data-layout-node="stat">` sin borde lateral de color y sin fondo de color. `label` aparece en texto muted y `value` en texto prominente y negrita, ambos con tokens neutros del tema (`text-app-text-muted` y `text-app-text-strong`), idénticos a los usados por `accent`.
+
+Es color-agnóstica: `props.color` se acepta en config para no rechazar layouts existentes, pero no cambia el render. El icono opcional, cuando se declara y resuelve, se renderiza a la izquierda del bloque `label`/`value` con sizing base (`size-8 shrink-0`) y color neutro (`text-app-text-muted`), sin depender de la paleta semántica.
+
 ## Comportamiento de render
 
 - Se renderiza siempre con `data-layout-node="stat"`.
@@ -73,7 +79,7 @@ Renderiza un `<div data-layout-node="stat">` con fondo de color suave derivado d
 
 - `props.label` ausente o no string: el config se rechaza con `invalid-layout` y diagnóstico de ruta `{path}.props.label`.
 - `props.value` ausente o no string: el config se rechaza con `invalid-layout` y diagnóstico de ruta `{path}.props.value`.
-- `props.variant` con valor fuera de `["accent", "tinted"]`: el config se rechaza con `invalid-layout` y diagnóstico de ruta `{path}.props.variant`.
+- `props.variant` con valor fuera de `["accent", "tinted", "plain"]`: el config se rechaza con `invalid-layout` y diagnóstico de ruta `{path}.props.variant`.
 - `props.color` con valor fuera de la paleta semántica: el config se rechaza con `invalid-layout` y diagnóstico de ruta `{path}.props.color`.
 - `visibility`, `queryStateFeedback` y `layout.span` siguen el contrato transversal estándar.
 

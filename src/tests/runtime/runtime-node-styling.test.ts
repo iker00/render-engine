@@ -18,6 +18,10 @@ import {
   getStatAccentIconClassName,
   getStatAccentLabelClassName,
   getStatAccentValueClassName,
+  getStatPlainRootClassName,
+  getStatPlainIconClassName,
+  getStatPlainLabelClassName,
+  getStatPlainValueClassName,
   getStatTintedRootClassName,
   getStatTintedIconClassName,
   getStatTintedLabelClassName,
@@ -1115,6 +1119,55 @@ describe('runtime node styling', () => {
 
     it('getStatTintedValueClassName neutral uses text-neutral-800', () => {
       expect(getStatTintedValueClassName('neutral')).toContain('text-neutral-800')
+    })
+
+    describe('stat plain styling functions', () => {
+      const semanticColorFamilies = ['neutral', 'primary', 'success', 'warning', 'danger', 'info'] as const
+
+      it('getStatPlainRootClassName does not include any border-l- class', () => {
+        const cn = getStatPlainRootClassName()
+        expect(cn).not.toMatch(/\bborder-l-/)
+      })
+
+      it('getStatPlainRootClassName does not include any semantic bg-*-100 class', () => {
+        const cn = getStatPlainRootClassName()
+        for (const family of semanticColorFamilies) {
+          expect(cn).not.toContain(`bg-${family}-100`)
+        }
+      })
+
+      it('getStatPlainRootClassName includes py-2 as neutral padding', () => {
+        expect(getStatPlainRootClassName()).toContain('py-2')
+      })
+
+      it('getStatPlainLabelClassName uses the same neutral muted text token as getStatAccentLabelClassName', () => {
+        expect(getStatPlainLabelClassName()).toContain('text-app-text-muted')
+      })
+
+      it('getStatPlainValueClassName uses the same strong text token as getStatAccentValueClassName', () => {
+        expect(getStatPlainValueClassName()).toContain('text-app-text-strong')
+      })
+
+      it('getStatPlainIconClassName does not include any class from the semantic color palette', () => {
+        const cn = getStatPlainIconClassName()
+        for (const family of semanticColorFamilies) {
+          expect(cn).not.toMatch(new RegExp(`\\btext-${family}-\\d`))
+        }
+      })
+
+      it('getStatPlainIconClassName includes size-8 and shrink-0 like accent/tinted', () => {
+        const cn = getStatPlainIconClassName()
+        expect(cn).toContain('size-8')
+        expect(cn).toContain('shrink-0')
+      })
+
+      it('getStatPlainRootClassName returns a stable string across multiple calls', () => {
+        expect(getStatPlainRootClassName()).toEqual(getStatPlainRootClassName())
+      })
+
+      it('getStatPlainIconClassName returns a stable string across multiple calls', () => {
+        expect(getStatPlainIconClassName()).toEqual(getStatPlainIconClassName())
+      })
     })
   })
 

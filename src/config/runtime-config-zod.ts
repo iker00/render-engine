@@ -667,7 +667,7 @@ export const alertNodeSchema = z
   })
   .strip()
 
-export const supportedStatVariants = ['accent', 'tinted'] as const
+export const supportedStatVariants = ['accent', 'tinted', 'plain'] as const
 export const supportedStatColors = ['neutral', 'primary', 'success', 'warning', 'danger', 'info'] as const
 
 export const statNodeSchema = z

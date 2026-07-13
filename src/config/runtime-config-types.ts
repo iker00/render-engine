@@ -513,7 +513,7 @@ export interface AlertLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLay
   children?: never
 }
 
-export type StatVariant = 'accent' | 'tinted'
+export type StatVariant = 'accent' | 'tinted' | 'plain'
 export type StatColor = 'neutral' | 'primary' | 'success' | 'warning' | 'danger' | 'info'
 
 export interface StatLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayoutFields {
