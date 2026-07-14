@@ -343,7 +343,6 @@ function validateContainerNode(
     parseResult.data.visibility as LayoutNodeFeedbackFields['visibility'],
     `${path}.visibility`,
     pageId,
-    breadcrumb,
   )
 
   if (visibilityResult.status === 'error') {
@@ -464,7 +463,6 @@ function validateRepeaterNode(
     parseResult.data.visibility as LayoutNodeFeedbackFields['visibility'],
     `${path}.visibility`,
     pageId,
-    breadcrumb,
   )
 
   if (visibilityResult.status === 'error') {
@@ -593,7 +591,6 @@ function validateHeadingNode(
     parseResult.data.visibility as LayoutNodeFeedbackFields['visibility'],
     `${path}.visibility`,
     pageId,
-    breadcrumb,
   )
 
   if (visibilityResult.status === 'error') {
@@ -649,7 +646,6 @@ function validateParagraphNode(
     parseResult.data.visibility as LayoutNodeFeedbackFields['visibility'],
     `${path}.visibility`,
     pageId,
-    breadcrumb,
   )
 
   if (visibilityResult.status === 'error') {
@@ -705,7 +701,6 @@ function validateListNode(
     parseResult.data.visibility as LayoutNodeFeedbackFields['visibility'],
     `${path}.visibility`,
     pageId,
-    breadcrumb,
   )
 
   if (visibilityResult.status === 'error') {
@@ -774,7 +769,6 @@ function validateImageNode(
     parseResult.data.visibility as LayoutNodeFeedbackFields['visibility'],
     `${path}.visibility`,
     pageId,
-    breadcrumb,
   )
 
   if (visibilityResult.status === 'error') {
@@ -878,7 +872,6 @@ function validateTableNode(
     parseResult.data.visibility as LayoutNodeFeedbackFields['visibility'],
     `${path}.visibility`,
     pageId,
-    breadcrumb,
   )
 
   if (visibilityResult.status === 'error') {
@@ -1178,7 +1171,6 @@ function validateModalNode(
     parseResult.data.visibility as LayoutNodeFeedbackFields['visibility'],
     `${path}.visibility`,
     pageId,
-    breadcrumb,
   )
 
   if (visibilityResult.status === 'error') return enrichErrorResult(visibilityResult, breadcrumb, rawNode)
@@ -1279,7 +1271,6 @@ function validateTabsNode(
     parseResult.data.visibility as LayoutNodeFeedbackFields['visibility'],
     `${path}.visibility`,
     pageId,
-    breadcrumb,
   )
 
   if (visibilityResult.status === 'error') return enrichErrorResult(visibilityResult, breadcrumb, rawNode)
@@ -1308,7 +1299,6 @@ function validateTabsNode(
       rawItem.visibility as LayoutNodeFeedbackFields['visibility'],
       `${path}.props.items[${index}].visibility`,
       pageId,
-      tabBreadcrumb,
     )
 
     if (itemVisibilityResult.status === 'error') return enrichErrorResult(itemVisibilityResult, tabBreadcrumb, rawNode)
@@ -1423,7 +1413,6 @@ function validateButtonNode(
     parseResult.data.visibility as LayoutNodeFeedbackFields['visibility'],
     `${path}.visibility`,
     pageId,
-    breadcrumb,
   )
 
   if (visibilityResult.status === 'error') {
@@ -1537,7 +1526,6 @@ export function validateLinkNode(
     parseResult.data.visibility as LayoutNodeFeedbackFields['visibility'],
     `${path}.visibility`,
     pageId,
-    breadcrumb,
   )
 
   if (visibilityResult.status === 'error') return enrichErrorResult(visibilityResult, breadcrumb, rawNode)
@@ -2048,7 +2036,6 @@ function validateAccordionNode(
     parseResult.data.visibility as LayoutNodeFeedbackFields['visibility'],
     `${path}.visibility`,
     pageId,
-    breadcrumb,
   )
 
   if (visibilityResult.status === 'error') return enrichErrorResult(visibilityResult, breadcrumb, rawNode)
@@ -2134,7 +2121,6 @@ function validateBadgeNode(
     parseResult.data.visibility as LayoutNodeFeedbackFields['visibility'],
     `${path}.visibility`,
     pageId,
-    breadcrumb,
   )
 
   if (visibilityResult.status === 'error') return enrichErrorResult(visibilityResult, breadcrumb, rawNode)
@@ -2209,7 +2195,6 @@ function validateAlertNode(
     parseResult.data.visibility as LayoutNodeFeedbackFields['visibility'],
     `${path}.visibility`,
     pageId,
-    breadcrumb,
   )
 
   if (visibilityResult.status === 'error') return enrichErrorResult(visibilityResult, breadcrumb, rawNode)
@@ -2288,7 +2273,6 @@ function validateStatNode(
     parseResult.data.visibility as LayoutNodeFeedbackFields['visibility'],
     `${path}.visibility`,
     pageId,
-    breadcrumb,
   )
 
   if (visibilityResult.status === 'error') return enrichErrorResult(visibilityResult, breadcrumb, rawNode)
@@ -2356,7 +2340,6 @@ function validateDividerNode(
     parseResult.data.visibility as LayoutNodeFeedbackFields['visibility'],
     `${path}.visibility`,
     pageId,
-    breadcrumb,
   )
 
   if (visibilityResult.status === 'error') return enrichErrorResult(visibilityResult, breadcrumb, rawNode)
@@ -2439,7 +2422,6 @@ function validateSkeletonNode(
     parseResult.data.visibility as LayoutNodeFeedbackFields['visibility'],
     `${path}.visibility`,
     pageId,
-    breadcrumb,
   )
 
   if (visibilityResult.status === 'error') return enrichErrorResult(visibilityResult, breadcrumb, rawNode)
@@ -2526,7 +2508,6 @@ function validateFileInputNode(
     parseResult.data.visibility as LayoutNodeFeedbackFields['visibility'],
     `${path}.visibility`,
     pageId,
-    breadcrumb,
   )
 
   if (visibilityResult.status === 'error') return enrichErrorResult(visibilityResult, breadcrumb, rawNode)
@@ -2652,7 +2633,6 @@ function validateFileManagerNode(
     parseResult.data.visibility as LayoutNodeFeedbackFields['visibility'],
     `${path}.visibility`,
     pageId,
-    breadcrumb,
   )
 
   if (visibilityResult.status === 'error') return enrichErrorResult(visibilityResult, breadcrumb, rawNode)

@@ -112,8 +112,12 @@ export function formatBreadcrumb(segments: BreadcrumbSegment[]): string {
 
 const excerptIdentifyingProps = new Set(['fieldId', 'label', 'text', 'operationName', 'fieldName'])
 
-export function buildNodeExcerpt(rawNode: Record<string, unknown>): string {
+export function buildNodeExcerpt(rawNode: Record<string, unknown> | undefined): string {
   const excerpt: Record<string, unknown> = {}
+
+  if (rawNode === undefined) {
+    return JSON.stringify(excerpt)
+  }
 
   if (typeof rawNode.type === 'string') {
     excerpt.type = rawNode.type
@@ -167,7 +171,7 @@ export function enrichErrorMessage(
 export function enrichedInvalidLayout(
   message: string,
   breadcrumb: BreadcrumbSegment[],
-  rawNode: Record<string, unknown>,
+  rawNode: Record<string, unknown> | undefined,
 ): { status: 'error'; error: RuntimeConfigError } {
   const bc = formatBreadcrumb(breadcrumb)
   const excerpt = buildNodeExcerpt(rawNode)
@@ -186,7 +190,7 @@ export function enrichedInvalidLayout(
 export function enrichErrorResult(
   result: { status: 'error'; error: RuntimeConfigError },
   breadcrumb: BreadcrumbSegment[],
-  rawNode: Record<string, unknown>,
+  rawNode: Record<string, unknown> | undefined,
 ): { status: 'error'; error: RuntimeConfigError } {
   const bc = formatBreadcrumb(breadcrumb)
   const excerpt = buildNodeExcerpt(rawNode)
