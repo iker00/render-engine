@@ -1764,5 +1764,35 @@ describe('runtime node styling', () => {
       expect(cn).not.toContain('cursor-pointer')
       expect(cn).toContain('cursor-auto')
     })
+
+    it('getModalPanelClassName sm includes max-w-md and not max-w-sm', () => {
+      const cn = getModalPanelClassName('sm')
+      expect(cn).toContain('max-w-md')
+      expect(cn).not.toContain('max-w-sm')
+    })
+
+    it('getModalPanelClassName md includes max-w-2xl and not max-w-md', () => {
+      const cn = getModalPanelClassName('md')
+      expect(cn).toContain('max-w-2xl')
+      expect(cn).not.toContain('max-w-md')
+    })
+
+    it('getModalPanelClassName lg includes max-w-4xl and not max-w-lg', () => {
+      const cn = getModalPanelClassName('lg')
+      expect(cn).toContain('max-w-4xl')
+      expect(cn).not.toContain('max-w-lg')
+    })
+
+    it('getModalPanelClassName without argument matches the md default exactly', () => {
+      expect(getModalPanelClassName()).toBe(getModalPanelClassName('md'))
+    })
+
+    it('preserves fixed classes unrelated to width across all three sizes', () => {
+      for (const size of ['sm', 'md', 'lg'] as const) {
+        const cn = getModalPanelClassName(size)
+        expect(cn).toContain('w-full')
+        expect(cn).toContain('p-6')
+      }
+    })
   })
 })

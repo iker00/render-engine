@@ -751,9 +751,9 @@ export function getModalOverlayClassName() {
 }
 
 const modalPanelSizeClassMap: Record<string, string> = {
-  sm: 'max-w-sm',
-  md: 'max-w-md',
-  lg: 'max-w-lg',
+  sm: 'max-w-md',
+  md: 'max-w-2xl',
+  lg: 'max-w-4xl',
 }
 
 export function getModalPanelClassName(size: 'sm' | 'md' | 'lg' = 'md') {
