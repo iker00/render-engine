@@ -1033,6 +1033,25 @@ export function getStatTintedValueClassName(color: ButtonColor): string {
   return `text-2xl font-semibold ${statTintedValueClassMap[color]}`
 }
 
+// Stat plain: color-agnostic, no lateral border, no colored background.
+// `props.color` is accepted by the config but has no visual effect on this variant.
+
+export function getStatPlainRootClassName(): string {
+  return 'py-2'
+}
+
+export function getStatPlainIconClassName(): string {
+  return 'size-8 shrink-0 text-app-text-muted'
+}
+
+export function getStatPlainLabelClassName(): string {
+  return 'text-sm font-medium text-app-text-muted'
+}
+
+export function getStatPlainValueClassName(): string {
+  return 'text-2xl font-semibold text-app-text-strong'
+}
+
 // T9 — Badge styling functions (D9 D10)
 
 const badgePillBgClassMap: Record<ButtonColor, string> = {

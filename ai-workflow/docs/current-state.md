@@ -12,7 +12,7 @@ No es histórico acumulado ni sustituto de las fichas funcionales. El detalle es
 | Runtime | estable | [runtime/](./app-features/runtime/index.md) | `0081` |
 | Contrato JSON | estable | [config/](./app-features/config/index.md) | `0096` |
 | Referencias y strings dinámicas | estable | [references/](./app-features/references/index.md) | `0092` |
-| Catálogo de nodos | estable | [nodes/](./app-features/nodes/index.md) | `0095` |
+| Catálogo de nodos | estable | [nodes/](./app-features/nodes/index.md) | `0097` |
 | Formularios y validación | estable | [forms/](./app-features/forms/index.md) | `0095` |
 | Queries, preloads y feedback | estable | [queries/](./app-features/queries/index.md) | `0073` |
 | Navegación y páginas | estable | [navigation/](./app-features/navigation/index.md) | `0046` |
