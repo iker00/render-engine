@@ -8,7 +8,7 @@ model: sonnet
 
 Esta skill actúa como **orquestador**: lanza un subagente con contexto limpio por cada tarea, recibe un resultado estructurado y avanza solo cuando la tarea queda cerrada con validación real. La actualización documental amplia se delega a una skill posterior.
 
-El orquestador no implementa código por sí mismo. El contrato completo del subagente vive en `subagent-prompt.md`, dentro de esta misma skill, y el subagente lo lee al arrancar.
+El orquestador no implementa código por sí mismo. El contrato completo del subagente vive en `subagent-prompt.md`, dentro de esta misma skill, y se entrega al subagente inline como parte del prefijo cacheable generado por `build-context.sh` (ver "Preparación de la pasada").
 
 ## Leer siempre (orquestador)
 Lo mínimo para decidir qué tarea toca y mantener el estado:
@@ -16,7 +16,7 @@ Lo mínimo para decidir qué tarea toca y mantener el estado:
 - `ai-workflow/features/NNNN-feature-name/tasks.md`
 - `ai-workflow/features/NNNN-feature-name/status.yaml`
 
-El contexto funcional amplio (spec, design, architecture, conventions, código relevante) lo lee el subagente. El orquestador no debe acumular ese contexto entre tareas.
+Los standards y las docs estables (workflow, conventions, architecture, test-index) más el propio contrato del subagente llegan al subagente vía el prefijo cacheable de `build-context.sh`. Lo específico de la tarea (código y tests del área, `notes.md` si existe, ficha de `app-features/` si la tarea la referencia) lo lee el propio subagente. El orquestador no acumula ninguno de esos contextos entre tareas.
 
 ## Objetivo
 Implementar las tareas planificadas de la feature en orden, una por una, lanzando un subagente por tarea hasta agotar el alcance solicitado o encontrar un bloqueo.
@@ -30,6 +30,20 @@ Antes de empezar la pasada, comprobar:
 - `implementation.ready: true`
 
 Si el gate falla, detenerse y explicitar qué artefacto o estado falta.
+
+## Preparación de la pasada — contexto compartido cacheable
+
+Antes de lanzar el primer subagente, generar una única vez el bloque fijo que se enviará como prefijo en cada llamada a `Agent`. Ese bloque contiene los standards del proyecto, las docs estables y el contrato de implementación del subagente. Al ser idéntico byte a byte en las N invocaciones de la pasada, el prompt caching del modelo lo reusa y evita reprocesarlo N veces.
+
+Ejecutar (una sola vez por pasada), sustituyendo `<feature_path>` por la ruta absoluta de la feature en curso:
+
+```
+ai-workflow/skills/implement-task-test-first/build-context.sh <feature_path>/.subagent-context.md
+```
+
+El script emite el contenido por stdout **y** lo escribe en `<feature_path>/.subagent-context.md` (gitignored). Capturar el stdout de esa llamada `Bash`; ese texto es el prefijo cacheable que se antepone al bloque de tarea en cada subagente. Si la pasada se reanuda tras una interrupción, re-ejecutar el script: mismos ficheros de entrada -> mismo output, la caché sigue golpeando.
+
+Si el script falla (por ejemplo, falta `standards/` o `subagent-prompt.md`), detener la pasada y señalar el error.
 
 ## Flujo del orquestador
 1. Seleccionar la primera tarea pendiente de `tasks.md` que no esté en `implementation.completed_task_ids` y que entre en el alcance solicitado por el usuario. Si no queda ninguna tarea pendiente en alcance, saltar al paso 8.
@@ -52,7 +66,21 @@ Si el gate falla, detenerse y explicitar qué artefacto o estado falta.
 
 ## Lanzamiento del subagente
 - Usar la herramienta `Agent` con `subagent_type: general-purpose`.
-- El prompt del subagente debe ser corto y autosuficiente: identidad de la tarea (`task_id`, ruta absoluta a `tasks.md` y a la carpeta de la feature) e instrucción de leer y aplicar literalmente `ai-workflow/skills/implement-task-test-first/subagent-prompt.md`.
+- El prompt del subagente se compone en dos bloques, en este orden exacto:
+  1. **Prefijo cacheable**: el contenido capturado por el paso "Preparación de la pasada" (standards + docs estables + contrato del subagente). Se pega literalmente, sin editar ni reordenar; cualquier alteración rompe el cache hit.
+  2. **Bloque de tarea** (variable, cambia en cada llamada):
+     ```
+     ## Tu tarea
+
+     - task_id: <ID>
+     - feature_path: <ruta absoluta a la carpeta de la feature>
+
+     <contenido literal del bloque de la tarea copiado tal cual de tasks.md, delimitado por los `---` que separan tareas o por el final del fichero>
+
+     Aplica el contrato de implementación incluido en el contexto compartido de arriba a este bloque de tarea. No releas los ficheros ya incluidos en el contexto compartido ni abras `tasks.md`; el bloque de tu tarea ya está inline aquí arriba. Sí lee lo específico del área (código, tests, notes.md, ficha de app-features si la tarea la referencia).
+     ```
+  - El orquestador extrae el bloque directamente de `tasks.md` (que ya tiene abierto para seleccionar la tarea) y lo pega literal, sin resumir ni reformatear.
+- El subagente ya no necesita leer `subagent-prompt.md`, `standards/*` ni las docs estables: vienen inline en el prefijo.
 - Esperar como única salida un JSON con la forma documentada en `subagent-prompt.md`. Sus campos relevantes para el orquestador:
   - `task_id`
   - `status` (`completed | blocked | failed`)
