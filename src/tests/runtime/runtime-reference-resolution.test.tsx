@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { parseRuntimeReference } from '../../runtime/runtime-references/runtime-reference-parser'
 import {
   resolveRuntimeImageAlt,
@@ -1633,6 +1633,220 @@ describe('Runtime reference resolution', () => {
           localPlaceholders: { fileName: 'bar.pdf' },
         }),
       ).toBe('Error al subir "bar.pdf"')
+    })
+  })
+
+  describe('T0101 formatters in visible interpolation', () => {
+    const formatterState: RuntimeState = {
+      ...runtimeState,
+      queries: {
+        ...runtimeState.queries,
+        total: { status: 'success', data: 1234.5, error: null },
+        price: { status: 'success', data: 19.9, error: null },
+        date: { status: 'success', data: '2026-07-16', error: null },
+        dateTime: { status: 'success', data: '2026-07-16T10:30:45+02:00', error: null },
+        name: { status: 'success', data: 'ana', error: null },
+        ratio: { status: 'success', data: 0.4256, error: null },
+      },
+    }
+
+    let consoleWarnSpy: ReturnType<typeof vi.spyOn>
+
+    beforeEach(() => {
+      consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    })
+
+    afterEach(() => {
+      consoleWarnSpy.mockRestore()
+      vi.unstubAllEnvs()
+    })
+
+    it('formats {{queries.total.data | number}} using es-ES grouping', () => {
+      expect(
+        resolveRuntimeVisibleValue('{{queries.total.data | number}}', formatterState, 'heading.props.text'),
+      ).toBe('1.234,5')
+    })
+
+    it('formats {{queries.total.data | number:2}} with two forced decimals', () => {
+      expect(
+        resolveRuntimeVisibleValue('{{queries.total.data | number:2}}', formatterState, 'heading.props.text'),
+      ).toBe('1.234,50')
+    })
+
+    it('formats {{queries.price.data | currency}} to euros', () => {
+      const result = resolveRuntimeVisibleValue(
+        '{{queries.price.data | currency}}',
+        formatterState,
+        'heading.props.text',
+      )
+
+      expect(String(result)).toContain('19,90')
+      expect(String(result)).toMatch(/€/)
+    })
+
+    it('formats {{queries.price.data | currency:"USD"}} using USD', () => {
+      const result = resolveRuntimeVisibleValue(
+        '{{queries.price.data | currency:"USD"}}',
+        formatterState,
+        'heading.props.text',
+      )
+
+      expect(String(result)).toContain('19,90')
+      expect(String(result)).toMatch(/US\$|\$/)
+    })
+
+    it('formats {{queries.date.data | date:"dd/MM/yyyy"}} for a date-only ISO input', () => {
+      expect(
+        resolveRuntimeVisibleValue(
+          '{{queries.date.data | date:"dd/MM/yyyy"}}',
+          formatterState,
+          'heading.props.text',
+        ),
+      ).toBe('16/07/2026')
+    })
+
+    it('formats {{queries.dateTime.data | date:"dd/MM/yyyy HH:mm:ss"}} for an ISO datetime with offset', () => {
+      const result = resolveRuntimeVisibleValue(
+        '{{queries.dateTime.data | date:"dd/MM/yyyy HH:mm:ss"}}',
+        formatterState,
+        'heading.props.text',
+      )
+
+      expect(String(result)).toMatch(/^\d{2}\/\d{2}\/\d{4} \d{2}:\d{2}:\d{2}$/)
+    })
+
+    it('uppercases {{queries.name.data | uppercase}}', () => {
+      expect(
+        resolveRuntimeVisibleValue('{{queries.name.data | uppercase}}', formatterState, 'heading.props.text'),
+      ).toBe('ANA')
+    })
+
+    it('chains {{queries.name.data | uppercase | truncate:2}} to produce AN…', () => {
+      expect(
+        resolveRuntimeVisibleValue(
+          '{{queries.name.data | uppercase | truncate:2}}',
+          formatterState,
+          'heading.props.text',
+        ),
+      ).toBe('AN…')
+    })
+
+    it('formats {{queries.ratio.data | percent:1}} to a value containing 42,6 and %', () => {
+      const result = resolveRuntimeVisibleValue(
+        '{{queries.ratio.data | percent:1}}',
+        formatterState,
+        'heading.props.text',
+      )
+
+      expect(String(result)).toContain('42,6')
+      expect(String(result)).toContain('%')
+    })
+
+    it('produces empty string when the formatter name is not in the catalog', () => {
+      expect(
+        resolveRuntimeVisibleValue(
+          'A {{queries.total.data | doesNotExist}} B',
+          formatterState,
+          'heading.props.text',
+        ),
+      ).toBe('A  B')
+    })
+
+    it('produces empty string when a formatter cannot handle the resolved value', () => {
+      expect(
+        resolveRuntimeVisibleValue(
+          'A {{queries.name.data | date:"dd/MM/yyyy"}} B',
+          formatterState,
+          'heading.props.text',
+        ),
+      ).toBe('A  B')
+    })
+
+    it('produces empty string when the argument grammar is invalid (number:"dos")', () => {
+      expect(
+        resolveRuntimeVisibleValue(
+          'A {{queries.total.data | number:"dos"}} B',
+          formatterState,
+          'heading.props.text',
+        ),
+      ).toBe('A  B')
+    })
+
+    it('produces empty string when the argument is missing after ":"', () => {
+      expect(
+        resolveRuntimeVisibleValue(
+          'A {{queries.total.data | truncate:}} B',
+          formatterState,
+          'heading.props.text',
+        ),
+      ).toBe('A  B')
+    })
+
+    it('tolerates variable whitespace around the pipe and the argument separator', () => {
+      const expected = resolveRuntimeVisibleValue(
+        '{{queries.total.data | number:2}}',
+        formatterState,
+        'heading.props.text',
+      )
+
+      expect(
+        resolveRuntimeVisibleValue(
+          '{{ queries.total.data | number : 2 }}',
+          formatterState,
+          'heading.props.text',
+        ),
+      ).toBe(expected)
+    })
+
+    it('formats a mixed string keeping literal text around the placeholder', () => {
+      expect(
+        resolveRuntimeVisibleValue(
+          'Total: {{queries.total.data | number:2}} eur',
+          formatterState,
+          'heading.props.text',
+        ),
+      ).toBe('Total: 1.234,50 eur')
+    })
+
+    it('preserves historical behavior for placeholders without a pipe', () => {
+      expect(
+        resolveRuntimeVisibleValue('{{queries.total.data}}', formatterState, 'heading.props.text'),
+      ).toBe('1234.5')
+    })
+
+    it('emits a DEV console.warn when a formatter chain is unresolvable, once per placeholder', () => {
+      resolveRuntimeVisibleValue(
+        '{{queries.name.data | date:"dd/MM/yyyy"}}',
+        formatterState,
+        'heading.props.text',
+      )
+
+      expect(consoleWarnSpy).toHaveBeenCalledTimes(1)
+      const warnMessage = String(consoleWarnSpy.mock.calls[0]?.[0] ?? '')
+      expect(warnMessage).toContain('runtime-formatters')
+      expect(warnMessage).toContain('date')
+    })
+
+    it('does not emit console.warn for formatter chain diagnostics when not in DEV', () => {
+      vi.stubEnv('DEV', false)
+
+      resolveRuntimeVisibleValue(
+        '{{queries.name.data | date:"dd/MM/yyyy"}}',
+        formatterState,
+        'heading.props.text',
+      )
+
+      expect(consoleWarnSpy).not.toHaveBeenCalled()
+    })
+
+    it('produces empty string when the reference is unsupported, regardless of the formatter', () => {
+      expect(
+        resolveRuntimeVisibleValue(
+          'A {{params.user.id | uppercase}} B',
+          formatterState,
+          'heading.props.text',
+        ),
+      ).toBe('A  B')
     })
   })
 })

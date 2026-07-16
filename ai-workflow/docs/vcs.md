@@ -93,10 +93,10 @@ Al finalizar implementación y documentación (cuando código, tests y documenta
 
 3. **Pushear y crear el Merge Request**:
    ```
-   git push -o merge_request.create -o merge_request.target=dev -o merge_request.title="<mismo patrón que el commit>" -o merge_request.description="<contenido de ai-workflow/features/NNNN-feature-name/spec.md>" origin <nombre-rama>
+   git push -o merge_request.create -o merge_request.target=dev -o merge_request.title="<mismo patrón que el commit>" -o merge_request.description="<descripción en una sola línea>" origin <nombre-rama>
    ```
    - Título: mismo patrón que el mensaje de commit.
-   - Descripción: contenido de `spec.md`.
+   - Descripción: **una sola línea sin saltos de línea**. Las opciones `-o` de `git push` rechazan cualquier carácter de nueva línea (`fatal: push options must not have new line characters`), por lo que la descripción no puede ser el volcado literal de `spec.md`. Escribir un resumen breve en una sola línea (por ejemplo, la sección "Objetivo" de la spec compactada) y, si hace falta la spec completa como cuerpo del MR, editarla desde la UI de GitLab tras la creación.
    - Sin asignación de reviewer ni assignee por defecto.
 
 **Regla de oro**: Si encuentras un commit parcial (solo código sin docs, o docs sin código), eso es un error. El flujo debe terminar con UN ÚNICO COMMIT que incluya código, tests, documentación y artefactos.

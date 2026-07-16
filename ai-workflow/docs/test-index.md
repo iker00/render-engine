@@ -107,6 +107,8 @@ src/tests/
 - `runtime-file-manager-hook.test.tsx` — comportamiento del nodo fileManager: subida secuencial, validaciones client-side, lista paginada, botones Ver/Descargar/Eliminar, precarga, integración con queries state (~nuevo)
 - `runtime-node-components-map.test.tsx` — mapa central de componentes de nodo: cobertura de todas las 26 claves, valores truthy, rama eager activa en modo test (~nuevo)
 - `runtime-lazy-node.test.tsx` — wrapper LazyNode con Suspense + error boundary: success, suspense (null), error (indicador con role="alert"), contención por instancia (~nuevo)
+- `runtime-formatter-parser.test.ts` — parser de la cadena `referencia | formatter[:arg] | ...` dentro de placeholders: fast-path `hasFormatterSyntax`, `parseFormatterPlaceholder` (estados `no-formatters`/`ok`/`unresolvable-chain`), encadenamiento, strings con `|` internos, gramática de argumento único (string entre `"..."` o número con signo/decimales), casos inválidos (nombre no identificador, `:` sin argumento, string sin cerrar, carácter extraño, referencia vacía) (~nuevo)
+- `runtime-formatter-registry.test.ts` — catálogo cerrado v1 de formatters (`number`, `currency`, `date`, `percent`, `uppercase`, `lowercase`, `capitalize`, `truncate`) con locale fijo `es-ES`, tokenización manual `dd/MM/yyyy HH:mm:ss` (getters UTC para date-only, locales para date-time con `T`), compatibilidad de valor de entrada por formatter, `applyFormatterChain` con corte al primer `unresolvable`, cache de instancias `Intl.NumberFormat` por combinación de opciones (~nuevo)
 - `runtime-table-processing.test.ts` — filtrado, ordenación y procesamiento local de tablas
 - `runtime-ui-actions.test.tsx` — ejecución de acciones UI (clicks, submit) y delegación al executor compartido
 

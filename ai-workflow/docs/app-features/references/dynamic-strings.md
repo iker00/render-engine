@@ -1,4 +1,4 @@
-> Cuándo leer: interpolación parcial `{{...}}` en strings visibles, catálogo cerrado de superficies, semántica de placeholders no resolubles.
+> Cuándo leer: interpolación parcial `{{...}}` en strings visibles, catálogo cerrado de superficies, semántica de placeholders no resolubles, sintaxis y catálogo de formatters (`| formatter[:arg]`).
 > Tamaño: medio.
 > Relacionados: [[reference-resolution.md]], [[../nodes/index.md]].
 
@@ -69,3 +69,42 @@ Las siguientes superficies usan solo referencias completas o literales y NO apli
 - cada placeholder no resoluble, inválido, ausente o no renderizable se sustituye por string vacío, conservando el texto literal que lo rodea
 - objetos y arrays pueden recorrerse de izquierda a derecha con una única semántica central
 - las referencias textuales no resolubles degradan a string vacío y mantienen diagnóstico de desarrollo coherente con la referencia original
+
+## Formatters dentro del placeholder
+
+### Sintaxis
+- gramática: `{{ referencia | formatter [: arg] | formatter [: arg] | ... }}`
+- los espacios alrededor de `|` y de `:` son opcionales; se ignoran igual que los espacios alrededor de la referencia
+- el argumento, cuando aparece, es una única string entre comillas dobles (`"..."`) o un número (entero o con parte decimal, con `.` como separador; sin coma decimal, sin separador de miles)
+- los formatters se aplican de izquierda a derecha sobre el valor ya resuelto de la referencia
+- una cadena mal formada (nombre no identificador, `:` sin argumento, string sin cerrar, argumento con tipo no soportado por el formatter) hace la cadena no resoluble para ese placeholder
+- un placeholder sin `|` mantiene exactamente el comportamiento anterior a la feature: se resuelve la referencia como referencia completa y se serializa igual que hoy
+
+### Catálogo v1
+- `number` — formatea un número finito en locale fijo `es-ES` con separación de miles. Argumento opcional numérico entero: número de decimales fijos (mínimos y máximos).
+- `currency` — formatea un número finito como moneda en locale fijo `es-ES`. Argumento opcional string: código ISO 4217 (por ejemplo `"EUR"`, `"USD"`); por defecto `"EUR"`.
+- `percent` — formatea un número finito como porcentaje en locale fijo `es-ES`. Argumento opcional numérico entero: número de decimales fijos.
+- `date` — formatea una string ISO 8601 (date-only `YYYY-MM-DD` o date-time con `T` y offset opcional). Argumento obligatorio string: patrón con tokens `dd`, `MM`, `yyyy`, `HH`, `mm`, `ss`; cualquier otro carácter del patrón se conserva literal. Un input date-only se interpreta en UTC; un input date-time con offset explícito respeta ese offset y se formatea en hora local.
+- `uppercase` — pasa a mayúsculas. Sin argumento.
+- `lowercase` — pasa a minúsculas. Sin argumento.
+- `capitalize` — capitaliza la primera letra. Sin argumento.
+- `truncate` — trunca a un número de caracteres y añade `…` cuando el input excede ese límite. Argumento obligatorio numérico entero no negativo. `truncate:0` sobre texto no vacío produce `"…"`.
+
+### Compatibilidad de valor de entrada por formatter
+- `number`, `currency`, `percent` aceptan `number` finito o `string` que matchee `/^-?\d+(\.\d+)?$/`. Cualquier otro tipo (`NaN`, `Infinity`, string vacío, objetos, arrays, `null`, `undefined`) hace la cadena no resoluble.
+- `date` acepta solo strings ISO 8601 (shape date-only o date-time con `T`) que parseen a `Date` válida. Cualquier otro shape o valor hace la cadena no resoluble.
+- `uppercase`, `lowercase`, `capitalize`, `truncate` aceptan `string`, `number` finito o `boolean`. Objetos, arrays, `null`, `undefined`, `NaN`, `Infinity` hacen la cadena no resoluble.
+
+### Semántica de cadena no resoluble en superficies visibles
+- Cuando la cadena de formatters no resuelve — nombre desconocido, argumento no válido para el formatter, valor de entrada incompatible o cualquier fallo intermedio en el encadenamiento — ese placeholder se sustituye por string vacío en la string resuelta, sin afectar al texto literal que lo rodea ni al resto de placeholders.
+- Es la misma semántica que ya aplica a referencias no resolubles en superficies visibles: solo cae el placeholder concreto, nunca la string completa.
+- En modo desarrollo se emite un `console.warn` con prefijo `[runtime-formatters]` indicando el placeholder afectado y el primer formatter que hizo fallar la cadena. En producción no se emite ningún log.
+
+### Semántica de cadena no resoluble en superficies de headers
+- Aplica a las cuatro superficies de headers listadas arriba (`api.headers`, `button.props.action.headers`, `form.submitAction.headers`, `preloads[].headers`).
+- Cuando la cadena de formatters no resuelve — nombre desconocido, argumento no válido para el formatter, valor de entrada incompatible, gramática de argumento inválida o cualquier fallo intermedio del encadenamiento — la petición no se emite y se proyecta `request-build-failed`, igual que hoy hacen los placeholders no resolubles en valores de header. No hay degradación silenciosa: la única diferencia semántica frente a superficies visibles es que el fallo escala al nivel de la petición completa, no del placeholder.
+- La omisión de header por campo oculto se sigue evaluando **antes** que la cadena de formatters. Un placeholder tipo `{{forms.f.hidden | uppercase}}`, donde `hidden` está declarado como campo oculto del formulario que dispara la petición, omite el header completo del wire format y nunca invoca la cadena. Esta regla preserva el contrato de omisión ya documentado en [[execution.md]].
+- En modo desarrollo se emite el mismo `console.warn` con prefijo `[runtime-formatters]` que en superficies visibles, indicando el placeholder afectado y el primer formatter que hizo fallar la cadena, con el contexto de superficie `api.headers[<clave>]`. En producción no se emite ningún log.
+
+### Semántica de cadena no resoluble en `api.endpoint`
+- `api.endpoint` hereda el mismo contrato de fallo que las superficies de headers: cualquier cadena no resoluble (gramática inválida, nombre desconocido, argumento incompatible o fallo intermedio del encadenamiento) proyecta `request-build-failed` para la operación completa, sin emitir petición. En modo desarrollo se emite el mismo `console.warn` con prefijo `[runtime-formatters]` con el contexto de superficie `api.endpoint`. Los placeholders sin `|` mantienen exactamente el camino previo a la feature.
