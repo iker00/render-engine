@@ -561,3 +561,109 @@ describe('resolveHeaders — global regex lastIndex does not leak between calls'
     expect(first).toEqual({ status: 'ready', headers: { Authorization: 'Bearer tok' } })
   })
 })
+
+// -----------------------------------------------------------------------
+// Formatters in header placeholders (feature 0101, T4)
+// -----------------------------------------------------------------------
+describe('resolveHeaders — formatters in placeholders (success cases)', () => {
+  it('applies uppercase to a token value inside "Bearer {{tokens.sede.value | uppercase}}"', () => {
+    const state = makeStateWithToken('sede', 'ready', 'abc-xyz')
+    const result = resolveHeaders(
+      { Authorization: 'Bearer {{tokens.sede.value | uppercase}}' },
+      'op "test"',
+      { state },
+    )
+    expect(result).toEqual({
+      status: 'ready',
+      headers: { Authorization: 'Bearer ABC-XYZ' },
+    })
+  })
+
+  it('applies number:2 to a query data value inside "X-Total: {{queries.total.data | number:2}}"', () => {
+    const state = makeStateWithQuery('total', 1234.5)
+    const result = resolveHeaders(
+      { 'X-Total': 'X-Total: {{queries.total.data | number:2}}' },
+      'op "test"',
+      { state },
+    )
+    expect(result).toEqual({
+      status: 'ready',
+      headers: { 'X-Total': 'X-Total: 1.234,50' },
+    })
+  })
+})
+
+describe('resolveHeaders — formatter failures produce request-build-failed', () => {
+  it('fails with request-build-failed when the formatter name is unknown', () => {
+    const state = makeStateWithQuery('total', 1234.5)
+    const result = resolveHeaders(
+      { 'X-Fail': 'X-Fail: {{queries.total.data | doesNotExist}}' },
+      'op "test"',
+      { state },
+    )
+    expect(result.status).toBe('error')
+    if (result.status !== 'error') return
+    expect(result.error.code).toBe('request-build-failed')
+  })
+
+  it('fails with request-build-failed when input type is not compatible with the formatter (date on non-ISO string)', () => {
+    const state = makeStateWithQuery('name', 'ana')
+    const result = resolveHeaders(
+      { 'X-Fail': 'X-Fail: {{queries.name.data | date:"dd/MM/yyyy"}}' },
+      'op "test"',
+      { state },
+    )
+    expect(result.status).toBe('error')
+    if (result.status !== 'error') return
+    expect(result.error.code).toBe('request-build-failed')
+  })
+
+  it('fails with request-build-failed when the argument grammar is invalid (truncate:)', () => {
+    const state = makeStateWithQuery('total', 1234.5)
+    const result = resolveHeaders(
+      { 'X-Bad': 'X-Bad: {{queries.total.data | truncate:}}' },
+      'op "test"',
+      { state },
+    )
+    expect(result.status).toBe('error')
+    if (result.status !== 'error') return
+    expect(result.error.code).toBe('request-build-failed')
+  })
+})
+
+describe('resolveHeaders — hidden-form-field omission preserved with formatter chain (D5)', () => {
+  it('omits the header when placeholder targets a hidden field even when a formatter is present', () => {
+    const state = makeState({ forms: makeFormState({ hiddenField: 'secret' }) })
+    const result = resolveHeaders(
+      { 'X-User': '{{forms.myForm.hiddenField | uppercase}}' },
+      'op "test"',
+      { state, hiddenFormFields },
+    )
+    expect(result).toEqual({ status: 'ready', headers: {} })
+  })
+
+  it('omits the header when placeholder targets a hidden field that is missing from the form store, even with a formatter', () => {
+    const state = makeState()
+    const result = resolveHeaders(
+      { 'X-User': 'prefix-{{forms.myForm.hiddenField | uppercase}}' },
+      'op "test"',
+      { state, hiddenFormFields },
+    )
+    expect(result).toEqual({ status: 'ready', headers: {} })
+  })
+})
+
+describe('resolveHeaders — placeholder without "|" behaves identically to pre-feature path', () => {
+  it('a placeholder without any pipe follows the same code path and produces the same output', () => {
+    const state = makeStateWithToken('sede', 'ready', 'plain-tok')
+    const withoutFormatter = resolveHeaders(
+      { Authorization: 'Bearer {{tokens.sede.value}}' },
+      'op "test"',
+      { state },
+    )
+    expect(withoutFormatter).toEqual({
+      status: 'ready',
+      headers: { Authorization: 'Bearer plain-tok' },
+    })
+  })
+})

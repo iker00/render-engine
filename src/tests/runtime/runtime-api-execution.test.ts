@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { RuntimeConfig } from '../../config/runtime-config'
 import {
   buildRuntimeApiRequest,
@@ -1867,6 +1867,172 @@ describe('Runtime api endpoint interpolation', () => {
       request: expect.objectContaining({
         url: '/api/collections/42/items?page=1',
       }),
+    })
+  })
+
+  describe('formatters in endpoint interpolation (feature 0101)', () => {
+    const stateWithFormatterQueries: RuntimeState = {
+      ...runtimeState,
+      queries: {
+        ...runtimeState.queries,
+        userId: {
+          status: 'success',
+          data: 'abc',
+          error: null,
+        },
+        total: {
+          status: 'success',
+          data: 1234,
+          error: null,
+        },
+        name: {
+          status: 'success',
+          data: 'ana',
+          error: null,
+        },
+      },
+    }
+
+    let consoleWarnSpy: ReturnType<typeof vi.spyOn>
+
+    beforeEach(() => {
+      consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    })
+
+    afterEach(() => {
+      consoleWarnSpy.mockRestore()
+    })
+
+    it('applies uppercase formatter to a resolved string reference', () => {
+      const config: RuntimeConfig = {
+        ...runtimeConfig,
+        api: {
+          getUser: {
+            method: 'GET',
+            endpoint: '/users/{{queries.userId.data | uppercase}}',
+          },
+        },
+      }
+
+      const result = buildRuntimeApiRequest({
+        config,
+        operationName: 'getUser',
+        state: stateWithFormatterQueries,
+      })
+
+      expect(result).toEqual({
+        status: 'ready',
+        request: expect.objectContaining({
+          url: '/users/ABC',
+        }),
+      })
+    })
+
+    it('applies number:0 formatter to a numeric reference (es-ES thousand separator)', () => {
+      const config: RuntimeConfig = {
+        ...runtimeConfig,
+        api: {
+          getByTotal: {
+            method: 'GET',
+            endpoint: '/n/{{queries.total.data | number:0}}',
+          },
+        },
+      }
+
+      const result = buildRuntimeApiRequest({
+        config,
+        operationName: 'getByTotal',
+        state: stateWithFormatterQueries,
+      })
+
+      expect(result).toEqual({
+        status: 'ready',
+        request: expect.objectContaining({
+          url: '/n/1.234',
+        }),
+      })
+    })
+
+    it('returns request-build-failed when the formatter name is not in the catalog', () => {
+      const config: RuntimeConfig = {
+        ...runtimeConfig,
+        api: {
+          brokenChain: {
+            method: 'GET',
+            endpoint: '/x/{{queries.total.data | doesNotExist}}',
+          },
+        },
+      }
+
+      const fetchMock = vi.fn()
+
+      const result = buildRuntimeApiRequest({
+        config,
+        operationName: 'brokenChain',
+        state: stateWithFormatterQueries,
+      })
+
+      expect(result).toEqual({
+        status: 'error',
+        error: {
+          code: 'request-build-failed',
+          message: expect.stringContaining('endpoint'),
+        },
+      })
+
+      expect(fetchMock).not.toHaveBeenCalled()
+    })
+
+    it('returns request-build-failed when a formatter cannot handle the resolved value', () => {
+      const config: RuntimeConfig = {
+        ...runtimeConfig,
+        api: {
+          badDate: {
+            method: 'GET',
+            endpoint: '/x/{{queries.name.data | date:"dd/MM/yyyy"}}',
+          },
+        },
+      }
+
+      const result = buildRuntimeApiRequest({
+        config,
+        operationName: 'badDate',
+        state: stateWithFormatterQueries,
+      })
+
+      expect(result).toEqual({
+        status: 'error',
+        error: {
+          code: 'request-build-failed',
+          message: expect.stringContaining('endpoint'),
+        },
+      })
+    })
+
+    it('returns request-build-failed when the formatter argument grammar is invalid', () => {
+      const config: RuntimeConfig = {
+        ...runtimeConfig,
+        api: {
+          badGrammar: {
+            method: 'GET',
+            endpoint: '/x/{{queries.total.data | truncate:}}',
+          },
+        },
+      }
+
+      const result = buildRuntimeApiRequest({
+        config,
+        operationName: 'badGrammar',
+        state: stateWithFormatterQueries,
+      })
+
+      expect(result).toEqual({
+        status: 'error',
+        error: {
+          code: 'request-build-failed',
+          message: expect.stringContaining('endpoint'),
+        },
+      })
     })
   })
 })
