@@ -12,5 +12,5 @@ Sistema central de referencias dinámicas e interpolación que el runtime resuel
 |---|---|
 | [reference-resolution.md](./reference-resolution.md) | Familias `queries.*`, `forms.*`, `params.*`, `item.*`, fronteras por familia y superficies admitidas. |
 | [dynamic-strings.md](./dynamic-strings.md) | Interpolación parcial `{{...}}`, catálogo cerrado de superficies, semántica de placeholders no resolubles. |
-| [visibility.md](./visibility.md) | `node.visibility`: operadores, referencias admitidas, prioridad respecto a `queryStateFeedback`. |
+| [visibility.md](./visibility.md) | `node.visibility`: operadores, referencias admitidas, composición booleana (`and`/`or`), negación de condición, prioridad respecto a `queryStateFeedback`. |
 | [query-state-feedback.md](./query-state-feedback.md) | `node.queryStateFeedback`: estados visibles, `mode: show/hide/fallback`, semántica `idle`. |
