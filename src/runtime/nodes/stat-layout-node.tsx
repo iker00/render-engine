@@ -1,4 +1,4 @@
-import type { StatLayoutNode, StatVariant } from '../../config/runtime-config'
+import type { StatColor, StatLayoutNode, StatVariant } from '../../config/runtime-config'
 import { resolveRuntimeTextReference, type RuntimeIterationContext } from '../runtime-references/runtime-reference-resolver'
 import { useRuntimeState } from '../runtime-state/runtime-state-provider'
 import {
@@ -22,50 +22,50 @@ interface StatNodeProps {
   iterationContext?: RuntimeIterationContext
 }
 
+interface StatVariantClassNames {
+  root: string
+  icon: string
+  label: string
+  value: string
+}
+
+const statVariantClassResolvers: Record<StatVariant, (color: StatColor) => StatVariantClassNames> = {
+  accent: (color) => ({
+    root: getStatAccentRootClassName(color),
+    icon: getStatAccentIconClassName(color),
+    label: getStatAccentLabelClassName(),
+    value: getStatAccentValueClassName(),
+  }),
+  tinted: (color) => ({
+    root: getStatTintedRootClassName(color),
+    icon: getStatTintedIconClassName(color),
+    label: getStatTintedLabelClassName(color),
+    value: getStatTintedValueClassName(color),
+  }),
+  plain: () => ({
+    root: getStatPlainRootClassName(),
+    icon: getStatPlainIconClassName(),
+    label: getStatPlainLabelClassName(),
+    value: getStatPlainValueClassName(),
+  }),
+}
+
 export function StatNode({ node, iterationContext }: StatNodeProps) {
   const state = useRuntimeState()
   const label = resolveRuntimeTextReference(node.props.label, state, 'stat.props.label', { iterationContext })
   const value = resolveRuntimeTextReference(node.props.value, state, 'stat.props.value', { iterationContext })
   const variant: StatVariant = node.props.variant ?? 'accent'
-  const color = node.props.color ?? 'neutral'
+  const color: StatColor = node.props.color ?? 'neutral'
   const icon = node.props.icon
+  const classes = statVariantClassResolvers[variant](color)
 
-  if (variant === 'tinted') {
-    return (
-      <div data-layout-node="stat" className={getStatTintedRootClassName(color)}>
-        <div className="flex items-center gap-3">
-          <IconNode name={icon} className={getStatTintedIconClassName(color)} />
-          <div>
-            <p className={getStatTintedLabelClassName(color)}>{label}</p>
-            <p className={getStatTintedValueClassName(color)}>{value}</p>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  if (variant === 'plain') {
-    return (
-      <div data-layout-node="stat" className={getStatPlainRootClassName()}>
-        <div className="flex items-center gap-3">
-          <IconNode name={icon} className={getStatPlainIconClassName()} />
-          <div>
-            <p className={getStatPlainLabelClassName()}>{label}</p>
-            <p className={getStatPlainValueClassName()}>{value}</p>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  // accent (default)
   return (
-    <div data-layout-node="stat" className={getStatAccentRootClassName(color)}>
+    <div data-layout-node="stat" className={classes.root}>
       <div className="flex items-center gap-3">
-        <IconNode name={icon} className={getStatAccentIconClassName(color)} />
+        <IconNode name={icon} className={classes.icon} />
         <div>
-          <p className={getStatAccentLabelClassName()}>{label}</p>
-          <p className={getStatAccentValueClassName()}>{value}</p>
+          <p className={classes.label}>{label}</p>
+          <p className={classes.value}>{value}</p>
         </div>
       </div>
     </div>

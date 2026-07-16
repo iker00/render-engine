@@ -1,0 +1,33 @@
+phase: complete
+risk_level: medium
+requires_design: false
+blocked_by: []
+artifacts:
+  spec: ready
+  design: not_required
+  tasks: ready
+  notes: optional
+implementation:
+  ready: true
+  completed_task_ids:
+    - 0099-T1
+    - 0099-T2
+    - 0099-T3
+    - 0099-T4
+    - 0099-T5
+    - 0099-T6
+    - 0099-T7
+    - 0099-T8
+  in_progress_task_id: null
+validation:
+  tests_green: true
+  coverage_gate_passed: true
+  notes: >-
+    Suites tocadas por T2–T8 pasan. 10 fallos preexistentes ajenos a la feature 0099
+    (1 en src/tests/app/app-shell.test.tsx, 9 en src/tests/dev-runtime/*-bundle.test.ts
+    que requieren dist/); verificados sobre la base sin cambios: ya fallaban antes del
+    refactor y no dependen de esta feature.
+documentation:
+  ready: true
+  done: true
+feature_status: completed

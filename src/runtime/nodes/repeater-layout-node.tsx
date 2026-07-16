@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import type { Dispatch, SetStateAction } from 'react'
 import type {
   LayoutNode,
   RepeaterLayoutNode,
@@ -11,13 +10,13 @@ import { useRuntimeLayoutContext } from '../runtime-layout-context'
 import {
   createCollectionPaginationModel,
   createCollectionScrollWindow,
-  createNumberedPaginationWindow,
 } from '../runtime-collection-pagination'
 import {
   getRepeaterPaginationButtonClassName,
   getRepeaterPaginationControlsClassName,
   getRepeaterPaginationCurrentButtonClassName,
 } from '../runtime-node-styling'
+import { CollectionPaginationControls } from './collection-pagination-controls'
 import type { RuntimeIterationContext } from '../runtime-references/runtime-reference-resolver'
 import { resolveRuntimeReference } from '../runtime-references/runtime-reference-resolver'
 import { useRuntimeState, useRuntimeStateActions } from '../runtime-state/runtime-state-provider'
@@ -116,17 +115,20 @@ function RepeaterNodeContent({
 
         return <LayoutRenderer key={iteration.key} nodes={node.props.template} iterationContext={iterationContext} />
       })}
-      {paginationPage && paginationPage.totalPages > 1
-        ? renderPaginationControls({
-            variant: paginationControlsVariant,
-            currentPage: paginationPage.currentPage,
-            totalPages: paginationPage.totalPages,
-            canGoPrevious: paginationPage.canGoPrevious,
-            canGoNext: paginationPage.canGoNext,
-            parentGridColumns,
-            setActivePage,
-          })
-        : null}
+      {paginationPage && paginationPage.totalPages > 1 ? (
+        <CollectionPaginationControls
+          variant={paginationControlsVariant}
+          currentPage={paginationPage.currentPage}
+          totalPages={paginationPage.totalPages}
+          canGoPrevious={paginationPage.canGoPrevious}
+          canGoNext={paginationPage.canGoNext}
+          setActivePage={setActivePage}
+          dataLayoutNode="repeater-pagination"
+          containerClassName={() => getRepeaterPaginationControlsClassName(parentGridColumns)}
+          buttonClassName={getRepeaterPaginationButtonClassName}
+          currentButtonClassName={getRepeaterPaginationCurrentButtonClassName}
+        />
+      ) : null}
       {scrollWindow?.canShowMore && pageSize !== undefined ? (
         <RepeaterScrollControls
           pageSize={pageSize}
@@ -135,99 +137,6 @@ function RepeaterNodeContent({
         />
       ) : null}
     </>
-  )
-}
-
-interface RepeaterPaginationControlsProps {
-  variant: RuntimeCollectionPaginationControlsVariant
-  currentPage: number
-  totalPages: number
-  canGoPrevious: boolean
-  canGoNext: boolean
-  parentGridColumns?: RuntimeResponsiveLayoutValue | null
-  setActivePage: Dispatch<SetStateAction<number>>
-}
-
-function renderPaginationControls({
-  variant,
-  currentPage,
-  totalPages,
-  canGoPrevious,
-  canGoNext,
-  parentGridColumns,
-  setActivePage,
-}: RepeaterPaginationControlsProps) {
-  if (variant === 'numbered') {
-    const pageWindow = createNumberedPaginationWindow({ currentPage, totalPages })
-
-    return (
-      <div className={getRepeaterPaginationControlsClassName(parentGridColumns)} data-layout-node="repeater-pagination">
-        <button
-          type="button"
-          className={getRepeaterPaginationButtonClassName()}
-          disabled={!canGoPrevious}
-          onClick={() => setActivePage(1)}
-        >
-          Primera
-        </button>
-        <button
-          type="button"
-          className={getRepeaterPaginationButtonClassName()}
-          disabled={!canGoPrevious}
-          onClick={() => setActivePage((page) => Math.max(1, page - 1))}
-        >
-          Anterior
-        </button>
-        {pageWindow.map((page) => (
-          <button
-            key={page}
-            type="button"
-            className={page === currentPage ? getRepeaterPaginationCurrentButtonClassName() : getRepeaterPaginationButtonClassName()}
-            aria-current={page === currentPage ? 'page' : undefined}
-            onClick={() => setActivePage(page)}
-          >
-            {page}
-          </button>
-        ))}
-        <button
-          type="button"
-          className={getRepeaterPaginationButtonClassName()}
-          disabled={!canGoNext}
-          onClick={() => setActivePage((page) => Math.min(totalPages, page + 1))}
-        >
-          Siguiente
-        </button>
-        <button
-          type="button"
-          className={getRepeaterPaginationButtonClassName()}
-          disabled={!canGoNext}
-          onClick={() => setActivePage(totalPages)}
-        >
-          Última
-        </button>
-      </div>
-    )
-  }
-
-  return (
-    <div className={getRepeaterPaginationControlsClassName(parentGridColumns)} data-layout-node="repeater-pagination">
-      <button
-        type="button"
-        className={getRepeaterPaginationButtonClassName()}
-        disabled={!canGoPrevious}
-        onClick={() => setActivePage((page) => Math.max(1, page - 1))}
-      >
-        Anterior
-      </button>
-      <button
-        type="button"
-        className={getRepeaterPaginationButtonClassName()}
-        disabled={!canGoNext}
-        onClick={() => setActivePage((page) => Math.min(totalPages, page + 1))}
-      >
-        Siguiente
-      </button>
-    </div>
   )
 }
 

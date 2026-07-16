@@ -1,4 +1,3 @@
-import { createElement } from 'react'
 import type { HeadingLayoutNode } from '../../config/runtime-config'
 import type { RuntimeIterationContext } from '../runtime-references/runtime-reference-resolver'
 import { useRuntimeState } from '../runtime-state/runtime-state-provider'
@@ -14,13 +13,11 @@ interface HeadingNodeProps {
 export function HeadingNode({ node, iterationContext }: HeadingNodeProps) {
   const state = useRuntimeState()
   const text = resolveRuntimeTextReference(node.props.text, state, 'heading.props.text', { iterationContext })
-  return createElement(
-    getHeadingTag(node.props.level),
-    {
-      'data-layout-node': 'heading',
-      className: getHeadingNodeClassName(node.props.level),
-    },
-    <IconNode name={node.props.icon} className="size-[1em] shrink-0 inline-block align-middle mr-2" />,
-    text,
+  const Tag = getHeadingTag(node.props.level)
+  return (
+    <Tag data-layout-node="heading" className={getHeadingNodeClassName(node.props.level)}>
+      <IconNode name={node.props.icon} className="size-[1em] shrink-0 inline-block align-middle mr-2" />
+      {text}
+    </Tag>
   )
 }

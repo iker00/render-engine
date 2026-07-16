@@ -1,4 +1,4 @@
-import { createElement, type ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import type { ContainerLayoutNode } from '../../config/runtime-config'
 import { useOptionalFormContext } from '../form-context'
 import { RuntimeLayoutContextProvider } from '../runtime-layout-context'
@@ -26,19 +26,15 @@ export function ContainerNode({ node, children }: ContainerLayoutNodeViewProps) 
     }),
   })
 
-  return createElement(
-    'section',
-    {
-      'data-layout-node': 'container',
-      className: styling.className,
-      style: styling.style,
-    },
-    <RuntimeLayoutContextProvider
-      value={{
-        parentGridColumns: node.props?.columns ?? null,
-      }}
-    >
-      {children}
-    </RuntimeLayoutContextProvider>,
+  return (
+    <section data-layout-node="container" className={styling.className} style={styling.style}>
+      <RuntimeLayoutContextProvider
+        value={{
+          parentGridColumns: node.props?.columns ?? null,
+        }}
+      >
+        {children}
+      </RuntimeLayoutContextProvider>
+    </section>
   )
 }
