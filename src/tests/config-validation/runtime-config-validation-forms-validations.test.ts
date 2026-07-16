@@ -2203,4 +2203,61 @@ describe('validateRuntimeConfig', () => {
       },
     })
   })
+
+  // T-3: semantic validation of composed groups in form.validations.*.when
+  describe('validations when semantics — composed groups', () => {
+    it('accepts required with when as a valid group of one simple condition', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithFormLayout({
+          children: [
+            {
+              type: 'input',
+              props: {
+                fieldId: 'name',
+                label: 'Name',
+                validations: {
+                  required: {
+                    value: true,
+                    when: {
+                      operator: 'and',
+                      conditions: [{ reference: 'forms.user-form.check', operator: 'isTruthy' }],
+                    },
+                  },
+                },
+              },
+            },
+          ],
+        }),
+      )
+      expect(result.status).toBe('ready')
+    })
+
+    it('rejects required with when as a group whose interior condition has an invalid reference (path validations.required.when.conditions[0].reference)', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithFormLayout({
+          children: [
+            {
+              type: 'input',
+              props: {
+                fieldId: 'name',
+                label: 'Name',
+                validations: {
+                  required: {
+                    value: true,
+                    when: {
+                      operator: 'or',
+                      conditions: [{ reference: 'invalid.ref', operator: 'equals', value: 'a' }],
+                    },
+                  },
+                },
+              },
+            },
+          ],
+        }),
+      )
+      expect(result.status).toBe('error')
+      if (result.status !== 'error') throw new Error('Expected error')
+      expect(result.error.message).toContain('validations.required.when.conditions[0].reference')
+    })
+  })
 })

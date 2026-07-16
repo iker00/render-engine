@@ -2849,6 +2849,80 @@ describe('validateRuntimeConfig', () => {
     expect(result.status).toBe('ready')
   })
 
+  // T-3: semantic validation of composed groups in executeOperations[*].when
+  describe('button executeOperations when semantics — composed groups', () => {
+    it('accepts button executeOperations entry with a valid group of two conditions', () => {
+      const result = validateRuntimeConfig({
+        api: {},
+        pages: [
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'button',
+                props: {
+                  label: 'Run',
+                  action: {
+                    type: 'executeOperations',
+                    operations: [
+                      {
+                        operationName: 'op1',
+                        when: {
+                          operator: 'and',
+                          conditions: [
+                            { reference: 'params.id', operator: 'isTruthy' },
+                            { reference: 'queries.q.data.flag', operator: 'isTruthy' },
+                          ],
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            ],
+          },
+        ],
+        initialPage: 'home',
+      })
+      expect(result.status).toBe('ready')
+    })
+
+    it('rejects button executeOperations entry with a group whose interior condition has an invalid reference (path .operations[0].when.conditions[0].reference)', () => {
+      const result = validateRuntimeConfig({
+        api: {},
+        pages: [
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'button',
+                props: {
+                  label: 'Run',
+                  action: {
+                    type: 'executeOperations',
+                    operations: [
+                      {
+                        operationName: 'op1',
+                        when: {
+                          operator: 'or',
+                          conditions: [{ reference: 'navigation.currentPage', operator: 'isTruthy' }],
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            ],
+          },
+        ],
+        initialPage: 'home',
+      })
+      expect(result.status).toBe('error')
+      if (result.status !== 'error') throw new Error('Expected error')
+      expect(result.error.message).toContain('layout[0].props.action.operations[0].when.conditions[0].reference')
+    })
+  })
+
   describe('tokens.* gating in button actions', () => {
     it('accepts tokens.* in button.props.action.headers for executeOperation', () => {
       const result = validateRuntimeConfig({
