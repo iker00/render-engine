@@ -886,4 +886,258 @@ describe('Runtime layout visibility', () => {
       ).toBe(false)
     })
   })
+
+  describe('boolean composition and negate', () => {
+    it('and group with two matching simple conditions is a match', () => {
+      expect(
+        matchesVisibilityRule(
+          {
+            operator: 'and',
+            conditions: [
+              { reference: 'forms.profileForm.role', operator: 'equals', value: 'admin' },
+              { reference: 'forms.profileForm.visits', operator: 'greaterThan', value: 2 },
+            ],
+          },
+          runtimeState,
+        ),
+      ).toBe(true)
+    })
+
+    it('and group with one non-matching simple condition is not a match', () => {
+      expect(
+        matchesVisibilityRule(
+          {
+            operator: 'and',
+            conditions: [
+              { reference: 'forms.profileForm.role', operator: 'equals', value: 'admin' },
+              { reference: 'forms.profileForm.visits', operator: 'greaterThan', value: 10 },
+            ],
+          },
+          runtimeState,
+        ),
+      ).toBe(false)
+    })
+
+    it('or group with at least one matching simple condition is a match', () => {
+      expect(
+        matchesVisibilityRule(
+          {
+            operator: 'or',
+            conditions: [
+              { reference: 'forms.profileForm.role', operator: 'equals', value: 'editor' },
+              { reference: 'forms.profileForm.visits', operator: 'greaterThan', value: 2 },
+            ],
+          },
+          runtimeState,
+        ),
+      ).toBe(true)
+    })
+
+    it('or group with no matching simple condition is not a match', () => {
+      expect(
+        matchesVisibilityRule(
+          {
+            operator: 'or',
+            conditions: [
+              { reference: 'forms.profileForm.role', operator: 'equals', value: 'editor' },
+              { reference: 'forms.profileForm.visits', operator: 'greaterThan', value: 10 },
+            ],
+          },
+          runtimeState,
+        ),
+      ).toBe(false)
+    })
+
+    it('and group with a single condition behaves like the standalone condition', () => {
+      expect(
+        matchesVisibilityRule(
+          {
+            operator: 'and',
+            conditions: [{ reference: 'forms.profileForm.role', operator: 'equals', value: 'admin' }],
+          },
+          runtimeState,
+        ),
+      ).toBe(true)
+
+      expect(
+        matchesVisibilityRule(
+          {
+            operator: 'and',
+            conditions: [{ reference: 'forms.profileForm.role', operator: 'equals', value: 'editor' }],
+          },
+          runtimeState,
+        ),
+      ).toBe(false)
+    })
+
+    it('or group with a single condition behaves like the standalone condition', () => {
+      expect(
+        matchesVisibilityRule(
+          {
+            operator: 'or',
+            conditions: [{ reference: 'forms.profileForm.role', operator: 'equals', value: 'admin' }],
+          },
+          runtimeState,
+        ),
+      ).toBe(true)
+
+      expect(
+        matchesVisibilityRule(
+          {
+            operator: 'or',
+            conditions: [{ reference: 'forms.profileForm.role', operator: 'equals', value: 'editor' }],
+          },
+          runtimeState,
+        ),
+      ).toBe(false)
+    })
+
+    it('negate: true on equals inverts the match', () => {
+      expect(
+        matchesVisibilityRule(
+          {
+            reference: 'forms.profileForm.role',
+            operator: 'equals',
+            value: 'admin',
+            negate: true,
+          },
+          runtimeState,
+        ),
+      ).toBe(false)
+
+      expect(
+        matchesVisibilityRule(
+          {
+            reference: 'forms.profileForm.role',
+            operator: 'equals',
+            value: 'editor',
+            negate: true,
+          },
+          runtimeState,
+        ),
+      ).toBe(true)
+    })
+
+    it('negate: true on isTruthy with missing reference flips from no match to match', () => {
+      expect(
+        matchesVisibilityRule(
+          {
+            reference: 'forms.profileForm.missingField',
+            operator: 'isTruthy',
+            negate: true,
+          },
+          runtimeState,
+        ),
+      ).toBe(true)
+    })
+
+    it('negate: true on isFalsy with missing reference flips from match to no match', () => {
+      expect(
+        matchesVisibilityRule(
+          {
+            reference: 'forms.profileForm.missingField',
+            operator: 'isFalsy',
+            negate: true,
+          },
+          runtimeState,
+        ),
+      ).toBe(false)
+    })
+
+    it('negate: true on greaterThan with non-comparable string value flips from no match to match', () => {
+      expect(
+        matchesVisibilityRule(
+          {
+            reference: 'forms.profileForm.role',
+            operator: 'greaterThan',
+            value: 5,
+            negate: true,
+          },
+          runtimeState,
+        ),
+      ).toBe(true)
+    })
+
+    it('negate: true on lessThan with non-comparable object or null value flips from no match to match', () => {
+      expect(
+        matchesVisibilityRule(
+          {
+            reference: 'queries.searchUsers',
+            operator: 'lessThan',
+            value: 100,
+            negate: true,
+          },
+          runtimeState,
+        ),
+      ).toBe(true)
+
+      expect(
+        matchesVisibilityRule(
+          {
+            reference: 'queries.pendingUsers.error',
+            operator: 'lessThan',
+            value: 100,
+            negate: true,
+          },
+          runtimeState,
+        ),
+      ).toBe(true)
+    })
+
+    it('and group combines individual results (with negate already applied) using AND', () => {
+      expect(
+        matchesVisibilityRule(
+          {
+            operator: 'and',
+            conditions: [
+              { reference: 'forms.profileForm.role', operator: 'equals', value: 'editor', negate: true },
+              { reference: 'forms.profileForm.visits', operator: 'greaterThan', value: 2 },
+            ],
+          },
+          runtimeState,
+        ),
+      ).toBe(true)
+
+      expect(
+        matchesVisibilityRule(
+          {
+            operator: 'and',
+            conditions: [
+              { reference: 'forms.profileForm.role', operator: 'equals', value: 'admin', negate: true },
+              { reference: 'forms.profileForm.visits', operator: 'greaterThan', value: 2 },
+            ],
+          },
+          runtimeState,
+        ),
+      ).toBe(false)
+    })
+
+    it('or group combines individual results (with negate already applied) using OR', () => {
+      expect(
+        matchesVisibilityRule(
+          {
+            operator: 'or',
+            conditions: [
+              { reference: 'forms.profileForm.role', operator: 'equals', value: 'admin', negate: true },
+              { reference: 'forms.profileForm.visits', operator: 'greaterThan', value: 2 },
+            ],
+          },
+          runtimeState,
+        ),
+      ).toBe(true)
+
+      expect(
+        matchesVisibilityRule(
+          {
+            operator: 'or',
+            conditions: [
+              { reference: 'forms.profileForm.role', operator: 'equals', value: 'admin', negate: true },
+              { reference: 'forms.profileForm.visits', operator: 'greaterThan', value: 10 },
+            ],
+          },
+          runtimeState,
+        ),
+      ).toBe(false)
+    })
+  })
 })

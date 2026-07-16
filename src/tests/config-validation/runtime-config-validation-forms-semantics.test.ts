@@ -2643,6 +2643,119 @@ describe('validateRuntimeConfig', () => {
     expect(result.error.message).toContain('\n  → form[0]')
     expect(result.error.message).toContain('Node: {"type":"form"}')
   })
+
+  // T-3: semantic validation of composed groups in submitAction.onSuccess[*].when (allowItem: true)
+  describe('submitAction.onSuccess when semantics — composed groups', () => {
+    it('accepts submitAction.onSuccess entry with a valid group of two conditions (params.* + queries.*)', () => {
+      const result = validateRuntimeConfig({
+        api: {
+          submitUserForm: { method: 'POST', endpoint: '/api/forms' },
+        },
+        pages: [
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'form',
+                id: 'user-form',
+                submitAction: {
+                  type: 'executeOperation',
+                  operationName: 'submitUserForm',
+                  onSuccess: [
+                    {
+                      type: 'goBack',
+                      when: {
+                        operator: 'and',
+                        conditions: [
+                          { reference: 'params.mode', operator: 'equals', value: 'edit' },
+                          { reference: 'queries.submitUserForm.data.flag', operator: 'isTruthy' },
+                        ],
+                      },
+                    },
+                  ],
+                },
+                children: [],
+              },
+            ],
+          },
+        ],
+        initialPage: 'home',
+      })
+      expect(result.status).toBe('ready')
+    })
+
+    it('accepts submitAction.onSuccess entry with a group containing an item.* reference (allowItem: true)', () => {
+      const result = validateRuntimeConfig({
+        api: {
+          submitUserForm: { method: 'POST', endpoint: '/api/forms' },
+        },
+        pages: [
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'form',
+                id: 'user-form',
+                submitAction: {
+                  type: 'executeOperation',
+                  operationName: 'submitUserForm',
+                  onSuccess: [
+                    {
+                      type: 'goBack',
+                      when: {
+                        operator: 'or',
+                        conditions: [{ reference: 'item.foo', operator: 'isTruthy' }],
+                      },
+                    },
+                  ],
+                },
+                children: [],
+              },
+            ],
+          },
+        ],
+        initialPage: 'home',
+      })
+      expect(result.status).toBe('ready')
+    })
+
+    it('rejects submitAction.onSuccess entry with a group whose interior equals condition is missing value (path submitAction.onSuccess[0].when.conditions[0].value)', () => {
+      const result = validateRuntimeConfig({
+        api: {
+          submitUserForm: { method: 'POST', endpoint: '/api/forms' },
+        },
+        pages: [
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'form',
+                id: 'user-form',
+                submitAction: {
+                  type: 'executeOperation',
+                  operationName: 'submitUserForm',
+                  onSuccess: [
+                    {
+                      type: 'goBack',
+                      when: {
+                        operator: 'and',
+                        conditions: [{ reference: 'params.mode', operator: 'equals' }],
+                      },
+                    },
+                  ],
+                },
+                children: [],
+              },
+            ],
+          },
+        ],
+        initialPage: 'home',
+      })
+      expect(result.status).toBe('error')
+      if (result.status !== 'error') throw new Error('Expected error')
+      expect(result.error.message).toContain('submitAction.onSuccess[0].when.conditions[0].value')
+    })
+  })
 })
 
 // ─── Second-pass breadcrumb enrichment tests ─────────────────────────────────

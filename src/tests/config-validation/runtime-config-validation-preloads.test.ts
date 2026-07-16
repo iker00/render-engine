@@ -909,4 +909,108 @@ describe('validateRuntimeConfig', () => {
       }
     })
   })
+
+  // T-3: semantic validation of composed groups in preloads[].when (allowItem: false)
+  describe('preloads when semantics — composed groups', () => {
+    it('accepts preload with when as a group of two valid conditions (params.* + queries.*)', () => {
+      const result = validateRuntimeConfig({
+        api: {},
+        pages: [
+          {
+            id: 'home',
+            preloads: [
+              {
+                searchUsers: {},
+                when: {
+                  operator: 'and',
+                  conditions: [
+                    { reference: 'params.userId', operator: 'isTruthy' },
+                    { reference: 'queries.searchUsers.data.flag', operator: 'isTruthy' },
+                  ],
+                },
+              },
+            ],
+            layout: [],
+          },
+        ],
+        initialPage: 'home',
+      })
+      expect(result.status).toBe('ready')
+    })
+
+    it('rejects preload with when as a group whose interior condition has an invalid reference (path pages[0].preloads[0].when.conditions[0].reference)', () => {
+      const result = validateRuntimeConfig({
+        api: {},
+        pages: [
+          {
+            id: 'home',
+            preloads: [
+              {
+                searchUsers: {},
+                when: {
+                  operator: 'and',
+                  conditions: [{ reference: 'navigation.currentPage', operator: 'isTruthy' }],
+                },
+              },
+            ],
+            layout: [],
+          },
+        ],
+        initialPage: 'home',
+      })
+      expect(result.status).toBe('error')
+      if (result.status !== 'error') throw new Error('Expected error')
+      expect(result.error.message).toContain('pages[0].preloads[0].when.conditions[0].reference')
+    })
+
+    it('rejects preload with when as a group whose interior condition references item (allowItem: false)', () => {
+      const result = validateRuntimeConfig({
+        api: {},
+        pages: [
+          {
+            id: 'home',
+            preloads: [
+              {
+                searchUsers: {},
+                when: {
+                  operator: 'and',
+                  conditions: [{ reference: 'item', operator: 'isTruthy' }],
+                },
+              },
+            ],
+            layout: [],
+          },
+        ],
+        initialPage: 'home',
+      })
+      expect(result.status).toBe('error')
+      if (result.status !== 'error') throw new Error('Expected error')
+      expect(result.error.message).toContain('pages[0].preloads[0].when.conditions[0].reference')
+    })
+
+    it('rejects preload with when as a group whose interior condition references item.foo (allowItem: false)', () => {
+      const result = validateRuntimeConfig({
+        api: {},
+        pages: [
+          {
+            id: 'home',
+            preloads: [
+              {
+                searchUsers: {},
+                when: {
+                  operator: 'or',
+                  conditions: [{ reference: 'item.foo', operator: 'isTruthy' }],
+                },
+              },
+            ],
+            layout: [],
+          },
+        ],
+        initialPage: 'home',
+      })
+      expect(result.status).toBe('error')
+      if (result.status !== 'error') throw new Error('Expected error')
+      expect(result.error.message).toContain('pages[0].preloads[0].when.conditions[0].reference')
+    })
+  })
 })

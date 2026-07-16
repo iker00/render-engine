@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { validateRuntimeConfig } from '../../config/runtime-config'
+import { whenConditionSchema } from '../../config/runtime-config-zod'
 import {
   createConfigWithPages,
   createConfigWithLayout,
@@ -857,6 +858,462 @@ describe('validateRuntimeConfig', () => {
       if (result.status === 'error') {
         expect(result.error.message).toContain('tokens.* references are not supported')
       }
+    })
+  })
+
+  describe('visibility shape — composed groups', () => {
+    it('accepts a group with operator "and" and a single simple condition', () => {
+      const result = whenConditionSchema.safeParse({
+        operator: 'and',
+        conditions: [{ reference: 'params.mode', operator: 'isTruthy' }],
+      })
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data).toEqual({
+          operator: 'and',
+          conditions: [{ reference: 'params.mode', operator: 'isTruthy' }],
+        })
+      }
+    })
+
+    it('accepts a group with operator "or" and two simple conditions', () => {
+      const result = whenConditionSchema.safeParse({
+        operator: 'or',
+        conditions: [
+          { reference: 'params.mode', operator: 'equals', value: 'edit' },
+          { reference: 'forms.profile.role', operator: 'isTruthy' },
+        ],
+      })
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data).toEqual({
+          operator: 'or',
+          conditions: [
+            { reference: 'params.mode', operator: 'equals', value: 'edit' },
+            { reference: 'forms.profile.role', operator: 'isTruthy' },
+          ],
+        })
+      }
+    })
+
+    it('accepts a simple condition with negate: true and preserves it after parsing', () => {
+      const result = whenConditionSchema.safeParse({
+        reference: 'params.mode',
+        operator: 'isTruthy',
+        negate: true,
+      })
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data).toEqual({
+          reference: 'params.mode',
+          operator: 'isTruthy',
+          negate: true,
+        })
+      }
+    })
+
+    it('accepts a simple condition with negate: false and preserves it after parsing', () => {
+      const result = whenConditionSchema.safeParse({
+        reference: 'params.mode',
+        operator: 'isTruthy',
+        negate: false,
+      })
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data).toEqual({
+          reference: 'params.mode',
+          operator: 'isTruthy',
+          negate: false,
+        })
+      }
+    })
+
+    it('rejects a simple condition with non-boolean negate (string) at visibility.negate', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithLayout([
+          {
+            type: 'heading',
+            visibility: { reference: 'params.mode', operator: 'isTruthy', negate: 'yes' },
+            props: { text: 'Welcome', level: 1 },
+          },
+        ]),
+      )
+      expect(result.status).toBe('error')
+      if (result.status === 'error') {
+        expect(result.error.message).toContain('layout[0].visibility.negate')
+      }
+    })
+
+    it('rejects a simple condition with non-boolean negate (number) at visibility.negate', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithLayout([
+          {
+            type: 'heading',
+            visibility: { reference: 'params.mode', operator: 'isTruthy', negate: 1 },
+            props: { text: 'Welcome', level: 1 },
+          },
+        ]),
+      )
+      expect(result.status).toBe('error')
+      if (result.status === 'error') {
+        expect(result.error.message).toContain('layout[0].visibility.negate')
+      }
+    })
+
+    it('rejects a group with an empty conditions array at visibility.conditions', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithLayout([
+          {
+            type: 'heading',
+            visibility: { operator: 'and', conditions: [] },
+            props: { text: 'Welcome', level: 1 },
+          },
+        ]),
+      )
+      expect(result.status).toBe('error')
+      if (result.status === 'error') {
+        expect(result.error.message).toContain('layout[0].visibility.conditions')
+      }
+    })
+
+    it('rejects a group with operator outside and|or and outside the simple catalog at visibility.operator', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithLayout([
+          {
+            type: 'heading',
+            visibility: {
+              operator: 'xyz',
+              conditions: [{ reference: 'params.mode', operator: 'isTruthy' }],
+            },
+            props: { text: 'Welcome', level: 1 },
+          },
+        ]),
+      )
+      expect(result.status).toBe('error')
+      if (result.status === 'error') {
+        expect(result.error.message).toContain('layout[0].visibility.operator')
+      }
+    })
+
+    it('rejects a group without operator at visibility.operator', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithLayout([
+          {
+            type: 'heading',
+            visibility: {
+              conditions: [{ reference: 'params.mode', operator: 'isTruthy' }],
+            },
+            props: { text: 'Welcome', level: 1 },
+          },
+        ]),
+      )
+      expect(result.status).toBe('error')
+      if (result.status === 'error') {
+        expect(result.error.message).toContain('layout[0].visibility.operator')
+      }
+    })
+
+    it('rejects a nested group inside conditions at visibility.conditions[0]', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithLayout([
+          {
+            type: 'heading',
+            visibility: {
+              operator: 'and',
+              conditions: [
+                {
+                  operator: 'or',
+                  conditions: [{ reference: 'params.mode', operator: 'isTruthy' }],
+                },
+              ],
+            },
+            props: { text: 'Welcome', level: 1 },
+          },
+        ]),
+      )
+      expect(result.status).toBe('error')
+      if (result.status === 'error') {
+        expect(result.error.message).toContain('layout[0].visibility.conditions[0]')
+      }
+    })
+
+    it('rejects a condition inside conditions with operator outside the simple catalog at visibility.conditions[0].operator', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithLayout([
+          {
+            type: 'heading',
+            visibility: {
+              operator: 'and',
+              conditions: [{ reference: 'params.mode', operator: 'contains', value: 'x' }],
+            },
+            props: { text: 'Welcome', level: 1 },
+          },
+        ]),
+      )
+      expect(result.status).toBe('error')
+      if (result.status === 'error') {
+        expect(result.error.message).toContain('layout[0].visibility.conditions[0].operator')
+      }
+    })
+
+    it('rejects a condition inside conditions with missing reference at visibility.conditions[0].reference', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithLayout([
+          {
+            type: 'heading',
+            visibility: {
+              operator: 'and',
+              conditions: [{ operator: 'isTruthy' }],
+            },
+            props: { text: 'Welcome', level: 1 },
+          },
+        ]),
+      )
+      expect(result.status).toBe('error')
+      if (result.status === 'error') {
+        expect(result.error.message).toContain('layout[0].visibility.conditions[0].reference')
+      }
+    })
+
+    it('rejects a condition inside conditions with empty reference at visibility.conditions[0].reference', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithLayout([
+          {
+            type: 'heading',
+            visibility: {
+              operator: 'and',
+              conditions: [{ reference: '', operator: 'isTruthy' }],
+            },
+            props: { text: 'Welcome', level: 1 },
+          },
+        ]),
+      )
+      expect(result.status).toBe('error')
+      if (result.status === 'error') {
+        expect(result.error.message).toContain('layout[0].visibility.conditions[0].reference')
+      }
+    })
+
+    it('rejects a condition inside conditions with non-boolean negate at visibility.conditions[0].negate', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithLayout([
+          {
+            type: 'heading',
+            visibility: {
+              operator: 'and',
+              conditions: [
+                { reference: 'params.mode', operator: 'isTruthy', negate: 'yes' },
+              ],
+            },
+            props: { text: 'Welcome', level: 1 },
+          },
+        ]),
+      )
+      expect(result.status).toBe('error')
+      if (result.status === 'error') {
+        expect(result.error.message).toContain('layout[0].visibility.conditions[0].negate')
+      }
+    })
+
+    it('keeps a plain simple condition without negate or conditions accepted (retrocompat)', () => {
+      const result = whenConditionSchema.safeParse({
+        reference: 'forms.profile.role',
+        operator: 'equals',
+        value: 'admin',
+      })
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data).toEqual({
+          reference: 'forms.profile.role',
+          operator: 'equals',
+          value: 'admin',
+        })
+      }
+    })
+  })
+
+  // T-3: semantic validation of composed groups in node.visibility
+  describe('visibility semantics — composed groups', () => {
+    it('rejects a group with an internal condition whose reference is unsupported (foo.bar) with path visibility.conditions[0].reference', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithLayout([
+          {
+            type: 'heading',
+            visibility: {
+              operator: 'and',
+              conditions: [{ reference: 'foo.bar', operator: 'isTruthy' }],
+            },
+            props: { text: 'Welcome', level: 1 },
+          },
+        ]),
+      )
+      expect(result.status).toBe('error')
+      if (result.status !== 'error') throw new Error('Expected error')
+      expect(result.error.message).toContain('layout[0].visibility.conditions[0].reference')
+    })
+
+    it('rejects a group with an internal condition whose reference is bare "params" with path visibility.conditions[0].reference', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithLayout([
+          {
+            type: 'heading',
+            visibility: {
+              operator: 'and',
+              conditions: [{ reference: 'params', operator: 'isTruthy' }],
+            },
+            props: { text: 'Welcome', level: 1 },
+          },
+        ]),
+      )
+      expect(result.status).toBe('error')
+      if (result.status !== 'error') throw new Error('Expected error')
+      expect(result.error.message).toContain('layout[0].visibility.conditions[0].reference')
+    })
+
+    it('rejects a group with an internal condition whose reference is params.user.id with path visibility.conditions[0].reference', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithLayout([
+          {
+            type: 'heading',
+            visibility: {
+              operator: 'or',
+              conditions: [{ reference: 'params.user.id', operator: 'isTruthy' }],
+            },
+            props: { text: 'Welcome', level: 1 },
+          },
+        ]),
+      )
+      expect(result.status).toBe('error')
+      if (result.status !== 'error') throw new Error('Expected error')
+      expect(result.error.message).toContain('layout[0].visibility.conditions[0].reference')
+    })
+
+    it('rejects a group with an internal equals condition missing value at visibility.conditions[0].value', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithLayout([
+          {
+            type: 'heading',
+            visibility: {
+              operator: 'and',
+              conditions: [{ reference: 'params.mode', operator: 'equals' }],
+            },
+            props: { text: 'Welcome', level: 1 },
+          },
+        ]),
+      )
+      expect(result.status).toBe('error')
+      if (result.status !== 'error') throw new Error('Expected error')
+      expect(result.error.message).toContain('layout[0].visibility.conditions[0].value')
+    })
+
+    it('rejects a group with an internal equals condition whose value is a non-scalar object at visibility.conditions[0].value', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithLayout([
+          {
+            type: 'heading',
+            visibility: {
+              operator: 'and',
+              conditions: [{ reference: 'params.mode', operator: 'equals', value: { role: 'admin' } }],
+            },
+            props: { text: 'Welcome', level: 1 },
+          },
+        ]),
+      )
+      expect(result.status).toBe('error')
+      if (result.status !== 'error') throw new Error('Expected error')
+      expect(result.error.message).toContain('layout[0].visibility.conditions[0].value')
+    })
+
+    it('rejects a group with an internal equals condition whose value is an array at visibility.conditions[0].value', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithLayout([
+          {
+            type: 'heading',
+            visibility: {
+              operator: 'and',
+              conditions: [{ reference: 'params.mode', operator: 'equals', value: ['admin'] }],
+            },
+            props: { text: 'Welcome', level: 1 },
+          },
+        ]),
+      )
+      expect(result.status).toBe('error')
+      if (result.status !== 'error') throw new Error('Expected error')
+      expect(result.error.message).toContain('layout[0].visibility.conditions[0].value')
+    })
+
+    it('rejects a group with an internal greaterThan condition whose value is non-numeric at visibility.conditions[0].value', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithLayout([
+          {
+            type: 'heading',
+            visibility: {
+              operator: 'and',
+              conditions: [{ reference: 'queries.q.data.count', operator: 'greaterThan', value: '10' }],
+            },
+            props: { text: 'Welcome', level: 1 },
+          },
+        ]),
+      )
+      expect(result.status).toBe('error')
+      if (result.status !== 'error') throw new Error('Expected error')
+      expect(result.error.message).toContain('layout[0].visibility.conditions[0].value')
+    })
+
+    it('rejects a group with an internal isTruthy condition that declares a value at visibility.conditions[0].value', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithLayout([
+          {
+            type: 'heading',
+            visibility: {
+              operator: 'and',
+              conditions: [{ reference: 'params.mode', operator: 'isTruthy', value: true }],
+            },
+            props: { text: 'Welcome', level: 1 },
+          },
+        ]),
+      )
+      expect(result.status).toBe('error')
+      if (result.status !== 'error') throw new Error('Expected error')
+      expect(result.error.message).toContain('layout[0].visibility.conditions[0].value')
+    })
+
+    it('rejects a group with an internal condition whose reference is tokens.* at visibility.conditions[0].reference', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithLayout([
+          {
+            type: 'heading',
+            visibility: {
+              operator: 'and',
+              conditions: [{ reference: 'tokens.session.value', operator: 'isTruthy' }],
+            },
+            props: { text: 'Welcome', level: 1 },
+          },
+        ]),
+      )
+      expect(result.status).toBe('error')
+      if (result.status !== 'error') throw new Error('Expected error')
+      expect(result.error.message).toContain('layout[0].visibility.conditions[0].reference')
+      expect(result.error.message).toContain('tokens.* references are not supported')
+    })
+
+    it('accepts a group with two simple conditions using distinct families (params.* + queries.*.data.*)', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithLayout([
+          {
+            type: 'heading',
+            visibility: {
+              operator: 'and',
+              conditions: [
+                { reference: 'params.mode', operator: 'equals', value: 'edit' },
+                { reference: 'queries.searchUsers.data.count', operator: 'greaterThan', value: 0 },
+              ],
+            },
+            props: { text: 'Welcome', level: 1 },
+          },
+        ]),
+      )
+      expect(result.status).toBe('ready')
     })
   })
 })

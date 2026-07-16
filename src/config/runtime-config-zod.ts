@@ -35,6 +35,7 @@ export const tableCellAllowedNodeTypes = ['image', 'list', 'button', 'container'
 export const supportedApiMethods = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'] as const
 export const supportedQueryStateFeedbackStates = ['idle', 'loading', 'error', 'empty', 'success'] as const
 export const supportedVisibilityOperators = ['equals', 'notEquals', 'isTruthy', 'isFalsy', 'greaterThan', 'lessThan'] as const
+export const supportedVisibilityGroupOperators = ['and', 'or'] as const
 export const supportedInputTypes = ['text', 'email', 'password', 'search', 'tel', 'url', 'number', 'date', 'datetime-local', 'time'] as const
 export const supportedContainerAlignValues = ['start', 'center', 'end', 'stretch'] as const
 export const supportedContainerJustifyValues = ['start', 'center', 'end', 'between', 'around', 'evenly'] as const
@@ -160,13 +161,23 @@ const queryStateFeedbackSchema = z
   })
   .strip()
 
-const visibilitySchema = z
+const visibilityConditionSchema = z
   .object({
     reference: nonEmptyStringSchema,
     operator: z.enum(supportedVisibilityOperators),
     value: z.unknown().optional(),
+    negate: z.boolean().optional(),
   })
   .strip()
+
+const visibilityGroupSchema = z
+  .object({
+    operator: z.enum(supportedVisibilityGroupOperators),
+    conditions: z.array(visibilityConditionSchema).min(1),
+  })
+  .strip()
+
+const visibilitySchema = z.discriminatedUnion('operator', [visibilityConditionSchema, visibilityGroupSchema])
 
 export const whenConditionSchema = visibilitySchema
 

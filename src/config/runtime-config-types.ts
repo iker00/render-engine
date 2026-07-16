@@ -75,14 +75,27 @@ export type RuntimeCollectionObjectItem = Record<string, RuntimeCollectionObject
 
 export type QueryStateFeedbackVisibleState = 'idle' | 'loading' | 'error' | 'empty' | 'success'
 export type RuntimeVisibilityOperator = 'equals' | 'notEquals' | 'isTruthy' | 'isFalsy' | 'greaterThan' | 'lessThan'
+export type RuntimeVisibilityGroupOperator = 'and' | 'or'
 
-export interface RuntimeVisibilityConfig {
+export interface RuntimeVisibilityCondition {
   reference: string
   operator: RuntimeVisibilityOperator
   value?: RuntimeConfigValue
+  negate?: boolean
 }
 
+export interface RuntimeVisibilityGroup {
+  operator: RuntimeVisibilityGroupOperator
+  conditions: RuntimeVisibilityCondition[]
+}
+
+export type RuntimeVisibilityConfig = RuntimeVisibilityCondition | RuntimeVisibilityGroup
+
 export type RuntimeWhenCondition = RuntimeVisibilityConfig
+
+export function isVisibilityGroup(config: RuntimeVisibilityConfig): config is RuntimeVisibilityGroup {
+  return 'conditions' in config
+}
 
 export interface QueryStateFeedbackShowRule {
   mode: 'show'
