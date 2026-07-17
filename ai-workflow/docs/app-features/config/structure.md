@@ -43,7 +43,7 @@ Cada elemento de layout usa un shape homogéneo basado en:
 - `props`: opcional según el tipo.
 - `queryStateFeedback`: opcional para condicionar la salida visible del nodo según el estado de una query.
 - `visibility`: opcional para mostrar u ocultar el nodo según un valor ya disponible en `forms.*`, `queries.*` o `item.*` cuando exista contexto de iteración.
-- `children`: opcional, pero solo interpretado en `container` y `form`.
+- `children`: opcional, pero solo interpretado en `container`, `form`, `modal`, `link` y `accordion`. `tabs` no interpreta `children` a nivel de nodo: cada pestaña de `props.items` declara su propia colección de hijos. `repeater` tampoco interpreta `children`: solo admite repetición a través de `props.template`.
 
 Reglas estructurales vigentes:
 - `layout` debe ser siempre un array.

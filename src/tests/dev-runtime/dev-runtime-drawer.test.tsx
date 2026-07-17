@@ -27,6 +27,9 @@ describe('DevRuntimeDrawer', () => {
         onCopy={() => {}}
         pendingChanges={false}
         errors={null}
+        activeTab="json"
+        onTabChange={() => {}}
+        visualContent={<div>visual content</div>}
       >
         <div>editor content</div>
       </DevRuntimeDrawer>,
@@ -46,6 +49,9 @@ describe('DevRuntimeDrawer', () => {
         onCopy={() => {}}
         pendingChanges={false}
         errors={null}
+        activeTab="json"
+        onTabChange={() => {}}
+        visualContent={<div>visual content</div>}
       >
         <div>editor content</div>
       </DevRuntimeDrawer>,
@@ -63,6 +69,9 @@ describe('DevRuntimeDrawer', () => {
         onCopy={() => {}}
         pendingChanges={false}
         errors={null}
+        activeTab="json"
+        onTabChange={() => {}}
+        visualContent={<div>visual content</div>}
       >
         <div data-testid="slot-content">My editor</div>
       </DevRuntimeDrawer>,
@@ -79,6 +88,9 @@ describe('DevRuntimeDrawer', () => {
         onCopy={() => {}}
         pendingChanges={true}
         errors={null}
+        activeTab="json"
+        onTabChange={() => {}}
+        visualContent={<div>visual content</div>}
       >
         <div>editor</div>
       </DevRuntimeDrawer>,
@@ -95,6 +107,9 @@ describe('DevRuntimeDrawer', () => {
         onCopy={() => {}}
         pendingChanges={false}
         errors={null}
+        activeTab="json"
+        onTabChange={() => {}}
+        visualContent={<div>visual content</div>}
       >
         <div>editor</div>
       </DevRuntimeDrawer>,
@@ -111,6 +126,9 @@ describe('DevRuntimeDrawer', () => {
         onCopy={() => {}}
         pendingChanges={false}
         errors={{ code: 'invalid-layout', message: 'Bad layout at index 0', displayMode: 'development-only' }}
+        activeTab="json"
+        onTabChange={() => {}}
+        visualContent={<div>visual content</div>}
       >
         <div>editor</div>
       </DevRuntimeDrawer>,
@@ -129,6 +147,9 @@ describe('DevRuntimeDrawer', () => {
         onCopy={() => {}}
         pendingChanges={false}
         errors={null}
+        activeTab="json"
+        onTabChange={() => {}}
+        visualContent={<div>visual content</div>}
       >
         <div>editor</div>
       </DevRuntimeDrawer>,
@@ -147,6 +168,9 @@ describe('DevRuntimeDrawer', () => {
         onCopy={() => {}}
         pendingChanges={false}
         errors={null}
+        activeTab="json"
+        onTabChange={() => {}}
+        visualContent={<div>visual content</div>}
       >
         <div>editor</div>
       </DevRuntimeDrawer>,
@@ -165,11 +189,82 @@ describe('DevRuntimeDrawer', () => {
         onCopy={onCopy}
         pendingChanges={false}
         errors={null}
+        activeTab="json"
+        onTabChange={() => {}}
+        visualContent={<div>visual content</div>}
       >
         <div>editor</div>
       </DevRuntimeDrawer>,
     )
     fireEvent.click(screen.getByTestId('dev-runtime-copy'))
     expect(onCopy).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('DevRuntimeDrawer Visual/JSON tabs', () => {
+  function renderDrawer(overrides?: {
+    activeTab?: 'visual' | 'json'
+    onTabChange?: (tab: 'visual' | 'json') => void
+    errors?: { code: string; message: string } | null
+  }) {
+    const onTabChange = overrides?.onTabChange ?? vi.fn()
+    const utils = render(
+      <DevRuntimeDrawer
+        open={true}
+        onClose={() => {}}
+        onApply={() => {}}
+        onCopy={() => {}}
+        pendingChanges={false}
+        errors={overrides?.errors ?? null}
+        activeTab={overrides?.activeTab ?? 'json'}
+        onTabChange={onTabChange}
+        visualContent={<div data-testid="visual-slot-content">canvas content</div>}
+      >
+        <div data-testid="json-slot-content">editor content</div>
+      </DevRuntimeDrawer>,
+    )
+    return { ...utils, onTabChange }
+  }
+
+  it('shows both the Visual and JSON tab controls', () => {
+    renderDrawer()
+    expect(screen.getByTestId('dev-runtime-tab-visual')).toBeInTheDocument()
+    expect(screen.getByTestId('dev-runtime-tab-json')).toBeInTheDocument()
+  })
+
+  it('renders only the JSON slot when activeTab is "json"', () => {
+    renderDrawer({ activeTab: 'json' })
+    expect(screen.getByTestId('json-slot-content')).toBeInTheDocument()
+    expect(screen.queryByTestId('visual-slot-content')).not.toBeInTheDocument()
+  })
+
+  it('renders only the visualContent slot when activeTab is "visual"', () => {
+    renderDrawer({ activeTab: 'visual' })
+    expect(screen.getByTestId('visual-slot-content')).toBeInTheDocument()
+    expect(screen.queryByTestId('json-slot-content')).not.toBeInTheDocument()
+  })
+
+  it('calls onTabChange with "visual" when the Visual tab is clicked', () => {
+    const { onTabChange } = renderDrawer({ activeTab: 'json' })
+    fireEvent.click(screen.getByTestId('dev-runtime-tab-visual'))
+    expect(onTabChange).toHaveBeenCalledWith('visual')
+  })
+
+  it('calls onTabChange with "json" when the JSON tab is clicked', () => {
+    const { onTabChange } = renderDrawer({ activeTab: 'visual' })
+    fireEvent.click(screen.getByTestId('dev-runtime-tab-json'))
+    expect(onTabChange).toHaveBeenCalledWith('json')
+  })
+
+  it('keeps the error panel visible regardless of the active tab', () => {
+    const errors = { code: 'invalid-layout', message: 'Bad layout at index 0' }
+    renderDrawer({ activeTab: 'visual', errors })
+    expect(screen.getByTestId('dev-runtime-error-panel')).toBeInTheDocument()
+  })
+
+  it('keeps the Copy/Apply action bar visible regardless of the active tab', () => {
+    renderDrawer({ activeTab: 'visual' })
+    expect(screen.getByTestId('dev-runtime-copy')).toBeInTheDocument()
+    expect(screen.getByTestId('dev-runtime-apply')).toBeInTheDocument()
   })
 })

@@ -49,6 +49,7 @@ src/tests/
 - `runtime-config-validation-toggle.test.ts` — validación del nodo `toggle`: shape con props mínimos, labelPosition, defaultValue boolean/referencia, validations.required aceptado, reglas no aplicables rechazadas, form-only, transversales, repeater, fieldId duplicado (~nuevo)
 - `runtime-config-validation-hidden.test.ts` — validación del nodo `hidden`: shape con fieldId y value (string/number/boolean/referencia), rechazo de props prohibidos (label/validations/defaultValue/placeholder/icon/iconPosition), rechazo de visibility y queryStateFeedback, form-only, repeater, fieldId duplicado (~nuevo)
 - `runtime-config-validation-tooltip.test.ts` — validación de `props.tooltip` en los siete field nodes: aceptación como string (vacío, no vacío, interpolado), rechazo como número/boolean/array, aceptación sin tooltip sin regresión (~nuevo)
+- `layout-placement-rules.test.ts` — predicados puros de colocación estructural (`nodeTypeAcceptsChildren`, `buttonRequiresFormAncestor`, `FORM_ONLY_LEAF_NODE_TYPES`, `FORM_ALLOWED_DESCENDANT_TYPES`, `MODAL_ALLOWED_CHILD_TYPES`, `LINK_ALLOWED_CHILD_TYPES`) reutilizados por la validación de config y por el motor de validez de drop del editor visual (~nuevo)
 
 ## layout-renderer/
 
@@ -74,6 +75,12 @@ src/tests/
 - `layout-renderer-toggle.test.tsx` — render del nodo `toggle`: role="switch", aria-checked, defaultValue, labelPosition (top/inline), click toggling, required (exige true), submit bloqueado/permitido, aria-describedby, visibility, repeater con item.*, payload boolean, reevaluación, layout.span, queryStateFeedback (~nuevo)
 - `layout-renderer-hidden.test.tsx` — render del nodo `hidden`: sin DOM visible, value literal (string/number/boolean), value referencia dinámica, inicialización no lazy al montar form, no bloquea submit, incluido en payload, repeater con item.*, dentro de container con visibility oculta sigue inicializado y en payload (~nuevo)
 - `layout-renderer-tooltip.test.tsx` — render del componente `FieldTooltip` aislado (icono, accesibilidad, no-render con texto vacío/undefined) e integración del tooltip en los siete field nodes (input, textarea, select, radioGroup, checkboxGroup, toggle top/inline, fileInput), interpolación, string vacío, referencia no resuelta, coexistencia con icon, no interferencia con validación/submit (~nuevo)
+- `layout-node-renderer-edit-mode.test.tsx` — modelo de `path` (`getNodeAtPath`, `serializeLayoutNodePath`), threading de `path`/`buildChildPath` en `LayoutRenderer`, wrapper de selección/hover condicionado a `LayoutEditModeContext`, regresión byte a byte sin proveedor (~nuevo)
+- `layout-renderer-edit-mode-placeholders.test.tsx` — placeholder visible y seleccionable de `container`/`form` vacíos en modo edición, ausencia total del placeholder en producción (~nuevo)
+- `layout-renderer-repeater-edit-mode.test.tsx` — `repeater` en modo edición: instancia única de `props.template` con y sin colección resuelta, sin controles de paginación, path con tramo `template` (~nuevo)
+- `layout-renderer-accordion-edit-mode.test.tsx` — `accordion` en modo edición: cuerpo siempre presente con independencia de `defaultOpen`/toggle, path de los hijos, regresión de colapso en producción (~nuevo)
+- `layout-renderer-tabs-edit-mode.test.tsx` — `tabs` en modo edición: path con tramo `tabItem` por pestaña activa, regresión de navegación entre pestañas en producción (~nuevo)
+- `layout-renderer-modal-edit-mode.test.tsx` — `modal` en modo edición: panel siempre presente con independencia de `defaultOpen`/`openModal`, regresión de cierre en producción (~nuevo)
 
 ## runtime-state/
 
@@ -123,3 +130,15 @@ src/tests/
 - `dev-runtime-monaco-editor.test.tsx` — integración del editor Monaco
 - `dev-runtime-bundle.test.ts` — bundle del dev runtime (gate de producción)
 - `runtime-nodes-bundle.test.ts` — gate de code splitting de nodos: verifica que cada nodo produce su chunk independiente en build de producción (~nuevo)
+- `dev-runtime-canvas-shell.test.tsx` — shell del canvas: pestañas Visual/JSON del drawer, selector de página, selección/hover, limpieza de selección al cambiar de página o de config (~nuevo)
+- `layout-tree-mutations.test.ts` — funciones puras de mutación del árbol por `path` (`replaceNodeAt`, `insertNodeAt`, `removeNodeAt`, `movePathTo`), incluyendo el disambiguador `tabItemIndex` de `tabs` y el rechazo de ciclos (~nuevo)
+- `layout-canvas-commit.test.tsx` — pipeline de commit del canvas: validación/migración igual que Aplicar, parcheo de solo la clave `layout` sobre el texto crudo, preservación de `preloads` y `form.onSuccess`/`onError` fuera del subárbol tocado (~nuevo)
+- `layout-canvas-breadcrumb.test.tsx` — breadcrumb de ancestros: cadena de segmentos, etiqueta por `type`/`id`, navegación de selección por click en un segmento (~nuevo)
+- `layout-canvas-node-schema.test.ts` — derivación de JSON Schema por tipo de nodo (`getNodeTypeJsonSchema`, cache) y catálogo completo de tipos soportados (`getSupportedNodeTypesCatalog`) (~nuevo)
+- `layout-canvas-property-field-dispatcher.test.tsx` — dispatcher genérico de campos de propiedades: primitivas `string`/`number`/`boolean`/`enum`/`array`/`object` recursivas y vía de escape sin schema reconocible (~nuevo)
+- `layout-canvas-properties-panel.test.tsx` — panel de propiedades del nodo seleccionado: secciones `props`/`layout`/`visibility`/`queryStateFeedback` según el schema, merge superficial de `layout.span` responsive, sincronización con `editorBuffer` (~nuevo)
+- `layout-canvas-dnd-wiring.test.tsx` — integración de `@dnd-kit/core`: nodos arrastrables/droppable, intento de drop crudo (`draggedPath`/`targetParentPath`/`targetIndex`), cancelación sin destino (~nuevo)
+- `layout-canvas-drop-validity.test.ts` — resolución de validez de destino de drop (`isValidDropTarget`): restricciones de `form`, `modal`/`link`, `repeater`, `tabs` con `targetTabItemIndex`, ciclos, origen paleta con `draggedNodeType` (~nuevo)
+- `layout-canvas-reorder-reinsert.test.tsx` — reordenar y reanidar nodos existentes vía drag end-to-end: commit, invalidez sin cambio de estado, seguimiento de la selección tras mover el nodo seleccionado (~nuevo)
+- `layout-canvas-palette-insert.test.tsx` — paleta de nodos e inserción vía drag: `buildDefaultNodeInstance` por tipo, inserción respetando las reglas de destino (~nuevo)
+- `layout-canvas-delete-node.test.tsx` — borrado del nodo seleccionado (y su subárbol) end-to-end, limpieza de selección, sincronización con Monaco (~nuevo)

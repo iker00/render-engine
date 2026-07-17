@@ -21,10 +21,15 @@ import type { RuntimeIterationContext } from '../runtime-references/runtime-refe
 import { resolveRuntimeReference } from '../runtime-references/runtime-reference-resolver'
 import { useRuntimeState, useRuntimeStateActions } from '../runtime-state/runtime-state-provider'
 import { selectActiveModal } from '../runtime-state/runtime-state-selectors'
+import { useLayoutEditModeContext } from '../layout-edit-mode-context'
+import type { LayoutNodePath } from '../layout-node-path'
 
 interface RepeaterNodeProps {
   node: RepeaterLayoutNode
+  path?: LayoutNodePath
 }
+
+const EDIT_MODE_ITERATION_KEY = '__edit-mode-instance__'
 
 interface RepeaterIteration {
   key: string
@@ -33,14 +38,21 @@ interface RepeaterIteration {
   itemIndex: number
 }
 
-export function RepeaterNode({ node }: RepeaterNodeProps) {
+export function RepeaterNode({ node, path }: RepeaterNodeProps) {
   const state = useRuntimeState()
   const { closeModal } = useRuntimeStateActions()
   const { parentGridColumns } = useRuntimeLayoutContext()
+  const editModeContext = useLayoutEditModeContext()
+  const isEditMode = editModeContext !== null
   const sourceItems = resolveRepeaterSourceItems(node.props.items.source, state)
   const pageSize = node.props.pagination?.pageSize
   const paginationControlsVariant = node.props.pagination?.controls?.variant ?? 'previousNext'
-  const iterations = useMemo(() => resolveRepeaterIterations(node, sourceItems), [node, sourceItems])
+  // In edit mode we never expand the collection into N iterations (Decisión 10), so skip the
+  // key-resolution/diagnostics pass entirely rather than computing and discarding it.
+  const iterations = useMemo(
+    () => (isEditMode ? [] : resolveRepeaterIterations(node, sourceItems)),
+    [isEditMode, node, sourceItems],
+  )
   const templateModalIds = useMemo(() => collectModalIdsFromTemplate(node.props.template), [node.props.template])
   const paginationStateKey = useMemo(
     () => `${paginationControlsVariant}:${pageSize ?? 'all'}:${iterations.map((iteration) => iteration.key).join('|')}`,
@@ -49,6 +61,7 @@ export function RepeaterNode({ node }: RepeaterNodeProps) {
   const activeModal = selectActiveModal(state)
 
   useEffect(() => {
+    if (isEditMode) return
     if (!activeModal.activeModalId || !activeModal.activeIterationKey) return
     if (!templateModalIds.has(activeModal.activeModalId)) return
     const iterationKeys = new Set(iterations.map((iter) => iter.key))
@@ -57,7 +70,25 @@ export function RepeaterNode({ node }: RepeaterNodeProps) {
         iterationContext: { item: null, key: activeModal.activeIterationKey, itemIndex: -1 },
       })
     }
-  }, [iterations, activeModal, closeModal, templateModalIds])
+  }, [isEditMode, iterations, activeModal, closeModal, templateModalIds])
+
+  if (isEditMode) {
+    const basePath = path ?? []
+    const editModeIterationContext: RuntimeIterationContext = {
+      item: sourceItems.entries[0]?.value ?? {},
+      key: EDIT_MODE_ITERATION_KEY,
+      itemIndex: 0,
+    }
+
+    return (
+      <LayoutRenderer
+        nodes={node.props.template}
+        iterationContext={editModeIterationContext}
+        path={basePath}
+        buildChildPath={(index) => [...basePath, { field: 'template', index }]}
+      />
+    )
+  }
 
   return (
     <RepeaterNodeContent

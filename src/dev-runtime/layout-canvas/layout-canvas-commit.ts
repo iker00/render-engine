@@ -1,0 +1,148 @@
+import type { LayoutNode, RuntimeConfig, RuntimeConfigError } from '../../config/runtime-config'
+
+/**
+ * Result of `commitCanvasMutation` (T4, `dev-runtime.tsx`). Declared here — not in
+ * `dev-runtime.tsx` — so both `dev-runtime.tsx` (which owns the real implementation) and
+ * `layout-canvas.tsx` (T14, which needs the type for its `onCommitCanvasMutation` prop) can
+ * import it without a circular module dependency (`dev-runtime.tsx` already imports from this
+ * file). `dev-runtime.tsx` re-exports it so existing external imports of
+ * `CommitCanvasMutationResult` from `dev-runtime.tsx` keep working unchanged.
+ */
+export type CommitCanvasMutationResult = { status: 'applied' } | { status: 'rejected'; error: RuntimeConfigError }
+
+/**
+ * Builds a candidate RuntimeConfig with the layout of `activePageId` replaced by
+ * `mutate(currentLayout)`. Every other page, plus `api`/`initialPage`/`tokens`/
+ * `translations`, is carried over unchanged. Never mutates `currentConfig`.
+ *
+ * The result is only ever used to compute the mutated layout in memory (for
+ * validation and for extracting the new page layout) — never serialized to text
+ * directly. See `patchRawConfigTextWithLayout` for the text-patching path.
+ */
+export function buildCommitCandidateConfig(
+  currentConfig: RuntimeConfig,
+  activePageId: string,
+  mutate: (pageLayout: LayoutNode[]) => LayoutNode[],
+): RuntimeConfig {
+  const nextPages = currentConfig.pages.map((page) => {
+    if (page.id !== activePageId) return page
+    return { ...page, layout: mutate(page.layout) }
+  })
+
+  return { ...currentConfig, pages: nextPages }
+}
+
+type FormNodeLike = Extract<LayoutNode, { type: 'form' }>
+
+function hasChildrenCollection(
+  node: LayoutNode,
+): node is LayoutNode & { children?: LayoutNode[] } {
+  return (
+    node.type === 'container' ||
+    node.type === 'form' ||
+    node.type === 'modal' ||
+    node.type === 'link' ||
+    node.type === 'accordion'
+  )
+}
+
+function denormalizeFormNode(node: FormNodeLike): unknown {
+  const { onSuccess, onError, submitAction, children, ...rest } = node
+
+  const denormalizedChildren = children ? denormalizeFormNodesForSerialization(children) : undefined
+
+  if (onSuccess === undefined && onError === undefined) {
+    return {
+      ...rest,
+      ...(submitAction !== undefined ? { submitAction } : {}),
+      ...(denormalizedChildren !== undefined ? { children: denormalizedChildren } : {}),
+    }
+  }
+
+  const nextSubmitAction: Record<string, unknown> = { ...(submitAction ?? {}) }
+  if (onSuccess !== undefined) nextSubmitAction.onSuccess = onSuccess
+  if (onError !== undefined) nextSubmitAction.onError = onError
+
+  return {
+    ...rest,
+    submitAction: nextSubmitAction,
+    ...(denormalizedChildren !== undefined ? { children: denormalizedChildren } : {}),
+  }
+}
+
+/**
+ * Recursively walks a `layout` tree (children of container/form/modal/link/
+ * accordion, repeater.props.template, tabs.props.items[].children) and, for
+ * every `form` node that declares `onSuccess`/`onError` as internal top-level
+ * fields (the normalized `FormLayoutNode` shape — see `runtime-config-types.ts`),
+ * nests them back inside `submitAction` so the result is safe to serialize and
+ * re-validate as raw config JSON (the shape `validateRuntimeConfig` expects).
+ *
+ * This is the *only* raw/normalized divergence confirmed within `layout` (see
+ * design.md, Contexto). If a future feature introduces a new node/field whose
+ * validation reshapes the raw input the same way, this function must be
+ * extended for that case too — it is a closed list, not a generic mechanism.
+ */
+export function denormalizeFormNodesForSerialization(nodes: readonly LayoutNode[]): unknown[] {
+  return nodes.map((node) => {
+    if (node.type === 'form') {
+      return denormalizeFormNode(node)
+    }
+
+    if (node.type === 'repeater') {
+      return {
+        ...node,
+        props: { ...node.props, template: denormalizeFormNodesForSerialization(node.props.template) },
+      }
+    }
+
+    if (node.type === 'tabs') {
+      return {
+        ...node,
+        props: {
+          ...node.props,
+          items: node.props.items.map((item) =>
+            item.children
+              ? { ...item, children: denormalizeFormNodesForSerialization(item.children) }
+              : item,
+          ),
+        },
+      }
+    }
+
+    if (hasChildrenCollection(node) && node.children) {
+      return { ...node, children: denormalizeFormNodesForSerialization(node.children) }
+    }
+
+    return node
+  })
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+/**
+ * Patches only the `layout` key of the page `activePageId` inside `rawConfigText`,
+ * leaving the rest of the document (other pages, their `preloads`/`title`, `api`,
+ * `initialPage`, `tokens`, `translations`) exactly as it was in the raw text.
+ * Never reserializes the document from an in-memory `RuntimeConfig` — this is
+ * what keeps `preloads` in its raw crude shape (see design.md, Contexto).
+ */
+export function patchRawConfigTextWithLayout(
+  rawConfigText: string,
+  activePageId: string,
+  mutatedLayout: readonly LayoutNode[],
+): string {
+  const rawConfigObject = JSON.parse(rawConfigText) as Record<string, unknown>
+  const rawPages = Array.isArray(rawConfigObject.pages) ? rawConfigObject.pages : []
+
+  const nextPages = rawPages.map((rawPage) => {
+    if (isRecord(rawPage) && rawPage.id === activePageId) {
+      return { ...rawPage, layout: denormalizeFormNodesForSerialization(mutatedLayout) }
+    }
+    return rawPage
+  })
+
+  return JSON.stringify({ ...rawConfigObject, pages: nextPages }, null, 2)
+}

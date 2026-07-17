@@ -5,6 +5,7 @@ import { resolveRuntimeTextReference } from '../runtime-references/runtime-refer
 import { useRuntimeState } from '../runtime-state/runtime-state-provider'
 import { LayoutRenderer } from '../layout-renderer'
 import { matchesVisibilityRule } from '../runtime-layout-visibility'
+import type { LayoutNodePath } from '../layout-node-path'
 import {
   getTabsBarClassName,
   getTabsButtonClassName,
@@ -15,9 +16,10 @@ import {
 interface TabsNodeProps {
   node: TabsLayoutNode
   iterationContext?: RuntimeIterationContext
+  path?: LayoutNodePath
 }
 
-export function TabsNode({ node, iterationContext }: TabsNodeProps) {
+export function TabsNode({ node, iterationContext, path }: TabsNodeProps) {
   const state = useRuntimeState()
   const { items, orientation = 'horizontal', defaultTab = 0 } = node.props
 
@@ -35,6 +37,7 @@ export function TabsNode({ node, iterationContext }: TabsNodeProps) {
       defaultTab={safeDefaultTab}
       state={state}
       iterationContext={iterationContext}
+      path={path}
     />
   )
 }
@@ -46,9 +49,10 @@ interface TabsNodeContentProps {
   defaultTab: number
   state: ReturnType<typeof useRuntimeState>
   iterationContext?: RuntimeIterationContext
+  path?: LayoutNodePath
 }
 
-function TabsNodeContent({ node, items, orientation, defaultTab, state, iterationContext }: TabsNodeContentProps) {
+function TabsNodeContent({ node, items, orientation, defaultTab, state, iterationContext, path }: TabsNodeContentProps) {
   // Compute visible indices using the original array indices
   const visibleIndices = items
     .map((item, index) => ({ item, index }))
@@ -103,10 +107,17 @@ function TabsNodeContent({ node, items, orientation, defaultTab, state, iteratio
   )
 
   const activeItem = items[effectiveActiveTab]
+  const basePath = path ?? []
   const panel = (
     <div data-layout-node="tabs-panel" className={getTabsPanelClassName()}>
       {activeItem?.children && activeItem.children.length > 0 ? (
-        <LayoutRenderer nodes={activeItem.children} iterationContext={iterationContext} />
+        <LayoutRenderer
+          nodes={activeItem.children}
+          iterationContext={iterationContext}
+          path={basePath}
+          parentTabItemIndex={effectiveActiveTab}
+          buildChildPath={(index) => [...basePath, { field: 'tabItem', itemIndex: effectiveActiveTab, index }]}
+        />
       ) : null}
     </div>
   )

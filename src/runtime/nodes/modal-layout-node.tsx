@@ -5,6 +5,7 @@ import type { RuntimeIterationContext } from '../runtime-references/runtime-refe
 import { getModalOverlayClassName, getModalPanelClassName } from '../runtime-node-styling'
 import { isModalOpen } from '../runtime-state/runtime-state-selectors'
 import { useRuntimeState, useRuntimeStateActions } from '../runtime-state/runtime-state-provider'
+import { useLayoutEditModeContext } from '../layout-edit-mode-context'
 
 interface ModalNodeProps {
   node: ModalLayoutNode
@@ -15,8 +16,9 @@ interface ModalNodeProps {
 export function ModalNode({ node, children, iterationContext }: ModalNodeProps) {
   const state = useRuntimeState()
   const { openModal, closeModal } = useRuntimeStateActions()
+  const isEditMode = useLayoutEditModeContext() !== null
   const iterationKey = iterationContext?.key
-  const open = isModalOpen(state, node.id, iterationKey)
+  const open = isEditMode || isModalOpen(state, node.id, iterationKey)
   const defaultOpen = node.props?.defaultOpen ?? false
   const pageEntryId = state.pageEntry.entryId
   const lastAutoOpenedEntryIdRef = useRef<number | null>(null)
@@ -24,13 +26,15 @@ export function ModalNode({ node, children, iterationContext }: ModalNodeProps) 
   const panelRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
+    if (isEditMode) return
     if (!defaultOpen) return
     if (lastAutoOpenedEntryIdRef.current === pageEntryId) return
     lastAutoOpenedEntryIdRef.current = pageEntryId
     openModal(node.id, { iterationContext })
-  }, [defaultOpen, pageEntryId, node.id, openModal, iterationContext])
+  }, [isEditMode, defaultOpen, pageEntryId, node.id, openModal, iterationContext])
 
   useEffect(() => {
+    if (isEditMode) return
     if (!open) return
     previousFocusRef.current = document.activeElement as HTMLElement | null
     const focusable = getFocusableElements(panelRef.current)
@@ -39,7 +43,7 @@ export function ModalNode({ node, children, iterationContext }: ModalNodeProps) 
       previousFocusRef.current?.focus()
       previousFocusRef.current = null
     }
-  }, [open])
+  }, [isEditMode, open])
 
   const handleClose = useCallback(() => {
     closeModal(node.id, { iterationContext })

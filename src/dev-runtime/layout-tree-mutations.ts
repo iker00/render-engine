@@ -1,0 +1,373 @@
+import type { LayoutNode } from '../config/runtime-config'
+import type { TabsItem } from '../config/runtime-config-types'
+import { getNodeAtPath, type LayoutNodePath, type LayoutPathStep } from '../runtime/layout-node-path'
+
+export { getNodeAtPath }
+
+export interface InsertNodeAtOptions {
+  tabItemIndex?: number
+}
+
+export interface MovePathToOptions {
+  toTabItemIndex?: number
+}
+
+interface ResolvedPathFrame {
+  step: LayoutPathStep
+  collection: readonly LayoutNode[]
+  parentNode: LayoutNode | null
+}
+
+function getChildNodesCollection(node: LayoutNode): readonly LayoutNode[] {
+  const children = (node as { children?: unknown }).children
+  return Array.isArray(children) ? (children as LayoutNode[]) : []
+}
+
+function replaceAtIndex(collection: readonly LayoutNode[], index: number, value: LayoutNode): LayoutNode[] {
+  const next = collection.slice()
+  next[index] = value
+  return next
+}
+
+function removeAtIndex(collection: readonly LayoutNode[], index: number): LayoutNode[] {
+  const next = collection.slice()
+  next.splice(index, 1)
+  return next
+}
+
+function insertAtIndex(collection: readonly LayoutNode[], index: number, value: LayoutNode): LayoutNode[] {
+  const next = collection.slice()
+  next.splice(index, 0, value)
+  return next
+}
+
+function withChildren(node: LayoutNode, children: LayoutNode[]): LayoutNode {
+  switch (node.type) {
+    case 'container':
+    case 'form':
+    case 'modal':
+    case 'link':
+    case 'accordion':
+      return { ...node, children }
+    default:
+      throw new Error(`layout-tree-mutations: node type "${node.type}" does not have a children collection`)
+  }
+}
+
+function withTemplate(node: LayoutNode, template: LayoutNode[]): LayoutNode {
+  if (node.type !== 'repeater') {
+    throw new Error(`layout-tree-mutations: node type "${node.type}" does not have a props.template collection`)
+  }
+  return { ...node, props: { ...node.props, template } }
+}
+
+function withTabItemChildren(node: LayoutNode, itemIndex: number, children: LayoutNode[]): LayoutNode {
+  if (node.type !== 'tabs') {
+    throw new Error(`layout-tree-mutations: node type "${node.type}" does not have tabs items`)
+  }
+  const items = node.props.items
+  if (itemIndex < 0 || itemIndex >= items.length) {
+    throw new Error(`layout-tree-mutations: no tabs item at index ${itemIndex}`)
+  }
+  const newItems = items.map((item, i) => (i === itemIndex ? { ...item, children } : item))
+  return { ...node, props: { ...node.props, items: newItems } }
+}
+
+function setNodeCollection(node: LayoutNode, step: LayoutPathStep, collection: LayoutNode[]): LayoutNode {
+  if (step.field === 'children') return withChildren(node, collection)
+  if (step.field === 'template') return withTemplate(node, collection)
+  return withTabItemChildren(node, step.itemIndex, collection)
+}
+
+/**
+ * Walks `path` from `rootNodes`, recording at each step the collection the step's
+ * index was read from and the node that owns that collection (`null` for the root
+ * array). Throws if any step fails to resolve to an existing node.
+ */
+function resolvePathFrames(
+  rootNodes: readonly LayoutNode[],
+  path: LayoutNodePath
+): { frames: ResolvedPathFrame[]; targetNode: LayoutNode } {
+  if (path.length === 0) {
+    throw new Error('layout-tree-mutations: path must address an existing node, got an empty path')
+  }
+
+  let currentNodes: readonly LayoutNode[] = rootNodes
+  let currentNode: LayoutNode | null = null
+  const frames: ResolvedPathFrame[] = []
+
+  for (const step of path) {
+    if (step.field === 'children') {
+      frames.push({ step, collection: currentNodes, parentNode: currentNode })
+      const candidate = currentNodes[step.index]
+      if (!candidate) {
+        throw new Error(`layout-tree-mutations: path does not resolve, no node at children[${step.index}]`)
+      }
+      currentNode = candidate
+      currentNodes = getChildNodesCollection(candidate)
+      continue
+    }
+
+    if (step.field === 'template') {
+      if (currentNode === null || currentNode.type !== 'repeater') {
+        throw new Error('layout-tree-mutations: path does not resolve, "template" step requires a repeater node')
+      }
+      const template: LayoutNode[] = currentNode.props.template
+      frames.push({ step, collection: template, parentNode: currentNode })
+      const candidate: LayoutNode | undefined = template[step.index]
+      if (!candidate) {
+        throw new Error(`layout-tree-mutations: path does not resolve, no node at template[${step.index}]`)
+      }
+      currentNode = candidate
+      currentNodes = getChildNodesCollection(candidate)
+      continue
+    }
+
+    if (currentNode === null || currentNode.type !== 'tabs') {
+      throw new Error('layout-tree-mutations: path does not resolve, "tabItem" step requires a tabs node')
+    }
+    const item: TabsItem | undefined = currentNode.props.items[step.itemIndex]
+    if (!item) {
+      throw new Error(`layout-tree-mutations: path does not resolve, no tabs item at index ${step.itemIndex}`)
+    }
+    const tabItemChildren: LayoutNode[] = item.children ?? []
+    frames.push({ step, collection: tabItemChildren, parentNode: currentNode })
+    const candidate: LayoutNode | undefined = tabItemChildren[step.index]
+    if (!candidate) {
+      throw new Error(
+        `layout-tree-mutations: path does not resolve, no node at tabItem[${step.itemIndex}][${step.index}]`
+      )
+    }
+    currentNode = candidate
+    currentNodes = getChildNodesCollection(candidate)
+  }
+
+  if (currentNode === null) {
+    throw new Error('layout-tree-mutations: path did not resolve to a node')
+  }
+
+  return { frames, targetNode: currentNode }
+}
+
+/**
+ * Rebuilds the root array by applying `applyToLeafCollection` to the collection of
+ * the deepest frame, then folding the result back up through every ancestor
+ * collection without mutating any of the original arrays or nodes.
+ */
+function rebuildFromFrames(
+  frames: ResolvedPathFrame[],
+  applyToLeafCollection: (leafCollection: readonly LayoutNode[]) => LayoutNode[]
+): LayoutNode[] {
+  const lastIndex = frames.length - 1
+  let newCollection = applyToLeafCollection(frames[lastIndex].collection)
+
+  for (let i = lastIndex; i > 0; i--) {
+    const frame = frames[i]
+    const parentFrame = frames[i - 1]
+    const updatedParentNode = setNodeCollection(frame.parentNode as LayoutNode, frame.step, newCollection)
+    newCollection = replaceAtIndex(parentFrame.collection, parentFrame.step.index, updatedParentNode)
+  }
+
+  return newCollection
+}
+
+export function replaceNodeAt(
+  rootNodes: readonly LayoutNode[],
+  path: LayoutNodePath,
+  updater: (node: LayoutNode) => LayoutNode
+): LayoutNode[] {
+  const { frames, targetNode } = resolvePathFrames(rootNodes, path)
+  const replacement = updater(targetNode)
+  const lastFrame = frames[frames.length - 1]
+  return rebuildFromFrames(frames, (leafCollection) => replaceAtIndex(leafCollection, lastFrame.step.index, replacement))
+}
+
+export function removeNodeAt(rootNodes: readonly LayoutNode[], path: LayoutNodePath): LayoutNode[] {
+  const { frames } = resolvePathFrames(rootNodes, path)
+  const lastFrame = frames[frames.length - 1]
+  return rebuildFromFrames(frames, (leafCollection) => removeAtIndex(leafCollection, lastFrame.step.index))
+}
+
+function insertIntoParentNode(
+  parentNode: LayoutNode,
+  index: number,
+  newNode: LayoutNode,
+  options?: InsertNodeAtOptions
+): LayoutNode {
+  const tabItemIndex = options?.tabItemIndex
+
+  if (parentNode.type === 'tabs') {
+    if (tabItemIndex === undefined) {
+      throw new Error('layout-tree-mutations: insertNodeAt into a tabs node requires options.tabItemIndex')
+    }
+    const items = parentNode.props.items
+    const item = items[tabItemIndex]
+    if (!item) {
+      throw new Error(`layout-tree-mutations: tabs node has no item at index ${tabItemIndex}`)
+    }
+    const children = insertAtIndex(item.children ?? [], index, newNode)
+    return withTabItemChildren(parentNode, tabItemIndex, children)
+  }
+
+  if (tabItemIndex !== undefined) {
+    throw new Error('layout-tree-mutations: options.tabItemIndex only applies when the target node is a tabs node')
+  }
+
+  if (parentNode.type === 'repeater') {
+    const template = insertAtIndex(parentNode.props.template, index, newNode)
+    return withTemplate(parentNode, template)
+  }
+
+  if (
+    parentNode.type === 'container' ||
+    parentNode.type === 'form' ||
+    parentNode.type === 'modal' ||
+    parentNode.type === 'link' ||
+    parentNode.type === 'accordion'
+  ) {
+    const children = insertAtIndex(parentNode.children ?? [], index, newNode)
+    return withChildren(parentNode, children)
+  }
+
+  throw new Error(`layout-tree-mutations: node type "${parentNode.type}" does not accept children`)
+}
+
+export function insertNodeAt(
+  rootNodes: readonly LayoutNode[],
+  parentPath: LayoutNodePath,
+  index: number,
+  newNode: LayoutNode,
+  options?: InsertNodeAtOptions
+): LayoutNode[] {
+  if (parentPath.length === 0) {
+    return insertAtIndex(rootNodes, index, newNode)
+  }
+
+  const { frames, targetNode } = resolvePathFrames(rootNodes, parentPath)
+  const updatedParentNode = insertIntoParentNode(targetNode, index, newNode, options)
+  const lastFrame = frames[frames.length - 1]
+  return rebuildFromFrames(frames, (leafCollection) =>
+    replaceAtIndex(leafCollection, lastFrame.step.index, updatedParentNode)
+  )
+}
+
+function stepsEqual(a: LayoutPathStep, b: LayoutPathStep): boolean {
+  if (a.field !== b.field || a.index !== b.index) return false
+  if (a.field === 'tabItem' && b.field === 'tabItem') return a.itemIndex === b.itemIndex
+  return true
+}
+
+function isSamePath(a: LayoutNodePath, b: LayoutNodePath): boolean {
+  if (a.length !== b.length) return false
+  return a.every((step, i) => stepsEqual(step, b[i]))
+}
+
+/**
+ * Exported (not just used internally by `movePathTo`) so the drop-validity engine
+ * (`layout-drop-validity.ts`, T13) can reuse the exact same cycle criterion instead of
+ * reimplementing it — dragging a node onto itself or one of its own descendants.
+ */
+export function isSameOrDescendantPath(ancestorPath: LayoutNodePath, candidatePath: LayoutNodePath): boolean {
+  if (candidatePath.length < ancestorPath.length) return false
+  return ancestorPath.every((step, i) => stepsEqual(step, candidatePath[i]))
+}
+
+function getSourceParentDescriptor(fromPath: LayoutNodePath): {
+  parentPath: LayoutNodePath
+  tabItemIndex: number | undefined
+  index: number
+} {
+  const lastStep = fromPath[fromPath.length - 1]
+  const parentPath = fromPath.slice(0, -1)
+  if (lastStep.field === 'tabItem') {
+    return { parentPath, tabItemIndex: lastStep.itemIndex, index: lastStep.index }
+  }
+  return { parentPath, tabItemIndex: undefined, index: lastStep.index }
+}
+
+function adjustIndexForSiblingMove(
+  fromPath: LayoutNodePath,
+  toParentPath: LayoutNodePath,
+  toIndex: number,
+  toTabItemIndex: number | undefined
+): number {
+  const source = getSourceParentDescriptor(fromPath)
+  const sameParent = isSamePath(source.parentPath, toParentPath) && source.tabItemIndex === toTabItemIndex
+  if (sameParent && source.index < toIndex) {
+    return toIndex - 1
+  }
+  return toIndex
+}
+
+function findPathWithinChildren(
+  children: readonly LayoutNode[],
+  target: LayoutNode,
+  stepForChild: (index: number) => LayoutPathStep
+): LayoutNodePath | null {
+  for (let index = 0; index < children.length; index++) {
+    const child = children[index]
+    if (child === target) return [stepForChild(index)]
+
+    const nestedPath = findPathWithinNode(child, target)
+    if (nestedPath !== null) return [stepForChild(index), ...nestedPath]
+  }
+  return null
+}
+
+function findPathWithinNode(node: LayoutNode, target: LayoutNode): LayoutNodePath | null {
+  if (node.type === 'repeater') {
+    return findPathWithinChildren(node.props.template, target, (index) => ({ field: 'template', index }))
+  }
+
+  if (node.type === 'tabs') {
+    for (let itemIndex = 0; itemIndex < node.props.items.length; itemIndex++) {
+      const item: TabsItem = node.props.items[itemIndex]
+      const found = findPathWithinChildren(item.children ?? [], target, (index) => ({
+        field: 'tabItem',
+        itemIndex,
+        index,
+      }))
+      if (found !== null) return found
+    }
+    return null
+  }
+
+  return findPathWithinChildren(getChildNodesCollection(node), target, (index) => ({ field: 'children', index }))
+}
+
+/**
+ * Locates `target` inside `rootNodes` by object identity (not deep equality), returning the
+ * `LayoutNodePath` that resolves to it via `getNodeAtPath`, or `null` if `target` is not
+ * present. Used by the canvas (T14) to recompute the selected node's path right after a
+ * `movePathTo` commit: `movePathTo` never clones the moved node itself (only the collections
+ * around it), so the exact object reference removed from `fromPath` is the same one that ends
+ * up inserted at its new location — searching by identity finds that new location without
+ * duplicating `movePathTo`'s own index-adjustment logic.
+ */
+export function findNodePath(rootNodes: readonly LayoutNode[], target: LayoutNode): LayoutNodePath | null {
+  return findPathWithinChildren(rootNodes, target, (index) => ({ field: 'children', index }))
+}
+
+export function movePathTo(
+  rootNodes: readonly LayoutNode[],
+  fromPath: LayoutNodePath,
+  toParentPath: LayoutNodePath,
+  toIndex: number,
+  options?: MovePathToOptions
+): LayoutNode[] {
+  if (isSameOrDescendantPath(fromPath, toParentPath)) {
+    throw new Error('layout-tree-mutations: movePathTo target must not be fromPath itself or one of its descendants')
+  }
+
+  const movedNode = getNodeAtPath(rootNodes, fromPath)
+  if (!movedNode) {
+    throw new Error('layout-tree-mutations: movePathTo fromPath does not resolve to an existing node')
+  }
+
+  const adjustedToIndex = adjustIndexForSiblingMove(fromPath, toParentPath, toIndex, options?.toTabItemIndex)
+
+  const afterRemoval = removeNodeAt(rootNodes, fromPath)
+  return insertNodeAt(afterRemoval, toParentPath, adjustedToIndex, movedNode, {
+    tabItemIndex: options?.toTabItemIndex,
+  })
+}

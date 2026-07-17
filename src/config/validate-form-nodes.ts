@@ -33,6 +33,7 @@ import {
   toggleNodeSchema,
 } from './runtime-config-zod'
 import { invalidLayout } from './runtime-config-validation-errors'
+import { buttonRequiresFormAncestor, FORM_ALLOWED_DESCENDANT_TYPES, FORM_ONLY_LEAF_NODE_TYPES } from './layout-placement-rules'
 import type { BreadcrumbSegment } from './validation-breadcrumb'
 import { enrichedInvalidLayout, enrichedInvalidLayoutFromNode, enrichErrorResult, buildBreadcrumbSegmentFromNode } from './validation-breadcrumb'
 import { hasRuntimeTemplateDelimiter, parseRuntimeReference } from '../runtime/runtime-references/runtime-reference-parser'
@@ -1495,6 +1496,14 @@ interface FormValidationContext {
   breadcrumb: BreadcrumbSegment[]
 }
 
+// Structural narrowing companion for FORM_ONLY_LEAF_NODE_TYPES: TypeScript does not
+// narrow a discriminated union via ReadonlySet#has, so this type guard reuses the
+// shared set for the runtime check while still giving downstream code a narrowed
+// `node.props.fieldId` access.
+function isFormOnlyLeafNode(node: LayoutNode): node is Extract<LayoutNode, { props: { fieldId: string } }> {
+  return FORM_ONLY_LEAF_NODE_TYPES.has(node.type)
+}
+
 function validateFormNodesInCollection(
   nodes: LayoutNodeCollection,
   path: string,
@@ -1628,16 +1637,7 @@ function validateFormNodesInCollection(
       continue
     }
 
-    if (
-      node.type === 'input' ||
-      node.type === 'textarea' ||
-      node.type === 'select' ||
-      node.type === 'radioGroup' ||
-      node.type === 'checkboxGroup' ||
-      node.type === 'fileInput' ||
-      node.type === 'toggle' ||
-      node.type === 'hidden'
-    ) {
+    if (isFormOnlyLeafNode(node)) {
       if (!context.inForm || !context.currentFormId || !context.fieldIds) {
         return enrichedInvalidLayoutFromNode(`Page "${pageId}" has an invalid layout at "${nodePath}": ${node.type} nodes must be descendants of a form node.`, nodeBreadcrumb, node)
       }
@@ -1655,7 +1655,7 @@ function validateFormNodesInCollection(
       continue
     }
 
-    if (node.type === 'button' && node.props.action === undefined && !context.inForm) {
+    if (node.type === 'button' && buttonRequiresFormAncestor(node) && !context.inForm) {
       return enrichedInvalidLayoutFromNode(
         `Page "${pageId}" has an invalid layout at "${nodePath}": button nodes without an action must be descendants of a form node.`,
         nodeBreadcrumb,
@@ -1694,25 +1694,7 @@ function validateFormChildren(
       )
     }
 
-    if (
-      node.type !== 'input' &&
-      node.type !== 'textarea' &&
-      node.type !== 'select' &&
-      node.type !== 'radioGroup' &&
-      node.type !== 'checkboxGroup' &&
-      node.type !== 'fileInput' &&
-      node.type !== 'toggle' &&
-      node.type !== 'hidden' &&
-      node.type !== 'button' &&
-      node.type !== 'heading' &&
-      node.type !== 'paragraph' &&
-      node.type !== 'image' &&
-      node.type !== 'table' &&
-      node.type !== 'container' &&
-      node.type !== 'accordion' &&
-      node.type !== 'divider' &&
-      node.type !== 'tabs'
-    ) {
+    if (!FORM_ALLOWED_DESCENDANT_TYPES.has(node.type)) {
       return enrichedInvalidLayoutFromNode(
         `Page "${pageId}" has an invalid layout at "${nodePath}": form nodes only accept input, textarea, select, radioGroup, checkboxGroup, fileInput, toggle, hidden, button, heading, paragraph, image, table, container, accordion, divider and tabs descendants.`,
         nodeBreadcrumb,
@@ -1761,16 +1743,7 @@ function validateFormChildren(
       continue
     }
 
-    if (
-      node.type === 'input' ||
-      node.type === 'textarea' ||
-      node.type === 'select' ||
-      node.type === 'radioGroup' ||
-      node.type === 'checkboxGroup' ||
-      node.type === 'fileInput' ||
-      node.type === 'toggle' ||
-      node.type === 'hidden'
-    ) {
+    if (isFormOnlyLeafNode(node)) {
       if (!context.currentFormId || !context.fieldIds) {
         return enrichedInvalidLayoutFromNode(`Page "${pageId}" has an invalid layout at "${nodePath}": ${node.type} nodes must be descendants of a form node.`, nodeBreadcrumb, node)
       }
