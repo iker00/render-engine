@@ -5,6 +5,8 @@ import { resolveRuntimeTextReference } from '../runtime-references/runtime-refer
 import { useRuntimeState } from '../runtime-state/runtime-state-provider'
 import { LayoutRenderer } from '../layout-renderer'
 import { useAccordionGroup } from '../runtime-accordion-group'
+import { useLayoutEditModeContext } from '../layout-edit-mode-context'
+import type { LayoutNodePath } from '../layout-node-path'
 import {
   getAccordionBodyAnimationClassName,
   getAccordionBodyClassName,
@@ -15,13 +17,15 @@ import {
 interface AccordionNodeProps {
   node: AccordionLayoutNode
   iterationContext?: RuntimeIterationContext
+  path?: LayoutNodePath
 }
 
-export function AccordionNode({ node, iterationContext }: AccordionNodeProps) {
+export function AccordionNode({ node, iterationContext, path }: AccordionNodeProps) {
   const state = useRuntimeState()
   const { label, defaultOpen = false, groupId } = node.props
   const instanceId = useId()
   const { getActiveInstanceId, claimDefaultOpen, openInGroup, closeInGroup } = useAccordionGroup()
+  const isEditMode = useLayoutEditModeContext() !== null
 
   // Determine initial open state
   // For grouped accordions, the group context controls who starts open
@@ -84,7 +88,7 @@ export function AccordionNode({ node, iterationContext }: AccordionNodeProps) {
     }
   }
 
-  const showContent = isOpen || isClosing
+  const showContent = isEditMode || isOpen || isClosing
 
   return (
     <div data-layout-node="accordion">
@@ -114,14 +118,14 @@ export function AccordionNode({ node, iterationContext }: AccordionNodeProps) {
       {showContent && (
         <div
           data-layout-node="accordion-body"
-          className={getAccordionBodyAnimationClassName(isOpen)}
+          className={getAccordionBodyAnimationClassName(isEditMode || isOpen)}
           onAnimationEnd={() => {
             if (!isOpen) setIsClosing(false)
           }}
         >
           {node.children && node.children.length > 0 ? (
             <div className={getAccordionBodyClassName()}>
-              <LayoutRenderer nodes={node.children} iterationContext={iterationContext} />
+              <LayoutRenderer nodes={node.children} iterationContext={iterationContext} path={path} />
             </div>
           ) : null}
         </div>

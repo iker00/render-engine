@@ -80,10 +80,9 @@ import {
   validateHiddenNode,
   validateCollectionSource,
 } from './validate-form-nodes'
+import { LINK_ALLOWED_CHILD_TYPES as linkAllowedChildTypes, MODAL_ALLOWED_CHILD_TYPES as modalAllowedChildTypes } from './layout-placement-rules'
 
 const collectionPathSegmentPattern = /^[A-Za-z0-9_-]+$/
-const modalAllowedChildTypes = new Set(['container', 'form', 'heading', 'paragraph', 'list', 'image', 'table', 'button', 'repeater', 'accordion', 'fileManager'])
-const linkAllowedChildTypes = new Set(['container', 'heading', 'paragraph', 'list', 'image', 'badge', 'alert', 'stat', 'divider', 'skeleton'])
 
 export function validateLayoutCollection(
   rawNodes: unknown,
@@ -1182,7 +1181,7 @@ function validateModalNode(
       const child = parseResult.data.children[i]
       const childType = isRecord(child) ? String(child.type) : undefined
 
-      if (!childType || !modalAllowedChildTypes.has(childType)) {
+      if (!childType || !modalAllowedChildTypes.has(childType as LayoutNodeType)) {
         return enrichedInvalidLayout(
           `Page "${pageId}" has an invalid layout at "${path}.children[${i}]": modal children may only be container, form, heading, paragraph, list, image, table, button, repeater, accordion or fileManager nodes.`,
           breadcrumb, rawNode)
@@ -1666,7 +1665,7 @@ function checkLinkChildrenAllowedTypes(
 
     const childType = typeof child.type === 'string' ? child.type : undefined
 
-    if (!childType || !linkAllowedChildTypes.has(childType)) {
+    if (!childType || !linkAllowedChildTypes.has(childType as LayoutNodeType)) {
       return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${basePath}[${i}]": link children may only be container, heading, paragraph, list, image, badge, alert, stat, divider or skeleton nodes.`, breadcrumb, isRecord(child) ? child : {})
     }
 

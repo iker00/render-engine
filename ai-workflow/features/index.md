@@ -14,13 +14,34 @@ La exploración previa, cuando hace falta, se hace conversacionalmente con `expl
 
 La política completa está definida en el documento de workflow del proyecto.
 
-## Planificadas
-
 ## Archivadas
 - `0035-image-node-api-source`: archivada. Se descarta por ahora porque el caso de imágenes privadas encaja mejor con URLs protegidas o firmadas desde backend que con una carga remota específica integrada en el nodo `image`.
 
 ## Completadas
 
+- `0102-dev-editor-visual-layout-canvas`: añade al drawer de `DevRuntime` una segunda pestaña (**Visual**, junto a
+  **JSON**) con una capa de edición visual del `layout` de la página activa mediante manipulación directa sobre el
+  propio preview ya renderizado (no un panel de árbol tipo "layers"), sincronizada en vivo y bidireccional con el
+  editor Monaco existente: cualquier mutación del canvas se confirma mediante un pipeline de commit propio que
+  valida con `validateRuntimeConfig`, migra el estado del runtime y parchea únicamente la clave `layout` de la
+  página activa sobre el último texto crudo válido conocido (preservando intacto el resto del documento, incluidos
+  bloques con forma cruda como `preloads`, y denormalizando `form.onSuccess`/`onError` dentro de `submitAction`).
+  Cubre selector de página (el canvas monta su propia instancia aislada de `RuntimeStateProvider`), selección por
+  click/hover con un modelo de `path` estructural, breadcrumb de ancestros navegable, panel de propiedades
+  (`props`/`layout`/`visibility`/`queryStateFeedback`) generado dinámicamente del mismo JSON Schema derivado del
+  schema Zod que ya alimenta el autocompletado de Monaco, arrastrar (`@dnd-kit/core`) para reordenar/reanidar nodos
+  existentes y para insertar desde una paleta con el catálogo completo de tipos, con validación de destino que
+  reutiliza las mismas reglas estructurales ya vigentes en `src/config/` (incluye el catálogo cerrado de
+  `modal`/`link`, y la disambiguación por pestaña de `tabs`), borrado de nodo seleccionado (y su subárbol),
+  placeholder visible y droppable para `container`/`form` vacíos sin rastro en producción, e instancia
+  representativa única de `props.template` para `repeater` en modo edición (con `accordion`/`modal` forzados a
+  mostrar su contenido y `tabs` con threading correcto de `path` por pestaña activa). Sin deshacer/rehacer,
+  selección múltiple, ni pickers contextuales para referencias string; edita únicamente `layout` (`api`, `pages`,
+  `tokens` y `translations` quedan para features independientes posteriores de la misma hoja de ruta, documentada en
+  `EDITOR-VISUAL-ROADMAP.md` en la raíz del repo). Como parte del refactor de soporte, `layout-placement-rules.ts`
+  centraliza en `src/config/` los predicados de colocación estructural ya existentes (qué tipos aceptan `children`,
+  qué tipos exigen ancestro `form`, catálogos cerrados de `modal`/`link`), consumidos tanto por la validación de
+  config como por el motor de validez de drop del canvas, sin cambio de comportamiento observable en la validación.
 - `0101-interpolation-formatters`: añade formatters encadenables a la interpolación `{{...}}` mediante sintaxis pipe (`{{ref | formatter[:arg] | ...}}`), con catálogo cerrado v1 de ocho formatters (`number`, `currency`, `date`, `percent`, `uppercase`, `lowercase`, `capitalize`, `truncate`), gramática de argumento único opcional (string entre `"..."` o número), locale fijo `es-ES` para `Intl` y tokenización manual `dd/MM/yyyy HH:mm:ss` para `date`. Los formatters se aplican izquierda a derecha sobre el valor ya resuelto de la referencia; una cadena no resoluble (nombre desconocido, argumento no válido, valor de entrada incompatible) proyecta la semántica de fallo por superficie ya existente: string vacío en superficies visibles y `request-build-failed` en las cuatro superficies de headers (`api.headers`, `button.props.action.headers`, `form.submitAction.headers`, `preloads[].headers`) y en `api.endpoint`. La omisión de header por campo oculto se sigue evaluando **antes** que la cadena. Compatibilidad hacia atrás total: cualquier placeholder sin `|` mantiene su camino previo. Nuevos módulos `runtime-formatter-parser.ts` y `runtime-formatter-registry.ts` bajo `src/runtime/runtime-references/`, con instancias `Intl.NumberFormat` cacheadas y diagnóstico DEV `console.warn` con prefijo `[runtime-formatters]`. Sin librerías externas nuevas.
 - `0100-visibility-boolean-composition`: amplia `visibility` y los predicados `when` para soportar composición booleana mediante grupos `and`/`or` de condiciones simples. Una `visibility` puede ser una condición simple (shape anterior sin cambios, ahora con `negate?: boolean` opcional) o un grupo `{ operator: "and" | "or", conditions: [condición simple, ...] }`. Cada condición simple puede tener `negate: true` para invertir su resultado individual. Un grupo `and` coincide solo si todas sus condiciones coinciden; un grupo `or` coincide si al menos una coincide. No se admite anidamiento de grupos. Afecta a `node.visibility`, `submitAction.onSuccess[*].when`, `pages[].preloads[*].when` y `button.props.action.operations[*].when` con la misma semántica. Cambios en tipos (`runtime-config-types.ts`: nuevos tipos `RuntimeVisibilityGroupOperator`, `RuntimeVisibilityCondition`, `RuntimeVisibilityGroup`, unión discriminada `RuntimeVisibilityConfig`, type guard `isVisibilityGroup`), validación Zod (`runtime-config-zod.ts`: `z.discriminatedUnion` para shape), runtime (`runtime-layout-visibility.ts`: evaluación de grupos con `every`/`some`), y validación semántica (`validate-actions-visibility.ts`: iteración de condiciones dentro del grupo con el mismo validador de referencia y `value`).
 - `0099-node-variant-and-jsx-consistency`: refactor técnico sin cambio de comportamiento. Fija en `conventions.md` la norma de resolución de variantes visuales (lookup map o helper delegado, sin duplicar JSX por rama `if/else`) y JSX por defecto frente a `createElement`. Refactoriza `stat`, `skeleton`, `badge` (duplicación de variante), extrae `CollectionPaginationControls` como componente compartido entre `repeater` y `table`, y sustituye `createElement` por JSX en `container` y `heading`. Sin cambios visuales, de contrato JSON ni de comportamiento observable.

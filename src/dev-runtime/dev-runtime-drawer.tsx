@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react'
 import type { RuntimeConfigError } from '../config/runtime-config'
 
+export type DevRuntimeDrawerTab = 'visual' | 'json'
+
 interface DevRuntimeDrawerProps {
   open: boolean
   onClose: () => void
@@ -8,6 +10,9 @@ interface DevRuntimeDrawerProps {
   onCopy: () => void
   pendingChanges: boolean
   errors: RuntimeConfigError | { code: string; message: string } | null
+  activeTab: DevRuntimeDrawerTab
+  onTabChange: (tab: DevRuntimeDrawerTab) => void
+  visualContent: ReactNode
   children: ReactNode
 }
 
@@ -18,6 +23,9 @@ export function DevRuntimeDrawer({
   onCopy,
   pendingChanges,
   errors,
+  activeTab,
+  onTabChange,
+  visualContent,
   children,
 }: DevRuntimeDrawerProps) {
   return (
@@ -46,6 +54,30 @@ export function DevRuntimeDrawer({
         <div className="flex items-center justify-between border-b px-4 py-3">
           <span className="text-sm font-semibold">Dev Config Editor</span>
           <div className="flex items-center gap-2">
+            <button
+              type="button"
+              data-testid="dev-runtime-tab-visual"
+              aria-pressed={activeTab === 'visual'}
+              onClick={() => onTabChange('visual')}
+              className={[
+                'rounded px-2 py-1 text-xs font-medium',
+                activeTab === 'visual' ? 'bg-gray-800 text-white' : 'text-gray-600 hover:bg-gray-100',
+              ].join(' ')}
+            >
+              Visual
+            </button>
+            <button
+              type="button"
+              data-testid="dev-runtime-tab-json"
+              aria-pressed={activeTab === 'json'}
+              onClick={() => onTabChange('json')}
+              className={[
+                'rounded px-2 py-1 text-xs font-medium',
+                activeTab === 'json' ? 'bg-gray-800 text-white' : 'text-gray-600 hover:bg-gray-100',
+              ].join(' ')}
+            >
+              JSON
+            </button>
             {pendingChanges && (
               <span
                 data-testid="dev-runtime-pending-indicator"
@@ -65,8 +97,11 @@ export function DevRuntimeDrawer({
           </div>
         </div>
 
-        {/* Editor slot */}
-        <div className="min-h-0 flex-1">{children}</div>
+        {/* Visual/JSON slots */}
+        <div className="min-h-0 flex-1">
+          {activeTab === 'json' && children}
+          {activeTab === 'visual' && visualContent}
+        </div>
 
         {/* Error panel */}
         {errors !== null && (

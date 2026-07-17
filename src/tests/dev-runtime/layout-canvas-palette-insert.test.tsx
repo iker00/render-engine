@@ -1,0 +1,238 @@
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { describe, expect, it } from 'vitest'
+import type { LayoutNode, LayoutNodeType } from '../../config/runtime-config'
+import { validateRuntimeConfig } from '../../config/runtime-config'
+import { FORM_ONLY_LEAF_NODE_TYPES } from '../../config/layout-placement-rules'
+import { DevRuntimeReady } from '../../dev-runtime/dev-runtime'
+import { buildDefaultNodeInstance } from '../../dev-runtime/layout-canvas/layout-canvas-node-palette-defaults'
+import { getSupportedNodeTypesCatalog } from '../../dev-runtime/layout-canvas/layout-canvas-node-schema'
+import { serializePaletteDragId } from '../../dev-runtime/layout-canvas/layout-canvas-node-palette'
+import {
+  serializeDropZoneId,
+  serializeLayoutNodePath,
+  type LayoutCanvasDropZone,
+  type LayoutNodePath,
+} from '../../runtime/layout-node-path'
+
+// Mock @monaco-editor/react with a controllable textarea, matching the pattern already
+// established in layout-canvas-commit.test.tsx / layout-canvas-reorder-reinsert.test.tsx: the
+// JSON tab is how the resulting editorBuffer gets inspected.
+vi.mock('@monaco-editor/react', () => ({
+  default: vi.fn(({ value, onChange, onMount }) => {
+    if (onMount) {
+      onMount(
+        { getValue: () => value as string },
+        { languages: { json: { jsonDefaults: { setDiagnosticsOptions: vi.fn() } } } },
+      )
+    }
+    return (
+      <textarea
+        data-testid="monaco-editor-mock"
+        value={value as string}
+        onChange={(e) => (onChange as (v: string) => void)?.(e.target.value)}
+      />
+    )
+  }),
+}))
+
+// Light mock of @dnd-kit/core (see layout-canvas-dnd-wiring.test.tsx / T12): real pointer
+// simulation against PointerSensor is impractical in jsdom, so DndContext is replaced with a
+// pass-through that captures the onDragEnd handler LayoutCanvasDndContext registers, letting
+// tests invoke it directly with synthetic {active, over} pairs. useDraggable/useDroppable keep
+// their real implementation, so the palette entries' own id-construction path is exercised too.
+let capturedOnDragEnd: ((event: { active: { id: string }; over: { id: string } | null }) => void) | null = null
+
+vi.mock('@dnd-kit/core', async () => {
+  const actual = await vi.importActual<typeof import('@dnd-kit/core')>('@dnd-kit/core')
+  return {
+    ...actual,
+    DndContext: (props: { children: React.ReactNode; onDragEnd?: (event: unknown) => void }) => {
+      capturedOnDragEnd = props.onDragEnd as typeof capturedOnDragEnd
+      return props.children
+    },
+  }
+})
+
+function heading(text: string) {
+  return { type: 'heading', props: { text, level: 2 } }
+}
+
+function inputNode(fieldId: string) {
+  return { type: 'input', props: { fieldId, label: fieldId } }
+}
+
+function container(children: unknown[]) {
+  return { type: 'container', children }
+}
+
+function form(id: string, children: unknown[]) {
+  return { type: 'form', id, children }
+}
+
+function buildReadyProps(rawConfig: unknown) {
+  const initialConfigText = JSON.stringify(rawConfig, null, 2)
+  const validation = validateRuntimeConfig(rawConfig)
+  if (validation.status !== 'ready') {
+    throw new Error(`Fixture config failed to validate: ${validation.error.message}`)
+  }
+  return { initialConfig: validation.config, initialConfigText }
+}
+
+// DevRuntimeReady mounts both the "background" preview runtime (data-testid="runtime-page")
+// and the canvas's own isolated preview (data-testid="layout-canvas") from the *same* config —
+// text/label queries must be scoped to the canvas, or they match both copies.
+function renderCanvas(rawConfig: unknown) {
+  const { initialConfig, initialConfigText } = buildReadyProps(rawConfig)
+  const view = render(<DevRuntimeReady initialConfig={initialConfig} initialConfigText={initialConfigText} />)
+  fireEvent.click(screen.getByTestId('dev-runtime-toggle'))
+  fireEvent.click(screen.getByTestId('dev-runtime-tab-visual'))
+  const canvas = within(screen.getByTestId('layout-canvas'))
+  return { initialConfigText, container: view.container, canvas }
+}
+
+function paletteDragEnd(type: LayoutNodeType, overZone: LayoutCanvasDropZone | null) {
+  expect(capturedOnDragEnd).not.toBeNull()
+  act(() => {
+    capturedOnDragEnd!({
+      active: { id: serializePaletteDragId(type) },
+      over: overZone === null ? null : { id: serializeDropZoneId(overZone) },
+    })
+  })
+}
+
+async function getMonacoJson(): Promise<{ text: string; parsed: Record<string, unknown> }> {
+  fireEvent.click(screen.getByTestId('dev-runtime-tab-json'))
+  await waitFor(() => expect(screen.getByTestId('monaco-editor-mock')).toBeInTheDocument())
+  const text = (screen.getByTestId('monaco-editor-mock') as HTMLTextAreaElement).value
+  return { text, parsed: JSON.parse(text) }
+}
+
+describe('buildDefaultNodeInstance: every catalog type is validly insertable (FR8)', () => {
+  const nodeTypes = getSupportedNodeTypesCatalog()
+
+  it.each(nodeTypes)('type "%s" passes validateRuntimeConfig once inserted into a minimal compatible layout', (type) => {
+    const node = buildDefaultNodeInstance(type)
+    // Form-only leaf types (input/textarea/select/radioGroup/checkboxGroup/fileInput/toggle/
+    // hidden) only make sense as descendants of a form — every other catalog type is inserted
+    // directly at the page root, matching how the palette drop-validity engine (T13/T15) would
+    // actually allow it to land.
+    const layout: LayoutNode[] = FORM_ONLY_LEAF_NODE_TYPES.has(type)
+      ? [{ type: 'form', id: 'hostForm', children: [node] } as LayoutNode]
+      : [node]
+
+    const config = {
+      api: {},
+      initialPage: 'home',
+      pages: [{ id: 'home', layout }],
+    }
+
+    const result = validateRuntimeConfig(config)
+
+    expect(result.status).toBe('ready')
+  })
+
+  it('never bakes a dynamic reference (queries.*/forms.*/{{...}}) into a form field default value', () => {
+    for (const type of nodeTypes) {
+      const node = buildDefaultNodeInstance(type) as { props?: { defaultValue?: unknown } }
+      if (node.props && 'defaultValue' in node.props) {
+        expect(node.props.defaultValue).toBeUndefined()
+      }
+    }
+  })
+})
+
+describe('LayoutCanvasNodePalette: lists the full catalog (FR8)', () => {
+  it('renders a draggable entry for every supported node type, always visible without a selection', () => {
+    renderCanvas({
+      api: {},
+      initialPage: 'home',
+      pages: [{ id: 'home', layout: [heading('Existing')] }],
+    })
+
+    expect(screen.getByTestId('layout-canvas-node-palette')).toBeInTheDocument()
+    expect(screen.queryByTestId('layout-canvas-properties-panel')).not.toBeInTheDocument()
+
+    for (const type of getSupportedNodeTypesCatalog()) {
+      expect(screen.getByTestId(`layout-canvas-palette-item-${type}`)).toBeInTheDocument()
+    }
+  })
+})
+
+describe('drag insert desde la paleta (FR8)', () => {
+  it('arrastrar container desde la paleta hasta el layout raíz lo inserta vacío, con su placeholder (T10) visible', async () => {
+    const { container: root } = renderCanvas({
+      api: {},
+      initialPage: 'home',
+      pages: [{ id: 'home', layout: [heading('Existing')] }],
+    })
+
+    paletteDragEnd('container', { parentPath: [], index: 1 })
+
+    // Checked before switching to the JSON tab: DevRuntimeDrawer only mounts one of
+    // `visualContent`/`children` at a time (see dev-runtime-drawer.tsx), so the canvas DOM —
+    // and the placeholder inside it — is gone once the JSON tab takes over.
+    const insertedContainerPath: LayoutNodePath = [{ field: 'children', index: 1 }]
+    const placeholderPath = serializeLayoutNodePath([...insertedContainerPath, { field: 'children', index: 0 }])
+    expect(root.querySelector(`[data-empty-placeholder="true"][data-node-path="${placeholderPath}"]`)).not.toBeNull()
+
+    const { parsed } = await getMonacoJson()
+    const page = (parsed.pages as Array<{ layout: Array<{ type: string }> }>)[0]
+
+    expect(page.layout).toHaveLength(2)
+    expect(page.layout[1].type).toBe('container')
+    expect(validateRuntimeConfig(parsed).status).toBe('ready')
+  })
+
+  it('arrastrar input desde la paleta hasta un destino sin form ancestro no inserta nada (destino inválido)', async () => {
+    const { initialConfigText } = renderCanvas({
+      api: {},
+      initialPage: 'home',
+      pages: [{ id: 'home', layout: [container([heading('Plain')])] }],
+    })
+
+    paletteDragEnd('input', { parentPath: [{ field: 'children', index: 0 }], index: 0 })
+
+    const { text } = await getMonacoJson()
+    expect(text).toBe(initialConfigText)
+  })
+
+  it('arrastrar input desde la paleta hasta dentro de un form existente lo inserta con un fieldId que no colisiona', async () => {
+    renderCanvas({
+      api: {},
+      initialPage: 'home',
+      pages: [{ id: 'home', layout: [form('formA', [inputNode('existingField')])] }],
+    })
+
+    paletteDragEnd('input', { parentPath: [{ field: 'children', index: 0 }], index: 1 })
+
+    const { parsed } = await getMonacoJson()
+    const formNode = (
+      parsed.pages as Array<{ layout: Array<{ children: Array<{ props: { fieldId: string } }> }> }>
+    )[0].layout[0]
+
+    expect(formNode.children).toHaveLength(2)
+    const fieldIds = formNode.children.map((child) => child.props.fieldId)
+    expect(new Set(fieldIds).size).toBe(2)
+    expect(fieldIds).toContain('existingField')
+    expect(validateRuntimeConfig(parsed).status).toBe('ready')
+  })
+
+  it('un drop de paleta con destino inválido no cambia el árbol renderizado', () => {
+    const { container: root } = renderCanvas({
+      api: {},
+      initialPage: 'home',
+      pages: [{ id: 'home', layout: [container([heading('Plain')])] }],
+    })
+
+    const beforeNodePaths = Array.from(root.querySelectorAll('[data-node-path]')).map((el) =>
+      el.getAttribute('data-node-path'),
+    )
+
+    paletteDragEnd('input', { parentPath: [{ field: 'children', index: 0 }], index: 0 })
+
+    const afterNodePaths = Array.from(root.querySelectorAll('[data-node-path]')).map((el) =>
+      el.getAttribute('data-node-path'),
+    )
+    expect(afterNodePaths).toEqual(beforeNodePaths)
+  })
+})
