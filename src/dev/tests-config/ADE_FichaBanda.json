@@ -252,12 +252,38 @@
           },
           "children": [
             {
-              "type": "heading",
+              "type": "container",
               "props": {
-                "text": "Personas relacionadas",
-                "level": 2,
-                "icon": "user"
-              }
+                "direction": "row",
+                "justify": "between"
+              },
+              "children": [
+                {
+                  "type": "heading",
+                  "props": {
+                    "text": "Personas relacionadas",
+                    "level": 2,
+                    "icon": "user"
+                  }
+                },
+                {
+                  "type": "button",
+                  "props": {
+                    "label": "Añadir persona",
+                    "color": "primary",
+                    "variant": "solid",
+                    "icon": "plus",
+                    "action": {
+                      "type": "navigateTo",
+                      "pageId": "buscar-persona",
+                      "params": {
+                        "id_entidad_asociacion": "params.bandaId",
+                        "etiqueta_entidad": "BANDA"
+                      }
+                    }
+                  }
+                }
+              ]
             },
             {
               "type": "container",

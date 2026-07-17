@@ -25,6 +25,18 @@
       "id": "buscar-persona",
       "layout": [
         {
+          "type": "alert",
+          "props": {
+            "title": "Modo asociación",
+            "message": "Seleccione una persona de los resultados para asociarla a la entidad indicada, o cree una persona nueva.",
+            "type": "info"
+          },
+          "visibility": {
+            "reference": "params.id_entidad_asociacion",
+            "operator": "isTruthy"
+          }
+        },
+        {
           "type": "container",
           "props": {
             "direction": "row",
@@ -48,6 +60,29 @@
                   "type": "navigateTo",
                   "pageId": "crear-persona"
                 }
+              },
+              "visibility": {
+                "reference": "params.id_entidad_asociacion",
+                "operator": "isFalsy"
+              }
+            },
+            {
+              "type": "link",
+              "props": {
+                "label": "Crear persona",
+                "icon": "plus",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "crear-persona",
+                  "params": {
+                    "id_entidad_asociacion": "params.id_entidad_asociacion",
+                    "etiqueta_entidad": "params.etiqueta_entidad"
+                  }
+                }
+              },
+              "visibility": {
+                "reference": "params.id_entidad_asociacion",
+                "operator": "isTruthy"
               }
             }
           ]
@@ -210,6 +245,26 @@
                           "personaId": "item.Id"
                         }
                       }
+                    }
+                  },
+                  {
+                    "type": "link",
+                    "props": {
+                      "label": "Asociar",
+                      "icon": "link",
+                      "action": {
+                        "type": "navigateTo",
+                        "pageId": "asociar-persona",
+                        "params": {
+                          "id_persona": "item.Id",
+                          "id_entidad_asociacion": "params.id_entidad_asociacion",
+                          "etiqueta_entidad": "params.etiqueta_entidad"
+                        }
+                      }
+                    },
+                    "visibility": {
+                      "reference": "params.id_entidad_asociacion",
+                      "operator": "isTruthy"
                     }
                   }
                 ]

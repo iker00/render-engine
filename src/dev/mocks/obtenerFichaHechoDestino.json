@@ -1,0 +1,159 @@
+{
+  "FichaHechoDTO": {
+    "Id": 1,
+    "HechoDatosIdentificativosDTO": {
+      "Lugar": "Hurto menor 8",
+      "ResumenHecho": "Hurto menor modificado",
+      "FechaHecho": "04/04/2023 0:00"
+    },
+    "PersonasRelacionadasDTO": [
+      {
+        "IdPersonasHecho": 45,
+        "Nombre": "Persona sospechosa 45",
+        "NombreCompleto": "Persona sospechosa 45",
+        "DocIdent": "No especificado",
+        "TipoImplicacion": "Sospechoso"
+      },
+      {
+        "IdPersonasHecho": 56,
+        "Nombre": "Persona sospechosa 56",
+        "NombreCompleto": "Persona sospechosa 56",
+        "DocIdent": "No especificado",
+        "TipoImplicacion": "Sospechoso"
+      },
+      {
+        "IdPersonasHecho": 57,
+        "Nombre": "Persona sospechosa 57",
+        "NombreCompleto": "Persona sospechosa 57",
+        "DocIdent": "No especificado",
+        "TipoImplicacion": "Sospechoso"
+      },
+      {
+        "IdPersona": 1,
+        "IdPersonasHecho": 22,
+        "Nombre": "Antonio Manuel",
+        "Apellido1": "Marín",
+        "Apellido2": "García",
+        "NombreCompleto": "Antonio Manuel Marín García",
+        "DocIdent": "73424513A",
+        "TipoImplicacion": "Implicado"
+      },
+      {
+        "IdPersona": 2,
+        "IdPersonasHecho": 23,
+        "Nombre": "Manuel",
+        "Apellido1": "Benitez",
+        "Apellido2": "Ruíz",
+        "NombreCompleto": "Manuel Benitez Ruíz",
+        "DocIdent": "38548716A",
+        "TipoImplicacion": "Testigo"
+      },
+      {
+        "IdPersona": 3,
+        "IdPersonasHecho": 31,
+        "Nombre": "Fernando (Yakuza)",
+        "Apellido1": "Castro",
+        "Apellido2": "Roldán",
+        "NombreCompleto": "Fernando (Yakuza) Castro Roldán",
+        "TipoImplicacion": "Sospechoso"
+      },
+      {
+        "IdPersona": 3,
+        "IdPersonasHecho": 40,
+        "Nombre": "Fernando (Yakuza)",
+        "Apellido1": "Castro",
+        "Apellido2": "Roldán",
+        "NombreCompleto": "Fernando (Yakuza) Castro Roldán",
+        "TipoImplicacion": "Sospechoso"
+      },
+      {
+        "IdPersona": 19144592,
+        "IdPersonasHecho": 55,
+        "Nombre": "Antonio Manuel",
+        "Apellido1": "Marín",
+        "Apellido2": "García",
+        "NombreCompleto": "Antonio Manuel Marín García",
+        "DocIdent": "71152139Y",
+        "TipoImplicacion": "Implicado"
+      },
+      {
+        "IdPersona": 19144608,
+        "IdPersonasHecho": 43,
+        "Nombre": "Manuel",
+        "Apellido1": "Benitez",
+        "Apellido2": "Ruíz",
+        "NombreCompleto": "Manuel Benitez Ruíz",
+        "DocIdent": "61289969Y",
+        "TipoImplicacion": "Testigo"
+      },
+      {
+        "IdPersona": 19156961,
+        "IdPersonasHecho": 42,
+        "Nombre": "ANA BELEN",
+        "Apellido1": "PARICIO",
+        "Apellido2": "FORTEA",
+        "NombreCompleto": "ANA BELEN PARICIO FORTEA",
+        "DocIdent": "18964143E",
+        "TipoImplicacion": "Víctima"
+      },
+      {
+        "IdPersona": 19161606,
+        "IdPersonasHecho": 32226,
+        "Nombre": "JUAN JOSE",
+        "Apellido1": "HERRERO",
+        "Apellido2": "MENDIVE",
+        "NombreCompleto": "JUAN JOSE HERRERO MENDIVE",
+        "DocIdent": "15940670Z",
+        "TipoImplicacion": "Denunciante"
+      }
+    ],
+    "DireccionesDTO": [
+      {
+        "IdDireccionEntidad": 195,
+        "Direccion": "Beheko E4 S05 Ñ, Pamplona",
+        "EsPrincipal": true,
+        "Favorito": true
+      },
+      {
+        "IdDireccionEntidad": 194,
+        "Direccion": "CALLE ZELANDI s/n, PLANTA BAJA, 31800 - ALTSASU/ALSASUA (NAVARRA)",
+        "Favorito": true
+      },
+      {
+        "IdDireccionEntidad": 202,
+        "Direccion": "AVENIDA CARLOS III 2 A E5 S05 Ñ, 31002 - Pamplona / Iruña (NAVARRA)"
+      },
+      {
+        "IdDireccionEntidad": 201,
+        "Direccion": "AVENIDA BAJA NAVARRA 1, 31002 - Pamplona / Iruña (NAVARRA)"
+      }
+    ],
+    "VehiculosDTO": [
+      {
+        "IdVehiculoEntidad": 39,
+        "Matricula": "4001BXL",
+        "Marca": "MERCEDES-BENZ",
+        "Modelo": "413CDI",
+        "Color": "BLANCO",
+        "Bastidor": "WDB9046121R346218",
+        "Favorito": true
+      },
+      {
+        "IdVehiculoEntidad": 9,
+        "Matricula": "4000BXL",
+        "Marca": "OPEL",
+        "Modelo": "ZAFIRA",
+        "Color": "NO DISPONIBLE",
+        "Bastidor": "W0L0TGF7522221625",
+        "Favorito": true
+      }
+    ],
+    "Medios": [
+      "98d1f53b-106e-4ff7-9cd8-5d869c9b0fdd",
+      "274a5e5e-afa2-41fc-b469-30b61c994a0e",
+      "b872ad94-825d-4efa-82d7-a87212263c6c",
+      "cbe433ce-5f92-480c-afbb-9e45d73ee8e3",
+      "9c250a90-897a-4872-aac4-3a87968af4fd"
+    ]
+  }
+}

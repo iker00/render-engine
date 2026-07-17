@@ -5,47 +5,51 @@
     }
   },
   "api": {
-    "obtenerDatosFormularioCreacionPersona": {
+    "obtenerDatosFormularioModificacionPersona": {
       "method": "POST",
-      "endpoint": "/api/ss/Ade/v1/operations/D8F3A619-4E2B-5C7D-9A41-6E0B8D2F5C73/ObtenerDatosFormularioCreacionPersona",
+      "endpoint": "/api/ss/Ade/v1/operations/A7B2C914-5E8F-4D1A-9C3B-8F0E2A6D4B71/ObtenerDatosFormularioModificacionPersona",
       "headers": {
         "Authorization": "Bearer {{tokens.token.value}}"
       },
       "body": {
-        "NoValidarPermisosTramiteWeb": false
+        "IdPersona": "params.personaId"
       }
     },
-    "crearPersona": {
+    "modificarPersona": {
       "method": "POST",
-      "endpoint": "/api/ss/Ade/v1/operations/C4E8A912-6D3B-4F7A-8E1C-9D2B5F6A7E30/CrearPersona",
+      "endpoint": "/api/ss/Ade/v1/operations/B8C3D025-6F9A-4E2B-AD4C-9A1F3B7E5C82/ModificarPersona",
       "headers": {
         "Authorization": "Bearer {{tokens.token.value}}"
       },
       "body": {
-        "CrearPersonaEntradaDTO": {
-          "Nombre": "forms.crearPersona.nombre",
-          "Apellido1": "forms.crearPersona.apellido1",
-          "Apellido2": "forms.crearPersona.apellido2",
-          "Apodo": "forms.crearPersona.apodo",
-          "Email": "forms.crearPersona.email",
-          "FechaNacimiento": "forms.crearPersona.fechaNacimiento",
-          "IdPaisNacimiento": "forms.crearPersona.idPaisNacimiento",
-          "Nacionalidad": "forms.crearPersona.nacionalidad",
-          "Nacionalidad2": "forms.crearPersona.nacionalidad2",
-          "IdTipoDocumento": "forms.crearPersona.idTipoDocumento",
-          "DocIdent": "forms.crearPersona.docIdent",
-          "IdTipoTelefono": "forms.crearPersona.idTipoTelefono",
-          "Telefono": "forms.crearPersona.telefono"
+        "ModificarPersonaEntradaDTO": {
+          "IdPersona": "params.personaId",
+          "Nombre": "forms.modificarPersona.nombre",
+          "Apellido1": "forms.modificarPersona.apellido1",
+          "Apellido2": "forms.modificarPersona.apellido2",
+          "Apodo": "forms.modificarPersona.apodo",
+          "Email": "forms.modificarPersona.email",
+          "FechaNacimiento": "forms.modificarPersona.fechaNacimiento",
+          "IdPaisNacimiento": "forms.modificarPersona.idPaisNacimiento",
+          "Nacionalidad": "forms.modificarPersona.nacionalidad",
+          "Nacionalidad2": "forms.modificarPersona.nacionalidad2",
+          "IdTipoDocumento": "forms.modificarPersona.idTipoDocumento",
+          "DocIdent": "forms.modificarPersona.docIdent",
+          "IdTipoTelefono": "forms.modificarPersona.idTipoTelefono",
+          "Telefono": "forms.modificarPersona.telefono"
         }
       }
     }
   },
   "pages": [
     {
-      "id": "crear-persona",
+      "id": "modificar-persona",
+      "title": "Modificar persona",
       "preloads": [
         {
-          "obtenerDatosFormularioCreacionPersona": {}
+          "obtenerDatosFormularioModificacionPersona": {
+            "IdPersona": "params.personaId"
+          }
         }
       ],
       "layout": [
@@ -66,7 +70,7 @@
             {
               "type": "heading",
               "props": {
-                "text": "Información de la persona",
+                "text": "Modificar persona",
                 "level": 2
               }
             },
@@ -77,7 +81,7 @@
                 "gap": "md"
               },
               "queryStateFeedback": {
-                "query": "obtenerDatosFormularioCreacionPersona",
+                "query": "obtenerDatosFormularioModificacionPersona",
                 "states": {
                   "loading": {
                     "mode": "fallback",
@@ -86,7 +90,7 @@
                         "type": "skeleton",
                         "props": {
                           "variant": "rect",
-                          "height": "32"
+                          "height": "400px"
                         }
                       }
                     ]
@@ -97,8 +101,8 @@
                       {
                         "type": "alert",
                         "props": {
-                          "title": "Error al cargar",
-                          "message": "Error al cargar los datos del formulario.",
+                          "title": "Error al cargar los datos de la persona.",
+                          "message": "{{queries.obtenerDatosFormularioModificacionPersona.error.message}}",
                           "type": "danger"
                         }
                       }
@@ -115,10 +119,10 @@
                 },
                 {
                   "type": "form",
-                  "id": "crearPersona",
+                  "id": "modificarPersona",
                   "submitAction": {
                     "type": "executeOperation",
-                    "operationName": "crearPersona"
+                    "operationName": "modificarPersona"
                   },
                   "children": [
                     {
@@ -127,14 +131,15 @@
                         "fieldId": "tieneDocumento",
                         "label": "Documento Identificación",
                         "optionLayout": "inline",
+                        "defaultValue": "queries.obtenerDatosFormularioModificacionPersona.data.DatosFormularioModificacionPersonaSalidaDTO.PersonaFormularioDTO.TieneDocumento",
                         "items": [
                           {
                             "label": "Sí",
-                            "value": "si"
+                            "value": "true"
                           },
                           {
                             "label": "No",
-                            "value": "no"
+                            "value": "false"
                           }
                         ]
                       }
@@ -146,9 +151,9 @@
                         "gap": "md"
                       },
                       "visibility": {
-                        "reference": "forms.crearPersona.tieneDocumento",
+                        "reference": "forms.modificarPersona.tieneDocumento",
                         "operator": "equals",
-                        "value": "si"
+                        "value": "true"
                       },
                       "children": [
                         {
@@ -157,8 +162,9 @@
                             "fieldId": "idTipoDocumento",
                             "label": "Tipo de documento",
                             "placeholder": "Seleccione un tipo",
+                            "defaultValue": "queries.obtenerDatosFormularioModificacionPersona.data.DatosFormularioModificacionPersonaSalidaDTO.PersonaFormularioDTO.IdTipoDocumento",
                             "items": {
-                              "source": "queries.obtenerDatosFormularioCreacionPersona.data.DatosFormularioCreacionPersonaSalidaDTO.TiposDocumentosIdentificativosDTO",
+                              "source": "queries.obtenerDatosFormularioModificacionPersona.data.DatosFormularioModificacionPersonaSalidaDTO.TiposDocumentosIdentificativosDTO",
                               "label": "Nombre",
                               "value": "Id"
                             },
@@ -172,12 +178,13 @@
                           "props": {
                             "fieldId": "docIdent",
                             "label": "Documento de Identidad",
+                            "defaultValue": "queries.obtenerDatosFormularioModificacionPersona.data.DatosFormularioModificacionPersonaSalidaDTO.PersonaFormularioDTO.DocIdent",
                             "validations": {
                               "required": true
                             }
                           },
                           "visibility": {
-                            "reference": "forms.crearPersona.idTipoDocumento",
+                            "reference": "forms.modificarPersona.idTipoDocumento",
                             "operator": "isTruthy"
                           }
                         }
@@ -195,6 +202,7 @@
                           "props": {
                             "fieldId": "nombre",
                             "label": "Nombre",
+                            "defaultValue": "queries.obtenerDatosFormularioModificacionPersona.data.DatosFormularioModificacionPersonaSalidaDTO.PersonaFormularioDTO.Nombre",
                             "validations": {
                               "required": true
                             }
@@ -205,6 +213,7 @@
                           "props": {
                             "fieldId": "apellido1",
                             "label": "Primer apellido",
+                            "defaultValue": "queries.obtenerDatosFormularioModificacionPersona.data.DatosFormularioModificacionPersonaSalidaDTO.PersonaFormularioDTO.Apellido1",
                             "validations": {
                               "required": true
                             }
@@ -214,7 +223,8 @@
                           "type": "input",
                           "props": {
                             "fieldId": "apellido2",
-                            "label": "Segundo apellido"
+                            "label": "Segundo apellido",
+                            "defaultValue": "queries.obtenerDatosFormularioModificacionPersona.data.DatosFormularioModificacionPersonaSalidaDTO.PersonaFormularioDTO.Apellido2"
                           }
                         },
                         {
@@ -222,14 +232,16 @@
                           "props": {
                             "fieldId": "fechaNacimiento",
                             "label": "Fecha nacimiento",
-                            "inputType": "date"
+                            "inputType": "date",
+                            "defaultValue": "queries.obtenerDatosFormularioModificacionPersona.data.DatosFormularioModificacionPersonaSalidaDTO.PersonaFormularioDTO.FechaNacimiento"
                           }
                         },
                         {
                           "type": "input",
                           "props": {
                             "fieldId": "apodo",
-                            "label": "Apodo"
+                            "label": "Apodo",
+                            "defaultValue": "queries.obtenerDatosFormularioModificacionPersona.data.DatosFormularioModificacionPersonaSalidaDTO.PersonaFormularioDTO.Apodo"
                           }
                         },
                         {
@@ -238,8 +250,9 @@
                             "fieldId": "idPaisNacimiento",
                             "label": "País de Nacimiento",
                             "placeholder": "Seleccione un país",
+                            "defaultValue": "queries.obtenerDatosFormularioModificacionPersona.data.DatosFormularioModificacionPersonaSalidaDTO.PersonaFormularioDTO.IdPaisNacimiento",
                             "items": {
-                              "source": "queries.obtenerDatosFormularioCreacionPersona.data.DatosFormularioCreacionPersonaSalidaDTO.PaisesDTO",
+                              "source": "queries.obtenerDatosFormularioModificacionPersona.data.DatosFormularioModificacionPersonaSalidaDTO.PaisesDTO",
                               "label": "Nombre",
                               "value": "Id"
                             }
@@ -251,8 +264,9 @@
                             "fieldId": "idTipoTelefono",
                             "label": "Tipo de teléfono",
                             "placeholder": "Seleccione un tipo",
+                            "defaultValue": "queries.obtenerDatosFormularioModificacionPersona.data.DatosFormularioModificacionPersonaSalidaDTO.PersonaFormularioDTO.IdTipoTelefono",
                             "items": {
-                              "source": "queries.obtenerDatosFormularioCreacionPersona.data.DatosFormularioCreacionPersonaSalidaDTO.TiposTelefonoDTO",
+                              "source": "queries.obtenerDatosFormularioModificacionPersona.data.DatosFormularioModificacionPersonaSalidaDTO.TiposTelefonoDTO",
                               "label": "Nombre",
                               "value": "Id"
                             }
@@ -262,28 +276,32 @@
                           "type": "input",
                           "props": {
                             "fieldId": "telefono",
-                            "label": "Teléfono"
+                            "label": "Teléfono",
+                            "defaultValue": "queries.obtenerDatosFormularioModificacionPersona.data.DatosFormularioModificacionPersonaSalidaDTO.PersonaFormularioDTO.Telefono"
                           }
                         },
                         {
                           "type": "input",
                           "props": {
                             "fieldId": "email",
-                            "label": "Email"
+                            "label": "Email",
+                            "defaultValue": "queries.obtenerDatosFormularioModificacionPersona.data.DatosFormularioModificacionPersonaSalidaDTO.PersonaFormularioDTO.Email"
                           }
                         },
                         {
                           "type": "input",
                           "props": {
                             "fieldId": "nacionalidad",
-                            "label": "Nacionalidad"
+                            "label": "Nacionalidad",
+                            "defaultValue": "queries.obtenerDatosFormularioModificacionPersona.data.DatosFormularioModificacionPersonaSalidaDTO.PersonaFormularioDTO.Nacionalidad"
                           }
                         },
                         {
                           "type": "input",
                           "props": {
                             "fieldId": "nacionalidad2",
-                            "label": "Otra nacionalidad"
+                            "label": "Otra nacionalidad",
+                            "defaultValue": "queries.obtenerDatosFormularioModificacionPersona.data.DatosFormularioModificacionPersonaSalidaDTO.PersonaFormularioDTO.Nacionalidad2"
                           }
                         }
                       ]
@@ -305,7 +323,7 @@
                     "gap": "sm"
                   },
                   "queryStateFeedback": {
-                    "query": "crearPersona",
+                    "query": "modificarPersona",
                     "states": {
                       "idle": {
                         "mode": "hide"
@@ -328,8 +346,8 @@
                           {
                             "type": "alert",
                             "props": {
-                              "title": "Persona guardada",
-                              "message": "La persona se ha guardado correctamente.",
+                              "title": "Cambios guardados",
+                              "message": "La persona se ha actualizado correctamente.",
                               "type": "success"
                             }
                           },
@@ -341,28 +359,9 @@
                                 "type": "navigateTo",
                                 "pageId": "ficha-persona",
                                 "params": {
-                                  "personaId": "queries.crearPersona.data.CrearPersonaSalidaDTO.PersonaCreadaDTO.Id"
+                                  "personaId": "params.personaId"
                                 }
                               }
-                            }
-                          },
-                          {
-                            "type": "link",
-                            "props": {
-                              "label": "Volver a búsqueda",
-                              "icon": "search",
-                              "action": {
-                                "type": "navigateTo",
-                                "pageId": "buscar-persona",
-                                "params": {
-                                  "id_entidad_asociacion": "params.id_entidad_asociacion",
-                                  "etiqueta_entidad": "params.etiqueta_entidad"
-                                }
-                              }
-                            },
-                            "visibility": {
-                              "reference": "params.id_entidad_asociacion",
-                              "operator": "isTruthy"
                             }
                           }
                         ]
@@ -374,7 +373,7 @@
                             "type": "alert",
                             "props": {
                               "title": "No se pudo guardar",
-                              "message": "{{queries.crearPersona.error.message}}",
+                              "message": "{{queries.modificarPersona.error.message}}",
                               "type": "danger"
                             }
                           }
@@ -383,48 +382,6 @@
                     }
                   },
                   "children": []
-                },
-                {
-                  "type": "container",
-                  "props": {
-                    "direction": "row",
-                    "gap": "md",
-                    "justify": "end"
-                  },
-                  "children": [
-                    {
-                      "type": "link",
-                      "props": {
-                        "label": "Cancelar",
-                        "action": {
-                          "type": "navigateTo",
-                          "pageId": "inicio"
-                        }
-                      },
-                      "visibility": {
-                        "reference": "params.id_entidad_asociacion",
-                        "operator": "isFalsy"
-                      }
-                    },
-                    {
-                      "type": "link",
-                      "props": {
-                        "label": "Cancelar",
-                        "action": {
-                          "type": "navigateTo",
-                          "pageId": "buscar-persona",
-                          "params": {
-                            "id_entidad_asociacion": "params.id_entidad_asociacion",
-                            "etiqueta_entidad": "params.etiqueta_entidad"
-                          }
-                        }
-                      },
-                      "visibility": {
-                        "reference": "params.id_entidad_asociacion",
-                        "operator": "isTruthy"
-                      }
-                    }
-                  ]
                 }
               ]
             }
@@ -433,5 +390,5 @@
       ]
     }
   ],
-  "initialPage": "crear-persona"
+  "initialPage": "modificar-persona"
 }

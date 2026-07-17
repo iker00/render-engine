@@ -1,0 +1,825 @@
+{
+  "tokens": {
+    "token": {
+      "value": "#bearer_token#"
+    }
+  },
+  "api": {
+    "obtenerFichaPersonaOrigen": {
+      "method": "POST",
+      "endpoint": "/api/ss/Ade/v1/operations/3BA19171-04D2-4C74-8F09-B11B51AFE2AF/ObtenerFichaPersona",
+      "headers": {
+        "Authorization": "Bearer {{tokens.token.value}}"
+      },
+      "body": {
+        "Id": "params.id_persona"
+      }
+    },
+    "obtenerFichaHechoDestino": {
+      "method": "POST",
+      "endpoint": "/api/ss/Ade/v1/operations/E4B82A91-6F3C-4D15-A8E2-9C7F1B3D5E60/ObtenerFichaHecho",
+      "headers": {
+        "Authorization": "Bearer {{tokens.token.value}}"
+      },
+      "body": {
+        "Id": "params.id_entidad_asociacion"
+      }
+    },
+    "obtenerFichaBandaDestino": {
+      "method": "POST",
+      "endpoint": "/api/ss/Ade/v1/operations/4959D4E9-5B07-4798-82A3-1E341C6693C8/ObtenerFichaBanda",
+      "headers": {
+        "Authorization": "Bearer {{tokens.token.value}}"
+      },
+      "body": {
+        "Id": "params.id_entidad_asociacion"
+      }
+    },
+    "obtenerFichaPersonaDestino": {
+      "method": "POST",
+      "endpoint": "/api/ss/Ade/v1/operations/3BA19171-04D2-4C74-8F09-B11B51AFE2AF/ObtenerFichaPersona",
+      "headers": {
+        "Authorization": "Bearer {{tokens.token.value}}"
+      },
+      "body": {
+        "Id": "params.id_entidad_asociacion"
+      }
+    },
+    "asociarPersonaEntidad": {
+      "method": "POST",
+      "endpoint": "/api/ss/Ade/v1/operations/D8F1A204-7B3C-4E5F-9A2D-6E8B1C3D5F70/AsociarPersonaEntidad",
+      "headers": {
+        "Authorization": "Bearer {{tokens.token.value}}"
+      },
+      "body": {
+        "AsociarPersonaEntidadEntradaDTO": {
+          "IdPersona": "params.id_persona",
+          "EtiquetaEntidad": "params.etiqueta_entidad",
+          "IdentificadorEntidad": "params.id_entidad_asociacion",
+          "Observaciones": "forms.asociarPersona.observaciones"
+        }
+      }
+    }
+  },
+  "pages": [
+    {
+      "id": "asociar-persona",
+      "title": "Asociar persona",
+      "preloads": [
+        {
+          "obtenerFichaPersonaOrigen": {
+            "when": {
+              "reference": "params.id_persona",
+              "operator": "isTruthy"
+            }
+          }
+        },
+        {
+          "obtenerFichaHechoDestino": {
+            "when": {
+              "reference": "params.etiqueta_entidad",
+              "operator": "equals",
+              "value": "HECHO"
+            }
+          }
+        },
+        {
+          "obtenerFichaBandaDestino": {
+            "when": {
+              "reference": "params.etiqueta_entidad",
+              "operator": "equals",
+              "value": "BANDA"
+            }
+          }
+        },
+        {
+          "obtenerFichaPersonaDestino": {
+            "when": {
+              "reference": "params.etiqueta_entidad",
+              "operator": "equals",
+              "value": "PERSONA"
+            }
+          }
+        }
+      ],
+      "layout": [
+        {
+          "type": "alert",
+          "props": {
+            "title": "Parámetros no válidos",
+            "message": "La URL debe incluir el parámetro id_persona.",
+            "type": "danger"
+          },
+          "visibility": {
+            "reference": "params.id_persona",
+            "operator": "isFalsy"
+          }
+        },
+        {
+          "type": "alert",
+          "props": {
+            "title": "Parámetros no válidos",
+            "message": "La URL debe incluir el parámetro id_entidad_asociacion.",
+            "type": "danger"
+          },
+          "visibility": {
+            "reference": "params.id_entidad_asociacion",
+            "operator": "isFalsy"
+          }
+        },
+        {
+          "type": "alert",
+          "props": {
+            "title": "Parámetros no válidos",
+            "message": "La URL debe incluir etiqueta_entidad con valor HECHO, BANDA o PERSONA.",
+            "type": "danger"
+          },
+          "visibility": {
+            "reference": "params.etiqueta_entidad",
+            "operator": "isFalsy"
+          }
+        },
+        {
+          "type": "alert",
+          "props": {
+            "title": "Etiqueta de entidad no válida",
+            "message": "etiqueta_entidad debe ser HECHO, BANDA o PERSONA.",
+            "type": "danger"
+          },
+          "visibility": {
+            "reference": "params.etiqueta_entidad",
+            "operator": "equals",
+            "value": "HECHOS"
+          }
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Asociar persona",
+            "level": 1
+          }
+        },
+        {
+          "type": "container",
+          "props": {
+            "variant": "card",
+            "gap": "md"
+          },
+          "queryStateFeedback": {
+            "query": "obtenerFichaPersonaOrigen",
+            "states": {
+              "loading": {
+                "mode": "fallback",
+                "fallback": [
+                  {
+                    "type": "skeleton",
+                    "props": {
+                      "variant": "rect",
+                      "width": "1/4",
+                      "height": "6"
+                    }
+                  },
+                  {
+                    "type": "container",
+                    "props": {
+                      "columns": 2,
+                      "gap": "md"
+                    },
+                    "children": [
+                      {
+                        "type": "skeleton",
+                        "props": {
+                          "variant": "rect",
+                          "height": "16",
+                          "rounded": true
+                        }
+                      },
+                      {
+                        "type": "skeleton",
+                        "props": {
+                          "variant": "rect",
+                          "height": "16",
+                          "rounded": true
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              "error": {
+                "mode": "fallback",
+                "fallback": [
+                  {
+                    "type": "alert",
+                    "props": {
+                      "title": "Error al cargar la persona",
+                      "message": "Error al cargar la persona.",
+                      "type": "danger"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "children": [
+            {
+              "type": "heading",
+              "props": {
+                "text": "Persona que se asocia",
+                "level": 2,
+                "icon": "user"
+              }
+            },
+            {
+              "type": "container",
+              "props": {
+                "columns": 2,
+                "gap": "md"
+              },
+              "children": [
+                {
+                  "type": "stat",
+                  "props": {
+                    "label": "Nombre",
+                    "value": "{{queries.obtenerFichaPersonaOrigen.data.FichaPersonaDTO.DatosIdentificativosDTO.NombreCompleto}}"
+                  }
+                },
+                {
+                  "type": "stat",
+                  "props": {
+                    "label": "Documento",
+                    "value": "{{queries.obtenerFichaPersonaOrigen.data.FichaPersonaDTO.DatosIdentificativosDTO.DocIdentidadPrincipal}}"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "container",
+          "props": {
+            "variant": "card",
+            "gap": "md"
+          },
+          "visibility": {
+            "reference": "params.etiqueta_entidad",
+            "operator": "equals",
+            "value": "HECHO"
+          },
+          "queryStateFeedback": {
+            "query": "obtenerFichaHechoDestino",
+            "states": {
+              "loading": {
+                "mode": "fallback",
+                "fallback": [
+                  {
+                    "type": "skeleton",
+                    "props": {
+                      "variant": "rect",
+                      "width": "1/4",
+                      "height": "6"
+                    }
+                  },
+                  {
+                    "type": "container",
+                    "props": {
+                      "columns": 2,
+                      "gap": "md"
+                    },
+                    "children": [
+                      {
+                        "type": "skeleton",
+                        "props": {
+                          "variant": "rect",
+                          "height": "16",
+                          "rounded": true
+                        }
+                      },
+                      {
+                        "type": "skeleton",
+                        "props": {
+                          "variant": "rect",
+                          "height": "16",
+                          "rounded": true
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              "error": {
+                "mode": "fallback",
+                "fallback": [
+                  {
+                    "type": "alert",
+                    "props": {
+                      "title": "Error al cargar la entidad",
+                      "message": "Error al cargar la entidad.",
+                      "type": "danger"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "children": [
+            {
+              "type": "heading",
+              "props": {
+                "text": "Hecho a asociar",
+                "level": 2,
+                "icon": "file-text"
+              }
+            },
+            {
+              "type": "container",
+              "props": {
+                "columns": 2,
+                "gap": "md"
+              },
+              "children": [
+                {
+                  "type": "stat",
+                  "props": {
+                    "label": "Lugar",
+                    "value": "{{queries.obtenerFichaHechoDestino.data.FichaHechoDTO.HechoDatosIdentificativosDTO.Lugar}}"
+                  }
+                },
+                {
+                  "type": "stat",
+                  "layout": {
+                    "span": 2
+                  },
+                  "props": {
+                    "label": "Resumen",
+                    "value": "{{queries.obtenerFichaHechoDestino.data.FichaHechoDTO.HechoDatosIdentificativosDTO.ResumenHecho}}"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "container",
+          "props": {
+            "variant": "card",
+            "gap": "md"
+          },
+          "visibility": {
+            "reference": "params.etiqueta_entidad",
+            "operator": "equals",
+            "value": "PERSONA"
+          },
+          "queryStateFeedback": {
+            "query": "obtenerFichaPersonaDestino",
+            "states": {
+              "loading": {
+                "mode": "fallback",
+                "fallback": [
+                  {
+                    "type": "skeleton",
+                    "props": {
+                      "variant": "rect",
+                      "width": "1/4",
+                      "height": "6"
+                    }
+                  },
+                  {
+                    "type": "container",
+                    "props": {
+                      "columns": 2,
+                      "gap": "md"
+                    },
+                    "children": [
+                      {
+                        "type": "skeleton",
+                        "props": {
+                          "variant": "rect",
+                          "height": "16",
+                          "rounded": true
+                        }
+                      },
+                      {
+                        "type": "skeleton",
+                        "props": {
+                          "variant": "rect",
+                          "height": "16",
+                          "rounded": true
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              "error": {
+                "mode": "fallback",
+                "fallback": [
+                  {
+                    "type": "alert",
+                    "props": {
+                      "title": "Error al cargar la entidad",
+                      "message": "Error al cargar la entidad.",
+                      "type": "danger"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "children": [
+            {
+              "type": "heading",
+              "props": {
+                "text": "Persona a asociar",
+                "level": 2,
+                "icon": "user"
+              }
+            },
+            {
+              "type": "container",
+              "props": {
+                "columns": 2,
+                "gap": "md"
+              },
+              "children": [
+                {
+                  "type": "stat",
+                  "props": {
+                    "label": "Nombre",
+                    "value": "{{queries.obtenerFichaPersonaDestino.data.FichaPersonaDTO.DatosIdentificativosDTO.NombreCompleto}}"
+                  }
+                },
+                {
+                  "type": "stat",
+                  "props": {
+                    "label": "Documento",
+                    "value": "{{queries.obtenerFichaPersonaDestino.data.FichaPersonaDTO.DatosIdentificativosDTO.DocIdentidadPrincipal}}"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "container",
+          "props": {
+            "variant": "card",
+            "gap": "md"
+          },
+          "visibility": {
+            "reference": "params.etiqueta_entidad",
+            "operator": "equals",
+            "value": "BANDA"
+          },
+          "queryStateFeedback": {
+            "query": "obtenerFichaBandaDestino",
+            "states": {
+              "loading": {
+                "mode": "fallback",
+                "fallback": [
+                  {
+                    "type": "skeleton",
+                    "props": {
+                      "variant": "rect",
+                      "width": "1/4",
+                      "height": "6"
+                    }
+                  },
+                  {
+                    "type": "container",
+                    "props": {
+                      "columns": 2,
+                      "gap": "md"
+                    },
+                    "children": [
+                      {
+                        "type": "skeleton",
+                        "props": {
+                          "variant": "rect",
+                          "height": "16",
+                          "rounded": true
+                        }
+                      },
+                      {
+                        "type": "skeleton",
+                        "props": {
+                          "variant": "rect",
+                          "height": "16",
+                          "rounded": true
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              "error": {
+                "mode": "fallback",
+                "fallback": [
+                  {
+                    "type": "alert",
+                    "props": {
+                      "title": "Error al cargar la entidad",
+                      "message": "Error al cargar la entidad.",
+                      "type": "danger"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "children": [
+            {
+              "type": "heading",
+              "props": {
+                "text": "Banda a asociar",
+                "level": 2,
+                "icon": "users"
+              }
+            },
+            {
+              "type": "container",
+              "props": {
+                "columns": 2,
+                "gap": "md"
+              },
+              "children": [
+                {
+                  "type": "stat",
+                  "props": {
+                    "label": "Nombre",
+                    "value": "{{queries.obtenerFichaBandaDestino.data.FichaBandaDTO.BandaDatosIdentificativosDTO.Nombre}}"
+                  }
+                },
+                {
+                  "type": "stat",
+                  "layout": {
+                    "span": 2
+                  },
+                  "props": {
+                    "label": "Descripción",
+                    "value": "{{queries.obtenerFichaBandaDestino.data.FichaBandaDTO.BandaDatosIdentificativosDTO.Descripcion}}"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "container",
+          "props": {
+            "variant": "card",
+            "gap": "md"
+          },
+          "children": [
+            {
+              "type": "form",
+              "id": "asociarPersona",
+              "submitAction": {
+                "type": "executeOperation",
+                "operationName": "asociarPersonaEntidad"
+              },
+              "children": [
+                {
+                  "type": "textarea",
+                  "props": {
+                    "fieldId": "observaciones",
+                    "label": "Observaciones",
+                    "placeholder": "Observaciones opcionales (máx. 500 caracteres)",
+                    "validations": {
+                      "maxLength": 500
+                    }
+                  }
+                },
+                {
+                  "type": "container",
+                  "props": {
+                    "direction": "row",
+                    "gap": "md",
+                    "justify": "end"
+                  },
+                  "visibility": {
+                    "reference": "params.id_persona",
+                    "operator": "isTruthy"
+                  },
+                  "children": [
+                    {
+                      "type": "button",
+                      "props": {
+                        "label": "Asociar",
+                        "color": "primary",
+                        "icon": "link"
+                      },
+                      "visibility": {
+                        "reference": "params.etiqueta_entidad",
+                        "operator": "equals",
+                        "value": "HECHO"
+                      }
+                    },
+                    {
+                      "type": "button",
+                      "props": {
+                        "label": "Asociar",
+                        "color": "primary",
+                        "icon": "link"
+                      },
+                      "visibility": {
+                        "reference": "params.etiqueta_entidad",
+                        "operator": "equals",
+                        "value": "PERSONA"
+                      }
+                    },
+                    {
+                      "type": "button",
+                      "props": {
+                        "label": "Asociar",
+                        "color": "primary",
+                        "icon": "link"
+                      },
+                      "visibility": {
+                        "reference": "params.etiqueta_entidad",
+                        "operator": "equals",
+                        "value": "BANDA"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "container",
+              "props": {
+                "direction": "column",
+                "gap": "sm"
+              },
+              "queryStateFeedback": {
+                "query": "asociarPersonaEntidad",
+                "states": {
+                  "idle": {
+                    "mode": "hide"
+                  },
+                  "loading": {
+                    "mode": "fallback",
+                    "fallback": [
+                      {
+                        "type": "skeleton",
+                        "props": {
+                          "variant": "rect",
+                          "height": "8"
+                        }
+                      }
+                    ]
+                  },
+                  "success": {
+                    "mode": "fallback",
+                    "fallback": [
+                      {
+                        "type": "alert",
+                        "props": {
+                          "title": "Persona asociada al hecho",
+                          "message": "La persona se ha vinculado correctamente al hecho.",
+                          "type": "success"
+                        },
+                        "visibility": {
+                          "reference": "params.etiqueta_entidad",
+                          "operator": "equals",
+                          "value": "HECHO"
+                        }
+                      },
+                      {
+                        "type": "link",
+                        "props": {
+                          "label": "Ver ficha",
+                          "action": {
+                            "type": "navigateTo",
+                            "pageId": "ficha-hecho",
+                            "params": {
+                              "hechoId": "params.id_entidad_asociacion"
+                            }
+                          }
+                        },
+                        "visibility": {
+                          "reference": "params.etiqueta_entidad",
+                          "operator": "equals",
+                          "value": "HECHO"
+                        }
+                      },
+                      {
+                        "type": "alert",
+                        "props": {
+                          "title": "Relación creada",
+                          "message": "La relación entre personas se ha creado correctamente.",
+                          "type": "success"
+                        },
+                        "visibility": {
+                          "reference": "params.etiqueta_entidad",
+                          "operator": "equals",
+                          "value": "PERSONA"
+                        }
+                      },
+                      {
+                        "type": "link",
+                        "props": {
+                          "label": "Ver ficha",
+                          "action": {
+                            "type": "navigateTo",
+                            "pageId": "ficha-persona",
+                            "params": {
+                              "personaId": "params.id_entidad_asociacion"
+                            }
+                          }
+                        },
+                        "visibility": {
+                          "reference": "params.etiqueta_entidad",
+                          "operator": "equals",
+                          "value": "PERSONA"
+                        }
+                      },
+                      {
+                        "type": "alert",
+                        "props": {
+                          "title": "Relación indirecta",
+                          "message": "Ya existía una relación en sentido contrario entre estas personas. Se ha creado la relación solicitada.",
+                          "type": "warning"
+                        },
+                        "visibility": {
+                          "reference": "queries.asociarPersonaEntidad.data.AsociarPersonaEntidadSalidaDTO.RelacionIndirecta",
+                          "operator": "isTruthy"
+                        }
+                      },
+                      {
+                        "type": "alert",
+                        "props": {
+                          "title": "Persona asociada a la banda",
+                          "message": "La persona se ha vinculado correctamente a la banda.",
+                          "type": "success"
+                        },
+                        "visibility": {
+                          "reference": "params.etiqueta_entidad",
+                          "operator": "equals",
+                          "value": "BANDA"
+                        }
+                      },
+                      {
+                        "type": "link",
+                        "props": {
+                          "label": "Ver ficha",
+                          "action": {
+                            "type": "navigateTo",
+                            "pageId": "ficha-banda",
+                            "params": {
+                              "bandaId": "params.id_entidad_asociacion"
+                            }
+                          }
+                        },
+                        "visibility": {
+                          "reference": "params.etiqueta_entidad",
+                          "operator": "equals",
+                          "value": "BANDA"
+                        }
+                      }
+                    ]
+                  },
+                  "error": {
+                    "mode": "fallback",
+                    "fallback": [
+                      {
+                        "type": "alert",
+                        "props": {
+                          "title": "No se pudo asociar",
+                          "message": "{{queries.asociarPersonaEntidad.error.message}}",
+                          "type": "danger"
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              "children": []
+            },
+            {
+              "type": "container",
+              "props": {
+                "direction": "row",
+                "gap": "md",
+                "justify": "end"
+              },
+              "children": [
+                {
+                  "type": "link",
+                  "props": {
+                    "label": "Cancelar",
+                    "action": {
+                      "type": "navigateTo",
+                      "pageId": "inicio"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "initialPage": "asociar-persona"
+}

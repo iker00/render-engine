@@ -20,7 +20,11 @@ import { DevRuntimeToggleButton } from './dev-runtime-toggle-button'
 import { DevRuntimeDrawer } from './dev-runtime-drawer'
 import { useDevRuntimeKeyboard } from './dev-runtime-keyboard'
 import { migrateRuntimeStateAcrossConfig } from './dev-runtime-state-migration'
-import type { RuntimeConfigError } from '../config/runtime-config'
+import devSettings from '../dev/dev-settings.json'
+import {
+  createBrowserHashNavigationHash,
+  parseBrowserHashNavigationHash,
+} from '../runtime/runtime-navigation/browser-hash-navigation'
 
 interface DevRuntimeProps {
   rootElement?: HTMLElement | null
@@ -31,6 +35,39 @@ const defaultDevConfigText = JSON.stringify(devConfigJson, null, 2)
 const defaultDevDataValues = devDataValuesJson as Record<string, unknown>
 
 let activeConfigHmrApply: ((nextConfig: unknown) => void) | null = null
+
+function ensureDevInitialNavigationHash(config: RuntimeConfig) {
+  if (!import.meta.env.DEV) {
+    return
+  }
+
+  const initialParams = (devSettings as { initialParams?: Record<string, string> }).initialParams
+  if (!initialParams || Object.keys(initialParams).length === 0) {
+    return
+  }
+
+  const knownPageIds = config.pages.map((page) => page.id)
+  const parsed = parseBrowserHashNavigationHash(window.location.hash, {
+    initialPageId: config.initialPage,
+    knownPageIds,
+  })
+
+  if (!parsed.isFallback && Object.keys(parsed.entry.params).length > 0) {
+    return
+  }
+
+  const hash = createBrowserHashNavigationHash(
+    {
+      pageId: parsed.entry.pageId,
+      params: { ...parsed.entry.params, ...initialParams },
+    },
+    { initialPageId: config.initialPage },
+  )
+
+  if (window.location.hash !== hash) {
+    window.location.hash = hash
+  }
+}
 
 if (import.meta.hot) {
   // Fast Refresh re-evaluates this module on config.json HMR but preserves
@@ -75,6 +112,8 @@ export function DevRuntime({ rootElement = document.getElementById('layout-rende
       />
     )
   }
+
+  ensureDevInitialNavigationHash(bootstrapResult.config)
 
   return (
     <DevRuntimeReady

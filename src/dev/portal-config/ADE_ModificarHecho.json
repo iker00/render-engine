@@ -5,43 +5,43 @@
     }
   },
   "api": {
-    "obtenerDatosFormularioEdicionHecho": {
+    "obtenerDatosFormularioModificacionHecho": {
       "method": "POST",
-      "endpoint": "https://pre-frontapi.pamplona.es/ss/Ade/v1/operations/E2F8A614-3B9C-4D7E-9F21-6A5B8C1D40E7/ObtenerDatosFormularioCreacionHecho",
+      "endpoint": "https://pre-frontapi.pamplona.es/ss/Ade/v1/operations/C4D9E836-4B0A-5F9C-A3B2-7E8F0B1D4C62/ObtenerDatosFormularioModificacionHecho",
       "headers": {
         "Authorization": "Bearer {{tokens.token.value}}"
       },
       "body": {
-        "Id": "params.hechoId"
+        "IdHecho": "params.hechoId"
       }
     },
     "modificarHecho": {
       "method": "POST",
-      "endpoint": "https://pre-frontapi.pamplona.es/ss/Ade/v1/operations/00000000-0000-4000-8000-000000000021/ModificarHecho",
+      "endpoint": "https://pre-frontapi.pamplona.es/ss/Ade/v1/operations/F3A8B725-3C9D-4E8A-B2F1-6D7E9A0C3B51/ModificarHecho",
       "headers": {
         "Authorization": "Bearer {{tokens.token.value}}"
       },
       "body": {
         "ModificarHechoEntradaDTO": {
-          "Id": "params.hechoId",
-          "Lugar": "forms.editarHecho.lugar",
-          "FechaHecho": "forms.editarHecho.fechaHecho",
-          "HoraHecho": "forms.editarHecho.horaHecho",
-          "IdTipoHecho": "forms.editarHecho.idTipoHecho",
-          "IdOrigenHecho": "forms.editarHecho.idOrigenHecho",
-          "ResumenHecho": "forms.editarHecho.resumenHecho",
-          "Agente": "forms.editarHecho.agente",
-          "Agente1": "forms.editarHecho.agente1"
+          "IdHecho": "params.hechoId",
+          "Lugar": "forms.modificarHecho.lugar",
+          "FechaHecho": "forms.modificarHecho.fechaHecho",
+          "HoraHecho": "forms.modificarHecho.horaHecho",
+          "IdTipoHecho": "forms.modificarHecho.idTipoHecho",
+          "IdOrigenHecho": "forms.modificarHecho.idOrigenHecho",
+          "ResumenHecho": "forms.modificarHecho.resumenHecho",
+          "Agente": "forms.modificarHecho.agente",
+          "Agente1": "forms.modificarHecho.agente1"
         }
       }
     }
   },
   "pages": [
     {
-      "id": "editar-hecho",
+      "id": "modificar-hecho",
       "preloads": [
         {
-          "obtenerDatosFormularioEdicionHecho": {}
+          "obtenerDatosFormularioModificacionHecho": {}
         }
       ],
       "layout": [
@@ -62,7 +62,7 @@
             {
               "type": "heading",
               "props": {
-                "text": "Editar hecho",
+                "text": "Modificar hecho",
                 "level": 2
               }
             },
@@ -73,7 +73,7 @@
                 "gap": "md"
               },
               "queryStateFeedback": {
-                "query": "obtenerDatosFormularioEdicionHecho",
+                "query": "obtenerDatosFormularioModificacionHecho",
                 "states": {
                   "loading": {
                     "mode": "fallback",
@@ -82,7 +82,7 @@
                         "type": "skeleton",
                         "props": {
                           "variant": "rect",
-                          "height": "32"
+                          "height": "400px"
                         }
                       }
                     ]
@@ -93,8 +93,8 @@
                       {
                         "type": "alert",
                         "props": {
-                          "title": "Error al cargar",
-                          "message": "{{queries.obtenerDatosFormularioEdicionHecho.error.message}}",
+                          "title": "Error al cargar los datos del hecho.",
+                          "message": "{{queries.obtenerDatosFormularioModificacionHecho.error.message}}",
                           "type": "danger"
                         }
                       }
@@ -111,7 +111,7 @@
                 },
                 {
                   "type": "form",
-                  "id": "editarHecho",
+                  "id": "modificarHecho",
                   "submitAction": {
                     "type": "executeOperation",
                     "operationName": "modificarHecho"
@@ -122,6 +122,7 @@
                       "props": {
                         "fieldId": "lugar",
                         "label": "Lugar",
+                        "defaultValue": "queries.obtenerDatosFormularioModificacionHecho.data.DatosFormularioModificacionHechoSalidaDTO.HechoFormularioDTO.Lugar",
                         "validations": {
                           "required": true
                         }
@@ -133,6 +134,7 @@
                         "fieldId": "fechaHecho",
                         "label": "Fecha hecho",
                         "inputType": "date",
+                        "defaultValue": "queries.obtenerDatosFormularioModificacionHecho.data.DatosFormularioModificacionHechoSalidaDTO.HechoFormularioDTO.FechaHecho",
                         "validations": {
                           "required": true
                         }
@@ -143,9 +145,11 @@
                       "props": {
                         "fieldId": "horaHecho",
                         "label": "Hora hecho",
-                        "inputType": "time",
+                        "placeholder": "HH:mm",
+                        "defaultValue": "queries.obtenerDatosFormularioModificacionHecho.data.DatosFormularioModificacionHechoSalidaDTO.HechoFormularioDTO.HoraHecho",
                         "validations": {
-                          "required": true
+                          "required": true,
+                          "pattern": "^([01]?[0-9]|2[0-3]):[0-5][0-9]$"
                         }
                       }
                     },
@@ -155,8 +159,9 @@
                         "fieldId": "idTipoHecho",
                         "label": "Tipo de hecho",
                         "placeholder": "Seleccione un tipo",
+                        "defaultValue": "queries.obtenerDatosFormularioModificacionHecho.data.DatosFormularioModificacionHechoSalidaDTO.HechoFormularioDTO.IdTipoHecho",
                         "items": {
-                          "source": "queries.obtenerDatosFormularioEdicionHecho.data.DatosFormularioCreacionHechoSalidaDTO.TiposHechoDTO",
+                          "source": "queries.obtenerDatosFormularioModificacionHecho.data.DatosFormularioModificacionHechoSalidaDTO.TiposHechoDTO",
                           "label": "Nombre",
                           "value": "Id"
                         },
@@ -171,8 +176,9 @@
                         "fieldId": "idOrigenHecho",
                         "label": "Origen hecho",
                         "placeholder": "Seleccione un origen",
+                        "defaultValue": "queries.obtenerDatosFormularioModificacionHecho.data.DatosFormularioModificacionHechoSalidaDTO.HechoFormularioDTO.IdOrigenHecho",
                         "items": {
-                          "source": "queries.obtenerDatosFormularioEdicionHecho.data.DatosFormularioCreacionHechoSalidaDTO.OrigenesHechoDTO",
+                          "source": "queries.obtenerDatosFormularioModificacionHecho.data.DatosFormularioModificacionHechoSalidaDTO.OrigenesHechoDTO",
                           "label": "Nombre",
                           "value": "Id"
                         },
@@ -186,6 +192,7 @@
                       "props": {
                         "fieldId": "resumenHecho",
                         "label": "Resumen",
+                        "defaultValue": "queries.obtenerDatosFormularioModificacionHecho.data.DatosFormularioModificacionHechoSalidaDTO.HechoFormularioDTO.ResumenHecho",
                         "validations": {
                           "required": true
                         }
@@ -196,6 +203,7 @@
                       "props": {
                         "fieldId": "agente",
                         "label": "Agente",
+                        "defaultValue": "queries.obtenerDatosFormularioModificacionHecho.data.DatosFormularioModificacionHechoSalidaDTO.HechoFormularioDTO.Agente",
                         "validations": {
                           "required": true
                         }
@@ -205,13 +213,14 @@
                       "type": "input",
                       "props": {
                         "fieldId": "agente1",
-                        "label": "Agente 1"
+                        "label": "Agente 1",
+                        "defaultValue": "queries.obtenerDatosFormularioModificacionHecho.data.DatosFormularioModificacionHechoSalidaDTO.HechoFormularioDTO.Agente1"
                       }
                     },
                     {
                       "type": "button",
                       "props": {
-                        "label": "Guardar cambios →",
+                        "label": "Guardar →",
                         "color": "primary",
                         "icon": "save"
                       }
@@ -248,7 +257,7 @@
                           {
                             "type": "alert",
                             "props": {
-                              "title": "Hecho actualizado",
+                              "title": "Cambios guardados",
                               "message": "Los cambios se han guardado correctamente.",
                               "type": "success"
                             }
@@ -278,23 +287,6 @@
                     }
                   },
                   "children": []
-                },
-                {
-                  "type": "container",
-                  "props": {
-                    "direction": "row",
-                    "gap": "md",
-                    "justify": "end"
-                  },
-                  "children": [
-                    {
-                      "type": "link",
-                      "props": {
-                        "label": "Cancelar",
-                        "href": "/carpetaciudadana/detallegenerico.aspx?tram=427&sec=19#/?hechoId={{params.hechoId}}"
-                      }
-                    }
-                  ]
                 }
               ]
             }
@@ -303,5 +295,5 @@
       ]
     }
   ],
-  "initialPage": "editar-hecho"
+  "initialPage": "modificar-hecho"
 }

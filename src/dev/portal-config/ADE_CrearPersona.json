@@ -189,10 +189,6 @@
                         "direction": "column",
                         "gap": "md"
                       },
-                      "visibility": {
-                        "reference": "forms.crearPersona.tieneDocumento",
-                        "operator": "isTruthy"
-                      },
                       "children": [
                         {
                           "type": "input",
@@ -343,6 +339,18 @@
                               "label": "Ver ficha",
                               "href": "/carpetaciudadana/detallegenerico.aspx?tram=427&sec=15#/?personaId={{queries.crearPersona.data.CrearPersonaSalidaDTO.PersonaCreadaDTO.Id}}"
                             }
+                          },
+                          {
+                            "type": "link",
+                            "props": {
+                              "label": "Volver a búsqueda",
+                              "icon": "search",
+                              "href": "/carpetaciudadana/detallegenerico.aspx?tram=427&sec=14#/?id_entidad_asociacion={{params.id_entidad_asociacion}}&etiqueta_entidad={{params.etiqueta_entidad}}"
+                            },
+                            "visibility": {
+                              "reference": "params.id_entidad_asociacion",
+                              "operator": "isTruthy"
+                            }
                           }
                         ]
                       },
@@ -376,6 +384,21 @@
                       "props": {
                         "label": "Cancelar",
                         "href": "/carpetaciudadana/detallegenerico.aspx?tram=427&sec=16"
+                      },
+                      "visibility": {
+                        "reference": "params.id_entidad_asociacion",
+                        "operator": "isFalsy"
+                      }
+                    },
+                    {
+                      "type": "link",
+                      "props": {
+                        "label": "Cancelar",
+                        "href": "/carpetaciudadana/detallegenerico.aspx?tram=427&sec=14#/?id_entidad_asociacion={{params.id_entidad_asociacion}}&etiqueta_entidad={{params.etiqueta_entidad}}"
+                      },
+                      "visibility": {
+                        "reference": "params.id_entidad_asociacion",
+                        "operator": "isTruthy"
                       }
                     }
                   ]

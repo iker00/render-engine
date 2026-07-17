@@ -465,7 +465,7 @@ function normalizeTextValue(value: unknown) {
 
 function normalizeSingleChoiceFieldValue(items: ResolvedSelectCollectionItem[], value: unknown) {
   const normalizedValue =
-    typeof value === 'string' || typeof value === 'number'
+    typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean'
       ? String(value)
       : ''
 

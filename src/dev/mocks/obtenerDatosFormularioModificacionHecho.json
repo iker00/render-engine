@@ -1,0 +1,64 @@
+{
+  "DatosFormularioModificacionHechoSalidaDTO": {
+    "TiposHechoDTO": [
+      {
+        "Id": 8,
+        "Nombre": "Agresión sexual",
+        "Descripcion": "Agresión sexual"
+      },
+      {
+        "Id": 5,
+        "Nombre": "Auxilio de personas",
+        "Descripcion": "Auxilio de personas"
+      },
+      {
+        "Id": 4,
+        "Nombre": "Estafas",
+        "Descripcion": "Estafas"
+      },
+      {
+        "Id": 1,
+        "Nombre": "Hurto",
+        "Descripcion": "Hurto"
+      },
+      {
+        "Id": 3,
+        "Nombre": "Problemas pareja",
+        "Descripcion": "Problemas pareja"
+      },
+      {
+        "Id": 2,
+        "Nombre": "Robo",
+        "Descripcion": "Robo"
+      }
+    ],
+    "OrigenesHechoDTO": [
+      {
+        "Id": 2,
+        "Nombre": "Atestados judiciales",
+        "Descripcion": "Atestados judiciales"
+      },
+      {
+        "Id": 3,
+        "Nombre": "Informe de actividad",
+        "Descripcion": "Informe de actividad"
+      },
+      {
+        "Id": 1,
+        "Nombre": "Partes diarios",
+        "Descripcion": "Partes diarios"
+      }
+    ],
+    "HechoFormularioDTO": {
+      "IdHecho": 2,
+      "Lugar": "Robo con violencia",
+      "FechaHecho": "2023-10-08",
+      "HoraHecho": "10:45",
+      "IdTipoHecho": 2,
+      "IdOrigenHecho": 3,
+      "ResumenHecho": "Robo plaza mayor",
+      "Agente": "458",
+      "Agente1": "111"
+    }
+  }
+}

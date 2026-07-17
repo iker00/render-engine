@@ -1,3 +1,7 @@
-{
-  "initialPage": "inicio"
-}
+{
+  "initialPage": "modificar-hecho",
+  "initialParams": {
+    "hechoId": "2"
+  }
+}
+

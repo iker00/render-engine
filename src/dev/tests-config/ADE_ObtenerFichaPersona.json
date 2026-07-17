@@ -358,7 +358,15 @@
                     "label": "Añadir persona",
                     "color": "primary",
                     "variant": "solid",
-                    "icon": "plus"
+                    "icon": "plus",
+                    "action": {
+                      "type": "navigateTo",
+                      "pageId": "buscar-persona",
+                      "params": {
+                        "id_entidad_asociacion": "params.personaId",
+                        "etiqueta_entidad": "PERSONA"
+                      }
+                    }
                   }
                 }
               ]
@@ -643,7 +651,11 @@
                     "label": "Añadir foto",
                     "color": "primary",
                     "variant": "solid",
-                    "icon": "plus"
+                    "icon": "plus",
+                    "action": {
+                      "type": "navigateTo",
+                      "pageId": "ficha-persona"
+                    }
                   }
                 }
               ]

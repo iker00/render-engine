@@ -25,6 +25,18 @@
       "id": "buscar-persona",
       "layout": [
         {
+          "type": "alert",
+          "props": {
+            "title": "Modo asociación",
+            "message": "Seleccione una persona de los resultados para asociarla a la entidad indicada, o cree una persona nueva.",
+            "type": "info"
+          },
+          "visibility": {
+            "reference": "params.id_entidad_asociacion",
+            "operator": "isTruthy"
+          }
+        },
+        {
           "type": "container",
           "props": {
             "direction": "row",
@@ -45,6 +57,22 @@
                 "label": "Crear persona",
                 "icon": "plus",
                 "href": "/carpetaciudadana/detallegenerico.aspx?tram=427&sec=21"
+              },
+              "visibility": {
+                "reference": "params.id_entidad_asociacion",
+                "operator": "isFalsy"
+              }
+            },
+            {
+              "type": "link",
+              "props": {
+                "label": "Crear persona",
+                "icon": "plus",
+                "href": "/carpetaciudadana/detallegenerico.aspx?tram=427&sec=21#/?id_entidad_asociacion={{params.id_entidad_asociacion}}&etiqueta_entidad={{params.etiqueta_entidad}}"
+              },
+              "visibility": {
+                "reference": "params.id_entidad_asociacion",
+                "operator": "isTruthy"
               }
             }
           ]
@@ -201,6 +229,18 @@
                     "props": {
                       "label": "{{item.NombreCompleto}}",
                       "href": "/carpetaciudadana/detallegenerico.aspx?tram=427&sec=15#/?personaId={{item.Id}}"
+                    }
+                  },
+                  {
+                    "type": "link",
+                    "props": {
+                      "label": "Asociar",
+                      "icon": "link",
+                      "href": "/carpetaciudadana/detallegenerico.aspx?tram=427&sec=22#/?id_persona={{item.Id}}&id_entidad_asociacion={{params.id_entidad_asociacion}}&etiqueta_entidad={{params.etiqueta_entidad}}"
+                    },
+                    "visibility": {
+                      "reference": "params.id_entidad_asociacion",
+                      "operator": "isTruthy"
                     }
                   }
                 ]

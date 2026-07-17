@@ -252,12 +252,29 @@
           },
           "children": [
             {
-              "type": "heading",
+              "type": "container",
               "props": {
-                "text": "Personas relacionadas",
-                "level": 2,
-                "icon": "user"
-              }
+                "direction": "row",
+                "justify": "between"
+              },
+              "children": [
+                {
+                  "type": "heading",
+                  "props": {
+                    "text": "Personas relacionadas",
+                    "level": 2,
+                    "icon": "user"
+                  }
+                },
+                {
+                  "type": "link",
+                  "props": {
+                    "label": "Añadir persona",
+                    "href": "/carpetaciudadana/detallegenerico.aspx?tram=427&sec=14#/?id_entidad_asociacion={{params.bandaId}}&etiqueta_entidad=BANDA",
+                    "icon": "plus"
+                  }
+                }
+              ]
             },
             {
               "type": "container",
