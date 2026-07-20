@@ -22,6 +22,7 @@ import type { RuntimeIterationContext } from '../runtime-references/runtime-refe
 import { resolveRuntimeValueWithOptions } from '../runtime-references/runtime-reference-resolver'
 import { matchesVisibilityRule } from '../runtime-layout-visibility'
 import { RuntimeDocumentTitleEffect } from '../runtime-document-title'
+import { useLayoutEditModeContext } from '../layout-edit-mode-context'
 import { RuntimeStateContext } from './runtime-state-context'
 import { createRuntimeState, runtimeStateReducer } from './runtime-state-reducer'
 import { selectCurrentNavigationEntry, selectCurrentPage } from './runtime-state-selectors'
@@ -514,6 +515,7 @@ export function useRuntimeState() {
 
 export function useRuntimeStateActions() {
   const { config, dispatchAndSyncState, getLatestState, initialState } = useRuntimeStateContext()
+  const editModeContext = useLayoutEditModeContext()
 
   const navigateToPage = useCallback(
     (
@@ -521,6 +523,10 @@ export function useRuntimeStateActions() {
       params: NavigateToRuntimeUiAction['params'] = {},
       options?: { iterationContext?: RuntimeIterationContext },
     ) => {
+      if (editModeContext !== null && editModeContext.active) {
+        return
+      }
+
       const page = config.pages.find((entry) => entry.id === pageId)
 
       if (!page) {
@@ -584,10 +590,14 @@ export function useRuntimeStateActions() {
         pushBrowserHash(nextHash)
       }
     },
-    [config.initialPage, config.pages, dispatchAndSyncState, getLatestState],
+    [config.initialPage, config.pages, dispatchAndSyncState, editModeContext, getLatestState],
   )
 
   const goBackPage = useCallback(() => {
+    if (editModeContext !== null && editModeContext.active) {
+      return
+    }
+
     const runtimeState = getLatestState()
 
     if (runtimeState.navigation.currentEntryIndex < 1) {
@@ -595,7 +605,7 @@ export function useRuntimeStateActions() {
     }
 
     window.history.back()
-  }, [getLatestState])
+  }, [editModeContext, getLatestState])
 
   const initializeForm = useCallback(
     (formId: string, fields: Record<string, RuntimeFormFieldDefinition>) => {
@@ -641,6 +651,10 @@ export function useRuntimeStateActions() {
 
   const openModal = useCallback(
     (modalId: string, options?: { iterationContext?: RuntimeIterationContext }) => {
+      if (editModeContext !== null && editModeContext.active) {
+        return
+      }
+
       dispatchAndSyncState({
         type: 'modal/open',
         payload: {
@@ -649,11 +663,15 @@ export function useRuntimeStateActions() {
         },
       })
     },
-    [dispatchAndSyncState],
+    [dispatchAndSyncState, editModeContext],
   )
 
   const closeModal = useCallback(
     (modalId: string, options?: { iterationContext?: RuntimeIterationContext }) => {
+      if (editModeContext !== null && editModeContext.active) {
+        return
+      }
+
       dispatchAndSyncState({
         type: 'modal/close',
         payload: {
@@ -662,11 +680,15 @@ export function useRuntimeStateActions() {
         },
       })
     },
-    [dispatchAndSyncState],
+    [dispatchAndSyncState, editModeContext],
   )
 
   const resetForm = useCallback(
     (formId: string) => {
+      if (editModeContext !== null && editModeContext.active) {
+        return
+      }
+
       dispatchAndSyncState({
         type: 'forms/reset',
         payload: {
@@ -674,7 +696,7 @@ export function useRuntimeStateActions() {
         },
       })
     },
-    [dispatchAndSyncState],
+    [dispatchAndSyncState, editModeContext],
   )
 
   const removeForm = useCallback(
@@ -764,6 +786,10 @@ export function useRuntimeStateActions() {
         hiddenFormFields?: RuntimeApiHiddenFormFields
       },
     ) => {
+      if (editModeContext !== null && editModeContext.active) {
+        return { status: 'skipped' as const }
+      }
+
       return executeQueryOperationWithSnapshot({
         config,
         dispatch: dispatchAndSyncState,
@@ -775,7 +801,7 @@ export function useRuntimeStateActions() {
         fetchImplementation: options?.fetch,
       })
     },
-    [config, dispatchAndSyncState, getLatestState],
+    [config, dispatchAndSyncState, editModeContext, getLatestState],
   )
 
   const executeInlineQueryOperation = useCallback(

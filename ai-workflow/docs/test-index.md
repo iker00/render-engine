@@ -12,7 +12,7 @@ src/tests/
 ├── layout-renderer/                — renderizado de nodos del layout
 ├── runtime-state/                  — store de estado compartido en runtime
 ├── runtime/                        — comportamiento runtime por área funcional
-└── dev-runtime/                    — modo desarrollo (editor Monaco, drawer, bundle)
+└── dev-runtime/                    — modo desarrollo (toolbar flotante, editor Monaco, bundle)
 ```
 
 ---
@@ -95,6 +95,7 @@ src/tests/
 - `runtime-state-validations-dynamic-select.test.tsx` — select dinámico: limpieza de valor, submit con empty, formularios declarativos (~270 líneas)
 - `runtime-state-modal.test.tsx` — estado del modal, acción open/close, regla uno a la vez, cierre por navegación/page-entry, identidad por iteración (~350 líneas)
 - `runtime-state-validations-when.test.tsx` — validación condicional `when`: required/minLength/pattern con condición cumplida/no cumplida, varias reglas con when sin match, mezcla con/sin when, retrocompatibilidad sin when, reevaluación local, referencia queries.*, referencia ausente (~nuevo)
+- `runtime-state-edit-mode-suppression.test.tsx` — supresión centralizada de acciones (`useRuntimeStateActions`, T1) bajo `LayoutEditModeProvider`: comportamiento base sin provider, supresión de navegación/operaciones/submit con `{ active: true }`, ejecución real sin suprimir con `{ active: false }` (modo Visual), integración con nodos de layout renderizados bajo el provider (~nuevo)
 
 ## runtime/
 
@@ -122,15 +123,18 @@ src/tests/
 ## dev-runtime/
 
 - `dev-runtime.test.tsx` — comportamiento del modo desarrollo
-- `dev-runtime-drawer.test.tsx` — drawer del dev runtime
+- `dev-editor-floating-toolbar.test.tsx` — `DevEditorFloatingToolbar` (UI pura): selector de página, tabs de dominio (layout activo, api/pages/tokens deshabilitados con "Próximamente"), botones paleta/Monaco con `aria-pressed`, toggle visual/editor, persistencia de un único root entre cambios de modo (~nuevo)
+- `dev-editor-layer.test.tsx` — `DevEditorLayer`: valor de `LayoutEditModeProvider` por modo sin remount de hijos, persistencia de selección al alternar visual/editor (Decisión 5), visibilidad de `FloatingSelectionOverlay` y `FloatingNodePalette` por modo, navegación de página limpia selección (FR15), degradación segura de selección cuando el nodo seleccionado se borra, único mecanismo de commit (`onCommitCanvasMutation`/`onCommitNodeUpdate`), persistencia de estado local de nodo (p. ej. accordion expandido) entre cambios de modo (Decisión 9) (~nuevo)
+- `floating-selection-overlay.test.tsx` — `FloatingSelectionOverlay`: no renderiza sin selección o sin anchor montado, `position:fixed` con top/left calculados, breadcrumb de ancestros con navegación de selección, panel de propiedades reenviando ediciones a `onCommitNodeUpdate`, botón de borrado invocando `onDeleteNode`, reposicionamiento al cambiar de anchor, clamping dentro del viewport (~nuevo)
+- `floating-node-palette.test.tsx` — `FloatingNodePalette`: no renderiza con `open=false`, panel `position:fixed` con `open=true`, monta `LayoutCanvasNodePalette` con una entrada por tipo del catálogo, botón "Cerrar" invoca `onClose`, desmonta al pasar `open` de `true` a `false` (~nuevo)
+- `floating-monaco-panel.test.tsx` — `FloatingMonacoPanel`: no renderiza con `open=false`, panel fijo `inset-y-0 right-0` con `open=true`, monta el editor Monaco con `editorBuffer` (o cadena vacía si es `null`), `onEditorChange`/`onApply`/`onCopy`, indicador de cambios pendientes, panel de errores con código/mensaje, `onClose` (~nuevo)
+- `overlay-anchor-position.test.ts` — utilidad pura `computeOverlayAnchorPosition` (cálculo de top/left con clamping de viewport) y el hook `useAnchoredPosition` (~nuevo)
 - `dev-runtime-state-bridge.test.tsx` — puente de estado entre editor y runtime
 - `dev-runtime-state-migration.test.ts` — migración de estado del dev runtime
 - `dev-runtime-json-schema.test.ts` — generación del JSON schema para el editor
-- `dev-runtime-keyboard.test.ts` — atajos de teclado del dev runtime
 - `dev-runtime-monaco-editor.test.tsx` — integración del editor Monaco
 - `dev-runtime-bundle.test.ts` — bundle del dev runtime (gate de producción)
 - `runtime-nodes-bundle.test.ts` — gate de code splitting de nodos: verifica que cada nodo produce su chunk independiente en build de producción (~nuevo)
-- `dev-runtime-canvas-shell.test.tsx` — shell del canvas: pestañas Visual/JSON del drawer, selector de página, selección/hover, limpieza de selección al cambiar de página o de config (~nuevo)
 - `layout-tree-mutations.test.ts` — funciones puras de mutación del árbol por `path` (`replaceNodeAt`, `insertNodeAt`, `removeNodeAt`, `movePathTo`), incluyendo el disambiguador `tabItemIndex` de `tabs` y el rechazo de ciclos (~nuevo)
 - `layout-canvas-commit.test.tsx` — pipeline de commit del canvas: validación/migración igual que Aplicar, parcheo de solo la clave `layout` sobre el texto crudo, preservación de `preloads` y `form.onSuccess`/`onError` fuera del subárbol tocado (~nuevo)
 - `layout-canvas-breadcrumb.test.tsx` — breadcrumb de ancestros: cadena de segmentos, etiqueta por `type`/`id`, navegación de selección por click en un segmento (~nuevo)

@@ -13,6 +13,23 @@ import { LayoutRenderer } from './layout-renderer'
 import { NodeComponents } from './nodes/node-components-map'
 import { LazyNode } from './lazy-node'
 
+// Node types whose native form control(s) must become inert in Editor mode.
+// A single <fieldset disabled> ancestor cascades the disabled state to every
+// listed-element descendant (input/select/textarea/button/…), covers label-driven
+// activation of checkboxes/radios/toggles that pointer-events-none alone would
+// leave functional, and does so without touching any individual node file.
+// See design.md (feature 0103) Decisión 4 for why 'button', 'accordion',
+// 'tabs', 'hidden' and 'fileManager' are deliberately excluded.
+const NODE_TYPES_INERT_IN_EDIT_MODE: ReadonlySet<LayoutNode['type']> = new Set([
+  'input',
+  'textarea',
+  'select',
+  'radioGroup',
+  'checkboxGroup',
+  'toggle',
+  'fileInput',
+])
+
 export interface LayoutNodeRendererProps {
   node: LayoutNode
   renderedChildren?: ReactNode
@@ -32,7 +49,7 @@ export function LayoutNodeRenderer({ node, renderedChildren, iterationContext, p
   const serializedPath = serializeLayoutNodePath(path)
   const { setNodeRef: setDraggableNodeRef, listeners: draggableListeners } = useDraggable({
     id: serializedPath,
-    disabled: editModeContext === null,
+    disabled: editModeContext === null || !editModeContext.active,
   })
   const resolvedVisibility = resolveLayoutNodeVisibility(node, state, iterationContext)
 
@@ -196,13 +213,33 @@ export function LayoutNodeRenderer({ node, renderedChildren, iterationContext, p
 
   renderedNode = <LazyNode>{renderedNode}</LazyNode>
 
+  if (editModeContext !== null && NODE_TYPES_INERT_IN_EDIT_MODE.has(node.type)) {
+    // `display: contents` keeps the layout untouched (no extra box, no reflow —
+    // same non-functional guarantee the selection wrapper below already meets).
+    // The fieldset sits INSIDE the selection wrapper so that clicks on the
+    // (now inert) control still bubble up to it and trigger selection.
+    // Presence is gated only by "provider mounted" (design.md Decisión 9): it must never
+    // toggle between Visual and Editor, only `disabled` does, so a node's DOM subtree never
+    // remounts when switching modes.
+    renderedNode = (
+      <fieldset disabled={editModeContext.active} className="contents">
+        {renderedNode}
+      </fieldset>
+    )
+  }
+
   if (editModeContext !== null) {
+    // Narrowed reference (not a plain boolean) so TypeScript keeps `selectedPath`/`hoveredPath`/
+    // `onSelectNode`/`onHoverNode` available below without re-checking `.active` each time.
+    const activeContext = editModeContext.active ? editModeContext : null
     const isSelected =
-      editModeContext.selectedPath !== null &&
-      serializeLayoutNodePath(editModeContext.selectedPath) === serializedPath
+      activeContext !== null &&
+      activeContext.selectedPath !== null &&
+      serializeLayoutNodePath(activeContext.selectedPath) === serializedPath
     const isHovered =
-      editModeContext.hoveredPath !== null &&
-      serializeLayoutNodePath(editModeContext.hoveredPath) === serializedPath
+      activeContext !== null &&
+      activeContext.hoveredPath !== null &&
+      serializeLayoutNodePath(activeContext.hoveredPath) === serializedPath
 
     let editModeClassName: string | undefined
     if (isSelected) {
@@ -219,6 +256,8 @@ export function LayoutNodeRenderer({ node, renderedChildren, iterationContext, p
     // selection while still letting the event keep bubbling normally (e.g. to an unrelated
     // click listener higher up the tree).
     const handleSelectClick = (event: MouseEvent<HTMLDivElement>) => {
+      if (activeContext === null) return
+
       const nativeEvent = event.nativeEvent as MouseEvent['nativeEvent'] & {
         __layoutEditModeNodeSelected?: boolean
       }
@@ -228,16 +267,19 @@ export function LayoutNodeRenderer({ node, renderedChildren, iterationContext, p
       }
 
       nativeEvent.__layoutEditModeNodeSelected = true
-      editModeContext.onSelectNode(path)
+      activeContext.onSelectNode(path)
     }
 
+    // Wrapper is mounted whenever a provider exists at all (design.md Decisión 9), never
+    // gated on `.active` — only its handlers/className behave differently, so a node's DOM
+    // subtree never remounts when switching between Visual and Editor.
     renderedNode = (
       <div
         ref={setDraggableNodeRef}
         data-node-path={serializedPath}
         onClick={handleSelectClick}
-        onMouseEnter={() => editModeContext.onHoverNode(path)}
-        onMouseLeave={() => editModeContext.onHoverNode(null)}
+        onMouseEnter={() => activeContext?.onHoverNode(path)}
+        onMouseLeave={() => activeContext?.onHoverNode(null)}
         className={editModeClassName}
         {...draggableListeners}
       >

@@ -34,20 +34,21 @@ function buildReadyProps(rawConfig: unknown): { initialConfig: RuntimeConfig; in
   return { initialConfig: validation.config, initialConfigText }
 }
 
-// DevRuntimeReady mounts both the "background" preview runtime (data-testid="runtime-page")
-// and the canvas's own isolated preview (data-testid="layout-canvas") from the *same* config —
-// text/label queries must be scoped to the canvas, or they match both copies.
+// DevRuntimeReady (0103, T8) edits the real `<RuntimePage />` in place — there is no separate
+// canvas preview anymore. Switching to Editor mode from the floating toolbar is what activates
+// the LayoutEditModeProvider/LayoutCanvasDndContext wiring on that same tree.
 function renderCanvas(rawConfig: unknown) {
   const { initialConfig, initialConfigText } = buildReadyProps(rawConfig)
   const view = render(<DevRuntimeReady initialConfig={initialConfig} initialConfigText={initialConfigText} />)
-  fireEvent.click(screen.getByTestId('dev-runtime-toggle'))
-  fireEvent.click(screen.getByTestId('dev-runtime-tab-visual'))
-  const canvasElement = screen.getByTestId('layout-canvas')
+  fireEvent.click(screen.getByTestId('dev-editor-toolbar-mode-editor'))
+  const canvasElement = screen.getByTestId('runtime-page')
   return { initialConfigText, root: view.container, canvas: within(canvasElement), canvasElement }
 }
 
 async function getMonacoJson(): Promise<{ text: string; parsed: Record<string, unknown> }> {
-  fireEvent.click(screen.getByTestId('dev-runtime-tab-json'))
+  if (screen.queryByTestId('monaco-editor-mock') === null) {
+    fireEvent.click(screen.getByTestId('dev-editor-toolbar-monaco-toggle'))
+  }
   await waitFor(() => expect(screen.getByTestId('monaco-editor-mock')).toBeInTheDocument())
   const text = (screen.getByTestId('monaco-editor-mock') as HTMLTextAreaElement).value
   return { text, parsed: JSON.parse(text) }
@@ -100,18 +101,21 @@ describe('LayoutCanvas: eliminar nodo seleccionado (FR9)', () => {
   })
 
   it('tras el borrado la selección queda limpia: sin outline de selección, sin panel de propiedades ni breadcrumb', () => {
-    const { root, canvasElement } = renderCanvas(twoChildContainerConfig())
+    const { root } = renderCanvas(twoChildContainerConfig())
 
     selectRootContainer(root)
-    expect(within(canvasElement).getByTestId('layout-canvas-properties-panel')).toBeInTheDocument()
-    expect(within(canvasElement).getByTestId('layout-canvas-breadcrumb')).toBeInTheDocument()
+    // FloatingSelectionOverlay (0103, T5/T8) renders the breadcrumb/properties panel as a
+    // `position: fixed` sibling of `<RuntimePage />`, not nested inside it — so these are
+    // global queries now, not scoped to the canvas element.
+    expect(screen.getByTestId('layout-canvas-properties-panel')).toBeInTheDocument()
+    expect(screen.getByTestId('layout-canvas-breadcrumb')).toBeInTheDocument()
     expect(root.querySelector('.outline-blue-500')).not.toBeNull()
 
     fireEvent.click(screen.getByTestId('layout-canvas-delete-node-button'))
 
     expect(root.querySelector('.outline-blue-500')).toBeNull()
-    expect(within(canvasElement).queryByTestId('layout-canvas-properties-panel')).not.toBeInTheDocument()
-    expect(within(canvasElement).queryByTestId('layout-canvas-breadcrumb')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('layout-canvas-properties-panel')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('layout-canvas-breadcrumb')).not.toBeInTheDocument()
   })
 
   it('sin ningún nodo seleccionado no existe ninguna acción de borrado disponible', () => {

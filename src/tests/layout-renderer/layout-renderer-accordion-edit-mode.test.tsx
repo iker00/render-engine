@@ -17,20 +17,18 @@ function buildConfig(): RuntimeConfig {
   }
 }
 
-function renderNodes(nodes: LayoutNode[], options?: { editMode?: Partial<LayoutEditModeContextValue> }) {
+function renderNodes(nodes: LayoutNode[], options?: { editMode?: { active?: boolean } }) {
   const onSelectNode = vi.fn()
   const onHoverNode = vi.fn()
 
-  const content = options?.editMode ? (
-    <LayoutEditModeProvider
-      value={{
-        selectedPath: null,
-        hoveredPath: null,
-        onSelectNode,
-        onHoverNode,
-        ...options.editMode,
-      }}
-    >
+  const editModeValue: LayoutEditModeContextValue | null = options?.editMode
+    ? options.editMode.active === false
+      ? { active: false }
+      : { active: true, selectedPath: null, hoveredPath: null, onSelectNode, onHoverNode }
+    : null
+
+  const content = editModeValue ? (
+    <LayoutEditModeProvider value={editModeValue}>
       <LayoutRenderer nodes={nodes} />
     </LayoutEditModeProvider>
   ) : (
@@ -106,6 +104,21 @@ describe('AccordionNode with LayoutEditModeProvider', () => {
 
     fireEvent.click(header)
     expect(header).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.getByText('Body content')).toBeInTheDocument()
+  })
+})
+
+// design.md feature 0103 Decisión 9: with a mounted-but-inert provider ({ active: false },
+// Visual mode inside DevRuntime), the accordion must behave exactly like production — it must
+// NOT force its content visible from the first render.
+describe('AccordionNode with LayoutEditModeProvider ({ active: false }, Visual mode)', () => {
+  it('does not render children until the header is clicked, same as production', () => {
+    renderNodes(buildAccordionTree(), { editMode: { active: false } })
+
+    expect(screen.queryByText('Body content')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Section one' }))
+
     expect(screen.getByText('Body content')).toBeInTheDocument()
   })
 })

@@ -3,7 +3,6 @@ import { useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import type { LayoutNode, RuntimeConfig } from '../../config/runtime-config'
 import { LayoutCanvasBreadcrumb } from '../../dev-runtime/layout-canvas/layout-canvas-breadcrumb'
-import { LayoutCanvas } from '../../dev-runtime/layout-canvas/layout-canvas'
 import { LayoutEditModeProvider } from '../../runtime/layout-edit-mode-context'
 import { LayoutRenderer } from '../../runtime/layout-renderer'
 import type { LayoutNodePath } from '../../runtime/layout-node-path'
@@ -129,9 +128,40 @@ function buildTwoLevelConfig(): RuntimeConfig {
 
 const HEADING_NODE_PATH_ATTR = 'children.0.children.0.children.0'
 
-describe('LayoutCanvasBreadcrumb integration with LayoutCanvas', () => {
+// LayoutCanvas (0102) was retired in 0103/T10 in favor of DevEditorLayer wrapping the real
+// `<RuntimePage />` in place, and kept selectedPath as private internal state with no way to
+// seed it directly with an already multi-level selection from the outside anyway (a real click
+// can reach any node, but there was no prop to start the component pre-selected). This harness
+// composes the exact same real, unmocked pieces LayoutCanvas used to wire together
+// (LayoutEditModeProvider, RuntimeStateProvider, LayoutRenderer, LayoutCanvasBreadcrumb) around
+// a locally-owned selectedPath, so both the initial-click-to-select and the ancestor-navigation
+// behavior can still be verified against the real T2 selection class, independent of that
+// unrelated pre-existing limitation.
+function CanvasBreadcrumbHarness({
+  config,
+  initialSelectedPath,
+}: {
+  config: RuntimeConfig
+  initialSelectedPath: LayoutNodePath | null
+}) {
+  const [selectedPath, setSelectedPath] = useState<LayoutNodePath | null>(initialSelectedPath)
+  const page = config.pages[0]
+
+  return (
+    <LayoutEditModeProvider
+      value={{ active: true, selectedPath, hoveredPath: null, onSelectNode: setSelectedPath, onHoverNode: () => {} }}
+    >
+      <LayoutCanvasBreadcrumb pageLayout={page.layout} selectedPath={selectedPath} onSelectNode={setSelectedPath} />
+      <RuntimeStateProvider config={config}>
+        <LayoutRenderer nodes={page.layout} />
+      </RuntimeStateProvider>
+    </LayoutEditModeProvider>
+  )
+}
+
+describe('LayoutCanvasBreadcrumb integration with the real edit-mode rendering pipeline', () => {
   it('updates the breadcrumb shown when a node is selected in the canvas', () => {
-    render(<LayoutCanvas config={buildTwoLevelConfig()} activePageId="home" onActivePageIdChange={() => {}} />)
+    render(<CanvasBreadcrumbHarness config={buildTwoLevelConfig()} initialSelectedPath={null} />)
 
     expect(screen.queryByTestId('layout-canvas-breadcrumb')).not.toBeInTheDocument()
 
@@ -149,37 +179,6 @@ describe('LayoutCanvasBreadcrumb integration with LayoutCanvas', () => {
     expect(texts).toEqual(['container', 'form (checkout)', 'heading'])
   })
 })
-
-// LayoutCanvas keeps selectedPath as private internal state with no way to
-// seed it directly with an already multi-level selection from the outside
-// (a real click can now reach any node, but there is no prop to start the
-// component pre-selected). This harness composes the exact same real,
-// unmocked pieces LayoutCanvas wires together (LayoutEditModeProvider,
-// RuntimeStateProvider, LayoutRenderer, LayoutCanvasBreadcrumb) around a
-// locally-owned selectedPath so the ancestor-navigation behavior can still
-// be verified against the real T2 selection class, independent of that
-// unrelated pre-existing limitation.
-function CanvasBreadcrumbHarness({
-  config,
-  initialSelectedPath,
-}: {
-  config: RuntimeConfig
-  initialSelectedPath: LayoutNodePath
-}) {
-  const [selectedPath, setSelectedPath] = useState<LayoutNodePath | null>(initialSelectedPath)
-  const page = config.pages[0]
-
-  return (
-    <LayoutEditModeProvider
-      value={{ selectedPath, hoveredPath: null, onSelectNode: setSelectedPath, onHoverNode: () => {} }}
-    >
-      <LayoutCanvasBreadcrumb pageLayout={page.layout} selectedPath={selectedPath} onSelectNode={setSelectedPath} />
-      <RuntimeStateProvider config={config}>
-        <LayoutRenderer nodes={page.layout} />
-      </RuntimeStateProvider>
-    </LayoutEditModeProvider>
-  )
-}
 
 describe('LayoutCanvasBreadcrumb ancestor navigation against the real edit-mode rendering pipeline', () => {
   it('moves the T2 selection class to the ancestor node when clicking a breadcrumb segment', () => {

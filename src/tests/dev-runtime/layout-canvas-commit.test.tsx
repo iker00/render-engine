@@ -240,8 +240,10 @@ function buildReadyProps(rawConfig: unknown): { initialConfig: RuntimeConfig; in
   return { initialConfig: validation.config, initialConfigText }
 }
 
+// The drawer/toggle are retired (0103, T8): the Monaco panel is now opened from the floating
+// toolbar's dedicated control and lives in FloatingMonacoPanel instead of DevRuntimeDrawer.
 function openDrawer() {
-  fireEvent.click(screen.getByTestId('dev-runtime-toggle'))
+  fireEvent.click(screen.getByTestId('dev-editor-toolbar-monaco-toggle'))
 }
 
 async function getMonacoValue(): Promise<string> {
@@ -353,13 +355,13 @@ describe('commitCanvasMutation via DevRuntimeReady', () => {
     openDrawer()
     await getMonacoValue()
     fireEvent.change(screen.getByTestId('monaco-editor-mock'), { target: { value: 'not applied yet' } })
-    expect(screen.getByTestId('dev-runtime-pending-indicator')).toBeInTheDocument()
+    expect(screen.getByTestId('dev-editor-floating-monaco-pending-indicator')).toBeInTheDocument()
 
     act(() => {
       ref.current?.commitCanvasMutation((layout) => [...layout, heading('Added by canvas')])
     })
 
-    expect(screen.queryByTestId('dev-runtime-pending-indicator')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('dev-editor-floating-monaco-pending-indicator')).not.toBeInTheDocument()
     const editorText = (screen.getByTestId('monaco-editor-mock') as HTMLTextAreaElement).value
     expect(editorText).not.toBe('not applied yet')
     expect(JSON.parse(editorText).pages[0].layout).toEqual([heading('Original'), heading('Added by canvas')])
@@ -416,7 +418,7 @@ describe('commitCanvasMutation via DevRuntimeReady', () => {
     fireEvent.change(screen.getByTestId('monaco-editor-mock'), {
       target: { value: JSON.stringify(appliedConfig, null, 2) },
     })
-    fireEvent.click(screen.getByTestId('dev-runtime-apply'))
+    fireEvent.click(screen.getByTestId('dev-editor-floating-monaco-apply'))
     await waitFor(() => expect(screen.getByText('Applied')).toBeInTheDocument())
 
     act(() => {
@@ -438,7 +440,7 @@ describe('commitCanvasMutation via DevRuntimeReady', () => {
     openDrawer()
     await getMonacoValue()
     fireEvent.change(screen.getByTestId('monaco-editor-mock'), { target: { value: 'pending edit' } })
-    expect(screen.getByTestId('dev-runtime-pending-indicator')).toBeInTheDocument()
+    expect(screen.getByTestId('dev-editor-floating-monaco-pending-indicator')).toBeInTheDocument()
 
     act(() => {
       triggerActiveConfigHmrApplyForTests(v2Config)

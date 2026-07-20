@@ -16,7 +16,8 @@ interface ModalNodeProps {
 export function ModalNode({ node, children, iterationContext }: ModalNodeProps) {
   const state = useRuntimeState()
   const { openModal, closeModal } = useRuntimeStateActions()
-  const isEditMode = useLayoutEditModeContext() !== null
+  const editModeContext = useLayoutEditModeContext()
+  const isEditMode = editModeContext !== null && editModeContext.active
   const iterationKey = iterationContext?.key
   const open = isEditMode || isModalOpen(state, node.id, iterationKey)
   const defaultOpen = node.props?.defaultOpen ?? false

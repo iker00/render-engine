@@ -43,7 +43,7 @@ export function RepeaterNode({ node, path }: RepeaterNodeProps) {
   const { closeModal } = useRuntimeStateActions()
   const { parentGridColumns } = useRuntimeLayoutContext()
   const editModeContext = useLayoutEditModeContext()
-  const isEditMode = editModeContext !== null
+  const isEditMode = editModeContext !== null && editModeContext.active
   const sourceItems = resolveRepeaterSourceItems(node.props.items.source, state)
   const pageSize = node.props.pagination?.pageSize
   const paginationControlsVariant = node.props.pagination?.controls?.variant ?? 'previousNext'

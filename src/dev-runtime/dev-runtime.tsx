@@ -17,11 +17,6 @@ import {
 } from '../runtime/runtime-node-styling'
 import { DevRuntimeStateBridge } from './dev-runtime-state-bridge'
 import type { DevRuntimeStateBridgeHandle } from './dev-runtime-state-bridge'
-import { DevRuntimeMonacoEditor } from './dev-runtime-monaco-editor'
-import { DevRuntimeToggleButton } from './dev-runtime-toggle-button'
-import { DevRuntimeDrawer } from './dev-runtime-drawer'
-import type { DevRuntimeDrawerTab } from './dev-runtime-drawer'
-import { useDevRuntimeKeyboard } from './dev-runtime-keyboard'
 import { migrateRuntimeStateAcrossConfig } from './dev-runtime-state-migration'
 import type { RuntimeConfigError } from '../config/runtime-config'
 import {
@@ -29,8 +24,9 @@ import {
   patchRawConfigTextWithLayout,
   type CommitCanvasMutationResult,
 } from './layout-canvas/layout-canvas-commit'
-import { LayoutCanvas } from './layout-canvas/layout-canvas'
 import { replaceNodeAt } from './layout-tree-mutations'
+import { DevEditorLayer } from './floating-toolbar/dev-editor-layer'
+import { FloatingMonacoPanel } from './floating-toolbar/floating-monaco-panel'
 
 export type { CommitCanvasMutationResult }
 
@@ -123,7 +119,6 @@ export const DevRuntimeReady = forwardRef<DevRuntimeReadyHandle, DevRuntimeReady
   ref,
 ) {
   const [currentConfig, setCurrentConfig] = useState<RuntimeConfig>(initialConfig)
-  const [editorOpen, setEditorOpen] = useState(false)
   const [editorBuffer, setEditorBuffer] = useState<string | null>(null)
   const [hasPendingChanges, setHasPendingChanges] = useState(false)
   const [validationError, setValidationError] = useState<RuntimeConfigError | null>(null)
@@ -135,12 +130,11 @@ export const DevRuntimeReady = forwardRef<DevRuntimeReadyHandle, DevRuntimeReady
   // would lose the raw crude `preloads` shape and silently drop
   // `form.onSuccess`/`form.onError` (see design.md, Decision 5 / Contexto).
   const [lastValidConfigText, setLastValidConfigText] = useState(initialConfigText)
-  // The page the canvas is currently editing, driven by LayoutCanvas's own page
-  // selector. Defaults to the first page and is not persisted across sessions.
-  const [activeCanvasPageId, setActiveCanvasPageId] = useState(() => currentConfig.pages[0].id)
-  // Which drawer tab is active. Defaults to 'json' to preserve the drawer's
-  // existing open behavior (Monaco visible immediately).
-  const [activeTab, setActiveTab] = useState<DevRuntimeDrawerTab>('json')
+  // Visual/Editor toggle (design.md 0103, Decisión 1). The floating toolbar is the single
+  // entry point for the dev editor surface — there is no separate drawer/toggle anymore.
+  const [mode, setMode] = useState<'visual' | 'editor'>('visual')
+  const [paletteOpen, setPaletteOpen] = useState(false)
+  const [monacoOpen, setMonacoOpen] = useState(false)
 
   const bridgeRef = useRef<DevRuntimeStateBridgeHandle>(null)
 
@@ -235,19 +229,32 @@ export const DevRuntimeReady = forwardRef<DevRuntimeReadyHandle, DevRuntimeReady
 
   const currentError = parseError ?? validationError
 
-  function handleToggle() {
-    setEditorOpen((prev) => {
-      if (!prev && editorBuffer === null) {
-        // First open: show the original raw text, not the re-serialized normalized config.
-        setEditorBuffer(initialConfigText)
-      }
-      return !prev
-    })
-  }
+  // The drawer's `handleToggle` used to seed `editorBuffer` with the original raw text the
+  // first time it opened. With the drawer gone, `onMonacoOpenChange` is wired directly to
+  // `setMonacoOpen` (no wrapping handler — see the render below), so this effect is the
+  // equivalent hook: it seeds the buffer the first time the Monaco panel opens, preserving
+  // "first open shows the original raw text, not the re-serialized normalized config".
+  useEffect(() => {
+    if (monacoOpen && editorBuffer === null) {
+      setEditorBuffer(initialConfigText)
+    }
+  }, [monacoOpen, editorBuffer, initialConfigText])
 
-  function handleClose() {
-    setEditorOpen(false)
-  }
+  // Sole remaining keyboard entry point (design.md 0103, Decisión 7): `Esc` closes the Monaco
+  // panel when it's open. The toggle shortcut (`Ctrl/Cmd+Shift+J`) and `useDevRuntimeKeyboard`
+  // are retired — the floating toolbar is the only entry point into the dev editor now.
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape' && monacoOpen) {
+        setMonacoOpen(false)
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [monacoOpen])
 
   function handleEditorChange(value: string) {
     setEditorBuffer(value)
@@ -305,8 +312,14 @@ export const DevRuntimeReady = forwardRef<DevRuntimeReadyHandle, DevRuntimeReady
   function commitCanvasMutation(
     mutate: (pageLayout: LayoutNode[]) => LayoutNode[],
   ): CommitCanvasMutationResult {
-    const candidateConfig = buildCommitCandidateConfig(currentConfig, activeCanvasPageId, mutate)
-    const mutatedPage = candidateConfig.pages.find((page) => page.id === activeCanvasPageId)
+    // The edited page is the really-navigated one (design.md 0103, Decisión 2), not a local
+    // canvas selector — read it from the bridge at commit time, same pattern already used
+    // below to read `prevState` before migrating. Falls back to `initialPage` if the bridge
+    // isn't mounted yet, matching the rest of the bootstrap code's degradation criteria.
+    const activePageId = bridgeRef.current?.getLatestState().navigation.currentPageId ?? currentConfig.initialPage
+
+    const candidateConfig = buildCommitCandidateConfig(currentConfig, activePageId, mutate)
+    const mutatedPage = candidateConfig.pages.find((page) => page.id === activePageId)
     const mutatedLayout = mutatedPage ? mutatedPage.layout : []
 
     // Validate the patched raw text (mirroring handleApply), not the in-memory
@@ -319,7 +332,7 @@ export const DevRuntimeReady = forwardRef<DevRuntimeReadyHandle, DevRuntimeReady
     // node"). Patching onto lastValidConfigText keeps every untouched part of the
     // document — including other pages' preloads and forms — in the raw shape the
     // validator expects, exactly like a manual "Aplicar".
-    const nextText = patchRawConfigTextWithLayout(lastValidConfigText, activeCanvasPageId, mutatedLayout)
+    const nextText = patchRawConfigTextWithLayout(lastValidConfigText, activePageId, mutatedLayout)
 
     const parsed: unknown = JSON.parse(nextText)
     const validation = validateRuntimeConfig(parsed)
@@ -379,12 +392,6 @@ export const DevRuntimeReady = forwardRef<DevRuntimeReadyHandle, DevRuntimeReady
     }
   }
 
-  useDevRuntimeKeyboard({
-    isOpen: editorOpen,
-    onToggle: handleToggle,
-    onClose: handleClose,
-  })
-
   return (
     <>
       <main className={getAppShellClassName()} data-testid="runtime-app">
@@ -392,41 +399,43 @@ export const DevRuntimeReady = forwardRef<DevRuntimeReadyHandle, DevRuntimeReady
           <div className={getAppShellFrameClassName()} data-testid="runtime-shell-frame">
             <RuntimeStateProvider config={currentConfig} dataValues={dataValues}>
               <DevRuntimeStateBridge ref={bridgeRef} />
-              <RuntimePage />
+              <DevEditorLayer
+                mode={mode}
+                onModeChange={setMode}
+                paletteOpen={paletteOpen}
+                onPaletteOpenChange={setPaletteOpen}
+                monacoOpen={monacoOpen}
+                onMonacoOpenChange={setMonacoOpen}
+                monaco={{
+                  editorBuffer,
+                  onEditorChange: handleEditorChange,
+                  onApply: handleApply,
+                  onCopy: handleCopy,
+                  pendingChanges: hasPendingChanges,
+                  errors: currentError,
+                }}
+                onCommitCanvasMutation={commitCanvasMutation}
+                onCommitNodeUpdate={handleCanvasNodeUpdate}
+              >
+                <RuntimePage />
+              </DevEditorLayer>
             </RuntimeStateProvider>
           </div>
         </section>
       </main>
 
-      <DevRuntimeToggleButton onToggle={handleToggle} />
-
-      <DevRuntimeDrawer
-        open={editorOpen}
-        onClose={handleClose}
+      {/* Outside RuntimeStateProvider: FloatingMonacoPanel doesn't consume runtime state, its
+          data all arrives via props (design.md 0103, Decisión 7). */}
+      <FloatingMonacoPanel
+        open={monacoOpen}
+        onClose={() => setMonacoOpen(false)}
+        editorBuffer={editorBuffer}
+        onEditorChange={handleEditorChange}
         onApply={handleApply}
         onCopy={handleCopy}
         pendingChanges={hasPendingChanges}
         errors={currentError}
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-        visualContent={
-          <LayoutCanvas
-            config={currentConfig}
-            activePageId={activeCanvasPageId}
-            onActivePageIdChange={setActiveCanvasPageId}
-            onCommitNodeUpdate={handleCanvasNodeUpdate}
-            onCommitCanvasMutation={commitCanvasMutation}
-          />
-        }
-      >
-        {editorBuffer !== null && (
-          <DevRuntimeMonacoEditor
-            value={editorBuffer}
-            onChange={handleEditorChange}
-            onMount={() => {}}
-          />
-        )}
-      </DevRuntimeDrawer>
+      />
     </>
   )
 })

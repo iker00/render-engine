@@ -17,20 +17,30 @@ function buildConfig(): RuntimeConfig {
   }
 }
 
-function renderNodes(nodes: LayoutNode[], options?: { editMode?: Partial<LayoutEditModeContextValue> }) {
+interface RenderNodesEditModeOptions {
+  active?: boolean
+  selectedPath?: LayoutNodePath | null
+  hoveredPath?: LayoutNodePath | null
+}
+
+function renderNodes(nodes: LayoutNode[], options?: { editMode?: RenderNodesEditModeOptions }) {
   const onSelectNode = vi.fn<(path: LayoutNodePath) => void>()
   const onHoverNode = vi.fn<(path: LayoutNodePath | null) => void>()
 
-  const content = options?.editMode ? (
-    <LayoutEditModeProvider
-      value={{
-        selectedPath: null,
-        hoveredPath: null,
-        onSelectNode,
-        onHoverNode,
-        ...options.editMode,
-      }}
-    >
+  const editModeValue: LayoutEditModeContextValue | null = options?.editMode
+    ? options.editMode.active === false
+      ? { active: false }
+      : {
+          active: true,
+          selectedPath: options.editMode.selectedPath ?? null,
+          hoveredPath: options.editMode.hoveredPath ?? null,
+          onSelectNode,
+          onHoverNode,
+        }
+    : null
+
+  const content = editModeValue ? (
+    <LayoutEditModeProvider value={editModeValue}>
       <LayoutRenderer nodes={nodes} />
     </LayoutEditModeProvider>
   ) : (
@@ -125,6 +135,17 @@ describe('LayoutRenderer empty container/form placeholders (edit mode)', () => {
 
     expect(placeholder.className).toContain('outline-blue-500')
     expect(containerWrapper.className ?? '').not.toContain('outline-blue-500')
+  })
+
+  // design.md feature 0103 Decisión 9: with a mounted-but-inert provider ({ active: false },
+  // Visual mode inside DevRuntime), the empty-container placeholder must not appear — only
+  // `{ active: true }` (Editor) renders it, same requirement as drop zones in general.
+  it('renders no placeholder for the same empty container when the provider is present but { active: false }', () => {
+    const { container } = renderNodes(emptyContainer, { editMode: { active: false } })
+
+    expect(container.querySelectorAll('[data-empty-placeholder]')).toHaveLength(0)
+    expect(screen.queryByText('Contenedor vacío')).not.toBeInTheDocument()
+    expect(container.querySelector('[data-layout-node="container"]')?.textContent).toBe('')
   })
 
   it('replicates the production acceptance criteria: an empty container inserted into a layout shows no visual trace when rendered as the production preview (no provider)', () => {

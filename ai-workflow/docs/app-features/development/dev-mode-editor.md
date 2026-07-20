@@ -5,7 +5,7 @@
 # Editor de configuración en vivo (dev mode)
 
 ## Objetivo
-Permitir editar el JSON de configuración directamente en el navegador durante el desarrollo, validarlo con el mismo validador del runtime y aplicarlo para ver el resultado al instante, sin recargar la página ni depender de backend. Junto al editor de texto Monaco, el drawer ofrece también un editor visual del árbol `layout` de la página activa mediante manipulación directa sobre el propio preview renderizado (ver [[#Editor visual del layout (pestaña Visual)]]).
+Permitir editar el JSON de configuración directamente en el navegador durante el desarrollo, validarlo con el mismo validador del runtime y aplicarlo para ver el resultado al instante, sin recargar la página ni depender de backend. Junto al editor de texto Monaco, una **barra de herramientas flotante** persistente ofrece también un editor visual del árbol `layout` de la página activa mediante manipulación directa sobre el propio preview real renderizado — no un árbol duplicado, sino el mismo contenido que ve el usuario — con controles para cambiar de página, seleccionar modo Visual/Editor, abrir la paleta de nodos y acceder a Monaco (ver [[#Barra flotante]] y [[#Editor visual del layout]]).
 
 ## Activación
 El editor solo existe si el host monta `<DevRuntime />` desde `src/dev-runtime/dev-runtime.tsx`. La decisión se toma en el bootstrap (`main.tsx`) y responde a dos condiciones:
@@ -19,12 +19,46 @@ En producción sin el atributo, `main.tsx` monta `<App />` directamente y Monaco
 `DevRuntime` reutiliza la misma frontera de bootstrap que el runtime: prioridad `data-config` en el elemento root, con `src/dev/config.json` como respaldo. Si el JSON inicial es inválido, la frontera de error de bootstrap existente aplica antes de que el editor sea utilizable.
 
 ## Interfaz
-- **Botón flotante** siempre visible en esquina inferior derecha mientras el wrapper esté montado, independientemente de la página activa del runtime.
-- **Drawer lateral derecho** que se superpone al runtime sin alterar su ancho ni layout interno.
-- **Dos pestañas** en la cabecera del drawer, **Visual** y **JSON**, mutuamente excluyentes (solo una está montada en el DOM a la vez). Por defecto, al abrir el drawer, la pestaña activa es **JSON** (comportamiento de apertura sin cambios respecto a antes de que existiera la pestaña Visual). El panel de errores y la barra de acciones (Copiar / Aplicar) permanecen visibles en ambas pestañas. Cambiar de pestaña no descarta el estado de ninguna de las dos vistas: ambas leen y escriben el mismo estado en memoria (`currentConfig` / `editorBuffer`), así que la sincronización entre canvas y Monaco es inmediata también al cambiar de pestaña.
-- **Atajo de teclado** `Ctrl/Cmd+Shift+J` para abrir y cerrar; `Esc` para cerrar cuando está abierto.
-- Al abrir el drawer por primera vez en la sesión, el contenido del editor es el JSON inicial formateado (formato original, no la forma normalizada interna del validador).
-- Los cambios en el editor persisten en memoria entre cierres y aperturas del panel en la misma sesión. Recargar la página descarta cambios sin aplicar.
+
+### Barra flotante de herramientas
+Una barra de herramientas persistente permanece siempre visible en la base central de la pantalla mientras `DevRuntime` esté montado, independientemente de la página activa del runtime y del modo vigente. Contiene (de izquierda a derecha):
+
+1. **Selector de página**: dropdown que lista todas las páginas disponibles en `config.pages`. Cambiar la selección navega el runtime a esa página (con el mismo mecanismo que una navegación interna por hash), en cualquiera de los dos modos. Al navegar, se limpia cualquier nodo seleccionado en modo Editor.
+2. **Selector de pestaña de dominio**: cuatro botones (`Layout`, `Api`, `Páginas`, `Tokens`). Solo `Layout` es funcional; las otras tres se renderizan como deshabilitadas o con indicación "Próximamente", sin acción al interactuar. En esta feature solo `Layout` permite edición visual.
+3. **Botón "Añadir elemento"**: abre la paleta flotante de nodos (ver sección [[#Paleta flotante de nodos]]), desde la que se puede arrastrar un nodo hasta el contenido para insertarlo. Su estado (abierto/cerrado) se refleja visualmente en la barra.
+4. **Botón de acceso a Monaco** (icono `{}`): abre el panel flotante de Monaco (ver sección [[#Panel flotante de Monaco]]). Su estado se refleja visualmente en la barra.
+5. **Toggle Visual/Editor**: dos botones (`Visual`, `Editor`) que controlan el modo. Al arrancar, el modo por defecto es `Visual`. Solo pueden estar activos alternativamente. El toggle modifica el comportamiento del árbol renderizado sin necesidad de recarga (ver [[#Modo Visual]] y [[#Modo Editor]]).
+
+### Modo Visual
+Por defecto al arrancar `DevRuntime`, el contenido se comporta exactamente igual que en producción: navegación por `link`/`button`, envío de formularios, ejecución de queries, campos de formulario editables. No hay selección, breadcrumb, panel de propiedades ni indicadores de arrastre visibles. Esta es la experiencia del usuario final, reflejada en el mismo árbol real renderizado.
+
+### Modo Editor
+Al activar "Editor" desde la barra, se habilita la edición visual directa sobre el contenido:
+- **Selección**: hacer click sobre un nodo lo selecciona; hover lo resalta sin cambiar la selección. La selección se identifica por un `path` estructural resuelto contra el árbol real.
+- **Overlay flotante de selección**: junto al nodo seleccionado aparece un panel flotante (anclado a su posición) que muestra el breadcrumb de ancestros y el panel de propiedades del nodo. Este overlay se posiciona automáticamente para permanecer visible dentro del viewport, sin alterar el ancho del contenido.
+- **Breadcrumb de ancestros**: cadena clicable de ancestros desde el nodo seleccionado hasta la raíz del layout (ej: `container > form > heading`). Clicar un segmento cambia la selección a ese ancestro.
+- **Panel de propiedades**: muestra las secciones `Props`, `Layout`, `Visibilidad` y `Estado de consulta` generadas dinámicamente desde el schema Zod del nodo. Editar cualquier campo actualiza el estado en memoria e inmediatamente se refleja tanto en el contenido renderizado como en el buffer de Monaco.
+- **Supresión de comportamiento propio**: en modo Editor, el contenido renderizado **no ejecuta ninguna acción declarativa** (`navigateTo`, `goBack`, `executeOperation(s)`, `openModal`/`closeModal`, `resetForm`, envío de `form`) y los campos de formulario quedan inertes a su interacción nativa (no se puede teclear ni marcar directamente sobre el campo). La única vía para cambiar configuración en modo Editor es el canvas (arrastre, borrado) o el panel de propiedades del nodo seleccionado.
+- **Excepción explícita**: la interactividad local de la cabecera de `accordion` (expandir/colapsar) y de `tabs` (cambiar de pestaña visible) sigue funcionando en modo Editor, necesaria para acceder y seleccionar nodos anidados bajo cabeceras distintas. El cuerpo de `accordion` y el panel de `modal` están siempre presentes en el DOM en modo Editor con independencia de su estado.
+- **Arrastre**: arrastrar un nodo existente lo reordena o reanida; arrastrar desde la paleta inserta un nodo nuevo. Ambas operaciones están sujetas a las mismas reglas de destino ya vigentes (ver sección [[#Reglas de destino de drop]]).
+- **Borrado**: con un nodo seleccionado, un botón en el panel de propiedades borra ese nodo y todo su subárbol, y limpia la selección.
+
+### Panel flotante de Monaco
+El editor de texto Monaco se renderiza como un panel deslizante `fixed` en el lado derecho (similar al drawer actual, pero sin las pestañas Visual/JSON — el contenido real renderizado *es* ahora la superficie visual). Se activa desde el botón `{}` de la barra. Incluye:
+- El editor Monaco con autocompletado JSON Schema (mismo que siempre).
+- Panel de errores cuando hay validación o sintaxis inválida.
+- Barra de acciones: botones "Copiar" y "Aplicar", con indicador visual de cambios pendientes.
+- Botón "Cerrar" (o presionar `Esc`) para cerrar el panel.
+
+### Paleta flotante de nodos
+Cuando se activa "Añadir elemento" desde la barra, aparece una paleta flotante lateral mostrando el catálogo completo de tipos de nodo. Desde la paleta se puede arrastrar cualquier tipo hasta una posición válida del contenido para insertarlo como nodo nuevo con valores por defecto. La paleta permanece abierta hasta que se cierra desde su botón de cierre o se vuelve a clicar "Añadir elemento".
+
+### Estado del editor entre modos
+- **Alternar Visual ⇄ Editor sin cambiar de página**: la selección y el overlay se conservan (al volver a Editor, se ve el mismo nodo seleccionado que en la última vez que se estuvo en Editor).
+- **Cambiar de página**: se limpia toda selección previa, independientemente del modo.
+- **Cambiar de pestaña de dominio fuera de `Layout`**: se limpia la selección, ya que esas pestañas no contienen `layout` que editar en esta feature.
+
+Los cambios en el editor (canvas y Monaco) persisten en memoria entre cierres y aperturas de paneles en la misma sesión. Recargar la página descarta cambios sin aplicar.
 
 ## Autocompletado JSON Schema
 El editor Monaco registra un JSON Schema derivado del schema Zod raíz (`runtimeConfigRootSchema` en `src/config/runtime-config-root-zod.ts`) usando el método built-in `toJSONSchema` de Zod v4. No se usa la librería externa `zod-to-json-schema` porque no es compatible con Zod v4 (el package está instalado como dependencia pero no se importa). El schema cubre el contrato completo del runtime config incluyendo la unión discriminada de nodos por `type`, y las propiedades opcionales `translations` y `tokens` con sus definiciones completas.
@@ -76,33 +110,42 @@ La guardia se activa exactamente en el primer Aplicar exitoso de la sesión. Una
 - No persiste la configuración aplicada en `localStorage`, `sessionStorage` o disco; es únicamente para avisar al usuario durante la sesión.
 - No existe ningún elemento visual adicional (banner, badge, indicador) más allá del diálogo nativo.
 
-## Editor visual del layout (pestaña Visual)
+## Editor visual del layout
 
 ### Objetivo y alcance
-Capa de edición visual del árbol `layout` de la página activa mediante manipulación directa sobre el propio preview ya renderizado (no un panel de árbol tipo "layers" separado del render), como alternativa a escribir JSON a mano. Cubre únicamente el `layout` de una página; `api`, `pages` (alta/baja/`initialPage`), `tokens` y `translations` quedan fuera de esta entrega.
+Capa de edición visual del árbol `layout` mediante manipulación directa sobre el **mismo contenido real renderizado** (no un árbol duplicado, no un panel de árbol tipo "layers"), activable mediante el toggle Visual/Editor de la barra flotante. En modo Editor, el usuario edita e interactúa con el mismo árbol que renderiza el runtime en producción, sin la intermediación de una segunda copia o lienzo separado. Cubre únicamente el `layout` de una página; `api`, `pages` (alta/baja/`initialPage`), `tokens` y `translations` quedan fuera de esta entrega.
 
-### Selector de página
-Un `<select>` en la cabecera del canvas permite elegir qué página de `config.pages` se muestra y edita, sin necesidad de navegar el runtime para cambiar de página. El canvas monta su propia instancia aislada de `RuntimeStateProvider`, independiente del runtime de preview de fondo: puede editar cualquier página sin depender de a qué página haya navegado el runtime visible detrás del drawer. Cambiar de página con un nodo seleccionado limpia la selección (y, con ella, el breadcrumb y el panel de propiedades).
+### Selector de página en la barra
+El selector de página de la barra flotante cambia la página activa del runtime real (navegación por hash, con los parámetros transportados según el mecanismo estándar). Funciona en ambos modos (Visual y Editor), permitiendo ver y editar cualquier página disponible sin necesidad de cerrar el editor o cambiar de modo. Cambiar de página con un nodo seleccionado en modo Editor limpia la selección.
 
-### Selección y hover
-Click sobre un nodo renderizado lo selecciona; hover lo resalta sin cambiar la selección. La selección se identifica por un `path` estructural resuelto contra el árbol real, no por índice DOM. Si el nodo seleccionado deja de existir en el árbol (por ejemplo, se borró desde Monaco y se aplicó, o quedó fuera de una mutación del propio canvas), la selección se limpia automáticamente en vez de referenciar un nodo inexistente.
+### Selección y hover (modo Editor)
+Click sobre un nodo renderizado en modo Editor lo selecciona; hover lo resalta visualmente sin cambiar la selección. La selección se identifica por un `path` estructural resuelto contra el árbol real renderizado, no por índice DOM. Si el nodo seleccionado deja de existir en el árbol (por ejemplo, se borró desde Monaco y se aplicó), la selección se limpia automáticamente sin intentar referenciar un nodo inexistente.
 
 ### Breadcrumb de ancestros
-Al seleccionar un nodo se muestra la cadena de ancestros hasta la raíz del `layout` de la página (por ejemplo `container > form > heading`), con la etiqueta `type`, o `type (id)` cuando el nodo declara `id`. Cada segmento salvo el último (el nodo ya seleccionado) es clicable y cambia la selección a ese ancestro, permitiendo editar las propiedades de un `container` o `form` padre y no solo de las hojas.
+El overlay flotante junto al nodo seleccionado muestra la cadena de ancestros hasta la raíz del `layout` de la página (por ejemplo `container > form > heading`), con la etiqueta `type`, o `type (id)` cuando el nodo declara `id`. Cada segmento salvo el último (el nodo ya seleccionado) es clicable y cambia la selección a ese ancestro, permitiendo editar las propiedades de un `container` o `form` padre y no solo de las hojas.
 
-### Panel de propiedades
-Con un nodo seleccionado se muestra un panel lateral con las secciones `Props`, `Layout`, `Visibilidad` y `Estado de consulta` (`queryStateFeedback`), mostrando solo las que el `type` del nodo seleccionado declara según su schema Zod individual. Los campos se generan dinámicamente a partir del mismo JSON Schema derivado (`toJSONSchema` de Zod v4) que ya alimenta el autocompletado de Monaco — no existe un segundo contrato de UI hardcodeado por tipo de nodo. Editar cualquier campo actualiza el estado en memoria de inmediato y se refleja tanto en el canvas como en el buffer de Monaco, sin necesidad de pulsar ningún botón "Aplicar" adicional. Un campo `layout.span` declarado como mapa responsive por breakpoint se edita con merge superficial sobre el objeto existente: cambiar un breakpoint no borra los demás ya declarados que no sean visibles en el viewport actual del canvas.
+### Panel de propiedades (modo Editor)
+Con un nodo seleccionado en modo Editor, el overlay flotante muestra un panel con las secciones `Props`, `Layout`, `Visibilidad` y `Estado de consulta` (`queryStateFeedback`), mostrando solo las que el `type` del nodo seleccionado declara según su schema Zod individual. Los campos se generan dinámicamente a partir del mismo JSON Schema derivado (`toJSONSchema` de Zod v4) que ya alimenta el autocompletado de Monaco — no existe un segundo contrato de UI hardcodeado por tipo de nodo. Editar cualquier campo actualiza el estado en memoria de inmediato y se refleja tanto en el contenido renderizado como en el buffer de Monaco, sin necesidad de pulsar ningún botón "Aplicar" adicional. Un campo `layout.span` declarado como mapa responsive por breakpoint se edita con merge superficial sobre el objeto existente: cambiar un breakpoint no borra los demás ya declarados que no sean visibles en el viewport actual.
 
-### Reordenar y reanidar por arrastre
-Arrastrar un nodo existente dentro del canvas permite reordenarlo entre hermanos o reanidarlo bajo un `container`/`form`/`modal`/`link`/`accordion`/`tabs` distinto. Un destino que violaría alguna regla estructural se señala visualmente como inválido durante el arrastre (indicador de color) y no se acepta al soltar; el `layout` no cambia en ese caso.
+### Reordenar y reanidar por arrastre (modo Editor)
+En modo Editor, arrastrar un nodo existente permite reordenarlo entre hermanos o reanidarlo bajo un `container`/`form`/`modal`/`link`/`accordion`/`tabs` distinto del árbol real renderizado. Un destino que violaría alguna regla estructural se señala visualmente como inválido durante el arrastre (indicador de color) y no se acepta al soltar; el `layout` no cambia en ese caso.
 
-### Paleta de nodos e inserción
-Una paleta lateral, siempre visible dentro de la pestaña Visual, lista el catálogo completo de tipos de nodo soportados con una etiqueta legible. Arrastrar una entrada de la paleta hasta una posición del canvas inserta ahí una instancia mínimamente válida de ese tipo (valores por defecto estáticos y literales, sin referencias dinámicas ni dependencia de queries o formularios existentes), sujeta a las mismas reglas de destino que el reordenamiento.
+### Paleta flotante de nodos (modo Editor)
+Cuando se abre "Añadir elemento" desde la barra, aparece una paleta flotante mostrando el catálogo completo de tipos de nodo soportados con una etiqueta legible. Arrastrar una entrada de la paleta hasta una posición válida del contenido renderizado inserta ahí una instancia mínimamente válida de ese tipo (valores por defecto estáticos y literales, sin referencias dinámicas ni dependencia de queries o formularios existentes), sujeta a las mismas reglas de destino que el reordenamiento. La paleta permanece abierta hasta que se cierra.
 
-### Eliminar nodo
-Con un nodo seleccionado, un botón "Eliminar nodo" en la cabecera del panel de propiedades borra ese nodo y todo su subárbol del `layout`, y limpia la selección. No hay confirmación modal, deshacer/rehacer ni atajo de teclado dedicado (por ejemplo `Supr`) — quedan fuera de esta primera entrega.
+### Panel de inserción: `repeater`, `accordion`, `tabs` y `modal` en modo Editor
+Estos cuatro nodos gestionan su propio subárbol de forma especial en modo Editor sobre el árbol real:
+- **`repeater`**: se muestra como exactamente una instancia editable de `props.template` (con el primer elemento real de la colección resuelta como contexto `item.*` si hay datos, o un contexto vacío si la colección está vacía), sin controles de paginación. No se editan instancias repetidas por separado; cualquier edición dentro de esa instancia se escribe siempre sobre `props.template`.
+- **`accordion`**: su cuerpo y sus `children` están siempre presentes en el DOM, con independencia de `defaultOpen` o de si se ha clicado la cabecera (en producción, un accordion colapsado no renderiza su contenido). La cabecera sigue alternando `aria-expanded` con normalidad.
+- **`modal`**: su panel y sus `children` están siempre presentes en el DOM, con independencia de `defaultOpen` o de si se ha disparado `openModal` (en producción, un modal cerrado no renderiza nada).
+- **`tabs`**: no se fuerza ninguna visibilidad adicional (el usuario ya puede cambiar de pestaña con la cabecera interactiva, que sigue funcionando igual); solo se garantiza que los nodos de la pestaña activa direccionan correctamente sus mutaciones.
 
-### Reglas de destino de drop
+**Limitación conocida**: un `tabItem` de `tabs` o un cuerpo de `accordion` completamente vacíos (sin ningún hijo) todavía no exponen una zona droppable propia equivalente al placeholder de contenedores vacíos descrito abajo; para insertar el primer nodo en esos casos hace falta arrastrar hasta un hijo ya existente de esa pestaña/cuerpo, o editar el JSON desde Monaco.
+
+### Eliminar nodo (modo Editor)
+Con un nodo seleccionado en modo Editor, un botón "Eliminar nodo" en el panel de propiedades borra ese nodo y todo su subárbol del `layout`, y limpia la selección. No hay confirmación modal, deshacer/rehacer ni atajo de teclado dedicado (por ejemplo `Supr`) — quedan fuera de esta primera entrega.
+
+### Reglas de destino de drop (modo Editor)
 La validez de un destino (tanto para reordenar/reanidar como para insertar desde la paleta) reutiliza exactamente las mismas reglas estructurales ya vigentes para el contrato JSON (ver [[../config/structure.md]]), sin duplicarlas de forma divergente:
 - solo `container`, `form`, `modal`, `link`, `accordion` y una pestaña concreta de `tabs` aceptan hijos.
 - `input`, `textarea`, `select`, `radioGroup`, `checkboxGroup`, `fileInput`, `toggle` y `hidden` solo son válidos como descendientes de un `form`, en cualquier profundidad (incluso a través de un `container`/`accordion`/`tabs` intermedio).
@@ -111,31 +154,63 @@ La validez de un destino (tanto para reordenar/reanidar como para insertar desde
 - `repeater` nunca acepta un drop de hijos fuera de la única instancia de `props.template` que representa en modo edición.
 - arrastrar un nodo sobre sí mismo o sobre uno de sus propios descendientes se trata siempre como destino inválido (evita ciclos).
 
-### `repeater`, `accordion`, `tabs` y `modal` en modo edición
-Estos cuatro nodos gestionan su propio subárbol de forma especial dentro del canvas, sin afectar a su comportamiento en producción:
-- **`repeater`**: se muestra siempre como exactamente una instancia editable de `props.template` (con el primer elemento real de la colección resuelta como contexto `item.*` si hay datos, o un contexto vacío si la colección está vacía), sin controles de paginación. No se editan instancias repetidas por separado; el resultado de cualquier edición dentro de esa instancia se escribe siempre sobre `props.template`.
-- **`accordion`**: su cuerpo y sus `children` están siempre presentes en el DOM del canvas, con independencia de `defaultOpen` o de si se ha clicado la cabecera (en producción, un accordion colapsado no renderiza su contenido). La cabecera sigue alternando `aria-expanded` con normalidad.
-- **`modal`**: su panel y sus `children` están siempre presentes en el DOM del canvas, con independencia de `defaultOpen` o de si se ha disparado `openModal` (en producción, un modal cerrado no renderiza nada).
-- **`tabs`**: no se fuerza ninguna visibilidad adicional (el usuario ya puede cambiar de pestaña con la cabecera interactiva, que sigue funcionando igual); solo se garantiza que los nodos de la pestaña activa direccionan correctamente sus mutaciones sobre `props.items[i].children`.
+### Contenedores y formularios vacíos (modo Editor)
+Un `container` o `form` sin `children` (o con `children: []`) en modo Editor se renderiza con un placeholder visible (borde punteado y etiqueta), seleccionable y válido como destino de drop para insertar el primer hijo. Ese placeholder no existe en el render de producción del mismo `layout`: el nodo vacío sigue sin mostrar nada fuera de modo Editor.
 
-Limitación conocida: un `tabItem` de `tabs` o un cuerpo de `accordion` completamente vacíos (sin ningún hijo) todavía no exponen una zona droppable propia equivalente al placeholder de contenedores vacíos descrito abajo; para insertar el primer nodo en esos casos hace falta arrastrar hasta un hijo ya existente de esa pestaña/cuerpo, o editar el JSON desde Monaco.
+## Modo Editor: supresión de comportamiento propio
 
-### Contenedores y formularios vacíos
-Un `container` o `form` sin `children` (o con `children: []`) se renderiza en el canvas con un placeholder visible (borde punteado y etiqueta), seleccionable y válido como destino de drop para insertar el primer hijo. Ese placeholder no existe en el render de producción del mismo `layout`: el nodo vacío sigue sin mostrar nada fuera del modo edición.
+En modo Editor, el contenido renderizado se comporta de forma especial para permitir edición sin interferencia de acciones declarativas:
 
-### Sincronización con Monaco
-Cualquier cambio hecho en el canvas (mover, insertar, borrar, editar propiedades) se confirma mediante el mismo pipeline de commit del canvas: valida el `layout` resultante con `validateRuntimeConfig` (el mismo validador que ya usa el botón Aplicar) y, solo si es válido, migra el estado del runtime y actualiza `currentConfig`. A diferencia del botón Aplicar (que deja el buffer de Monaco intacto tras aplicar), el commit del canvas parchea únicamente la clave `layout` de la página activa sobre el último texto crudo válido conocido, dejando intacto el resto del documento (`api`, `initialPage`, `tokens`, `translations`, y cualquier otra página, incluidos bloques con forma cruda como `preloads`). Un `form.onSuccess`/`form.onError` declarado a nivel superior se serializa anidado dentro de `submitAction`, igual que exige el contrato normalizado. Si la mutación resultante no fuera válida, se descarta sin tocar ningún estado — la validación de destino de drop y las reglas estructurales ya evitan que esto ocurra en el flujo normal, pero el commit es la última barrera de seguridad. Un commit exitoso desde el canvas activa la misma guardia de cambios aplicados (§ Guardia de cambios aplicados) que el botón Aplicar, y sobrescribe deliberadamente cualquier cambio sin aplicar que hubiera pendiente en Monaco en ese momento.
+### Acciones declarativas suprimidas
+Ninguna acción declarativa se ejecuta en modo Editor:
+- Buttons con `action.navigateTo` no navegano.
+- Buttons con `action.goBack` no retroceden.
+- Forms no se envían ni ejecutan su `submitAction`.
+- Queries declaradas en `submitAction` o `onSuccess`/`onError` no se ejecutan.
+- `openModal`/`closeModal` no funcionan.
+- `resetForm` no limpia el formulario.
 
-### Límites del editor visual
+Estas acciones se suprimen de forma centralizada en el punto de disparo, sin necesidad de cambiar ningún nodo individual. El único efecto observable es que hacer click sobre un `button` con acción lo selecciona en lugar de ejecutar la acción.
+
+### Campos de formulario inertizados
+Los siete tipos de campo (`input`, `textarea`, `select`, `radioGroup`, `checkboxGroup`, `toggle`, `fileInput`) quedan deshabilitados en modo Editor:
+- Teclear sobre un `input`/`textarea` no cambia su valor.
+- Marcar un `checkbox`/`radio`/`toggle` no cambia su estado.
+- Cambiar la selección de un `select` no refleja la elección.
+- Activar un `radioGroup`/`checkboxGroup` no marca/desmarca opciones.
+- Estos controles no responden a activación vía `<label>` (clicar la etiqueta de un checkbox no lo marca).
+
+El único mecanismo para cambiar un valor de campo en modo Editor es el panel de propiedades del nodo seleccionado, que edita directamente el config en memoria.
+
+### Excepción explícita: interactividad local de `accordion` y `tabs`
+La interactividad local de cabecera se preserva en modo Editor:
+- Clicar la cabecera de un `accordion` sigue alternando `aria-expanded` y su cuerpo se muestra/oculta (aunque el cuerpo esté siempre en el DOM para que se pueda seleccionar cualquier nodo anidado).
+- Clicar una pestaña de `tabs` sigue cambiando la pestaña visible.
+
+Estas interacciones no son acciones declarativas ni comportamiento de usuario sobre campos (son estado local del propio componente), así que se permiten para poder acceder y seleccionar nodos anidados bajo cabeceras/pestañas distintas en modo Editor.
+
+## Sincronización entre canvas y Monaco
+
+Cualquier cambio hecho en modo Editor (mover, insertar, borrar, editar propiedades) se confirma mediante el mismo pipeline de commit: valida el `layout` resultante con `validateRuntimeConfig` (el mismo validador que ya usa el botón Aplicar) y, solo si es válido, migra el estado del runtime y actualiza `currentConfig`. A diferencia del botón Aplicar de Monaco (que deja el buffer intacto tras aplicar), el commit del canvas parchea únicamente la clave `layout` de la página activa sobre el último texto crudo válido conocido, dejando intacto el resto del documento (`api`, `initialPage`, `tokens`, `translations`, y cualquier otra página, incluidos bloques con forma cruda como `preloads`). Un `form.onSuccess`/`form.onError` declarado a nivel superior se serializa anidado dentro de `submitAction`, igual que exige el contrato normalizado. Si la mutación resultante no fuera válida, se descarta sin tocar ningún estado — la validación de destino de drop y las reglas estructurales ya evitan que esto ocurra en el flujo normal, pero el commit es la última barrera de seguridad. Un commit exitoso desde el canvas activa la misma guardia de cambios aplicados (§ Guardia de cambios aplicados) que el botón Aplicar, y sobrescribe deliberadamente cualquier cambio sin aplicar que hubiera pendiente en Monaco en ese momento.
+
+La sincronización entre canvas y Monaco es bidireccional e inmediata: cambios en el canvas se reflejan en el buffer de Monaco, y cambios directamente editados en Monaco se reflejan en el canvas tras pulsar "Aplicar".
+
+## Límites del editor visual
+
+### Alcance funcional
 - No hay deshacer/rehacer (undo/redo) de las operaciones del canvas; Monaco sigue disponible como red de seguridad manual.
 - No hay selección múltiple de nodos, duplicar/copiar un nodo, ni atajos de teclado dedicados.
 - El panel de propiedades no incluye pickers contextuales para referencias string (`queries.x`, `forms.x`, `params.x`, `{{...}}`); esos campos se editan como texto plano, igual que el resto de propiedades del schema.
-- Edita únicamente `layout`; `api`, `pages` (alta/baja/`initialPage`), `tokens` y `translations` quedan fuera de esta entrega.
-- Persiste solo en memoria de sesión, con el mismo límite ya vigente para Monaco (ver § Límites siguiente).
+- Edita únicamente `layout`; `api`, `pages` (alta/baja/`initialPage`), `tokens` y `translations` quedan fuera de esta entrega (son features futuras independientes).
 
-## Límites
-- No persiste cambios entre sesiones del navegador (`localStorage`/`sessionStorage` fuera de alcance).
+### Persistencia y entorno
+- No persiste cambios entre sesiones del navegador (`localStorage`/`sessionStorage` fuera de alcance). Los cambios aplicados viven solo en memoria de sesión, igual que el buffer de Monaco.
 - No descarga el JSON como archivo.
-- No resalta errores de validación inline en Monaco; solo los muestra en el panel adjunto.
-- No permite varias instancias simultáneas del editor.
-- No modifica el contrato observable del runtime ni su frontera pública de errores.
+- Recargar la página descarta todos los cambios sin aplicar.
+- No resalta errores de validación inline en Monaco; solo los muestra en el panel flotante adjunto.
+- No permite varias instancias simultáneas del editor sobre el mismo runtime.
+- No modifica el contrato observable del runtime en producción ni su frontera pública de errores.
+
+### Vistas del contenido
+- El árbol editado en modo Editor es el **mismo árbol renderizado en modo Visual y en producción** — no existe una vista paralela o simulada. Cuando se edita en modo Editor, el usuario ve de inmediato cómo quedaría el resultado.
+- Con `repeater` expandido en Visual, al cambiar a modo Editor se colapsa a una única instancia de plantilla (porque en modo Editor solo se muestra la plantilla editable, no todas las instancias iteradas). Cambiar la plantilla en modo Editor se refleja en todas las iteraciones al volver a Visual.

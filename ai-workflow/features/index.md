@@ -14,11 +14,33 @@ La exploración previa, cuando hace falta, se hace conversacionalmente con `expl
 
 La política completa está definida en el documento de workflow del proyecto.
 
+## Planificadas
+
+(Todas las features actuales han sido completadas. Próximas features: `EDITOR-VISUAL-ROADMAP.md` en la raíz del repo define el roadmap de edición visual para `Api`, `Páginas` y `Tokens`.)
+
 ## Archivadas
 - `0035-image-node-api-source`: archivada. Se descarta por ahora porque el caso de imágenes privadas encaja mejor con URLs protegidas o firmadas desde backend que con una carga remota específica integrada en el nodo `image`.
 
 ## Completadas
 
+- `0103-dev-editor-floating-toolbar`: sucesora de `0102`. Sustituye el drawer con pestañas Visual/JSON y su árbol de
+  canvas duplicado por edición directamente sobre el mismo contenido real renderizado del runtime, controlada por una
+  barra de herramientas flotante persistente que actúa como único punto de entrada al editor. La barra incluye: (1)
+  selector de página que pilota la navegación real del runtime; (2) selector de pestaña de dominio con solo `Layout`
+  funcional (`Api`, `Páginas` y `Tokens` deshabilitadas, reservadas para features futuras); (3) botón "Añadir
+  elemento" que abre la paleta de nodos como panel flotante lateral; (4) botón de acceso a Monaco como panel flotante
+  derecho; (5) toggle Visual/Editor que controla el comportamiento del árbol real. En modo Visual, el contenido se
+  comporta exactamente igual que en producción. En modo Editor, se suprime por completo el comportamiento propio de los
+  nodos (acciones declarativas: `navigateTo`, `goBack`, `executeOperation`, `openModal`, `closeModal`, `resetForm` se
+  convierten en no-op; campos de formulario quedan deshabilitados mediante `<fieldset disabled>`) salvo la
+  interactividad local de cabecera de `accordion` y `tabs` (necesaria para acceder a nodos anidados). El overlay de
+  selección (breadcrumb + panel de propiedades) se posiciona de forma anclada al nodo seleccionado con clamping
+  automático de viewport. Reutiliza sin cambios la lógica de `0102`: modelo de `path`, mutaciones, pipeline de
+  commit, generación de formulario de propiedades desde JSON Schema, drag-and-drop, reglas de destino estructurales,
+  y tratamiento especial de `repeater` (plantilla única), `accordion`, `tabs` y `modal` (contenido siempre visible en
+  Editor). Los paneles flotantes (paleta, overlay, Monaco) no alteran el ancho ni el reflow del contenido subyacente
+  (todos `position: fixed`). Reemplaza el botón flotante y el atajo `Ctrl/Cmd+Shift+J` como punto de entrada único;
+  `Esc` se conserva para cerrar el panel de Monaco.
 - `0102-dev-editor-visual-layout-canvas`: añade al drawer de `DevRuntime` una segunda pestaña (**Visual**, junto a
   **JSON**) con una capa de edición visual del `layout` de la página activa mediante manipulación directa sobre el
   propio preview ya renderizado (no un panel de árbol tipo "layers"), sincronizada en vivo y bidireccional con el

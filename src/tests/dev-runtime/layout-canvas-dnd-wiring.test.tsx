@@ -1,7 +1,9 @@
 import { render } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { RuntimeConfig } from '../../config/runtime-config'
-import { LayoutCanvas } from '../../dev-runtime/layout-canvas/layout-canvas'
+import { LayoutCanvasDndContext, type LayoutCanvasDropAttempt } from '../../dev-runtime/layout-canvas/layout-canvas-dnd-context'
+import { LayoutEditModeProvider } from '../../runtime/layout-edit-mode-context'
+import { LayoutRenderer } from '../../runtime/layout-renderer'
 import {
   deserializeLayoutNodePath,
   parseDropZoneId,
@@ -10,7 +12,7 @@ import {
   type LayoutCanvasDropZone,
   type LayoutNodePath,
 } from '../../runtime/layout-node-path'
-import type { LayoutCanvasDropAttempt } from '../../dev-runtime/layout-canvas/layout-canvas-dnd-context'
+import { RuntimeStateProvider } from '../../runtime/runtime-state/runtime-state-provider'
 
 // Light mock of @dnd-kit/core (see subagent-prompt.md / T12 tests contract): real pointer
 // simulation against PointerSensor is impractical in jsdom (no real layout, no real
@@ -79,14 +81,26 @@ const CONTAINER_B_EMPTY_PATH: LayoutNodePath = [{ field: 'children', index: 1 }]
 const BETWEEN_SIBLINGS_ZONE_ID = serializeDropZoneId({ parentPath: CONTAINER_A_PATH, index: 1 })
 const EMPTY_PLACEHOLDER_ZONE_ID = serializeDropZoneId({ parentPath: CONTAINER_B_EMPTY_PATH, index: 0 })
 
+// LayoutCanvas (0102) was retired in 0103/T10 in favor of DevEditorLayer wrapping the real
+// `<RuntimePage />` in place. This harness composes the exact same underlying, still-live
+// pieces LayoutCanvas used to wire together for its canvas pane — LayoutCanvasDndContext,
+// LayoutEditModeProvider (active: true), RuntimeStateProvider, LayoutRenderer — without the
+// retired component itself, so the draggable/droppable registration and onDragEnd wiring this
+// file verifies keeps exercising the real, unmocked id-construction path.
 function renderCanvas(onDropAttempt: (attempt: LayoutCanvasDropAttempt) => void) {
+  const config = buildConfig()
+  const pageLayout = config.pages[0].layout
+
   return render(
-    <LayoutCanvas
-      config={buildConfig()}
-      activePageId="home"
-      onActivePageIdChange={() => {}}
-      onDropAttempt={onDropAttempt}
-    />,
+    <LayoutCanvasDndContext pageLayout={pageLayout} onDropAttempt={onDropAttempt}>
+      <LayoutEditModeProvider
+        value={{ active: true, selectedPath: null, hoveredPath: null, onSelectNode: () => {}, onHoverNode: () => {} }}
+      >
+        <RuntimeStateProvider config={config}>
+          <LayoutRenderer nodes={pageLayout} />
+        </RuntimeStateProvider>
+      </LayoutEditModeProvider>
+    </LayoutCanvasDndContext>,
   )
 }
 

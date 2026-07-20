@@ -16,20 +16,18 @@ function buildConfig(): RuntimeConfig {
   }
 }
 
-function renderNodes(nodes: LayoutNode[], options?: { editMode?: Partial<LayoutEditModeContextValue> }) {
+function renderNodes(nodes: LayoutNode[], options?: { editMode?: { active?: boolean } }) {
   const onSelectNode = vi.fn()
   const onHoverNode = vi.fn()
 
-  const content = options?.editMode ? (
-    <LayoutEditModeProvider
-      value={{
-        selectedPath: null,
-        hoveredPath: null,
-        onSelectNode,
-        onHoverNode,
-        ...options.editMode,
-      }}
-    >
+  const editModeValue: LayoutEditModeContextValue | null = options?.editMode
+    ? options.editMode.active === false
+      ? { active: false }
+      : { active: true, selectedPath: null, hoveredPath: null, onSelectNode, onHoverNode }
+    : null
+
+  const content = editModeValue ? (
+    <LayoutEditModeProvider value={editModeValue}>
       <LayoutRenderer nodes={nodes} />
     </LayoutEditModeProvider>
   ) : (
@@ -84,5 +82,17 @@ describe('ModalNode with LayoutEditModeProvider', () => {
       { field: 'children', index: 0 },
       { field: 'children', index: 0 },
     ])
+  })
+})
+
+// design.md feature 0103 Decisión 9: with a mounted-but-inert provider ({ active: false },
+// Visual mode inside DevRuntime), the modal must behave exactly like production — only open
+// when the real modal state says so, never forced open.
+describe('ModalNode with LayoutEditModeProvider ({ active: false }, Visual mode)', () => {
+  it('does not render children for a closed modal, same as production', () => {
+    const { container } = renderNodes(buildModalTree(), { editMode: { active: false } })
+
+    expect(screen.queryByText('Modal body content')).not.toBeInTheDocument()
+    expect(container.querySelector('[data-testid="modal-overlay"]')).toBeNull()
   })
 })
