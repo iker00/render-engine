@@ -35,7 +35,8 @@ Por defecto al arrancar `DevRuntime`, el contenido se comporta exactamente igual
 ### Modo Editor
 Al activar "Editor" desde la barra, se habilita la edición visual directa sobre el contenido:
 - **Selección**: hacer click sobre un nodo lo selecciona; hover lo resalta sin cambiar la selección. La selección se identifica por un `path` estructural resuelto contra el árbol real.
-- **Overlay flotante de selección**: junto al nodo seleccionado aparece un panel flotante (anclado a su posición) que muestra el breadcrumb de ancestros y el panel de propiedades del nodo. Este overlay se posiciona automáticamente para permanecer visible dentro del viewport, sin alterar el ancho del contenido.
+- **Panel de selección**: al seleccionar un nodo, aparece un panel fijo acoplado al borde derecho de la pantalla mostrando el breadcrumb de ancestros y el panel de propiedades del nodo seleccionado. El panel ocupa entre el 90% y el 100% de la altura del viewport y dispone de scroll vertical interno cuando su contenido excede esa altura. El panel no reduce el ancho disponible del contenido renderizado.
+- **Cierre del panel de selección**: el panel incluye un botón "Cerrar" visible en su cabecera. Al pulsarlo, el panel se oculta y la selección del nodo se limpia (desaparece el resaltado de selección). Además, con el panel de selección abierto y el panel de Monaco cerrado, pulsar `Esc` produce el mismo efecto (cierra el panel y limpia la selección).
 - **Breadcrumb de ancestros**: cadena clicable de ancestros desde el nodo seleccionado hasta la raíz del layout (ej: `container > form > heading`). Clicar un segmento cambia la selección a ese ancestro.
 - **Panel de propiedades**: muestra las secciones `Props`, `Layout`, `Visibilidad` y `Estado de consulta` generadas dinámicamente desde el schema Zod del nodo. Editar cualquier campo actualiza el estado en memoria e inmediatamente se refleja tanto en el contenido renderizado como en el buffer de Monaco.
 - **Supresión de comportamiento propio**: en modo Editor, el contenido renderizado **no ejecuta ninguna acción declarativa** (`navigateTo`, `goBack`, `executeOperation(s)`, `openModal`/`closeModal`, `resetForm`, envío de `form`) y los campos de formulario quedan inertes a su interacción nativa (no se puede teclear ni marcar directamente sobre el campo). La única vía para cambiar configuración en modo Editor es el canvas (arrastre, borrado) o el panel de propiedades del nodo seleccionado.
@@ -44,11 +45,17 @@ Al activar "Editor" desde la barra, se habilita la edición visual directa sobre
 - **Borrado**: con un nodo seleccionado, un botón en el panel de propiedades borra ese nodo y todo su subárbol, y limpia la selección.
 
 ### Panel flotante de Monaco
-El editor de texto Monaco se renderiza como un panel deslizante `fixed` en el lado derecho (similar al drawer actual, pero sin las pestañas Visual/JSON — el contenido real renderizado *es* ahora la superficie visual). Se activa desde el botón `{}` de la barra. Incluye:
+El editor de texto Monaco se renderiza como un panel deslizante `fixed` en el lado derecho. Se activa desde el botón `{}` de la barra. Incluye:
 - El editor Monaco con autocompletado JSON Schema (mismo que siempre).
 - Panel de errores cuando hay validación o sintaxis inválida.
 - Barra de acciones: botones "Copiar" y "Aplicar", con indicador visual de cambios pendientes.
 - Botón "Cerrar" (o presionar `Esc`) para cerrar el panel.
+
+### Exclusión mutua entre panel de selección y panel de Monaco
+El lado derecho de la pantalla muestra como máximo uno de los dos paneles a la vez:
+- Seleccionar un nodo en modo Editor mientras el panel de Monaco está abierto cierra automáticamente el panel de Monaco y muestra el panel de selección del nodo elegido.
+- Abrir el panel de Monaco desde el botón de la barra mientras hay un nodo seleccionado con su panel visible cierra el panel de selección (limpiando la selección, igual que el botón "Cerrar") y muestra el panel de Monaco.
+- Con el panel de Monaco abierto, pulsar `Esc` sigue cerrando el panel de Monaco exactamente igual que antes; no afecta a la selección si la hubiera.
 
 ### Paleta flotante de nodos
 Cuando se activa "Añadir elemento" desde la barra, aparece una paleta flotante lateral mostrando el catálogo completo de tipos de nodo. Desde la paleta se puede arrastrar cualquier tipo hasta una posición válida del contenido para insertarlo como nodo nuevo con valores por defecto. La paleta permanece abierta hasta que se cierra desde su botón de cierre o se vuelve a clicar "Añadir elemento".
