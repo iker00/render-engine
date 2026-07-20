@@ -79,6 +79,8 @@ interface HarnessProps {
   mountCountRef: MutableRefObject<number>
   onCommitCanvasMutation?: (mutate: (pageLayout: LayoutNode[]) => LayoutNode[]) => CommitCanvasMutationResult
   onCommitNodeUpdate?: (path: never, updater: never) => void
+  onMonacoOpenChangeSpy?: (open: boolean) => void
+  initialMonacoOpen?: boolean
 }
 
 function DevEditorLayerHarness({
@@ -86,10 +88,17 @@ function DevEditorLayerHarness({
   mountCountRef,
   onCommitCanvasMutation = noopCommitCanvasMutation,
   onCommitNodeUpdate = () => {},
+  onMonacoOpenChangeSpy,
+  initialMonacoOpen = false,
 }: HarnessProps) {
   const [mode, setMode] = useState<'visual' | 'editor'>('visual')
   const [paletteOpen, setPaletteOpen] = useState(false)
-  const [monacoOpen, setMonacoOpen] = useState(false)
+  const [monacoOpen, setMonacoOpen] = useState(initialMonacoOpen)
+
+  function handleMonacoOpenChange(open: boolean) {
+    onMonacoOpenChangeSpy?.(open)
+    setMonacoOpen(open)
+  }
 
   return (
     <RuntimeStateProvider config={config}>
@@ -100,7 +109,7 @@ function DevEditorLayerHarness({
         paletteOpen={paletteOpen}
         onPaletteOpenChange={setPaletteOpen}
         monacoOpen={monacoOpen}
-        onMonacoOpenChange={setMonacoOpen}
+        onMonacoOpenChange={handleMonacoOpenChange}
         monaco={NOOP_MONACO}
         onCommitCanvasMutation={onCommitCanvasMutation}
         onCommitNodeUpdate={onCommitNodeUpdate}
@@ -331,6 +340,165 @@ describe('DevEditorLayer / commit callbacks are the ones threaded through, no se
 // accordion). This exercises the real rendering pipeline (LayoutRenderer -> LayoutNodeRenderer
 // -> AccordionNode), not the EditModeProbe stand-in used by the other describes above, because
 // the bug lived specifically in the per-node wrapper those tests don't render through.
+describe('DevEditorLayer / mutual exclusion between selection panel and Monaco (T2)', () => {
+  it('selecting a node while Monaco is open closes Monaco and keeps the node selected', () => {
+    const onMonacoOpenChangeSpy = vi.fn()
+    const mountCountRef = { current: 0 }
+    render(
+      <DevEditorLayerHarness
+        config={buildConfig()}
+        mountCountRef={mountCountRef}
+        onMonacoOpenChangeSpy={onMonacoOpenChangeSpy}
+        initialMonacoOpen={true}
+      />,
+    )
+
+    switchToEditorMode()
+    fireEvent.click(screen.getByTestId('probe-node-a'))
+
+    expect(onMonacoOpenChangeSpy).toHaveBeenCalledTimes(1)
+    expect(onMonacoOpenChangeSpy).toHaveBeenCalledWith(false)
+    expect((contextJson() as { selectedPath: unknown }).selectedPath).toEqual([{ field: 'children', index: 0 }])
+  })
+
+  it('opening Monaco while a node is selected clears the selection and hides the selection panel', () => {
+    const onMonacoOpenChangeSpy = vi.fn()
+    const mountCountRef = { current: 0 }
+    render(
+      <DevEditorLayerHarness
+        config={buildConfig()}
+        mountCountRef={mountCountRef}
+        onMonacoOpenChangeSpy={onMonacoOpenChangeSpy}
+        initialMonacoOpen={false}
+      />,
+    )
+
+    switchToEditorMode()
+    fireEvent.click(screen.getByTestId('probe-node-a'))
+    expect(screen.getByTestId('dev-editor-selection-overlay')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByTestId('dev-editor-toolbar-monaco-toggle'))
+
+    expect(onMonacoOpenChangeSpy).toHaveBeenCalledTimes(1)
+    expect(onMonacoOpenChangeSpy).toHaveBeenCalledWith(true)
+    expect((contextJson() as { selectedPath: unknown }).selectedPath).toBeNull()
+    expect(screen.queryByTestId('dev-editor-selection-overlay')).not.toBeInTheDocument()
+  })
+
+  it('does not invoke onMonacoOpenChange when selecting a node while Monaco is already closed', () => {
+    const onMonacoOpenChangeSpy = vi.fn()
+    const mountCountRef = { current: 0 }
+    render(
+      <DevEditorLayerHarness
+        config={buildConfig()}
+        mountCountRef={mountCountRef}
+        onMonacoOpenChangeSpy={onMonacoOpenChangeSpy}
+        initialMonacoOpen={false}
+      />,
+    )
+
+    switchToEditorMode()
+    fireEvent.click(screen.getByTestId('probe-node-a'))
+
+    expect(onMonacoOpenChangeSpy).not.toHaveBeenCalled()
+  })
+
+  it('does not touch the selection when opening Monaco with no active selection', () => {
+    const onMonacoOpenChangeSpy = vi.fn()
+    const mountCountRef = { current: 0 }
+    render(
+      <DevEditorLayerHarness
+        config={buildConfig()}
+        mountCountRef={mountCountRef}
+        onMonacoOpenChangeSpy={onMonacoOpenChangeSpy}
+        initialMonacoOpen={false}
+      />,
+    )
+
+    switchToEditorMode()
+    fireEvent.click(screen.getByTestId('dev-editor-toolbar-monaco-toggle'))
+
+    expect(onMonacoOpenChangeSpy).toHaveBeenCalledTimes(1)
+    expect(onMonacoOpenChangeSpy).toHaveBeenCalledWith(true)
+    expect((contextJson() as { selectedPath: unknown }).selectedPath).toBeNull()
+    expect(screen.queryByTestId('dev-editor-selection-overlay')).not.toBeInTheDocument()
+  })
+})
+
+// T3: the selection panel's own Escape handling. The Monaco panel's Escape handling lives in
+// dev-runtime.tsx (a separate, untouched listener) and is covered there — this describe only
+// exercises the listener DevEditorLayer registers for itself.
+describe('DevEditorLayer / Esc closes the selection panel when Monaco is closed (T3)', () => {
+  it('clears the selection and hides the overlay on Escape when Monaco is closed', () => {
+    renderHarness()
+    switchToEditorMode()
+    fireEvent.click(screen.getByTestId('probe-node-a'))
+    expect(screen.getByTestId('dev-editor-selection-overlay')).toBeInTheDocument()
+
+    fireEvent.keyDown(document, { key: 'Escape' })
+
+    expect(screen.queryByTestId('dev-editor-selection-overlay')).not.toBeInTheDocument()
+    expect((contextJson() as { selectedPath: unknown }).selectedPath).toBeNull()
+  })
+
+  it('does not clear the selection on Escape while Monaco is open', () => {
+    // DevEditorLayer's own handlers (handleSelectNode / handleOpenMonaco) never allow
+    // monacoOpen: true and a selection to coexist (T2's mutual exclusion), so this state is
+    // constructed directly: monacoOpen is a fixed prop here and onMonacoOpenChange is a no-op,
+    // isolating the Esc guard itself rather than relying on a reachable app flow.
+    const mountCountRef = { current: 0 }
+
+    function MonacoStaysOpenHarness() {
+      const [paletteOpen, setPaletteOpen] = useState(false)
+
+      return (
+        <RuntimeStateProvider config={buildConfig()}>
+          <DevEditorLayer
+            mode="editor"
+            onModeChange={() => {}}
+            paletteOpen={paletteOpen}
+            onPaletteOpenChange={setPaletteOpen}
+            monacoOpen={true}
+            onMonacoOpenChange={() => {}}
+            monaco={NOOP_MONACO}
+            onCommitCanvasMutation={noopCommitCanvasMutation}
+            onCommitNodeUpdate={() => {}}
+          >
+            <EditModeProbe mountCountRef={mountCountRef} />
+          </DevEditorLayer>
+        </RuntimeStateProvider>
+      )
+    }
+
+    render(<MonacoStaysOpenHarness />)
+    fireEvent.click(screen.getByTestId('probe-node-a'))
+    expect(screen.getByTestId('dev-editor-selection-overlay')).toBeInTheDocument()
+
+    fireEvent.keyDown(document, { key: 'Escape' })
+
+    expect(screen.getByTestId('dev-editor-selection-overlay')).toBeInTheDocument()
+    expect((contextJson() as { selectedPath: unknown }).selectedPath).toEqual([{ field: 'children', index: 0 }])
+  })
+
+  it('has no effect when there is no active selection', () => {
+    renderHarness()
+    switchToEditorMode()
+
+    fireEvent.keyDown(document, { key: 'Escape' })
+
+    expect(screen.queryByTestId('dev-editor-selection-overlay')).not.toBeInTheDocument()
+    expect(contextJson()).toEqual({ active: true, selectedPath: null, hoveredPath: null })
+  })
+
+  it('deregisters the keydown listener when DevEditorLayer unmounts', () => {
+    const mountCountRef = { current: 0 }
+    const { unmount } = render(<DevEditorLayerHarness config={buildConfig()} mountCountRef={mountCountRef} />)
+    unmount()
+
+    expect(() => fireEvent.keyDown(document, { key: 'Escape' })).not.toThrow()
+  })
+})
+
 describe('DevEditorLayer / node-local state persists across mode switches (Decisión 9)', () => {
   it('keeps an expanded accordion expanded, same DOM node, toggling Visual -> Editor -> Visual', () => {
     const accordionLayout: LayoutNode[] = [

@@ -104,11 +104,47 @@ export function DevEditorLayer({
 
   const selectedNode = selectedPath !== null ? getNodeAtPath(activePageLayout, selectedPath) : null
 
+  // T3: `Esc` closes the selection panel when Monaco is closed, same effect as the panel's own
+  // close button (T1). This listener is independent from the Monaco `Esc` listener in
+  // dev-runtime.tsx: when Monaco is open, the guard below is false and this effect does
+  // nothing, leaving that listener as the sole handler for Monaco's own close-on-Esc behavior.
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape' && selectedPath !== null && !monacoOpen) {
+        setSelectedPath(null)
+        setHoveredPath(null)
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [selectedPath, monacoOpen])
+
   function handleModeChange(nextMode: DevEditorMode) {
     // Deliberately does not clear selectedPath (design.md Decisión 5): with the provider
     // permanently mounted, the selection is still valid when switching back to Editor on the
     // same page, so there is nothing to reconcile.
     onModeChange(nextMode)
+  }
+
+  // Mutual exclusion between the selection panel and the Monaco panel (T2): the right side of
+  // the screen shows at most one of the two at a time. Selecting a node while Monaco is open
+  // closes Monaco; opening Monaco while a node is selected clears the selection. Both setters
+  // below run in the same handler invocation, so React 18's automatic batching coalesces them
+  // into a single commit without needing flushSync.
+  function handleSelectNode(path: LayoutNodePath | null) {
+    if (path !== null && monacoOpen) {
+      onMonacoOpenChange(false)
+    }
+    setSelectedPath(path)
+  }
+
+  function handleOpenMonaco() {
+    setSelectedPath(null)
+    setHoveredPath(null)
+    onMonacoOpenChange(true)
   }
 
   // Same drop-commit logic LayoutCanvas.handleDropAttempt used (0102 T14/T15), reused as-is:
@@ -175,7 +211,7 @@ export function DevEditorLayer({
         <LayoutEditModeProvider
           value={
             mode === 'editor'
-              ? { active: true, selectedPath, hoveredPath, onSelectNode: setSelectedPath, onHoverNode: setHoveredPath }
+              ? { active: true, selectedPath, hoveredPath, onSelectNode: handleSelectNode, onHoverNode: setHoveredPath }
               : { active: false }
           }
         >
@@ -188,7 +224,7 @@ export function DevEditorLayer({
         <FloatingSelectionOverlay
           pageLayout={activePageLayout}
           selectedPath={selectedPath}
-          onSelectNode={setSelectedPath}
+          onSelectNode={handleSelectNode}
           onCommitNodeUpdate={onCommitNodeUpdate}
           onDeleteNode={handleDeleteSelectedNode}
         />
@@ -201,7 +237,7 @@ export function DevEditorLayer({
         activePageId={activePageId}
         onActivePageIdChange={(pageId) => navigateToPage(pageId)}
         activeDomain="layout"
-        onOpenMonaco={() => onMonacoOpenChange(true)}
+        onOpenMonaco={handleOpenMonaco}
         isMonacoOpen={monacoOpen}
         onOpenPalette={() => onPaletteOpenChange(!paletteOpen)}
         isPaletteOpen={paletteOpen}
