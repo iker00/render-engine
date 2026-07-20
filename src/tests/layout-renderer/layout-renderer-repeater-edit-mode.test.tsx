@@ -18,21 +18,19 @@ function buildConfig(): RuntimeConfig {
 
 function renderNodes(
   nodes: LayoutNode[],
-  options?: { editMode?: Partial<LayoutEditModeContextValue>; dataValues?: Record<string, unknown> },
+  options?: { editMode?: { active?: boolean }; dataValues?: Record<string, unknown> },
 ) {
   const onSelectNode = vi.fn()
   const onHoverNode = vi.fn()
 
-  const content = options?.editMode ? (
-    <LayoutEditModeProvider
-      value={{
-        selectedPath: null,
-        hoveredPath: null,
-        onSelectNode,
-        onHoverNode,
-        ...options.editMode,
-      }}
-    >
+  const editModeValue: LayoutEditModeContextValue | null = options?.editMode
+    ? options.editMode.active === false
+      ? { active: false }
+      : { active: true, selectedPath: null, hoveredPath: null, onSelectNode, onHoverNode }
+    : null
+
+  const content = editModeValue ? (
+    <LayoutEditModeProvider value={editModeValue}>
       <LayoutRenderer nodes={nodes} />
     </LayoutEditModeProvider>
   ) : (
@@ -138,5 +136,20 @@ describe('RepeaterNode with LayoutEditModeProvider', () => {
     expect(container.querySelector('[data-layout-node="repeater-scroll-sentinel"]')).toBeNull()
     expect(screen.getByText('Post one')).toBeInTheDocument()
     expect(screen.queryByText('Post two')).not.toBeInTheDocument()
+  })
+})
+
+// design.md feature 0103 Decisión 9: with a mounted-but-inert provider ({ active: false },
+// Visual mode inside DevRuntime), the repeater must resolve the real collection into one
+// iteration per item, not collapse to a single template instance — same as production.
+describe('RepeaterNode with LayoutEditModeProvider ({ active: false }, Visual mode)', () => {
+  it('renders one iteration per item in the resolved collection, same as production', () => {
+    renderNodes([buildRepeaterNode()], { editMode: { active: false }, dataValues: fivePosts })
+
+    expect(screen.getByText('Post one')).toBeInTheDocument()
+    expect(screen.getByText('Post two')).toBeInTheDocument()
+    expect(screen.getByText('Post three')).toBeInTheDocument()
+    expect(screen.getByText('Post four')).toBeInTheDocument()
+    expect(screen.getByText('Post five')).toBeInTheDocument()
   })
 })

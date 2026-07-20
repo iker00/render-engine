@@ -25,7 +25,8 @@ export function AccordionNode({ node, iterationContext, path }: AccordionNodePro
   const { label, defaultOpen = false, groupId } = node.props
   const instanceId = useId()
   const { getActiveInstanceId, claimDefaultOpen, openInGroup, closeInGroup } = useAccordionGroup()
-  const isEditMode = useLayoutEditModeContext() !== null
+  const editModeContext = useLayoutEditModeContext()
+  const isEditMode = editModeContext !== null && editModeContext.active
 
   // Determine initial open state
   // For grouped accordions, the group context controls who starts open

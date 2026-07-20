@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import type { LayoutNode } from '../../config/runtime-config'
 import { validateRuntimeConfig } from '../../config/runtime-config'
@@ -119,17 +119,19 @@ function buildReadyProps(rawConfig: unknown): { initialConfig: RuntimeConfig; in
   return { initialConfig: validation.config, initialConfigText }
 }
 
-function openDrawer() {
-  fireEvent.click(screen.getByTestId('dev-runtime-toggle'))
-}
-
+// The drawer/toggle and the isolated canvas preview are retired (0103, T8): editing happens
+// directly on the real `<RuntimePage />` once Editor mode is active, and the Monaco panel is
+// opened from the floating toolbar's dedicated control.
 async function getMonacoValue(): Promise<string> {
+  if (screen.queryByTestId('monaco-editor-mock') === null) {
+    fireEvent.click(screen.getByTestId('dev-editor-toolbar-monaco-toggle'))
+  }
   await waitFor(() => expect(screen.getByTestId('monaco-editor-mock')).toBeInTheDocument())
   return (screen.getByTestId('monaco-editor-mock') as HTMLTextAreaElement).value
 }
 
-describe('LayoutCanvasPropertiesPanel integration with LayoutCanvas + commitCanvasMutation', () => {
-  it('editing a text prop in the canvas panel updates editorBuffer immediately, visible on the JSON tab, with no extra button press', async () => {
+describe('LayoutCanvasPropertiesPanel integration with DevEditorLayer + commitCanvasMutation', () => {
+  it('editing a text prop in the overlay panel updates editorBuffer immediately, visible in Monaco, with no extra button press', async () => {
     const config = {
       api: {},
       pages: [{ id: 'home', layout: [{ type: 'heading', props: { text: 'Original', level: 2 } }] }],
@@ -138,16 +140,11 @@ describe('LayoutCanvasPropertiesPanel integration with LayoutCanvas + commitCanv
     const { initialConfig, initialConfigText } = buildReadyProps(config)
     render(<DevRuntimeReady initialConfig={initialConfig} initialConfigText={initialConfigText} />)
 
-    openDrawer()
-    await getMonacoValue()
+    fireEvent.click(screen.getByTestId('dev-editor-toolbar-mode-editor'))
+    fireEvent.click(screen.getByText('Original'))
 
-    fireEvent.click(screen.getByTestId('dev-runtime-tab-visual'))
-    const canvas = screen.getByTestId('layout-canvas')
-    fireEvent.click(within(canvas).getByText('Original'))
+    fireEvent.change(screen.getByLabelText('text', { exact: false }), { target: { value: 'Edited from panel' } })
 
-    fireEvent.change(within(canvas).getByLabelText('text', { exact: false }), { target: { value: 'Edited from panel' } })
-
-    fireEvent.click(screen.getByTestId('dev-runtime-tab-json'))
     const editorText = await getMonacoValue()
 
     expect(JSON.parse(editorText).pages[0].layout[0].props.text).toBe('Edited from panel')

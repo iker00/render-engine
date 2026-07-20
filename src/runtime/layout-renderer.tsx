@@ -42,8 +42,9 @@ export function LayoutRenderer({
   // A production render (no LayoutEditModeContext) never mounts these, so output stays
   // byte-identical to before T12.
   const elements: ReactNode[] = []
+  const activeEditModeContext = editModeContext !== null && editModeContext.active ? editModeContext : null
 
-  if (editModeContext !== null) {
+  if (activeEditModeContext !== null) {
     elements.push(
       <LayoutCanvasDropZoneGap key="drop-zone-0" parentPath={path} index={0} tabItemIndex={parentTabItemIndex} />,
     )
@@ -60,8 +61,8 @@ export function LayoutRenderer({
         path={childPath}
         renderedChildren={
           hasChildren(node) ? (
-            editModeContext !== null && isEmptyPlaceholderCandidate(node) ? (
-              <EmptyContainerPlaceholder nodeType={node.type} path={childPath} editModeContext={editModeContext} />
+            activeEditModeContext !== null && isEmptyPlaceholderCandidate(node) ? (
+              <EmptyContainerPlaceholder nodeType={node.type} path={childPath} editModeContext={activeEditModeContext} />
             ) : (
               <LayoutRenderer nodes={node.children ?? []} iterationContext={iterationContext} path={childPath} />
             )
@@ -70,7 +71,7 @@ export function LayoutRenderer({
       />,
     )
 
-    if (editModeContext !== null) {
+    if (activeEditModeContext !== null) {
       elements.push(
         <LayoutCanvasDropZoneGap
           key={`drop-zone-${index + 1}`}
@@ -118,7 +119,7 @@ function isEmptyPlaceholderCandidate(
 interface EmptyContainerPlaceholderProps {
   nodeType: EmptyPlaceholderNodeType
   path: LayoutNodePath
-  editModeContext: LayoutEditModeContextValue
+  editModeContext: Extract<LayoutEditModeContextValue, { active: true }>
 }
 
 // The placeholder stands for the container/form's still-empty first-child slot, so its own

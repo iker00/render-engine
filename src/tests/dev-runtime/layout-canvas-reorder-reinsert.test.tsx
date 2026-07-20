@@ -77,15 +77,14 @@ function buildReadyProps(rawConfig: unknown) {
   return { initialConfig: validation.config, initialConfigText }
 }
 
-// DevRuntimeReady mounts both the "background" preview runtime (data-testid="runtime-page")
-// and the canvas's own isolated preview (data-testid="layout-canvas") from the *same* config —
-// text/label queries must be scoped to the canvas, or they match both copies.
+// DevRuntimeReady (0103, T8) edits the real `<RuntimePage />` in place — there is no separate
+// canvas preview anymore. Switching to Editor mode from the floating toolbar is what activates
+// the LayoutEditModeProvider/LayoutCanvasDndContext wiring on that same tree.
 function renderCanvas(rawConfig: unknown) {
   const { initialConfig, initialConfigText } = buildReadyProps(rawConfig)
   const view = render(<DevRuntimeReady initialConfig={initialConfig} initialConfigText={initialConfigText} />)
-  fireEvent.click(screen.getByTestId('dev-runtime-toggle'))
-  fireEvent.click(screen.getByTestId('dev-runtime-tab-visual'))
-  const canvas = within(screen.getByTestId('layout-canvas'))
+  fireEvent.click(screen.getByTestId('dev-editor-toolbar-mode-editor'))
+  const canvas = within(screen.getByTestId('runtime-page'))
   return { initialConfigText, container: view.container, canvas }
 }
 
@@ -100,7 +99,9 @@ function dragEnd(activePath: LayoutNodePath, overZone: LayoutCanvasDropZone | nu
 }
 
 async function getMonacoJson(): Promise<{ text: string; parsed: Record<string, unknown> }> {
-  fireEvent.click(screen.getByTestId('dev-runtime-tab-json'))
+  if (screen.queryByTestId('monaco-editor-mock') === null) {
+    fireEvent.click(screen.getByTestId('dev-editor-toolbar-monaco-toggle'))
+  }
   await waitFor(() => expect(screen.getByTestId('monaco-editor-mock')).toBeInTheDocument())
   const text = (screen.getByTestId('monaco-editor-mock') as HTMLTextAreaElement).value
   return { text, parsed: JSON.parse(text) }

@@ -16,20 +16,18 @@ function buildConfig(): RuntimeConfig {
   }
 }
 
-function renderNodes(nodes: LayoutNode[], options?: { editMode?: Partial<LayoutEditModeContextValue> }) {
+function renderNodes(nodes: LayoutNode[], options?: { editMode?: { active?: boolean } }) {
   const onSelectNode = vi.fn()
   const onHoverNode = vi.fn()
 
-  const content = options?.editMode ? (
-    <LayoutEditModeProvider
-      value={{
-        selectedPath: null,
-        hoveredPath: null,
-        onSelectNode,
-        onHoverNode,
-        ...options.editMode,
-      }}
-    >
+  const editModeValue: LayoutEditModeContextValue | null = options?.editMode
+    ? options.editMode.active === false
+      ? { active: false }
+      : { active: true, selectedPath: null, hoveredPath: null, onSelectNode, onHoverNode }
+    : null
+
+  const content = editModeValue ? (
+    <LayoutEditModeProvider value={editModeValue}>
       <LayoutRenderer nodes={nodes} />
     </LayoutEditModeProvider>
   ) : (
