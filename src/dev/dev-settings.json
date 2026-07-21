@@ -1,7 +1,13 @@
-{
-  "initialPage": "modificar-hecho",
-  "initialParams": {
-    "hechoId": "2"
-  }
-}
-
+{
+
+  "initialPage": "crear-persona",
+
+  "initialParams": {
+
+    "hechoId": "2"
+
+  }
+
+}
+
+

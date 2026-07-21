@@ -1,0 +1,26 @@
+{
+  "pages": [
+    {
+      "id": "anadir-foto",
+      "layout": [
+        {
+          "type": "heading",
+          "props": {
+            "text": "Añadir foto",
+            "level": 1,
+            "icon": "image"
+          }
+        },
+        {
+          "type": "alert",
+          "props": {
+            "title": "Trámite en desarrollo",
+            "message": "Entidad: {{params.etiqueta_entidad}} · Identificador: {{params.id_entidad_asociacion}}",
+            "type": "info"
+          }
+        }
+      ]
+    }
+  ],
+  "initialPage": "anadir-foto"
+}

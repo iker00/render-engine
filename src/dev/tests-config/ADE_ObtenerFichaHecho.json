@@ -69,6 +69,20 @@
                 "text": "{{queries.obtenerFichaHecho.data.FichaHechoDTO.HechoDatosIdentificativosDTO.ResumenHecho}}",
                 "level": 1
               }
+            },
+            {
+              "type": "link",
+              "props": {
+                "label": "Modificar hecho",
+                "icon": "edit",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "modificar-hecho",
+                  "params": {
+                    "hechoId": "params.hechoId"
+                  }
+                }
+              }
             }
           ]
         },
@@ -591,12 +605,36 @@
           },
           "children": [
             {
-              "type": "heading",
+              "type": "container",
               "props": {
-                "text": "Fotos",
-                "level": 2,
-                "icon": "image"
-              }
+                "direction": "row",
+                "justify": "between"
+              },
+              "children": [
+                {
+                  "type": "heading",
+                  "props": {
+                    "text": "Fotos",
+                    "level": 2,
+                    "icon": "image"
+                  }
+                },
+                {
+                  "type": "link",
+                  "props": {
+                    "label": "Añadir foto",
+                    "icon": "plus",
+                    "action": {
+                      "type": "navigateTo",
+                      "pageId": "anadir-foto",
+                      "params": {
+                        "id_entidad_asociacion": "params.hechoId",
+                        "etiqueta_entidad": "HECHO"
+                      }
+                    }
+                  }
+                }
+              ]
             },
             {
               "type": "container",

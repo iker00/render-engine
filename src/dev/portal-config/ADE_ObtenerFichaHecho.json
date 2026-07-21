@@ -69,6 +69,14 @@
                 "text": "{{queries.obtenerFichaHecho.data.FichaHechoDTO.HechoDatosIdentificativosDTO.ResumenHecho}}",
                 "level": 1
               }
+            },
+            {
+              "type": "link",
+              "props": {
+                "label": "Modificar hecho",
+                "icon": "edit",
+                "href": "/carpetaciudadana/detallegenerico.aspx?tram=427&sec=23#/?hechoId={{params.hechoId}}"
+              }
             }
           ]
         },
@@ -576,12 +584,29 @@
           },
           "children": [
             {
-              "type": "heading",
+              "type": "container",
               "props": {
-                "text": "Fotos",
-                "level": 2,
-                "icon": "image"
-              }
+                "direction": "row",
+                "justify": "between"
+              },
+              "children": [
+                {
+                  "type": "heading",
+                  "props": {
+                    "text": "Fotos",
+                    "level": 2,
+                    "icon": "image"
+                  }
+                },
+                {
+                  "type": "link",
+                  "props": {
+                    "label": "Añadir foto",
+                    "icon": "plus",
+                    "href": "/carpetaciudadana/detallegenerico.aspx?tram=427&sec=25#/?id_entidad_asociacion={{params.hechoId}}&etiqueta_entidad=HECHO"
+                  }
+                }
+              ]
             },
             {
               "type": "container",
