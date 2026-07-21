@@ -5,6 +5,7 @@ import type { RuntimeIterationContext } from './runtime-references/runtime-refer
 import type { LayoutNodePath } from './layout-node-path'
 import { LayoutNodeRenderer } from './layout-node-renderer'
 import { useLayoutEditModeContext, type LayoutEditModeContextValue } from './layout-edit-mode-context'
+import { useRuntimeLayoutContext } from './runtime-layout-context'
 import { serializeDropZoneId, serializeLayoutNodePath } from './layout-node-path'
 
 export interface LayoutRendererProps {
@@ -31,6 +32,7 @@ export function LayoutRenderer({
   parentTabItemIndex,
 }: LayoutRendererProps) {
   const editModeContext = useLayoutEditModeContext()
+  const { parentGridColumns } = useRuntimeLayoutContext()
   const resolveChildPath = buildChildPath ?? ((index: number) => [...path, { field: 'children' as const, index }])
 
   // Canvas-only (T12 / design.md Decisión 7): a droppable "insertion position" zone before
@@ -41,12 +43,29 @@ export function LayoutRenderer({
   // `closestCenter` resolves the same way for lists and grids without a separate algorithm.
   // A production render (no LayoutEditModeContext) never mounts these, so output stays
   // byte-identical to before T12.
+  //
+  // Exception (T1 / feature 0105): when this collection is the direct children of a `container`
+  // in grid mode (`parentGridColumns !== null`), a gap `div` participating in the grid flow like
+  // any other item would consume its own cell and shift the real children's column/row position
+  // relative to Visual mode. In that case only the boundary gaps (index 0, before the first
+  // child, and index N, after the last one) are rendered, each forced to span the full grid row
+  // (`grid-column: 1 / -1`) so it never competes with a real child for a column. Intermediate
+  // gaps between grid children are not rendered — a known limitation, not a missing feature: the
+  // spec only requires visual order to be preserved, not a drop-zone between every pair of grid
+  // siblings.
   const elements: ReactNode[] = []
   const activeEditModeContext = editModeContext !== null && editModeContext.active ? editModeContext : null
+  const isGridParent = parentGridColumns !== null
 
   if (activeEditModeContext !== null) {
     elements.push(
-      <LayoutCanvasDropZoneGap key="drop-zone-0" parentPath={path} index={0} tabItemIndex={parentTabItemIndex} />,
+      <LayoutCanvasDropZoneGap
+        key="drop-zone-0"
+        parentPath={path}
+        index={0}
+        tabItemIndex={parentTabItemIndex}
+        fullRowSpan={isGridParent}
+      />,
     )
   }
 
@@ -71,13 +90,16 @@ export function LayoutRenderer({
       />,
     )
 
-    if (activeEditModeContext !== null) {
+    const isLastNode = index === nodes.length - 1
+
+    if (activeEditModeContext !== null && (!isGridParent || isLastNode)) {
       elements.push(
         <LayoutCanvasDropZoneGap
           key={`drop-zone-${index + 1}`}
           parentPath={path}
           index={index + 1}
           tabItemIndex={parentTabItemIndex}
+          fullRowSpan={isGridParent}
         />,
       )
     }
@@ -90,17 +112,28 @@ interface LayoutCanvasDropZoneGapProps {
   parentPath: LayoutNodePath
   index: number
   tabItemIndex?: number
+  /** T1 / feature 0105: forces `grid-column: 1 / -1` so the gap occupies its own full row
+   * instead of a single grid cell — see the "Exception" note above `LayoutRenderer`. */
+  fullRowSpan?: boolean
 }
 
 // A minimal, unstyled-by-default drop target participating in the real flex/grid flow of its
 // parent container, so its measured rect (and therefore its collision center) reflects the
 // actual visual layout without any custom geometry math on our side (see T12 note on grids
 // vs vertical lists).
-function LayoutCanvasDropZoneGap({ parentPath, index, tabItemIndex }: LayoutCanvasDropZoneGapProps) {
+function LayoutCanvasDropZoneGap({ parentPath, index, tabItemIndex, fullRowSpan }: LayoutCanvasDropZoneGapProps) {
   const dropZoneId = serializeDropZoneId({ parentPath, index, tabItemIndex })
   const { setNodeRef } = useDroppable({ id: dropZoneId })
 
-  return <div ref={setNodeRef} data-drop-zone={dropZoneId} aria-hidden="true" className="h-1 min-w-1" />
+  return (
+    <div
+      ref={setNodeRef}
+      data-drop-zone={dropZoneId}
+      aria-hidden="true"
+      className="h-1 min-w-1"
+      style={fullRowSpan ? { gridColumn: '1 / -1' } : undefined}
+    />
+  )
 }
 
 type EmptyPlaceholderNodeType = 'container' | 'form'

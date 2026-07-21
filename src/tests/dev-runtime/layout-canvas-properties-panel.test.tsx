@@ -110,6 +110,93 @@ describe('LayoutCanvasPropertiesPanel layout.span edge case', () => {
   })
 })
 
+describe('LayoutCanvasPropertiesPanel tabs node props.items (RF2, 0105)', () => {
+  function tabsNode(items: Array<{ label: string; children?: LayoutNode[] }>): LayoutNode {
+    return { type: 'tabs', props: { items } } as LayoutNode
+  }
+
+  it('renders the items array editor exposing only label and visibility, never a "children" field', () => {
+    const node = tabsNode([{ label: 'Uno', children: [{ type: 'heading', props: { text: 'Hi', level: 2 } }] }])
+    render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={() => {}} />)
+
+    expect(screen.getByLabelText('label', { exact: false })).toHaveValue('Uno')
+    expect(screen.queryByLabelText('children', { exact: false })).not.toBeInTheDocument()
+  })
+
+  it('clicking "Añadir" on props.items commits a new last item with the default non-empty label', () => {
+    const node = tabsNode([{ label: 'Uno' }])
+    const onCommitNodeUpdate = vi.fn()
+    render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={onCommitNodeUpdate} />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Añadir items' }))
+
+    expect(onCommitNodeUpdate).toHaveBeenCalledTimes(1)
+    const [calledPath, updater] = onCommitNodeUpdate.mock.calls[0]
+    expect(calledPath).toBe(somePath)
+    const result = updater(node) as Extract<LayoutNode, { type: 'tabs' }>
+    expect(result.props.items).toEqual([{ label: 'Uno' }, { label: 'Nueva pestaña' }])
+  })
+
+  it('with a single item, "Quitar" is unavailable and does not commit anything', () => {
+    const node = tabsNode([{ label: 'Uno' }])
+    const onCommitNodeUpdate = vi.fn()
+    render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={onCommitNodeUpdate} />)
+
+    const removeButton = screen.getByRole('button', { name: 'Quitar items #1' })
+    expect(removeButton).toBeDisabled()
+
+    fireEvent.click(removeButton)
+    expect(onCommitNodeUpdate).not.toHaveBeenCalled()
+  })
+
+  it('with two items, "Quitar" on the first commits a single remaining item, keeping the second one', () => {
+    const node = tabsNode([{ label: 'Uno' }, { label: 'Dos' }])
+    const onCommitNodeUpdate = vi.fn()
+    render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={onCommitNodeUpdate} />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Quitar items #1' }))
+
+    expect(onCommitNodeUpdate).toHaveBeenCalledTimes(1)
+    const [, updater] = onCommitNodeUpdate.mock.calls[0]
+    const result = updater(node) as Extract<LayoutNode, { type: 'tabs' }>
+    expect(result.props.items).toEqual([{ label: 'Dos' }])
+  })
+})
+
+describe('LayoutCanvasPropertiesPanel regression: array without minItems on a non-tabs node', () => {
+  function tableNode(headers: string[]): LayoutNode {
+    return { type: 'table', props: { headers, rows: [] } } as LayoutNode
+  }
+
+  it('keeps "Quitar" available even down to a single remaining header (no minItems restriction)', () => {
+    const node = tableNode(['Nombre'])
+    const onCommitNodeUpdate = vi.fn()
+    render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={onCommitNodeUpdate} />)
+
+    const removeButton = screen.getByRole('button', { name: 'Quitar headers #1' })
+    expect(removeButton).not.toBeDisabled()
+
+    fireEvent.click(removeButton)
+    expect(onCommitNodeUpdate).toHaveBeenCalledTimes(1)
+    const [, updater] = onCommitNodeUpdate.mock.calls[0]
+    const result = updater(node) as Extract<LayoutNode, { type: 'table' }>
+    expect(result.props.headers).toEqual([])
+  })
+
+  it('"Añadir" still appends an empty-string default for a plain string array', () => {
+    const node = tableNode(['Nombre'])
+    const onCommitNodeUpdate = vi.fn()
+    render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={onCommitNodeUpdate} />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Añadir headers' }))
+
+    expect(onCommitNodeUpdate).toHaveBeenCalledTimes(1)
+    const [, updater] = onCommitNodeUpdate.mock.calls[0]
+    const result = updater(node) as Extract<LayoutNode, { type: 'table' }>
+    expect(result.props.headers).toEqual(['Nombre', ''])
+  })
+})
+
 function buildReadyProps(rawConfig: unknown): { initialConfig: RuntimeConfig; initialConfigText: string } {
   const initialConfigText = JSON.stringify(rawConfig, null, 2)
   const validation = validateRuntimeConfig(rawConfig)

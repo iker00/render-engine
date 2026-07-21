@@ -73,6 +73,67 @@ function resolveUnionBranch(
   return matchByRequiredKeys ?? branches.find((branch) => branch.type === 'object') ?? branches[0]
 }
 
+// RF2 (0105): label seeded onto a brand-new `tabs.props.items` entry via `handleAdd`'s generic
+// default-object builder (property-field-dispatcher.tsx). Named so a future copy change stays a
+// one-line edit.
+const NEW_TAB_DEFAULT_LABEL = 'Nueva pestaña'
+
+/**
+ * The generated schema for `tabs.props.items[]` mirrors the runtime contract literally, which
+ * includes `children` — an arbitrary nested `LayoutNode[]` subtree that the generic property-field
+ * dispatcher has no way to represent as a form field (it would fall back to an unusable/disabled
+ * raw-JSON escape hatch). RF2 (0105) excludes it from the generic editor: tab content stays
+ * editable only via canvas drag/drop and Monaco, never through this per-item form.
+ *
+ * This also seeds `label`'s sub-schema with a non-empty `default`, consumed by the dispatcher's
+ * object-default builder when "Añadir" creates a new item, so a fresh tab starts with a usable
+ * label instead of an empty string. `minItems` is preserved from the generated schema (already
+ * `1` from the zod `.min(1)` on `tabs.props.items`) with a defensive fallback to `1` — the node
+ * schema is this function's only input, so if it ever stopped declaring the minimum this keeps
+ * the "at least one tab" guarantee the properties panel must honor.
+ */
+function resolveTabsPropsSchema(propsSchema: Record<string, unknown>): Record<string, unknown> {
+  const properties = propsSchema.properties
+  if (!isPlainObject(properties)) return propsSchema
+
+  const itemsFieldSchema = properties.items
+  if (!itemsFieldSchema || typeof itemsFieldSchema !== 'object') return propsSchema
+  const itemsFieldRecord = itemsFieldSchema as Record<string, unknown>
+
+  const itemSchema = itemsFieldRecord.items
+  if (!itemSchema || typeof itemSchema !== 'object') return propsSchema
+  const itemRecord = itemSchema as Record<string, unknown>
+
+  const itemProperties = itemRecord.properties
+  if (!isPlainObject(itemProperties)) return propsSchema
+
+  const visibleItemProperties: Record<string, unknown> = {}
+  for (const [propertyKey, propertySchema] of Object.entries(itemProperties)) {
+    if (propertyKey === 'children') continue
+    visibleItemProperties[propertyKey] = propertySchema
+  }
+  const labelSchema = visibleItemProperties.label
+  const nextItemProperties =
+    labelSchema && typeof labelSchema === 'object'
+      ? { ...visibleItemProperties, label: { ...(labelSchema as Record<string, unknown>), default: NEW_TAB_DEFAULT_LABEL } }
+      : visibleItemProperties
+
+  return {
+    ...propsSchema,
+    properties: {
+      ...properties,
+      items: {
+        ...itemsFieldRecord,
+        minItems: typeof itemsFieldRecord.minItems === 'number' ? itemsFieldRecord.minItems : 1,
+        items: {
+          ...itemRecord,
+          properties: nextItemProperties,
+        },
+      },
+    },
+  }
+}
+
 /**
  * `layout.span` is nested one level inside the `layout` subsection, so the
  * generic top-level `resolveUnionBranch` call for that subsection never reaches
@@ -148,10 +209,13 @@ export function LayoutCanvasPropertiesPanel({
         if (!subsectionSchema || typeof subsectionSchema !== 'object') return null
 
         const currentValue = readSubsection(node, key)
-        const effectiveSchema =
+        let effectiveSchema =
           key === 'layout'
             ? resolveLayoutSubsectionSchema(subsectionSchema as Record<string, unknown>, currentValue)
             : resolveUnionBranch(subsectionSchema as Record<string, unknown>, currentValue)
+        if (key === 'props' && node.type === 'tabs' && effectiveSchema) {
+          effectiveSchema = resolveTabsPropsSchema(effectiveSchema)
+        }
 
         return (
           <PropertyFieldDispatcher

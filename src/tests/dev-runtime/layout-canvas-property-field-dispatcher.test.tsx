@@ -185,6 +185,107 @@ describe('PropertyFieldDispatcher object schema', () => {
   })
 })
 
+describe('PropertyFieldDispatcher array schema with minItems (RF2, 0105)', () => {
+  it('disables "Quitar" and ignores the click when the array is already at minItems', () => {
+    const onChangeSpy = vi.fn()
+    render(
+      <ControlledDispatcher
+        schema={{ type: 'array', items: { type: 'string' }, minItems: 1 }}
+        initialValue={['solo']}
+        label="Pestañas"
+        onChangeSpy={onChangeSpy}
+      />,
+    )
+
+    const removeButton = screen.getByRole('button', { name: 'Quitar Pestañas #1' })
+    expect(removeButton).toBeDisabled()
+
+    fireEvent.click(removeButton)
+    expect(onChangeSpy).not.toHaveBeenCalled()
+  })
+
+  it('keeps both "Quitar" enabled with two items above minItems, then disables the remaining one after removing one', () => {
+    const onChangeSpy = vi.fn()
+    render(
+      <ControlledDispatcher
+        schema={{ type: 'array', items: { type: 'string' }, minItems: 1 }}
+        initialValue={['uno', 'dos']}
+        label="Pestañas"
+        onChangeSpy={onChangeSpy}
+      />,
+    )
+
+    expect(screen.getByRole('button', { name: 'Quitar Pestañas #1' })).not.toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Quitar Pestañas #2' })).not.toBeDisabled()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Quitar Pestañas #1' }))
+    expect(onChangeSpy).toHaveBeenCalledWith(['dos'])
+
+    expect(screen.getByRole('button', { name: 'Quitar Pestañas #1' })).toBeDisabled()
+  })
+
+  it('without minItems in the schema, "Quitar" stays enabled down to a single item (no regression)', () => {
+    const onChangeSpy = vi.fn()
+    render(
+      <ControlledDispatcher
+        schema={{ type: 'array', items: { type: 'string' } }}
+        initialValue={['x']}
+        label="Opciones"
+        onChangeSpy={onChangeSpy}
+      />,
+    )
+
+    const removeButton = screen.getByRole('button', { name: 'Quitar Opciones #1' })
+    expect(removeButton).not.toBeDisabled()
+
+    fireEvent.click(removeButton)
+    expect(onChangeSpy).toHaveBeenCalledWith([])
+  })
+})
+
+describe('PropertyFieldDispatcher array-of-objects default on "Añadir" (RF2, 0105)', () => {
+  const itemsSchemaWithDefault = {
+    type: 'object',
+    required: ['label'],
+    properties: { label: { type: 'string', default: 'Nueva pestaña' } },
+  }
+
+  it('uses the required field default declared on the item sub-schema instead of {}', () => {
+    const onChangeSpy = vi.fn()
+    render(
+      <ControlledDispatcher
+        schema={{ type: 'array', items: itemsSchemaWithDefault, minItems: 1 }}
+        initialValue={[{ label: 'Uno' }]}
+        label="items"
+        onChangeSpy={onChangeSpy}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Añadir items' }))
+    expect(onChangeSpy).toHaveBeenCalledWith([{ label: 'Uno' }, { label: 'Nueva pestaña' }])
+  })
+
+  it('falls back to the empty string for a required field with no declared default, never omitting the key', () => {
+    const onChangeSpy = vi.fn()
+    const itemsSchemaWithoutDefault = {
+      type: 'object',
+      required: ['label'],
+      properties: { label: { type: 'string' } },
+    }
+    render(
+      <ControlledDispatcher
+        schema={{ type: 'array', items: itemsSchemaWithoutDefault, minItems: 1 }}
+        initialValue={[{ label: 'Uno' }]}
+        label="items"
+        onChangeSpy={onChangeSpy}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Añadir items' }))
+    expect(onChangeSpy).toHaveBeenCalledWith([{ label: 'Uno' }, { label: '' }])
+  })
+})
+
 describe('PropertyFieldDispatcher escape hatch', () => {
   it('falls back to a disabled raw JSON textarea without throwing when the schema has no recognizable type', () => {
     const onChangeSpy = vi.fn()

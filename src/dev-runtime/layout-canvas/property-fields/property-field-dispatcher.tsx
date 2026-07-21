@@ -32,12 +32,35 @@ function buildDefaultValueForSchema(schema: Record<string, unknown> | undefined)
     case 'boolean':
       return false
     case 'object':
-      return {}
+      return buildDefaultObjectForRequiredFields(schema)
     case 'array':
       return []
     default:
-      return ''
+      // A caller (e.g. the tabs properties panel) may seed a non-empty default onto a string
+      // sub-schema so that adding an array item produces a usable value instead of `''`.
+      return typeof schema.default === 'string' ? schema.default : ''
   }
+}
+
+// Builds an object default satisfying only the sub-schema's own `required` fields, recursing
+// through this same builder per field. This is what lets adding an item to an array of objects
+// (e.g. `tabs.props.items`) produce `{ label: 'Nueva pestaña' }` instead of `{}` — the item stays
+// structurally valid without inventing values for optional fields the schema doesn't require.
+function buildDefaultObjectForRequiredFields(schema: Record<string, unknown>): Record<string, unknown> {
+  const properties =
+    schema.properties && typeof schema.properties === 'object'
+      ? (schema.properties as Record<string, Record<string, unknown>>)
+      : {}
+  const requiredFields = Array.isArray(schema.required) ? (schema.required as string[]) : []
+
+  const defaultObject: Record<string, unknown> = {}
+  for (const key of requiredFields) {
+    const propertySchema = properties[key]
+    defaultObject[key] = buildDefaultValueForSchema(
+      propertySchema && typeof propertySchema === 'object' ? propertySchema : undefined,
+    )
+  }
+  return defaultObject
 }
 
 /**
@@ -94,11 +117,13 @@ export function PropertyFieldDispatcher({ schema, value, onChange, label, requir
 
   if (schemaType === 'array') {
     const itemsSchema = schema.items && typeof schema.items === 'object' ? (schema.items as Record<string, unknown>) : undefined
+    const minItems = typeof schema.minItems === 'number' ? schema.minItems : 0
     return (
       <ArrayPropertyField
         label={label}
         value={Array.isArray(value) ? value : []}
         itemsSchema={itemsSchema}
+        minItems={minItems}
         onChange={onChange}
       />
     )
@@ -131,10 +156,16 @@ interface ArrayPropertyFieldProps {
   label: string
   value: unknown[]
   itemsSchema: Record<string, unknown> | undefined
+  minItems: number
   onChange: (value: unknown[]) => void
 }
 
-function ArrayPropertyField({ label, value, itemsSchema, onChange }: ArrayPropertyFieldProps) {
+function ArrayPropertyField({ label, value, itemsSchema, minItems, onChange }: ArrayPropertyFieldProps) {
+  // Generic JSON Schema `minItems` support: once the array is at its declared minimum, removing
+  // another item would produce an invalid array, so "Quitar" is disabled rather than hidden
+  // (native `disabled`, per the project's accessibility standard for disabled controls).
+  const canRemove = value.length > minItems
+
   function handleItemChange(index: number, itemValue: unknown) {
     const next = value.slice()
     next[index] = itemValue
@@ -146,6 +177,7 @@ function ArrayPropertyField({ label, value, itemsSchema, onChange }: ArrayProper
   }
 
   function handleRemove(index: number) {
+    if (!canRemove) return
     onChange(value.filter((_, itemIndex) => itemIndex !== index))
   }
 
@@ -167,8 +199,9 @@ function ArrayPropertyField({ label, value, itemsSchema, onChange }: ArrayProper
           <button
             type="button"
             onClick={() => handleRemove(index)}
+            disabled={!canRemove}
             aria-label={`Quitar ${label} #${index + 1}`}
-            className="rounded border border-gray-300 px-2 py-1 text-xs text-gray-600 hover:bg-gray-100"
+            className="rounded border border-gray-300 px-2 py-1 text-xs text-gray-600 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent"
           >
             Quitar
           </button>

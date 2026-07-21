@@ -299,6 +299,61 @@ function adjustIndexForSiblingMove(
   return toIndex
 }
 
+function stepsReferenceSameCollection(a: LayoutPathStep, b: LayoutPathStep): boolean {
+  if (a.field !== b.field) return false
+  if (a.field === 'tabItem' && b.field === 'tabItem') return a.itemIndex === b.itemIndex
+  return true
+}
+
+/**
+ * `removeNodeAt(rootNodes, fromPath)` shifts down the indices of every sibling that came
+ * after the removed node within its own collection. `toParentPath` is always computed
+ * against the pre-removal tree (the DOM the user actually dragged over), so when it
+ * addresses a node that lives in that very same collection — the case where the dragged
+ * node and the drop target are themselves siblings, directly or through a shared ancestor
+ * step — it goes stale by exactly one position. `movePathTo` must correct it before calling
+ * `insertNodeAt` on the post-removal tree.
+ */
+function adjustParentPathForRemoval(
+  fromPath: LayoutNodePath,
+  toParentPath: LayoutNodePath,
+  toTabItemIndex: number | undefined
+): LayoutNodePath {
+  if (fromPath.length === 0) return toParentPath
+
+  const sourceParentPath = fromPath.slice(0, -1)
+  const lastFromStep = fromPath[fromPath.length - 1]
+
+  const targetsSourceCollection =
+    lastFromStep.field === 'tabItem' ? toTabItemIndex === lastFromStep.itemIndex : toTabItemIndex === undefined
+
+  if (isSamePath(sourceParentPath, toParentPath) && targetsSourceCollection) {
+    // Case A: removal and insertion happen in the exact same collection — toParentPath
+    // itself does not change; adjustIndexForSiblingMove still owns the toIndex shift.
+    return toParentPath
+  }
+
+  const isStrictDescendant =
+    toParentPath.length > sourceParentPath.length &&
+    sourceParentPath.every((step, i) => stepsEqual(step, toParentPath[i]))
+
+  if (!isStrictDescendant) {
+    // Case C: unrelated paths (disjoint subtrees, or toParentPath too shallow to be affected).
+    return toParentPath
+  }
+
+  const divergentStep = toParentPath[sourceParentPath.length]
+  if (!stepsReferenceSameCollection(divergentStep, lastFromStep) || divergentStep.index <= lastFromStep.index) {
+    return toParentPath
+  }
+
+  // Case B: toParentPath descends through the same collection the removal shifted, at a
+  // step that addressed a sibling positioned after the removed node — decrement it by one.
+  return toParentPath.map((step, i) =>
+    i === sourceParentPath.length ? { ...step, index: step.index - 1 } : step
+  )
+}
+
 function findPathWithinChildren(
   children: readonly LayoutNode[],
   target: LayoutNode,
@@ -365,9 +420,10 @@ export function movePathTo(
   }
 
   const adjustedToIndex = adjustIndexForSiblingMove(fromPath, toParentPath, toIndex, options?.toTabItemIndex)
+  const adjustedToParentPath = adjustParentPathForRemoval(fromPath, toParentPath, options?.toTabItemIndex)
 
   const afterRemoval = removeNodeAt(rootNodes, fromPath)
-  return insertNodeAt(afterRemoval, toParentPath, adjustedToIndex, movedNode, {
+  return insertNodeAt(afterRemoval, adjustedToParentPath, adjustedToIndex, movedNode, {
     tabItemIndex: options?.toTabItemIndex,
   })
 }
