@@ -285,6 +285,40 @@ describe('drag reanida un nodo raíz hacia un destino con contenido, situado des
   })
 })
 
+describe('drag reanida hacia una zona intermedia de un container grid (feature 0106 / RF2)', () => {
+  it('reanida un nodo raíz X en la zona intermedia index 2 de un container grid con 4 hijos [A,B,C,D] → [A,B,X,C,D]', async () => {
+    const X_PATH: LayoutNodePath = [{ field: 'children', index: 0 }]
+    const GRID_CONTAINER_PATH: LayoutNodePath = [{ field: 'children', index: 1 }]
+
+    renderCanvas({
+      api: {},
+      initialPage: 'home',
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            heading('X'),
+            {
+              type: 'container',
+              props: { columns: 2 },
+              children: [heading('A'), heading('B'), heading('C'), heading('D')],
+            },
+          ],
+        },
+      ],
+    })
+
+    dragEnd(X_PATH, { parentPath: GRID_CONTAINER_PATH, index: 2 })
+
+    const { parsed } = await getMonacoJson()
+    const page = (parsed.pages as Array<{ layout: Array<{ children?: Array<{ props: { text: string } }> }> }>)[0]
+
+    expect(page.layout).toHaveLength(1)
+    expect(page.layout[0].children!.map((node) => node.props.text)).toEqual(['A', 'B', 'X', 'C', 'D'])
+    expect(validateRuntimeConfig(parsed).status).toBe('ready')
+  })
+})
+
 describe('drag reanida entre items de un mismo tabs (FR7)', () => {
   it('arrastrar un heading de items[0].children a items[1].children lo reanida, desapareciendo de items[0]', async () => {
     const TABS_PATH: LayoutNodePath = [{ field: 'children', index: 0 }]

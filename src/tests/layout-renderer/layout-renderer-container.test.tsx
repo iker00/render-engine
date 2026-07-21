@@ -303,11 +303,12 @@ describe('container columns grid (modo Editor)', () => {
     )
   }
 
-  // Direct children of the container's <section>, excluding drop-zone gaps, in DOM order.
+  // Direct children of the container's <section>, excluding drop-zone gaps and the T2 grid
+  // drop-zones overlay (feature 0106), in DOM order.
   function getRealChildTexts(container: HTMLElement) {
     const section = container.querySelector('[data-layout-node="container"]') as HTMLElement
     return Array.from(section.children)
-      .filter((el) => !el.hasAttribute('data-drop-zone'))
+      .filter((el) => !el.hasAttribute('data-drop-zone') && !el.hasAttribute('data-canvas-grid-drop-zones'))
       .map((el) => el.textContent)
   }
 
@@ -382,5 +383,70 @@ describe('container columns grid (modo Editor)', () => {
 
     expect(getRealChildTexts(editorContainer)).toEqual(getRealChildTexts(visualContainer))
     expect(getRealChildTexts(editorContainer)).toEqual(['Only child'])
+  })
+
+  // T2 (feature 0106): the grid-drop-zones overlay is absolutely positioned inside the
+  // container's `<section>`, so the `<section>` needs `position: relative` in Editor mode
+  // to become the overlay's containing block. Adding `relative` unconditionally would break
+  // the byte-identical guarantee in Visual/production; the class must appear only when the
+  // provider is active AND the container is in grid mode (has `props.columns`).
+  it('adds the `relative` class to the container <section> in Editor mode when in grid mode', () => {
+    const nodes: LayoutNode[] = [
+      {
+        type: 'container',
+        props: { columns: 3 },
+        children: [{ type: 'paragraph', props: { text: 'Grid Editor child' } }],
+      },
+    ]
+
+    const { container } = renderEditor(nodes)
+    const section = container.querySelector('[data-layout-node="container"]')
+
+    expect(section).toHaveClass('relative')
+  })
+
+  it('does not add the `relative` class in Visual mode/production for the same grid container', () => {
+    const nodes: LayoutNode[] = [
+      {
+        type: 'container',
+        props: { columns: 3 },
+        children: [{ type: 'paragraph', props: { text: 'Grid Visual child' } }],
+      },
+    ]
+
+    const { container } = renderVisual(nodes)
+    const section = container.querySelector('[data-layout-node="container"]')
+
+    expect(section).not.toHaveClass('relative')
+  })
+
+  it('does not add the `relative` class when the provider is mounted but inactive ({ active: false })', () => {
+    const nodes: LayoutNode[] = [
+      {
+        type: 'container',
+        props: { columns: 3 },
+        children: [{ type: 'paragraph', props: { text: 'Grid inactive child' } }],
+      },
+    ]
+
+    const { container } = renderEditor(nodes, false)
+    const section = container.querySelector('[data-layout-node="container"]')
+
+    expect(section).not.toHaveClass('relative')
+  })
+
+  it('does not add the `relative` class in Editor mode when the container is not in grid mode', () => {
+    const nodes: LayoutNode[] = [
+      {
+        type: 'container',
+        props: { direction: 'row' },
+        children: [{ type: 'paragraph', props: { text: 'Row child' } }],
+      },
+    ]
+
+    const { container } = renderEditor(nodes)
+    const section = container.querySelector('[data-layout-node="container"]')
+
+    expect(section).not.toHaveClass('relative')
   })
 })
