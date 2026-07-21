@@ -68,6 +68,10 @@ function tabs(items: Array<{ label: string; children: unknown[] }>) {
   return { type: 'tabs', props: { items } }
 }
 
+function accordion(label: string, children: unknown[]) {
+  return { type: 'accordion', props: { label }, children }
+}
+
 function buildReadyProps(rawConfig: unknown) {
   const initialConfigText = JSON.stringify(rawConfig, null, 2)
   const validation = validateRuntimeConfig(rawConfig)
@@ -188,6 +192,96 @@ describe('drag reordena hermanos dentro del mismo container (FR6)', () => {
     const page = (parsed.pages as Array<{ layout: Array<{ children: Array<{ props: { text: string } }> }> }>)[0]
 
     expect(page.layout[0].children.map((node) => node.props.text)).toEqual(['Second', 'First'])
+  })
+
+  it('arrastrar el primer hermano al final produce el nuevo orden sin duplicar ni perder nodos', async () => {
+    const CONTAINER_PATH: LayoutNodePath = [{ field: 'children', index: 0 }]
+    const FIRST_PATH: LayoutNodePath = [...CONTAINER_PATH, { field: 'children', index: 0 }]
+
+    renderCanvas({
+      api: {},
+      initialPage: 'home',
+      pages: [{ id: 'home', layout: [container([heading('First'), heading('Second')])] }],
+    })
+
+    dragEnd(FIRST_PATH, { parentPath: CONTAINER_PATH, index: 2 })
+
+    const { parsed } = await getMonacoJson()
+    const page = (parsed.pages as Array<{ layout: Array<{ children: Array<{ props: { text: string } }> }> }>)[0]
+
+    expect(page.layout[0].children).toHaveLength(2)
+    expect(page.layout[0].children.map((node) => node.props.text)).toEqual(['Second', 'First'])
+  })
+})
+
+describe('drag reanida un nodo raíz hacia un destino con contenido, situado después en el árbol (RF3)', () => {
+  // Regression: `toParentPath` was computed against the pre-removal tree by the DnD wiring
+  // (it addresses the drop target as it exists in the currently rendered tree), and
+  // `movePathTo` never compensated for the index shift `removeNodeAt` causes on siblings
+  // positioned after the dragged node. Whenever the drop target already had content and sat
+  // after the dragged root node, the previous implementation resolved `toParentPath` against
+  // the *shifted* tree and inserted into (or threw resolving) the wrong node.
+  const X_PATH: LayoutNodePath = [{ field: 'children', index: 0 }]
+  const TARGET_PATH: LayoutNodePath = [{ field: 'children', index: 1 }]
+
+  it('reanidar un nodo hoja raíz dentro de un container que ya tiene un hijo deja el container con 2 hijos en el orden esperado', async () => {
+    renderCanvas({
+      api: {},
+      initialPage: 'home',
+      pages: [{ id: 'home', layout: [heading('X'), container([heading('Y')])] }],
+    })
+
+    dragEnd(X_PATH, { parentPath: TARGET_PATH, index: 1 })
+
+    const { parsed } = await getMonacoJson()
+    const page = (parsed.pages as Array<{ layout: Array<{ children?: Array<{ props: { text: string } }> }> }>)[0]
+
+    expect(page.layout).toHaveLength(1)
+    expect(page.layout[0].children!.map((node) => node.props.text)).toEqual(['Y', 'X'])
+    expect(validateRuntimeConfig(parsed).status).toBe('ready')
+  })
+
+  it('reanidar un nodo raíz dentro de la pestaña activa de un tabs que ya tiene un hijo deja esa pestaña con 2 hijos', async () => {
+    renderCanvas({
+      api: {},
+      initialPage: 'home',
+      pages: [
+        {
+          id: 'home',
+          layout: [heading('X'), tabs([{ label: 'Tab1', children: [heading('Y')] }])],
+        },
+      ],
+    })
+
+    dragEnd(X_PATH, { parentPath: TARGET_PATH, index: 1, tabItemIndex: 0 })
+
+    const { parsed } = await getMonacoJson()
+    const page = (
+      parsed.pages as Array<{
+        layout: Array<{ props: { items: Array<{ children: Array<{ props: { text: string } }> }> } }>
+      }>
+    )[0]
+
+    expect(page.layout).toHaveLength(1)
+    expect(page.layout[0].props.items[0].children.map((node) => node.props.text)).toEqual(['Y', 'X'])
+    expect(validateRuntimeConfig(parsed).status).toBe('ready')
+  })
+
+  it('reanidar un nodo raíz dentro de un accordion que ya tiene un hijo deja el accordion con 2 hijos', async () => {
+    renderCanvas({
+      api: {},
+      initialPage: 'home',
+      pages: [{ id: 'home', layout: [heading('X'), accordion('Section', [heading('Y')])] }],
+    })
+
+    dragEnd(X_PATH, { parentPath: TARGET_PATH, index: 1 })
+
+    const { parsed } = await getMonacoJson()
+    const page = (parsed.pages as Array<{ layout: Array<{ children?: Array<{ props: { text: string } }> }> }>)[0]
+
+    expect(page.layout).toHaveLength(1)
+    expect(page.layout[0].children!.map((node) => node.props.text)).toEqual(['Y', 'X'])
+    expect(validateRuntimeConfig(parsed).status).toBe('ready')
   })
 })
 

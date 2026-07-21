@@ -362,6 +362,122 @@ describe('movePathTo', () => {
 
     expect(() => movePathTo(original, [{ field: 'children', index: 9 }], [], 0)).toThrow()
   })
+
+  describe('renesting a root sibling into a target that comes after it (RF3 regression)', () => {
+    // Regression for the bug where `movePathTo` computed `toParentPath` against the
+    // pre-removal tree and never compensated for the index shift `removeNodeAt` causes on
+    // siblings positioned after the removed node — corrupting the destination path whenever
+    // the drop target already contained content and sat after the dragged node in the array.
+
+    it('renests a leading root node into a container that already has one child', () => {
+      const original = [heading('X'), container([heading('Y')])]
+
+      const result = movePathTo(original, [{ field: 'children', index: 0 }], [{ field: 'children', index: 1 }], 1)
+
+      expect(result).toHaveLength(1)
+      const containerResult = result[0] as { children: LayoutNode[] }
+      expect(containerResult.children.map((n) => (n as { props: { text: string } }).props.text)).toEqual([
+        'Y',
+        'X',
+      ])
+    })
+
+    it('renests a leading root node to the front of a container that already has two children', () => {
+      const original = [heading('X'), container([heading('Y'), heading('Z')])]
+
+      const result = movePathTo(original, [{ field: 'children', index: 0 }], [{ field: 'children', index: 1 }], 0)
+
+      expect(result).toHaveLength(1)
+      const containerResult = result[0] as { children: LayoutNode[] }
+      expect(containerResult.children.map((n) => (n as { props: { text: string } }).props.text)).toEqual([
+        'X',
+        'Y',
+        'Z',
+      ])
+    })
+
+    it('does not shift toParentPath when the removed node sits after the target in the array', () => {
+      const original = [container([heading('Y'), heading('Z')]), heading('X')]
+
+      const result = movePathTo(original, [{ field: 'children', index: 1 }], [{ field: 'children', index: 0 }], 1)
+
+      expect(result).toHaveLength(1)
+      const containerResult = result[0] as { children: LayoutNode[] }
+      expect(containerResult.children.map((n) => (n as { props: { text: string } }).props.text)).toEqual([
+        'Y',
+        'X',
+        'Z',
+      ])
+    })
+
+    it('renests a leading root node into the active tab of a tabs node that already has one child', () => {
+      const original = [
+        heading('X'),
+        tabsNode([
+          { label: 'Tab 0', children: [heading('Y')] },
+          { label: 'Tab 1', children: [heading('Z')] },
+        ]),
+      ]
+
+      const result = movePathTo(original, [{ field: 'children', index: 0 }], [{ field: 'children', index: 1 }], 1, {
+        toTabItemIndex: 0,
+      })
+
+      expect(result).toHaveLength(1)
+      const tabsResult = result[0] as { props: { items: { children?: LayoutNode[] }[] } }
+      expect(
+        tabsResult.props.items[0].children!.map((n) => (n as { props: { text: string } }).props.text)
+      ).toEqual(['Y', 'X'])
+      expect(
+        tabsResult.props.items[1].children!.map((n) => (n as { props: { text: string } }).props.text)
+      ).toEqual(['Z'])
+    })
+
+    it('renests a leading root node into a form that already has one child', () => {
+      const original = [heading('X'), form('f1', [inputNode('existing')])]
+
+      const result = movePathTo(original, [{ field: 'children', index: 0 }], [{ field: 'children', index: 1 }], 1)
+
+      expect(result).toHaveLength(1)
+      const formResult = result[0] as { children: LayoutNode[] }
+      expect(formResult.children[0]).toMatchObject({ type: 'input', props: { fieldId: 'existing' } })
+      expect(formResult.children[1]).toMatchObject({ type: 'heading' })
+    })
+
+    it('renests a leading root node into an accordion that already has one child', () => {
+      const accordion = (children: LayoutNode[]): LayoutNode =>
+        ({ type: 'accordion', props: { label: 'Section' }, children } as LayoutNode)
+      const original = [heading('X'), accordion([heading('Y')])]
+
+      const result = movePathTo(original, [{ field: 'children', index: 0 }], [{ field: 'children', index: 1 }], 1)
+
+      expect(result).toHaveLength(1)
+      const accordionResult = result[0] as { children: LayoutNode[] }
+      expect(accordionResult.children.map((n) => (n as { props: { text: string } }).props.text)).toEqual([
+        'Y',
+        'X',
+      ])
+    })
+
+    it('leaves toParentPath and toIndex unchanged when fromPath and toParentPath are disjoint subtrees', () => {
+      const original = [container([heading('Moved')]), container([heading('Existing')])]
+
+      const result = movePathTo(
+        original,
+        [{ field: 'children', index: 0 }, { field: 'children', index: 0 }],
+        [{ field: 'children', index: 1 }],
+        1
+      )
+
+      const sourceResult = result[0] as { children: LayoutNode[] }
+      const targetResult = result[1] as { children: LayoutNode[] }
+      expect(sourceResult.children).toHaveLength(0)
+      expect(targetResult.children.map((n) => (n as { props: { text: string } }).props.text)).toEqual([
+        'Existing',
+        'Moved',
+      ])
+    })
+  })
 })
 
 describe('immutability across all four functions', () => {
