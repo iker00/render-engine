@@ -220,6 +220,39 @@ describe('drag insert desde la paleta (FR8)', () => {
     expect(validateRuntimeConfig(parsed).status).toBe('ready')
   })
 
+  it('arrastrar heading desde la paleta a la zona intermedia index 1 de un container grid con 3 hijos lo inserta con los defaults del catálogo (feature 0106 / RF2)', async () => {
+    renderCanvas({
+      api: {},
+      initialPage: 'home',
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'container',
+              props: { columns: 3 },
+              children: [heading('A'), heading('B'), heading('C')],
+            },
+          ],
+        },
+      ],
+    })
+
+    const gridContainerPath: LayoutNodePath = [{ field: 'children', index: 0 }]
+    paletteDragEnd('heading', { parentPath: gridContainerPath, index: 1 })
+
+    const { parsed } = await getMonacoJson()
+    const container = (parsed.pages as Array<{ layout: Array<{ children: Array<{ type: string; props: { text: string } }> }> }>)[0].layout[0]
+
+    expect(container.children).toHaveLength(4)
+    expect(container.children.map((child) => child.type)).toEqual(['heading', 'heading', 'heading', 'heading'])
+    const insertedTextsInOrder = container.children.map((child) => child.props.text)
+    expect(insertedTextsInOrder[0]).toBe('A')
+    expect(insertedTextsInOrder[2]).toBe('B')
+    expect(insertedTextsInOrder[3]).toBe('C')
+    expect(validateRuntimeConfig(parsed).status).toBe('ready')
+  })
+
   it('un drop de paleta con destino inválido no cambia el árbol renderizado', () => {
     const { container: root } = renderCanvas({
       api: {},

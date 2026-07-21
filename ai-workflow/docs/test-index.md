@@ -119,6 +119,7 @@ src/tests/
 - `runtime-formatter-registry.test.ts` — catálogo cerrado v1 de formatters (`number`, `currency`, `date`, `percent`, `uppercase`, `lowercase`, `capitalize`, `truncate`) con locale fijo `es-ES`, tokenización manual `dd/MM/yyyy HH:mm:ss` (getters UTC para date-only, locales para date-time con `T`), compatibilidad de valor de entrada por formatter, `applyFormatterChain` con corte al primer `unresolvable`, cache de instancias `Intl.NumberFormat` por combinación de opciones (~nuevo)
 - `runtime-table-processing.test.ts` — filtrado, ordenación y procesamiento local de tablas
 - `runtime-ui-actions.test.tsx` — ejecución de acciones UI (clicks, submit) y delegación al executor compartido
+- `runtime-grid-drop-zone-rects.test.ts` — función pura `computeGridDropZoneRects`: geometría de las zonas de inserción overlay de un `container` grid (barra vertical límite/intermedia, altura por fila, salto de fila por wrap, clamp en los bordes del `<section>`, configurabilidad de ancho de zona y tolerancia de "misma fila"), sin DOM ni React (~nuevo)
 
 ## dev-runtime/
 
@@ -142,6 +143,7 @@ src/tests/
 - `layout-canvas-properties-panel.test.tsx` — panel de propiedades del nodo seleccionado: secciones `props`/`layout`/`visibility`/`queryStateFeedback` según el schema, merge superficial de `layout.span` responsive, sincronización con `editorBuffer` (~nuevo)
 - `layout-canvas-dnd-wiring.test.tsx` — integración de `@dnd-kit/core`: nodos arrastrables/droppable, intento de drop crudo (`draggedPath`/`targetParentPath`/`targetIndex`), cancelación sin destino (~nuevo)
 - `layout-canvas-drop-validity.test.ts` — resolución de validez de destino de drop (`isValidDropTarget`): restricciones de `form`, `modal`/`link`, `repeater`, `tabs` con `targetTabItemIndex`, ciclos, origen paleta con `draggedNodeType` (~nuevo)
+- `layout-canvas-grid-drop-zones.test.tsx` — overlay `LayoutCanvasGridDropZonesOverlay` de zonas de inserción de un `container` en modo grid: `N+1` zonas `[data-drop-zone]` absolutas dentro del overlay medidas con `getBoundingClientRect`/`ResizeObserver` mockeados, `id` ordinales, `position: relative` condicional en el `<section>` (Editor activo y grid), regresión de orden/clases `col-span-*` de los hijos reales frente a Visual, ausencia de overlay en contenedores sin `columns` o vacíos, soporte de `columns` responsive, geometría en salto de fila, indicador de validez del drop sobre las nuevas zonas (~nuevo)
 - `layout-canvas-reorder-reinsert.test.tsx` — reordenar y reanidar nodos existentes vía drag end-to-end: commit, invalidez sin cambio de estado, seguimiento de la selección tras mover el nodo seleccionado (~nuevo)
 - `layout-canvas-palette-insert.test.tsx` — paleta de nodos e inserción vía drag: `buildDefaultNodeInstance` por tipo, inserción respetando las reglas de destino (~nuevo)
 - `layout-canvas-delete-node.test.tsx` — borrado del nodo seleccionado (y su subárbol) end-to-end, limpieza de selección, sincronización con Monaco (~nuevo)
