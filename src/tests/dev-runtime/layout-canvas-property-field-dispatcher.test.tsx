@@ -286,6 +286,202 @@ describe('PropertyFieldDispatcher array-of-objects default on "Añadir" (RF2, 01
   })
 })
 
+describe('PropertyFieldDispatcher union branch resolution during recursion (T4)', () => {
+  // Fabricated schema shaped like `visibility`/`layout.span`: a `oneOf` whose branches share no
+  // discriminant literal `type` (both are plain objects). Placed as an array item's schema so the
+  // dispatcher must resolve the branch during its own `ArrayPropertyField` recursion, not at its
+  // own top-level entry point (that stays the caller's job — see the escape-hatch tests below).
+  const nestedUnionSchema = {
+    oneOf: [
+      {
+        type: 'object',
+        required: ['reference', 'operator'],
+        properties: { reference: { type: 'string' }, operator: { type: 'string' } },
+      },
+      {
+        type: 'object',
+        required: ['operator', 'conditions'],
+        properties: {
+          operator: { type: 'string' },
+          conditions: { type: 'array', items: { type: 'string' } },
+        },
+      },
+    ],
+  }
+
+  it('resolves a oneOf array item by shape (single-condition branch) and renders it as an editable form, not the raw-JSON escape hatch', () => {
+    const onChangeSpy = vi.fn()
+    const arraySchemaWithNestedUnion = { type: 'array', items: nestedUnionSchema }
+    render(
+      <ControlledDispatcher
+        schema={arraySchemaWithNestedUnion}
+        initialValue={[{ reference: 'queries.list.state', operator: 'equals' }]}
+        label="Reglas"
+        onChangeSpy={onChangeSpy}
+      />,
+    )
+
+    const referenceField = screen.getByLabelText('reference', { exact: false }) as HTMLInputElement
+    expect(referenceField.value).toBe('queries.list.state')
+
+    fireEvent.change(referenceField, { target: { value: 'queries.list.otherState' } })
+    expect(onChangeSpy).toHaveBeenCalledWith([{ reference: 'queries.list.otherState', operator: 'equals' }])
+  })
+
+  it('resolves a oneOf array item by shape (group branch with conditions) and keeps the other item unaffected', () => {
+    const onChangeSpy = vi.fn()
+    const arraySchemaWithNestedUnion = { type: 'array', items: nestedUnionSchema }
+    const groupItem = { operator: 'and', conditions: ['a', 'b'] }
+    const conditionItem = { reference: 'x', operator: 'equals' }
+    render(
+      <ControlledDispatcher
+        schema={arraySchemaWithNestedUnion}
+        initialValue={[groupItem, conditionItem]}
+        label="Reglas"
+        onChangeSpy={onChangeSpy}
+      />,
+    )
+
+    expect(screen.queryByLabelText('reference', { exact: false })).toBeInTheDocument()
+    const conditionsGroup = screen.getByRole('group', { name: 'Reglas #1' })
+    const firstConditionField = within(conditionsGroup).getByLabelText('conditions #1')
+    fireEvent.change(firstConditionField, { target: { value: 'changed' } })
+
+    expect(onChangeSpy).toHaveBeenCalledWith([{ operator: 'and', conditions: ['changed', 'b'] }, conditionItem])
+  })
+})
+
+describe('PropertyFieldDispatcher discriminated union with selector (T5)', () => {
+  // Fabricated schema shaped like `oneOf` of two object branches sharing a literal
+  // `properties.type.const` — the "discriminated union with selector" pattern (D5, design.md).
+  // Uses made-up type names (`alpha`/`beta`) precisely so the readable-label map (real 7 action
+  // variants) never applies here: the fallback path (raw `type` literal as the option text) is
+  // what's under test, keeping this unit suite independent from the real action catalog.
+  const discriminatedSchema = {
+    oneOf: [
+      {
+        type: 'object',
+        properties: { type: { type: 'string', const: 'alpha' }, foo: { type: 'string' } },
+        required: ['type', 'foo'],
+      },
+      {
+        type: 'object',
+        properties: { type: { type: 'string', const: 'beta' }, bar: { type: 'number' } },
+        required: ['type', 'bar'],
+      },
+    ],
+  }
+
+  it('renders a selector plus the active variant fields, and does not render the other variant fields', () => {
+    const onChangeSpy = vi.fn()
+    render(
+      <ControlledDispatcher
+        schema={discriminatedSchema}
+        initialValue={{ type: 'alpha', foo: 'x' }}
+        label="Acción"
+        onChangeSpy={onChangeSpy}
+      />,
+    )
+
+    const select = screen.getByLabelText('Acción') as HTMLSelectElement
+    expect(select.value).toBe('alpha')
+    expect(screen.getByRole('option', { name: 'alpha' })).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: 'beta' })).toBeInTheDocument()
+
+    expect((screen.getByLabelText('foo', { exact: false }) as HTMLInputElement).value).toBe('x')
+    expect(screen.queryByLabelText('bar', { exact: false })).not.toBeInTheDocument()
+  })
+
+  it('changing the selector rebuilds the default value for the new variant, dropping the previous variant fields', () => {
+    const onChangeSpy = vi.fn()
+    render(
+      <ControlledDispatcher
+        schema={discriminatedSchema}
+        initialValue={{ type: 'alpha', foo: 'x' }}
+        label="Acción"
+        onChangeSpy={onChangeSpy}
+      />,
+    )
+
+    fireEvent.change(screen.getByLabelText('Acción'), { target: { value: 'beta' } })
+    expect(onChangeSpy).toHaveBeenCalledWith({ type: 'beta', bar: 0 })
+
+    expect((screen.getByLabelText('bar', { exact: false }) as HTMLInputElement).value).toBe('0')
+    expect(screen.queryByLabelText('foo', { exact: false })).not.toBeInTheDocument()
+  })
+
+  it('adds a "Sin acción" option when the field is optional, and selecting it calls onChange(undefined)', () => {
+    const onChangeSpy = vi.fn()
+    render(
+      <ControlledDispatcher schema={discriminatedSchema} initialValue={undefined} label="Acción" onChangeSpy={onChangeSpy} />,
+    )
+
+    expect(screen.getByRole('option', { name: 'Sin acción', selected: true })).toBeInTheDocument()
+
+    fireEvent.change(screen.getByLabelText('Acción'), { target: { value: 'alpha' } })
+    expect(onChangeSpy).toHaveBeenCalledWith({ type: 'alpha', foo: '' })
+
+    const noActionOption = screen.getByRole('option', { name: 'Sin acción' }) as HTMLOptionElement
+    fireEvent.change(screen.getByLabelText('Acción'), { target: { value: noActionOption.value } })
+    expect(onChangeSpy).toHaveBeenLastCalledWith(undefined)
+  })
+
+  it('does not add a "Sin acción" option when the field is required', () => {
+    const onChangeSpy = vi.fn()
+    render(
+      <ControlledDispatcher
+        schema={{ type: 'object', properties: { action: discriminatedSchema }, required: ['action'] }}
+        initialValue={{ action: { type: 'alpha', foo: 'x' } }}
+        label="Config"
+        onChangeSpy={onChangeSpy}
+      />,
+    )
+
+    expect(screen.queryByRole('option', { name: 'Sin acción' })).not.toBeInTheDocument()
+  })
+
+  it('an array of discriminated-union items renders one independent selector per entry, required so no "Sin acción" per item', () => {
+    const onChangeSpy = vi.fn()
+    const arraySchema = { type: 'array', items: discriminatedSchema }
+    render(
+      <ControlledDispatcher
+        schema={arraySchema}
+        initialValue={[{ type: 'alpha', foo: 'x' }]}
+        label="Reglas"
+        onChangeSpy={onChangeSpy}
+      />,
+    )
+
+    const entryGroup = screen.getByRole('group', { name: 'Reglas #1' })
+    const select = within(entryGroup).getByRole('combobox') as HTMLSelectElement
+    expect(select.value).toBe('alpha')
+    expect(screen.queryByRole('option', { name: 'Sin acción' })).not.toBeInTheDocument()
+
+    fireEvent.change(select, { target: { value: 'beta' } })
+    expect(onChangeSpy).toHaveBeenCalledWith([{ type: 'beta', bar: 0 }])
+  })
+})
+
+describe('PropertyFieldDispatcher object schema with additionalProperties: string (T6)', () => {
+  it('dispatches to the key-value editor (not ObjectPropertyField) for an object with no declared properties and additionalProperties: { type: "string" }', () => {
+    const onChangeSpy = vi.fn()
+    const schema = { type: 'object', additionalProperties: { type: 'string' } }
+
+    render(
+      <ControlledDispatcher schema={schema} initialValue={{ a: '1' }} label="Cabeceras" onChangeSpy={onChangeSpy} />,
+    )
+
+    // The key-value editor labels its rows "<label> clave #n" / "<label> valor #n" — a shape
+    // ObjectPropertyField (which renders one field per declared `properties` key) never produces,
+    // since it has no `properties` to iterate here.
+    expect(screen.getByLabelText('Cabeceras clave #1')).toBeInTheDocument()
+    expect(screen.getByLabelText('Cabeceras valor #1')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Añadir Cabeceras' }))
+    expect(onChangeSpy).toHaveBeenCalledWith({ a: '1', '': '' })
+  })
+})
+
 describe('PropertyFieldDispatcher escape hatch', () => {
   it('falls back to a disabled raw JSON textarea without throwing when the schema has no recognizable type', () => {
     const onChangeSpy = vi.fn()

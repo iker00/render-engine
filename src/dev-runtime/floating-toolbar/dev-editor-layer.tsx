@@ -40,7 +40,10 @@ interface DevEditorLayerProps {
   onMonacoOpenChange: (open: boolean) => void
   monaco: DevEditorLayerMonacoProps
   onCommitCanvasMutation: (mutate: (pageLayout: LayoutNode[]) => LayoutNode[]) => CommitCanvasMutationResult
-  onCommitNodeUpdate: (path: LayoutNodePath, updater: (node: LayoutNode) => LayoutNode) => void
+  onCommitNodeUpdate: (
+    path: LayoutNodePath,
+    updater: (node: LayoutNode) => LayoutNode,
+  ) => CommitCanvasMutationResult
   children: ReactNode
 }
 

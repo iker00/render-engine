@@ -371,8 +371,11 @@ export const DevRuntimeReady = forwardRef<DevRuntimeReadyHandle, DevRuntimeReady
   // rebuilds the page's node tree around that edit, and commitCanvasMutation
   // (T4) is what actually validates and applies it — this is the same pipeline
   // a structural canvas mutation would go through.
-  function handleCanvasNodeUpdate(path: LayoutNodePath, updater: (node: LayoutNode) => LayoutNode) {
-    commitCanvasMutation((pageLayout) => replaceNodeAt(pageLayout, path, updater))
+  function handleCanvasNodeUpdate(
+    path: LayoutNodePath,
+    updater: (node: LayoutNode) => LayoutNode,
+  ): CommitCanvasMutationResult {
+    return commitCanvasMutation((pageLayout) => replaceNodeAt(pageLayout, path, updater))
   }
 
   async function handleCopy() {

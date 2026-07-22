@@ -1,3 +1,5 @@
+import { LayoutTemplate, Plug, StickyNote, KeyRound, Braces, Plus, SquarePen } from 'lucide-react'
+
 type ToolbarMode = 'visual' | 'editor'
 type ToolbarDomain = 'layout'
 
@@ -35,7 +37,7 @@ const CONTAINER_CLASSES = [
 const GROUP_CLASSES = 'flex items-center gap-1 rounded border border-gray-200 bg-gray-50 p-1'
 
 const BUTTON_BASE =
-  'flex h-8 items-center justify-center rounded px-2 text-sm text-gray-800 hover:bg-gray-200'
+  'flex gap-2 h-8 items-center justify-center rounded px-2 text-sm text-gray-800 hover:bg-gray-200'
 const BUTTON_PRESSED = 'bg-gray-800 text-white hover:bg-gray-700'
 const BUTTON_DISABLED = 'cursor-not-allowed text-gray-400 hover:bg-transparent'
 
@@ -90,7 +92,7 @@ export function DevEditorFloatingToolbar({
           className={buttonClasses({ pressed: isLayoutActive })}
           aria-pressed={isLayoutActive}
         >
-          Layout
+          <LayoutTemplate size={14} /> Layout
         </button>
         <button
           type="button"
@@ -100,7 +102,7 @@ export function DevEditorFloatingToolbar({
           aria-disabled="true"
           title="Próximamente"
         >
-          Api
+          <Plug size={14} /> Api
         </button>
         <button
           type="button"
@@ -110,7 +112,7 @@ export function DevEditorFloatingToolbar({
           aria-disabled="true"
           title="Próximamente"
         >
-          Páginas
+          <StickyNote size={14} /> Páginas
         </button>
         <button
           type="button"
@@ -120,7 +122,7 @@ export function DevEditorFloatingToolbar({
           aria-disabled="true"
           title="Próximamente"
         >
-          Tokens
+          <KeyRound size={14} /> Tokens
         </button>
       </div>
 
@@ -131,7 +133,7 @@ export function DevEditorFloatingToolbar({
         aria-pressed={isPaletteOpen}
         onClick={onOpenPalette}
       >
-        Añadir elemento
+        <Plus size="16" /> Añadir elemento
       </button>
 
       <button
@@ -142,7 +144,7 @@ export function DevEditorFloatingToolbar({
         onClick={onOpenMonaco}
         aria-label="Abrir editor Monaco"
       >
-        {'{}'}
+        <Braces size="16" />
       </button>
 
       <div className={GROUP_CLASSES} role="group" aria-label="Modo de edición">
@@ -162,7 +164,7 @@ export function DevEditorFloatingToolbar({
           aria-pressed={mode === 'editor'}
           onClick={() => onModeChange('editor')}
         >
-          Editor
+          <SquarePen /> Editor
         </button>
       </div>
     </div>

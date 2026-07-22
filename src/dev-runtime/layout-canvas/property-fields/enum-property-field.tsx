@@ -4,11 +4,16 @@ interface EnumPropertyFieldProps {
   label: string
   value: string | number
   options: readonly (string | number)[]
+  // Optional display text per option (keyed by `String(option)`), distinct from the underlying
+  // value. Falls back to `String(option)` for any option missing from the map. Used by
+  // `DiscriminatedUnionPropertyField` (T5) to show readable Spanish labels for action variants
+  // while keeping the actual committed value as the raw `type` literal.
+  optionLabels?: Record<string, string>
   onChange: (value: string | number) => void
   required?: boolean
 }
 
-export function EnumPropertyField({ label, value, options, onChange, required = false }: EnumPropertyFieldProps) {
+export function EnumPropertyField({ label, value, options, optionLabels, onChange, required = false }: EnumPropertyFieldProps) {
   const selectId = useId()
 
   function handleChange(event: ChangeEvent<HTMLSelectElement>) {
@@ -34,7 +39,7 @@ export function EnumPropertyField({ label, value, options, onChange, required = 
       >
         {options.map((option) => (
           <option key={String(option)} value={String(option)}>
-            {String(option)}
+            {optionLabels?.[String(option)] ?? String(option)}
           </option>
         ))}
       </select>

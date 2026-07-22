@@ -680,3 +680,26 @@ describe('DevRuntime / mode toggle keeps the toolbar in sync', () => {
     expect(screen.getByRole('link', { name: 'Go via link' })).toBeInTheDocument()
   })
 })
+
+describe('DevRuntime / properties panel surfaces rejected commits instead of discarding them (T9)', () => {
+  it('switching a button action to executeOperation (which leaves operationName empty) shows the rejection banner, keeps the chosen variant visible, and leaves the rest of the page intact', () => {
+    render(<DevRuntime rootElement={makeRootElement(multiPageConfig)} />)
+    switchToEditorMode()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Go via button' }))
+    expect(screen.getByTestId('dev-editor-selection-overlay')).toBeInTheDocument()
+
+    fireEvent.change(screen.getByLabelText('action'), { target: { value: 'executeOperation' } })
+
+    // handleCanvasNodeUpdate no longer discards commitCanvasMutation's result: the full config is
+    // momentarily invalid (operationName === ''), so the commit is rejected, but the panel keeps
+    // showing the user's own chosen variant instead of silently reverting to navigateTo.
+    expect((screen.getByLabelText('action') as HTMLSelectElement).value).toBe('executeOperation')
+    expect(screen.getByTestId('layout-canvas-properties-panel-props-error')).toBeInTheDocument()
+
+    // currentConfig was never overwritten with the momentarily-invalid config (the validation gate
+    // in commitCanvasMutation is untouched), so the rest of the page renders exactly as before.
+    expect(screen.getByRole('link', { name: 'Go via link' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Section one' })).toBeInTheDocument()
+  })
+})

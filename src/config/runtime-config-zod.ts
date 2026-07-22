@@ -400,6 +400,55 @@ export const resetFormRuntimeUiActionSchema = z
   })
   .strip()
 
+export const openModalRuntimeUiActionSchema = z
+  .object({
+    type: z.literal('openModal'),
+    modalId: nonEmptyStringSchema,
+  })
+  .strip()
+
+export const closeModalRuntimeUiActionSchema = z
+  .object({
+    type: z.literal('closeModal'),
+    modalId: nonEmptyStringSchema,
+  })
+  .strip()
+
+export const buttonActionSchema = z.discriminatedUnion('type', [
+  navigateToButtonActionSchema,
+  goBackButtonActionSchema,
+  executeOperationRuntimeUiActionSchema,
+  executeOperationsRuntimeUiActionSchema,
+  resetFormRuntimeUiActionSchema,
+  openModalRuntimeUiActionSchema,
+  closeModalRuntimeUiActionSchema,
+])
+
+// Shape of a single onSuccess/onError entry: the same 7 action variants accepted by
+// buttonActionSchema, each extended with an optional `when` condition.
+export const formLifecycleActionEntrySchema = z.discriminatedUnion('type', [
+  navigateToButtonActionSchema.extend({ when: whenConditionSchema.optional() }),
+  goBackButtonActionSchema.extend({ when: whenConditionSchema.optional() }),
+  executeOperationRuntimeUiActionSchema.extend({ when: whenConditionSchema.optional() }),
+  executeOperationsRuntimeUiActionSchema.extend({ when: whenConditionSchema.optional() }),
+  resetFormRuntimeUiActionSchema.extend({ when: whenConditionSchema.optional() }),
+  openModalRuntimeUiActionSchema.extend({ when: whenConditionSchema.optional() }),
+  closeModalRuntimeUiActionSchema.extend({ when: whenConditionSchema.optional() }),
+])
+
+const formLifecycleActionsSchema = z.array(formLifecycleActionEntrySchema).optional()
+
+export const formSubmitActionSchema = z.discriminatedUnion('type', [
+  executeOperationRuntimeUiActionSchema.extend({
+    onSuccess: formLifecycleActionsSchema,
+    onError: formLifecycleActionsSchema,
+  }),
+  executeOperationsRuntimeUiActionSchema.extend({
+    onSuccess: formLifecycleActionsSchema,
+    onError: formLifecycleActionsSchema,
+  }),
+])
+
 export const supportedButtonVariants = ['solid', 'outline', 'ghost', 'link'] as const
 export const supportedButtonColors = ['neutral', 'primary', 'success', 'warning', 'danger', 'info'] as const
 
@@ -413,7 +462,7 @@ export const buttonNodeSchema = z
     props: z
       .object({
         label: z.string(),
-        action: z.unknown().optional(),
+        action: buttonActionSchema.optional(),
         color: z.enum(supportedButtonColors).optional(),
         variant: z.enum(supportedButtonVariants).optional(),
         fullWidth: z.boolean().optional(),
@@ -432,7 +481,7 @@ export const formNodeSchema = z
     visibility: visibilitySchema.optional(),
     layout: layoutNodeLayoutSchema.optional(),
     persistOnUnmount: z.boolean().optional(),
-    submitAction: z.unknown().optional(),
+    submitAction: formSubmitActionSchema.optional(),
     resetOnSuccess: z.boolean().optional(),
     children: z.array(z.unknown()).optional(),
   })
@@ -551,20 +600,6 @@ export const modalNodeSchema = z
   })
   .strip()
 
-export const openModalRuntimeUiActionSchema = z
-  .object({
-    type: z.literal('openModal'),
-    modalId: nonEmptyStringSchema,
-  })
-  .strip()
-
-export const closeModalRuntimeUiActionSchema = z
-  .object({
-    type: z.literal('closeModal'),
-    modalId: nonEmptyStringSchema,
-  })
-  .strip()
-
 export const tabsItemSchema = z
   .object({
     label: z.string(),
@@ -630,7 +665,7 @@ export const linkNodeSchema = z
         href: z.string().optional(),
         download: z.string().optional(),
         target: z.string().optional(),
-        action: z.unknown().optional(),
+        action: z.discriminatedUnion('type', [navigateToButtonActionSchema, goBackButtonActionSchema]).optional(),
         icon: z.string().optional(),
         iconPosition: z.enum(['left', 'right']).optional(),
       })

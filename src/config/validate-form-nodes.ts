@@ -98,8 +98,8 @@ export function validateFormNode(
     }
 
     if (issuePath[0] === 'submitAction') {
-      const field = issuePath[1]
-      return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}.submitAction${field ? `.${String(field)}` : ''}".`, breadcrumb, rawNode)
+      const remainingSegments = issuePath.slice(1).map(formatPathSegment).join('')
+      return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}.submitAction${remainingSegments}".`, breadcrumb, rawNode)
     }
 
     if (issuePath[0] === 'resetOnSuccess') {

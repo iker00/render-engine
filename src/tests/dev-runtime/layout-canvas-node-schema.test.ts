@@ -40,6 +40,85 @@ describe('getNodeTypeJsonSchema', () => {
     expect(propProperties['iconPosition']).toBeDefined()
   })
 
+  it('emits an action oneOf with the 7 button action variants, each with a distinct literal type', () => {
+    const schema = getNodeTypeJsonSchema('button')
+    const properties = schema.properties as Record<string, unknown>
+    const propsSchema = properties['props'] as { properties?: Record<string, unknown> }
+    const propProperties = propsSchema.properties ?? {}
+    const actionSchema = propProperties['action'] as { oneOf?: Array<{ properties?: { type?: { const?: string } } }> }
+
+    expect(actionSchema.oneOf).toBeDefined()
+    expect(actionSchema.oneOf).toHaveLength(7)
+
+    const literalTypes = (actionSchema.oneOf ?? []).map((branch) => branch.properties?.type?.const)
+    expect(literalTypes).toEqual([
+      'navigateTo',
+      'goBack',
+      'executeOperation',
+      'executeOperations',
+      'resetForm',
+      'openModal',
+      'closeModal',
+    ])
+    expect(new Set(literalTypes).size).toBe(7)
+  })
+
+  it('emits an action oneOf with exactly the 2 link action variants (navigateTo, goBack)', () => {
+    const schema = getNodeTypeJsonSchema('link')
+    const properties = schema.properties as Record<string, unknown>
+    const propsSchema = properties['props'] as { properties?: Record<string, unknown> }
+    const propProperties = propsSchema.properties ?? {}
+    const actionSchema = propProperties['action'] as { oneOf?: Array<{ properties?: { type?: { const?: string } } }> }
+
+    expect(actionSchema.oneOf).toBeDefined()
+    expect(actionSchema.oneOf).toHaveLength(2)
+
+    const literalTypes = (actionSchema.oneOf ?? []).map((branch) => branch.properties?.type?.const)
+    expect(literalTypes).toEqual(['navigateTo', 'goBack'])
+    expect(new Set(literalTypes).size).toBe(2)
+  })
+
+  it('emits form.submitAction as an oneOf with exactly 2 branches (executeOperation, executeOperations), each exposing onSuccess/onError arrays of a 7-branch oneOf', () => {
+    const schema = getNodeTypeJsonSchema('form')
+    const properties = schema.properties as Record<string, unknown>
+    const submitActionSchema = properties['submitAction'] as {
+      oneOf?: Array<{
+        properties?: {
+          type?: { const?: string }
+          onSuccess?: { type?: string; items?: { oneOf?: Array<{ properties?: { type?: { const?: string } } }> } }
+          onError?: { type?: string; items?: { oneOf?: Array<{ properties?: { type?: { const?: string } } }> } }
+        }
+      }>
+    }
+
+    expect(submitActionSchema.oneOf).toBeDefined()
+    expect(submitActionSchema.oneOf).toHaveLength(2)
+
+    const branchTypes = (submitActionSchema.oneOf ?? []).map((branch) => branch.properties?.type?.const)
+    expect(branchTypes).toEqual(['executeOperation', 'executeOperations'])
+
+    for (const branch of submitActionSchema.oneOf ?? []) {
+      for (const field of ['onSuccess', 'onError'] as const) {
+        const fieldSchema = branch.properties?.[field]
+        expect(fieldSchema?.type).toBe('array')
+        expect(fieldSchema?.items?.oneOf).toBeDefined()
+        expect(fieldSchema?.items?.oneOf).toHaveLength(7)
+
+        const entryTypes = (fieldSchema?.items?.oneOf ?? []).map((entry) => entry.properties?.type?.const)
+        expect(entryTypes).toEqual([
+          'navigateTo',
+          'goBack',
+          'executeOperation',
+          'executeOperations',
+          'resetForm',
+          'openModal',
+          'closeModal',
+        ])
+        expect(new Set(entryTypes).size).toBe(7)
+      }
+    }
+  })
+
   it('returns the same reference on a second call for the same type (cache)', () => {
     const first = getNodeTypeJsonSchema('container')
     const second = getNodeTypeJsonSchema('container')
