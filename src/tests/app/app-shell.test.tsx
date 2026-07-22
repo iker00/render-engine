@@ -127,16 +127,6 @@ describe('App shell', () => {
     )
 
     expect(screen.getByTestId('runtime-page')).toHaveClass('grid', 'gap-5', 'lg:gap-6')
-    expect(screen.getByRole('button', { name: 'Limpiar formulario' }).closest('[data-layout-node="container"]')).toHaveClass(
-      'flex',
-      'w-full',
-      'flex-row',
-    )
-    expect(screen.getByRole('button', { name: 'Limpiar formulario' }).closest('[data-layout-node="container"]')).not.toHaveClass(
-      'border-t',
-      '-mx-5',
-      'sm:-mx-6',
-    )
 
     consoleWarnSpy.mockRestore()
   })

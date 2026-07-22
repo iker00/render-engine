@@ -45,6 +45,7 @@ function extractEntryJsFiles(htmlContent: string, distDir: string): string[] {
   }
 
   return paths
+    .map((p) => p.replace(/^\.\//, '/'))
     .filter((p) => p.startsWith('/assets/') && p.endsWith('.js'))
     .map((p) => join(distDir, p.replace(/^\//, '')))
 }
