@@ -1369,7 +1369,8 @@ function validateButtonNode(
     }
 
     if (issuePath[0] === 'props' && issuePath[1] === 'action') {
-      return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.action".`, breadcrumb, rawNode)
+      const remainingSegments = issuePath.slice(2).map(formatPathSegment).join('')
+      return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.action${remainingSegments}".`, breadcrumb, rawNode)
     }
 
     if (issuePath[0] === 'props' && issuePath[1] === 'color') {
@@ -1502,7 +1503,8 @@ export function validateLinkNode(
     }
 
     if (issuePath[0] === 'props' && issuePath[1] === 'action') {
-      return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.action".`, breadcrumb, rawNode)
+      const remainingSegments = issuePath.slice(2).map(formatPathSegment).join('')
+      return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.action${remainingSegments}".`, breadcrumb, rawNode)
     }
 
     if (issuePath[0] === 'props' && issuePath[1] === 'iconPosition') {

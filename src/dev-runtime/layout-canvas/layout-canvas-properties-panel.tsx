@@ -1,12 +1,17 @@
-import type { LayoutNode } from '../../config/runtime-config'
-import type { LayoutNodePath } from '../../runtime/layout-node-path'
+import { useEffect, useState } from 'react'
+import type { LayoutNode, RuntimeConfigError } from '../../config/runtime-config'
+import { serializeLayoutNodePath, type LayoutNodePath } from '../../runtime/layout-node-path'
+import type { CommitCanvasMutationResult } from './layout-canvas-commit'
 import { getNodeTypeJsonSchema } from './layout-canvas-node-schema'
-import { PropertyFieldDispatcher } from './property-fields/property-field-dispatcher'
+import { PropertyFieldDispatcher, resolveUnionBranch } from './property-fields/property-field-dispatcher'
 
 export interface LayoutCanvasPropertiesPanelProps {
   node: LayoutNode
   path: LayoutNodePath
-  onCommitNodeUpdate: (path: LayoutNodePath, updater: (node: LayoutNode) => LayoutNode) => void
+  onCommitNodeUpdate: (
+    path: LayoutNodePath,
+    updater: (node: LayoutNode) => LayoutNode,
+  ) => CommitCanvasMutationResult | void
   // T16/FR9: deletes the selected node (and its subtree) via the same
   // `commitCanvasMutation` pipeline T14/T15 already use — no second commit path. Optional so
   // callers that only need read/edit (e.g. the panel-only unit tests above, which render this
@@ -16,6 +21,20 @@ export interface LayoutCanvasPropertiesPanelProps {
 }
 
 type NodeSubsectionKey = 'props' | 'layout' | 'visibility' | 'queryStateFeedback'
+
+// T9: the key used to track a rejected commit for the `submitAction` block, which lives
+// outside `SUBSECTIONS` (see `buildSubmitActionFieldValue` below).
+type PendingRejectionKey = NodeSubsectionKey | 'submitAction'
+
+// T9 (bug fix): `commitCanvasMutation` validates the *entire* config before applying a panel
+// commit (see dev-runtime.tsx). Switching a discriminated-union variant (T5) or adding a new
+// array entry can produce a momentarily invalid full config (e.g. a required string field that
+// starts out as `''`) — the commit is then rejected and `currentConfig` never changes. Without
+// this state, the field derives its displayed value straight from `node`, so it would silently
+// "snap back" to the pre-change variant with no feedback. `pendingRejections` remembers, per
+// subsection, the last value the user tried to commit and the error that rejected it, purely for
+// local re-rendering — it is never written into `currentConfig`.
+type PendingRejections = Partial<Record<PendingRejectionKey, { value: unknown; error: RuntimeConfigError }>>
 
 const SUBSECTIONS: ReadonlyArray<{ key: NodeSubsectionKey; label: string }> = [
   { key: 'props', label: 'Props' },
@@ -41,36 +60,56 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value)
 }
 
-/**
- * `PropertyFieldDispatcher` (T8) resolves plain JSON Schema `type`s but has no
- * notion of `anyOf`/`oneOf` (zod `.union()`/`.discriminatedUnion()` output) — an
- * unresolved union falls back to its disabled raw-JSON escape hatch. Two fields
- * relevant to this panel are unions in the generated schema: `layout.span`
- * (integer | responsive per-breakpoint map) and a node's own `visibility`
- * (single condition | group). Resolving the branch that matches the current
- * value's shape here is what keeps both fields genuinely editable.
- */
-function resolveUnionBranch(
-  schema: Record<string, unknown> | undefined,
-  value: unknown,
-): Record<string, unknown> | undefined {
-  if (!schema || typeof schema !== 'object') return schema
-
-  const branches = (
-    Array.isArray(schema.anyOf) ? schema.anyOf : Array.isArray(schema.oneOf) ? schema.oneOf : undefined
-  ) as Record<string, unknown>[] | undefined
-  if (!branches || branches.length === 0) return schema
-
-  if (!isPlainObject(value)) {
-    return branches.find((branch) => branch.type !== 'object') ?? branches[0]
+// T8: choosing "Sin acción" in the discriminated-union action selector (T5) resolves to
+// `{ ...subsection, action: undefined }` rather than dropping the key outright — the dispatcher
+// clears a variant by setting its value to `undefined`, not by removing it. Committing that as-is
+// would leave a literal `"action": undefined` key in the node (and its serialized Monaco JSON).
+// This strips `undefined`-valued keys recursively, at any depth, right before commit. Scoped to
+// plain objects only: arrays and primitives pass through unchanged, since none of the current
+// subsection editors produce `undefined` entries inside arrays.
+function stripUndefined<T>(value: T): T {
+  if (!isPlainObject(value)) return value
+  const result: Record<string, unknown> = {}
+  for (const [key, entryValue] of Object.entries(value)) {
+    if (entryValue === undefined) continue
+    result[key] = isPlainObject(entryValue) ? stripUndefined(entryValue) : entryValue
   }
+  return result as T
+}
 
-  const matchByRequiredKeys = branches.find((branch) => {
-    if (branch.type !== 'object') return false
-    const required = Array.isArray(branch.required) ? (branch.required as string[]) : []
-    return required.every((key) => key in value)
-  })
-  return matchByRequiredKeys ?? branches.find((branch) => branch.type === 'object') ?? branches[0]
+type FormNode = Extract<LayoutNode, { type: 'form' }>
+
+/**
+ * `submitAction` is a special case, handled separately from `SUBSECTIONS` (T5): the generated JSON
+ * Schema for `formNodeSchema.submitAction` nests `onSuccess`/`onError` inside each variant branch
+ * (matching the raw config shape `formSubmitActionSchema` validates), but the in-memory
+ * `FormLayoutNode` stores `submitAction`, `onSuccess` and `onError` as three separate sibling
+ * fields (see `validate-form-nodes.ts`, which splits them apart, and `layout-canvas-commit.ts`'s
+ * `denormalizeFormNode`, which nests them back for serialization). These two functions bridge that
+ * gap for the dispatcher, which only ever sees the schema's own (nested) shape.
+ */
+function buildSubmitActionFieldValue(node: FormNode): unknown {
+  if (node.submitAction === undefined) return undefined
+  return {
+    ...node.submitAction,
+    ...(node.onSuccess !== undefined ? { onSuccess: node.onSuccess } : {}),
+    ...(node.onError !== undefined ? { onError: node.onError } : {}),
+  }
+}
+
+// Inverse of `buildSubmitActionFieldValue`: splits the dispatcher's nested value back into the
+// three flattened fields `FormLayoutNode` actually stores.
+function withSubmitActionField(node: FormNode, nextValue: unknown): FormNode {
+  if (nextValue === undefined) {
+    return { ...node, submitAction: undefined, onSuccess: undefined, onError: undefined }
+  }
+  const { onSuccess, onError, ...restAction } = nextValue as Record<string, unknown>
+  return {
+    ...node,
+    submitAction: restAction as unknown as FormNode['submitAction'],
+    onSuccess: onSuccess as FormNode['onSuccess'],
+    onError: onError as FormNode['onError'],
+  }
 }
 
 // RF2 (0105): label seeded onto a brand-new `tabs.props.items` entry via `handleAdd`'s generic
@@ -134,34 +173,21 @@ function resolveTabsPropsSchema(propsSchema: Record<string, unknown>): Record<st
   }
 }
 
-/**
- * `layout.span` is nested one level inside the `layout` subsection, so the
- * generic top-level `resolveUnionBranch` call for that subsection never reaches
- * it. Editing it must preserve breakpoint keys not touched by the current edit
- * (e.g. editing `md` on `{ sm: 6, lg: 4 }` must not drop `lg`) — resolving the
- * matching union branch here, before delegating to the dispatcher, is what makes
- * the dispatcher's own object-field merge (`{ ...value, [key]: nextValue }`)
- * apply to `span` instead of falling back to the disabled raw-JSON escape hatch.
- */
-function resolveLayoutSubsectionSchema(
-  layoutSchema: Record<string, unknown>,
-  currentLayoutValue: unknown,
-): Record<string, unknown> {
-  const properties = layoutSchema.properties
-  if (!isPlainObject(properties)) return layoutSchema
-
-  const spanSchema = properties.span
-  if (!spanSchema || typeof spanSchema !== 'object') return layoutSchema
-
-  const currentSpanValue = isPlainObject(currentLayoutValue) ? currentLayoutValue.span : undefined
-
-  return {
-    ...layoutSchema,
-    properties: {
-      ...properties,
-      span: resolveUnionBranch(spanSchema as Record<string, unknown>, currentSpanValue),
-    },
-  }
+// T9: rendered under a subsection's `PropertyFieldDispatcher` when its last commit attempt was
+// rejected by `commitCanvasMutation`. Same visual pattern as the error panel in
+// `floating-monaco-panel.tsx` (bold error code, then `: `, then the message).
+function CommitRejectionBanner({ dataTestId, error }: { dataTestId: string; error: RuntimeConfigError }) {
+  return (
+    <div
+      role="alert"
+      data-testid={dataTestId}
+      className="rounded bg-red-50 px-3 py-2 text-xs text-red-800"
+    >
+      No se pudo guardar este cambio: <span className="font-medium">{error.code}</span>
+      {': '}
+      {error.message}
+    </div>
+  )
 }
 
 /**
@@ -170,12 +196,20 @@ function resolveLayoutSubsectionSchema(
  * Schema (T7) declares. Every editable field comes from that schema — there is
  * no separate hardcoded list of properties per node type.
  *
- * Each subsection is dispatched to a single `PropertyFieldDispatcher` call; for
- * an object-typed subsection (`props`/`layout`/`queryStateFeedback`, and
- * `visibility` once its union branch is resolved) T8's own object handling
- * already renders one field per property and merges edits against the
- * subsection's current value, so per-field wiring does not need to be
- * duplicated here.
+ * Each subsection is dispatched to a single top-level `PropertyFieldDispatcher`
+ * call. The dispatcher itself only resolves plain JSON Schema `type`s, not a
+ * union (`anyOf`/`oneOf`) passed as its own top-level `schema` — that's what
+ * `resolveUnionBranch` handles here for `visibility`, which is a union at the
+ * subsection's own root (single condition | group). `layout.span`, by
+ * contrast, is a union nested one level inside the `layout` subsection's
+ * `properties`, so it no longer needs a panel-specific resolver: the
+ * dispatcher's own `ObjectPropertyField` recursion (T4) resolves it against
+ * `layout.span`'s current value before rendering that nested field.
+ *
+ * T9: each subsection also tracks its own `pendingRejections` entry — the last value the user
+ * tried to commit through this panel plus the error that rejected it — so a commit rejected by
+ * `commitCanvasMutation`'s full-config validation still shows the user's own edit (and why it
+ * didn't save) instead of silently reverting to the pre-edit value derived from `node`.
  */
 export function LayoutCanvasPropertiesPanel({
   node,
@@ -185,11 +219,39 @@ export function LayoutCanvasPropertiesPanel({
 }: LayoutCanvasPropertiesPanelProps) {
   const nodeSchema = getNodeTypeJsonSchema(node.type)
   const schemaProperties = isPlainObject(nodeSchema.properties) ? nodeSchema.properties : {}
+  const submitActionSchema =
+    node.type === 'form' && isPlainObject(schemaProperties.submitAction) ? (schemaProperties.submitAction as Record<string, unknown>) : undefined
+
+  const [pendingRejections, setPendingRejections] = useState<PendingRejections>({})
+
+  // Selecting a different node discards any rejection pending on the previously selected
+  // node — it belongs to that node's edit, not this one. A successful commit on this node
+  // clears its own entry explicitly below, so this effect must not also fire on every `node`
+  // reference change (e.g. its own successful commit would otherwise race this reset).
+  const serializedPath = serializeLayoutNodePath(path)
+  useEffect(() => {
+    setPendingRejections({})
+  }, [serializedPath])
+
+  function recordCommitResult(key: PendingRejectionKey, attemptedValue: unknown, result: CommitCanvasMutationResult | void) {
+    if (result && result.status === 'rejected') {
+      setPendingRejections((prev) => ({ ...prev, [key]: { value: attemptedValue, error: result.error } }))
+      return
+    }
+    // `undefined` (a `vi.fn()` test double without `mockReturnValue`) is treated exactly like
+    // `{ status: 'applied' }` — see design.md / T9 motivation for why this must not show a banner.
+    setPendingRejections((prev) => {
+      if (!(key in prev)) return prev
+      const next = { ...prev }
+      delete next[key]
+      return next
+    })
+  }
 
   return (
     <div
       data-testid="layout-canvas-properties-panel"
-      className="flex w-72 shrink-0 flex-col gap-4 overflow-y-auto border-l border-gray-200 bg-white p-3"
+      className="flex shrink-0 flex-col gap-4 overflow-y-auto border-l border-gray-200 bg-white p-3"
     >
       {onDeleteNode !== undefined && (
         <div className="flex items-center justify-between gap-2 border-b border-gray-200 pb-3">
@@ -209,26 +271,63 @@ export function LayoutCanvasPropertiesPanel({
         if (!subsectionSchema || typeof subsectionSchema !== 'object') return null
 
         const currentValue = readSubsection(node, key)
-        let effectiveSchema =
-          key === 'layout'
-            ? resolveLayoutSubsectionSchema(subsectionSchema as Record<string, unknown>, currentValue)
-            : resolveUnionBranch(subsectionSchema as Record<string, unknown>, currentValue)
+        let effectiveSchema = resolveUnionBranch(subsectionSchema as Record<string, unknown>, currentValue)
         if (key === 'props' && node.type === 'tabs' && effectiveSchema) {
           effectiveSchema = resolveTabsPropsSchema(effectiveSchema)
         }
 
+        const pendingRejection = pendingRejections[key]
+        const displayedValue = pendingRejection ? pendingRejection.value : currentValue
+
         return (
-          <PropertyFieldDispatcher
-            key={key}
-            schema={effectiveSchema}
-            value={currentValue ?? {}}
-            label={label}
-            onChange={(nextValue) => {
-              onCommitNodeUpdate(path, (currentNode) => withSubsection(currentNode, key, nextValue))
-            }}
-          />
+          <div key={key} className="flex flex-col gap-2">
+            <PropertyFieldDispatcher
+              schema={effectiveSchema}
+              value={displayedValue ?? {}}
+              label={label}
+              onChange={(nextValue) => {
+                const sanitizedValue = stripUndefined(nextValue)
+                const result = onCommitNodeUpdate(path, (currentNode) => withSubsection(currentNode, key, sanitizedValue))
+                recordCommitResult(key, sanitizedValue, result)
+              }}
+            />
+            {pendingRejection && (
+              <CommitRejectionBanner
+                dataTestId={`layout-canvas-properties-panel-${key}-error`}
+                error={pendingRejection.error}
+              />
+            )}
+          </div>
         )
       })}
+      {node.type === 'form' &&
+        submitActionSchema &&
+        (() => {
+          const pendingRejection = pendingRejections.submitAction
+          const displayedValue = pendingRejection ? pendingRejection.value : buildSubmitActionFieldValue(node)
+
+          return (
+            <div className="flex flex-col gap-2">
+              <PropertyFieldDispatcher
+                schema={submitActionSchema}
+                value={displayedValue}
+                label="Acción de envío"
+                onChange={(nextValue) => {
+                  const result = onCommitNodeUpdate(path, (currentNode) =>
+                    currentNode.type === 'form' ? withSubmitActionField(currentNode, nextValue) : currentNode,
+                  )
+                  recordCommitResult('submitAction', nextValue, result)
+                }}
+              />
+              {pendingRejection && (
+                <CommitRejectionBanner
+                  dataTestId="layout-canvas-properties-panel-submitAction-error"
+                  error={pendingRejection.error}
+                />
+              )}
+            </div>
+          )
+        })()}
     </div>
   )
 }

@@ -576,6 +576,64 @@ describe('validateRuntimeConfig', () => {
     })
   })
 
+  it('rejects a button action with an unrecognized type value at the Zod discriminated union level', () => {
+    expect(
+      validateRuntimeConfig(
+        createConfigWithPages([
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'button',
+                props: {
+                  label: 'Broken',
+                  action: {
+                    type: 'doSomethingUnsupported',
+                  },
+                },
+              },
+            ],
+          },
+        ]),
+      ),
+    ).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message: `Page "home" has an invalid layout at "layout[0].props.action.type".
+  → button("Broken")
+  Node: {"type":"button","props":{"label":"Broken"}}`,
+      },
+    })
+  })
+
+  it('accepts a button node without props.action when it is a descendant of a form node', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithPages([
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'form',
+              id: 'my-form',
+              children: [
+                {
+                  type: 'button',
+                  props: {
+                    label: 'Submit',
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      ]),
+    )
+
+    expect(result.status).toBe('ready')
+  })
+
   it('accepts a button with an openModal action referencing a declared modal', () => {
     const result = validateRuntimeConfig(
       createConfigWithPages([
@@ -1393,6 +1451,57 @@ describe('validateRuntimeConfig', () => {
   Node: {"type":"link","props":{"label":"Broken"}}`,
       },
     })
+  })
+
+  it('rejects a link action with an unrecognized type value at the Zod discriminated union level', () => {
+    expect(
+      validateRuntimeConfig(
+        createConfigWithPages([
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'link',
+                props: {
+                  label: 'Broken',
+                  action: { type: 'doSomethingUnsupported' },
+                },
+              },
+            ],
+          },
+        ]),
+      ),
+    ).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message: `Page "home" has an invalid layout at "layout[0].props.action.type".
+  → link("Broken")
+  Node: {"type":"link","props":{"label":"Broken"}}`,
+      },
+    })
+  })
+
+  it('accepts a link node without props.action when props.href is present (mutually exclusive fields, no crash)', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithPages([
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'link',
+              props: {
+                label: 'Docs',
+                href: 'https://example.com',
+              },
+            },
+          ],
+        },
+      ]),
+    )
+
+    expect(result.status).toBe('ready')
   })
 
   it('accepts a link node with visibility, queryStateFeedback and layout.span', () => {

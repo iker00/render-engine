@@ -87,7 +87,7 @@ export function LayoutCanvasNodePalette() {
     <div
       data-testid="layout-canvas-node-palette"
       aria-label="Paleta de nodos"
-      className="flex w-40 shrink-0 flex-col gap-1 overflow-y-auto border-r p-2"
+      className="flex flex-col gap-1 overflow-y-auto p-2"
     >
       {nodeTypes.map((type) => (
         <LayoutCanvasNodePaletteEntry key={type} type={type} />

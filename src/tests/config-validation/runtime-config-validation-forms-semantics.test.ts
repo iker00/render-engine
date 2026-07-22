@@ -2919,4 +2919,154 @@ describe('validateRuntimeConfig — second-pass form semantics include breadcrum
     expect(result.error.message).toContain('button("Search")')
     expect(result.error.message).toContain('\n  Node: ')
   })
+
+  describe('formSubmitActionSchema structural hardening (T3)', () => {
+    it('accepts form.submitAction absent', () => {
+      const result = validateRuntimeConfig({
+        api: {},
+        pages: [
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'form',
+                id: 'user-form',
+                children: [],
+              },
+            ],
+          },
+        ],
+        initialPage: 'home',
+      })
+
+      expect(result.status).toBe('ready')
+    })
+
+    it('accepts form.submitAction with type "executeOperation" with the same fields as before', () => {
+      expect(validateRuntimeConfig(createConfigWithFormLayout()).status).toBe('ready')
+    })
+
+    it('accepts form.submitAction with type "executeOperations" with the same fields as before', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithFormLayout({
+          submitAction: {
+            type: 'executeOperations',
+            operations: [{ operationName: 'submitUserForm' }],
+          },
+        }),
+      )
+
+      expect(result.status).toBe('ready')
+    })
+
+    it('rejects form.submitAction.type "navigateTo" (outside the submitAction catalog) at the schema level', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithFormLayout({
+          submitAction: {
+            type: 'navigateTo',
+            pageId: 'home',
+          },
+        }),
+      )
+
+      expect(result.status).toBe('error')
+    })
+
+    it('rejects a submitAction.onSuccess entry whose type is outside the 7-variant catalog', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithFormLayout({
+          submitAction: {
+            type: 'executeOperation',
+            operationName: 'submitUserForm',
+            onSuccess: [{ type: 'doSomethingUnsupported' }],
+          },
+        }),
+      )
+
+      expect(result.status).toBe('error')
+    })
+
+    it('rejects a submitAction.onError entry whose type is outside the 7-variant catalog', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithFormLayout({
+          submitAction: {
+            type: 'executeOperation',
+            operationName: 'submitUserForm',
+            onError: [{ type: 'doSomethingUnsupported' }],
+          },
+        }),
+      )
+
+      expect(result.status).toBe('error')
+    })
+
+    it('accepts submitAction.onSuccess and onError mixing all 7 action variants, each with an optional when condition', () => {
+      const result = validateRuntimeConfig({
+        api: {
+          submitUserForm: { method: 'POST', endpoint: '/api/forms' },
+          searchUsers: { method: 'POST', endpoint: '/api/users' },
+        },
+        pages: [
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'modal',
+                id: 'confirm-modal',
+                children: [],
+              },
+              {
+                type: 'form',
+                id: 'user-form',
+                submitAction: {
+                  type: 'executeOperation',
+                  operationName: 'submitUserForm',
+                  onSuccess: [
+                    { type: 'resetForm', formId: 'user-form' },
+                    {
+                      type: 'openModal',
+                      modalId: 'confirm-modal',
+                      when: { reference: 'queries.submitUserForm.data.flag', operator: 'isTruthy' },
+                    },
+                    { type: 'closeModal', modalId: 'confirm-modal' },
+                    { type: 'navigateTo', pageId: 'next' },
+                    { type: 'goBack' },
+                    { type: 'executeOperation', operationName: 'searchUsers' },
+                    {
+                      type: 'executeOperations',
+                      operations: [{ operationName: 'searchUsers' }],
+                    },
+                  ],
+                  onError: [
+                    { type: 'resetForm', formId: 'user-form' },
+                    { type: 'openModal', modalId: 'confirm-modal' },
+                    {
+                      type: 'closeModal',
+                      modalId: 'confirm-modal',
+                      when: { reference: 'queries.submitUserForm.error', operator: 'isTruthy' },
+                    },
+                    { type: 'navigateTo', pageId: 'next' },
+                    { type: 'goBack' },
+                    { type: 'executeOperation', operationName: 'searchUsers' },
+                    {
+                      type: 'executeOperations',
+                      operations: [{ operationName: 'searchUsers' }],
+                    },
+                  ],
+                },
+                children: [],
+              },
+            ],
+          },
+          {
+            id: 'next',
+            layout: [],
+          },
+        ],
+        initialPage: 'home',
+      })
+
+      expect(result.status).toBe('ready')
+    })
+  })
 })
