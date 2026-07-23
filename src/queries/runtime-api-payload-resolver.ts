@@ -21,6 +21,7 @@ interface ResolvePayloadValueOptions {
   state: RuntimeState
   iterationContext?: RuntimeIterationContext
   hiddenFormFields?: RuntimeApiHiddenFormFields
+  fileValueOverrides?: ReadonlyMap<string, RuntimeApiBodyValue[]>
 }
 
 export function resolvePayloadValue(
@@ -93,6 +94,61 @@ export function resolvePayloadValue(
   } as const
 }
 
+/**
+ * Body-only substitution channel: when a body string is a complete, unsuffixed
+ * `forms.{formId}.{fieldId}` reference and `fileValueOverrides` carries a
+ * precomputed array for `"${formId}.${fieldId}"`, that array replaces the
+ * resolved value — used by file inputs to inject their base64-encoded
+ * selection instead of the unresolvable `File`/`File[]` form value.
+ *
+ * Hidden-field omission still takes priority over the override. Returns
+ * `null` when `value` is not a candidate (no overrides configured, not a
+ * complete two-segment `forms.*` reference, or no matching override key) so
+ * the caller falls back to the existing resolution flow unchanged.
+ */
+function resolveFileValueOverride(
+  value: string,
+  options: ResolvePayloadValueOptions,
+): { status: 'ready'; value: RuntimeApiBodyValue[] } | { status: 'omit' } | null {
+  const { state, iterationContext, hiddenFormFields, fileValueOverrides } = options
+
+  if (fileValueOverrides === undefined) {
+    return null
+  }
+
+  const resolvedReference = resolveRuntimeReference(value, state, { iterationContext })
+
+  const reference =
+    resolvedReference.status === 'resolved' || resolvedReference.status === 'missing'
+      ? resolvedReference.reference
+      : null
+
+  if (reference === null || reference.namespace !== 'forms' || reference.path.length !== 2) {
+    return null
+  }
+
+  const [formId, fieldId] = reference.path
+
+  if (
+    hiddenFormFields !== undefined &&
+    hiddenFormFields.formId === formId &&
+    hiddenFormFields.fieldIds.has(fieldId)
+  ) {
+    return { status: 'omit' } as const
+  }
+
+  const overrideKey = `${formId}.${fieldId}`
+
+  if (!fileValueOverrides.has(overrideKey)) {
+    return null
+  }
+
+  return {
+    status: 'ready',
+    value: fileValueOverrides.get(overrideKey) as RuntimeApiBodyValue[],
+  } as const
+}
+
 export function resolveJsonPayloadValue(
   value: RuntimeApiBodyValue,
   options: ResolvePayloadValueOptions,
@@ -105,6 +161,12 @@ export function resolveJsonPayloadValue(
   }
 
   if (typeof value === 'string') {
+    const fileValueOverrideResult = resolveFileValueOverride(value, options)
+
+    if (fileValueOverrideResult !== null) {
+      return fileValueOverrideResult
+    }
+
     const resolvedValue = resolvePayloadValue(value, options)
 
     if (resolvedValue.status === 'omit') {

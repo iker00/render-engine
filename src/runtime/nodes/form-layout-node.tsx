@@ -11,7 +11,6 @@ import type {
   LayoutNode,
   LayoutNodeCollection,
   RadioGroupLayoutNode,
-  RuntimeApiFileField,
   SelectLayoutNode,
   TextareaLayoutNode,
   ToggleLayoutNode,
@@ -28,7 +27,7 @@ import { type ResolvedFormFieldDefinition, validateFormFields } from '../runtime
 import { useRuntimeState, useRuntimeStateActions } from '../runtime-state/runtime-state-provider'
 import { selectFormFieldState } from '../runtime-state/runtime-state-selectors'
 import { executeRuntimeUiAction, type RuntimeUiActionHandlers } from '../runtime-actions/runtime-ui-action-executor'
-import type { RuntimeApiHiddenFormFields } from '../../queries/runtime-api-types'
+import type { RuntimeApiFileInputSources, RuntimeApiHiddenFormFields } from '../../queries/runtime-api-types'
 
 interface FormNodeProps {
   node: FormLayoutNode
@@ -254,20 +253,7 @@ export function FormNode({ node, children, iterationContext }: FormNodeProps) {
     )
     const hiddenFormFields: RuntimeApiHiddenFormFields = { formId: node.id, fieldIds: hiddenFieldIds }
 
-    // Collect files from visible fileInput fields
-    const fileEntries: RuntimeApiFileField[] = []
-    for (const fieldDefinition of visibleFieldDefinitions) {
-      if (fieldDefinition.type !== 'fileInput') continue
-      const fieldState = selectFormFieldState(snapshotState, node.id, fieldDefinition.fieldId)
-      const value = fieldState?.value ?? fieldDefinition.defaultValue
-      if (!Array.isArray(value)) continue
-      for (const entry of value) {
-        if (entry instanceof File) {
-          fileEntries.push({ name: fieldDefinition.fieldId, file: entry })
-        }
-      }
-    }
-    const filesParam = fileEntries.length > 0 ? { files: fileEntries } : {}
+    const fileInputSources = buildFileInputSources(node.id, visibleFieldDefinitions, snapshotState)
 
     const submitAction = node.submitAction
 
@@ -284,10 +270,10 @@ export function FormNode({ node, children, iterationContext }: FormNodeProps) {
               query: entry.query,
               body: entry.body,
               headers: entry.headers,
-              ...filesParam,
             },
             iterationContext,
             hiddenFormFields,
+            fileInputSources,
           }),
         ),
       )
@@ -315,10 +301,10 @@ export function FormNode({ node, children, iterationContext }: FormNodeProps) {
         query: submitAction.query,
         body: submitAction.body,
         headers: submitAction.headers,
-        ...filesParam,
       },
       iterationContext,
       hiddenFormFields,
+      fileInputSources,
     })
 
     if (result.status === 'success') {
@@ -435,6 +421,38 @@ export function collectAllFormFieldIds(nodes: LayoutNodeCollection): string[] {
   }
 
   return fieldIds
+}
+
+/**
+ * Builds the fileInputSources channel from the visible fileInput fields of a
+ * form at submit time. Only visible fields with a File[] value are included;
+ * an empty selection still contributes its (empty) entry as long as the field
+ * is visible. Returns undefined when no visible fileInput field qualifies, so
+ * callers never pass an empty-but-defined fileInputSources downstream.
+ */
+function buildFileInputSources(
+  formId: string,
+  visibleFieldDefinitions: ResolvedFormFieldDefinition[],
+  state: ReturnType<typeof useRuntimeState>,
+): RuntimeApiFileInputSources | undefined {
+  const valuesByFieldId: Record<string, readonly File[]> = {}
+
+  for (const fieldDefinition of visibleFieldDefinitions) {
+    if (fieldDefinition.type !== 'fileInput') continue
+
+    const fieldState = selectFormFieldState(state, formId, fieldDefinition.fieldId)
+    const value = fieldState?.value ?? fieldDefinition.defaultValue
+
+    if (!Array.isArray(value)) continue
+
+    valuesByFieldId[fieldDefinition.fieldId] = value.filter((entry): entry is File => entry instanceof File)
+  }
+
+  if (Object.keys(valuesByFieldId).length === 0) {
+    return undefined
+  }
+
+  return { formId, valuesByFieldId }
 }
 
 function resolveFileInputFieldDefinition(node: FileInputLayoutNode): ResolvedFormFieldDefinition {

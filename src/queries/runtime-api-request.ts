@@ -44,6 +44,7 @@ export function buildRuntimeApiRequest({
   requestParams,
   iterationContext,
   hiddenFormFields,
+  fileValueOverrides,
 }: BuildRuntimeApiRequestOptions): RuntimeApiRequestBuildResult {
   const operation = config.api[operationName]
 
@@ -57,7 +58,15 @@ export function buildRuntimeApiRequest({
     }
   }
 
-  return buildInlineRuntimeApiRequest({ operation, operationName, state, requestParams, iterationContext, hiddenFormFields })
+  return buildInlineRuntimeApiRequest({
+    operation,
+    operationName,
+    state,
+    requestParams,
+    iterationContext,
+    hiddenFormFields,
+    fileValueOverrides,
+  })
 }
 
 export function buildInlineRuntimeApiRequest({
@@ -67,6 +76,7 @@ export function buildInlineRuntimeApiRequest({
   requestParams,
   iterationContext,
   hiddenFormFields,
+  fileValueOverrides,
 }: BuildInlineRuntimeApiRequestOptions): RuntimeApiRequestBuildResult {
   const effectiveRequestParams = mergeRuntimeApiRequestParams(operation, requestParams)
   const resolveOptions = { state, iterationContext, hiddenFormFields }
@@ -86,7 +96,10 @@ export function buildInlineRuntimeApiRequest({
     return queryResult
   }
 
-  const bodyResult = resolveBody(effectiveRequestParams.body, messagePrefix, resolveOptions)
+  const bodyResult = resolveBody(effectiveRequestParams.body, messagePrefix, {
+    ...resolveOptions,
+    fileValueOverrides,
+  })
 
   if (bodyResult.status === 'error') {
     return bodyResult

@@ -1,4 +1,4 @@
-> Cuándo leer: nodo `fileInput`, selector de ficheros dentro de formulario, preview inmediata, validaciones client-side, serialización multipart en submit.
+> Cuándo leer: nodo `fileInput`, selector de ficheros dentro de formulario, preview inmediata, validaciones client-side, serialización JSON+base64 en submit.
 > Tamaño: medio.
 > Relacionados: [[./form.md]], [[../forms/validation-rules.md]], [[../forms/submit.md]], [[../references/visibility.md]], [[../references/query-state-feedback.md]].
 
@@ -6,13 +6,13 @@
 
 ## Objetivo
 
-Nodo de entrada de formulario que permite seleccionar uno o varios ficheros desde el dispositivo (incluida la cámara en móvil), previsualizar antes del submit y enviarlos como parte del payload `multipart/form-data` del formulario contenedor. Soporta validaciones client-side de fichero (MIME type, tamaño, nombre) evaluadas inmediatamente al seleccionar, no en submit.
+Nodo de entrada de formulario que permite seleccionar uno o varios ficheros desde el dispositivo (incluida la cámara en móvil), previsualizar antes del submit y, si el campo está referenciado en el body de la operación de submit, enviarlos codificados en base64 dentro del JSON del payload. Soporta validaciones client-side de fichero (MIME type, tamaño, nombre) evaluadas inmediatamente al seleccionar, no en submit.
 
 ## Contrato (`props`)
 
 | Prop | Tipo | Default | Obligatorio | Descripción |
 |---|---|---|---|---|
-| `fieldId` | string | — | **Sí** | Identificador único del campo dentro del formulario. Usado como clave en `forms.{formId}.{fieldId}` y como nombre del campo en el FormData multipart. |
+| `fieldId` | string | — | **Sí** | Identificador único del campo dentro del formulario. Usado como clave en `forms.{formId}.{fieldId}` y como clave del array de ficheros en el body cuando el campo está referenciado. |
 | `label` | string | — | **Sí** | Etiqueta del campo, literal, referencia dinámica o string visible interpolado. |
 | `tooltip` | string | — | No | Texto de ayuda contextual, literal, referencia dinámica o string visible interpolado. Cuando resuelve a un string no vacío, se renderiza un icono de información (`HelpCircle`) junto al texto del label con un tooltip flotante accesible (hover y focus). Cuando está ausente o resuelve a vacío, no se renderiza nada adicional. |
 | `multiple` | boolean | `true` | No | Si `false`, el selector limita la selección a un único fichero. |
@@ -81,11 +81,19 @@ Nodo de entrada de formulario que permite seleccionar uno o varios ficheros desd
 ## Integración con formulario
 
 - `fileInput` es descendiente válido de `form` (directo o anidado en containers dentro del form).
-- Lee y escribe exclusivamente en `forms.{formId}.{fieldId}` con shape `File[]` (array de objetos File).
-- Al hacer submit, si el formulario contiene algún `fileInput` visible con al menos un fichero seleccionado, el payload se serializa como `multipart/form-data`. El `fieldId` del campo actúa como clave en el FormData.
-- Los campos de texto del mismo formulario se incluyen como partes de texto del mismo FormData.
-- Un formulario sin `fileInput` con valor sigue enviando con la serialización habitual (JSON o query params), sin regresión.
+- Lee y escribe exclusivamente en `forms.{formId}.{fieldId}` con shape `File[]` (array de objetos File). La codificación a base64 ocurre en submit, no al seleccionar: la preview y el estado siguen operando sobre los `File` nativos sin cambios.
+- `fileInput` se comporta como cualquier otro campo del formulario respecto a su inclusión en el payload: solo aporta clave al body si `submitAction.body`/`api.body` lo referencia explícitamente con `forms.{formId}.{fieldId}`. Un `fileInput` con ficheros seleccionados pero sin referencia no aporta ninguna clave, aunque el resto del formulario siga enviando con normalidad.
+- Cuando la referencia está presente, resuelve siempre a un **array** de objetos `{ name, size, mime, data }` — uno por fichero seleccionado, en el mismo orden de selección — con independencia de `props.multiple`. Sin ficheros seleccionados, resuelve a `[]`.
+  - `name`: `File.name` sin normalización adicional.
+  - `size`: `File.size` en bytes.
+  - `mime`: `File.type` reportado por el navegador (puede ser cadena vacía).
+  - `data`: contenido binario del fichero en base64 estándar, sin el prefijo `data:<mime>;base64,`.
+- El submit de un formulario con `fileInput` referenciado usa siempre la serialización habitual de la operación (`content-type: application/json` o query params, según corresponda) — nunca `multipart/form-data`. No existe modo dual ni flag para elegir el mecanismo de envío.
+- La codificación a base64 ocurre de forma asíncrona como parte de la construcción del request en submit. Si la lectura de algún fichero falla en el navegador, la query transita a `status: error` con `code: request-build-failed` sin emitir la llamada de red, igual que otros fallos de construcción de request.
+- `required` y `minFiles` se siguen evaluando en submit sobre `forms.{formId}.{fieldId}.value` (`File[]`), con independencia de si el campo está referenciado en el body.
+- Un `fileInput` referenciado pero oculto por `visibility` en el momento del submit se omite del payload, siguiendo la misma semántica de omisión de campos ocultos ya vigente para el resto de campos.
 - `resetOnSuccess: true` en el formulario limpia los ficheros seleccionados del campo (restaura `value: []`).
+- Este comportamiento es exclusivo de `fileInput`. El nodo `fileManager` (subida standalone fuera de formulario) no se ve afectado: sigue enviando `multipart/form-data` contra sus operaciones configuradas.
 
 ## Validación específica
 
