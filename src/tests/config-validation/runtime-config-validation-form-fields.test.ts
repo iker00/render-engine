@@ -548,10 +548,8 @@ describe('validateRuntimeConfig', () => {
                 fieldId: 'assignees',
                 label: 'Assignees',
                 items: {
-                  values: [
-                    { id: 1, name: 'Ada' },
-                    { id: 2, name: 'Grace' },
-                  ],
+                  source: 'queries.searchUsers.data.results',
+                  itemType: 'object',
                   label: 'name',
                   value: 'id',
                 },
@@ -585,6 +583,7 @@ describe('validateRuntimeConfig', () => {
                         label: 'Dynamic users',
                         items: {
                           source: 'queries.searchUsers.data.results',
+                          itemType: 'object',
                           label: 'profile.name',
                           value: 'id',
                         },
@@ -597,6 +596,7 @@ describe('validateRuntimeConfig', () => {
                         label: 'Dynamic select',
                         items: {
                           source: 'queries.searchUsers.data.results',
+                          itemType: 'object',
                           label: 'profile.name',
                           value: 'id',
                         },

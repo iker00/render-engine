@@ -482,6 +482,62 @@ describe('PropertyFieldDispatcher object schema with additionalProperties: strin
   })
 })
 
+describe('PropertyFieldDispatcher x-widget hook (T4, 0108)', () => {
+  it('delegates to ChoiceItemsPropertyField for a schema declaring x-widget: "choice-items", instead of the raw-JSON escape hatch', () => {
+    const onChangeSpy = vi.fn()
+    render(
+      <ControlledDispatcher
+        schema={{ 'x-widget': 'choice-items' }}
+        initialValue={[]}
+        label="items"
+        onChangeSpy={onChangeSpy}
+      />,
+    )
+
+    // ChoiceItemsPropertyField's own mode selector is labelled by the field's `label` and starts
+    // in "manualLiteral" for an array value — distinct from the disabled raw-JSON textarea the
+    // escape hatch would render for a schema this bare.
+    const modeSelect = screen.getByLabelText('items') as HTMLSelectElement
+    expect(modeSelect.tagName).toBe('SELECT')
+    expect(modeSelect.value).toBe('manualLiteral')
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Añadir items' }))
+    expect(onChangeSpy).toHaveBeenCalledWith([{ label: '', value: '' }])
+  })
+
+  it('ignores x-widget when its value has no entry in the closed registry, falling back to the generic patterns', () => {
+    const onChangeSpy = vi.fn()
+    render(
+      <ControlledDispatcher
+        schema={{ type: 'string', 'x-widget': 'not-a-real-widget' }}
+        initialValue="hola"
+        label="Título"
+        onChangeSpy={onChangeSpy}
+      />,
+    )
+
+    const input = screen.getByLabelText('Título')
+    expect(input).toHaveAttribute('type', 'text')
+
+    fireEvent.change(input, { target: { value: 'nuevo texto' } })
+    expect(onChangeSpy).toHaveBeenCalledWith('nuevo texto')
+  })
+
+  it('applies the generic patterns unchanged for a schema with no x-widget at all (regression)', () => {
+    const onChangeSpy = vi.fn()
+    render(
+      <ControlledDispatcher schema={{ type: 'boolean' }} initialValue={false} label="Activo" onChangeSpy={onChangeSpy} />,
+    )
+
+    const checkbox = screen.getByLabelText('Activo')
+    expect(checkbox).toHaveAttribute('type', 'checkbox')
+
+    fireEvent.click(checkbox)
+    expect(onChangeSpy).toHaveBeenCalledWith(true)
+  })
+})
+
 describe('PropertyFieldDispatcher escape hatch', () => {
   it('falls back to a disabled raw JSON textarea without throwing when the schema has no recognizable type', () => {
     const onChangeSpy = vi.fn()

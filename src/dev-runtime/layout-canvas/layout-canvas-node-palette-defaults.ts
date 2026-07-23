@@ -76,7 +76,7 @@ export function buildDefaultNodeInstance(type: LayoutNodeType): LayoutNode {
         props: {
           fieldId: generateUniqueId('field'),
           label: 'Selector',
-          items: [{ label: 'Opción 1', value: 'opcion-1' }],
+          items: [],
         },
       }
 
@@ -86,7 +86,7 @@ export function buildDefaultNodeInstance(type: LayoutNodeType): LayoutNode {
         props: {
           fieldId: generateUniqueId('field'),
           label: 'Opciones',
-          items: [{ label: 'Opción 1', value: 'opcion-1' }],
+          items: [],
         },
       }
 
@@ -96,7 +96,7 @@ export function buildDefaultNodeInstance(type: LayoutNodeType): LayoutNode {
         props: {
           fieldId: generateUniqueId('field'),
           label: 'Opciones',
-          items: [{ label: 'Opción 1', value: 'opcion-1' }],
+          items: [],
         },
       }
 

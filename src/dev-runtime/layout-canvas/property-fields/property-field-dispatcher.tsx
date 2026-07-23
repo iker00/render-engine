@@ -1,10 +1,26 @@
+import type { ComponentType } from 'react'
 import { BooleanPropertyField } from './boolean-property-field'
+import { ChoiceItemsPropertyField } from './choice-items-property-field'
 import { DiscriminatedUnionPropertyField } from './discriminated-union-property-field'
 import { EnumPropertyField } from './enum-property-field'
 import { KeyValuePropertyField } from './key-value-property-field'
 import { NumberPropertyField } from './number-property-field'
 import { RawJsonPropertyField } from './raw-json-property-field'
 import { TextPropertyField } from './text-property-field'
+
+interface WidgetComponentProps {
+  label: string
+  value: unknown
+  onChange: (value: unknown) => void
+}
+
+// Closed registry for the `x-widget` hook (D5, T4 0108): a schema fragment can opt out of every
+// generic pattern below by declaring `'x-widget': '<key>'`, and the dispatcher delegates to the
+// matching component instead. Deliberately not exported — there is no public API to register a
+// widget from outside this module, only this fixed catalog.
+const WIDGET_REGISTRY: Record<string, ComponentType<WidgetComponentProps>> = {
+  'choice-items': ChoiceItemsPropertyField,
+}
 
 export interface PropertyFieldDispatcherProps {
   schema: Record<string, unknown> | undefined
@@ -195,6 +211,15 @@ export function buildDefaultObjectForRequiredFields(schema: Record<string, unkno
 export function PropertyFieldDispatcher({ schema, value, onChange, label, required = false }: PropertyFieldDispatcherProps) {
   if (!schema || typeof schema !== 'object') {
     return <RawJsonPropertyField label={label} value={value} onChange={onChange} />
+  }
+
+  // `x-widget` hook (D5, T4 0108): takes priority over every generic pattern below. Only a schema
+  // fragment whose `x-widget` matches an entry in the closed `WIDGET_REGISTRY` is affected; any
+  // other `x-widget` value (or none) falls through to the generic detectors unchanged.
+  const widgetKey = typeof schema['x-widget'] === 'string' ? (schema['x-widget'] as string) : undefined
+  const WidgetComponent = widgetKey ? WIDGET_REGISTRY[widgetKey] : undefined
+  if (WidgetComponent) {
+    return <WidgetComponent label={label} value={value} onChange={onChange} />
   }
 
   // `body` (T7): a bare `$ref` schema (see `isBareRefSchema`) has no `type`/`anyOf`/`oneOf` this

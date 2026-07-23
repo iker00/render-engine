@@ -56,6 +56,7 @@
 
 ## Validación específica
 - Si `radioGroup.props.items` o `checkboxGroup.props.items` mezclan `value` string y number dentro del mismo campo, el config completo se rechaza antes del render.
+- Un `items` con un shape retirado (manual objeto, o dinámico sin `itemType` explícito) se rechaza con `code: invalid-layout` y ruta exacta al `props.items` del nodo. Ídem para `itemType: 'scalar'` con `label`/`value` presentes o `itemType: 'object'` sin `label`/`value`.
 - Si `checkboxGroup` declara un `defaultValue` literal no array, el config completo se rechaza antes del render.
 - Si `radioGroup` declara un `defaultValue` literal array, el config completo se rechaza antes del render.
 - Si un `defaultValue` literal múltiple contiene miembros no escalares o mezcla strings y números, el config completo se rechaza antes del render.
@@ -65,3 +66,6 @@
 
 ## Solo dentro de `form`
 - Si `radioGroup` o `checkboxGroup` aparecen fuera de un subárbol `form`, el config completo se rechaza antes del render.
+
+## Edición desde el dev editor
+El panel de propiedades del modo Editor permite configurar `props.items` de ambos nodos íntegramente desde el formulario, con el mismo widget y comportamiento que `select` (ver [[select.md#Edición desde el dev editor]] y [[../development/dev-mode-editor.md]]).

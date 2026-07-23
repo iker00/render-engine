@@ -398,28 +398,28 @@ export type ListLayoutNodeItems =
   | ListManualScalarItemsSource
   | ListManualObjectItemsSource
 
-export interface SelectDynamicItemsSource {
+export interface SelectDynamicScalarItemsSource {
   source: string
-  itemType?: 'scalar'
-  label?: string
-  value?: string
+  itemType: 'scalar'
 }
+
+export interface SelectDynamicObjectItemsSource {
+  source: string
+  itemType: 'object'
+  label: string
+  value: string
+}
+
+export type SelectDynamicItemsSource = SelectDynamicScalarItemsSource | SelectDynamicObjectItemsSource
 
 export interface SelectManualScalarItemsSource {
   values: Array<string | number>
 }
 
-export interface SelectManualObjectItemsSource {
-  values: RuntimeCollectionObjectItem[]
-  label: string
-  value: string
-}
-
 export type SelectLayoutNodeItems =
   | SelectLayoutNodeItem[]
-  | SelectDynamicItemsSource
   | SelectManualScalarItemsSource
-  | SelectManualObjectItemsSource
+  | SelectDynamicItemsSource
 
 export interface SelectLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayoutFields {
   type: 'select'

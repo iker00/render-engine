@@ -144,6 +144,39 @@ describe('buildDefaultNodeInstance: every catalog type is validly insertable (FR
   })
 })
 
+describe('items: [] por defecto para select/radioGroup/checkboxGroup (T3, RF10)', () => {
+  it.each(['select', 'radioGroup', 'checkboxGroup'] as const)(
+    'buildDefaultNodeInstance("%s") produce props.items estrictamente igual a []',
+    (type) => {
+      const node = buildDefaultNodeInstance(type) as { props: { items: unknown } }
+      expect(node.props.items).toEqual([])
+    },
+  )
+
+  it.each(['select', 'radioGroup', 'checkboxGroup'] as const)(
+    'arrastrar %s desde la paleta hasta dentro de un form existente lo inserta con props.items estrictamente igual a []',
+    async (type) => {
+      renderCanvas({
+        api: {},
+        initialPage: 'home',
+        pages: [{ id: 'home', layout: [form('formA', [])] }],
+      })
+
+      paletteDragEnd(type, { parentPath: [{ field: 'children', index: 0 }], index: 0 })
+
+      const { parsed } = await getMonacoJson()
+      const formNode = (
+        parsed.pages as Array<{ layout: Array<{ children: Array<{ type: string; props: { items: unknown } }> }> }>
+      )[0].layout[0]
+
+      expect(formNode.children).toHaveLength(1)
+      expect(formNode.children[0].type).toBe(type)
+      expect(formNode.children[0].props.items).toEqual([])
+      expect(validateRuntimeConfig(parsed).status).toBe('ready')
+    },
+  )
+})
+
 describe('LayoutCanvasNodePalette: lists the full catalog (FR8)', () => {
   it('renders a draggable entry for every supported node type, always visible without a selection', () => {
     renderCanvas({

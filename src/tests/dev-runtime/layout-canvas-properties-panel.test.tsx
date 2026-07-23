@@ -257,6 +257,130 @@ describe('LayoutCanvasPropertiesPanel regression: array without minItems on a no
   })
 })
 
+describe('LayoutCanvasPropertiesPanel choice-items widget for select/radioGroup/checkboxGroup (T5, 0108)', () => {
+  function selectNode(items: unknown = [{ label: 'Uno', value: 'uno' }]): LayoutNode {
+    return { type: 'select', props: { fieldId: 'choice', label: 'Elige', items } } as LayoutNode
+  }
+
+  function radioGroupNode(items: unknown = [{ label: 'Uno', value: 'uno' }]): LayoutNode {
+    return { type: 'radioGroup', props: { fieldId: 'choice', label: 'Elige', items } } as LayoutNode
+  }
+
+  function checkboxGroupNode(items: unknown = [{ label: 'Uno', value: 'uno' }]): LayoutNode {
+    return { type: 'checkboxGroup', props: { fieldId: 'choice', label: 'Elige', items } } as LayoutNode
+  }
+
+  it.each([
+    ['select', selectNode],
+    ['radioGroup', radioGroupNode],
+    ['checkboxGroup', checkboxGroupNode],
+  ])('renders the widget mode selector for props.items on a %s node, not the read-only raw-JSON escape hatch', (_type, buildNode) => {
+    render(<LayoutCanvasPropertiesPanel node={buildNode()} path={somePath} onCommitNodeUpdate={() => {}} />)
+
+    const itemsGroup = screen.getByRole('group', { name: 'items' })
+    const modeSelect = within(itemsGroup).getByRole('combobox') as HTMLSelectElement
+    expect(Array.from(modeSelect.options).map((option) => option.value)).toEqual(['manualLiteral', 'manualScalar', 'dynamic'])
+    // No disabled raw-JSON `<textarea>` fallback anywhere inside the items widget.
+    expect(itemsGroup.querySelectorAll('textarea')).toHaveLength(0)
+  })
+
+  it('editing a manual literal item commits props.items as a flat array of {label, value}', () => {
+    const node = selectNode([{ label: 'Uno', value: 'uno' }])
+    const onCommitNodeUpdate = vi.fn()
+    render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={onCommitNodeUpdate} />)
+
+    const itemsGroup = screen.getByRole('group', { name: 'items' })
+    const itemGroup = within(itemsGroup).getByRole('group', { name: 'items #1' })
+    fireEvent.change(within(itemGroup).getByLabelText('label', { exact: false }), { target: { value: 'Cambiado' } })
+
+    expect(onCommitNodeUpdate).toHaveBeenCalledTimes(1)
+    const [calledPath, updater] = onCommitNodeUpdate.mock.calls[0]
+    expect(calledPath).toBe(somePath)
+    const result = updater(node) as Extract<LayoutNode, { type: 'select' }>
+    expect(result.props.items).toEqual([{ label: 'Cambiado', value: 'uno' }])
+  })
+
+  it('switching the mode to manualScalar commits props.items as { values: [] }', () => {
+    const node = selectNode([{ label: 'Uno', value: 'uno' }])
+    const onCommitNodeUpdate = vi.fn()
+    render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={onCommitNodeUpdate} />)
+
+    const itemsGroup = screen.getByRole('group', { name: 'items' })
+    const modeSelect = within(itemsGroup).getByRole('combobox') as HTMLSelectElement
+    fireEvent.change(modeSelect, { target: { value: 'manualScalar' } })
+
+    expect(onCommitNodeUpdate).toHaveBeenCalledTimes(1)
+    const [, updater] = onCommitNodeUpdate.mock.calls[0]
+    const result = updater(node) as Extract<LayoutNode, { type: 'select' }>
+    expect(result.props.items).toEqual({ values: [] })
+  })
+
+  it('switching the mode to dynamic seeds { source: "", itemType: "scalar" }; editing source and switching itemType to object adds label/value', () => {
+    const node = selectNode([{ label: 'Uno', value: 'uno' }])
+    const onCommitNodeUpdate = vi.fn()
+    const { rerender } = render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={onCommitNodeUpdate} />)
+
+    const modeSelect = within(screen.getByRole('group', { name: 'items' })).getByRole('combobox') as HTMLSelectElement
+    fireEvent.change(modeSelect, { target: { value: 'dynamic' } })
+
+    expect(onCommitNodeUpdate).toHaveBeenCalledTimes(1)
+    const [, seedUpdater] = onCommitNodeUpdate.mock.calls[0]
+    const afterDynamic = seedUpdater(node) as Extract<LayoutNode, { type: 'select' }>
+    expect(afterDynamic.props.items).toEqual({ source: '', itemType: 'scalar' })
+
+    onCommitNodeUpdate.mockClear()
+    rerender(<LayoutCanvasPropertiesPanel node={afterDynamic} path={somePath} onCommitNodeUpdate={onCommitNodeUpdate} />)
+
+    const sourceField = within(screen.getByRole('group', { name: 'items' })).getByLabelText('source', { exact: false })
+    fireEvent.change(sourceField, { target: { value: 'queries.list.items' } })
+
+    expect(onCommitNodeUpdate).toHaveBeenCalledTimes(1)
+    const [, sourceUpdater] = onCommitNodeUpdate.mock.calls[0]
+    const afterSource = sourceUpdater(afterDynamic) as Extract<LayoutNode, { type: 'select' }>
+    expect(afterSource.props.items).toEqual({ source: 'queries.list.items', itemType: 'scalar' })
+
+    onCommitNodeUpdate.mockClear()
+    rerender(<LayoutCanvasPropertiesPanel node={afterSource} path={somePath} onCommitNodeUpdate={onCommitNodeUpdate} />)
+
+    const itemTypeSelect = within(screen.getByRole('group', { name: 'items' })).getByLabelText('itemType', { exact: false })
+    fireEvent.change(itemTypeSelect, { target: { value: 'object' } })
+
+    expect(onCommitNodeUpdate).toHaveBeenCalledTimes(1)
+    const [, itemTypeUpdater] = onCommitNodeUpdate.mock.calls[0]
+    const afterObject = itemTypeUpdater(afterSource) as Extract<LayoutNode, { type: 'select' }>
+    expect(afterObject.props.items).toEqual({ source: 'queries.list.items', itemType: 'object', label: '', value: '' })
+  })
+
+  // Structural regression on `resolveChoiceLikePropsSchema`: the dynamic shape's own
+  // `{ source, itemType: 'object', label, value }` variant is nested one level inside the
+  // generated `oneOf` for the third `selectItemsSchema` union branch, which itself has no
+  // top-level `type` for `resolveUnionBranch`'s generic by-shape matching to key off. Before the
+  // `items` sub-schema is swapped for the `x-widget` sentinel, that generic resolution
+  // mis-resolves a dynamic-object value to the *manual scalar* branch (the only branch whose
+  // `type` is literally `'object'`) instead of the dynamic widget fields. Asserting the dynamic
+  // fields render correctly for this exact value shape is a direct regression check that no
+  // `oneOf`/`anyOf` is left for the generic dispatcher to (mis)resolve.
+  it('renders the dynamic object-shape fields (not the manual-scalar "values" editor) when props.items is already a dynamic object value', () => {
+    const node = radioGroupNode({ source: 'queries.list.items', itemType: 'object', label: 'name', value: 'id' })
+    render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={() => {}} />)
+
+    const itemsGroup = screen.getByRole('group', { name: 'items' })
+    expect((within(itemsGroup).getByLabelText('source', { exact: false }) as HTMLInputElement).value).toBe('queries.list.items')
+    expect((within(itemsGroup).getByLabelText('itemType', { exact: false }) as HTMLSelectElement).value).toBe('object')
+    expect((within(itemsGroup).getByLabelText('label', { exact: false }) as HTMLInputElement).value).toBe('name')
+    expect((within(itemsGroup).getByLabelText('value', { exact: false }) as HTMLInputElement).value).toBe('id')
+    expect(within(itemsGroup).queryByLabelText('values', { exact: false })).not.toBeInTheDocument()
+  })
+
+  it('a different node type (e.g. input) is unaffected: its props render as before, with no choice-items widget', () => {
+    const node: LayoutNode = { type: 'input', props: { fieldId: 'name', label: 'Nombre' } } as LayoutNode
+    render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={() => {}} />)
+
+    expect(screen.getByLabelText('label', { exact: false })).toHaveValue('Nombre')
+    expect(screen.queryByRole('group', { name: 'items' })).not.toBeInTheDocument()
+  })
+})
+
 describe('LayoutCanvasPropertiesPanel discriminated union action selector (T5)', () => {
   function buttonNode(action?: Record<string, unknown>): LayoutNode {
     return { type: 'button', props: { label: 'Enviar', ...(action !== undefined ? { action } : {}) } } as LayoutNode
@@ -650,5 +774,46 @@ describe('LayoutCanvasPropertiesPanel integration with DevEditorLayer + commitCa
     const editorText = await getMonacoValue()
 
     expect(JSON.parse(editorText).pages[0].layout[0].props.text).toBe('Edited from panel')
+  })
+
+  it('editing props.items via the choice-items widget on a select node propagates to editorBuffer/Monaco (T5, 0108)', async () => {
+    const config = {
+      api: {},
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'form',
+              id: 'f1',
+              children: [
+                {
+                  type: 'select',
+                  props: {
+                    fieldId: 'choice',
+                    label: 'Elige',
+                    items: [{ label: 'Uno', value: 'uno' }],
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+      initialPage: 'home',
+    }
+    const { initialConfig, initialConfigText } = buildReadyProps(config)
+    render(<DevRuntimeReady initialConfig={initialConfig} initialConfigText={initialConfigText} />)
+
+    fireEvent.click(screen.getByTestId('dev-editor-toolbar-mode-editor'))
+    fireEvent.click(screen.getByText('Elige'))
+
+    const itemsGroup = screen.getByRole('group', { name: 'items' })
+    const modeSelect = within(itemsGroup).getByRole('combobox') as HTMLSelectElement
+    fireEvent.change(modeSelect, { target: { value: 'manualScalar' } })
+
+    const editorText = await getMonacoValue()
+
+    expect(JSON.parse(editorText).pages[0].layout[0].children[0].props.items).toEqual({ values: [] })
   })
 })
