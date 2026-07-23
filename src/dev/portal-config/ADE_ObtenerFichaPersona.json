@@ -57,6 +57,14 @@
                 "text": "{{queries.obtenerFichaPersona.data.FichaPersonaDTO.DatosIdentificativosDTO.NombreCompleto}}",
                 "level": 1
               }
+            },
+            {
+              "type": "link",
+              "props": {
+                "label": "Modificar persona",
+                "icon": "edit",
+                "href": "/carpetaciudadana/detallegenerico.aspx?tram=427&sec=24#/?personaId={{params.personaId}}"
+              }
             }
           ]
         },

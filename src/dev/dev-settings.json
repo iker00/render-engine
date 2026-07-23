@@ -1,13 +1,6 @@
-{
-
-  "initialPage": "crear-persona",
-
-  "initialParams": {
-
-    "hechoId": "2"
-
-  }
-
-}
-
-
+{
+  "initialPage": "modificar-persona",
+  "initialParams": {
+    "personaId": "19168276"
+  }
+}

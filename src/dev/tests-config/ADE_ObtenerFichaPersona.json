@@ -57,6 +57,20 @@
                 "text": "{{queries.obtenerFichaPersona.data.FichaPersonaDTO.DatosIdentificativosDTO.NombreCompleto}}",
                 "level": 1
               }
+            },
+            {
+              "type": "link",
+              "props": {
+                "label": "Modificar persona",
+                "icon": "edit",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "modificar-persona",
+                  "params": {
+                    "personaId": "params.personaId"
+                  }
+                }
+              }
             }
           ]
         },

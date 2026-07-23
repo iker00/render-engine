@@ -346,67 +346,6 @@
                       ]
                     },
                     {
-                      "type": "container",
-                      "props": {
-                        "direction": "column",
-                        "gap": "sm"
-                      },
-                      "queryStateFeedback": {
-                        "query": "modificarPersona",
-                        "states": {
-                          "idle": {
-                            "mode": "hide"
-                          },
-                          "loading": {
-                            "mode": "fallback",
-                            "fallback": [
-                              {
-                                "type": "skeleton",
-                                "props": {
-                                  "variant": "rect",
-                                  "height": "8"
-                                }
-                              }
-                            ]
-                          },
-                          "success": {
-                            "mode": "fallback",
-                            "fallback": [
-                              {
-                                "type": "alert",
-                                "props": {
-                                  "title": "Cambios guardados",
-                                  "message": "La persona se ha actualizado correctamente.",
-                                  "type": "success"
-                                }
-                              },
-                              {
-                                "type": "link",
-                                "props": {
-                                  "label": "Ver ficha",
-                                  "href": "/carpetaciudadana/detallegenerico.aspx?tram=427&sec=15#/?personaId={{params.personaId}}"
-                                }
-                              }
-                            ]
-                          },
-                          "error": {
-                            "mode": "fallback",
-                            "fallback": [
-                              {
-                                "type": "alert",
-                                "props": {
-                                  "title": "No se pudo guardar",
-                                  "message": "{{queries.modificarPersona.error.message}}",
-                                  "type": "danger"
-                                }
-                              }
-                            ]
-                          }
-                        }
-                      },
-                      "children": []
-                    },
-                    {
                       "type": "button",
                       "props": {
                         "label": "Guardar →",
@@ -415,6 +354,67 @@
                       }
                     }
                   ]
+                },
+                {
+                  "type": "container",
+                  "props": {
+                    "direction": "column",
+                    "gap": "sm"
+                  },
+                  "queryStateFeedback": {
+                    "query": "modificarPersona",
+                    "states": {
+                      "idle": {
+                        "mode": "hide"
+                      },
+                      "loading": {
+                        "mode": "fallback",
+                        "fallback": [
+                          {
+                            "type": "skeleton",
+                            "props": {
+                              "variant": "rect",
+                              "height": "8"
+                            }
+                          }
+                        ]
+                      },
+                      "success": {
+                        "mode": "fallback",
+                        "fallback": [
+                          {
+                            "type": "alert",
+                            "props": {
+                              "title": "Cambios guardados",
+                              "message": "La persona se ha actualizado correctamente.",
+                              "type": "success"
+                            }
+                          },
+                          {
+                            "type": "link",
+                            "props": {
+                              "label": "Ver ficha",
+                              "href": "/carpetaciudadana/detallegenerico.aspx?tram=427&sec=15#/?personaId={{params.personaId}}"
+                            }
+                          }
+                        ]
+                      },
+                      "error": {
+                        "mode": "fallback",
+                        "fallback": [
+                          {
+                            "type": "alert",
+                            "props": {
+                              "title": "No se pudo guardar",
+                              "message": "{{queries.modificarPersona.error.message}}",
+                              "type": "danger"
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "children": []
                 }
               ]
             }
