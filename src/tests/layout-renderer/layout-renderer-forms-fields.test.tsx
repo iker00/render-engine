@@ -531,6 +531,7 @@ describe('RuntimePage', () => {
                 label: 'Object role',
                 items: {
                   source: 'queries.searchUsers.data.results',
+                  itemType: 'object',
                   label: 'profile.name',
                   value: 'id',
                 },
@@ -540,6 +541,13 @@ describe('RuntimePage', () => {
         },
       ],
     })
+
+    expect(
+      within(screen.getByRole('combobox', { name: 'Scalar role' })).getAllByRole('option').map((option) => option.textContent),
+    ).toEqual([''])
+    expect(
+      within(screen.getByRole('combobox', { name: 'Object role' })).getAllByRole('option').map((option) => option.textContent),
+    ).toEqual([''])
 
     fireEvent.click(screen.getByRole('button', { name: 'Seed scalar results' }))
 
@@ -552,6 +560,52 @@ describe('RuntimePage', () => {
     expect(
       within(screen.getByRole('combobox', { name: 'Object role' })).getAllByRole('option').map((option) => option.textContent),
     ).toEqual(['', 'Ada', 'Grace'])
+  })
+
+  it('renders radioGroup and checkboxGroup dynamic scalar options from query-backed collections', () => {
+    renderRuntimePageWithCollectionControls({
+      id: 'dynamic-choice-groups-scalar',
+      layout: [
+        {
+          type: 'form',
+          id: 'catalog-form',
+          children: [
+            {
+              type: 'radioGroup',
+              props: {
+                fieldId: 'scalarRole',
+                label: 'Scalar role',
+                items: {
+                  source: 'queries.searchUsers.data',
+                  itemType: 'scalar',
+                },
+              },
+            },
+            {
+              type: 'checkboxGroup',
+              props: {
+                fieldId: 'scalarRoles',
+                label: 'Scalar roles',
+                items: {
+                  source: 'queries.searchUsers.data',
+                  itemType: 'scalar',
+                },
+              },
+            },
+          ],
+        },
+      ],
+    })
+
+    expect(screen.queryAllByRole('radio')).toHaveLength(0)
+    expect(screen.queryAllByRole('checkbox')).toHaveLength(0)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Seed scalar results' }))
+
+    expect(screen.getAllByRole('radio').map((radio) => radio.getAttribute('value'))).toEqual(['Ada', 'Grace'])
+    expect(screen.getAllByRole('radio').map((radio) => radio.parentElement?.textContent)).toEqual(['Ada', 'Grace'])
+    expect(screen.getAllByRole('checkbox').map((checkbox) => checkbox.getAttribute('value'))).toEqual(['Ada', 'Grace'])
+    expect(screen.getAllByRole('checkbox').map((checkbox) => checkbox.parentElement?.textContent)).toEqual(['Ada', 'Grace'])
   })
 
   it('uses interpolated dynamic select option labels and values as stored and submitted strings', async () => {
@@ -586,6 +640,7 @@ describe('RuntimePage', () => {
                 label: 'User',
                 items: {
                   source: 'queries.searchUsers.data.results',
+                  itemType: 'object',
                   label: '{{item.id}} - {{item.profile.name}}',
                   value: '{{item.meta.role}}:{{item.id}}',
                 },
@@ -649,6 +704,7 @@ describe('RuntimePage', () => {
                 label: 'Choice',
                 items: {
                   source: 'queries.searchUsers.data.results',
+                  itemType: 'object',
                   label: '{{forms.option-form.prefix}} {{item.profile.name}}/{{item.meta.role}}',
                   value: '{{forms.option-form.prefix}}:{{item.meta.role}}:{{item.id}}',
                 },
@@ -761,6 +817,7 @@ describe('RuntimePage', () => {
                 label: 'User',
                 items: {
                   source: 'queries.searchUsers.data.results',
+                  itemType: 'object',
                   label: 'profile.name',
                   value: 'id',
                 },
@@ -773,6 +830,7 @@ describe('RuntimePage', () => {
                 label: 'Roles',
                 items: {
                   source: 'queries.searchUsers.data.results',
+                  itemType: 'object',
                   label: 'meta.role',
                   value: 'id',
                 },
@@ -867,6 +925,7 @@ describe('RuntimePage', () => {
                 optionLayout: 'inline',
                 items: {
                   source: 'queries.searchUsers.data.results',
+                  itemType: 'object',
                   label: 'profile.name',
                   value: 'id',
                 },
@@ -880,6 +939,7 @@ describe('RuntimePage', () => {
                 optionLayout: 'inline',
                 items: {
                   source: 'queries.searchUsers.data.results',
+                  itemType: 'object',
                   label: 'meta.role',
                   value: 'id',
                 },
@@ -915,6 +975,7 @@ describe('RuntimePage', () => {
                 label: 'User',
                 items: {
                   source: 'queries.searchUsers.data.results',
+                  itemType: 'object',
                   label: 'profile.name',
                   value: 'id',
                 },
@@ -961,6 +1022,7 @@ describe('RuntimePage', () => {
                 label: 'User',
                 items: {
                   source: 'queries.searchUsers.data.results',
+                  itemType: 'object',
                   label: 'profile.name',
                   value: 'id',
                 },

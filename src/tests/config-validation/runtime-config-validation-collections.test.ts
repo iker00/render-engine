@@ -167,7 +167,7 @@ describe('validateRuntimeConfig', () => {
       ])
     })
 
-    it('accepts object collection shapes when they declare the required consumer mappings', () => {
+    it('accepts dynamic object collection shapes for select when they declare the required consumer mappings', () => {
       const result = validateRuntimeConfig(
         createConfigWithFormLayout({
           children: [
@@ -177,13 +177,10 @@ describe('validateRuntimeConfig', () => {
                 fieldId: 'role',
                 label: 'Role',
                 items: {
-                  values: [
-                    { id: 'admin', name: 'Admin', ignored: true },
-                    { id: 'editor', name: 'Editor' },
-                  ],
+                  source: 'queries.searchUsers.data.results',
+                  itemType: 'object',
                   label: 'name',
                   value: 'id',
-                  extra: 'drop-me',
                 },
               },
             },
@@ -231,10 +228,8 @@ describe('validateRuntimeConfig', () => {
               fieldId: 'role',
               label: 'Role',
               items: {
-                values: [
-                  { id: 'admin', name: 'Admin', ignored: true },
-                  { id: 'editor', name: 'Editor' },
-                ],
+                source: 'queries.searchUsers.data.results',
+                itemType: 'object',
                 label: 'name',
                 value: 'id',
               },
@@ -257,6 +252,131 @@ describe('validateRuntimeConfig', () => {
       })
     })
 
+    it('accepts the four supported items shapes for select, radioGroup and checkboxGroup', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithFormLayout({
+          children: [
+            {
+              type: 'select',
+              props: {
+                fieldId: 'selectManualLiteral',
+                label: 'Select (manual literal)',
+                items: [
+                  { label: 'Admin', value: 'admin' },
+                  { label: 'Editor', value: 'editor' },
+                ],
+              },
+            },
+            {
+              type: 'select',
+              props: {
+                fieldId: 'selectManualScalar',
+                label: 'Select (manual scalar)',
+                items: { values: ['admin', 'editor'] },
+              },
+            },
+            {
+              type: 'select',
+              props: {
+                fieldId: 'selectDynamicScalar',
+                label: 'Select (dynamic scalar)',
+                items: { source: 'queries.roles.data', itemType: 'scalar' },
+              },
+            },
+            {
+              type: 'select',
+              props: {
+                fieldId: 'selectDynamicObject',
+                label: 'Select (dynamic object)',
+                items: {
+                  source: 'queries.roles.data.results',
+                  itemType: 'object',
+                  label: 'name',
+                  value: 'id',
+                },
+              },
+            },
+            {
+              type: 'radioGroup',
+              props: {
+                fieldId: 'radioManualLiteral',
+                label: 'Radio (manual literal)',
+                items: [{ label: 'Yes', value: 'yes' }],
+              },
+            },
+            {
+              type: 'radioGroup',
+              props: {
+                fieldId: 'radioManualScalar',
+                label: 'Radio (manual scalar)',
+                items: { values: [1, 2] },
+              },
+            },
+            {
+              type: 'radioGroup',
+              props: {
+                fieldId: 'radioDynamicScalar',
+                label: 'Radio (dynamic scalar)',
+                items: { source: 'queries.roles.data', itemType: 'scalar' },
+              },
+            },
+            {
+              type: 'radioGroup',
+              props: {
+                fieldId: 'radioDynamicObject',
+                label: 'Radio (dynamic object)',
+                items: {
+                  source: 'queries.roles.data.results',
+                  itemType: 'object',
+                  label: '{{item.name}}',
+                  value: 'id',
+                },
+              },
+            },
+            {
+              type: 'checkboxGroup',
+              props: {
+                fieldId: 'checkboxManualLiteral',
+                label: 'Checkbox (manual literal)',
+                items: [{ label: 'A', value: 'a' }],
+              },
+            },
+            {
+              type: 'checkboxGroup',
+              props: {
+                fieldId: 'checkboxManualScalar',
+                label: 'Checkbox (manual scalar)',
+                items: { values: ['a', 'b'] },
+              },
+            },
+            {
+              type: 'checkboxGroup',
+              props: {
+                fieldId: 'checkboxDynamicScalar',
+                label: 'Checkbox (dynamic scalar)',
+                items: { source: 'queries.roles.data', itemType: 'scalar' },
+              },
+            },
+            {
+              type: 'checkboxGroup',
+              props: {
+                fieldId: 'checkboxDynamicObject',
+                label: 'Checkbox (dynamic object)',
+                items: {
+                  source: 'queries.roles.data.results',
+                  itemType: 'object',
+                  label: 'name',
+                  value: 'id',
+                },
+              },
+            },
+          ],
+        }),
+      )
+
+      expect(result.status).toBe('ready')
+    })
+
     it('accepts template strings in closed collection projection fields', () => {
       const result = validateRuntimeConfig(
         createConfigWithFormLayout({
@@ -268,6 +388,7 @@ describe('validateRuntimeConfig', () => {
                 label: 'Dynamic user',
                 items: {
                   source: 'queries.searchUsers.data.results',
+                  itemType: 'object',
                   label: '{{item.code}} - {{item.profile.name}}',
                   value: '{{item.type}}:{{item.id}}',
                 },
@@ -279,10 +400,8 @@ describe('validateRuntimeConfig', () => {
                 fieldId: 'manualUser',
                 label: 'Manual user',
                 items: {
-                  values: [
-                    { id: 'user-1', type: 'admin', code: 'A1', profile: { name: 'Ada' } },
-                    { id: 'user-2', type: 'editor', code: 'G2', profile: { name: 'Grace' } },
-                  ],
+                  source: 'queries.searchAccounts.data.results',
+                  itemType: 'object',
                   label: '{{item.code}} - {{item.profile.name}}',
                   value: '{{item.type}}:{{item.id}}',
                 },
@@ -347,6 +466,7 @@ describe('validateRuntimeConfig', () => {
                   label: 'Dynamic user',
                   items: {
                     source: 'queries.searchUsers.data.results',
+                    itemType: 'object',
                     label: 'Nombre }}',
                     value: '{{item.id',
                   },
@@ -455,7 +575,7 @@ describe('validateRuntimeConfig', () => {
       })
     })
 
-    it('rejects manual object collections when required mappings are missing', () => {
+    it('rejects manual object list collections when required mappings are missing', () => {
       expect(
         validateRuntimeConfig(
           createConfigWithPages([
@@ -482,33 +602,58 @@ describe('validateRuntimeConfig', () => {
           message: 'Page "home" has an invalid layout at "layout[0].props.items.itemText".',
         },
       })
+    })
 
-      expect(
-        validateRuntimeConfig(
-          createConfigWithFormLayout({
-            children: [
-              {
-                type: 'select',
-                props: {
-                  fieldId: 'role',
-                  label: 'Role',
-                  items: {
-                    values: [{ id: 'admin', name: 'Admin' }],
-                    label: 'name',
+    it('rejects retired and incomplete items shapes for select, radioGroup and checkboxGroup', () => {
+      const invalidItemsShapes: Array<Record<string, unknown>> = [
+        // manual object (retired shape, no compatibility adapter)
+        {
+          values: [
+            { id: 'admin', name: 'Admin' },
+            { id: 'editor', name: 'Editor' },
+          ],
+          label: 'name',
+          value: 'id',
+        },
+        // dynamic without an explicit itemType discriminator
+        { source: 'queries.roles.data.results' },
+        { source: 'queries.roles.data.results', label: 'name', value: 'id' },
+        // dynamic itemType: 'scalar' with label/value present
+        { source: 'queries.roles.data', itemType: 'scalar', label: 'name' },
+        { source: 'queries.roles.data', itemType: 'scalar', value: 'id' },
+        // dynamic itemType: 'object' missing label and/or value
+        { source: 'queries.roles.data.results', itemType: 'object', label: 'name' },
+        { source: 'queries.roles.data.results', itemType: 'object', value: 'id' },
+        { source: 'queries.roles.data.results', itemType: 'object' },
+      ]
+
+      for (const nodeType of ['select', 'radioGroup', 'checkboxGroup'] as const) {
+        for (const items of invalidItemsShapes) {
+          const result = validateRuntimeConfig(
+            createConfigWithFormLayout({
+              children: [
+                {
+                  type: nodeType,
+                  props: {
+                    fieldId: 'role',
+                    label: 'Role',
+                    items,
                   },
                 },
-              },
-            ],
-          }),
-        ),
-      ).toEqual({
-        status: 'error',
-        error: {
-          code: 'invalid-layout',
-          displayMode: 'development-only',
-          message: expect.stringContaining('layout[0].children[0].props.items.value'),
-        },
-      })
+              ],
+            }),
+          )
+
+          expect(result).toEqual({
+            status: 'error',
+            error: {
+              code: 'invalid-layout',
+              displayMode: 'development-only',
+              message: expect.stringContaining('layout[0].children[0].props.items'),
+            },
+          })
+        }
+      }
     })
 
     it('rejects ambiguous list and select collection source shapes', () => {
@@ -607,6 +752,7 @@ describe('validateRuntimeConfig', () => {
                   label: 'Role',
                   items: {
                     source: 'queries.searchUsers',
+                    itemType: 'scalar',
                   },
                 },
               },
@@ -719,7 +865,8 @@ describe('validateRuntimeConfig', () => {
                   fieldId: 'role',
                   label: 'Role',
                   items: {
-                    values: [{ id: 'admin', profile: { name: 'Admin' } }],
+                    source: 'queries.searchUsers.data.results',
+                    itemType: 'object',
                     label: 'profile.name',
                     value: 'profile[id]',
                   },
@@ -738,7 +885,7 @@ describe('validateRuntimeConfig', () => {
       })
     })
 
-    it('rejects dynamic collection sources that omit both the scalar discriminator and object mappings', () => {
+    it('rejects list dynamic collection sources that omit both the scalar discriminator and object mappings', () => {
       expect(
         validateRuntimeConfig(
           createConfigWithPages([
@@ -764,32 +911,6 @@ describe('validateRuntimeConfig', () => {
           displayMode: 'development-only',
           message:
             'Page "home" has an invalid layout at "layout[0].props.items": dynamic scalar collections must declare itemType: "scalar", and dynamic object collections must declare itemText.',
-        },
-      })
-
-      expect(
-        validateRuntimeConfig(
-          createConfigWithFormLayout({
-            children: [
-              {
-                type: 'select',
-                props: {
-                  fieldId: 'role',
-                  label: 'Role',
-                  items: {
-                    source: 'queries.searchUsers.data.results',
-                  },
-                },
-              },
-            ],
-          }),
-        ),
-      ).toEqual({
-        status: 'error',
-        error: {
-          code: 'invalid-layout',
-          displayMode: 'development-only',
-          message: expect.stringContaining('dynamic scalar collections must declare itemType: "scalar", and dynamic object collections must declare label and value'),
         },
       })
     })
@@ -822,38 +943,6 @@ describe('validateRuntimeConfig', () => {
       })
     })
 
-    it('rejects manual object select collections with heterogeneous projected value types', () => {
-      expect(
-        validateRuntimeConfig(
-          createConfigWithFormLayout({
-            children: [
-              {
-                type: 'select',
-                props: {
-                  fieldId: 'role',
-                  label: 'Role',
-                  items: {
-                    values: [
-                      { id: 'admin', name: 'Admin' },
-                      { id: 2, name: 'Editor' },
-                    ],
-                    label: 'name',
-                    value: 'id',
-                  },
-                },
-              },
-            ],
-          }),
-        ),
-      ).toEqual({
-        status: 'error',
-        error: {
-          code: 'invalid-layout',
-          displayMode: 'development-only',
-          message: expect.stringContaining('select item values must all be strings or all be numbers'),
-        },
-      })
-    })
   })
 
   describe('tokens.* gating in collection sources', () => {
@@ -895,7 +984,7 @@ describe('validateRuntimeConfig', () => {
               props: {
                 fieldId: 'role',
                 label: 'Role',
-                items: { source: 'tokens.session.value', itemText: 'label' },
+                items: { source: 'tokens.session.value', itemType: 'scalar' },
               },
             },
           ],
@@ -913,7 +1002,7 @@ describe('validateRuntimeConfig', () => {
               props: {
                 fieldId: 'role',
                 label: 'Role',
-                items: { source: 'tokens.session.value', itemText: 'label' },
+                items: { source: 'tokens.session.value', itemType: 'scalar' },
               },
             },
           ],
@@ -931,7 +1020,7 @@ describe('validateRuntimeConfig', () => {
               props: {
                 fieldId: 'roles',
                 label: 'Roles',
-                items: { source: 'tokens.session.value', itemText: 'label' },
+                items: { source: 'tokens.session.value', itemType: 'scalar' },
               },
             },
           ],
@@ -951,7 +1040,7 @@ describe('validateRuntimeConfig', () => {
               props: {
                 fieldId: 'roles',
                 label: 'Roles',
-                items: { source: 'invalid.ref' },
+                items: { source: 'invalid.ref', itemType: 'scalar' },
               },
             },
           ],

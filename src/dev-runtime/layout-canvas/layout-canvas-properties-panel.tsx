@@ -112,6 +112,38 @@ function withSubmitActionField(node: FormNode, nextValue: unknown): FormNode {
   }
 }
 
+// D6 (0108): the three node types whose `props.items` is the closed choice-items contract (T1) —
+// manual literal, manual scalar, or dynamic with a mandatory `itemType` discriminator. None of
+// these shapes share a common literal discriminant the dispatcher's generic union detectors could
+// key off, so the panel routes them through the dedicated `ChoiceItemsPropertyField` widget (T4)
+// instead, the same way `resolveTabsPropsSchema` routes `tabs.props.items` through a panel-specific
+// adapter below.
+const CHOICE_LIKE_NODE_TYPES: ReadonlySet<LayoutNode['type']> = new Set(['select', 'radioGroup', 'checkboxGroup'])
+
+/**
+ * Replaces the generated `oneOf` sub-schema of `props.items` (from Zod's `selectItemsSchema`
+ * union, T1) with the `{ 'x-widget': 'choice-items' }` sentinel the dispatcher's `x-widget` hook
+ * (T4) resolves to `ChoiceItemsPropertyField`. The rest of `props` — and its own schema-driven
+ * fields — passes through unchanged; only the `items` sub-schema is swapped out, never derived
+ * from the raw Zod union again. This keeps the union entirely out of the generic dispatcher path:
+ * `resolveUnionBranch` never sees an `anyOf`/`oneOf` for `items` to (mis)resolve by shape.
+ *
+ * Same precedent as `resolveTabsPropsSchema` above: a panel-level adapter narrows one node type's
+ * `props` schema before handing it to the dispatcher, without touching the dispatcher itself.
+ */
+function resolveChoiceLikePropsSchema(propsSchema: Record<string, unknown>): Record<string, unknown> {
+  const properties = propsSchema.properties
+  if (!isPlainObject(properties) || !('items' in properties)) return propsSchema
+
+  return {
+    ...propsSchema,
+    properties: {
+      ...properties,
+      items: { 'x-widget': 'choice-items' },
+    },
+  }
+}
+
 // RF2 (0105): label seeded onto a brand-new `tabs.props.items` entry via `handleAdd`'s generic
 // default-object builder (property-field-dispatcher.tsx). Named so a future copy change stays a
 // one-line edit.
@@ -274,6 +306,9 @@ export function LayoutCanvasPropertiesPanel({
         let effectiveSchema = resolveUnionBranch(subsectionSchema as Record<string, unknown>, currentValue)
         if (key === 'props' && node.type === 'tabs' && effectiveSchema) {
           effectiveSchema = resolveTabsPropsSchema(effectiveSchema)
+        }
+        if (key === 'props' && CHOICE_LIKE_NODE_TYPES.has(node.type) && effectiveSchema) {
+          effectiveSchema = resolveChoiceLikePropsSchema(effectiveSchema)
         }
 
         const pendingRejection = pendingRejections[key]

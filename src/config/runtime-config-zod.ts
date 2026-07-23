@@ -535,6 +535,20 @@ export const selectItemSchema = z
   })
   .strip()
 
+// Exclusive contract for props.items of select/radioGroup/checkboxGroup: manual literal
+// (array of {label, value}), manual scalar ({ values: [...] }), or dynamic with an explicit
+// itemType discriminator (scalar or object with label/value projection paths). No other shape
+// is accepted; there is no compatibility adapter for retired shapes (manual object, dynamic
+// without itemType).
+export const selectItemsSchema = z.union([
+  z.array(selectItemSchema),
+  z.object({ values: z.array(z.union([z.string(), z.number()])) }).strict(),
+  z.discriminatedUnion('itemType', [
+    z.object({ source: z.string(), itemType: z.literal('scalar') }).strict(),
+    z.object({ source: z.string(), itemType: z.literal('object'), label: z.string(), value: z.string() }).strict(),
+  ]),
+])
+
 export const selectNodeSchema = z
   .object({
     type: z.literal('select'),
@@ -543,7 +557,7 @@ export const selectNodeSchema = z
     layout: layoutNodeLayoutSchema.optional(),
     props: formFieldNodePropsSchema
       .extend({
-        items: z.unknown(),
+        items: selectItemsSchema,
         multiple: z.boolean().optional(),
         placeholder: z.string().optional(),
       })
@@ -559,7 +573,7 @@ export const radioGroupNodeSchema = z
     layout: layoutNodeLayoutSchema.optional(),
     props: formFieldNodePropsSchema
       .extend({
-        items: z.unknown(),
+        items: selectItemsSchema,
         optionLayout: z.enum(supportedChoiceGroupOptionLayoutValues).optional(),
       })
       .strip(),
@@ -574,7 +588,7 @@ export const checkboxGroupNodeSchema = z
     layout: layoutNodeLayoutSchema.optional(),
     props: formFieldNodePropsSchema
       .extend({
-        items: z.unknown(),
+        items: selectItemsSchema,
         optionLayout: z.enum(supportedChoiceGroupOptionLayoutValues).optional(),
       })
       .strip(),

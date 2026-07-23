@@ -10,7 +10,6 @@ import type {
   LayoutNodeFeedbackFields,
   RadioGroupLayoutNode,
   RuntimeBooleanFlagValidationRule,
-  RuntimeCollectionObjectItem,
   RuntimeConfigError,
   RuntimeFormFieldValidations,
   RuntimeFormValidationRuleName,
@@ -27,7 +26,7 @@ import {
   hiddenNodeSchema,
   inputNodeSchema,
   radioGroupNodeSchema,
-  selectItemSchema,
+  selectItemsSchema,
   selectNodeSchema,
   textareaNodeSchema,
   toggleNodeSchema,
@@ -1157,28 +1156,18 @@ export function validateSelectItemsContract(
   breadcrumb: BreadcrumbSegment[] = [],
   rawNode?: Record<string, unknown>,
 ): { status: 'ready'; items: SelectLayoutNode['props']['items'] } | { status: 'error'; error: RuntimeConfigError } {
-  if (Array.isArray(rawItems)) {
-    const items: SelectLayoutNode['props']['items'] = []
+  const parseResult = selectItemsSchema.safeParse(rawItems)
 
-    for (let index = 0; index < rawItems.length; index += 1) {
-      const itemResult = selectItemSchema.safeParse(rawItems[index])
+  if (!parseResult.success) {
+    const issuePath = parseResult.error.issues[0]?.path ?? []
+    const formattedPath = issuePath.map(formatPathSegment).join('')
+    return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}${formattedPath}".`, breadcrumb, rawNode)
+  }
 
-      if (!itemResult.success) {
-        const issuePath = itemResult.error.issues[0]?.path ?? []
-        const formattedPath = issuePath.map(formatPathSegment).join('')
-        return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}[${index}]${formattedPath}".`, breadcrumb, rawNode)
-      }
+  const items = parseResult.data
 
-      items.push(itemResult.data)
-    }
-
-    const scalarValuesIssue = validateSelectScalarValues(
-      (items as Array<{ label: string; value: string | number }>).map((item) => item.value),
-      path,
-      pageId,
-      breadcrumb,
-      rawNode,
-    )
+  if (Array.isArray(items)) {
+    const scalarValuesIssue = validateSelectScalarValues(items.map((item) => item.value), path, pageId, breadcrumb, rawNode)
 
     if (scalarValuesIssue) {
       return scalarValuesIssue
@@ -1190,84 +1179,8 @@ export function validateSelectItemsContract(
     }
   }
 
-  if (!isRecord(rawItems)) {
-    return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}".`, breadcrumb, rawNode)
-  }
-
-  const hasSource = 'source' in rawItems
-  const hasValues = 'values' in rawItems
-
-  if (hasSource && hasValues) {
-    return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}".`, breadcrumb, rawNode)
-  }
-
-  if (hasSource) {
-    const sourceResult = validateCollectionSource(rawItems.source, `${path}.source`, pageId, { allowItemReference: true })
-
-    if (sourceResult.status === 'error') {
-      return enrichErrorResult(sourceResult, breadcrumb, rawNode)
-    }
-
-    if (rawItems.itemType !== undefined && rawItems.itemType !== 'scalar') {
-      return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}.itemType".`, breadcrumb, rawNode)
-    }
-
-    if ((rawItems.label === undefined) !== (rawItems.value === undefined)) {
-      return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}".`, breadcrumb, rawNode)
-    }
-
-    if (rawItems.label === undefined && rawItems.value === undefined) {
-      if (rawItems.itemType !== 'scalar') {
-        return enrichedInvalidLayout(
-          `Page "${pageId}" has an invalid layout at "${path}": dynamic scalar collections must declare itemType: "scalar", and dynamic object collections must declare label and value.`,
-          breadcrumb,
-          rawNode,
-        )
-      }
-
-      return {
-        status: 'ready',
-        items: {
-          source: sourceResult.source,
-          itemType: 'scalar',
-        },
-      }
-    }
-
-    if (!isValidCollectionProjectionPath(rawItems.label)) {
-      return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}.label".`, breadcrumb, rawNode)
-    }
-
-    if (!isValidCollectionProjectionPath(rawItems.value)) {
-      return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}.value".`, breadcrumb, rawNode)
-    }
-
-    if (rawItems.itemType !== undefined) {
-      return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}".`, breadcrumb, rawNode)
-    }
-
-    return {
-      status: 'ready',
-      items: {
-        source: sourceResult.source,
-        label: rawItems.label,
-        value: rawItems.value,
-      },
-    }
-  }
-
-  if (!hasValues) {
-    return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}".`, breadcrumb, rawNode)
-  }
-
-  if (!Array.isArray(rawItems.values)) {
-    return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}.values".`, breadcrumb, rawNode)
-  }
-
-  const values = rawItems.values
-
-  if (values.every((value) => typeof value === 'string' || typeof value === 'number')) {
-    const scalarValuesIssue = validateSelectScalarValues(values, `${path}.values`, pageId, breadcrumb, rawNode)
+  if ('values' in items) {
+    const scalarValuesIssue = validateSelectScalarValues(items.values, `${path}.values`, pageId, breadcrumb, rawNode)
 
     if (scalarValuesIssue) {
       return scalarValuesIssue
@@ -1275,41 +1188,43 @@ export function validateSelectItemsContract(
 
     return {
       status: 'ready',
-      items: {
-        values,
-      },
+      items,
     }
   }
 
-  if (values.every((value) => isRecord(value))) {
-    if (!isValidCollectionProjectionPath(rawItems.label)) {
-      return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}.label".`, breadcrumb, rawNode)
-    }
+  const sourceResult = validateCollectionSource(items.source, `${path}.source`, pageId, { allowItemReference: true })
 
-    if (!isValidCollectionProjectionPath(rawItems.value)) {
-      return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}.value".`, breadcrumb, rawNode)
-    }
+  if (sourceResult.status === 'error') {
+    return enrichErrorResult(sourceResult, breadcrumb, rawNode)
+  }
 
-    const projectedValueTypeIssue = hasRuntimeTemplateDelimiter(rawItems.value)
-      ? null
-      : validateManualSelectObjectValueTypes(values as RuntimeCollectionObjectItem[], rawItems.value, `${path}.values`, pageId, breadcrumb, rawNode)
-
-    if (projectedValueTypeIssue) {
-      return projectedValueTypeIssue
-    }
-
+  if (items.itemType === 'scalar') {
     return {
       status: 'ready',
       items: {
-        values: values as RuntimeCollectionObjectItem[],
-        label: rawItems.label,
-        value: rawItems.value,
+        source: sourceResult.source,
+        itemType: 'scalar',
       },
     }
   }
 
-  const invalidIndex = values.findIndex((value) => !isRecord(value) && typeof value !== 'string' && typeof value !== 'number')
-  return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}.values[${Math.max(invalidIndex, 0)}]".`, breadcrumb, rawNode)
+  if (!isValidCollectionProjectionPath(items.label)) {
+    return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}.label".`, breadcrumb, rawNode)
+  }
+
+  if (!isValidCollectionProjectionPath(items.value)) {
+    return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}.value".`, breadcrumb, rawNode)
+  }
+
+  return {
+    status: 'ready',
+    items: {
+      source: sourceResult.source,
+      itemType: 'object',
+      label: items.label,
+      value: items.value,
+    },
+  }
 }
 
 export function validateCollectionSource(
@@ -1792,42 +1707,6 @@ function validateSelectScalarValues(
   return null
 }
 
-function validateManualSelectObjectValueTypes(
-  items: RuntimeCollectionObjectItem[],
-  valuePath: string,
-  path: string,
-  pageId: string,
-  breadcrumb: BreadcrumbSegment[] = [],
-  rawNode?: Record<string, unknown>,
-): { status: 'error'; error: RuntimeConfigError } | null {
-  let valueType: 'string' | 'number' | null = null
-
-  for (const item of items) {
-    const resolvedValue = resolveCollectionItemPathValue(item, valuePath)
-
-    if (!resolvedValue.found || (typeof resolvedValue.value !== 'string' && typeof resolvedValue.value !== 'number')) {
-      continue
-    }
-
-    if (resolvedValue.value === '') {
-      continue
-    }
-
-    const currentType = typeof resolvedValue.value as 'string' | 'number'
-
-    if (valueType === null) {
-      valueType = currentType
-      continue
-    }
-
-    if (valueType !== currentType) {
-      return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}": select item values must all be strings or all be numbers.`, breadcrumb, rawNode)
-    }
-  }
-
-  return null
-}
-
 function validateExecutionRequestParamsInCollection(
   nodes: LayoutNodeCollection,
   path: string,
@@ -2115,44 +1994,6 @@ function isValidCollectionProjectionPath(value: unknown): value is string {
 
 function isValidCollectionPathSegment(segment: string) {
   return segment.length > 0 && collectionPathSegmentPattern.test(segment)
-}
-
-function resolveCollectionItemPathValue(item: unknown, path: string) {
-  const pathSegments = path.split('.')
-  let currentValue: unknown = item
-
-  for (const segment of pathSegments) {
-    if (Array.isArray(currentValue)) {
-      if (!/^(0|[1-9]\d*)$/.test(segment)) {
-        return {
-          found: false,
-        } as const
-      }
-
-      currentValue = currentValue[Number(segment)]
-
-      if (typeof currentValue === 'undefined') {
-        return {
-          found: false,
-        } as const
-      }
-
-      continue
-    }
-
-    if (!isRecord(currentValue) || !Object.hasOwn(currentValue, segment)) {
-      return {
-        found: false,
-      } as const
-    }
-
-    currentValue = currentValue[segment]
-  }
-
-  return {
-    found: true,
-    value: currentValue,
-  } as const
 }
 
 function formatPathSegment(segment: PropertyKey): string {
