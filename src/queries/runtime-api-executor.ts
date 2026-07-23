@@ -1,11 +1,13 @@
 import { buildRuntimeApiRequest, buildInlineRuntimeApiRequest } from './runtime-api-request'
+import { encodeFilesToBase64Entries } from './runtime-file-base64-encoder'
 import type {
   ExecuteBuiltRuntimeApiRequestOptions,
   ExecuteInlineRuntimeApiOperationOptions,
   ExecuteRuntimeApiOperationOptions,
   RuntimeApiExecutionResult,
+  RuntimeApiFileInputSources,
 } from './runtime-api-types'
-import type { RuntimeApiOperation } from '../config/runtime-config'
+import type { RuntimeApiBodyValue, RuntimeApiOperation } from '../config/runtime-config'
 import type { RuntimeApiError } from './runtime-api-types'
 
 export { buildRuntimeApiRequest, buildInlineRuntimeApiRequest } from './runtime-api-request'
@@ -16,9 +18,76 @@ export type {
   ExecuteRuntimeApiOperationOptions,
   RuntimeApiError,
   RuntimeApiExecutionResult,
+  RuntimeApiFileInputSources,
   RuntimeApiRequest,
   RuntimeApiRequestBuildResult,
 } from './runtime-api-types'
+
+type ResolveFileValueOverridesResult =
+  | { status: 'ready'; fileValueOverrides: ReadonlyMap<string, RuntimeApiBodyValue[]> | undefined }
+  | { status: 'error'; error: RuntimeApiError }
+
+/**
+ * Cheap synchronous guard checked before awaiting the encoding preflight.
+ * Callers (this module and `runtime-state-provider`) must branch on this
+ * first so that the no-files path never awaits anything — awaiting an async
+ * function always defers to a microtask even when it resolves immediately,
+ * which would otherwise push the `queries/set-loading` dispatch one tick
+ * later than today for every operation, not just ones with files.
+ */
+export function hasEncodableFileInputSources(
+  fileInputSources: RuntimeApiFileInputSources | undefined,
+): fileInputSources is RuntimeApiFileInputSources {
+  return fileInputSources !== undefined && Object.keys(fileInputSources.valuesByFieldId).length > 0
+}
+
+/**
+ * Preflight step shared by the async executor entry points and by
+ * `runtime-state-provider`'s query execution path: encodes every `File[]`
+ * carried by `fileInputSources` to base64 (T1) and maps the result to the
+ * `"${formId}.${fieldId}"` keyed overrides consumed by the builder (T2).
+ *
+ * Runs before `buildRuntimeApiRequest`/`buildInlineRuntimeApiRequest` — the
+ * builder itself stays synchronous and never sees raw `File` values. Callers
+ * should only await this after checking `hasEncodableFileInputSources`.
+ */
+export async function resolveFileInputSourcesOverrides(
+  fileInputSources: RuntimeApiFileInputSources | undefined,
+): Promise<ResolveFileValueOverridesResult> {
+  if (!hasEncodableFileInputSources(fileInputSources)) {
+    return { status: 'ready', fileValueOverrides: undefined }
+  }
+
+  const fieldEntries = Object.entries(fileInputSources.valuesByFieldId)
+
+  const encodedFields = await Promise.all(
+    fieldEntries.map(async ([fieldId, files]) => ({
+      fieldId,
+      encodeResult: await encodeFilesToBase64Entries(files),
+    })),
+  )
+
+  const fileValueOverrides = new Map<string, RuntimeApiBodyValue[]>()
+
+  for (const { fieldId, encodeResult } of encodedFields) {
+    if (encodeResult.status === 'error') {
+      return {
+        status: 'error',
+        error: {
+          code: 'request-build-failed',
+          message: `Could not encode the selected files for field "${fieldId}" in form "${fileInputSources.formId}".`,
+        },
+      }
+    }
+
+    fileValueOverrides.set(
+      `${fileInputSources.formId}.${fieldId}`,
+      encodeResult.entries as unknown as RuntimeApiBodyValue[],
+    )
+  }
+
+  return { status: 'ready', fileValueOverrides }
+}
 
 export async function executeRuntimeApiOperation({
   config,
@@ -27,8 +96,21 @@ export async function executeRuntimeApiOperation({
   requestParams,
   iterationContext,
   hiddenFormFields,
+  fileInputSources,
   fetch: fetchImplementation = fetch,
 }: ExecuteRuntimeApiOperationOptions): Promise<RuntimeApiExecutionResult> {
+  let fileValueOverrides: ReadonlyMap<string, RuntimeApiBodyValue[]> | undefined
+
+  if (hasEncodableFileInputSources(fileInputSources)) {
+    const overridesResult = await resolveFileInputSourcesOverrides(fileInputSources)
+
+    if (overridesResult.status === 'error') {
+      return overridesResult
+    }
+
+    fileValueOverrides = overridesResult.fileValueOverrides
+  }
+
   const requestResult = buildRuntimeApiRequest({
     config,
     operationName,
@@ -36,6 +118,7 @@ export async function executeRuntimeApiOperation({
     requestParams,
     iterationContext,
     hiddenFormFields,
+    fileValueOverrides,
   })
 
   if (requestResult.status === 'error') {
@@ -55,8 +138,21 @@ export async function executeInlineRuntimeApiOperation({
   requestParams,
   iterationContext,
   hiddenFormFields,
+  fileInputSources,
   fetch: fetchImplementation = fetch,
 }: ExecuteInlineRuntimeApiOperationOptions): Promise<RuntimeApiExecutionResult> {
+  let fileValueOverrides: ReadonlyMap<string, RuntimeApiBodyValue[]> | undefined
+
+  if (hasEncodableFileInputSources(fileInputSources)) {
+    const overridesResult = await resolveFileInputSourcesOverrides(fileInputSources)
+
+    if (overridesResult.status === 'error') {
+      return overridesResult
+    }
+
+    fileValueOverrides = overridesResult.fileValueOverrides
+  }
+
   const requestResult = buildInlineRuntimeApiRequest({
     operation,
     operationName,
@@ -64,6 +160,7 @@ export async function executeInlineRuntimeApiOperation({
     requestParams,
     iterationContext,
     hiddenFormFields,
+    fileValueOverrides,
   })
 
   if (requestResult.status === 'error') {

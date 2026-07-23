@@ -4,15 +4,22 @@ import { useContext, useMemo, useReducer, useRef } from 'react'
 import { useRuntimeTokenScheduler } from '../runtime-tokens'
 import type {
   NavigateToRuntimeUiAction,
+  RuntimeApiBodyValue,
   RuntimeApiRequestParams,
   RuntimeConfig,
   RuntimeConfigValue,
   RuntimePageConfig,
   RuntimePreloadConfig,
 } from '../../config/runtime-config'
-import { buildRuntimeApiRequest, buildInlineRuntimeApiRequest, executeBuiltRuntimeApiRequest } from '../../queries/runtime-api-executor'
+import {
+  buildRuntimeApiRequest,
+  buildInlineRuntimeApiRequest,
+  executeBuiltRuntimeApiRequest,
+  hasEncodableFileInputSources,
+  resolveFileInputSourcesOverrides,
+} from '../../queries/runtime-api-executor'
 import type { RuntimeApiOperation } from '../../config/runtime-config'
-import type { RuntimeApiHiddenFormFields } from '../../queries/runtime-api-types'
+import type { RuntimeApiFileInputSources, RuntimeApiHiddenFormFields } from '../../queries/runtime-api-types'
 import {
   areBrowserHashNavigationEntriesEqual,
   createBrowserHashNavigationHash,
@@ -135,6 +142,7 @@ async function executeQueryOperationWithSnapshot({
   requestParams,
   iterationContext,
   hiddenFormFields,
+  fileInputSources,
   fetchImplementation,
   skipLoadingDispatch = false,
 }: {
@@ -145,9 +153,35 @@ async function executeQueryOperationWithSnapshot({
   requestParams?: RuntimeApiRequestParams
   iterationContext?: RuntimeIterationContext
   hiddenFormFields?: RuntimeApiHiddenFormFields
+  fileInputSources?: RuntimeApiFileInputSources
   fetchImplementation?: typeof fetch
   skipLoadingDispatch?: boolean
 }) {
+  // Only await the encoding preflight when there are files to encode: awaiting
+  // an async function always defers to a microtask even if it resolves
+  // immediately, which would otherwise push the `queries/set-loading` dispatch
+  // below one tick later than today for every operation, not just uploads.
+  let fileValueOverrides: ReadonlyMap<string, RuntimeApiBodyValue[]> | undefined
+
+  if (hasEncodableFileInputSources(fileInputSources)) {
+    const overridesResult = await resolveFileInputSourcesOverrides(fileInputSources)
+
+    if (overridesResult.status === 'error') {
+      dispatch({
+        type: 'queries/set-error',
+        payload: {
+          queryName: operationName,
+          error: overridesResult.error satisfies RuntimeQueryError,
+          requestSignature: null,
+        },
+      })
+
+      return overridesResult
+    }
+
+    fileValueOverrides = overridesResult.fileValueOverrides
+  }
+
   const requestResult = buildRuntimeApiRequest({
     config,
     operationName,
@@ -155,6 +189,7 @@ async function executeQueryOperationWithSnapshot({
     requestParams,
     iterationContext,
     hiddenFormFields,
+    fileValueOverrides,
   })
 
   if (requestResult.status === 'error') {
@@ -784,6 +819,7 @@ export function useRuntimeStateActions() {
         requestParams?: RuntimeApiRequestParams
         iterationContext?: RuntimeIterationContext
         hiddenFormFields?: RuntimeApiHiddenFormFields
+        fileInputSources?: RuntimeApiFileInputSources
       },
     ) => {
       if (editModeContext !== null && editModeContext.active) {
@@ -798,6 +834,7 @@ export function useRuntimeStateActions() {
         requestParams: options?.requestParams,
         iterationContext: options?.iterationContext,
         hiddenFormFields: options?.hiddenFormFields,
+        fileInputSources: options?.fileInputSources,
         fetchImplementation: options?.fetch,
       })
     },

@@ -14,6 +14,17 @@ export interface RuntimeApiHiddenFormFields {
   fieldIds: ReadonlySet<string>
 }
 
+/**
+ * Channel carrying raw `File[]` selections for a form's file-like fields,
+ * keyed by field id. The executor encodes each array to base64 in a preflight
+ * step (T3) and maps it into `fileValueOverrides` before the builder runs —
+ * this type never reaches `buildRuntimeApiRequest`/`buildInlineRuntimeApiRequest`.
+ */
+export interface RuntimeApiFileInputSources {
+  formId: string
+  valuesByFieldId: Record<string, readonly File[]>
+}
+
 export interface BuildRuntimeApiRequestOptions {
   config: RuntimeConfig
   operationName: string
@@ -21,6 +32,7 @@ export interface BuildRuntimeApiRequestOptions {
   requestParams?: RuntimeApiRequestParams
   iterationContext?: RuntimeIterationContext
   hiddenFormFields?: RuntimeApiHiddenFormFields
+  fileValueOverrides?: ReadonlyMap<string, RuntimeApiBodyValue[]>
 }
 
 export interface BuildInlineRuntimeApiRequestOptions {
@@ -30,6 +42,7 @@ export interface BuildInlineRuntimeApiRequestOptions {
   requestParams?: RuntimeApiRequestParams
   iterationContext?: RuntimeIterationContext
   hiddenFormFields?: RuntimeApiHiddenFormFields
+  fileValueOverrides?: ReadonlyMap<string, RuntimeApiBodyValue[]>
 }
 
 export interface RuntimeApiRequest {
@@ -74,10 +87,12 @@ export type RuntimeApiRequestBuildResult =
 
 export interface ExecuteRuntimeApiOperationOptions extends BuildRuntimeApiRequestOptions {
   fetch?: typeof fetch
+  fileInputSources?: RuntimeApiFileInputSources
 }
 
 export interface ExecuteInlineRuntimeApiOperationOptions extends BuildInlineRuntimeApiRequestOptions {
   fetch?: typeof fetch
+  fileInputSources?: RuntimeApiFileInputSources
 }
 
 export interface ExecuteBuiltRuntimeApiRequestOptions {

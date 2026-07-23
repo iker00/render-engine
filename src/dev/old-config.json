@@ -520,7 +520,8 @@
                 "items": {
                   "source": "queries.searchUsers.data",
                   "label": "name",
-                  "value": "id"
+                  "value": "id",
+                  "itemType": "object"
                 },
                 "defaultValue": "params.authorId"
               },
@@ -1300,7 +1301,8 @@
                       "icon": "user",
                       "source": "queries.searchUsers.data",
                       "label": "name",
-                      "value": "id"
+                      "value": "id",
+                      "itemType": "object"
                     },
                     "defaultValue": "queries.getPost.data.0.userId"
                   }
@@ -1359,7 +1361,8 @@
               "personal_nacimiento": "forms.dynamicForm.personal_nacimiento",
               "personal_estadoCivil": "forms.dynamicForm.personal_estadoCivil",
               "company_cif": "forms.dynamicForm.company_cif",
-              "hidden_field": "forms.dynamicForm.hidden_field"
+              "hidden_field": "forms.dynamicForm.hidden_field",
+              "images": "forms.dynamicForm.image"
             }
           },
           "children": [

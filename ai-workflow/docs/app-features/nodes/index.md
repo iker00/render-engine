@@ -49,7 +49,7 @@ Los conceptos transversales (`visibility`, `queryStateFeedback`, referencias din
 | [choice-groups.md](./choice-groups.md) | `radioGroup` y `checkboxGroup`, `optionLayout: vertical | inline`. |
 | [toggle.md](./toggle.md) | `toggle` — interruptor booleano on/off con `labelPosition` (`top`/`inline`), `required` exige `true`, valor boolean en store y payload. |
 | [hidden.md](./hidden.md) | `hidden` — campo sin render que aporta un valor fijo o dinámico al payload del submit, inicialización no lazy, no participa en validación ni en `visibility`. |
-| [file-input.md](./file-input.md) | Selector de ficheros dentro de formulario, preview inmediata, validaciones client-side, serialización multipart en submit. |
+| [file-input.md](./file-input.md) | Selector de ficheros dentro de formulario, preview inmediata, validaciones client-side, serialización JSON+base64 en submit como campo referenciable. |
 
 ## Nodos de gestión de ficheros
 

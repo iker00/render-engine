@@ -18,7 +18,7 @@ No es histórico acumulado ni sustituto de las fichas funcionales. El detalle es
 | Navegación y páginas | estable | [navigation/](./app-features/navigation/index.md) | `0046` |
 | Accesibilidad | estable | [nodes/](./app-features/nodes/index.md), [queries/](./app-features/queries/index.md), [navigation/](./app-features/navigation/index.md) | `0046` |
 | Desarrollo local | estable | [development/](./app-features/development/index.md) | `0108` |
-| Subida de archivos | estable | [nodes/file-manager.md](./app-features/nodes/file-manager.md), [nodes/file-input.md](./app-features/nodes/file-input.md), [forms/validation-rules.md](./app-features/forms/validation-rules.md) | `0090` |
+| Subida de archivos | estable | [nodes/file-manager.md](./app-features/nodes/file-manager.md), [nodes/file-input.md](./app-features/nodes/file-input.md), [forms/validation-rules.md](./app-features/forms/validation-rules.md), [forms/submit.md](./app-features/forms/submit.md) | `0109` |
 | Theming declarativo | fuera de v1 | — | — |
 | Tokens de autenticación | estable | [auth/tokens.md](./app-features/auth/tokens.md) | `0078` |
 | Procesamiento remoto de tablas | fuera de v1 | — | — |
