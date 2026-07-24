@@ -3580,7 +3580,10 @@
                     "multiple": false,
                     "validations": {
                       "accept": {
-                        "value": ["image/jpeg", "image/png"],
+                        "value": [
+                          "image/jpeg",
+                          "image/png"
+                        ],
                         "message": "Solo JPG o PNG"
                       },
                       "maxFileSize": {
@@ -3617,7 +3620,9 @@
                     "fieldId": "docsField",
                     "label": "Documentos adjuntos",
                     "validations": {
-                      "required": { "value": true },
+                      "required": {
+                        "value": true
+                      },
                       "maxFiles": {
                         "value": 3,
                         "message": "Maximo {{value}} ficheros"
@@ -3712,10 +3717,22 @@
                         "label": "Region",
                         "tooltip": "Selecciona la comunidad autonoma",
                         "items": [
-                          { "label": "Madrid", "value": "mad" },
-                          { "label": "Cataluna", "value": "cat" },
-                          { "label": "Andalucia", "value": "and" },
-                          { "label": "Pais Vasco", "value": "pvs" }
+                          {
+                            "label": "Madrid",
+                            "value": "mad"
+                          },
+                          {
+                            "label": "Cataluna",
+                            "value": "cat"
+                          },
+                          {
+                            "label": "Andalucia",
+                            "value": "and"
+                          },
+                          {
+                            "label": "Pais Vasco",
+                            "value": "pvs"
+                          }
                         ]
                       }
                     }
@@ -4259,8 +4276,14 @@
                     "label": "Tipo de cliente",
                     "optionLayout": "inline",
                     "items": [
-                      { "label": "Particular", "value": "individual" },
-                      { "label": "Empresa", "value": "company" }
+                      {
+                        "label": "Particular",
+                        "value": "individual"
+                      },
+                      {
+                        "label": "Empresa",
+                        "value": "company"
+                      }
                     ]
                   }
                 },

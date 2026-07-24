@@ -13,6 +13,7 @@ La configuración parte de tres bloques principales:
 Bloques opcionales:
 - `translations`: objeto opcional que define un catálogo de traducciones por idioma. Su estructura es un mapa cuyas claves son strings arbitrarios (claves de traducción) y cuyos valores son mapas idioma-string. Véase [[../references/reference-resolution.md]] para superficies admitidas y semántica de fallback.
 - `tokens`: objeto opcional que define un catálogo de tokens de autenticación nombrados, cada uno con un valor inicial y refresco opcional proactivo. Véase [[../auth/tokens.md]] para configuración, ciclo de vida y refresco automático.
+- `preloads`: array opcional y ordenado de precargas globales de aplicación, hermano de `api`/`pages`/`initialPage`. Se dispara una única vez por carga del runtime, sin depender de `initialPage` ni de `pageEntry`. Reutiliza el mismo shape de entrada que `pages[].preloads` con reglas más restrictivas (ver más abajo). Véase [[../queries/preloads.md]] para el modelo completo de ejecución, reintentos y feedback.
 
 ## Modelo de página
 Cada página debe incluir:
@@ -26,12 +27,19 @@ Campos opcionales:
 La página ya no depende de `description` fuera del árbol `layout`.
 
 ## Shape de `preloads`
+`pages[].preloads` y el bloque raíz `preloads` comparten el mismo shape de entrada:
 - cada entrada debe ser un objeto con exactamente una clave no vacía cuyo nombre actúa como `operationName`
 - el valor de esa clave debe ser `{}` o un objeto con `query`, `body` y/o `headers`
 - `query`, `body` y `headers` reutilizan exactamente el mismo contrato de `RuntimeApiRequestParams` ya soportado por `executeOperation`
 - el runtime normaliza internamente cada entrada a `{ operationName, requestParams }`
-- dentro de una misma página no se admite repetir el mismo `operationName`, aunque las requests declaradas fueran distintas
+- dentro de un mismo bloque (una página o el bloque raíz) no se admite repetir el mismo `operationName`, aunque las requests declaradas fueran distintas
 - el shape histórico `preloads: ["loadUsers"]` ya no forma parte del contrato soportado y se rechaza antes del render
+
+El bloque raíz `preloads` es más restrictivo que `pages[].preloads`:
+- no admite `when`; una entrada con `when` se rechaza en bootstrap con ruta exacta `preloads[i].when`
+- no admite referencias `item.*` en `query`/`body`/`headers` (no existe contexto de iteración a nivel de arranque de aplicación)
+- cada `operationName` referenciado debe existir en el catálogo `api`, igual que en `pages[].preloads`
+- ausencia del bloque o `preloads: []` se comportan exactamente igual que no declararlo
 
 ## Shape general del `layout`
 `layout` ya no usa un nodo raíz artificial. La colección puede empezar directamente con varios bloques hermanos y su orden define el orden visible de renderizado.

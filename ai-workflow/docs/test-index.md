@@ -28,7 +28,8 @@ src/tests/
 - `helpers.ts` — helpers compartidos por todos los ficheros de validación (sin tests)
 - `runtime-config-root-zod.test.ts` — esquema Zod raíz de la config
 - `read-runtime-config.test.ts` — lectura y normalización de la config desde el DOM
-- `runtime-config-validation-preloads.test.ts` — layout raíz básico, preloads: aceptación y rechazo (~450 líneas)
+- `runtime-config-validation-preloads.test.ts` — layout raíz básico, preloads por página: aceptación y rechazo (~450 líneas)
+- `runtime-config-validation-global-preloads.test.ts` — bloque raíz `preloads` (feature `0110`): aceptación sin bloque/vacío/con entradas, cross-check contra el catálogo `api`, rechazo de `when`, `operationName` duplicado, shape inválido, `preloads` no-array (~nuevo)
 - `runtime-config-validation-buttons.test.ts` — botones y acciones: navigateTo, goBack, executeOperation, resetForm, leaf nodes, validación estructural y cruzada del nodo `link` (~700 líneas)
 - `runtime-config-validation-qsf.test.ts` — queryStateFeedback: estados, fallback, rechazo (~430 líneas)
 - `runtime-config-validation-forms-validations.test.ts` — formularios: aceptación, normalización de reglas de validación (~580 líneas)
@@ -96,6 +97,7 @@ src/tests/
 - `runtime-state-modal.test.tsx` — estado del modal, acción open/close, regla uno a la vez, cierre por navegación/page-entry, identidad por iteración (~350 líneas)
 - `runtime-state-validations-when.test.tsx` — validación condicional `when`: required/minLength/pattern con condición cumplida/no cumplida, varias reglas con when sin match, mezcla con/sin when, retrocompatibilidad sin when, reevaluación local, referencia queries.*, referencia ausente (~nuevo)
 - `runtime-state-edit-mode-suppression.test.tsx` — supresión centralizada de acciones (`useRuntimeStateActions`, T1) bajo `LayoutEditModeProvider`: comportamiento base sin provider, supresión de navegación/operaciones/submit con `{ active: true }`, ejecución real sin suprimir con `{ active: false }` (modo Visual), integración con nodos de layout renderizados bajo el provider (~nuevo)
+- `runtime-state-global-preloads-init.test.tsx` — siembra de `queries.*` en el estado inicial para el bloque raíz `preloads` (feature `0110`, `planGlobalPreloads`/`createRuntimeStateFromBrowserHash`): sin bloque/con `[]` sin nuevas claves, seed `loading` con `requestSignature` byte a byte igual al de `buildRuntimeApiRequest`, seed `loading`/`requestSignature: null` para operación desconocida (marcador, sin error real todavía), no sobrescritura de `dataValues` ya presentes, pureza de `planGlobalPreloads`, misma firma cuando el `operationName` coincide con `pages[].preloads` de la página inicial (~nuevo)
 
 ## runtime/
 
@@ -124,6 +126,8 @@ src/tests/
 - `runtime-table-processing.test.ts` — filtrado, ordenación y procesamiento local de tablas
 - `runtime-ui-actions.test.tsx` — ejecución de acciones UI (clicks, submit) y delegación al executor compartido
 - `runtime-grid-drop-zone-rects.test.ts` — función pura `computeGridDropZoneRects`: geometría de las zonas de inserción overlay de un `container` grid (barra vertical límite/intermedia, altura por fila, salto de fila por wrap, clamp en los bordes del `<section>`, configurabilidad de ancho de zona y tolerancia de "misma fila"), sin DOM ni React (~nuevo)
+- `runtime-api-retry.test.ts` — primitiva pura `runRuntimeApiRequestWithRetries` (feature `0110`, `src/queries/runtime-api-retry.ts`): éxito en el primer intento, éxito tras un fallo previo, agotamiento de `maxAttempts` con el error del último intento, `GLOBAL_PRELOAD_MAX_ATTEMPTS === 3`, ausencia de espera artificial entre intentos, propagación de excepciones sin capturarlas (~nuevo)
+- `runtime-global-preloads.test.tsx` — disparo end-to-end del bloque raíz `preloads` (feature `0110`, `useRuntimeGlobalPreloads`): fetch único al montar sin depender de `initialPage`, render no bloqueante de la página inicial, transición de `queryStateFeedback` `loading → success/error`, ausencia de relanzamiento al navegar y volver, reintentos acotados (agotados y con éxito en el segundo intento), regresión sin bloque `preloads`, dedup con `pages[].preloads` por firma coincidente, convivencia con ejecución manual concurrente (latest-only), fallos deterministas de compose (`operation-not-found`, `request-build-failed`) sin `fetch`, ejecución única bajo `StrictMode` (~nuevo)
 
 ## dev-runtime/
 
