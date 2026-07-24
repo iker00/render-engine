@@ -9,14 +9,34 @@ import {
 import { invalidLayout } from './runtime-config-validation-errors'
 import { validateWhenCondition } from './validate-actions-visibility'
 
-export function validatePagePreloads(
+type ValidateRuntimeApiRequestParams = (
+  requestParams: RuntimeApiRequestParams,
+  path: string,
+  pageId: string,
+) => { status: 'error'; error: RuntimeConfigError } | null
+
+type PreloadEntriesWhenPolicy =
+  | { readonly kind: 'allow'; readonly allowItem: boolean }
+  | { readonly kind: 'reject' }
+
+interface PreloadEntriesModeConfig {
+  // Base path used to build every error message for this mode, e.g. `pages[0].preloads` or `preloads`.
+  readonly pathPrefix: string
+  // Identifier forwarded to validateRuntimeApiRequestParams/validateWhenCondition and used to strip their
+  // generic "Page "<pageId>" has an invalid layout at "..." prefix before applying messageLabel.
+  readonly pageId: string
+  // Text prepended to every message produced by this mode, e.g. `The page at` or `The runtime config at`.
+  readonly messageLabel: string
+  readonly when: PreloadEntriesWhenPolicy
+  // When provided, every operationName is cross-checked against this catalog before its requestParams
+  // are validated. Only the root `preloads` block uses this; pages[].preloads leaves it undefined.
+  readonly operationNames?: ReadonlySet<string>
+}
+
+function validatePreloadEntries(
   rawPreloads: unknown[] | undefined,
-  pageIndex: number,
-  validateRuntimeApiRequestParams: (
-    requestParams: RuntimeApiRequestParams,
-    path: string,
-    pageId: string,
-  ) => { status: 'error'; error: RuntimeConfigError } | null,
+  modeConfig: PreloadEntriesModeConfig,
+  validateRuntimeApiRequestParams: ValidateRuntimeApiRequestParams,
 ): { status: 'ready'; preloads?: RuntimePreloadConfig[] } | { status: 'error'; error: RuntimeConfigError } {
   if (rawPreloads === undefined) {
     return {
@@ -24,6 +44,7 @@ export function validatePagePreloads(
     }
   }
 
+  const { pathPrefix, pageId, messageLabel, when: whenPolicy, operationNames } = modeConfig
   const preloads: RuntimePreloadConfig[] = []
   const seenOperationNames = new Set<string>()
 
@@ -31,30 +52,36 @@ export function validatePagePreloads(
     const rawPreload = rawPreloads[preloadIndex]
 
     if (!isRecord(rawPreload)) {
-      return invalidPreloadEntry(pageIndex, preloadIndex)
+      return invalidPreloadEntry(pathPrefix, messageLabel, preloadIndex)
     }
 
     const entries = Object.entries(rawPreload)
 
     if (entries.length === 0 || entries.length > 2) {
-      return invalidPreloadEntry(pageIndex, preloadIndex)
+      return invalidPreloadEntry(pathPrefix, messageLabel, preloadIndex)
     }
 
     if (entries.length === 2 && !entries.some(([key]) => key === 'when')) {
-      return invalidPreloadEntry(pageIndex, preloadIndex)
+      return invalidPreloadEntry(pathPrefix, messageLabel, preloadIndex)
     }
 
     const operationEntry = entries.find(([key]) => key !== 'when')
 
     if (!operationEntry) {
-      return invalidPreloadEntry(pageIndex, preloadIndex)
+      return invalidPreloadEntry(pathPrefix, messageLabel, preloadIndex)
     }
 
     const [operationName, rawRequestParams] = operationEntry
     const rawWhen = rawPreload['when']
 
     if (operationName.trim().length === 0) {
-      return invalidPreloadEntry(pageIndex, preloadIndex)
+      return invalidPreloadEntry(pathPrefix, messageLabel, preloadIndex)
+    }
+
+    if (operationNames && !operationNames.has(operationName)) {
+      return invalidLayout(
+        `${messageLabel} "${getPreloadPath(pathPrefix, preloadIndex, operationName)}": unknown operation "${operationName}".`,
+      )
     }
 
     const requestParamsResult = runtimeApiRequestParamsSchema.safeParse(rawRequestParams)
@@ -63,33 +90,33 @@ export function validatePagePreloads(
       const issuePath = requestParamsResult.error.issues[0]?.path ?? []
 
       if (issuePath[0] === 'query') {
-        return mapPreloadRequestQueryIssue(pageIndex, preloadIndex, operationName, rawRequestParams, issuePath.slice(1))
+        return mapPreloadRequestQueryIssue(pathPrefix, messageLabel, preloadIndex, operationName, rawRequestParams, issuePath.slice(1))
       }
 
       if (issuePath[0] === 'headers') {
-        return mapPreloadRequestHeadersIssue(pageIndex, preloadIndex, operationName, rawRequestParams, issuePath.slice(1))
+        return mapPreloadRequestHeadersIssue(pathPrefix, messageLabel, preloadIndex, operationName, rawRequestParams, issuePath.slice(1))
       }
 
       if (issuePath[0] === 'body') {
-        return mapPreloadRequestBodyIssue(pageIndex, preloadIndex, operationName, rawRequestParams, issuePath.slice(1))
+        return mapPreloadRequestBodyIssue(pathPrefix, messageLabel, preloadIndex, operationName, rawRequestParams, issuePath.slice(1))
       }
 
-      return invalidLayout(`The page at "${getPreloadPath(pageIndex, preloadIndex, operationName)}" must be an object.`)
+      return invalidLayout(`${messageLabel} "${getPreloadPath(pathPrefix, preloadIndex, operationName)}" must be an object.`)
     }
 
-    const requestParamsPath = getPreloadPath(pageIndex, preloadIndex, operationName)
+    const requestParamsPath = getPreloadPath(pathPrefix, preloadIndex, operationName)
     const requestParamsIssue = validateRuntimeApiRequestParams(
       requestParamsResult.data as RuntimeApiRequestParams,
       requestParamsPath,
-      `pages[${pageIndex}]`,
+      pageId,
     )
 
     if (requestParamsIssue) {
-      return normalizePagePreloadRequestParamsIssue(requestParamsIssue, pageIndex)
+      return normalizePreloadRequestParamsIssue(requestParamsIssue, pageId, messageLabel)
     }
 
     if (seenOperationNames.has(operationName)) {
-      return invalidLayout(`The page at "pages[${pageIndex}].preloads" contains duplicate operationName "${operationName}".`)
+      return invalidLayout(`${messageLabel} "${pathPrefix}" contains duplicate operationName "${operationName}".`)
     }
 
     seenOperationNames.add(operationName)
@@ -100,11 +127,16 @@ export function validatePagePreloads(
     }
 
     if (rawWhen !== undefined) {
-      const whenPath = `pages[${pageIndex}].preloads[${preloadIndex}].when`
-      const whenResult = validateWhenCondition(rawWhen, whenPath, `pages[${pageIndex}]`, { allowItem: false })
+      const whenPath = `${pathPrefix}[${preloadIndex}].when`
+
+      if (whenPolicy.kind === 'reject') {
+        return invalidLayout(`${messageLabel} "${whenPath}" is not supported for this preloads block.`)
+      }
+
+      const whenResult = validateWhenCondition(rawWhen, whenPath, pageId, { allowItem: whenPolicy.allowItem })
 
       if (whenResult.status === 'error') {
-        return normalizePagePreloadRequestParamsIssue(whenResult, pageIndex)
+        return normalizePreloadRequestParamsIssue(whenResult, pageId, messageLabel)
       }
 
       preloadConfig.when = whenResult.when
@@ -119,84 +151,124 @@ export function validatePagePreloads(
   }
 }
 
-function invalidPreloadEntry(
+export function validatePagePreloads(
+  rawPreloads: unknown[] | undefined,
   pageIndex: number,
-  preloadIndex: number,
-): { status: 'error'; error: RuntimeConfigError } {
-  return invalidLayout(
-    `The page at "pages[${pageIndex}].preloads[${preloadIndex}]" must be an object with exactly one non-empty operationName key.`,
+  validateRuntimeApiRequestParams: ValidateRuntimeApiRequestParams,
+): { status: 'ready'; preloads?: RuntimePreloadConfig[] } | { status: 'error'; error: RuntimeConfigError } {
+  return validatePreloadEntries(
+    rawPreloads,
+    {
+      pathPrefix: `pages[${pageIndex}].preloads`,
+      pageId: `pages[${pageIndex}]`,
+      messageLabel: 'The page at',
+      when: { kind: 'allow', allowItem: false },
+    },
+    validateRuntimeApiRequestParams,
   )
 }
 
-export function getPreloadPath(pageIndex: number, preloadIndex: number, operationName: string): string {
-  return `pages[${pageIndex}].preloads[${preloadIndex}].${operationName}`
+export function validateGlobalPreloads(
+  rawPreloads: unknown[] | undefined,
+  validateRuntimeApiRequestParams: ValidateRuntimeApiRequestParams,
+  operationNames: ReadonlySet<string>,
+): { status: 'ready'; preloads?: RuntimePreloadConfig[] } | { status: 'error'; error: RuntimeConfigError } {
+  return validatePreloadEntries(
+    rawPreloads,
+    {
+      pathPrefix: 'preloads',
+      pageId: 'preloads',
+      messageLabel: 'The runtime config has an invalid layout at',
+      when: { kind: 'reject' },
+      operationNames,
+    },
+    validateRuntimeApiRequestParams,
+  )
+}
+
+function invalidPreloadEntry(
+  pathPrefix: string,
+  messageLabel: string,
+  preloadIndex: number,
+): { status: 'error'; error: RuntimeConfigError } {
+  return invalidLayout(
+    `${messageLabel} "${pathPrefix}[${preloadIndex}]" must be an object with exactly one non-empty operationName key.`,
+  )
+}
+
+export function getPreloadPath(pathPrefix: string, preloadIndex: number, operationName: string): string {
+  return `${pathPrefix}[${preloadIndex}].${operationName}`
 }
 
 function mapPreloadRequestQueryIssue(
-  pageIndex: number,
+  pathPrefix: string,
+  messageLabel: string,
   preloadIndex: number,
   operationName: string,
   rawRequestParams: unknown,
   issuePath: PropertyKey[],
 ): { status: 'error'; error: RuntimeConfigError } {
   if (!isRecord(rawRequestParams) || !isRecord(rawRequestParams.query)) {
-    return invalidLayout(`The page at "${getPreloadPath(pageIndex, preloadIndex, operationName)}.query" must be an object.`)
+    return invalidLayout(`${messageLabel} "${getPreloadPath(pathPrefix, preloadIndex, operationName)}.query" must be an object.`)
   }
 
   if (typeof issuePath[0] === 'string') {
     return invalidLayout(
-      `The page at "${getPreloadPath(pageIndex, preloadIndex, operationName)}.query.${issuePath[0]}" must resolve to a string, number, or boolean.`,
+      `${messageLabel} "${getPreloadPath(pathPrefix, preloadIndex, operationName)}.query.${issuePath[0]}" must resolve to a string, number, or boolean.`,
     )
   }
 
-  return invalidLayout(`The page at "${getPreloadPath(pageIndex, preloadIndex, operationName)}.query" must be an object.`)
+  return invalidLayout(`${messageLabel} "${getPreloadPath(pathPrefix, preloadIndex, operationName)}.query" must be an object.`)
 }
 
 function mapPreloadRequestHeadersIssue(
-  pageIndex: number,
+  pathPrefix: string,
+  messageLabel: string,
   preloadIndex: number,
   operationName: string,
   rawRequestParams: unknown,
   issuePath: PropertyKey[],
 ): { status: 'error'; error: RuntimeConfigError } {
   if (!isRecord(rawRequestParams) || !isRecord(rawRequestParams.headers)) {
-    return invalidLayout(`The page at "${getPreloadPath(pageIndex, preloadIndex, operationName)}.headers" must be an object.`)
+    return invalidLayout(`${messageLabel} "${getPreloadPath(pathPrefix, preloadIndex, operationName)}.headers" must be an object.`)
   }
 
   if (typeof issuePath[0] === 'string') {
     return invalidLayout(
-      `The page at "${getPreloadPath(pageIndex, preloadIndex, operationName)}.headers.${issuePath[0]}" must resolve to a string.`,
+      `${messageLabel} "${getPreloadPath(pathPrefix, preloadIndex, operationName)}.headers.${issuePath[0]}" must resolve to a string.`,
     )
   }
 
-  return invalidLayout(`The page at "${getPreloadPath(pageIndex, preloadIndex, operationName)}.headers" must be an object.`)
+  return invalidLayout(`${messageLabel} "${getPreloadPath(pathPrefix, preloadIndex, operationName)}.headers" must be an object.`)
 }
 
 function mapPreloadRequestBodyIssue(
-  pageIndex: number,
+  pathPrefix: string,
+  messageLabel: string,
   preloadIndex: number,
   operationName: string,
   rawRequestParams: unknown,
   issuePath: PropertyKey[],
 ): { status: 'error'; error: RuntimeConfigError } {
   const rawBody = isRecord(rawRequestParams) ? rawRequestParams.body : undefined
-  const bodyPath = findInvalidJsonBodyPath(rawBody, `${getPreloadPath(pageIndex, preloadIndex, operationName)}.body`)
+  const bodyPath = findInvalidJsonBodyPath(rawBody, `${getPreloadPath(pathPrefix, preloadIndex, operationName)}.body`)
 
   if (bodyPath) {
-    return invalidLayout(`The page at "${bodyPath}" must be valid JSON data.`)
+    return invalidLayout(`${messageLabel} "${bodyPath}" must be valid JSON data.`)
   }
 
   const formattedPath = issuePath.map(formatPathSegment).join('')
   return invalidLayout(
-    `The page at "${getPreloadPath(pageIndex, preloadIndex, operationName)}.body${formattedPath}" must be valid JSON data.`,
+    `${messageLabel} "${getPreloadPath(pathPrefix, preloadIndex, operationName)}.body${formattedPath}" must be valid JSON data.`,
   )
 }
 
-function normalizePagePreloadRequestParamsIssue(
+function normalizePreloadRequestParamsIssue(
   issue: { status: 'error'; error: RuntimeConfigError },
-  pageIndex: number,
+  pageId: string,
+  messageLabel: string,
 ): { status: 'error'; error: RuntimeConfigError } {
-  return invalidLayout(issue.error.message.replace(`Page "pages[${pageIndex}]" has an invalid layout at "`, 'The page at "'))
+  return invalidLayout(issue.error.message.replace(`Page "${pageId}" has an invalid layout at "`, `${messageLabel} "`))
 }
 
 function formatPathSegment(segment: PropertyKey): string {

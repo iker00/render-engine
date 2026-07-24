@@ -807,6 +807,7 @@ export interface RuntimeConfig {
   api: RuntimeApiConfig
   pages: RuntimePageConfig[]
   initialPage: string
+  preloads?: RuntimePreloadConfig[]
   translations?: RuntimeTranslationsConfig
   tokens?: RuntimeTokensConfig
 }

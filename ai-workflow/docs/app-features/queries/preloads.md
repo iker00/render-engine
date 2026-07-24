@@ -1,8 +1,10 @@
-> Cuándo leer: precargas declaradas por página, firma estable de request, comportamiento por `pageEntry`, snapshot común, latest-only, limpieza fresca selectiva.
+> Cuándo leer: precargas declaradas por página, firma estable de request, comportamiento por `pageEntry`, snapshot común, latest-only, limpieza fresca selectiva, precargas globales de aplicación (`preloads` raíz), reintentos acotados.
 > Tamaño: medio.
 > Relacionados: [[state-model.md]], [[execution.md]], [[../navigation/navigate-actions.md]], [[../forms/defaults.md]], [[../config/structure.md]].
 
 # Precargas (`preloads`)
+
+Existen dos mecanismos de precarga, complementarios y con ciclos de vida distintos: precargas por página (`pages[].preloads`, descritas primero) y precargas globales de aplicación (`preloads` raíz, ver más abajo).
 
 ## Modelo declarativo
 - Las precargas se declaran a nivel de página.
@@ -43,3 +45,14 @@
 - Ese snapshot ya incluye los params efectivos de la entrada activa, leídos desde la URL canónica o desde navegación interna equivalente, por lo que una precarga puede reutilizar `params.*` sin lógica imperativa adicional.
 - La comparación automática también puede reaccionar a cambios de `forms.*` o `queries.*` si esos valores alteran la request efectiva de un preload ya visible en la misma entrada.
 - Esta política de limpieza fresca queda limitada al mecanismo automático de `pages[].preloads`; una ejecución manual de la misma operación sigue pudiendo recargar en `loading` conservando su último `data` válido.
+
+## Precargas globales de aplicación (`preloads` raíz)
+
+- La configuración admite un bloque raíz opcional `preloads`, hermano de `api`/`pages`/`initialPage`, con el shape descrito en [[../config/structure.md]] (sin `when`, sin `item.*`).
+- Se dispara en paralelo exactamente una vez por instancia de runtime montada (una carga de la SPA en memoria): no depende de `initialPage`, no se liga a ninguna `pageEntry` y no se relanza al navegar internamente entre páginas dentro de la misma carga. Recargar el navegador o abrir una pestaña nueva es una instancia nueva y vuelve a dispararlo; no hay persistencia entre recargas ni entre sesiones.
+- No es bloqueante: la página inicial se renderiza de inmediato. Antes de que se emita ninguna request, el runtime siembra `queries.{operationName}` en `status: 'loading'` para cada entrada del bloque raíz, así que cualquier `queryStateFeedback` sobre esas queries ya refleja `loading` desde el primer render.
+- Cada operación referenciada actualiza `queries.{operationName}` con la misma semántica de estado (`status`, `data`, `error`, `requestSignature`) que cualquier otra ejecución de operación; cualquier página o nodo puede consumirla con las referencias `queries.*` ya soportadas.
+- **Reintentos acotados**: si una operación del `preloads` global falla, el runtime la reintenta automáticamente sin espera entre intentos, hasta un máximo de 3 intentos totales (intento inicial + 2 reintentos). La política se aplica de forma uniforme a cualquier `code` de error, incluidos los deterministas (`operation-not-found`, `request-build-failed`): no existe una categoría separada de errores "reintentables". Si tras el tercer intento la operación sigue en error, la query queda en `status: 'error'` con el `code` del último fallo y no se reintenta más durante esa misma carga. Una operación que tiene éxito en cualquier intento no continúa reintentándose. Esta política de reintentos es exclusiva del `preloads` global: `pages[].preloads`, `executeOperation` y `executeOperations` siguen haciendo un único intento por disparo.
+- **Dedup con `pages[].preloads`**: un mismo `operationName` puede aparecer a la vez en el `preloads` global y en `pages[].preloads` de una página. Si la request efectiva coincide (misma firma), no se dispara una segunda request en la primera carga; ambas rutas comparten el mismo `queries.{operationName}` y siguen la política ya vigente de reevaluación selectiva por firma. Si las requests efectivas divergen, sí se emiten ambas.
+- **Ejecución manual concurrente**: las operaciones también declaradas en el `preloads` global siguen siendo relanzables manualmente (`executeOperation`/`executeOperations` desde botón o submit) sin restricción adicional. Ambas ejecuciones conviven sin coordinación nueva; la que complete último es la que queda reflejada en `queries.{operationName}` (latest-only, igual que el resto del runtime).
+- No introduce ninguna pantalla de carga ni de error a nivel de aplicación: es puramente un mecanismo de datos, consumido con el feedback ya existente por query.

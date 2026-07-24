@@ -13,7 +13,7 @@ import {
 } from './runtime-config-zod'
 import { initialPageNotFound, invalidLayout } from './runtime-config-validation-errors'
 import { validateApiConfig } from './validate-api-config'
-import { validatePagePreloads } from './validate-preloads'
+import { validatePagePreloads, validateGlobalPreloads } from './validate-preloads'
 import { validateRuntimeApiRequestParams, validateActionTargets } from './validate-actions-visibility'
 import { validateLayoutCollection } from './validate-layout-nodes'
 import { validateFormSemantics, validateExecutionRequestParams } from './validate-form-nodes'
@@ -60,6 +60,10 @@ export function validateRuntimeConfig(rawConfig: unknown): RuntimeConfigValidati
       return invalidLayout('The runtime config field "initialPage" must be a non-empty string.')
     }
 
+    if (issue.path[0] === 'preloads') {
+      return invalidLayout('The runtime config field "preloads" must be an array.')
+    }
+
     return invalidLayout('The runtime config must be an object.')
   }
 
@@ -69,11 +73,23 @@ export function validateRuntimeConfig(rawConfig: unknown): RuntimeConfigValidati
     return apiResult
   }
 
+  const knownApiOperations = new Set(Object.keys(apiResult.api))
+
   // Validate the tokens block after api is validated (cross-check needs api operation names)
-  const tokensResult = validateTokensConfig(rawTokens, new Set(Object.keys(apiResult.api)))
+  const tokensResult = validateTokensConfig(rawTokens, knownApiOperations)
 
   if (tokensResult.status === 'error') {
     return { status: 'error', error: tokensResult.error }
+  }
+
+  const globalPreloadsResult = validateGlobalPreloads(
+    configShellResult.data.preloads,
+    validateRuntimeApiRequestParams,
+    knownApiOperations,
+  )
+
+  if (globalPreloadsResult.status === 'error') {
+    return globalPreloadsResult
   }
 
   const pageShellResults: Array<{
@@ -177,6 +193,10 @@ export function validateRuntimeConfig(rawConfig: unknown): RuntimeConfigValidati
 
   if (tokensResult.status === 'ready' && Object.keys(tokensResult.tokens).length > 0) {
     config.tokens = tokensResult.tokens
+  }
+
+  if (globalPreloadsResult.status === 'ready' && globalPreloadsResult.preloads && globalPreloadsResult.preloads.length > 0) {
+    config.preloads = globalPreloadsResult.preloads
   }
 
   const page = config.pages.find((entry) => entry.id === config.initialPage)

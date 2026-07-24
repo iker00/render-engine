@@ -69,6 +69,7 @@ export const runtimeConfigShellSchema = z
     api: z.record(z.string(), z.unknown()),
     pages: z.array(z.unknown()),
     initialPage: nonEmptyStringSchema,
+    preloads: z.array(z.unknown()).optional(),
   })
   .strip()
 

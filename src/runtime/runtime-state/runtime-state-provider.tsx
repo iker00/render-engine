@@ -2,6 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useState } from 'react'
 import type { Dispatch, ReactNode } from 'react'
 import { useContext, useMemo, useReducer, useRef } from 'react'
 import { useRuntimeTokenScheduler } from '../runtime-tokens'
+import { planGlobalPreloads, useRuntimeGlobalPreloads } from '../runtime-global-preloads'
 import type {
   NavigateToRuntimeUiAction,
   RuntimeApiBodyValue,
@@ -282,6 +283,7 @@ export function RuntimeStateProvider({ config, dataValues, activeLanguage, child
 
   const getLatestStateForScheduler = useCallback(() => latestStateRef.current, [])
   useRuntimeTokenScheduler({ config, dispatch: dispatchAndSyncState, getLatestState: getLatestStateForScheduler })
+  useRuntimeGlobalPreloads({ config, dispatch: dispatchAndSyncState, getLatestState: getLatestStateForScheduler })
 
   useLayoutEffect(() => {
     const normalizedHash = parseBrowserHashNavigationHash(window.location.hash, {
@@ -1179,9 +1181,29 @@ function createRuntimeStateFromBrowserHash(
   })
   const initialState = createRuntimeState(config, { dataValues, activeLanguage })
   const initialPage = config.pages.find((page) => page.id === parsedHash.entry.pageId)
+  const globalPreloadPlan = planGlobalPreloads({ config, state: initialState })
+  const queriesWithGlobalPreloadSeeds = { ...initialState.queries }
+
+  for (const item of globalPreloadPlan.items) {
+    // dataValues (embedder-provided seeds) win over the preload plan: a query
+    // name already present in `queries` at this point came from `dataValues`,
+    // since `initialState` has no other query source yet. Latest-only policy:
+    // never overwrite an existing entry with a `loading` marker.
+    if (Object.hasOwn(queriesWithGlobalPreloadSeeds, item.operationName)) {
+      continue
+    }
+
+    queriesWithGlobalPreloadSeeds[item.operationName] = {
+      status: 'loading',
+      data: null,
+      error: null,
+      requestSignature: item.requestSignature,
+    }
+  }
 
   return {
     ...initialState,
+    queries: queriesWithGlobalPreloadSeeds,
     navigation: {
       currentPageId: parsedHash.entry.pageId,
       history: [
