@@ -1,7 +1,7 @@
 # Onboarding local
 
 ## Estado actual
-El bootstrap técnico ya existe y permite instalar dependencias, arrancar la app localmente y validar la base del proyecto sin depender de backend real.
+El runtime declarativo ya está implementado y estable: navegación, formularios, queries, validación `Zod` del contrato completo, autenticación y subida de archivos. El bootstrap técnico permite instalar dependencias, arrancar la app localmente y validarla sin depender de backend real. Para el detalle actualizado por área, ver [`ai-workflow/docs/current-state.md`](./current-state.md); para el catálogo funcional completo, ver [`ai-workflow/docs/app-features/index.md`](./app-features/index.md).
 
 ## Requisitos
 - Node.js `22`
@@ -30,10 +30,9 @@ El bootstrap técnico ya existe y permite instalar dependencias, arrancar la app
 
 ## Estructura inicial esperada
 - `src/app/`
+- `src/config/`
+- `src/dev/`
+- `src/dev-runtime/`
+- `src/queries/`
+- `src/runtime/`
 - `src/tests/`
-- `src/dev/config.json`
-
-## Límites del bootstrap actual
-- todavía no existe panel editable de configuración en tiempo real
-- todavía no existe validación con `Zod` del contrato funcional completo
-- todavía no existen navegación, formularios, queries ni integración real con backend
