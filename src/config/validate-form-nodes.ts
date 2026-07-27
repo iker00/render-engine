@@ -4,6 +4,7 @@ import type {
   ExecuteOperationsRuntimeUiAction,
   FormLayoutNode,
   FormOnErrorAction,
+  HiddenLayoutNode,
   InputLayoutNode, LayoutNode,
   LayoutNodeCollection,
   LayoutNodeFeedbackFields,
@@ -13,18 +14,22 @@ import type {
   RuntimeFormFieldValidations,
   RuntimeFormValidationRuleName,
   RuntimeNumericValidationRule,
+  RuntimePatternValidationRule,
   RuntimeRequiredValidationRule,
   SelectLayoutNode,
   TextareaLayoutNode,
+  ToggleLayoutNode,
 } from './runtime-config-types'
 import {
   checkboxGroupNodeSchema,
   formNodeSchema,
+  hiddenNodeSchema,
   inputNodeSchema,
   radioGroupNodeSchema,
   selectItemsSchema,
   selectNodeSchema,
   textareaNodeSchema,
+  toggleNodeSchema,
 } from './runtime-config-zod'
 import { invalidLayout } from './runtime-config-validation-errors'
 import { buttonRequiresFormAncestor, FORM_ALLOWED_DESCENDANT_TYPES, FORM_ONLY_LEAF_NODE_TYPES } from './layout-placement-rules'
@@ -39,7 +44,7 @@ import {
   mapLeafNodeIssue,
   mapLayoutNodeIssue,
 } from './validate-layout-nodes'
-import { mapQueryStateFeedbackIssue, mapVisibilityIssue, validateFormSubmitAction } from './validate-actions-visibility'
+import { mapQueryStateFeedbackIssue, mapVisibilityIssue, validateFormSubmitAction, validateWhenCondition } from './validate-actions-visibility'
 
 const collectionPathSegmentPattern = /^[A-Za-z0-9_-]+$/
 const supportedFormValidationRuleNames = new Set<RuntimeFormValidationRuleName>([
@@ -50,6 +55,9 @@ const supportedFormValidationRuleNames = new Set<RuntimeFormValidationRuleName>(
   'max',
   'minSelections',
   'maxSelections',
+  'pattern',
+  'email',
+  'url',
 ])
 
 type FormFieldValidationTarget =
@@ -58,6 +66,7 @@ type FormFieldValidationTarget =
   | { type: 'select'; multiple: boolean }
   | { type: 'radioGroup' }
   | { type: 'checkboxGroup' }
+  | { type: 'toggle' }
 
 export function validateFormNode(
   rawNode: Record<string, unknown>,
@@ -818,6 +827,15 @@ export function validateFormFieldValidations(
       case 'maxSelections':
         validations.maxSelections = validationResult.rule as RuntimeNumericValidationRule
         break
+      case 'pattern':
+        validations.pattern = validationResult.rule as RuntimePatternValidationRule
+        break
+      case 'email':
+        validations.email = validationResult.rule as RuntimeBooleanFlagValidationRule
+        break
+      case 'url':
+        validations.url = validationResult.rule as RuntimeBooleanFlagValidationRule
+        break
     }
   }
 
@@ -873,7 +891,7 @@ function validateRequiredRule(
 
   return {
     status: 'ready',
-    rule: typeof rawRule.message === 'string' ? { value: true, message: rawRule.message } : { value: true },
+    rule,
   }
 }
 
@@ -1031,7 +1049,7 @@ function validateBooleanFlagRule(
 
 function validateValidationCompatibility(
   ruleName: RuntimeFormValidationRuleName,
-  rule: RuntimeRequiredValidationRule | RuntimeNumericValidationRule,
+  rule: RuntimeRequiredValidationRule | RuntimeNumericValidationRule | RuntimePatternValidationRule | RuntimeBooleanFlagValidationRule,
   target: FormFieldValidationTarget,
   path: string,
   pageId: string,
@@ -1108,12 +1126,27 @@ function supportsTextLengthValidations(target: FormFieldValidationTarget) {
     target.type === 'input' &&
     target.inputType !== 'number' &&
     target.inputType !== 'date' &&
-    target.inputType !== 'datetime-local'
+    target.inputType !== 'datetime-local' &&
+    target.inputType !== 'time'
   )
 }
 
 function supportsSelectionCardinalityValidations(target: FormFieldValidationTarget) {
   return target.type === 'checkboxGroup' || (target.type === 'select' && target.multiple)
+}
+
+function supportsTextualValidations(target: FormFieldValidationTarget) {
+  if (target.type === 'textarea') {
+    return true
+  }
+
+  return (
+    target.type === 'input' &&
+    target.inputType !== 'number' &&
+    target.inputType !== 'date' &&
+    target.inputType !== 'datetime-local' &&
+    target.inputType !== 'time'
+  )
 }
 
 export function validateSelectItemsContract(

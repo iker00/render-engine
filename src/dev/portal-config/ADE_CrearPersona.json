@@ -159,6 +159,7 @@
                             "placeholder": "Seleccione un tipo",
                             "items": {
                               "source": "queries.obtenerDatosFormularioCreacionPersona.data.DatosFormularioCreacionPersonaSalidaDTO.TiposDocumentosIdentificativosDTO",
+                              "itemType": "object",
                               "label": "Nombre",
                               "value": "Id"
                             },
@@ -240,6 +241,7 @@
                             "placeholder": "Seleccione un país",
                             "items": {
                               "source": "queries.obtenerDatosFormularioCreacionPersona.data.DatosFormularioCreacionPersonaSalidaDTO.PaisesDTO",
+                              "itemType": "object",
                               "label": "Nombre",
                               "value": "Id"
                             }
@@ -253,6 +255,7 @@
                             "placeholder": "Seleccione un tipo",
                             "items": {
                               "source": "queries.obtenerDatosFormularioCreacionPersona.data.DatosFormularioCreacionPersonaSalidaDTO.TiposTelefonoDTO",
+                              "itemType": "object",
                               "label": "Nombre",
                               "value": "Id"
                             }

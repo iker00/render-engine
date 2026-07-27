@@ -26,6 +26,9 @@ export const supportedNodeTypes = [
   'divider',
   'skeleton',
   'fileManager',
+  'fileInput',
+  'toggle',
+  'hidden',
 ] as const
 
 export const tableCellAllowedNodeTypes = ['image', 'list', 'button', 'container', 'heading', 'paragraph'] as const
@@ -74,6 +77,7 @@ export const runtimePageShellSchema = z
   .object({
     id: nonEmptyStringSchema,
     preloads: z.array(z.unknown()).optional(),
+    title: z.string().optional(),
     layout: z.array(z.unknown()),
   })
   .strip()
@@ -464,6 +468,7 @@ export const buttonNodeSchema = z
         variant: z.enum(supportedButtonVariants).optional(),
         fullWidth: z.boolean().optional(),
         icon: z.string().optional(),
+        iconPosition: z.enum(['left', 'right']).optional(),
       })
       .strip(),
   })
@@ -504,6 +509,7 @@ export const inputNodeSchema = z
         inputType: z.enum(supportedInputTypes).optional(),
         placeholder: z.string().optional(),
         icon: z.string().optional(),
+        iconPosition: z.enum(['left', 'right']).optional(),
       })
       .strip(),
   })
@@ -670,14 +676,16 @@ export const linkNodeSchema = z
     layout: layoutNodeLayoutSchema.optional(),
     props: z
       .object({
-        label: z.string(),
+        label: z.string().optional(),
         href: z.string().optional(),
         download: z.string().optional(),
         target: z.string().optional(),
         action: z.discriminatedUnion('type', [navigateToButtonActionSchema, goBackButtonActionSchema]).optional(),
         icon: z.string().optional(),
+        iconPosition: z.enum(['left', 'right']).optional(),
       })
       .strip(),
+    children: z.array(z.unknown()).optional(),
   })
   .strip()
 
@@ -795,6 +803,33 @@ const fileManagerValidationsSchema = z
   .strip()
 
 const fileManagerOperationSchema = z.union([z.string(), z.literal(false)]).optional()
+
+const fileManagerLabelsSchema = z
+  .object({
+    dropzoneIdle: z.string().optional(),
+    dropzoneAcceptedFormats: z.string().optional(),
+    dropzoneUploading: z.string().optional(),
+    dropzoneProgress: z.string().optional(),
+    dropzoneSuccess: z.string().optional(),
+    dropzoneMaxFilesReached: z.string().optional(),
+    dropzoneAriaLabel: z.string().optional(),
+    listLoadError: z.string().optional(),
+    listEmpty: z.string().optional(),
+    paginationPrevious: z.string().optional(),
+    paginationNext: z.string().optional(),
+    rowViewLabel: z.string().optional(),
+    rowViewAriaLabel: z.string().optional(),
+    rowViewUnavailableAriaLabel: z.string().optional(),
+    rowDownloadLabel: z.string().optional(),
+    rowDownloadAriaLabel: z.string().optional(),
+    rowDownloadUnavailableAriaLabel: z.string().optional(),
+    rowDeleteLabel: z.string().optional(),
+    rowDeleteAriaLabel: z.string().optional(),
+    uploadFileError: z.string().optional(),
+    uploadListPathMissing: z.string().optional(),
+    deleteError: z.string().optional(),
+  })
+  .strict()
 
 export const fileManagerNodeSchema = z
   .object({

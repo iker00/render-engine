@@ -161,6 +161,7 @@
                         "defaultValue": "queries.obtenerDatosFormularioModificacionHecho.data.DatosFormularioModificacionHechoSalidaDTO.HechoFormularioDTO.IdTipoHecho",
                         "items": {
                           "source": "queries.obtenerDatosFormularioModificacionHecho.data.DatosFormularioModificacionHechoSalidaDTO.TiposHechoDTO",
+                          "itemType": "object",
                           "label": "Nombre",
                           "value": "Id"
                         },
@@ -178,6 +179,7 @@
                         "defaultValue": "queries.obtenerDatosFormularioModificacionHecho.data.DatosFormularioModificacionHechoSalidaDTO.HechoFormularioDTO.IdOrigenHecho",
                         "items": {
                           "source": "queries.obtenerDatosFormularioModificacionHecho.data.DatosFormularioModificacionHechoSalidaDTO.OrigenesHechoDTO",
+                          "itemType": "object",
                           "label": "Nombre",
                           "value": "Id"
                         },

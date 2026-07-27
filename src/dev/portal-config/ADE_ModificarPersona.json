@@ -292,6 +292,7 @@
                             "defaultValue": "queries.obtenerDatosFormularioModificacionPersona.data.DatosFormularioModificacionPersonaSalidaDTO.PersonaFormularioDTO.IdPaisNacimiento",
                             "items": {
                               "source": "queries.obtenerDatosFormularioModificacionPersona.data.DatosFormularioModificacionPersonaSalidaDTO.PaisesDTO",
+                              "itemType": "object",
                               "label": "Nombre",
                               "value": "Id"
                             }
@@ -306,6 +307,7 @@
                             "defaultValue": "queries.obtenerDatosFormularioModificacionPersona.data.DatosFormularioModificacionPersonaSalidaDTO.PersonaFormularioDTO.IdTipoTelefono",
                             "items": {
                               "source": "queries.obtenerDatosFormularioModificacionPersona.data.DatosFormularioModificacionPersonaSalidaDTO.TiposTelefonoDTO",
+                              "itemType": "object",
                               "label": "Nombre",
                               "value": "Id"
                             }
