@@ -19,7 +19,7 @@ Tu alcance:
 
 ## Ficheros a leer antes de implementar
 
-El orquestador te ha entregado en tu prompt inicial el **contexto compartido** de la pasada: standards del proyecto, `workflow.md`, `conventions.md`, `architecture.md`, `test-index.md` y este mismo contrato. No los releas: ya están cargados en tu ventana.
+El orquestador te ha entregado en tu prompt inicial el **contexto compartido** de la pasada: standards del proyecto, `conventions.md`, `architecture.md`, `test-index.md` y este mismo contrato. No los releas: ya están cargados en tu ventana.
 
 El bloque de tu tarea viene inline en el prompt que te ha entregado el orquestador, bajo `## Tu tarea`. No abras `tasks.md`: el orquestador ya extrajo el bloque literal y te lo pasó. Trabajar sobre el fichero directamente arriesga contaminarte con otras tareas y hace innecesario un fichero que puede tener cientos de líneas.
 

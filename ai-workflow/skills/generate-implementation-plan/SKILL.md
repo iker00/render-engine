@@ -2,6 +2,7 @@
 name: generate-implementation-plan
 description: Genera el plan técnico de implementación para una feature de este proyecto una vez exista la spec funcional. Úsala para solicitudes de escritura de `tasks.md`, incluyendo el impacto en código, el contrato de tests por tarea y la documentación afectada.
 model: claude-opus-4-7
+allowed-tools: Read, Write, Edit, Agent
 ---
 
 # Generar plan de implementación
@@ -19,28 +20,22 @@ La calidad del plan debe ser suficientemente alta como para que dos agentes comp
 - `ai-workflow/features/NNNN-feature-name/design.md` si existe o si `status.yaml` marca `requires_design: true`
 - `ai-workflow/features/NNNN-feature-name/tasks.md` si existe
 - `ai-workflow/docs/context.md`
+- `ai-workflow/docs/architecture.md`
+- `ai-workflow/docs/conventions.md`
 - `ai-workflow/docs/app-features/index.md`
-- solo las fichas de `ai-workflow/docs/app-features/` que el índice marque como relevantes para la feature
-- `ai-workflow/standards/testing-rules.md`
+- solo las fichas de `ai-workflow/docs/app-features/` que el índice marque como relevantes para la feature (típicamente 1-3, rara vez más de 5)
 - `ai-workflow/docs/test-index.md`
-- `ai-workflow/standards/coding-style.md`
 
 ## Leer si aplica
-- `ai-workflow/docs/architecture.md` si la feature cruza fronteras de capa, modifica responsabilidades arquitectónicas o introduce puntos de extensión nuevos.
-- `ai-workflow/docs/conventions.md` si la feature toca naming, estructura de carpetas, estilos, errores, logs o convenciones de documentación.
 - `ai-workflow/docs/current-state.md` si hace falta confirmar el estado vigente o un límite actual.
-- Otros documentos de `ai-workflow/standards/` según el tipo de cambio: React, errores, seguridad u otras reglas de calidad afectadas.
 - `ai-workflow/features/index.md` si hace falta contexto histórico o coordinación con otras features.
-- Archivos relevantes de `ai-workflow/examples/` si existen ejemplos reales aplicables.
-- `ai-workflow/docs/index.md` solo como mapa documental auxiliar si no está claro qué contexto adicional seleccionar.
+- Archivos relevantes de `ai-workflow/examples/` si existen ejemplos reales aplicables al planificar una tarea concreta.
 
 ## Objetivo
 Escribir o refinar:
 - `features/NNNN-feature-name/tasks.md` (incluye el contrato de tests por tarea como sub-bloque)
 
-No implementar código en este paso.
-
-No escribir `design.md` desde esta skill. Si `status.yaml` marca `requires_design: true` y `artifacts.design` aún no es `ready`, detenerse y redirigir al usuario a `generate-feature-design`. La creación o refino de `design.md` corresponde a esa skill, no a esta.
+No implementar código en este paso. Si `status.yaml` marca `requires_design: true` y `artifacts.design` aún no es `ready`, detenerse y redirigir al usuario a `generate-feature-design`; ver "Restricciones" para el resto de límites sobre `design.md`.
 
 ## Gate de entrada
 Antes de planificar, comprobar:
@@ -53,7 +48,6 @@ Si el gate falla, detenerse y explicitar qué falta. Si lo bloqueante es el desi
 ## Qué debe incluir `tasks.md`
 Cada tarea debe incluir como mínimo, usando una estructura estable:
 - ID
-- estado
 - objetivo
 - fuera de alcance
 - dependencias
@@ -115,7 +109,6 @@ Si una tarea no requiere tests propios (refactor puro, doc-only), el sub-bloque 
 - Respetar el gate de workflow: no dejar la feature lista para implementación si falta algún artefacto requerido por `status.yaml`.
 - Si `status.yaml` no existe, crearlo usando `ai-workflow/templates/status.yaml`.
 - Si durante la planificación se descubre que el riesgo o la complejidad técnica justifican un `design.md` que no existía, no escribirlo aquí: marcar `requires_design: true`, dejar `artifacts.design: missing`, detener la planificación y redirigir a `generate-feature-design`.
-- Si `requires_design: true` ya estaba marcado y `design.md` no está listo, no avanzar la planificación.
 - Si `design.md` no aplica, mantener `artifacts.design: not_required` en `status.yaml`.
 - Actualizar `status.yaml` al terminar para reflejar:
   - `phase: planning` o `phase: implementation`

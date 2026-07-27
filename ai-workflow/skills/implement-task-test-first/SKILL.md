@@ -2,6 +2,7 @@
 name: implement-task-test-first
 description: Implementa las tareas planificadas de una feature de este proyecto orquestando un subagente con contexto limpio por cada tarea. Úsala cuando `spec.md` y `tasks.md` ya existan y el objetivo sea ejecutar tareas de código de forma segura con enfoque tests-first, dejando la actualización documental amplia para una skill posterior.
 model: sonnet
+allowed-tools: Read, Edit, Bash, Agent
 ---
 
 # Implementar tareas con enfoque tests-first
@@ -55,7 +56,7 @@ Si el script falla (por ejemplo, falta `standards/` o `subagent-prompt.md`), det
 4. Lanzar un subagente para esa tarea con la herramienta `Agent` (ver "Lanzamiento del subagente").
 5. Recibir el texto final del subagente y parsearlo como JSON. Tolerar `\`\`\`json` y `\`\`\`` envolventes si el subagente los añade. Si el JSON no se puede parsear o falta algún campo obligatorio, tratarlo como `status: "failed"` con `blocker_reason` describiendo el problema de protocolo y continuar por la rama de fallo del paso 6.
 6. Según el `status` devuelto:
-   - `completed`: actualizar `tasks.md` (marcar la tarea como cerrada si el formato lo permite) y `status.yaml` (mover el ID de `in_progress_task_id` a `completed_task_ids`, limpiar `in_progress_task_id`). Pasar a la siguiente tarea.
+   - `completed`: actualizar `status.yaml` (mover el ID de `in_progress_task_id` a `completed_task_ids`, limpiar `in_progress_task_id`). Pasar a la siguiente tarea.
    - `blocked` o `failed`: detener la pasada, dejar la tarea en `in_progress_task_id`, registrar el motivo en `status.yaml.blocked_by` y saltar al paso 8.
 7. Repetir desde el paso 1.
 8. Ejecutar la validación final de cobertura del proyecto (`pnpm test`). Si no se implementó ninguna tarea en esta pasada (gate fallido o bloqueo temprano sin código nuevo), se puede omitir y dejar los flags de validación en `false`.
@@ -93,7 +94,7 @@ Si el script falla (por ejemplo, falta `standards/` o `subagent-prompt.md`), det
 - Mantener el orden definido por `tasks.md`. No reordenar ni fusionar tareas.
 - Lanzar un único subagente por tarea. No agrupar tareas en un mismo subagente aunque compartan ficheros.
 - No avanzar a la siguiente tarea si la anterior devolvió `blocked` o `failed`.
-- Centralizar la escritura de `tasks.md` y `status.yaml`: solo el orquestador los modifica.
+- `tasks.md` es solo lectura durante la implementación; el orquestador no lo modifica. El estado de la pasada vive únicamente en `status.yaml`, y solo el orquestador lo escribe.
 - No reutilizar `validation.tests_green: true` o `validation.coverage_gate_passed: true` de pasadas anteriores como si siguieran siendo válidos tras nuevos cambios.
 - Ejecutar la validación de cobertura una sola vez al final de la pasada, no por tarea.
 - Tratar `tasks.md` como contrato de ejecución, no como guía orientativa.

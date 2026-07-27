@@ -23,6 +23,32 @@ fix/<descripción-en-kebab-case>
 ```
 Usar `feature/` para nuevas funcionalidades y `fix/` para correcciones de defecto. La descripción debe ser breve y legible.
 
+### Diff filtrado para actualización de documentación
+
+Cuando el objetivo del diff es actualizar documentación funcional del proyecto (no revisar código, no auditar, no preparar un commit), el diff completo suele arrastrar archivos que por naturaleza no aportan a la documentación. Aplicar este procedimiento en tres pasos:
+
+Paso 1 — inventario ligero (siempre):
+```
+git status --short
+git diff --name-only dev
+git diff --stat dev
+```
+
+Paso 2 — filtrado mecánico de la lista (no interpretativo). Excluir siempre:
+- `pnpm-lock.yaml`, `package-lock.json`, `dist/**`, `build/**` y otros generados
+- `ai-workflow/features/**` (ya se cargan por separado como artefactos de feature: spec, tasks, status, design)
+- Tooling: `.eslintrc*`, `.prettierrc*`, `tsconfig*.json`, `vitest.config*`
+- `src/dev/**` (lo cubre la fase interactiva de documentación)
+
+Todo lo demás se incluye. Los tests (`src/tests/**`, `*.test.ts`, `*.spec.ts`) **sí se incluyen** porque su contenido alimenta la actualización del índice de tests.
+
+Paso 3 — diff selectivo de los archivos que sobrevivieron al filtro:
+```
+git diff dev -- <archivo1> <archivo2> ...
+```
+
+Si el filtro deja la lista vacía, no hay nada documentalmente relevante: dejar constancia y detener sin tocar documentación.
+
 ## Fase generate-feature-spec
 
 Al comenzar la fase de especificación de una feature:

@@ -3,8 +3,12 @@
 #
 # Concatena en orden determinista:
 #   1. Standards del proyecto (ai-workflow/standards/*.md, alfabético)
-#   2. Docs estables (workflow.md, conventions.md, architecture.md, test-index.md)
+#   2. Docs estables (conventions.md, architecture.md, test-index.md)
 #   3. Contrato de implementación del subagente (subagent-prompt.md)
+#
+# workflow.md se excluye a propósito: el subagente no decide fase, no toca
+# status.yaml y no orquesta artefactos de workflow; sólo implementa la tarea
+# que le entrega el orquestador.
 #
 # Escribe a <output_path> y emite el mismo contenido a stdout via `tee`, para que
 # el orquestador lo capture en una sola llamada a Bash. Mismos ficheros de entrada
@@ -58,7 +62,7 @@ emit_file() {
     shopt -u nullglob
   fi
 
-  for name in workflow.md conventions.md architecture.md test-index.md; do
+  for name in conventions.md architecture.md test-index.md; do
     doc_file="$docs_dir/$name"
     [[ -f "$doc_file" ]] && emit_file "$doc_file"
   done
