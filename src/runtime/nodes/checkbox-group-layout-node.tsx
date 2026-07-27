@@ -16,6 +16,7 @@ import {
 import { getValidationErrorForEditedField } from '../runtime-form-validations'
 import { useRuntimeState, useRuntimeStateActions } from '../runtime-state/runtime-state-provider'
 import { selectFormFieldState } from '../runtime-state/runtime-state-selectors'
+import { FieldTooltip } from './field-tooltip'
 
 interface CheckboxGroupNodeProps {
   node: CheckboxGroupLayoutNode
@@ -34,6 +35,9 @@ export function CheckboxGroupNode({ node, iterationContext }: CheckboxGroupNodeP
   const fieldState = selectFormFieldState(state, formContext.formId, node.props.fieldId)
   const fieldDefinition = resolveResolvedFormFieldDefinition(node, state, iterationContext)
   const label = resolveRuntimeTextReference(node.props.label, state, 'checkboxGroup.props.label', { iterationContext })
+  const tooltip = node.props.tooltip !== undefined
+    ? resolveRuntimeTextReference(node.props.tooltip, state, 'checkboxGroup.props.tooltip', { iterationContext })
+    : ''
   const defaultValue = fieldDefinition.defaultValue
   const items = resolveChoiceCollectionItems(node.props.items, state, 'checkboxGroup.props.items', { iterationContext })
   const value = normalizeChoiceFieldValue(node.props.items, state, fieldState?.value ?? defaultValue, {
@@ -53,7 +57,7 @@ export function CheckboxGroupNode({ node, iterationContext }: CheckboxGroupNodeP
       data-layout-node="checkbox-group"
       aria-describedby={error !== null ? errorId : undefined}
     >
-      <legend className={getFieldLabelClassName()}>{label}</legend>
+      <legend className={getFieldLabelClassName()}>{label}<FieldTooltip text={tooltip} /></legend>
       <div className={getChoiceGroupClassName(optionLayout)}>
         {items.map((item, index) => (
           <label key={`${node.props.fieldId}-${index}-${item.value}`} className={getChoiceOptionClassName(optionLayout)}>

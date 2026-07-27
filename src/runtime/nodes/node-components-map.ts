@@ -6,8 +6,10 @@ import { ButtonNode } from './button-layout-node'
 import { CheckboxGroupNode } from './checkbox-group-layout-node'
 import { ContainerNode } from './container-layout-node'
 import { DividerNode } from './divider-layout-node'
+import { FileInputNode } from './file-input-layout-node'
 import { FileManagerNode } from './file-manager-layout-node'
 import { FormNode } from './form-layout-node'
+import { HiddenNode } from './hidden-layout-node'
 import { HeadingNode } from './heading-layout-node'
 import { ImageNode } from './image-layout-node'
 import { InputNode } from './input-layout-node'
@@ -23,6 +25,7 @@ import { StatNode } from './stat-layout-node'
 import { TableNode } from './table-layout-node'
 import { TabsNode } from './tabs-layout-node'
 import { TextareaNode } from './textarea-layout-node'
+import { ToggleNode } from './toggle-layout-node'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyComponent = React.ComponentType<any>
@@ -38,9 +41,11 @@ const eagerMap = {
   checkboxGroup: CheckboxGroupNode as AnyComponent,
   container: ContainerNode as AnyComponent,
   divider: DividerNode as AnyComponent,
+  fileInput: FileInputNode as AnyComponent,
   fileManager: FileManagerNode as AnyComponent,
   form: FormNode as AnyComponent,
   heading: HeadingNode as AnyComponent,
+  hidden: HiddenNode as AnyComponent,
   image: ImageNode as AnyComponent,
   input: InputNode as AnyComponent,
   link: LinkNode as AnyComponent,
@@ -55,6 +60,7 @@ const eagerMap = {
   table: TableNode as AnyComponent,
   tabs: TabsNode as AnyComponent,
   textarea: TextareaNode as AnyComponent,
+  toggle: ToggleNode as AnyComponent,
 }
 
 // Lazy variant: each entry is a React.lazy() that produces an independent chunk in dev/prod.
@@ -69,11 +75,15 @@ const lazyMap = {
   ),
   container: React.lazy(() => import('./container-layout-node').then((m) => ({ default: m.ContainerNode }))),
   divider: React.lazy(() => import('./divider-layout-node').then((m) => ({ default: m.DividerNode }))),
+  fileInput: React.lazy(() =>
+    import('./file-input-layout-node').then((m) => ({ default: m.FileInputNode })),
+  ),
   fileManager: React.lazy(() =>
     import('./file-manager-layout-node').then((m) => ({ default: m.FileManagerNode })),
   ),
   form: React.lazy(() => import('./form-layout-node').then((m) => ({ default: m.FormNode }))),
   heading: React.lazy(() => import('./heading-layout-node').then((m) => ({ default: m.HeadingNode }))),
+  hidden: React.lazy(() => import('./hidden-layout-node').then((m) => ({ default: m.HiddenNode }))),
   image: React.lazy(() => import('./image-layout-node').then((m) => ({ default: m.ImageNode }))),
   input: React.lazy(() => import('./input-layout-node').then((m) => ({ default: m.InputNode }))),
   link: React.lazy(() => import('./link-layout-node').then((m) => ({ default: m.LinkNode }))),
@@ -90,6 +100,7 @@ const lazyMap = {
   table: React.lazy(() => import('./table-layout-node').then((m) => ({ default: m.TableNode }))),
   tabs: React.lazy(() => import('./tabs-layout-node').then((m) => ({ default: m.TabsNode }))),
   textarea: React.lazy(() => import('./textarea-layout-node').then((m) => ({ default: m.TextareaNode }))),
+  toggle: React.lazy(() => import('./toggle-layout-node').then((m) => ({ default: m.ToggleNode }))),
 }
 
 /**

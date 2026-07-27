@@ -20,6 +20,7 @@ export type RuntimeReferenceSurface =
   | 'image.props.alt'
   | 'table.cell'
   | 'api.endpoint'
+  | `api.headers[${string}]`
   | 'alert.props.message'
   | 'alert.props.title'
   | 'badge.props.label'
@@ -33,6 +34,16 @@ export type RuntimeReferenceSurface =
   | 'textarea.props.placeholder'
   | 'select.props.placeholder'
   | 'form.validation.message'
+  | `fileManager.props.labels.${string}`
+  | 'fileManager.props.validations.message'
+  | 'toggle.props.label'
+  | 'input.props.tooltip'
+  | 'textarea.props.tooltip'
+  | 'select.props.tooltip'
+  | 'radioGroup.props.tooltip'
+  | 'checkboxGroup.props.tooltip'
+  | 'toggle.props.tooltip'
+  | 'fileInput.props.tooltip'
 
 export function reportRuntimeReferenceDiagnostic(
   result: RuntimeReferenceResolutionResult,
@@ -47,4 +58,19 @@ export function reportRuntimeReferenceDiagnostic(
       `[runtime-references] Could not resolve "${result.reference.source}" for ${surface} (${result.status}).`,
     )
   }
+}
+
+export function reportRuntimeFormatterChainDiagnostic(
+  rawPlaceholder: string,
+  firstFailingFormatterName: string | null,
+  surface: RuntimeReferenceSurface,
+) {
+  if (!import.meta.env.DEV) {
+    return
+  }
+
+  const formatterLabel = firstFailingFormatterName ?? 'unknown'
+  console.warn(
+    `[runtime-formatters] Chain unresolvable for "${rawPlaceholder}" (formatter: ${formatterLabel}) at ${surface}.`,
+  )
 }

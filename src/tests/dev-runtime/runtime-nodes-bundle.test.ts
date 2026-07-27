@@ -8,13 +8,16 @@ const PROJECT_ROOT = new URL('../../../', import.meta.url).pathname.replace(/\/$
 const DIST_ASSETS = join(PROJECT_ROOT, 'dist', 'assets')
 const DIST_INDEX = join(PROJECT_ROOT, 'dist', 'index.html')
 
-// Text markers from file-manager node components that must NOT appear in the
-// production bundle initial entry after code splitting. These strings survive
-// esbuild minification and were verified present in the pre-feature bundle.
+// Text markers from node components that must NOT appear in the production
+// bundle initial entry after code splitting. These strings survive esbuild
+// minification and were verified present in the pre-feature bundle.
 const FORBIDDEN_NODE_MARKERS = [
+  // file-manager node markers
   'No hay ficheros subidos.',
   'Arrastra los ficheros aquí o haz clic para seleccionar',
   'Ver fichero',
+  // file-input node marker
+  'Límite de ficheros alcanzado',
 ]
 
 /**
@@ -42,6 +45,7 @@ function extractEntryJsFiles(htmlContent: string, distDir: string): string[] {
   }
 
   return paths
+    .map((p) => p.replace(/^\.\//, '/'))
     .filter((p) => p.startsWith('/assets/') && p.endsWith('.js'))
     .map((p) => join(distDir, p.replace(/^\//, '')))
 }

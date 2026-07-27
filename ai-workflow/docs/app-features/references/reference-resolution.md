@@ -15,6 +15,7 @@ El escape literal con `\` permite mostrar una referencia completa tal cual, por 
 - `item`
 - `item.{segmentosAnidados}`
 - `item.$key`
+- `item.$index`
 - `forms.{formId}.{fieldId}`
 - `params.{paramName}`
 - `queries.{queryName}`
@@ -92,6 +93,13 @@ Las superficies de `query`, `body`, `params` y otras no listadas siguen fuera de
 - `item.$key` es la forma exacta soportada. Variantes como `item.$key.algo`, `item.algo.$key`, `item.$key.$key` u otras formas con `$` distintas del literal exacto son rutas inválidas.
 - Cuando el valor de la entrada contiene una propiedad literal `$key`, `item.$key` devuelve siempre la clave del diccionario, nunca esa propiedad interna: la propiedad sintética tiene precedencia sobre la navegación dentro del valor.
 - Las mismas superficies donde aplica `item.*` admiten también `item.$key`.
+
+## Frontera específica de `item.$index`
+- `item.$index` es una referencia sintética soportada, distinta de la navegación genérica `item.{ruta}`. Expone el índice numérico (0, 1, 2…) de la iteración actual como número dentro del subárbol iterado de cualquier `repeater`, con independencia del valor de `props.items.key`.
+- Funciona tanto con fuentes array como con fuentes objeto plano. En ambos casos expone la posición ordinal dentro de la secuencia iterada.
+- `item.$index` tiene precedencia sobre cualquier propiedad literal `$index` que pudiera existir dentro del valor del item, de forma análoga a la precedencia de `item.$key`.
+- `item.$index` es la forma exacta soportada. Variantes como `item.$index.algo`, `item.algo.$index` u otras formas con `$` distintas del literal exacto son rutas inválidas.
+- Las mismas superficies donde aplica `item.*` e `item.$key` admiten también `item.$index`.
 
 ## Frontera específica de `translations.*`
 - `translations.{key}` resuelve valores desde el catálogo de traducciones declarado en la raíz del JSON de configuración, aplicando una cadena de fallback por idioma.

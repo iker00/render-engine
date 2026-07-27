@@ -17,12 +17,16 @@ import type {
   RuntimeConfigValue,
   RuntimeUiAction,
   RuntimeVisibilityConfig,
+  RuntimeVisibilityGroup,
   RuntimeVisibilityOperator,
   RuntimeWhenCondition,
   LayoutNode,
   LayoutNodeCollection,
   LayoutNodeFeedbackFields,
 } from './runtime-config-types'
+import { isVisibilityGroup } from './runtime-config-types'
+import type { BreadcrumbSegment } from './validation-breadcrumb'
+import { buildBreadcrumbSegmentFromNode, enrichedInvalidLayoutFromNode } from './validation-breadcrumb'
 import {
   closeModalRuntimeUiActionSchema,
   executeOperationRuntimeUiActionSchema,
@@ -377,44 +381,17 @@ export function validateVisibility(
     }
   }
 
-  if (typeof rawVisibility.reference === 'string' && isTokensReference(rawVisibility.reference)) {
-    return invalidLayout(
-      `Page "${pageId}" has an invalid layout at "${path}.reference": tokens.* references are not supported in visibility or when conditions.`,
+  if (isVisibilityGroup(rawVisibility)) {
+    const groupResult = validateVisibilityGroupConditions(
+      rawVisibility,
+      path,
+      pageId,
+      isValidVisibilityReference,
+      'visibility',
     )
-  }
 
-  if (!isValidVisibilityReference(rawVisibility.reference)) {
-    return invalidLayout(
-      `Page "${pageId}" has an invalid layout at "${path}.reference": visibility references must use params.{paramName}, item, item.*, forms.{formId}.{fieldId}, queries.{queryName}, queries.{queryName}.data, queries.{queryName}.data.*, queries.{queryName}.status, queries.{queryName}.error, queries.{queryName}.error.message or queries.{queryName}.error.code.`,
-    )
-  }
-
-  const hasValue = Object.prototype.hasOwnProperty.call(rawVisibility, 'value')
-
-  if (visibilityTruthinessOperators.has(rawVisibility.operator) && hasValue) {
-    return invalidLayout(
-      `Page "${pageId}" has an invalid layout at "${path}.value": operator "${rawVisibility.operator}" does not accept value.`,
-    )
-  }
-
-  if (visibilityComparisonOperators.has(rawVisibility.operator) && !hasValue) {
-    return invalidLayout(
-      `Page "${pageId}" has an invalid layout at "${path}.value": operator "${rawVisibility.operator}" requires value.`,
-    )
-  }
-
-  if (!hasValue) {
-    return {
-      status: 'ready',
-      visibility: rawVisibility,
-    }
-  }
-
-  if (visibilityScalarOperators.has(rawVisibility.operator)) {
-    if (!isRuntimeConfigValue(rawVisibility.value)) {
-      return invalidLayout(
-        `Page "${pageId}" has an invalid layout at "${path}.value": operator "${rawVisibility.operator}" only accepts string, number, boolean or null.`,
-      )
+    if (groupResult.status === 'error') {
+      return groupResult
     }
 
     return {
@@ -423,20 +400,22 @@ export function validateVisibility(
     }
   }
 
-  if (rawVisibility.operator === 'greaterThan' || rawVisibility.operator === 'lessThan') {
-    if (typeof rawVisibility.value !== 'number') {
-      return invalidLayout(
-        `Page "${pageId}" has an invalid layout at "${path}.value": operator "${rawVisibility.operator}" only accepts numeric thresholds.`,
-      )
-    }
+  const conditionResult = validateSingleVisibilityCondition(
+    rawVisibility,
+    path,
+    pageId,
+    isValidVisibilityReference,
+    'visibility',
+  )
 
-    return {
-      status: 'ready',
-      visibility: rawVisibility,
-    }
+  if (conditionResult.status === 'error') {
+    return conditionResult
   }
 
-  return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.operator".`)
+  return {
+    status: 'ready',
+    visibility: rawVisibility,
+  }
 }
 
 export function mapQueryStateFeedbackIssue(
@@ -480,20 +459,24 @@ export function validateActionTargets(
   const operationNames = new Set(Object.keys(config.api))
 
   for (const page of config.pages) {
-    const invalidTarget = findInvalidActionTarget(page.layout, 'layout', pageIds, operationNames)
+    const invalidTarget = findInvalidActionTarget(page.layout, 'layout', pageIds, operationNames, [])
 
     if (!invalidTarget) {
       continue
     }
 
     if (invalidTarget.type === 'navigateTo') {
-      return invalidLayout(
+      return enrichedInvalidLayoutFromNode(
         `Page "${page.id}" has an invalid layout at "${invalidTarget.path}.pageId": unknown page "${invalidTarget.target}".`,
+        invalidTarget.breadcrumb,
+        invalidTarget.node,
       )
     }
 
-    return invalidLayout(
+    return enrichedInvalidLayoutFromNode(
       `Page "${page.id}" has an invalid layout at "${invalidTarget.path}.operationName": unknown operation "${invalidTarget.target}".`,
+      invalidTarget.breadcrumb,
+      invalidTarget.node,
     )
   }
 
@@ -725,11 +708,14 @@ function findInvalidActionTarget(
   path: string,
   pageIds: ReadonlySet<string>,
   operationNames: ReadonlySet<string>,
-): { path: string; type: 'navigateTo' | 'executeOperation'; target: string } | null {
+  breadcrumb: BreadcrumbSegment[],
+): { path: string; type: 'navigateTo' | 'executeOperation'; target: string; breadcrumb: BreadcrumbSegment[]; node: LayoutNode } | null {
   for (let index = 0; index < nodes.length; index += 1) {
     const node = nodes[index]
     const nodePath = `${path}[${index}]`
-    const fallbackTarget = findInvalidTargetInFallbackCollections(node, nodePath, pageIds, operationNames)
+    const nodeSegment = buildBreadcrumbSegmentFromNode(node, index)
+    const nodeBreadcrumb = [...breadcrumb, nodeSegment]
+    const fallbackTarget = findInvalidTargetInFallbackCollections(node, nodePath, pageIds, operationNames, nodeBreadcrumb)
 
     if (fallbackTarget) {
       return fallbackTarget
@@ -744,6 +730,8 @@ function findInvalidActionTarget(
         path: `${nodePath}.props.action`,
         type: 'navigateTo',
         target: node.props.action.pageId,
+        breadcrumb: nodeBreadcrumb,
+        node,
       }
     }
 
@@ -756,6 +744,8 @@ function findInvalidActionTarget(
         path: `${nodePath}.props.action`,
         type: 'executeOperation',
         target: node.props.action.operationName,
+        breadcrumb: nodeBreadcrumb,
+        node,
       }
     }
 
@@ -768,11 +758,13 @@ function findInvalidActionTarget(
         path: `${nodePath}.props.action`,
         type: 'navigateTo',
         target: node.props.action.pageId,
+        breadcrumb: nodeBreadcrumb,
+        node,
       }
     }
 
     if ((node.type === 'container' || node.type === 'form' || node.type === 'modal') && node.children) {
-      const childResult = findInvalidActionTarget(node.children, `${nodePath}.children`, pageIds, operationNames)
+      const childResult = findInvalidActionTarget(node.children, `${nodePath}.children`, pageIds, operationNames, nodeBreadcrumb)
 
       if (childResult) {
         return childResult
@@ -780,7 +772,7 @@ function findInvalidActionTarget(
     }
 
     if (node.type === 'repeater') {
-      const childResult = findInvalidActionTarget(node.props.template, `${nodePath}.props.template`, pageIds, operationNames)
+      const childResult = findInvalidActionTarget(node.props.template, `${nodePath}.props.template`, pageIds, operationNames, nodeBreadcrumb)
 
       if (childResult) {
         return childResult
@@ -796,6 +788,7 @@ function findInvalidTargetInFallbackCollections(
   nodePath: string,
   pageIds: ReadonlySet<string>,
   operationNames: ReadonlySet<string>,
+  breadcrumb: BreadcrumbSegment[],
 ) {
   if (!node.queryStateFeedback) {
     return null
@@ -811,6 +804,7 @@ function findInvalidTargetInFallbackCollections(
       `${nodePath}.queryStateFeedback.states.${stateName}.fallback`,
       pageIds,
       operationNames,
+      breadcrumb,
     )
 
     if (childResult) {
@@ -850,33 +844,114 @@ export function validateWhenCondition(
     }
   }
 
-  if (!isRecord(rawWhen) || typeof rawWhen.reference !== 'string' || rawWhen.reference.trim().length === 0) {
+  const isValidReference = (reference: string) => isValidWhenReference(reference, options)
+
+  if (isRecord(rawWhen) && isVisibilityGroup(rawWhen as unknown as RuntimeVisibilityConfig)) {
+    const groupResult = validateVisibilityGroupConditions(
+      rawWhen as unknown as RuntimeVisibilityGroup,
+      path,
+      pageId,
+      isValidReference,
+      'when',
+    )
+
+    if (groupResult.status === 'error') {
+      return groupResult
+    }
+
+    return {
+      status: 'ready',
+      when: rawWhen as unknown as RuntimeWhenCondition,
+    }
+  }
+
+  const conditionResult = validateSingleVisibilityCondition(
+    rawWhen,
+    path,
+    pageId,
+    isValidReference,
+    'when',
+  )
+
+  if (conditionResult.status === 'error') {
+    return conditionResult
+  }
+
+  return {
+    status: 'ready',
+    when: rawWhen as unknown as RuntimeWhenCondition,
+  }
+}
+
+type VisibilityConditionScope = 'visibility' | 'when'
+
+const visibilityReferenceCatalogMessage =
+  'params.{paramName}, item, item.*, forms.{formId}.{fieldId}, queries.{queryName}, queries.{queryName}.data, queries.{queryName}.data.*, queries.{queryName}.status, queries.{queryName}.error, queries.{queryName}.error.message or queries.{queryName}.error.code'
+
+function validateVisibilityGroupConditions(
+  group: RuntimeVisibilityGroup,
+  path: string,
+  pageId: string,
+  isValidReference: (reference: string) => boolean,
+  scope: VisibilityConditionScope,
+): { status: 'ready' } | { status: 'error'; error: RuntimeConfigError } {
+  for (let index = 0; index < group.conditions.length; index += 1) {
+    const conditionResult = validateSingleVisibilityCondition(
+      group.conditions[index],
+      `${path}.conditions[${index}]`,
+      pageId,
+      isValidReference,
+      scope,
+    )
+
+    if (conditionResult.status === 'error') {
+      return conditionResult
+    }
+  }
+
+  return { status: 'ready' }
+}
+
+function validateSingleVisibilityCondition(
+  rawCondition: unknown,
+  path: string,
+  pageId: string,
+  isValidReference: (reference: string) => boolean,
+  scope: VisibilityConditionScope,
+): { status: 'ready' } | { status: 'error'; error: RuntimeConfigError } {
+  if (
+    !isRecord(rawCondition) ||
+    typeof rawCondition.reference !== 'string' ||
+    rawCondition.reference.trim().length === 0
+  ) {
     return invalidLayout(
-      `Page "${pageId}" has an invalid layout at "${path}.reference": when references must use params.{paramName}, item, item.*, forms.{formId}.{fieldId}, queries.{queryName}, queries.{queryName}.data, queries.{queryName}.data.*, queries.{queryName}.status, queries.{queryName}.error, queries.{queryName}.error.message or queries.{queryName}.error.code.`,
+      `Page "${pageId}" has an invalid layout at "${path}.reference": ${scope} references must use ${visibilityReferenceCatalogMessage}.`,
     )
   }
 
-  if (isTokensReference(rawWhen.reference)) {
+  if (isTokensReference(rawCondition.reference)) {
     return invalidLayout(
       `Page "${pageId}" has an invalid layout at "${path}.reference": tokens.* references are not supported in visibility or when conditions.`,
     )
   }
 
-  if (!isValidWhenReference(rawWhen.reference, options)) {
+  if (!isValidReference(rawCondition.reference)) {
     return invalidLayout(
-      `Page "${pageId}" has an invalid layout at "${path}.reference": when references must use params.{paramName}, item, item.*, forms.{formId}.{fieldId}, queries.{queryName}, queries.{queryName}.data, queries.{queryName}.data.*, queries.{queryName}.status, queries.{queryName}.error, queries.{queryName}.error.message or queries.{queryName}.error.code.`,
+      `Page "${pageId}" has an invalid layout at "${path}.reference": ${scope} references must use ${visibilityReferenceCatalogMessage}.`,
     )
   }
 
-  const operator = rawWhen.operator
+  const operator = rawCondition.operator
 
-  if (typeof operator !== 'string' || !visibilityComparisonOperators.has(operator as RuntimeVisibilityOperator) && !visibilityTruthinessOperators.has(operator as RuntimeVisibilityOperator)) {
-    return invalidLayout(
-      `Page "${pageId}" has an invalid layout at "${path}.operator".`,
-    )
+  if (
+    typeof operator !== 'string' ||
+    (!visibilityComparisonOperators.has(operator as RuntimeVisibilityOperator) &&
+      !visibilityTruthinessOperators.has(operator as RuntimeVisibilityOperator))
+  ) {
+    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.operator".`)
   }
 
-  const hasValue = Object.prototype.hasOwnProperty.call(rawWhen, 'value')
+  const hasValue = Object.prototype.hasOwnProperty.call(rawCondition, 'value')
 
   if (visibilityTruthinessOperators.has(operator as RuntimeVisibilityOperator) && hasValue) {
     return invalidLayout(
@@ -891,36 +966,27 @@ export function validateWhenCondition(
   }
 
   if (!hasValue) {
-    return {
-      status: 'ready',
-      when: rawWhen as unknown as RuntimeWhenCondition,
-    }
+    return { status: 'ready' }
   }
 
   if (visibilityScalarOperators.has(operator as RuntimeVisibilityOperator)) {
-    if (!isRuntimeConfigValue(rawWhen.value)) {
+    if (!isRuntimeConfigValue(rawCondition.value)) {
       return invalidLayout(
         `Page "${pageId}" has an invalid layout at "${path}.value": operator "${operator}" only accepts string, number, boolean or null.`,
       )
     }
 
-    return {
-      status: 'ready',
-      when: rawWhen as unknown as RuntimeWhenCondition,
-    }
+    return { status: 'ready' }
   }
 
   if (operator === 'greaterThan' || operator === 'lessThan') {
-    if (typeof rawWhen.value !== 'number') {
+    if (typeof rawCondition.value !== 'number') {
       return invalidLayout(
         `Page "${pageId}" has an invalid layout at "${path}.value": operator "${operator}" only accepts numeric thresholds.`,
       )
     }
 
-    return {
-      status: 'ready',
-      when: rawWhen as unknown as RuntimeWhenCondition,
-    }
+    return { status: 'ready' }
   }
 
   return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.operator".`)

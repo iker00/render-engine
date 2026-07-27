@@ -7,6 +7,7 @@ import {
   checkboxGroupNodeSchema,
   containerNodeSchema,
   dividerNodeSchema,
+  fileInputNodeSchema,
   fileManagerNodeSchema,
   formNodeSchema,
   headingNodeSchema,
@@ -19,12 +20,16 @@ import {
   radioGroupNodeSchema,
   repeaterNodeSchema,
   runtimeApiOperationShellSchema,
+  runtimeTokensConfigSchema,
+  runtimeTranslationsSchema,
   selectNodeSchema,
   skeletonNodeSchema,
   statNodeSchema,
   tabsNodeSchema,
   tableNodeSchema,
   textareaNodeSchema,
+  toggleNodeSchema,
+  hiddenNodeSchema,
 } from './runtime-config-zod'
 
 // Lazy recursive schema — resolved at parse time, after all loose schemas are initialized
@@ -54,6 +59,9 @@ const layoutNodeSchema: z.ZodType<unknown> = z.lazy(() =>
     dividerNodeSchema,
     skeletonNodeSchema,
     fileManagerNodeSchema,
+    fileInputNodeSchema,
+    toggleNodeSchema,
+    hiddenNodeSchema,
   ]),
 )
 
@@ -119,5 +127,7 @@ export const runtimeConfigRootSchema = z
     api: z.record(z.string(), runtimeApiOperationShellSchema),
     pages: z.array(runtimePageRootSchema),
     initialPage: z.string().min(1),
+    translations: runtimeTranslationsSchema.optional(),
+    tokens: runtimeTokensConfigSchema.optional(),
   })
   .strip()

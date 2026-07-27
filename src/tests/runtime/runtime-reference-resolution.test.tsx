@@ -1,9 +1,10 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { parseRuntimeReference } from '../../runtime/runtime-references/runtime-reference-parser'
 import {
   resolveRuntimeImageAlt,
   resolveRuntimeImageSource,
   resolveRuntimeReference,
+  resolveRuntimeTextReference,
   resolveRuntimeVisibleValue,
 } from '../../runtime/runtime-references/runtime-reference-resolver'
 import type { RuntimeState } from '../../runtime/runtime-state/runtime-state-types'
@@ -96,6 +97,8 @@ const iterationContext = {
     tags: ['news', 'featured'],
     stats: null,
   },
+  key: 'post-1',
+  itemIndex: 0,
 }
 
 const interpolationRuntimeState: RuntimeState = {
@@ -1064,7 +1067,7 @@ describe('Runtime reference resolution', () => {
     })
 
     it('resolves item.$key to the dictionary key when the iteration context provides itemKey', () => {
-      const iterationContextWithKey = { item: { name: 'Ada' }, key: 'entry-1', itemKey: 'vinfopol' }
+      const iterationContextWithKey = { item: { name: 'Ada' }, key: 'entry-1', itemKey: 'vinfopol', itemIndex: 0 }
 
       expect(resolveRuntimeReference('item.$key', runtimeState, { iterationContext: iterationContextWithKey })).toEqual({
         status: 'resolved',
@@ -1074,7 +1077,7 @@ describe('Runtime reference resolution', () => {
     })
 
     it('resolves item.$key as missing when iteration context does not provide itemKey (array source)', () => {
-      const iterationContextWithoutKey = { item: { name: 'Ada' }, key: 'entry-1' }
+      const iterationContextWithoutKey = { item: { name: 'Ada' }, key: 'entry-1', itemIndex: 0 }
 
       expect(resolveRuntimeReference('item.$key', runtimeState, { iterationContext: iterationContextWithoutKey })).toEqual({
         status: 'missing',
@@ -1091,7 +1094,7 @@ describe('Runtime reference resolution', () => {
 
     it('degrades item.$key to empty string in text surfaces when itemKey is absent', () => {
       const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
-      const iterationContextWithoutKey = { item: { name: 'Ada' }, key: 'entry-1' }
+      const iterationContextWithoutKey = { item: { name: 'Ada' }, key: 'entry-1', itemIndex: 0 }
 
       expect(
         resolveRuntimeVisibleValue('item.$key', runtimeState, 'heading.props.text', {
@@ -1103,7 +1106,7 @@ describe('Runtime reference resolution', () => {
     })
 
     it('resolves {{item.$key}} interpolated as the dictionary key string', () => {
-      const iterationContextWithKey = { item: { name: 'Ada' }, key: 'entry-1', itemKey: 'vinfopol' }
+      const iterationContextWithKey = { item: { name: 'Ada' }, key: 'entry-1', itemKey: 'vinfopol', itemIndex: 0 }
 
       expect(
         resolveRuntimeVisibleValue('Source: {{item.$key}}', runtimeState, 'heading.props.text', {
@@ -1117,6 +1120,7 @@ describe('Runtime reference resolution', () => {
         item: { name: 'Ada', $key: 'internal-value' },
         key: 'entry-1',
         itemKey: 'vinfopol',
+        itemIndex: 0,
       }
 
       expect(
@@ -1506,6 +1510,343 @@ describe('Runtime reference resolution', () => {
       expect(
         resolveRuntimeVisibleValue('Bearer: {{tokens.session.value}}', stateWithReadyToken, 'heading.props.text'),
       ).toBe('Bearer: abc')
+    })
+  })
+
+  describe('T0092-T3 item.$index parser and resolver contract', () => {
+    it('classifies item.$index as a supported reference when iteration context is enabled', () => {
+      expect(parseRuntimeReference('item.$index', { allowItemReference: true })).toMatchObject({
+        kind: 'reference',
+        status: 'supported',
+        namespace: 'item',
+        path: ['$index'],
+      })
+    })
+
+    it('classifies item.$index as unsupported outside explicit iteration context', () => {
+      expect(parseRuntimeReference('item.$index', { allowItemReference: false })).toMatchObject({
+        kind: 'reference',
+        status: 'unsupported',
+        namespace: 'item',
+        path: ['$index'],
+      })
+    })
+
+    it('classifies item.$index.algo as invalid', () => {
+      expect(parseRuntimeReference('item.$index.algo', { allowItemReference: true })).toMatchObject({
+        kind: 'reference',
+        status: 'invalid',
+        namespace: 'item',
+      })
+    })
+
+    it('resolves item.$index to the numeric index with precedence over a literal $index property', () => {
+      const iterationContextWithIndex = {
+        item: { $index: 'shadow' },
+        key: '0',
+        itemIndex: 2,
+      }
+
+      expect(resolveRuntimeReference('item.$index', runtimeState, { iterationContext: iterationContextWithIndex })).toEqual({
+        status: 'resolved',
+        value: 2,
+        reference: parseRuntimeReference('item.$index', { allowItemReference: true }),
+      })
+    })
+
+    it('resolves item.$index to 0 when itemIndex is 0', () => {
+      const iterationContextWithZeroIndex = {
+        item: {},
+        key: '0',
+        itemIndex: 0,
+      }
+
+      expect(resolveRuntimeReference('item.$index', runtimeState, { iterationContext: iterationContextWithZeroIndex })).toEqual({
+        status: 'resolved',
+        value: 0,
+        reference: parseRuntimeReference('item.$index', { allowItemReference: true }),
+      })
+    })
+  })
+
+  describe('localPlaceholders', () => {
+    const stateWithTranslations: RuntimeState = {
+      ...runtimeState,
+      modal: {
+        activeModalId: null,
+        activeIterationKey: null,
+      },
+      i18n: {
+        translations: {
+          foo: { es: 'Zorro', en: 'Fox' },
+        },
+        activeLanguage: 'es',
+      },
+    }
+
+    it('substitutes a local placeholder verbatim without re-parsing it as a reference', () => {
+      expect(
+        resolveRuntimeVisibleValue('Error al subir "{{fileName}}"', stateWithTranslations, 'heading.props.text', {
+          localPlaceholders: { fileName: 'foo.pdf' },
+        }),
+      ).toBe('Error al subir "foo.pdf"')
+    })
+
+    it('resolves several local placeholders within the same pass', () => {
+      expect(
+        resolveRuntimeVisibleValue(
+          'Total {{completed}}/{{total}} — {{percent}}%',
+          stateWithTranslations,
+          'heading.props.text',
+          { localPlaceholders: { completed: '2', total: '5', percent: '40' } },
+        ),
+      ).toBe('Total 2/5 — 40%')
+    })
+
+    it('degrades a placeholder name absent from localPlaceholders and unsupported as a reference to empty string', () => {
+      expect(
+        resolveRuntimeVisibleValue('Total {{completed}}/{{total}}', stateWithTranslations, 'heading.props.text', {
+          localPlaceholders: { completed: '2' },
+        }),
+      ).toBe('Total 2/')
+    })
+
+    it('keeps resolving {{translations.*}} through the catalog while localPlaceholders holds unrelated keys', () => {
+      expect(
+        resolveRuntimeVisibleValue('{{translations.foo}}', stateWithTranslations, 'heading.props.text', {
+          localPlaceholders: { fileName: 'foo.pdf' },
+        }),
+      ).toBe('Zorro')
+    })
+
+    it('does not re-interpolate a localPlaceholders value that itself contains {{translations.foo}}', () => {
+      expect(
+        resolveRuntimeVisibleValue('Nombre: {{fileName}}', stateWithTranslations, 'heading.props.text', {
+          localPlaceholders: { fileName: '{{translations.foo}}' },
+        }),
+      ).toBe('Nombre: {{translations.foo}}')
+    })
+
+    it('propagates localPlaceholders from resolveRuntimeTextReference through resolveRuntimeVisibleValue', () => {
+      expect(
+        resolveRuntimeTextReference('Error al subir "{{fileName}}"', stateWithTranslations, 'heading.props.text', {
+          localPlaceholders: { fileName: 'bar.pdf' },
+        }),
+      ).toBe('Error al subir "bar.pdf"')
+    })
+  })
+
+  describe('T0101 formatters in visible interpolation', () => {
+    const formatterState: RuntimeState = {
+      ...runtimeState,
+      queries: {
+        ...runtimeState.queries,
+        total: { status: 'success', data: 1234.5, error: null },
+        price: { status: 'success', data: 19.9, error: null },
+        date: { status: 'success', data: '2026-07-16', error: null },
+        dateTime: { status: 'success', data: '2026-07-16T10:30:45+02:00', error: null },
+        name: { status: 'success', data: 'ana', error: null },
+        ratio: { status: 'success', data: 0.4256, error: null },
+      },
+    }
+
+    let consoleWarnSpy: ReturnType<typeof vi.spyOn>
+
+    beforeEach(() => {
+      consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    })
+
+    afterEach(() => {
+      consoleWarnSpy.mockRestore()
+      vi.unstubAllEnvs()
+    })
+
+    it('formats {{queries.total.data | number}} using es-ES grouping', () => {
+      expect(
+        resolveRuntimeVisibleValue('{{queries.total.data | number}}', formatterState, 'heading.props.text'),
+      ).toBe('1.234,5')
+    })
+
+    it('formats {{queries.total.data | number:2}} with two forced decimals', () => {
+      expect(
+        resolveRuntimeVisibleValue('{{queries.total.data | number:2}}', formatterState, 'heading.props.text'),
+      ).toBe('1.234,50')
+    })
+
+    it('formats {{queries.price.data | currency}} to euros', () => {
+      const result = resolveRuntimeVisibleValue(
+        '{{queries.price.data | currency}}',
+        formatterState,
+        'heading.props.text',
+      )
+
+      expect(String(result)).toContain('19,90')
+      expect(String(result)).toMatch(/€/)
+    })
+
+    it('formats {{queries.price.data | currency:"USD"}} using USD', () => {
+      const result = resolveRuntimeVisibleValue(
+        '{{queries.price.data | currency:"USD"}}',
+        formatterState,
+        'heading.props.text',
+      )
+
+      expect(String(result)).toContain('19,90')
+      expect(String(result)).toMatch(/US\$|\$/)
+    })
+
+    it('formats {{queries.date.data | date:"dd/MM/yyyy"}} for a date-only ISO input', () => {
+      expect(
+        resolveRuntimeVisibleValue(
+          '{{queries.date.data | date:"dd/MM/yyyy"}}',
+          formatterState,
+          'heading.props.text',
+        ),
+      ).toBe('16/07/2026')
+    })
+
+    it('formats {{queries.dateTime.data | date:"dd/MM/yyyy HH:mm:ss"}} for an ISO datetime with offset', () => {
+      const result = resolveRuntimeVisibleValue(
+        '{{queries.dateTime.data | date:"dd/MM/yyyy HH:mm:ss"}}',
+        formatterState,
+        'heading.props.text',
+      )
+
+      expect(String(result)).toMatch(/^\d{2}\/\d{2}\/\d{4} \d{2}:\d{2}:\d{2}$/)
+    })
+
+    it('uppercases {{queries.name.data | uppercase}}', () => {
+      expect(
+        resolveRuntimeVisibleValue('{{queries.name.data | uppercase}}', formatterState, 'heading.props.text'),
+      ).toBe('ANA')
+    })
+
+    it('chains {{queries.name.data | uppercase | truncate:2}} to produce AN…', () => {
+      expect(
+        resolveRuntimeVisibleValue(
+          '{{queries.name.data | uppercase | truncate:2}}',
+          formatterState,
+          'heading.props.text',
+        ),
+      ).toBe('AN…')
+    })
+
+    it('formats {{queries.ratio.data | percent:1}} to a value containing 42,6 and %', () => {
+      const result = resolveRuntimeVisibleValue(
+        '{{queries.ratio.data | percent:1}}',
+        formatterState,
+        'heading.props.text',
+      )
+
+      expect(String(result)).toContain('42,6')
+      expect(String(result)).toContain('%')
+    })
+
+    it('produces empty string when the formatter name is not in the catalog', () => {
+      expect(
+        resolveRuntimeVisibleValue(
+          'A {{queries.total.data | doesNotExist}} B',
+          formatterState,
+          'heading.props.text',
+        ),
+      ).toBe('A  B')
+    })
+
+    it('produces empty string when a formatter cannot handle the resolved value', () => {
+      expect(
+        resolveRuntimeVisibleValue(
+          'A {{queries.name.data | date:"dd/MM/yyyy"}} B',
+          formatterState,
+          'heading.props.text',
+        ),
+      ).toBe('A  B')
+    })
+
+    it('produces empty string when the argument grammar is invalid (number:"dos")', () => {
+      expect(
+        resolveRuntimeVisibleValue(
+          'A {{queries.total.data | number:"dos"}} B',
+          formatterState,
+          'heading.props.text',
+        ),
+      ).toBe('A  B')
+    })
+
+    it('produces empty string when the argument is missing after ":"', () => {
+      expect(
+        resolveRuntimeVisibleValue(
+          'A {{queries.total.data | truncate:}} B',
+          formatterState,
+          'heading.props.text',
+        ),
+      ).toBe('A  B')
+    })
+
+    it('tolerates variable whitespace around the pipe and the argument separator', () => {
+      const expected = resolveRuntimeVisibleValue(
+        '{{queries.total.data | number:2}}',
+        formatterState,
+        'heading.props.text',
+      )
+
+      expect(
+        resolveRuntimeVisibleValue(
+          '{{ queries.total.data | number : 2 }}',
+          formatterState,
+          'heading.props.text',
+        ),
+      ).toBe(expected)
+    })
+
+    it('formats a mixed string keeping literal text around the placeholder', () => {
+      expect(
+        resolveRuntimeVisibleValue(
+          'Total: {{queries.total.data | number:2}} eur',
+          formatterState,
+          'heading.props.text',
+        ),
+      ).toBe('Total: 1.234,50 eur')
+    })
+
+    it('preserves historical behavior for placeholders without a pipe', () => {
+      expect(
+        resolveRuntimeVisibleValue('{{queries.total.data}}', formatterState, 'heading.props.text'),
+      ).toBe('1234.5')
+    })
+
+    it('emits a DEV console.warn when a formatter chain is unresolvable, once per placeholder', () => {
+      resolveRuntimeVisibleValue(
+        '{{queries.name.data | date:"dd/MM/yyyy"}}',
+        formatterState,
+        'heading.props.text',
+      )
+
+      expect(consoleWarnSpy).toHaveBeenCalledTimes(1)
+      const warnMessage = String(consoleWarnSpy.mock.calls[0]?.[0] ?? '')
+      expect(warnMessage).toContain('runtime-formatters')
+      expect(warnMessage).toContain('date')
+    })
+
+    it('does not emit console.warn for formatter chain diagnostics when not in DEV', () => {
+      vi.stubEnv('DEV', false)
+
+      resolveRuntimeVisibleValue(
+        '{{queries.name.data | date:"dd/MM/yyyy"}}',
+        formatterState,
+        'heading.props.text',
+      )
+
+      expect(consoleWarnSpy).not.toHaveBeenCalled()
+    })
+
+    it('produces empty string when the reference is unsupported, regardless of the formatter', () => {
+      expect(
+        resolveRuntimeVisibleValue(
+          'A {{params.user.id | uppercase}} B',
+          formatterState,
+          'heading.props.text',
+        ),
+      ).toBe('A  B')
     })
   })
 })

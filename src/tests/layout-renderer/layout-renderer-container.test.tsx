@@ -1,6 +1,13 @@
 import { render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { RuntimeConfig, RuntimePageConfig } from '../../config/runtime-config'
+import type {
+  LayoutNode,
+  RuntimeConfig,
+  RuntimePageConfig,
+  RuntimeResponsiveLayoutValue,
+} from '../../config/runtime-config'
+import { LayoutRenderer } from '../../runtime/layout-renderer'
+import { LayoutEditModeProvider } from '../../runtime/layout-edit-mode-context'
 import { RuntimePage } from '../../runtime/runtime-page'
 import { RuntimeStateProvider } from '../../runtime/runtime-state/runtime-state-provider'
 
@@ -255,5 +262,191 @@ describe('RuntimePage', () => {
       'gap-[var(--runtime-container-gap)]',
     )
     expect(container).toHaveStyle('--runtime-container-gap: 18px')
+  })
+})
+
+// T1 (feature 0105): the Editor's LayoutRenderer injects drop-zone gaps into every children
+// collection it iterates. These tests confirm that, for a `container` in grid mode
+// (`props.columns` set), the real children keep the exact visual order and Tailwind span
+// classes they have in Visual mode/production — the drop-zone gaps must never behave as extra
+// grid items that shift columns.
+describe('container columns grid (modo Editor)', () => {
+  function buildConfig(nodes: LayoutNode[]): RuntimeConfig {
+    return {
+      api: {},
+      initialPage: 'home',
+      pages: [{ id: 'home', layout: nodes }],
+    }
+  }
+
+  function renderVisual(nodes: LayoutNode[]) {
+    return render(
+      <RuntimeStateProvider config={buildConfig(nodes)}>
+        <LayoutRenderer nodes={nodes} />
+      </RuntimeStateProvider>,
+    )
+  }
+
+  function renderEditor(nodes: LayoutNode[], active = true) {
+    return render(
+      <RuntimeStateProvider config={buildConfig(nodes)}>
+        <LayoutEditModeProvider
+          value={
+            active
+              ? { active: true, selectedPath: null, hoveredPath: null, onSelectNode: vi.fn(), onHoverNode: vi.fn() }
+              : { active: false }
+          }
+        >
+          <LayoutRenderer nodes={nodes} />
+        </LayoutEditModeProvider>
+      </RuntimeStateProvider>,
+    )
+  }
+
+  // Direct children of the container's <section>, excluding drop-zone gaps and the T2 grid
+  // drop-zones overlay (feature 0106), in DOM order.
+  function getRealChildTexts(container: HTMLElement) {
+    const section = container.querySelector('[data-layout-node="container"]') as HTMLElement
+    return Array.from(section.children)
+      .filter((el) => !el.hasAttribute('data-drop-zone') && !el.hasAttribute('data-canvas-grid-drop-zones'))
+      .map((el) => el.textContent)
+  }
+
+  const heterogeneousChildren: LayoutNode[] = [
+    { type: 'heading', props: { text: 'Grid Heading One', level: 2 } },
+    { type: 'paragraph', props: { text: 'Grid Paragraph' } },
+    { type: 'divider' },
+    { type: 'paragraph', props: { text: 'Spanning Paragraph' }, layout: { span: 2 } },
+    { type: 'heading', props: { text: 'Grid Heading Two', level: 3 } },
+  ]
+
+  function buildGridContainer(columns: RuntimeResponsiveLayoutValue): LayoutNode {
+    return { type: 'container', props: { columns }, children: heterogeneousChildren }
+  }
+
+  it('keeps the same real-child order and span classes between Editor mode and Visual mode for a fixed columns:3 container', () => {
+    const nodes: LayoutNode[] = [buildGridContainer(3)]
+
+    const { container: visualContainer } = renderVisual(nodes)
+    const { container: editorContainer } = renderEditor(nodes)
+
+    const visualTexts = getRealChildTexts(visualContainer)
+    const editorTexts = getRealChildTexts(editorContainer)
+
+    expect(visualTexts).toEqual([
+      'Grid Heading One',
+      'Grid Paragraph',
+      '',
+      'Spanning Paragraph',
+      'Grid Heading Two',
+    ])
+    expect(editorTexts).toEqual(visualTexts)
+
+    const visualSpanHolders = visualContainer.querySelectorAll('.col-span-2')
+    const editorSpanHolders = editorContainer.querySelectorAll('.col-span-2')
+
+    expect(visualSpanHolders).toHaveLength(1)
+    expect(editorSpanHolders).toHaveLength(1)
+    expect(visualSpanHolders[0].textContent).toBe('Spanning Paragraph')
+    expect(editorSpanHolders[0].textContent).toBe('Spanning Paragraph')
+  })
+
+  it('preserves the same real-child visual order for a responsive columns map (base/md) in Editor mode', () => {
+    const nodes: LayoutNode[] = [buildGridContainer({ base: 1, md: 3 })]
+
+    const { container: visualContainer } = renderVisual(nodes)
+    const { container: editorContainer } = renderEditor(nodes)
+
+    expect(getRealChildTexts(editorContainer)).toEqual(getRealChildTexts(visualContainer))
+  })
+
+  it('does not add any visual trace (no drop-zone, no structural change) when the provider is mounted but inactive ({ active: false })', () => {
+    const nodes: LayoutNode[] = [buildGridContainer(3)]
+
+    const { container: visualContainer } = renderVisual(nodes)
+    const { container: inertContainer } = renderEditor(nodes, false)
+
+    expect(inertContainer.querySelectorAll('[data-drop-zone]')).toHaveLength(0)
+    expect(getRealChildTexts(inertContainer)).toEqual(getRealChildTexts(visualContainer))
+  })
+
+  it('preserves order for a single child already present in a grid container (edge case: 1 child)', () => {
+    const singleChildNode: LayoutNode = {
+      type: 'container',
+      props: { columns: 2 },
+      children: [{ type: 'paragraph', props: { text: 'Only child' } }],
+    }
+    const nodes: LayoutNode[] = [singleChildNode]
+
+    const { container: visualContainer } = renderVisual(nodes)
+    const { container: editorContainer } = renderEditor(nodes)
+
+    expect(getRealChildTexts(editorContainer)).toEqual(getRealChildTexts(visualContainer))
+    expect(getRealChildTexts(editorContainer)).toEqual(['Only child'])
+  })
+
+  // T2 (feature 0106): the grid-drop-zones overlay is absolutely positioned inside the
+  // container's `<section>`, so the `<section>` needs `position: relative` in Editor mode
+  // to become the overlay's containing block. Adding `relative` unconditionally would break
+  // the byte-identical guarantee in Visual/production; the class must appear only when the
+  // provider is active AND the container is in grid mode (has `props.columns`).
+  it('adds the `relative` class to the container <section> in Editor mode when in grid mode', () => {
+    const nodes: LayoutNode[] = [
+      {
+        type: 'container',
+        props: { columns: 3 },
+        children: [{ type: 'paragraph', props: { text: 'Grid Editor child' } }],
+      },
+    ]
+
+    const { container } = renderEditor(nodes)
+    const section = container.querySelector('[data-layout-node="container"]')
+
+    expect(section).toHaveClass('relative')
+  })
+
+  it('does not add the `relative` class in Visual mode/production for the same grid container', () => {
+    const nodes: LayoutNode[] = [
+      {
+        type: 'container',
+        props: { columns: 3 },
+        children: [{ type: 'paragraph', props: { text: 'Grid Visual child' } }],
+      },
+    ]
+
+    const { container } = renderVisual(nodes)
+    const section = container.querySelector('[data-layout-node="container"]')
+
+    expect(section).not.toHaveClass('relative')
+  })
+
+  it('does not add the `relative` class when the provider is mounted but inactive ({ active: false })', () => {
+    const nodes: LayoutNode[] = [
+      {
+        type: 'container',
+        props: { columns: 3 },
+        children: [{ type: 'paragraph', props: { text: 'Grid inactive child' } }],
+      },
+    ]
+
+    const { container } = renderEditor(nodes, false)
+    const section = container.querySelector('[data-layout-node="container"]')
+
+    expect(section).not.toHaveClass('relative')
+  })
+
+  it('does not add the `relative` class in Editor mode when the container is not in grid mode', () => {
+    const nodes: LayoutNode[] = [
+      {
+        type: 'container',
+        props: { direction: 'row' },
+        children: [{ type: 'paragraph', props: { text: 'Row child' } }],
+      },
+    ]
+
+    const { container } = renderEditor(nodes)
+    const section = container.querySelector('[data-layout-node="container"]')
+
+    expect(section).not.toHaveClass('relative')
   })
 })

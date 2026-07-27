@@ -711,4 +711,327 @@ describe('Runtime shared state store', () => {
       expect(screen.queryByText('Select no more than 3 options.')).not.toBeInTheDocument()
     })
   })
+
+  it('blocks submit with required error for empty time field and allows submit with a valid time value', async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: {
+          'content-type': 'application/json',
+        },
+      }),
+    )
+
+    const config: RuntimeConfig = {
+      api: {
+        submitProfile: {
+          method: 'POST',
+          endpoint: '/api/profile',
+        },
+      },
+      initialPage: 'home',
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'form',
+              id: 'scheduleForm',
+              submitAction: {
+                type: 'executeOperation',
+                operationName: 'submitProfile',
+              },
+              children: [
+                {
+                  type: 'input',
+                  props: {
+                    fieldId: 'startTime',
+                    label: 'Start time',
+                    inputType: 'time',
+                    defaultValue: '',
+                    validations: {
+                      required: { value: true },
+                    },
+                  },
+                },
+                {
+                  type: 'button',
+                  props: {
+                    label: 'Submit schedule',
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    }
+
+    globalThis.fetch = fetchMock
+
+    render(
+      <RuntimeStateProvider config={config}>
+        <RuntimePage />
+      </RuntimeStateProvider>,
+    )
+
+    const timeInput = document.getElementById('scheduleForm-startTime') as HTMLInputElement
+    expect(timeInput).toHaveAttribute('type', 'time')
+    expect(timeInput).toHaveAttribute('id', 'scheduleForm-startTime')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Submit schedule' }))
+
+    await waitFor(() => {
+      expect(screen.getByText('Required')).toBeInTheDocument()
+      expect(timeInput).toHaveAttribute('aria-describedby', 'scheduleForm-startTime-error')
+      expect(document.getElementById('scheduleForm-startTime-error')).toBeInTheDocument()
+    })
+    expect(fetchMock).not.toHaveBeenCalled()
+
+    fireEvent.change(timeInput, { target: { value: '09:00' } })
+
+    await waitFor(() => {
+      expect(screen.queryByText('Required')).not.toBeInTheDocument()
+      expect(timeInput).not.toHaveAttribute('aria-describedby')
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Submit schedule' }))
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+  })
+
+  it('blocks submit with pattern error for field that does not match and clears error when corrected', async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    )
+
+    const config: RuntimeConfig = {
+      api: {
+        submitForm: { method: 'POST', endpoint: '/api/submit' },
+      },
+      initialPage: 'home',
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'form',
+              id: 'codeForm',
+              submitAction: { type: 'executeOperation', operationName: 'submitForm' },
+              children: [
+                {
+                  type: 'input',
+                  props: {
+                    fieldId: 'zipCode',
+                    label: 'Zip code',
+                    defaultValue: 'abc',
+                    validations: {
+                      pattern: { value: '^\\d{5}$' },
+                    },
+                  },
+                },
+                { type: 'button', props: { label: 'Submit code' } },
+              ],
+            },
+          ],
+        },
+      ],
+    }
+
+    globalThis.fetch = fetchMock
+
+    render(
+      <RuntimeStateProvider config={config}>
+        <RuntimePage />
+      </RuntimeStateProvider>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Submit code' }))
+
+    await waitFor(() => {
+      expect(screen.getByText('Invalid format.')).toBeInTheDocument()
+    })
+    expect(fetchMock).not.toHaveBeenCalled()
+
+    fireEvent.change(screen.getByRole('textbox', { name: /Zip code/ }), { target: { value: '12345' } })
+
+    await waitFor(() => {
+      expect(screen.queryByText('Invalid format.')).not.toBeInTheDocument()
+    })
+  })
+
+  it('blocks submit with email error for invalid address and clears error when corrected', async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    )
+
+    const config: RuntimeConfig = {
+      api: {
+        submitForm: { method: 'POST', endpoint: '/api/submit' },
+      },
+      initialPage: 'home',
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'form',
+              id: 'contactForm',
+              submitAction: { type: 'executeOperation', operationName: 'submitForm' },
+              children: [
+                {
+                  type: 'input',
+                  props: {
+                    fieldId: 'contactEmail',
+                    label: 'Contact email',
+                    defaultValue: 'noarroba',
+                    validations: {
+                      email: { value: true },
+                    },
+                  },
+                },
+                { type: 'button', props: { label: 'Submit contact' } },
+              ],
+            },
+          ],
+        },
+      ],
+    }
+
+    globalThis.fetch = fetchMock
+
+    render(
+      <RuntimeStateProvider config={config}>
+        <RuntimePage />
+      </RuntimeStateProvider>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Submit contact' }))
+
+    await waitFor(() => {
+      expect(screen.getByText('Invalid email address.')).toBeInTheDocument()
+    })
+    expect(fetchMock).not.toHaveBeenCalled()
+
+    fireEvent.change(screen.getByRole('textbox', { name: /Contact email/ }), { target: { value: 'user@example.com' } })
+
+    await waitFor(() => {
+      expect(screen.queryByText('Invalid email address.')).not.toBeInTheDocument()
+    })
+  })
+
+  it('blocks submit with url error for invalid URL and clears error when corrected', async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    )
+
+    const config: RuntimeConfig = {
+      api: {
+        submitForm: { method: 'POST', endpoint: '/api/submit' },
+      },
+      initialPage: 'home',
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'form',
+              id: 'linkForm',
+              submitAction: { type: 'executeOperation', operationName: 'submitForm' },
+              children: [
+                {
+                  type: 'input',
+                  props: {
+                    fieldId: 'website',
+                    label: 'Website',
+                    defaultValue: 'not-a-url',
+                    validations: {
+                      url: { value: true },
+                    },
+                  },
+                },
+                { type: 'button', props: { label: 'Submit link' } },
+              ],
+            },
+          ],
+        },
+      ],
+    }
+
+    globalThis.fetch = fetchMock
+
+    render(
+      <RuntimeStateProvider config={config}>
+        <RuntimePage />
+      </RuntimeStateProvider>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Submit link' }))
+
+    await waitFor(() => {
+      expect(screen.getByText('Invalid URL.')).toBeInTheDocument()
+    })
+    expect(fetchMock).not.toHaveBeenCalled()
+
+    fireEvent.change(screen.getByRole('textbox', { name: /Website/ }), { target: { value: 'https://example.com' } })
+
+    await waitFor(() => {
+      expect(screen.queryByText('Invalid URL.')).not.toBeInTheDocument()
+    })
+  })
+
+  it('respects rule ordering: required before pattern shows Required for empty field instead of Invalid format', async () => {
+    const config: RuntimeConfig = {
+      api: {},
+      initialPage: 'home',
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'form',
+              id: 'orderForm',
+              children: [
+                {
+                  type: 'input',
+                  props: {
+                    fieldId: 'code',
+                    label: 'Code',
+                    defaultValue: '',
+                    validations: {
+                      required: { value: true },
+                      pattern: { value: '^\\d{5}$' },
+                    },
+                  },
+                },
+                { type: 'button', props: { label: 'Submit order' } },
+              ],
+            },
+          ],
+        },
+      ],
+    }
+
+    render(
+      <RuntimeStateProvider config={config}>
+        <RuntimePage />
+      </RuntimeStateProvider>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Submit order' }))
+
+    await waitFor(() => {
+      expect(screen.getByText('Required')).toBeInTheDocument()
+    })
+    expect(screen.queryByText('Invalid format.')).not.toBeInTheDocument()
+  })
 })

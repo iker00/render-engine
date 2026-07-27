@@ -21,6 +21,7 @@ import { useRuntimeState, useRuntimeStateActions } from '../runtime-state/runtim
 import { selectFormFieldState } from '../runtime-state/runtime-state-selectors'
 import * as LucideIcons from 'lucide-react'
 import { IconNode, toPascalCase } from './icon-node'
+import { FieldTooltip } from './field-tooltip'
 
 interface InputNodeProps {
   node: InputLayoutNode
@@ -39,6 +40,9 @@ export function InputNode({ node, iterationContext }: InputNodeProps) {
   const fieldState = selectFormFieldState(state, formContext.formId, node.props.fieldId)
   const fieldDefinition = resolveResolvedFormFieldDefinition(node, state, iterationContext)
   const label = resolveRuntimeTextReference(node.props.label, state, 'input.props.label', { iterationContext })
+  const tooltip = node.props.tooltip !== undefined
+    ? resolveRuntimeTextReference(node.props.tooltip, state, 'input.props.tooltip', { iterationContext })
+    : ''
   const placeholder = node.props.placeholder !== undefined
     ? resolveRuntimeTextReference(node.props.placeholder, state, 'input.props.placeholder', { iterationContext })
     : ''
@@ -57,6 +61,7 @@ export function InputNode({ node, iterationContext }: InputNodeProps) {
     resolvedIconName &&
     (LucideIcons as Record<string, unknown>)[resolvedIconName] !== undefined,
   )
+  const iconPosition = node.props.iconPosition ?? 'left'
 
   const hasError = error !== null
 
@@ -87,16 +92,30 @@ export function InputNode({ node, iterationContext }: InputNodeProps) {
 
   return (
     <label className={getFieldWrapperClassName()} data-layout-node="input">
-      <span className={getFieldLabelClassName()}>{label}</span>
+      <span className={getFieldLabelClassName()}>{label}<FieldTooltip text={tooltip} /></span>
       {iconResolved ? (
         <span className={getInputIconWrapperClassName(hasError)}>
-          <span className={getInputIconHolderClassName()}>
-            <IconNode name={iconName} className={getInputIconClassName()} />
-          </span>
-          <input
-            {...sharedInputProps}
-            className={getInputWithIconClassName()}
-          />
+          {iconPosition === 'right' ? (
+            <>
+              <input
+                {...sharedInputProps}
+                className={getInputWithIconClassName()}
+              />
+              <span className={getInputIconHolderClassName('right')}>
+                <IconNode name={iconName} className={getInputIconClassName()} />
+              </span>
+            </>
+          ) : (
+            <>
+              <span className={getInputIconHolderClassName('left')}>
+                <IconNode name={iconName} className={getInputIconClassName()} />
+              </span>
+              <input
+                {...sharedInputProps}
+                className={getInputWithIconClassName()}
+              />
+            </>
+          )}
         </span>
       ) : (
         <input {...sharedInputProps} className={getFieldControlClassName(hasError)} />

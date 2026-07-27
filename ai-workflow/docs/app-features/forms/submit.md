@@ -1,6 +1,6 @@
 > Cuándo leer: `submitAction.type: executeOperation`, payload efectivo, resolución de `forms.*`/`item.*` en submit, `resetOnSuccess`, semántica de `resetForm`.
 > Tamaño: corto.
-> Relacionados: [[../queries/execution.md]], [[validation-rules.md]], [[../references/reference-resolution.md]].
+> Relacionados: [[../queries/execution.md]], [[validation-rules.md]], [[../references/reference-resolution.md]], [[../nodes/file-input.md]].
 
 # Submit y reseteo
 
@@ -17,6 +17,17 @@
 - El resultado visible del submit vive solo en `queries.{operationName}`; no existe un dominio paralelo de `submitting`, `submitSuccess` o `submitError`.
 - El submit resuelve sus referencias contra el snapshot más reciente del runtime tras la validación local del formulario.
 - Si `submitAction` y la operación base aportan request params a la vez, `query` y `headers` combinan por clave con precedencia del submit, y `body` sigue la misma semántica limitada de merge superficial o sustitución total que usa el dominio `queries`.
+
+### `fileInput` como campo estándar referenciable
+
+`fileInput` no es un caso especial de serialización: se comporta como cualquier otro campo del formulario respecto al payload de submit.
+- Un `fileInput` con ficheros seleccionados solo aporta clave al body si `submitAction.body`/`api.body` lo referencia explícitamente con `forms.{formId}.{fieldId}`, igual que el resto de campos. Sin esa referencia, no aporta ninguna clave.
+- Cuando está referenciado, la referencia resuelve a un array de objetos `{ name, size, mime, data }` (uno por fichero seleccionado, `data` en base64 estándar sin prefijo), con independencia de `props.multiple`. Sin ficheros seleccionados, resuelve a `[]`.
+- La codificación a base64 ocurre de forma asíncrona en el momento del submit, antes de emitir la llamada de red. El submit sigue usando la serialización habitual de la operación (`content-type: application/json` o query params) — nunca `multipart/form-data` — con independencia de si el formulario contiene `fileInput`.
+- Si la codificación de algún fichero falla (fallo de lectura del navegador), la query transita a `status: error` con `code: request-build-failed`, sin emitir red, siguiendo la misma semántica que otros fallos de construcción de request.
+- Un `fileInput` oculto por `visibility` en el momento del submit sigue la misma semántica de omisión de campos ocultos que el resto de campos: se omite del payload sin producir `request-build-failed`.
+- Un formulario sin ningún `fileInput` referenciado mantiene exactamente el mismo comportamiento de submit que un formulario sin `fileInput`, sin regresión.
+- Este comportamiento aplica únicamente a `fileInput`. El nodo `fileManager` (subida standalone fuera de formulario) sigue enviando `multipart/form-data` por fichero contra sus operaciones configuradas, sin cambios; ver [[../nodes/file-input.md]] y [[../nodes/file-manager.md]].
 
 ## Acciones post-éxito (`onSuccess`)
 - `submitAction` acepta opcionalmente `onSuccess`: una lista ordenada de acciones a ejecutar tras un submit exitoso.

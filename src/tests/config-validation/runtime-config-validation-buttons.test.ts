@@ -480,7 +480,9 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].props".',
+        message: `Page "home" has an invalid layout at "layout[0].props".
+  → button[0]
+  Node: {"type":"button"}`,
       },
     })
 
@@ -507,7 +509,9 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].props.label".',
+        message: `Page "home" has an invalid layout at "layout[0].props.label".
+  → button[0]
+  Node: {"type":"button"}`,
       },
     })
 
@@ -535,7 +539,9 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].props.label".',
+        message: `Page "home" has an invalid layout at "layout[0].props.label".
+  → button[0]
+  Node: {"type":"button"}`,
       },
     })
   })
@@ -563,9 +569,69 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].props.action.type".',
+        message: `Page "home" has an invalid layout at "layout[0].props.action.type".
+  → button("Broken")
+  Node: {"type":"button","props":{"label":"Broken"}}`,
       },
     })
+  })
+
+  it('rejects a button action with an unrecognized type value at the Zod discriminated union level', () => {
+    expect(
+      validateRuntimeConfig(
+        createConfigWithPages([
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'button',
+                props: {
+                  label: 'Broken',
+                  action: {
+                    type: 'doSomethingUnsupported',
+                  },
+                },
+              },
+            ],
+          },
+        ]),
+      ),
+    ).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message: `Page "home" has an invalid layout at "layout[0].props.action.type".
+  → button("Broken")
+  Node: {"type":"button","props":{"label":"Broken"}}`,
+      },
+    })
+  })
+
+  it('accepts a button node without props.action when it is a descendant of a form node', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithPages([
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'form',
+              id: 'my-form',
+              children: [
+                {
+                  type: 'button',
+                  props: {
+                    label: 'Submit',
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      ]),
+    )
+
+    expect(result.status).toBe('ready')
   })
 
   it('accepts a button with an openModal action referencing a declared modal', () => {
@@ -638,7 +704,9 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].props.action.modalId".',
+        message: `Page "home" has an invalid layout at "layout[0].props.action.modalId".
+  → button("Broken")
+  Node: {"type":"button","props":{"label":"Broken"}}`,
       },
     })
   })
@@ -663,7 +731,9 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].props.action.modalId".',
+        message: `Page "home" has an invalid layout at "layout[0].props.action.modalId".
+  → button("Broken")
+  Node: {"type":"button","props":{"label":"Broken"}}`,
       },
     })
   })
@@ -688,7 +758,9 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].props.action.modalId".',
+        message: `Page "home" has an invalid layout at "layout[0].props.action.modalId".
+  → button("Broken")
+  Node: {"type":"button","props":{"label":"Broken"}}`,
       },
     })
   })
@@ -713,7 +785,9 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].props.action.modalId".',
+        message: `Page "home" has an invalid layout at "layout[0].props.action.modalId".
+  → button("Broken")
+  Node: {"type":"button","props":{"label":"Broken"}}`,
       },
     })
   })
@@ -740,7 +814,9 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0]": button nodes without an action must be descendants of a form node.',
+        message: `Page "home" has an invalid layout at "layout[0]": button nodes without an action must be descendants of a form node.
+  → button("Broken")
+  Node: {"type":"button","props":{"label":"Broken"}}`,
       },
     })
   })
@@ -774,7 +850,9 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].props.action.pageId".',
+        message: `Page "home" has an invalid layout at "layout[0].props.action.pageId".
+  → button("Missing page")
+  Node: {"type":"button","props":{"label":"Missing page"}}`,
       },
     })
 
@@ -807,7 +885,9 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].props.action.pageId".',
+        message: `Page "home" has an invalid layout at "layout[0].props.action.pageId".
+  → button("Empty page")
+  Node: {"type":"button","props":{"label":"Empty page"}}`,
       },
     })
 
@@ -840,7 +920,9 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].props.action.pageId": unknown page "missing-page".',
+        message: `Page "home" has an invalid layout at "layout[0].props.action.pageId": unknown page "missing-page".
+  → button("Unknown page")
+  Node: {"type":"button","props":{"label":"Unknown page"}}`,
       },
     })
   })
@@ -877,7 +959,9 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].props.action.operationName".',
+        message: `Page "home" has an invalid layout at "layout[0].props.action.operationName".
+  → button("Broken")
+  Node: {"type":"button","props":{"label":"Broken"}}`,
       },
     })
 
@@ -913,7 +997,9 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].props.action.operationName".',
+        message: `Page "home" has an invalid layout at "layout[0].props.action.operationName".
+  → button("Broken")
+  Node: {"type":"button","props":{"label":"Broken"}}`,
       },
     })
 
@@ -950,7 +1036,9 @@ describe('validateRuntimeConfig', () => {
         code: 'invalid-layout',
         displayMode: 'development-only',
         message:
-          'Page "home" has an invalid layout at "layout[0].props.action.operationName": unknown operation "missingOperation".',
+          `Page "home" has an invalid layout at "layout[0].props.action.operationName": unknown operation "missingOperation".
+  → button("Broken")
+  Node: {"type":"button","props":{"label":"Broken"}}`,
       },
     })
   })
@@ -1010,7 +1098,9 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0]": link nodes must have either props.label or children.',
+        message: `Page "home" has an invalid layout at "layout[0]": link nodes must have either props.label or children.
+  → link[0]
+  Node: {"type":"link"}`,
       },
     })
   })
@@ -1035,7 +1125,9 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0]": link nodes must have either props.label or children.',
+        message: `Page "home" has an invalid layout at "layout[0]": link nodes must have either props.label or children.
+  → link[0]
+  Node: {"type":"link"}`,
       },
     })
   })
@@ -1171,7 +1263,9 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0]": link nodes must have either props.href or props.action.',
+        message: `Page "home" has an invalid layout at "layout[0]": link nodes must have either props.href or props.action.
+  → link("Broken")
+  Node: {"type":"link","props":{"label":"Broken"}}`,
       },
     })
   })
@@ -1200,7 +1294,9 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0]": link nodes cannot have both props.href and props.action.',
+        message: `Page "home" has an invalid layout at "layout[0]": link nodes cannot have both props.href and props.action.
+  → link("Broken")
+  Node: {"type":"link","props":{"label":"Broken"}}`,
       },
     })
   })
@@ -1229,7 +1325,9 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].props.download": download requires props.href.',
+        message: `Page "home" has an invalid layout at "layout[0].props.download": download requires props.href.
+  → link("Broken")
+  Node: {"type":"link","props":{"label":"Broken"}}`,
       },
     })
   })
@@ -1258,7 +1356,9 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].props.target": target requires props.href.',
+        message: `Page "home" has an invalid layout at "layout[0].props.target": target requires props.href.
+  → link("Broken")
+  Node: {"type":"link","props":{"label":"Broken"}}`,
       },
     })
   })
@@ -1286,7 +1386,9 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].props.action.type".',
+        message: `Page "home" has an invalid layout at "layout[0].props.action.type".
+  → link("Broken")
+  Node: {"type":"link","props":{"label":"Broken"}}`,
       },
     })
   })
@@ -1314,7 +1416,9 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].props.action.pageId": unknown page "missing-page".',
+        message: `Page "home" has an invalid layout at "layout[0].props.action.pageId": unknown page "missing-page".
+  → link("Broken")
+  Node: {"type":"link","props":{"label":"Broken"}}`,
       },
     })
   })
@@ -1342,9 +1446,62 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].props.action.pageId".',
+        message: `Page "home" has an invalid layout at "layout[0].props.action.pageId".
+  → link("Broken")
+  Node: {"type":"link","props":{"label":"Broken"}}`,
       },
     })
+  })
+
+  it('rejects a link action with an unrecognized type value at the Zod discriminated union level', () => {
+    expect(
+      validateRuntimeConfig(
+        createConfigWithPages([
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'link',
+                props: {
+                  label: 'Broken',
+                  action: { type: 'doSomethingUnsupported' },
+                },
+              },
+            ],
+          },
+        ]),
+      ),
+    ).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message: `Page "home" has an invalid layout at "layout[0].props.action.type".
+  → link("Broken")
+  Node: {"type":"link","props":{"label":"Broken"}}`,
+      },
+    })
+  })
+
+  it('accepts a link node without props.action when props.href is present (mutually exclusive fields, no crash)', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithPages([
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'link',
+              props: {
+                label: 'Docs',
+                href: 'https://example.com',
+              },
+            },
+          ],
+        },
+      ]),
+    )
+
+    expect(result.status).toBe('ready')
   })
 
   it('accepts a link node with visibility, queryStateFeedback and layout.span', () => {
@@ -1594,7 +1751,9 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0]": link nodes cannot have both props.label and children.',
+        message: `Page "home" has an invalid layout at "layout[0]": link nodes cannot have both props.label and children.
+  → link("Go")
+  Node: {"type":"link","props":{"label":"Go"}}`,
       },
     })
   })
@@ -1620,7 +1779,9 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0]": link nodes cannot have both props.icon and children.',
+        message: `Page "home" has an invalid layout at "layout[0]": link nodes cannot have both props.icon and children.
+  → link[0]
+  Node: {"type":"link"}`,
       },
     })
   })
@@ -1645,7 +1806,9 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0]": link nodes must have either props.label or children.',
+        message: `Page "home" has an invalid layout at "layout[0]": link nodes must have either props.label or children.
+  → link[0]
+  Node: {"type":"link"}`,
       },
     })
   })
@@ -1671,7 +1834,9 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].children": link children cannot be empty.',
+        message: `Page "home" has an invalid layout at "layout[0].children": link children cannot be empty.
+  → link[0]
+  Node: {"type":"link"}`,
       },
     })
   })
@@ -1825,7 +1990,9 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].props.download": download requires props.href.',
+        message: `Page "home" has an invalid layout at "layout[0].props.download": download requires props.href.
+  → link[0]
+  Node: {"type":"link"}`,
       },
     })
   })
@@ -1855,7 +2022,9 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].props.target": target requires props.href.',
+        message: `Page "home" has an invalid layout at "layout[0].props.target": target requires props.href.
+  → link[0]
+  Node: {"type":"link"}`,
       },
     })
   })
@@ -2380,7 +2549,9 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].props.action.formId".',
+        message: `Page "home" has an invalid layout at "layout[0].props.action.formId".
+  → button("Broken")
+  Node: {"type":"button","props":{"label":"Broken"}}`,
       },
     })
 
@@ -2409,7 +2580,9 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].props.action.formId".',
+        message: `Page "home" has an invalid layout at "layout[0].props.action.formId".
+  → button("Broken")
+  Node: {"type":"button","props":{"label":"Broken"}}`,
       },
     })
 
@@ -2785,6 +2958,80 @@ describe('validateRuntimeConfig', () => {
     expect(result.status).toBe('ready')
   })
 
+  // T-3: semantic validation of composed groups in executeOperations[*].when
+  describe('button executeOperations when semantics — composed groups', () => {
+    it('accepts button executeOperations entry with a valid group of two conditions', () => {
+      const result = validateRuntimeConfig({
+        api: {},
+        pages: [
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'button',
+                props: {
+                  label: 'Run',
+                  action: {
+                    type: 'executeOperations',
+                    operations: [
+                      {
+                        operationName: 'op1',
+                        when: {
+                          operator: 'and',
+                          conditions: [
+                            { reference: 'params.id', operator: 'isTruthy' },
+                            { reference: 'queries.q.data.flag', operator: 'isTruthy' },
+                          ],
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            ],
+          },
+        ],
+        initialPage: 'home',
+      })
+      expect(result.status).toBe('ready')
+    })
+
+    it('rejects button executeOperations entry with a group whose interior condition has an invalid reference (path .operations[0].when.conditions[0].reference)', () => {
+      const result = validateRuntimeConfig({
+        api: {},
+        pages: [
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'button',
+                props: {
+                  label: 'Run',
+                  action: {
+                    type: 'executeOperations',
+                    operations: [
+                      {
+                        operationName: 'op1',
+                        when: {
+                          operator: 'or',
+                          conditions: [{ reference: 'navigation.currentPage', operator: 'isTruthy' }],
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            ],
+          },
+        ],
+        initialPage: 'home',
+      })
+      expect(result.status).toBe('error')
+      if (result.status !== 'error') throw new Error('Expected error')
+      expect(result.error.message).toContain('layout[0].props.action.operations[0].when.conditions[0].reference')
+    })
+  })
+
   describe('tokens.* gating in button actions', () => {
     it('accepts tokens.* in button.props.action.headers for executeOperation', () => {
       const result = validateRuntimeConfig({
@@ -2956,5 +3203,421 @@ describe('validateRuntimeConfig', () => {
         expect(result.error.message).toContain('tokens.*')
       }
     })
+  })
+
+  describe('button props.iconPosition', () => {
+    it('accepts iconPosition: "left" and the normalized node preserves it', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithPages([
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'button',
+                props: {
+                  label: 'Search',
+                  action: { type: 'goBack' },
+                  icon: 'Search',
+                  iconPosition: 'left',
+                },
+              },
+            ],
+          },
+        ]),
+      )
+
+      expect(result.status).toBe('ready')
+      if (result.status !== 'ready') throw new Error('Expected ready')
+
+      expect(result.page.layout[0]).toMatchObject({
+        type: 'button',
+        props: { label: 'Search', iconPosition: 'left' },
+      })
+    })
+
+    it('accepts iconPosition: "right" and the normalized node preserves it', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithPages([
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'button',
+                props: {
+                  label: 'Next',
+                  action: { type: 'goBack' },
+                  icon: 'ArrowRight',
+                  iconPosition: 'right',
+                },
+              },
+            ],
+          },
+        ]),
+      )
+
+      expect(result.status).toBe('ready')
+      if (result.status !== 'ready') throw new Error('Expected ready')
+
+      expect(result.page.layout[0]).toMatchObject({
+        type: 'button',
+        props: { label: 'Next', iconPosition: 'right' },
+      })
+    })
+
+    it('without iconPosition, the normalized node does not include the iconPosition key', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithPages([
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'button',
+                props: {
+                  label: 'Search',
+                  action: { type: 'goBack' },
+                  icon: 'Search',
+                },
+              },
+            ],
+          },
+        ]),
+      )
+
+      expect(result.status).toBe('ready')
+      if (result.status !== 'ready') throw new Error('Expected ready')
+
+      expect(result.page.layout[0]).not.toHaveProperty('props.iconPosition')
+    })
+
+    it('rejects iconPosition with a value outside the enum with code invalid-layout and the exact path', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithPages([
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'button',
+                props: {
+                  label: 'Broken',
+                  action: { type: 'goBack' },
+                  iconPosition: 'center',
+                },
+              },
+            ],
+          },
+        ]),
+      )
+
+      expect(result.status).toBe('error')
+      if (result.status !== 'error') throw new Error('Expected error')
+
+      expect(result.error.code).toBe('invalid-layout')
+      expect(result.error.message).toContain('layout[0].props.iconPosition')
+    })
+
+    it('accepts iconPosition declared without icon and the normalized node preserves iconPosition', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithPages([
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'button',
+                props: {
+                  label: 'Next',
+                  action: { type: 'goBack' },
+                  iconPosition: 'right',
+                },
+              },
+            ],
+          },
+        ]),
+      )
+
+      expect(result.status).toBe('ready')
+      if (result.status !== 'ready') throw new Error('Expected ready')
+
+      expect(result.page.layout[0]).toMatchObject({
+        type: 'button',
+        props: { label: 'Next', iconPosition: 'right' },
+      })
+    })
+  })
+
+  describe('link props.iconPosition', () => {
+    it('accepts props.label and iconPosition: "right" and the normalized node preserves iconPosition', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithPages([
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'link',
+                props: {
+                  label: 'Visit',
+                  href: 'https://example.com',
+                  icon: 'ExternalLink',
+                  iconPosition: 'right',
+                },
+              },
+            ],
+          },
+        ]),
+      )
+
+      expect(result.status).toBe('ready')
+      if (result.status !== 'ready') throw new Error('Expected ready')
+
+      expect(result.page.layout[0]).toMatchObject({
+        type: 'link',
+        props: { label: 'Visit', iconPosition: 'right' },
+      })
+    })
+
+    it('without iconPosition, the normalized node does not include the iconPosition key', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithPages([
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'link',
+                props: {
+                  label: 'Visit',
+                  href: 'https://example.com',
+                },
+              },
+            ],
+          },
+        ]),
+      )
+
+      expect(result.status).toBe('ready')
+      if (result.status !== 'ready') throw new Error('Expected ready')
+
+      expect(result.page.layout[0]).not.toHaveProperty('props.iconPosition')
+    })
+
+    it('rejects iconPosition with a value outside the enum with code invalid-layout and the exact path', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithPages([
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'link',
+                props: {
+                  label: 'Visit',
+                  href: 'https://example.com',
+                  iconPosition: 'center',
+                },
+              },
+            ],
+          },
+        ]),
+      )
+
+      expect(result.status).toBe('error')
+      if (result.status !== 'error') throw new Error('Expected error')
+
+      expect(result.error.code).toBe('invalid-layout')
+      expect(result.error.message).toContain('layout[0].props.iconPosition')
+    })
+
+    it('rejects link with children and iconPosition declared with the icon+children diagnostic message', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithPages([
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'link',
+                props: {
+                  href: 'https://example.com',
+                  iconPosition: 'right',
+                },
+                children: [
+                  {
+                    type: 'paragraph',
+                    props: { text: 'Click here' },
+                  },
+                ],
+              },
+            ],
+          },
+        ]),
+      )
+
+      expect(result.status).toBe('error')
+      if (result.status !== 'error') throw new Error('Expected error')
+
+      expect(result.error.code).toBe('invalid-layout')
+      expect(result.error.message).toContain('link nodes cannot have both props.icon and children.')
+    })
+
+    it('accepts props.label and iconPosition declared without icon and the normalized node preserves iconPosition', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithPages([
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'link',
+                props: {
+                  label: 'Visit',
+                  href: 'https://example.com',
+                  iconPosition: 'right',
+                },
+              },
+            ],
+          },
+        ]),
+      )
+
+      expect(result.status).toBe('ready')
+      if (result.status !== 'ready') throw new Error('Expected ready')
+
+      expect(result.page.layout[0]).toMatchObject({
+        type: 'link',
+        props: { label: 'Visit', iconPosition: 'right' },
+      })
+    })
+  })
+})
+
+// ─── Second-pass breadcrumb enrichment tests ─────────────────────────────────
+
+describe('validateRuntimeConfig — second-pass action target errors include breadcrumb', () => {
+  it('navigateTo to unknown page in button nested inside container > form includes breadcrumb with full ancestors', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithPages([
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'container',
+              children: [
+                {
+                  type: 'form',
+                  id: 'user',
+                  children: [
+                    {
+                      type: 'button',
+                      props: {
+                        label: 'Go nowhere',
+                        action: {
+                          type: 'navigateTo',
+                          pageId: 'non-existent-page',
+                        },
+                      },
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      ]),
+    )
+    expect(result.status).toBe('error')
+    if (result.status !== 'error') throw new Error('Expected error')
+    expect(result.error.message).toContain('unknown page "non-existent-page"')
+    expect(result.error.message).toContain('\n  → ')
+    expect(result.error.message).toContain('container[0]')
+    expect(result.error.message).toContain('form("user")')
+    expect(result.error.message).toContain('button("Go nowhere")')
+    expect(result.error.message).toContain('\n  Node: ')
+    expect(result.error.message).toContain('"type":"button"')
+  })
+
+  it('executeOperation to unknown operation includes breadcrumb and excerpt of the button', () => {
+    const result = validateRuntimeConfig({
+      api: {
+        searchUsers: { method: 'GET', endpoint: '/api/users' },
+      },
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'button',
+              props: {
+                label: 'Run missing',
+                action: {
+                  type: 'executeOperation',
+                  operationName: 'nonExistentOp',
+                },
+              },
+            },
+          ],
+        },
+      ],
+      initialPage: 'home',
+    })
+    expect(result.status).toBe('error')
+    if (result.status !== 'error') throw new Error('Expected error')
+    expect(result.error.message).toContain('unknown operation "nonExistentOp"')
+    expect(result.error.message).toContain('\n  → ')
+    expect(result.error.message).toContain('button("Run missing")')
+    expect(result.error.message).toContain('\n  Node: ')
+    expect(result.error.message).toContain('"type":"button"')
+    expect(result.error.message).toContain('"label":"Run missing"')
+  })
+
+  it('link navigateTo to unknown page includes breadcrumb with link node', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithPages([
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'link',
+              props: {
+                label: 'Broken link',
+                action: { type: 'navigateTo', pageId: 'missing-page' },
+              },
+            },
+          ],
+        },
+      ]),
+    )
+    expect(result.status).toBe('error')
+    if (result.status !== 'error') throw new Error('Expected error')
+    expect(result.error.message).toContain('unknown page "missing-page"')
+    expect(result.error.message).toContain('\n  → ')
+    expect(result.error.message).toContain('link("Broken link")')
+    expect(result.error.message).toContain('\n  Node: ')
+  })
+
+  it('navigateTo to unknown page inside repeater template includes breadcrumb with repeater ancestor', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithPages([
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'repeater',
+              props: {
+                items: { source: 'queries.posts.data', key: 'id' },
+                template: [
+                  {
+                    type: 'button',
+                    props: {
+                      label: 'View',
+                      action: { type: 'navigateTo', pageId: 'ghost-page' },
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      ]),
+    )
+    expect(result.status).toBe('error')
+    if (result.status !== 'error') throw new Error('Expected error')
+    expect(result.error.message).toContain('unknown page "ghost-page"')
+    expect(result.error.message).toContain('repeater[0]')
+    expect(result.error.message).toContain('button("View")')
   })
 })

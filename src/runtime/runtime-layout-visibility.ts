@@ -1,4 +1,6 @@
 import type { LayoutNode, LayoutNodeFeedbackFields, RuntimeVisibilityConfig } from '../config/runtime-config'
+import type { RuntimeVisibilityCondition } from '../config/runtime-config-types'
+import { isVisibilityGroup } from '../config/runtime-config-types'
 import type { RuntimeIterationContext } from './runtime-references/runtime-reference-resolver'
 import { resolveRuntimeReference } from './runtime-references/runtime-reference-resolver'
 import type { RuntimeState } from './runtime-state/runtime-state-types'
@@ -67,13 +69,38 @@ export function matchesVisibilityRule(
     return true
   }
 
-  const resolvedReference = resolveRuntimeReference(visibility.reference, state, { iterationContext })
+  if (isVisibilityGroup(visibility)) {
+    if (visibility.operator === 'and') {
+      return visibility.conditions.every((condition) => evaluateCondition(condition, state, iterationContext))
+    }
 
-  if (visibility.operator === 'isTruthy') {
+    return visibility.conditions.some((condition) => evaluateCondition(condition, state, iterationContext))
+  }
+
+  return evaluateCondition(visibility, state, iterationContext)
+}
+
+function evaluateCondition(
+  condition: RuntimeVisibilityCondition,
+  state: RuntimeState,
+  iterationContext: RuntimeIterationContext | undefined,
+) {
+  const result = evaluateConditionMatch(condition, state, iterationContext)
+  return condition.negate ? !result : result
+}
+
+function evaluateConditionMatch(
+  condition: RuntimeVisibilityCondition,
+  state: RuntimeState,
+  iterationContext: RuntimeIterationContext | undefined,
+) {
+  const resolvedReference = resolveRuntimeReference(condition.reference, state, { iterationContext })
+
+  if (condition.operator === 'isTruthy') {
     return resolvedReference.status === 'resolved' && isTruthyValue(resolvedReference.value)
   }
 
-  if (visibility.operator === 'isFalsy') {
+  if (condition.operator === 'isFalsy') {
     return resolvedReference.status !== 'resolved' || !isTruthyValue(resolvedReference.value)
   }
 
@@ -81,25 +108,25 @@ export function matchesVisibilityRule(
     return false
   }
 
-  if (visibility.operator === 'equals') {
-    return Object.is(resolvedReference.value, visibility.value)
+  if (condition.operator === 'equals') {
+    return Object.is(resolvedReference.value, condition.value)
   }
 
-  if (visibility.operator === 'notEquals') {
-    return !Object.is(resolvedReference.value, visibility.value)
+  if (condition.operator === 'notEquals') {
+    return !Object.is(resolvedReference.value, condition.value)
   }
 
   const comparableValue = normalizeComparableValue(resolvedReference.value)
 
-  if (comparableValue === null || typeof visibility.value !== 'number') {
+  if (comparableValue === null || typeof condition.value !== 'number') {
     return false
   }
 
-  if (visibility.operator === 'greaterThan') {
-    return comparableValue > visibility.value
+  if (condition.operator === 'greaterThan') {
+    return comparableValue > condition.value
   }
 
-  return comparableValue < visibility.value
+  return comparableValue < condition.value
 }
 
 function normalizeComparableValue(value: unknown) {

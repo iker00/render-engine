@@ -26,13 +26,17 @@ export const supportedNodeTypes = [
   'divider',
   'skeleton',
   'fileManager',
+  'fileInput',
+  'toggle',
+  'hidden',
 ] as const
 
 export const tableCellAllowedNodeTypes = ['image', 'list', 'button', 'container', 'heading', 'paragraph'] as const
 export const supportedApiMethods = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'] as const
 export const supportedQueryStateFeedbackStates = ['idle', 'loading', 'error', 'empty', 'success'] as const
 export const supportedVisibilityOperators = ['equals', 'notEquals', 'isTruthy', 'isFalsy', 'greaterThan', 'lessThan'] as const
-export const supportedInputTypes = ['text', 'email', 'password', 'search', 'tel', 'url', 'number', 'date', 'datetime-local'] as const
+export const supportedVisibilityGroupOperators = ['and', 'or'] as const
+export const supportedInputTypes = ['text', 'email', 'password', 'search', 'tel', 'url', 'number', 'date', 'datetime-local', 'time'] as const
 export const supportedContainerAlignValues = ['start', 'center', 'end', 'stretch'] as const
 export const supportedContainerJustifyValues = ['start', 'center', 'end', 'between', 'around', 'evenly'] as const
 export const supportedContainerWrapValues = ['nowrap', 'wrap', 'wrap-reverse'] as const
@@ -65,6 +69,7 @@ export const runtimeConfigShellSchema = z
     api: z.record(z.string(), z.unknown()),
     pages: z.array(z.unknown()),
     initialPage: nonEmptyStringSchema,
+    preloads: z.array(z.unknown()).optional(),
   })
   .strip()
 
@@ -157,13 +162,23 @@ const queryStateFeedbackSchema = z
   })
   .strip()
 
-const visibilitySchema = z
+const visibilityConditionSchema = z
   .object({
     reference: nonEmptyStringSchema,
     operator: z.enum(supportedVisibilityOperators),
     value: z.unknown().optional(),
+    negate: z.boolean().optional(),
   })
   .strip()
+
+const visibilityGroupSchema = z
+  .object({
+    operator: z.enum(supportedVisibilityGroupOperators),
+    conditions: z.array(visibilityConditionSchema).min(1),
+  })
+  .strip()
+
+const visibilitySchema = z.discriminatedUnion('operator', [visibilityConditionSchema, visibilityGroupSchema])
 
 export const whenConditionSchema = visibilitySchema
 
@@ -386,6 +401,55 @@ export const resetFormRuntimeUiActionSchema = z
   })
   .strip()
 
+export const openModalRuntimeUiActionSchema = z
+  .object({
+    type: z.literal('openModal'),
+    modalId: nonEmptyStringSchema,
+  })
+  .strip()
+
+export const closeModalRuntimeUiActionSchema = z
+  .object({
+    type: z.literal('closeModal'),
+    modalId: nonEmptyStringSchema,
+  })
+  .strip()
+
+export const buttonActionSchema = z.discriminatedUnion('type', [
+  navigateToButtonActionSchema,
+  goBackButtonActionSchema,
+  executeOperationRuntimeUiActionSchema,
+  executeOperationsRuntimeUiActionSchema,
+  resetFormRuntimeUiActionSchema,
+  openModalRuntimeUiActionSchema,
+  closeModalRuntimeUiActionSchema,
+])
+
+// Shape of a single onSuccess/onError entry: the same 7 action variants accepted by
+// buttonActionSchema, each extended with an optional `when` condition.
+export const formLifecycleActionEntrySchema = z.discriminatedUnion('type', [
+  navigateToButtonActionSchema.extend({ when: whenConditionSchema.optional() }),
+  goBackButtonActionSchema.extend({ when: whenConditionSchema.optional() }),
+  executeOperationRuntimeUiActionSchema.extend({ when: whenConditionSchema.optional() }),
+  executeOperationsRuntimeUiActionSchema.extend({ when: whenConditionSchema.optional() }),
+  resetFormRuntimeUiActionSchema.extend({ when: whenConditionSchema.optional() }),
+  openModalRuntimeUiActionSchema.extend({ when: whenConditionSchema.optional() }),
+  closeModalRuntimeUiActionSchema.extend({ when: whenConditionSchema.optional() }),
+])
+
+const formLifecycleActionsSchema = z.array(formLifecycleActionEntrySchema).optional()
+
+export const formSubmitActionSchema = z.discriminatedUnion('type', [
+  executeOperationRuntimeUiActionSchema.extend({
+    onSuccess: formLifecycleActionsSchema,
+    onError: formLifecycleActionsSchema,
+  }),
+  executeOperationsRuntimeUiActionSchema.extend({
+    onSuccess: formLifecycleActionsSchema,
+    onError: formLifecycleActionsSchema,
+  }),
+])
+
 export const supportedButtonVariants = ['solid', 'outline', 'ghost', 'link'] as const
 export const supportedButtonColors = ['neutral', 'primary', 'success', 'warning', 'danger', 'info'] as const
 
@@ -399,11 +463,12 @@ export const buttonNodeSchema = z
     props: z
       .object({
         label: z.string(),
-        action: z.unknown().optional(),
+        action: buttonActionSchema.optional(),
         color: z.enum(supportedButtonColors).optional(),
         variant: z.enum(supportedButtonVariants).optional(),
         fullWidth: z.boolean().optional(),
         icon: z.string().optional(),
+        iconPosition: z.enum(['left', 'right']).optional(),
       })
       .strip(),
   })
@@ -417,7 +482,7 @@ export const formNodeSchema = z
     visibility: visibilitySchema.optional(),
     layout: layoutNodeLayoutSchema.optional(),
     persistOnUnmount: z.boolean().optional(),
-    submitAction: z.unknown().optional(),
+    submitAction: formSubmitActionSchema.optional(),
     resetOnSuccess: z.boolean().optional(),
     children: z.array(z.unknown()).optional(),
   })
@@ -427,6 +492,7 @@ const formFieldNodePropsSchema = z
   .object({
     fieldId: nonEmptyStringSchema,
     label: z.string(),
+    tooltip: z.string().optional(),
     validations: formFieldValidationsSchema.optional(),
     defaultValue: formFieldDefaultValueSchema.optional(),
   })
@@ -443,6 +509,7 @@ export const inputNodeSchema = z
         inputType: z.enum(supportedInputTypes).optional(),
         placeholder: z.string().optional(),
         icon: z.string().optional(),
+        iconPosition: z.enum(['left', 'right']).optional(),
       })
       .strip(),
   })
@@ -469,6 +536,20 @@ export const selectItemSchema = z
   })
   .strip()
 
+// Exclusive contract for props.items of select/radioGroup/checkboxGroup: manual literal
+// (array of {label, value}), manual scalar ({ values: [...] }), or dynamic with an explicit
+// itemType discriminator (scalar or object with label/value projection paths). No other shape
+// is accepted; there is no compatibility adapter for retired shapes (manual object, dynamic
+// without itemType).
+export const selectItemsSchema = z.union([
+  z.array(selectItemSchema),
+  z.object({ values: z.array(z.union([z.string(), z.number()])) }).strict(),
+  z.discriminatedUnion('itemType', [
+    z.object({ source: z.string(), itemType: z.literal('scalar') }).strict(),
+    z.object({ source: z.string(), itemType: z.literal('object'), label: z.string(), value: z.string() }).strict(),
+  ]),
+])
+
 export const selectNodeSchema = z
   .object({
     type: z.literal('select'),
@@ -477,7 +558,7 @@ export const selectNodeSchema = z
     layout: layoutNodeLayoutSchema.optional(),
     props: formFieldNodePropsSchema
       .extend({
-        items: z.unknown(),
+        items: selectItemsSchema,
         multiple: z.boolean().optional(),
         placeholder: z.string().optional(),
       })
@@ -493,7 +574,7 @@ export const radioGroupNodeSchema = z
     layout: layoutNodeLayoutSchema.optional(),
     props: formFieldNodePropsSchema
       .extend({
-        items: z.unknown(),
+        items: selectItemsSchema,
         optionLayout: z.enum(supportedChoiceGroupOptionLayoutValues).optional(),
       })
       .strip(),
@@ -508,7 +589,7 @@ export const checkboxGroupNodeSchema = z
     layout: layoutNodeLayoutSchema.optional(),
     props: formFieldNodePropsSchema
       .extend({
-        items: z.unknown(),
+        items: selectItemsSchema,
         optionLayout: z.enum(supportedChoiceGroupOptionLayoutValues).optional(),
       })
       .strip(),
@@ -531,20 +612,6 @@ export const modalNodeSchema = z
       .strip()
       .optional(),
     children: z.array(z.unknown()).optional(),
-  })
-  .strip()
-
-export const openModalRuntimeUiActionSchema = z
-  .object({
-    type: z.literal('openModal'),
-    modalId: nonEmptyStringSchema,
-  })
-  .strip()
-
-export const closeModalRuntimeUiActionSchema = z
-  .object({
-    type: z.literal('closeModal'),
-    modalId: nonEmptyStringSchema,
   })
   .strip()
 
@@ -613,8 +680,9 @@ export const linkNodeSchema = z
         href: z.string().optional(),
         download: z.string().optional(),
         target: z.string().optional(),
-        action: z.unknown().optional(),
+        action: z.discriminatedUnion('type', [navigateToButtonActionSchema, goBackButtonActionSchema]).optional(),
         icon: z.string().optional(),
+        iconPosition: z.enum(['left', 'right']).optional(),
       })
       .strip(),
     children: z.array(z.unknown()).optional(),
@@ -660,7 +728,7 @@ export const alertNodeSchema = z
   })
   .strip()
 
-export const supportedStatVariants = ['accent', 'tinted'] as const
+export const supportedStatVariants = ['accent', 'tinted', 'plain'] as const
 export const supportedStatColors = ['neutral', 'primary', 'success', 'warning', 'danger', 'info'] as const
 
 export const statNodeSchema = z
@@ -736,6 +804,33 @@ const fileManagerValidationsSchema = z
 
 const fileManagerOperationSchema = z.union([z.string(), z.literal(false)]).optional()
 
+const fileManagerLabelsSchema = z
+  .object({
+    dropzoneIdle: z.string().optional(),
+    dropzoneAcceptedFormats: z.string().optional(),
+    dropzoneUploading: z.string().optional(),
+    dropzoneProgress: z.string().optional(),
+    dropzoneSuccess: z.string().optional(),
+    dropzoneMaxFilesReached: z.string().optional(),
+    dropzoneAriaLabel: z.string().optional(),
+    listLoadError: z.string().optional(),
+    listEmpty: z.string().optional(),
+    paginationPrevious: z.string().optional(),
+    paginationNext: z.string().optional(),
+    rowViewLabel: z.string().optional(),
+    rowViewAriaLabel: z.string().optional(),
+    rowViewUnavailableAriaLabel: z.string().optional(),
+    rowDownloadLabel: z.string().optional(),
+    rowDownloadAriaLabel: z.string().optional(),
+    rowDownloadUnavailableAriaLabel: z.string().optional(),
+    rowDeleteLabel: z.string().optional(),
+    rowDeleteAriaLabel: z.string().optional(),
+    uploadFileError: z.string().optional(),
+    uploadListPathMissing: z.string().optional(),
+    deleteError: z.string().optional(),
+  })
+  .strict()
+
 export const fileManagerNodeSchema = z
   .object({
     type: z.literal('fileManager'),
@@ -765,6 +860,40 @@ export const fileManagerNodeSchema = z
           })
           .strip()
           .optional(),
+        labels: fileManagerLabelsSchema.optional(),
+      })
+      .strip(),
+  })
+  .strip()
+
+export const supportedToggleLabelPositions = ['top', 'inline'] as const
+
+export const toggleNodeSchema = z
+  .object({
+    type: z.literal('toggle'),
+    queryStateFeedback: queryStateFeedbackSchema.optional(),
+    visibility: visibilitySchema.optional(),
+    layout: layoutNodeLayoutSchema.optional(),
+    props: z
+      .object({
+        fieldId: nonEmptyStringSchema,
+        label: z.string(),
+        tooltip: z.string().optional(),
+        labelPosition: z.enum(supportedToggleLabelPositions).optional(),
+        defaultValue: z.union([z.boolean(), z.string()]).optional(),
+        validations: formFieldValidationsSchema.optional(),
+      })
+      .strip(),
+  })
+  .strip()
+
+export const hiddenNodeSchema = z
+  .object({
+    type: z.literal('hidden'),
+    props: z
+      .object({
+        fieldId: nonEmptyStringSchema,
+        value: z.union([z.string(), z.number(), z.boolean()]),
       })
       .strip(),
   })
@@ -786,3 +915,37 @@ export const runtimeTokenConfigSchema = z
   .strip()
 
 export const runtimeTokensConfigSchema = z.record(nonEmptyStringSchema, runtimeTokenConfigSchema)
+
+export const supportedCaptureValues = ['environment', 'user'] as const
+
+const fileInputValidationsSchema = z
+  .object({
+    required: z.object({ value: z.literal(true), message: z.string().optional() }).strip().optional(),
+    accept: z.object({ value: z.array(z.string()).nonempty(), message: z.string().optional() }).strip().optional(),
+    maxFileSize: z.object({ value: z.number().positive(), message: z.string().optional() }).strip().optional(),
+    maxTotalSize: z.object({ value: z.number().positive(), message: z.string().optional() }).strip().optional(),
+    minFiles: z.object({ value: z.number().int().positive(), message: z.string().optional() }).strip().optional(),
+    maxFiles: z.object({ value: z.number().int().positive(), message: z.string().optional() }).strip().optional(),
+    validFileNames: z.object({ value: z.array(z.string()).nonempty(), message: z.string().optional() }).strip().optional(),
+  })
+  .strip()
+
+export const fileInputNodeSchema = z
+  .object({
+    type: z.literal('fileInput'),
+    id: nodeIdSchema.optional(),
+    queryStateFeedback: queryStateFeedbackSchema.optional(),
+    visibility: visibilitySchema.optional(),
+    layout: layoutNodeLayoutSchema.optional(),
+    props: z
+      .object({
+        fieldId: nonEmptyStringSchema,
+        label: z.string(),
+        tooltip: z.string().optional(),
+        multiple: z.boolean().optional(),
+        capture: z.enum(supportedCaptureValues).optional(),
+        validations: fileInputValidationsSchema.optional(),
+      })
+      .strip(),
+  })
+  .strip()

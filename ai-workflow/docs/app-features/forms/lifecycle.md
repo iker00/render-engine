@@ -16,6 +16,7 @@
 - Si un campo ya tiene estado mientras su `form` sigue montado, el runtime conserva ese valor y no rehidrata el `defaultValue`.
 - Un campo controlado por `visibility` puede inicializarse lazy la primera vez que llegue a mostrarse, aunque el resto del formulario ya exista en store.
 - **Excepción con `tabs` dentro de `form`**: los campos en todos los tabs (con `visibility` visible) se inicializan de forma eager al montar el form, no lazy. Esto permite que campos en tabs inactivos se validen y participen en submit incluso si nunca han sido visitados.
+- **Excepción con `hidden`**: los campos `hidden` se inicializan de forma eager al montar el form, independientemente de la visibilidad de nodos padres. El valor de `props.value` (literal o referencia dinámica) se resuelve una sola vez en el momento de la inicialización.
 
 ## Desmontaje y persistencia
 - Al desmontarse realmente un `form`, el runtime elimina por defecto `forms.{formId}` completo; al volver a montarse, sus campos vuelven a inicializarse como un primer montaje efectivo.
@@ -32,6 +33,7 @@
 - Un campo oculto por `queryStateFeedback.states.idle` no bloquea el submit antes de la primera ejecución de la query observada y vuelve a validarse cuando la query abandona `idle`.
 - Si un campo vuelve a hacerse visible tras una regla `visibility`, el runtime reutiliza su estado local existente y vuelve a incluirlo en la validación normal.
 - **Omisión de payload**: cuando un campo del formulario está oculto en el momento del submit, cualquier clave del request (`body`, `query`, `headers`) cuya referencia apunte a ese campo se omite del payload final, en lugar de viajar vacía. Esto aplica solo a referencias a campos del propio formulario que dispara el submit; referencias a campos de otros formularios, `params.*`, `queries.*` o `item.*` siguen siendo errores si faltan.
+- **Excepción de payload para `hidden`**: los campos de tipo `hidden` nunca se omiten del payload, independientemente de la visibilidad de sus nodos padres. Un campo hidden siempre tiene valor y siempre se incluye.
 
 ## Campos dentro de `tabs` en formularios
 
@@ -47,7 +49,7 @@ Cuando un nodo `tabs` es hijo de un nodo `form`:
 ## Encaje en el contrato de páginas
 - El runtime implementa `form` como nodo contenedor real dentro de `pages[].layout`.
 - La raíz de `pages[].layout` sigue siendo una colección ordenada, así que un formulario puede convivir con otros bloques hermanos sin wrapper sintético.
-- `form.children` reutiliza el árbol declarativo existente y admite `input`, `textarea`, `select`, `radioGroup`, `checkboxGroup`, `button`, `heading`, `paragraph`, `image`, `table`, `container`, `accordion`, `tabs` y `divider`.
+- `form.children` reutiliza el árbol declarativo existente y admite `input`, `textarea`, `select`, `radioGroup`, `checkboxGroup`, `toggle`, `hidden`, `button`, `heading`, `paragraph`, `image`, `table`, `container`, `accordion`, `tabs` y `divider`.
 - El dominio compartido `forms` del store sigue siendo la única fuente de verdad para valores y errores de formulario.
 
 ## Casos funcionales soportados

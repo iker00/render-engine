@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import type { Dispatch, SetStateAction } from 'react'
 import type {
   LayoutNode,
   RepeaterLayoutNode,
@@ -11,36 +10,49 @@ import { useRuntimeLayoutContext } from '../runtime-layout-context'
 import {
   createCollectionPaginationModel,
   createCollectionScrollWindow,
-  createNumberedPaginationWindow,
 } from '../runtime-collection-pagination'
 import {
   getRepeaterPaginationButtonClassName,
   getRepeaterPaginationControlsClassName,
   getRepeaterPaginationCurrentButtonClassName,
 } from '../runtime-node-styling'
+import { CollectionPaginationControls } from './collection-pagination-controls'
 import type { RuntimeIterationContext } from '../runtime-references/runtime-reference-resolver'
 import { resolveRuntimeReference } from '../runtime-references/runtime-reference-resolver'
 import { useRuntimeState, useRuntimeStateActions } from '../runtime-state/runtime-state-provider'
 import { selectActiveModal } from '../runtime-state/runtime-state-selectors'
+import { useLayoutEditModeContext } from '../layout-edit-mode-context'
+import type { LayoutNodePath } from '../layout-node-path'
 
 interface RepeaterNodeProps {
   node: RepeaterLayoutNode
+  path?: LayoutNodePath
 }
+
+const EDIT_MODE_ITERATION_KEY = '__edit-mode-instance__'
 
 interface RepeaterIteration {
   key: string
   item: unknown
   itemKey?: string
+  itemIndex: number
 }
 
-export function RepeaterNode({ node }: RepeaterNodeProps) {
+export function RepeaterNode({ node, path }: RepeaterNodeProps) {
   const state = useRuntimeState()
   const { closeModal } = useRuntimeStateActions()
   const { parentGridColumns } = useRuntimeLayoutContext()
+  const editModeContext = useLayoutEditModeContext()
+  const isEditMode = editModeContext !== null && editModeContext.active
   const sourceItems = resolveRepeaterSourceItems(node.props.items.source, state)
   const pageSize = node.props.pagination?.pageSize
   const paginationControlsVariant = node.props.pagination?.controls?.variant ?? 'previousNext'
-  const iterations = useMemo(() => resolveRepeaterIterations(node, sourceItems), [node, sourceItems])
+  // In edit mode we never expand the collection into N iterations (Decisión 10), so skip the
+  // key-resolution/diagnostics pass entirely rather than computing and discarding it.
+  const iterations = useMemo(
+    () => (isEditMode ? [] : resolveRepeaterIterations(node, sourceItems)),
+    [isEditMode, node, sourceItems],
+  )
   const templateModalIds = useMemo(() => collectModalIdsFromTemplate(node.props.template), [node.props.template])
   const paginationStateKey = useMemo(
     () => `${paginationControlsVariant}:${pageSize ?? 'all'}:${iterations.map((iteration) => iteration.key).join('|')}`,
@@ -49,15 +61,34 @@ export function RepeaterNode({ node }: RepeaterNodeProps) {
   const activeModal = selectActiveModal(state)
 
   useEffect(() => {
+    if (isEditMode) return
     if (!activeModal.activeModalId || !activeModal.activeIterationKey) return
     if (!templateModalIds.has(activeModal.activeModalId)) return
     const iterationKeys = new Set(iterations.map((iter) => iter.key))
     if (!iterationKeys.has(activeModal.activeIterationKey)) {
       closeModal(activeModal.activeModalId, {
-        iterationContext: { item: null, key: activeModal.activeIterationKey },
+        iterationContext: { item: null, key: activeModal.activeIterationKey, itemIndex: -1 },
       })
     }
-  }, [iterations, activeModal, closeModal, templateModalIds])
+  }, [isEditMode, iterations, activeModal, closeModal, templateModalIds])
+
+  if (isEditMode) {
+    const basePath = path ?? []
+    const editModeIterationContext: RuntimeIterationContext = {
+      item: sourceItems.entries[0]?.value ?? {},
+      key: EDIT_MODE_ITERATION_KEY,
+      itemIndex: 0,
+    }
+
+    return (
+      <LayoutRenderer
+        nodes={node.props.template}
+        iterationContext={editModeIterationContext}
+        path={basePath}
+        buildChildPath={(index) => [...basePath, { field: 'template', index }]}
+      />
+    )
+  }
 
   return (
     <RepeaterNodeContent
@@ -110,21 +141,25 @@ function RepeaterNodeContent({
           item: iteration.item,
           key: iteration.key,
           itemKey: iteration.itemKey,
+          itemIndex: iteration.itemIndex,
         }
 
         return <LayoutRenderer key={iteration.key} nodes={node.props.template} iterationContext={iterationContext} />
       })}
-      {paginationPage && paginationPage.totalPages > 1
-        ? renderPaginationControls({
-            variant: paginationControlsVariant,
-            currentPage: paginationPage.currentPage,
-            totalPages: paginationPage.totalPages,
-            canGoPrevious: paginationPage.canGoPrevious,
-            canGoNext: paginationPage.canGoNext,
-            parentGridColumns,
-            setActivePage,
-          })
-        : null}
+      {paginationPage && paginationPage.totalPages > 1 ? (
+        <CollectionPaginationControls
+          variant={paginationControlsVariant}
+          currentPage={paginationPage.currentPage}
+          totalPages={paginationPage.totalPages}
+          canGoPrevious={paginationPage.canGoPrevious}
+          canGoNext={paginationPage.canGoNext}
+          setActivePage={setActivePage}
+          dataLayoutNode="repeater-pagination"
+          containerClassName={() => getRepeaterPaginationControlsClassName(parentGridColumns)}
+          buttonClassName={getRepeaterPaginationButtonClassName}
+          currentButtonClassName={getRepeaterPaginationCurrentButtonClassName}
+        />
+      ) : null}
       {scrollWindow?.canShowMore && pageSize !== undefined ? (
         <RepeaterScrollControls
           pageSize={pageSize}
@@ -133,99 +168,6 @@ function RepeaterNodeContent({
         />
       ) : null}
     </>
-  )
-}
-
-interface RepeaterPaginationControlsProps {
-  variant: RuntimeCollectionPaginationControlsVariant
-  currentPage: number
-  totalPages: number
-  canGoPrevious: boolean
-  canGoNext: boolean
-  parentGridColumns?: RuntimeResponsiveLayoutValue | null
-  setActivePage: Dispatch<SetStateAction<number>>
-}
-
-function renderPaginationControls({
-  variant,
-  currentPage,
-  totalPages,
-  canGoPrevious,
-  canGoNext,
-  parentGridColumns,
-  setActivePage,
-}: RepeaterPaginationControlsProps) {
-  if (variant === 'numbered') {
-    const pageWindow = createNumberedPaginationWindow({ currentPage, totalPages })
-
-    return (
-      <div className={getRepeaterPaginationControlsClassName(parentGridColumns)} data-layout-node="repeater-pagination">
-        <button
-          type="button"
-          className={getRepeaterPaginationButtonClassName()}
-          disabled={!canGoPrevious}
-          onClick={() => setActivePage(1)}
-        >
-          Primera
-        </button>
-        <button
-          type="button"
-          className={getRepeaterPaginationButtonClassName()}
-          disabled={!canGoPrevious}
-          onClick={() => setActivePage((page) => Math.max(1, page - 1))}
-        >
-          Anterior
-        </button>
-        {pageWindow.map((page) => (
-          <button
-            key={page}
-            type="button"
-            className={page === currentPage ? getRepeaterPaginationCurrentButtonClassName() : getRepeaterPaginationButtonClassName()}
-            aria-current={page === currentPage ? 'page' : undefined}
-            onClick={() => setActivePage(page)}
-          >
-            {page}
-          </button>
-        ))}
-        <button
-          type="button"
-          className={getRepeaterPaginationButtonClassName()}
-          disabled={!canGoNext}
-          onClick={() => setActivePage((page) => Math.min(totalPages, page + 1))}
-        >
-          Siguiente
-        </button>
-        <button
-          type="button"
-          className={getRepeaterPaginationButtonClassName()}
-          disabled={!canGoNext}
-          onClick={() => setActivePage(totalPages)}
-        >
-          Última
-        </button>
-      </div>
-    )
-  }
-
-  return (
-    <div className={getRepeaterPaginationControlsClassName(parentGridColumns)} data-layout-node="repeater-pagination">
-      <button
-        type="button"
-        className={getRepeaterPaginationButtonClassName()}
-        disabled={!canGoPrevious}
-        onClick={() => setActivePage((page) => Math.max(1, page - 1))}
-      >
-        Anterior
-      </button>
-      <button
-        type="button"
-        className={getRepeaterPaginationButtonClassName()}
-        disabled={!canGoNext}
-        onClick={() => setActivePage((page) => Math.min(totalPages, page + 1))}
-      >
-        Siguiente
-      </button>
-    </div>
   )
 }
 
@@ -320,7 +262,9 @@ function resolveRepeaterIterations(node: RepeaterLayoutNode, sourceItems: Repeat
     const entry = sourceItems.entries[index]
     let effectiveKey: string | null = null
 
-    if (keyPath === '$key') {
+    if (keyPath === '$index') {
+      effectiveKey = String(index)
+    } else if (keyPath === '$key') {
       if (entry.dictKey === undefined) {
         reportRepeaterKeyDiagnostic(node, index, 'invalid')
         continue
@@ -338,7 +282,7 @@ function resolveRepeaterIterations(node: RepeaterLayoutNode, sourceItems: Repeat
       effectiveKey = String(resolvedKey)
     }
 
-    if (seenKeys.has(effectiveKey)) {
+    if (keyPath !== '$index' && seenKeys.has(effectiveKey)) {
       reportRepeaterKeyDiagnostic(node, index, 'duplicate', effectiveKey)
       continue
     }
@@ -348,6 +292,7 @@ function resolveRepeaterIterations(node: RepeaterLayoutNode, sourceItems: Repeat
       key: effectiveKey,
       item: entry.value,
       itemKey: entry.dictKey,
+      itemIndex: index,
     })
   }
 

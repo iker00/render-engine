@@ -204,7 +204,9 @@ describe('validateRuntimeConfig — tabs inside form', () => {
         code: 'invalid-layout',
         displayMode: 'development-only',
         message:
-          'Page "home" has an invalid layout at "layout[0].children[0].props.items[1].children[0].props.fieldId": duplicate fieldId "email" in form "user-form".',
+          `Page "home" has an invalid layout at "layout[0].children[0].props.items[1].children[0].props.fieldId": duplicate fieldId "email" in form "user-form".
+  → form("user-form") > tabs[0] > input(fieldId: "email")
+  Node: {"type":"input","props":{"fieldId":"email","label":"Email duplicate"}}`,
       },
     })
   })
@@ -244,7 +246,9 @@ describe('validateRuntimeConfig — tabs inside form', () => {
         code: 'invalid-layout',
         displayMode: 'development-only',
         message:
-          'Page "home" has an invalid layout at "layout[0].children[1].props.items[0].children[0].props.fieldId": duplicate fieldId "email" in form "user-form".',
+          `Page "home" has an invalid layout at "layout[0].children[1].props.items[0].children[0].props.fieldId": duplicate fieldId "email" in form "user-form".
+  → form("user-form") > tabs[1] > input(fieldId: "email")
+  Node: {"type":"input","props":{"fieldId":"email","label":"Email again"}}`,
       },
     })
   })
@@ -280,7 +284,9 @@ describe('validateRuntimeConfig — tabs inside form', () => {
         code: 'invalid-layout',
         displayMode: 'development-only',
         message:
-          'Page "home" has an invalid layout at "layout[0].children[0].props.items[0].children[0]": "fileManager" is not allowed inside a form.',
+          `Page "home" has an invalid layout at "layout[0].children[0].props.items[0].children[0]": "fileManager" is not allowed inside a form.
+  → form("user-form") > tabs[0] > fileManager[0]
+  Node: {"type":"fileManager"}`,
       },
     })
   })
@@ -393,7 +399,9 @@ describe('validateRuntimeConfig — tabs inside form', () => {
         code: 'invalid-layout',
         displayMode: 'development-only',
         message:
-          'Page "home" has an invalid layout at "layout[0].children[0].props.items[0].children[0].props.action.body": GET operations do not support body.',
+          `Page "home" has an invalid layout at "layout[0].children[0].props.items[0].children[0].props.action.body": GET operations do not support body.
+  → form("user-form") > tabs[0] > button("Search")
+  Node: {"type":"button","props":{"label":"Search"}}`,
       },
     })
   })

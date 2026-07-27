@@ -3,7 +3,9 @@ import type {
   ListLayoutNodeItems,
   RadioGroupLayoutNode,
   RuntimeCollectionObjectItem,
+  SelectDynamicItemsSource,
   SelectLayoutNodeItems,
+  SelectManualScalarItemsSource,
 } from '../config/runtime-config'
 import type { RuntimeReferenceSurface } from './runtime-references/runtime-reference-diagnostics'
 import { hasRuntimeTemplateDelimiter } from './runtime-references/runtime-reference-parser'
@@ -167,7 +169,7 @@ export function normalizeChoiceFieldValue(
 }
 
 function resolveCollectionSource(
-  items: Exclude<ListLayoutNodeItems, string[]> | Exclude<ChoiceCollectionItems, Array<{ label: string; value: string | number }>>,
+  items: Exclude<ListLayoutNodeItems, string[]> | SelectManualScalarItemsSource | SelectDynamicItemsSource,
   state: RuntimeState,
   surface: 'list.props.items' | ChoiceCollectionSurface,
   options: { iterationContext?: RuntimeIterationContext } = {},
@@ -226,6 +228,7 @@ function projectObjectCollectionToTextItems(
         iterationContext: {
           item,
           key: String(index),
+          itemIndex: index,
         },
       }))
       continue
@@ -305,6 +308,7 @@ function projectObjectCollectionToSelectItems(
           iterationContext: {
             item,
             key: String(index),
+            itemIndex: index,
           },
         })
       : normalizeCollectionItemPathText(item, labelPath)
@@ -325,6 +329,7 @@ function projectObjectCollectionToSelectItems(
           iterationContext: {
             item,
             key: String(index),
+            itemIndex: index,
           },
         }),
       })

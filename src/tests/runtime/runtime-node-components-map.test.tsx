@@ -22,9 +22,11 @@ const EXPECTED_KEYS = [
   'checkboxGroup',
   'container',
   'divider',
+  'fileInput',
   'fileManager',
   'form',
   'heading',
+  'hidden',
   'image',
   'input',
   'link',
@@ -39,13 +41,14 @@ const EXPECTED_KEYS = [
   'table',
   'tabs',
   'textarea',
+  'toggle',
 ]
 
 describe('NodeComponents map', () => {
-  it('exports exactly 24 keys — no missing, no extra', () => {
+  it('exports exactly 27 keys — no missing, no extra', () => {
     const keys = Object.keys(NodeComponents).sort()
     expect(keys).toEqual([...EXPECTED_KEYS].sort())
-    expect(keys).toHaveLength(24)
+    expect(keys).toHaveLength(27)
   })
 
   it('each value in the map is truthy (not undefined)', () => {

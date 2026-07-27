@@ -26,6 +26,8 @@ export function ButtonNode({ node, iterationContext }: ButtonNodeProps) {
   const className = getButtonVariantClassName(color, variant, fullWidth)
   const label = resolveRuntimeTextReference(node.props.label, state, 'button.props.label', { iterationContext })
 
+  const iconRight = node.props.iconPosition === 'right'
+
   return (
     <button
       data-layout-node="button"
@@ -45,8 +47,9 @@ export function ButtonNode({ node, iterationContext }: ButtonNodeProps) {
           : undefined
       }
     >
-      <IconNode name={node.props.icon} className="size-4 shrink-0" />
+      {iconRight ? null : <IconNode name={node.props.icon} className="size-4 shrink-0" />}
       {label}
+      {iconRight ? <IconNode name={node.props.icon} className="size-4 shrink-0" /> : null}
     </button>
   )
 }

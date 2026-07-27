@@ -695,4 +695,32 @@ describe('Runtime shared state store', () => {
     const detailsSection = screen.getByTestId('runtime-page')
     await waitFor(() => expect(detailsSection).toHaveFocus())
   })
+
+  it('does not steal focus away from an unrelated element when the config reference changes without changing page or entry (e.g. an edit-mode commit on every keystroke)', async () => {
+    const { rerender } = render(
+      <RuntimeStateProvider config={runtimeConfig}>
+        <input data-testid="external-input" />
+        <RuntimePage />
+      </RuntimeStateProvider>,
+    )
+
+    await waitFor(() => expect(screen.getByTestId('runtime-page')).toHaveFocus())
+
+    const externalInput = screen.getByTestId('external-input')
+    externalInput.focus()
+    expect(externalInput).toHaveFocus()
+
+    // A brand new config object, with brand new page object references for the exact same
+    // pages/initialPage — same shape as what a property-panel commit on every keystroke produces
+    // (RuntimeConfig fully re-parsed and replaced, same currentPageId, same pageEntry, but no
+    // object in the tree is reference-equal to the previous config).
+    rerender(
+      <RuntimeStateProvider config={{ ...runtimeConfig, pages: runtimeConfig.pages.map((page) => ({ ...page })) }}>
+        <input data-testid="external-input" />
+        <RuntimePage />
+      </RuntimeStateProvider>,
+    )
+
+    expect(externalInput).toHaveFocus()
+  })
 })

@@ -95,8 +95,9 @@ export type {
   SelectLayoutNode,
   SelectLayoutNodeItems,
   SelectDynamicItemsSource,
+  SelectDynamicScalarItemsSource,
+  SelectDynamicObjectItemsSource,
   SelectLayoutNodeItem,
-  SelectManualObjectItemsSource,
   SelectManualScalarItemsSource,
   TableCellNode,
   TableCellValue,
@@ -112,9 +113,13 @@ export type {
   CheckboxGroupLayoutNode,
   ChoiceGroupOptionLayout,
   FileManagerLayoutNode,
+  FileInputLayoutNode,
+  RuntimeFileInputValidations,
   FormOnErrorAction,
   FormOnSuccessAction,
   RuntimeTokenRefreshConfig,
+  HiddenLayoutNode,
+  ToggleLayoutNode
 } from './runtime-config-types'
 export type { RuntimeTranslationsConfig, RuntimeTranslationsLangMap } from './runtime-config-types'
 export { validateRuntimeConfig } from './validate-runtime-config'

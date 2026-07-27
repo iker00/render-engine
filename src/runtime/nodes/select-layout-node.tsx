@@ -15,6 +15,7 @@ import {
 import { getValidationErrorForEditedField } from '../runtime-form-validations'
 import { useRuntimeState, useRuntimeStateActions } from '../runtime-state/runtime-state-provider'
 import { selectFormFieldState } from '../runtime-state/runtime-state-selectors'
+import { FieldTooltip } from './field-tooltip'
 
 interface SelectNodeProps {
   node: SelectLayoutNode
@@ -33,6 +34,9 @@ export function SelectNode({ node, iterationContext }: SelectNodeProps) {
   const fieldState = selectFormFieldState(state, formContext.formId, node.props.fieldId)
   const fieldDefinition = resolveResolvedFormFieldDefinition(node, state, iterationContext)
   const label = resolveRuntimeTextReference(node.props.label, state, 'select.props.label', { iterationContext })
+  const tooltip = node.props.tooltip !== undefined
+    ? resolveRuntimeTextReference(node.props.tooltip, state, 'select.props.tooltip', { iterationContext })
+    : ''
   const defaultValue = fieldDefinition.defaultValue
   const resolvedItems = resolveSelectCollectionItems(node.props.items, state, { iterationContext })
   const isMultiple = node.props.multiple === true
@@ -63,7 +67,7 @@ export function SelectNode({ node, iterationContext }: SelectNodeProps) {
 
   return (
     <label className={getFieldWrapperClassName()} data-layout-node="select">
-      <span className={getFieldLabelClassName()}>{label}</span>
+      <span className={getFieldLabelClassName()}>{label}<FieldTooltip text={tooltip} /></span>
       <div className="relative">
         <select
           id={`${formContext.formId}-${node.props.fieldId}`}

@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import type { ChangeEvent, Dispatch, SetStateAction } from 'react'
 import type {
-  RuntimeCollectionPaginationControlsVariant,
   TableCellNode,
   TableDynamicRows,
   TableLayoutNode,
@@ -9,8 +8,8 @@ import type {
 import {
   createCollectionPaginationModel,
   createCollectionScrollWindow,
-  createNumberedPaginationWindow,
 } from '../runtime-collection-pagination'
+import { CollectionPaginationControls } from './collection-pagination-controls'
 import { resolveCollectionSourceItems } from '../runtime-collection-sources'
 import {
   getNextTableSortState,
@@ -179,7 +178,7 @@ export function TableNode({ node, iterationContext }: TableNodeProps) {
             {visibleRows.map((row, rowIndex) => {
               const rowItem = rowItemMap.get(row)
               const rowIterationContext: RuntimeIterationContext | undefined =
-                rowItem !== undefined ? { item: rowItem, key: String(rowIndex) } : undefined
+                rowItem !== undefined ? { item: rowItem, key: String(rowIndex), itemIndex: rowIndex } : undefined
 
               return (
                 <tr key={`row-${rowIndex}`} className={getTableBodyRowClassName()}>
@@ -206,16 +205,20 @@ export function TableNode({ node, iterationContext }: TableNodeProps) {
           </tbody>
         </table>
       </div>
-      {paginationPage && paginationPage.totalPages > 1
-        ? renderPaginationControls({
-            variant: paginationControlsVariant,
-            currentPage: paginationPage.currentPage,
-            totalPages: paginationPage.totalPages,
-            canGoPrevious: paginationPage.canGoPrevious,
-            canGoNext: paginationPage.canGoNext,
-            setActivePage,
-          })
-        : null}
+      {paginationPage && paginationPage.totalPages > 1 ? (
+        <CollectionPaginationControls
+          variant={paginationControlsVariant}
+          currentPage={paginationPage.currentPage}
+          totalPages={paginationPage.totalPages}
+          canGoPrevious={paginationPage.canGoPrevious}
+          canGoNext={paginationPage.canGoNext}
+          setActivePage={setActivePage}
+          dataLayoutNode="table-pagination"
+          containerClassName={getTablePaginationControlsClassName}
+          buttonClassName={getTablePaginationButtonClassName}
+          currentButtonClassName={getTablePaginationCurrentButtonClassName}
+        />
+      ) : null}
       {scrollWindow?.canShowMore && pageSize !== undefined ? <TableScrollControls onShowMore={showMoreRows} /> : null}
     </div>
   )
@@ -308,97 +311,6 @@ function findColumnByIndex(columns: readonly ResolvedTableColumnConfig[], index:
 
 function getSortDirectionLabel(direction: TableSortState['direction']) {
   return direction === 'ascending' ? 'Asc' : 'Desc'
-}
-
-interface TablePaginationControlsProps {
-  variant: RuntimeCollectionPaginationControlsVariant
-  currentPage: number
-  totalPages: number
-  canGoPrevious: boolean
-  canGoNext: boolean
-  setActivePage: Dispatch<SetStateAction<number>>
-}
-
-function renderPaginationControls({
-  variant,
-  currentPage,
-  totalPages,
-  canGoPrevious,
-  canGoNext,
-  setActivePage,
-}: TablePaginationControlsProps) {
-  if (variant === 'numbered') {
-    const pageWindow = createNumberedPaginationWindow({ currentPage, totalPages })
-
-    return (
-      <div className={getTablePaginationControlsClassName()} data-layout-node="table-pagination">
-        <button
-          type="button"
-          className={getTablePaginationButtonClassName()}
-          disabled={!canGoPrevious}
-          onClick={() => setActivePage(1)}
-        >
-          Primera
-        </button>
-        <button
-          type="button"
-          className={getTablePaginationButtonClassName()}
-          disabled={!canGoPrevious}
-          onClick={() => setActivePage((page) => Math.max(1, page - 1))}
-        >
-          Anterior
-        </button>
-        {pageWindow.map((page) => (
-          <button
-            key={page}
-            type="button"
-            className={page === currentPage ? getTablePaginationCurrentButtonClassName() : getTablePaginationButtonClassName()}
-            aria-current={page === currentPage ? 'page' : undefined}
-            onClick={() => setActivePage(page)}
-          >
-            {page}
-          </button>
-        ))}
-        <button
-          type="button"
-          className={getTablePaginationButtonClassName()}
-          disabled={!canGoNext}
-          onClick={() => setActivePage((page) => Math.min(totalPages, page + 1))}
-        >
-          Siguiente
-        </button>
-        <button
-          type="button"
-          className={getTablePaginationButtonClassName()}
-          disabled={!canGoNext}
-          onClick={() => setActivePage(totalPages)}
-        >
-          Última
-        </button>
-      </div>
-    )
-  }
-
-  return (
-    <div className={getTablePaginationControlsClassName()} data-layout-node="table-pagination">
-      <button
-        type="button"
-        className={getTablePaginationButtonClassName()}
-        disabled={!canGoPrevious}
-        onClick={() => setActivePage((page) => Math.max(1, page - 1))}
-      >
-        Anterior
-      </button>
-      <button
-        type="button"
-        className={getTablePaginationButtonClassName()}
-        disabled={!canGoNext}
-        onClick={() => setActivePage((page) => Math.min(totalPages, page + 1))}
-      >
-        Siguiente
-      </button>
-    </div>
-  )
 }
 
 interface TableScrollControlsProps {
@@ -509,6 +421,7 @@ function resolveTableRows(
           iterationContext: {
             item,
             key: String(rowIndex),
+            itemIndex: rowIndex,
           },
         }),
       )

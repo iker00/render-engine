@@ -8,6 +8,7 @@
 - `props.fieldId`: string obligatorio y único dentro del `form` contenedor.
 - `props.label`: string obligatorio, literal, referencia dinámica completa o string visible interpolado con `{{...}}`.
 - `props.placeholder`: string opcional, literal o string visible interpolado con `{{...}}`. Solo aplica a selección simple (`multiple` ausente o `false`); se renderiza como opción deshabilitada al inicio del listado cuando el campo está vacío. No aplica a selección múltiple (`multiple: true`).
+- `props.tooltip`: string opcional, literal, referencia dinámica completa o string visible interpolado con `{{...}}`. Cuando resuelve a un string no vacío, se renderiza un icono de información (`HelpCircle`) junto al texto del label con un tooltip flotante accesible (hover y focus). Cuando está ausente o resuelve a vacío, no se renderiza nada adicional.
 - `props.validations`: objeto opcional y ordenado por declaración.
   - `props.validations.required`: `true` o `{ value: true, message?: string }`.
   - `props.validations.minSelections`: número o `{ value: number, message?: string }`, solo cuando `props.multiple: true`.
@@ -17,11 +18,14 @@
 - `props.multiple`: boolean opcional; cuando vale `true`, el valor efectivo del campo pasa a ser una colección ordenada.
 
 ## Shapes de `items`
-- shape histórico: array de `{ label, value }`, con `value` homogéneo `string` o `number` dentro del mismo campo.
-- shape manual escalar: `{ values: Array<string | number> }`.
-- shape manual objeto: `{ values: Array<object>, label: string, value: string }`, donde `label` y `value` aceptan ruta relativa histórica o interpolación parcial con `{{...}}`.
-- shape dinámico escalar: `{ source: 'queries.{queryName}.data' | 'queries.{queryName}.data.*' | 'item.*', itemType: 'scalar' }`.
-- shape dinámico objeto: `{ source: 'queries.{queryName}.data' | 'queries.{queryName}.data.*' | 'item.*', label: string, value: string }`, donde `label` y `value` aceptan ruta relativa histórica o interpolación parcial con `{{...}}`.
+Contrato cerrado a exactamente tres shapes; cualquier otro shape rechaza el config completo en bootstrap con `code: invalid-layout` y ruta exacta al `props.items` del nodo.
+- **manual literal**: array de `{ label, value }`, con `value` homogéneo `string` o `number` dentro del mismo campo.
+- **manual escalar**: `{ values: Array<string | number> }`.
+- **dinámico unificado**: `{ source: 'queries.{queryName}.data' | 'queries.{queryName}.data.*' | 'item.*', itemType: 'scalar' | 'object', label?, value? }`, donde `itemType` es obligatorio:
+  - `itemType: 'scalar'`: ni `label` ni `value` pueden declararse.
+  - `itemType: 'object'`: `label` y `value` son obligatorios y aceptan ruta relativa histórica o interpolación parcial con `{{...}}`.
+
+El shape manual objeto (`{ values: Array<object>, label, value }`) y los dos shapes dinámicos separados anteriores (`{ source, itemType: 'scalar' }` opcional sin restricción, y `{ source, label, value }` sin `itemType`) ya no forman parte del contrato: se rechazan explícitamente, sin adaptador de compatibilidad silencioso.
 
 ## Reglas de render
 - `select` acepta tanto items históricos estáticos `{ label, value }` como colecciones manuales o dinámicas declaradas desde `queries.*`.
@@ -56,9 +60,14 @@
 
 ## Validación específica
 - Si `select.props.items` mezclan `value` string y number dentro del mismo campo, el config completo se rechaza antes del render.
+- Un `select.props.items` con un shape retirado (manual objeto, o dinámico sin `itemType` explícito) se rechaza con `code: invalid-layout` y ruta exacta al `props.items` del nodo.
+- Un `select.props.items` dinámico con `itemType: 'scalar'` y `label`/`value` presentes, o con `itemType: 'object'` sin `label`/`value`, se rechaza con `code: invalid-layout` y ruta exacta.
 - Si un campo de selección múltiple (`select.props.multiple: true`) declara un `defaultValue` literal no array, el config completo se rechaza antes del render.
 - Si un campo de selección simple declara un `defaultValue` literal array, el config completo se rechaza antes del render.
 - Si un `defaultValue` literal múltiple contiene miembros no escalares o mezcla strings y números, el config completo se rechaza antes del render.
 
 ## Solo dentro de `form`
 - Si `select` aparece fuera de un subárbol `form`, el config completo se rechaza antes del render.
+
+## Edición desde el dev editor
+El panel de propiedades del modo Editor (ver [[../development/dev-mode-editor.md]]) permite configurar `props.items` íntegramente desde el formulario, sin depender de Monaco, mediante un widget dedicado con selector de modo (manual literal, manual escalar, dinámico) y, en modo dinámico, un sub-selector `itemType`. Un `select`/`radioGroup`/`checkboxGroup` insertado desde la paleta arranca con `props.items: []` (manual literal vacío).

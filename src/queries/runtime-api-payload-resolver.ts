@@ -4,6 +4,16 @@ import {
   RUNTIME_TEMPLATE_PLACEHOLDER_PATTERN,
 } from '../runtime/runtime-references/runtime-reference-resolver'
 import type { RuntimeIterationContext } from '../runtime/runtime-references/runtime-reference-resolver'
+import { reportRuntimeFormatterChainDiagnostic } from '../runtime/runtime-references/runtime-reference-diagnostics'
+import {
+  hasFormatterSyntax,
+  parseFormatterPlaceholder,
+} from '../runtime/runtime-references/runtime-formatter-parser'
+import type { RuntimeFormatterInvocation } from '../runtime/runtime-references/runtime-formatter-parser'
+import {
+  applyFormatterChain,
+  findFirstFailingFormatterName,
+} from '../runtime/runtime-references/runtime-formatter-registry'
 import type { RuntimeState } from '../runtime/runtime-state/runtime-state-types'
 import type { RuntimeApiHiddenFormFields } from './runtime-api-types'
 
@@ -11,6 +21,7 @@ interface ResolvePayloadValueOptions {
   state: RuntimeState
   iterationContext?: RuntimeIterationContext
   hiddenFormFields?: RuntimeApiHiddenFormFields
+  fileValueOverrides?: ReadonlyMap<string, RuntimeApiBodyValue[]>
 }
 
 export function resolvePayloadValue(
@@ -83,6 +94,61 @@ export function resolvePayloadValue(
   } as const
 }
 
+/**
+ * Body-only substitution channel: when a body string is a complete, unsuffixed
+ * `forms.{formId}.{fieldId}` reference and `fileValueOverrides` carries a
+ * precomputed array for `"${formId}.${fieldId}"`, that array replaces the
+ * resolved value — used by file inputs to inject their base64-encoded
+ * selection instead of the unresolvable `File`/`File[]` form value.
+ *
+ * Hidden-field omission still takes priority over the override. Returns
+ * `null` when `value` is not a candidate (no overrides configured, not a
+ * complete two-segment `forms.*` reference, or no matching override key) so
+ * the caller falls back to the existing resolution flow unchanged.
+ */
+function resolveFileValueOverride(
+  value: string,
+  options: ResolvePayloadValueOptions,
+): { status: 'ready'; value: RuntimeApiBodyValue[] } | { status: 'omit' } | null {
+  const { state, iterationContext, hiddenFormFields, fileValueOverrides } = options
+
+  if (fileValueOverrides === undefined) {
+    return null
+  }
+
+  const resolvedReference = resolveRuntimeReference(value, state, { iterationContext })
+
+  const reference =
+    resolvedReference.status === 'resolved' || resolvedReference.status === 'missing'
+      ? resolvedReference.reference
+      : null
+
+  if (reference === null || reference.namespace !== 'forms' || reference.path.length !== 2) {
+    return null
+  }
+
+  const [formId, fieldId] = reference.path
+
+  if (
+    hiddenFormFields !== undefined &&
+    hiddenFormFields.formId === formId &&
+    hiddenFormFields.fieldIds.has(fieldId)
+  ) {
+    return { status: 'omit' } as const
+  }
+
+  const overrideKey = `${formId}.${fieldId}`
+
+  if (!fileValueOverrides.has(overrideKey)) {
+    return null
+  }
+
+  return {
+    status: 'ready',
+    value: fileValueOverrides.get(overrideKey) as RuntimeApiBodyValue[],
+  } as const
+}
+
 export function resolveJsonPayloadValue(
   value: RuntimeApiBodyValue,
   options: ResolvePayloadValueOptions,
@@ -95,6 +161,12 @@ export function resolveJsonPayloadValue(
   }
 
   if (typeof value === 'string') {
+    const fileValueOverrideResult = resolveFileValueOverride(value, options)
+
+    if (fileValueOverrideResult !== null) {
+      return fileValueOverrideResult
+    }
+
     const resolvedValue = resolvePayloadValue(value, options)
 
     if (resolvedValue.status === 'omit') {
@@ -279,12 +351,36 @@ function resolveHeaderTemplateValue(
       return ''
     }
 
-    const referenceValue = rawReference.trim()
+    // Determine the reference to resolve and the formatter chain to apply.
+    // Formatters (feature 0101, T4) reuse the same parser used by the visible
+    // surfaces (T3) so that headers get the same semantics — with the
+    // header-specific twist that unresolvable-chain / unresolvable formatter
+    // application projects to failed=true instead of the visible "empty
+    // placeholder" fallback. See design D5.
+    let referenceValue: string
+    let formatters: readonly RuntimeFormatterInvocation[] = []
 
-    if (referenceValue.length === 0) {
-      failed = true
-      failedPlaceholder = _placeholder
-      return ''
+    if (!hasFormatterSyntax(rawReference)) {
+      referenceValue = rawReference.trim()
+
+      if (referenceValue.length === 0) {
+        failed = true
+        failedPlaceholder = _placeholder
+        return ''
+      }
+    } else {
+      const parseResult = parseFormatterPlaceholder(rawReference)
+
+      if (parseResult.status === 'unresolvable-chain') {
+        failed = true
+        failedPlaceholder = _placeholder
+        return ''
+      }
+
+      referenceValue = parseResult.reference
+      if (parseResult.status === 'ok') {
+        formatters = parseResult.formatters
+      }
     }
 
     const result = resolveRuntimeReference(referenceValue, state, { iterationContext })
@@ -295,7 +391,9 @@ function resolveHeaderTemplateValue(
     }
 
     if (result.status === 'missing') {
-      // Check hidden-form-field omission condition (same logic as resolvePayloadValue)
+      // Check hidden-form-field omission condition (same logic as resolvePayloadValue).
+      // This check runs against the resolved reference, not the formatted value —
+      // omission by hidden field is decided before applying any formatter (D5).
       if (
         hiddenFormFields !== undefined &&
         result.reference.namespace === 'forms' &&
@@ -313,7 +411,9 @@ function resolveHeaderTemplateValue(
     }
 
     if (result.status === 'resolved') {
-      // Check hidden-form-field omission condition for resolved references too
+      // Check hidden-form-field omission condition for resolved references too.
+      // Applied BEFORE the formatter chain (D5): a hidden field still omits the
+      // header even if the placeholder carries a formatter chain.
       if (
         hiddenFormFields !== undefined &&
         result.reference.namespace === 'forms' &&
@@ -325,14 +425,32 @@ function resolveHeaderTemplateValue(
         return ''
       }
 
-      const value = result.value
+      let finalValue: unknown = result.value
 
-      if (typeof value === 'string') {
-        return value
+      if (formatters.length > 0) {
+        const chainResult = applyFormatterChain(result.value, formatters)
+
+        if (chainResult.status !== 'ok') {
+          const failingName = findFirstFailingFormatterName(result.value, formatters)
+          reportRuntimeFormatterChainDiagnostic(
+            _placeholder,
+            failingName,
+            `api.headers[${headerKey}]`,
+          )
+          failed = true
+          failedPlaceholder = referenceValue
+          return ''
+        }
+
+        finalValue = chainResult.value
       }
 
-      if (typeof value === 'number' || typeof value === 'boolean') {
-        return String(value)
+      if (typeof finalValue === 'string') {
+        return finalValue
+      }
+
+      if (typeof finalValue === 'number' || typeof finalValue === 'boolean') {
+        return String(finalValue)
       }
 
       // null, object, array — not serializable as header value

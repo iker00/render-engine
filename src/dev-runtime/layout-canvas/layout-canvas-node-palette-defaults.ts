@@ -1,0 +1,144 @@
+import type { LayoutNode, LayoutNodeType } from '../../config/runtime-config'
+
+// Monotonically increasing, module-scoped: guarantees every generated `fieldId`/`id` is unique
+// across the whole session, so a freshly-inserted `form`/`modal` never collides with an
+// existing one on the page (both must be globally unique per validateRuntimeConfig, see
+// validate-form-nodes.ts) and a freshly-inserted form-only leaf never collides with a sibling
+// field already present in the target form. The value baked into the returned node is a plain
+// string literal by the time `insertNodeAt` sees it — not a reference re-evaluated later — so
+// this still satisfies "no dynamic references" below.
+let uniqueSuffixCounter = 0
+
+function generateUniqueId(prefix: string): string {
+  uniqueSuffixCounter += 1
+  return `${prefix}-${uniqueSuffixCounter}`
+}
+
+/**
+ * Produces a minimally valid `LayoutNode` for every type in `getSupportedNodeTypesCatalog()`
+ * (T7), suitable for inserting directly via `insertNodeAt` (T3) from the node palette (T15,
+ * FR8). Every value is a static literal — never a `queries.*`/`forms.*` reference or a
+ * `{{...}}` interpolation — so the inserted node is valid immediately, without depending on any
+ * query or form actually existing in the active config. The one structural exception is
+ * `repeater`: its own schema (`repeaterNodeSchema`) requires `props.items.source` to already be
+ * shaped like `queries.{queryName}.data` — validation only checks that shape, never that the
+ * named query exists, so a placeholder query name is still a fully static, self-contained
+ * value that needs no runtime state to insert validly (it simply renders zero items until a
+ * real query is wired up).
+ */
+export function buildDefaultNodeInstance(type: LayoutNodeType): LayoutNode {
+  switch (type) {
+    case 'container':
+      return { type: 'container' }
+
+    case 'repeater':
+      return {
+        type: 'repeater',
+        props: {
+          items: { source: 'queries.placeholderQuery.data', key: 'id' },
+          template: [],
+        },
+      }
+
+    case 'heading':
+      return { type: 'heading', props: { text: 'Título', level: 2 } }
+
+    case 'paragraph':
+      return { type: 'paragraph', props: { text: 'Texto de párrafo.' } }
+
+    case 'list':
+      return { type: 'list', props: { items: { values: [] } } }
+
+    case 'image':
+      return { type: 'image', props: { src: 'https://placehold.co/64x64', alt: 'Imagen' } }
+
+    case 'table':
+      return { type: 'table', props: { headers: ['Columna 1'], rows: [] } }
+
+    case 'button':
+      return { type: 'button', props: { label: 'Botón', action: { type: 'goBack' } } }
+
+    case 'link':
+      return { type: 'link', props: { label: 'Enlace', href: '#' } }
+
+    case 'form':
+      return { type: 'form', id: generateUniqueId('form') }
+
+    case 'input':
+      return { type: 'input', props: { fieldId: generateUniqueId('field'), label: 'Campo de texto' } }
+
+    case 'textarea':
+      return { type: 'textarea', props: { fieldId: generateUniqueId('field'), label: 'Área de texto' } }
+
+    case 'select':
+      return {
+        type: 'select',
+        props: {
+          fieldId: generateUniqueId('field'),
+          label: 'Selector',
+          items: [],
+        },
+      }
+
+    case 'radioGroup':
+      return {
+        type: 'radioGroup',
+        props: {
+          fieldId: generateUniqueId('field'),
+          label: 'Opciones',
+          items: [],
+        },
+      }
+
+    case 'checkboxGroup':
+      return {
+        type: 'checkboxGroup',
+        props: {
+          fieldId: generateUniqueId('field'),
+          label: 'Opciones',
+          items: [],
+        },
+      }
+
+    case 'modal':
+      return { type: 'modal', id: generateUniqueId('modal') }
+
+    case 'tabs':
+      return { type: 'tabs', props: { items: [{ label: 'Pestaña 1' }] } }
+
+    case 'accordion':
+      return { type: 'accordion', props: { label: 'Sección' } }
+
+    case 'badge':
+      return { type: 'badge', props: { label: 'Etiqueta' } }
+
+    case 'alert':
+      return { type: 'alert', props: { message: 'Mensaje informativo.' } }
+
+    case 'stat':
+      return { type: 'stat', props: { label: 'Métrica', value: '0' } }
+
+    case 'divider':
+      return { type: 'divider' }
+
+    case 'skeleton':
+      return { type: 'skeleton' }
+
+    case 'fileManager':
+      return { type: 'fileManager', props: { fieldName: 'archivos' } }
+
+    case 'fileInput':
+      return { type: 'fileInput', props: { fieldId: generateUniqueId('field'), label: 'Archivo' } }
+
+    case 'toggle':
+      return { type: 'toggle', props: { fieldId: generateUniqueId('field'), label: 'Activar' } }
+
+    case 'hidden':
+      return { type: 'hidden', props: { fieldId: generateUniqueId('field'), value: 'valor' } }
+
+    default: {
+      const exhaustiveCheck: never = type
+      throw new Error(`buildDefaultNodeInstance: unsupported node type "${String(exhaustiveCheck)}"`)
+    }
+  }
+}

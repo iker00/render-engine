@@ -212,7 +212,7 @@ describe('executeRuntimeUiAction', () => {
 
   it('propagates iterationContext to openModal', () => {
     const handlers = createHandlers()
-    const iterationContext = { item: { id: 'row-1' }, key: 'row-1' }
+    const iterationContext = { item: { id: 'row-1' }, key: 'row-1', itemIndex: 0 }
 
     runtimeUiActionExecutor.executeRuntimeUiAction(
       {
@@ -228,7 +228,7 @@ describe('executeRuntimeUiAction', () => {
 
   it('propagates iterationContext to closeModal', () => {
     const handlers = createHandlers()
-    const iterationContext = { item: { id: 'row-2' }, key: 'row-2' }
+    const iterationContext = { item: { id: 'row-2' }, key: 'row-2', itemIndex: 0 }
 
     runtimeUiActionExecutor.executeRuntimeUiAction(
       {
@@ -356,7 +356,7 @@ describe('executeRuntimeUiAction', () => {
   it('propagates iterationContext to all executeQueryOperation calls in executeOperations', () => {
     const handlers = createHandlers()
     handlers.executeQueryOperation.mockResolvedValue(undefined)
-    const iterationContext = { item: { id: 'row-5' }, key: '4' }
+    const iterationContext = { item: { id: 'row-5' }, key: '4', itemIndex: 4 }
 
     runtimeUiActionExecutor.executeRuntimeUiAction(
       {
@@ -589,7 +589,7 @@ describe('ButtonNode', () => {
       closeModal: vi.fn(),
       resetForm: vi.fn(),
     }
-    const iterationContext = { item: { id: 'row-7' }, key: '6' }
+    const iterationContext = { item: { id: 'row-7' }, key: '6', itemIndex: 6 }
 
     useRuntimeStateActionsMock.mockReturnValue(runtimeHandlers)
 

@@ -23,6 +23,9 @@ export type LayoutNodeType =
   | 'divider'
   | 'skeleton'
   | 'fileManager'
+  | 'fileInput'
+  | 'toggle'
+  | 'hidden'
 export type RuntimeApiMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
 export type RuntimeApiQueryValue = string | number | boolean
 export type RuntimeApiQuery = Record<string, RuntimeApiQueryValue>
@@ -72,14 +75,27 @@ export type RuntimeCollectionObjectItem = Record<string, RuntimeCollectionObject
 
 export type QueryStateFeedbackVisibleState = 'idle' | 'loading' | 'error' | 'empty' | 'success'
 export type RuntimeVisibilityOperator = 'equals' | 'notEquals' | 'isTruthy' | 'isFalsy' | 'greaterThan' | 'lessThan'
+export type RuntimeVisibilityGroupOperator = 'and' | 'or'
 
-export interface RuntimeVisibilityConfig {
+export interface RuntimeVisibilityCondition {
   reference: string
   operator: RuntimeVisibilityOperator
   value?: RuntimeConfigValue
+  negate?: boolean
 }
 
+export interface RuntimeVisibilityGroup {
+  operator: RuntimeVisibilityGroupOperator
+  conditions: RuntimeVisibilityCondition[]
+}
+
+export type RuntimeVisibilityConfig = RuntimeVisibilityCondition | RuntimeVisibilityGroup
+
 export type RuntimeWhenCondition = RuntimeVisibilityConfig
+
+export function isVisibilityGroup(config: RuntimeVisibilityConfig): config is RuntimeVisibilityGroup {
+  return 'conditions' in config
+}
 
 export interface QueryStateFeedbackShowRule {
   mode: 'show'
@@ -267,15 +283,32 @@ export type RuntimeFormValidationRuleName =
   | 'max'
   | 'minSelections'
   | 'maxSelections'
+  | 'pattern'
+  | 'email'
+  | 'url'
 
 export interface RuntimeRequiredValidationRule {
   value: true
   message?: string
+  when?: RuntimeWhenCondition
 }
 
 export interface RuntimeNumericValidationRule {
   value: number
   message?: string
+  when?: RuntimeWhenCondition
+}
+
+export interface RuntimePatternValidationRule {
+  value: string
+  message?: string
+  when?: RuntimeWhenCondition
+}
+
+export interface RuntimeBooleanFlagValidationRule {
+  value: true
+  message?: string
+  when?: RuntimeWhenCondition
 }
 
 export interface RuntimeFormFieldValidations {
@@ -286,6 +319,9 @@ export interface RuntimeFormFieldValidations {
   max?: RuntimeNumericValidationRule
   minSelections?: RuntimeNumericValidationRule
   maxSelections?: RuntimeNumericValidationRule
+  pattern?: RuntimePatternValidationRule
+  email?: RuntimeBooleanFlagValidationRule
+  url?: RuntimeBooleanFlagValidationRule
 }
 
 export interface RuntimeFileManagerValidations {
@@ -297,9 +333,20 @@ export interface RuntimeFileManagerValidations {
   validFileNames?: { value: string[]; message?: string }
 }
 
+export interface RuntimeFileInputValidations {
+  required?: RuntimeRequiredValidationRule
+  accept?: { value: string[]; message?: string }
+  maxFileSize?: { value: number; message?: string }
+  maxTotalSize?: { value: number; message?: string }
+  minFiles?: RuntimeNumericValidationRule
+  maxFiles?: { value: number; message?: string }
+  validFileNames?: { value: string[]; message?: string }
+}
+
 export interface FormFieldLayoutNodeProps {
   fieldId: string
   label: string
+  tooltip?: string
   validations?: RuntimeFormFieldValidations
   defaultValue?: RuntimeConfigValue | unknown[]
 }
@@ -308,9 +355,10 @@ export interface InputLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLay
   type: 'input'
   id?: string
   props: FormFieldLayoutNodeProps & {
-    inputType?: 'text' | 'email' | 'password' | 'search' | 'tel' | 'url' | 'number' | 'date' | 'datetime-local'
+    inputType?: 'text' | 'email' | 'password' | 'search' | 'tel' | 'url' | 'number' | 'date' | 'datetime-local' | 'time'
     placeholder?: string
     icon?: string
+    iconPosition?: 'left' | 'right'
   }
   children?: unknown
 }
@@ -350,28 +398,28 @@ export type ListLayoutNodeItems =
   | ListManualScalarItemsSource
   | ListManualObjectItemsSource
 
-export interface SelectDynamicItemsSource {
+export interface SelectDynamicScalarItemsSource {
   source: string
-  itemType?: 'scalar'
-  label?: string
-  value?: string
+  itemType: 'scalar'
 }
+
+export interface SelectDynamicObjectItemsSource {
+  source: string
+  itemType: 'object'
+  label: string
+  value: string
+}
+
+export type SelectDynamicItemsSource = SelectDynamicScalarItemsSource | SelectDynamicObjectItemsSource
 
 export interface SelectManualScalarItemsSource {
   values: Array<string | number>
 }
 
-export interface SelectManualObjectItemsSource {
-  values: RuntimeCollectionObjectItem[]
-  label: string
-  value: string
-}
-
 export type SelectLayoutNodeItems =
   | SelectLayoutNodeItem[]
-  | SelectDynamicItemsSource
   | SelectManualScalarItemsSource
-  | SelectManualObjectItemsSource
+  | SelectDynamicItemsSource
 
 export interface SelectLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayoutFields {
   type: 'select'
@@ -478,7 +526,7 @@ export interface AlertLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLay
   children?: never
 }
 
-export type StatVariant = 'accent' | 'tinted'
+export type StatVariant = 'accent' | 'tinted' | 'plain'
 export type StatColor = 'neutral' | 'primary' | 'success' | 'warning' | 'danger' | 'info'
 
 export interface StatLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayoutFields {
@@ -594,6 +642,7 @@ export interface ButtonLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLa
     variant?: ButtonVariant
     fullWidth?: boolean
     icon?: string
+    iconPosition?: 'left' | 'right'
   }
   children?: unknown
 }
@@ -608,9 +657,74 @@ export interface LinkLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayo
     target?: string
     action?: NavigateToRuntimeUiAction | GoBackRuntimeUiAction
     icon?: string
+    iconPosition?: 'left' | 'right'
   }
   children?: LayoutNodeCollection
 }
+
+export interface FileInputLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayoutFields {
+  type: 'fileInput'
+  id?: string
+  props: {
+    fieldId: string
+    label: string
+    tooltip?: string
+    multiple?: boolean
+    capture?: 'environment' | 'user'
+    validations?: RuntimeFileInputValidations
+  }
+  children?: unknown
+}
+
+export type ToggleLabelPosition = 'top' | 'inline'
+
+export interface ToggleLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayoutFields {
+  type: 'toggle'
+  id?: string
+  props: {
+    fieldId: string
+    label: string
+    tooltip?: string
+    labelPosition?: ToggleLabelPosition
+    defaultValue?: boolean | string
+    validations?: RuntimeFormFieldValidations
+  }
+  children?: unknown
+}
+
+export interface HiddenLayoutNode extends LayoutNodeFeedbackFields {
+  type: 'hidden'
+  props: {
+    fieldId: string
+    value: string | number | boolean
+  }
+}
+
+export type FileManagerLabelKey =
+  | 'dropzoneIdle'
+  | 'dropzoneAcceptedFormats'
+  | 'dropzoneUploading'
+  | 'dropzoneProgress'
+  | 'dropzoneSuccess'
+  | 'dropzoneMaxFilesReached'
+  | 'dropzoneAriaLabel'
+  | 'listLoadError'
+  | 'listEmpty'
+  | 'paginationPrevious'
+  | 'paginationNext'
+  | 'rowViewLabel'
+  | 'rowViewAriaLabel'
+  | 'rowViewUnavailableAriaLabel'
+  | 'rowDownloadLabel'
+  | 'rowDownloadAriaLabel'
+  | 'rowDownloadUnavailableAriaLabel'
+  | 'rowDeleteLabel'
+  | 'rowDeleteAriaLabel'
+  | 'uploadFileError'
+  | 'uploadListPathMissing'
+  | 'deleteError'
+
+export type FileManagerLabels = Partial<Record<FileManagerLabelKey, string>>
 
 export interface FileManagerLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayoutFields {
   type: 'fileManager'
@@ -631,6 +745,7 @@ export interface FileManagerLayoutNode extends LayoutNodeFeedbackFields, LayoutN
     downloadOperation?: string | false
     validations?: RuntimeFileManagerValidations
     pagination?: { pageSize?: number }
+    labels?: FileManagerLabels
   }
 }
 
@@ -658,6 +773,9 @@ export type LayoutNode =
   | StatLayoutNode
   | DividerLayoutNode
   | SkeletonLayoutNode
+  | FileInputLayoutNode
+  | ToggleLayoutNode
+  | HiddenLayoutNode
   | FileManagerLayoutNode
 
 export type LayoutNodeCollection = LayoutNode[]
@@ -689,6 +807,7 @@ export interface RuntimeConfig {
   api: RuntimeApiConfig
   pages: RuntimePageConfig[]
   initialPage: string
+  preloads?: RuntimePreloadConfig[]
   translations?: RuntimeTranslationsConfig
   tokens?: RuntimeTokensConfig
 }

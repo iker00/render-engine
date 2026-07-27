@@ -42,6 +42,26 @@ function makeRootElement(config?: object): HTMLDivElement {
   return el
 }
 
+// Floating toolbar / Monaco panel helpers (T8, design.md 0103): the drawer and its toggle
+// button no longer exist, the toolbar is always mounted and the Monaco panel is a `fixed`
+// overlay toggled from it — see DevEditorFloatingToolbar / FloatingMonacoPanel testids.
+function openMonaco() {
+  fireEvent.click(screen.getByTestId('dev-editor-toolbar-monaco-toggle'))
+}
+
+function switchToEditorMode() {
+  fireEvent.click(screen.getByTestId('dev-editor-toolbar-mode-editor'))
+}
+
+function switchToVisualMode() {
+  fireEvent.click(screen.getByTestId('dev-editor-toolbar-mode-visual'))
+}
+
+async function getMonacoValue(): Promise<string> {
+  await waitFor(() => expect(screen.getByTestId('monaco-editor-mock')).toBeInTheDocument())
+  return (screen.getByTestId('monaco-editor-mock') as HTMLTextAreaElement).value
+}
+
 beforeEach(() => {
   vi.clearAllMocks()
 })
@@ -70,44 +90,93 @@ describe('DevRuntime bootstrap', () => {
   })
 })
 
-describe('DevRuntime toggle and drawer', () => {
-  it('renders the toggle button always visible', () => {
+describe('DevRuntime floating toolbar surface', () => {
+  it('renders the floating toolbar always visible, in "visual" mode by default', () => {
     render(<DevRuntime rootElement={makeRootElement(minimalConfig)} />)
-    expect(screen.getByTestId('dev-runtime-toggle')).toBeInTheDocument()
+
+    const toolbar = screen.getByTestId('dev-editor-toolbar')
+    expect(toolbar).toBeInTheDocument()
+    expect(screen.getByTestId('dev-editor-toolbar-mode-visual')).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByTestId('dev-editor-toolbar-mode-editor')).toHaveAttribute('aria-pressed', 'false')
   })
 
-  it('opens the drawer when toggle is clicked', () => {
+  it('does not render DevRuntimeToggleButton (regression: legacy floating button retired)', () => {
     render(<DevRuntime rootElement={makeRootElement(minimalConfig)} />)
-    expect(screen.getByTestId('dev-runtime-drawer')).toHaveClass('translate-x-full')
-
-    fireEvent.click(screen.getByTestId('dev-runtime-toggle'))
-
-    expect(screen.getByTestId('dev-runtime-drawer')).not.toHaveClass('translate-x-full')
+    expect(screen.queryByTestId('dev-runtime-toggle')).not.toBeInTheDocument()
   })
 
-  it('closes the drawer when close button is clicked', () => {
+  it('does not render DevRuntimeDrawer (regression: legacy drawer retired)', () => {
     render(<DevRuntime rootElement={makeRootElement(minimalConfig)} />)
-    fireEvent.click(screen.getByTestId('dev-runtime-toggle'))
-    fireEvent.click(screen.getByTestId('dev-runtime-close'))
-    expect(screen.getByTestId('dev-runtime-drawer')).toHaveClass('translate-x-full')
+    expect(screen.queryByTestId('dev-runtime-drawer')).not.toBeInTheDocument()
   })
 
-  it('preserves editor buffer when closing and reopening the drawer in the same session', async () => {
+  it('does not open any panel on Ctrl+Shift+J (regression: legacy shortcut retired)', () => {
     render(<DevRuntime rootElement={makeRootElement(minimalConfig)} />)
 
-    // Open drawer
-    fireEvent.click(screen.getByTestId('dev-runtime-toggle'))
+    fireEvent.keyDown(document, { key: 'J', ctrlKey: true, shiftKey: true })
+
+    expect(screen.queryByTestId('dev-editor-floating-monaco')).not.toBeInTheDocument()
+  })
+
+  it('clicking the disabled "Api" domain tab produces no content change or navigation', () => {
+    render(<DevRuntime rootElement={makeRootElement(minimalConfig)} />)
+    const hashBefore = window.location.hash
+
+    fireEvent.click(screen.getByTestId('dev-editor-toolbar-domain-api'))
+
+    expect(screen.getByText('Hello World')).toBeInTheDocument()
+    expect(window.location.hash).toBe(hashBefore)
+  })
+})
+
+describe('DevRuntime Monaco panel (via toolbar)', () => {
+  it('opens the Monaco panel when the toolbar control is clicked', () => {
+    render(<DevRuntime rootElement={makeRootElement(minimalConfig)} />)
+    expect(screen.queryByTestId('dev-editor-floating-monaco')).not.toBeInTheDocument()
+
+    openMonaco()
+
+    expect(screen.getByTestId('dev-editor-floating-monaco')).toBeInTheDocument()
+  })
+
+  it('closes the Monaco panel when its own close button is clicked', () => {
+    render(<DevRuntime rootElement={makeRootElement(minimalConfig)} />)
+    openMonaco()
+    fireEvent.click(screen.getByTestId('dev-editor-floating-monaco-close'))
+    expect(screen.queryByTestId('dev-editor-floating-monaco')).not.toBeInTheDocument()
+  })
+
+  it('closes the Monaco panel on Escape while open', () => {
+    render(<DevRuntime rootElement={makeRootElement(minimalConfig)} />)
+    openMonaco()
+    expect(screen.getByTestId('dev-editor-floating-monaco')).toBeInTheDocument()
+
+    fireEvent.keyDown(document, { key: 'Escape' })
+
+    expect(screen.queryByTestId('dev-editor-floating-monaco')).not.toBeInTheDocument()
+  })
+
+  it('Escape has no effect when the Monaco panel is closed (no other global shortcut remains)', () => {
+    render(<DevRuntime rootElement={makeRootElement(minimalConfig)} />)
+
+    fireEvent.keyDown(document, { key: 'Escape' })
+
+    expect(screen.queryByTestId('dev-editor-floating-monaco')).not.toBeInTheDocument()
+    expect(screen.getByText('Hello World')).toBeInTheDocument()
+  })
+
+  it('preserves editor buffer when closing and reopening the panel in the same session', async () => {
+    render(<DevRuntime rootElement={makeRootElement(minimalConfig)} />)
+
+    openMonaco()
     await waitFor(() => expect(screen.getByTestId('monaco-editor-mock')).toBeInTheDocument())
 
-    // Edit buffer
     const initialJson = JSON.stringify(secondConfig, null, 2)
     fireEvent.change(screen.getByTestId('monaco-editor-mock'), { target: { value: initialJson } })
 
-    // Close and reopen
-    fireEvent.click(screen.getByTestId('dev-runtime-close'))
-    fireEvent.click(screen.getByTestId('dev-runtime-toggle'))
+    fireEvent.click(screen.getByTestId('dev-editor-floating-monaco-close'))
+    openMonaco()
 
-    // Buffer should still have the edited value
     expect(screen.getByTestId('monaco-editor-mock')).toHaveValue(initialJson)
   })
 })
@@ -118,16 +187,14 @@ describe('DevRuntime Apply', () => {
 
     expect(screen.getByText('Hello World')).toBeInTheDocument()
 
-    // Open drawer and change content
-    fireEvent.click(screen.getByTestId('dev-runtime-toggle'))
+    openMonaco()
     await waitFor(() => expect(screen.getByTestId('monaco-editor-mock')).toBeInTheDocument())
 
     fireEvent.change(screen.getByTestId('monaco-editor-mock'), {
       target: { value: JSON.stringify(secondConfig) },
     })
 
-    // Apply
-    fireEvent.click(screen.getByTestId('dev-runtime-apply'))
+    fireEvent.click(screen.getByTestId('dev-editor-floating-monaco-apply'))
 
     await waitFor(() => {
       expect(screen.getByText('Updated Title')).toBeInTheDocument()
@@ -137,42 +204,42 @@ describe('DevRuntime Apply', () => {
 
   it('clears hasPendingChanges after a valid apply', async () => {
     render(<DevRuntime rootElement={makeRootElement(minimalConfig)} />)
-    fireEvent.click(screen.getByTestId('dev-runtime-toggle'))
+    openMonaco()
     await waitFor(() => expect(screen.getByTestId('monaco-editor-mock')).toBeInTheDocument())
 
     fireEvent.change(screen.getByTestId('monaco-editor-mock'), {
       target: { value: JSON.stringify(secondConfig) },
     })
 
-    expect(screen.getByTestId('dev-runtime-pending-indicator')).toBeInTheDocument()
+    expect(screen.getByTestId('dev-editor-floating-monaco-pending-indicator')).toBeInTheDocument()
 
-    fireEvent.click(screen.getByTestId('dev-runtime-apply'))
+    fireEvent.click(screen.getByTestId('dev-editor-floating-monaco-apply'))
 
     await waitFor(() => {
-      expect(screen.queryByTestId('dev-runtime-pending-indicator')).not.toBeInTheDocument()
+      expect(screen.queryByTestId('dev-editor-floating-monaco-pending-indicator')).not.toBeInTheDocument()
     })
   })
 
   it('does not update runtime and shows error when JSON is syntactically invalid', async () => {
     render(<DevRuntime rootElement={makeRootElement(minimalConfig)} />)
-    fireEvent.click(screen.getByTestId('dev-runtime-toggle'))
+    openMonaco()
     await waitFor(() => expect(screen.getByTestId('monaco-editor-mock')).toBeInTheDocument())
 
     fireEvent.change(screen.getByTestId('monaco-editor-mock'), {
       target: { value: '{invalid json' },
     })
 
-    fireEvent.click(screen.getByTestId('dev-runtime-apply'))
+    fireEvent.click(screen.getByTestId('dev-editor-floating-monaco-apply'))
 
     expect(screen.getByText('Hello World')).toBeInTheDocument()
     await waitFor(() => {
-      expect(screen.getByTestId('dev-runtime-error-panel')).toBeInTheDocument()
+      expect(screen.getByTestId('dev-editor-floating-monaco-error-panel')).toBeInTheDocument()
     })
   })
 
   it('preserves the editor buffer text after a valid apply', async () => {
     render(<DevRuntime rootElement={makeRootElement(minimalConfig)} />)
-    fireEvent.click(screen.getByTestId('dev-runtime-toggle'))
+    openMonaco()
     await waitFor(() => expect(screen.getByTestId('monaco-editor-mock')).toBeInTheDocument())
 
     const editedJson = JSON.stringify(secondConfig, null, 2)
@@ -180,33 +247,30 @@ describe('DevRuntime Apply', () => {
       target: { value: editedJson },
     })
 
-    fireEvent.click(screen.getByTestId('dev-runtime-apply'))
+    fireEvent.click(screen.getByTestId('dev-editor-floating-monaco-apply'))
 
     await waitFor(() => {
       expect(screen.getByText('Updated Title')).toBeInTheDocument()
     })
-    // Buffer is kept as-is after apply; re-serializing validation.config would
-    // produce the normalized preload format and break a subsequent apply.
     expect(screen.getByTestId('monaco-editor-mock')).toHaveValue(editedJson)
   })
 
   it('does not update runtime and shows validation error code/message on structural invalid JSON', async () => {
     const invalidConfig = { api: {}, pages: [], initialPage: 'missing-page' }
     render(<DevRuntime rootElement={makeRootElement(minimalConfig)} />)
-    fireEvent.click(screen.getByTestId('dev-runtime-toggle'))
+    openMonaco()
     await waitFor(() => expect(screen.getByTestId('monaco-editor-mock')).toBeInTheDocument())
 
     fireEvent.change(screen.getByTestId('monaco-editor-mock'), {
       target: { value: JSON.stringify(invalidConfig) },
     })
 
-    fireEvent.click(screen.getByTestId('dev-runtime-apply'))
+    fireEvent.click(screen.getByTestId('dev-editor-floating-monaco-apply'))
 
     expect(screen.getByText('Hello World')).toBeInTheDocument()
     await waitFor(() => {
-      expect(screen.getByTestId('dev-runtime-error-panel')).toBeInTheDocument()
+      expect(screen.getByTestId('dev-editor-floating-monaco-error-panel')).toBeInTheDocument()
     })
-    // Should show the canonical error code/message from validateRuntimeConfig
     expect(screen.getByText(/initial-page-not-found/)).toBeInTheDocument()
   })
 })
@@ -221,7 +285,7 @@ describe('DevRuntime Copy', () => {
     })
 
     render(<DevRuntime rootElement={makeRootElement(minimalConfig)} />)
-    fireEvent.click(screen.getByTestId('dev-runtime-toggle'))
+    openMonaco()
     await waitFor(() => expect(screen.getByTestId('monaco-editor-mock')).toBeInTheDocument())
 
     const editedJson = '{"custom":true}'
@@ -230,7 +294,7 @@ describe('DevRuntime Copy', () => {
     })
 
     await act(async () => {
-      fireEvent.click(screen.getByTestId('dev-runtime-copy'))
+      fireEvent.click(screen.getByTestId('dev-editor-floating-monaco-copy'))
     })
 
     expect(writeText).toHaveBeenCalledWith(editedJson)
@@ -246,11 +310,11 @@ describe('DevRuntime Copy', () => {
     document.execCommand = execCommand
 
     render(<DevRuntime rootElement={makeRootElement(minimalConfig)} />)
-    fireEvent.click(screen.getByTestId('dev-runtime-toggle'))
+    openMonaco()
     await waitFor(() => expect(screen.getByTestId('monaco-editor-mock')).toBeInTheDocument())
 
     await act(async () => {
-      fireEvent.click(screen.getByTestId('dev-runtime-copy'))
+      fireEvent.click(screen.getByTestId('dev-editor-floating-monaco-copy'))
     })
 
     expect(execCommand).toHaveBeenCalledWith('copy')
@@ -258,11 +322,9 @@ describe('DevRuntime Copy', () => {
 })
 
 describe('DevRuntime no-regression', () => {
-  it('renders the runtime content identically to the plain runtime when drawer is closed', () => {
+  it('renders the runtime content identically to the plain runtime when the Monaco panel is closed', () => {
     render(<DevRuntime rootElement={makeRootElement(minimalConfig)} />)
-    // Editor is closed by default
-    expect(screen.getByTestId('dev-runtime-drawer')).toHaveClass('translate-x-full')
-    // Runtime renders the same content
+    expect(screen.queryByTestId('dev-editor-floating-monaco')).not.toBeInTheDocument()
     expect(screen.getByText('Hello World')).toBeInTheDocument()
   })
 })
@@ -354,13 +416,13 @@ describe('DevRuntime unsaved changes guard', () => {
   it('registers beforeunload listener exactly once after the first successful Apply', async () => {
     render(<DevRuntime rootElement={makeRootElement(minimalConfig)} />)
 
-    fireEvent.click(screen.getByTestId('dev-runtime-toggle'))
+    openMonaco()
     await waitFor(() => expect(screen.getByTestId('monaco-editor-mock')).toBeInTheDocument())
 
     fireEvent.change(screen.getByTestId('monaco-editor-mock'), {
       target: { value: JSON.stringify(secondConfig) },
     })
-    fireEvent.click(screen.getByTestId('dev-runtime-apply'))
+    fireEvent.click(screen.getByTestId('dev-editor-floating-monaco-apply'))
 
     await waitFor(() => expect(screen.getByText('Updated Title')).toBeInTheDocument())
 
@@ -375,13 +437,13 @@ describe('DevRuntime unsaved changes guard', () => {
   it('does not register beforeunload listener after a failed Apply due to invalid JSON', async () => {
     render(<DevRuntime rootElement={makeRootElement(minimalConfig)} />)
 
-    fireEvent.click(screen.getByTestId('dev-runtime-toggle'))
+    openMonaco()
     await waitFor(() => expect(screen.getByTestId('monaco-editor-mock')).toBeInTheDocument())
 
     fireEvent.change(screen.getByTestId('monaco-editor-mock'), {
       target: { value: '{invalid json' },
     })
-    fireEvent.click(screen.getByTestId('dev-runtime-apply'))
+    fireEvent.click(screen.getByTestId('dev-editor-floating-monaco-apply'))
 
     expect(beforeunloadCalls()).toHaveLength(0)
 
@@ -395,13 +457,13 @@ describe('DevRuntime unsaved changes guard', () => {
     const invalidConfig = { api: {}, pages: [], initialPage: 'missing-page' }
     render(<DevRuntime rootElement={makeRootElement(minimalConfig)} />)
 
-    fireEvent.click(screen.getByTestId('dev-runtime-toggle'))
+    openMonaco()
     await waitFor(() => expect(screen.getByTestId('monaco-editor-mock')).toBeInTheDocument())
 
     fireEvent.change(screen.getByTestId('monaco-editor-mock'), {
       target: { value: JSON.stringify(invalidConfig) },
     })
-    fireEvent.click(screen.getByTestId('dev-runtime-apply'))
+    fireEvent.click(screen.getByTestId('dev-editor-floating-monaco-apply'))
 
     expect(beforeunloadCalls()).toHaveLength(0)
 
@@ -414,22 +476,20 @@ describe('DevRuntime unsaved changes guard', () => {
   it('registers listener after a failed Apply followed by a successful Apply', async () => {
     render(<DevRuntime rootElement={makeRootElement(minimalConfig)} />)
 
-    fireEvent.click(screen.getByTestId('dev-runtime-toggle'))
+    openMonaco()
     await waitFor(() => expect(screen.getByTestId('monaco-editor-mock')).toBeInTheDocument())
 
-    // First: failed apply
     fireEvent.change(screen.getByTestId('monaco-editor-mock'), {
       target: { value: '{invalid json' },
     })
-    fireEvent.click(screen.getByTestId('dev-runtime-apply'))
+    fireEvent.click(screen.getByTestId('dev-editor-floating-monaco-apply'))
 
     expect(beforeunloadCalls()).toHaveLength(0)
 
-    // Then: successful apply
     fireEvent.change(screen.getByTestId('monaco-editor-mock'), {
       target: { value: JSON.stringify(secondConfig) },
     })
-    fireEvent.click(screen.getByTestId('dev-runtime-apply'))
+    fireEvent.click(screen.getByTestId('dev-editor-floating-monaco-apply'))
 
     await waitFor(() => expect(screen.getByText('Updated Title')).toBeInTheDocument())
 
@@ -444,37 +504,34 @@ describe('DevRuntime unsaved changes guard', () => {
   it('does not register a duplicate listener after a second successful Apply', async () => {
     render(<DevRuntime rootElement={makeRootElement(minimalConfig)} />)
 
-    fireEvent.click(screen.getByTestId('dev-runtime-toggle'))
+    openMonaco()
     await waitFor(() => expect(screen.getByTestId('monaco-editor-mock')).toBeInTheDocument())
 
-    // First successful apply
     fireEvent.change(screen.getByTestId('monaco-editor-mock'), {
       target: { value: JSON.stringify(secondConfig) },
     })
-    fireEvent.click(screen.getByTestId('dev-runtime-apply'))
+    fireEvent.click(screen.getByTestId('dev-editor-floating-monaco-apply'))
     await waitFor(() => expect(screen.getByText('Updated Title')).toBeInTheDocument())
 
-    // Second successful apply
     fireEvent.change(screen.getByTestId('monaco-editor-mock'), {
       target: { value: JSON.stringify(minimalConfig) },
     })
-    fireEvent.click(screen.getByTestId('dev-runtime-apply'))
+    fireEvent.click(screen.getByTestId('dev-editor-floating-monaco-apply'))
     await waitFor(() => expect(screen.getByText('Hello World')).toBeInTheDocument())
 
-    // Should still be exactly one registration (not two)
     expect(beforeunloadCalls()).toHaveLength(1)
   })
 
   it('removes the beforeunload listener on unmount after a successful Apply', async () => {
     const { unmount } = render(<DevRuntime rootElement={makeRootElement(minimalConfig)} />)
 
-    fireEvent.click(screen.getByTestId('dev-runtime-toggle'))
+    openMonaco()
     await waitFor(() => expect(screen.getByTestId('monaco-editor-mock')).toBeInTheDocument())
 
     fireEvent.change(screen.getByTestId('monaco-editor-mock'), {
       target: { value: JSON.stringify(secondConfig) },
     })
-    fireEvent.click(screen.getByTestId('dev-runtime-apply'))
+    fireEvent.click(screen.getByTestId('dev-editor-floating-monaco-apply'))
     await waitFor(() => expect(screen.getByText('Updated Title')).toBeInTheDocument())
 
     const registeredHandler = beforeunloadCalls()[0][1] as EventListenerOrEventListenerObject
@@ -497,5 +554,152 @@ describe('DevRuntime unsaved changes guard', () => {
 
     expect(beforeunloadCalls()).toHaveLength(0)
     expect(removeBeforeunloadCalls()).toHaveLength(0)
+  })
+})
+
+// Feature 0103 (dev editor floating toolbar): end-to-end coverage that the in-place editor
+// surface — mode toggle, page navigation, action suppression, node selection — works through
+// the real DevRuntime tree, not a duplicated canvas.
+const multiPageConfig = {
+  api: {},
+  initialPage: 'home',
+  pages: [
+    {
+      id: 'home',
+      layout: [
+        {
+          type: 'link',
+          props: { label: 'Go via link', action: { type: 'navigateTo', pageId: 'details' } },
+        },
+        {
+          type: 'button',
+          props: { label: 'Go via button', action: { type: 'navigateTo', pageId: 'details' } },
+        },
+        {
+          type: 'form',
+          id: 'f',
+          children: [{ type: 'input', props: { fieldId: 'name', label: 'Name' } }],
+        },
+        {
+          type: 'accordion',
+          id: 'acc-1',
+          props: { label: 'Section one' },
+          children: [{ type: 'paragraph', props: { text: 'Body content' } }],
+        },
+      ],
+    },
+    { id: 'details', layout: [{ type: 'heading', props: { text: 'Details Page', level: 1 } }] },
+  ],
+}
+
+describe('DevRuntime / real navigation in visual mode (spec FR-baseline)', () => {
+  it('a link with props.action.navigateTo navigates normally: hash changes and the target page renders', () => {
+    render(<DevRuntime rootElement={makeRootElement(multiPageConfig)} />)
+
+    fireEvent.click(screen.getByRole('link', { name: 'Go via link' }))
+
+    expect(screen.getByText('Details Page')).toBeInTheDocument()
+    expect(window.location.hash).not.toBe('')
+  })
+})
+
+describe('DevRuntime / editor mode suppresses declarative navigation and selects instead (T1 + T8)', () => {
+  it('clicking a button with a navigateTo action does not navigate; the node is selected instead', () => {
+    render(<DevRuntime rootElement={makeRootElement(multiPageConfig)} />)
+    switchToEditorMode()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Go via button' }))
+
+    expect(screen.queryByText('Details Page')).not.toBeInTheDocument()
+    expect(screen.getByTestId('dev-editor-selection-overlay')).toBeInTheDocument()
+  })
+})
+
+describe('DevRuntime / editor mode inertness and properties panel (T2 + T8)', () => {
+  it('the form input is inert (fieldset[disabled] cascade) in editor mode', () => {
+    render(<DevRuntime rootElement={makeRootElement(multiPageConfig)} />)
+    switchToEditorMode()
+
+    expect(screen.getByLabelText('Name')).toBeDisabled()
+  })
+
+  it('editing a prop from the selection overlay panel commits and re-renders the real node', () => {
+    render(<DevRuntime rootElement={makeRootElement(multiPageConfig)} />)
+    switchToEditorMode()
+
+    fireEvent.click(screen.getByLabelText('Name'))
+    expect(screen.getByTestId('dev-editor-selection-overlay')).toBeInTheDocument()
+
+    fireEvent.change(screen.getByLabelText('label', { exact: false }), { target: { value: 'Full name' } })
+
+    expect(screen.getByLabelText('Full name')).toBeInTheDocument()
+  })
+})
+
+describe('DevRuntime / interactive nodes keep working in editor mode (spec FR11)', () => {
+  it('an accordion still toggles aria-expanded when its header is clicked; children stay in the DOM', () => {
+    render(<DevRuntime rootElement={makeRootElement(multiPageConfig)} />)
+    switchToEditorMode()
+
+    const header = screen.getByRole('button', { name: 'Section one' })
+    expect(header).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.getByText('Body content')).toBeInTheDocument()
+
+    fireEvent.click(header)
+
+    expect(header).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByText('Body content')).toBeInTheDocument()
+  })
+})
+
+describe('DevRuntime / page navigation from the toolbar (spec FR2/FR15)', () => {
+  it('navigates the runtime for real and clears any prior selection', () => {
+    render(<DevRuntime rootElement={makeRootElement(multiPageConfig)} />)
+    switchToEditorMode()
+
+    fireEvent.click(screen.getByLabelText('Name'))
+    expect(screen.getByTestId('dev-editor-selection-overlay')).toBeInTheDocument()
+
+    fireEvent.change(screen.getByTestId('dev-editor-toolbar-page-select'), { target: { value: 'details' } })
+
+    expect(screen.getByText('Details Page')).toBeInTheDocument()
+    expect(window.location.hash).not.toBe('')
+    expect(screen.queryByTestId('dev-editor-selection-overlay')).not.toBeInTheDocument()
+  })
+})
+
+describe('DevRuntime / mode toggle keeps the toolbar in sync', () => {
+  it('reflects the active mode on the toolbar pressed state after toggling back and forth', () => {
+    render(<DevRuntime rootElement={makeRootElement(multiPageConfig)} />)
+
+    switchToEditorMode()
+    expect(screen.getByTestId('dev-editor-toolbar-mode-editor')).toHaveAttribute('aria-pressed', 'true')
+
+    switchToVisualMode()
+    expect(screen.getByTestId('dev-editor-toolbar-mode-visual')).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('link', { name: 'Go via link' })).toBeInTheDocument()
+  })
+})
+
+describe('DevRuntime / properties panel surfaces rejected commits instead of discarding them (T9)', () => {
+  it('switching a button action to executeOperation (which leaves operationName empty) shows the rejection banner, keeps the chosen variant visible, and leaves the rest of the page intact', () => {
+    render(<DevRuntime rootElement={makeRootElement(multiPageConfig)} />)
+    switchToEditorMode()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Go via button' }))
+    expect(screen.getByTestId('dev-editor-selection-overlay')).toBeInTheDocument()
+
+    fireEvent.change(screen.getByLabelText('action'), { target: { value: 'executeOperation' } })
+
+    // handleCanvasNodeUpdate no longer discards commitCanvasMutation's result: the full config is
+    // momentarily invalid (operationName === ''), so the commit is rejected, but the panel keeps
+    // showing the user's own chosen variant instead of silently reverting to navigateTo.
+    expect((screen.getByLabelText('action') as HTMLSelectElement).value).toBe('executeOperation')
+    expect(screen.getByTestId('layout-canvas-properties-panel-props-error')).toBeInTheDocument()
+
+    // currentConfig was never overwritten with the momentarily-invalid config (the validation gate
+    // in commitCanvasMutation is untouched), so the rest of the page renders exactly as before.
+    expect(screen.getByRole('link', { name: 'Go via link' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Section one' })).toBeInTheDocument()
   })
 })
