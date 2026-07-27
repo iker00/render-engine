@@ -1,6 +1,12 @@
-{
-  "initialPage": "modificar-persona",
-  "initialParams": {
-    "personaId": "19168276"
-  }
-}
+{
+
+  "initialPage": "inicio",
+
+  "initialParams": {
+
+    "personaId": "19168276"
+
+  }
+
+}
+
