@@ -109,6 +109,14 @@ describe('validateRuntimeConfig', () => {
                 inputType: 'datetime-local',
               },
             },
+            {
+              type: 'input',
+              props: {
+                fieldId: 'startTime',
+                label: 'Start time',
+                inputType: 'time',
+              },
+            },
           ],
         }),
       )

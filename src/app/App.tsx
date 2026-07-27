@@ -1,4 +1,4 @@
-import devConfig from '../dev/config.json'
+import devConfig from '../dev/dev-config'
 import devDataValues from '../dev/data-values.json'
 import { AppShell } from './app-shell'
 import { readRuntimeActiveLanguage } from './bootstrap/read-runtime-active-language'

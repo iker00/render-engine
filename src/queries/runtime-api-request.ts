@@ -305,6 +305,16 @@ function resolveQuery(
       } as const
     }
 
+    if (resolvedValue.status === 'token-error') {
+      return {
+        status: 'error',
+        error: {
+          code: 'request-build-failed',
+          message: `The api operation "${operationName}" could not resolve "${rawValue}" for "query.${key}" because token "${resolvedValue.tokenId}" is in error state.`,
+        },
+      } as const
+    }
+
     if (
       typeof resolvedValue.value !== 'string' &&
       typeof resolvedValue.value !== 'number' &&

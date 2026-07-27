@@ -427,8 +427,49 @@ describe('validateRuntimeConfig', () => {
       })
     })
 
-    it('rejects "$"-prefixed key values other than the exact literal "$key"', () => {
-      for (const key of ['$key.id', '$key.$key', 'meta.$key', '$other', '$']) {
+    it('accepts the reserved literal "$index" as a valid value for props.items.key', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithLayout([
+          createRepeaterNode({
+            props: {
+              items: {
+                source: 'queries.posts.data',
+                key: '$index',
+              },
+              template: [
+                {
+                  type: 'heading',
+                  props: {
+                    text: 'item.title',
+                    level: 2,
+                  },
+                },
+              ],
+            },
+          }),
+        ]),
+      )
+
+      expect(result).toMatchObject({
+        status: 'ready',
+        page: {
+          layout: [
+            {
+              type: 'repeater',
+              props: {
+                items: {
+                  source: 'queries.posts.data',
+                  key: '$index',
+                },
+              },
+            },
+          ],
+        },
+      })
+    })
+
+    it('rejects "$"-prefixed key values other than the exact literals "$key" and "$index"', () => {
+      for (const key of ['$key.id', '$key.$key', 'meta.$key', '$index.algo', '$index.$key', 'meta.$index', '$other', '$']) {
         expect(
           validateRuntimeConfig(
             createConfigWithLayout([

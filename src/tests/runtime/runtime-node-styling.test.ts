@@ -88,6 +88,8 @@ import {
   getFileManagerDropZoneProgressTrackClassName,
   getFileManagerDropZoneProgressFillClassName,
   getFileManagerDropZoneIconColorClassName,
+  getModalOverlayClassName,
+  getModalPanelClassName,
 } from '../../runtime/runtime-node-styling'
 
 describe('runtime node styling', () => {
@@ -344,11 +346,21 @@ describe('runtime node styling', () => {
       'col-span-1 md:col-span-2 lg:col-span-4 flex w-full flex-wrap items-center justify-center gap-3 pt-2',
     )
     expect(getRepeaterPaginationButtonClassName()).toBe(
-      'inline-flex items-center justify-center rounded-control border border-app-border-strong bg-white px-3 py-1.5 text-sm font-semibold leading-5 text-app-text-strong transition-colors hover:bg-app-surface-subtle disabled:cursor-not-allowed disabled:border-app-border-soft disabled:text-app-text-muted disabled:hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-app-accent',
+      'inline-flex items-center justify-center rounded-control border border-app-border-strong bg-white px-3 py-1.5 text-sm font-semibold leading-5 text-app-text-strong transition-colors cursor-pointer hover:bg-app-surface-subtle disabled:cursor-not-allowed disabled:border-app-border-soft disabled:text-app-text-muted disabled:hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-app-accent',
     )
     expect(getRepeaterPaginationCurrentButtonClassName()).toBe(
-      'inline-flex items-center justify-center rounded-control border border-app-accent bg-app-accent px-3 py-1.5 text-sm font-semibold leading-5 text-white transition-colors hover:bg-app-accent-strong disabled:cursor-not-allowed disabled:border-app-border-soft disabled:text-app-text-muted disabled:hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-app-accent',
+      'inline-flex items-center justify-center rounded-control border border-app-accent bg-app-accent px-3 py-1.5 text-sm font-semibold leading-5 text-white transition-colors cursor-pointer hover:bg-app-accent-strong disabled:cursor-not-allowed disabled:border-app-border-soft disabled:text-app-text-muted disabled:hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-app-accent',
     )
+  })
+
+  it('getRepeaterPaginationButtonClassName includes cursor-pointer and preserves disabled:cursor-not-allowed', () => {
+    const cn = getRepeaterPaginationButtonClassName()
+    expect(cn).toContain('cursor-pointer')
+    expect(cn).toContain('disabled:cursor-not-allowed')
+  })
+
+  it('getRepeaterPaginationCurrentButtonClassName includes cursor-pointer (inherited from base)', () => {
+    expect(getRepeaterPaginationCurrentButtonClassName()).toContain('cursor-pointer')
   })
 
   it('returns compact stable classes for table controls', () => {
@@ -363,21 +375,38 @@ describe('runtime node styling', () => {
       'w-full min-w-40 rounded-control border border-app-border-soft bg-white px-3 py-2 text-sm leading-5 text-app-text placeholder:text-app-text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:border-app-accent focus-visible:ring-app-accent',
     )
     expect(getTableFilterResetButtonClassName()).toBe(
-      'inline-flex items-center justify-center self-end rounded-control border border-app-border-strong bg-white px-3.5 py-2 text-sm font-medium leading-5 text-app-text-strong transition-colors hover:bg-app-surface-subtle focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-app-accent',
+      'inline-flex items-center justify-center self-end rounded-control border border-app-border-strong bg-white px-3.5 py-2 text-sm font-medium leading-5 text-app-text-strong transition-colors cursor-pointer hover:bg-app-surface-subtle focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-app-accent',
     )
     expect(getTableSortButtonClassName(false)).toBe(
-      'inline-flex w-full items-center justify-between gap-2 text-left text-xs font-semibold uppercase tracking-[0.16em] text-app-text-strong transition-colors hover:text-app-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-app-accent',
+      'inline-flex w-full items-center justify-between gap-2 text-left text-xs font-semibold uppercase tracking-[0.16em] text-app-text-strong transition-colors cursor-pointer hover:text-app-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-app-accent',
     )
     expect(getTableSortButtonClassName(true)).toBe(
-      'inline-flex w-full items-center justify-between gap-2 text-left text-xs font-semibold uppercase tracking-[0.16em] text-app-accent transition-colors hover:text-app-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-app-accent',
+      'inline-flex w-full items-center justify-between gap-2 text-left text-xs font-semibold uppercase tracking-[0.16em] text-app-accent transition-colors cursor-pointer hover:text-app-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-app-accent',
     )
     expect(getTablePaginationControlsClassName()).toBe('flex w-full flex-wrap items-center justify-center gap-3 border-t border-app-border-soft px-4 py-3')
     expect(getTablePaginationButtonClassName()).toBe(
-      'inline-flex items-center justify-center rounded-control border border-app-border-strong bg-white px-3 py-1.5 text-sm font-semibold leading-5 text-app-text-strong transition-colors hover:bg-app-surface-subtle disabled:cursor-not-allowed disabled:border-app-border-soft disabled:text-app-text-muted disabled:hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-app-accent',
+      'inline-flex items-center justify-center rounded-control border border-app-border-strong bg-white px-3 py-1.5 text-sm font-semibold leading-5 text-app-text-strong transition-colors cursor-pointer hover:bg-app-surface-subtle disabled:cursor-not-allowed disabled:border-app-border-soft disabled:text-app-text-muted disabled:hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-app-accent',
     )
     expect(getTablePaginationCurrentButtonClassName()).toBe(
-      'inline-flex items-center justify-center rounded-control border border-app-accent bg-app-accent px-3 py-1.5 text-sm font-semibold leading-5 text-white transition-colors hover:bg-app-accent-strong disabled:cursor-not-allowed disabled:border-app-border-soft disabled:text-app-text-muted disabled:hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-app-accent',
+      'inline-flex items-center justify-center rounded-control border border-app-accent bg-app-accent px-3 py-1.5 text-sm font-semibold leading-5 text-white transition-colors cursor-pointer hover:bg-app-accent-strong disabled:cursor-not-allowed disabled:border-app-border-soft disabled:text-app-text-muted disabled:hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-app-accent',
     )
+  })
+
+  it('getTableSortButtonClassName includes cursor-pointer in both active states', () => {
+    expect(getTableSortButtonClassName(false)).toContain('cursor-pointer')
+    expect(getTableSortButtonClassName(true)).toContain('cursor-pointer')
+  })
+
+  it('getTableFilterResetButtonClassName includes cursor-pointer', () => {
+    expect(getTableFilterResetButtonClassName()).toContain('cursor-pointer')
+  })
+
+  it('getTablePaginationButtonClassName includes cursor-pointer (delegation to repeater base)', () => {
+    expect(getTablePaginationButtonClassName()).toContain('cursor-pointer')
+  })
+
+  it('getTablePaginationCurrentButtonClassName includes cursor-pointer (delegation to repeater base)', () => {
+    expect(getTablePaginationCurrentButtonClassName()).toContain('cursor-pointer')
   })
 
   it('supports an inline choice-group variant with wrap and without option card styling', () => {
@@ -570,6 +599,10 @@ describe('runtime node styling', () => {
       expect(solidClass).not.toContain('px-4')
       expect(solidClass).not.toContain('py-3')
     })
+
+    it('getButtonVariantClassName includes cursor-pointer (regression control)', () => {
+      expect(getButtonVariantClassName('primary', 'solid', false)).toContain('cursor-pointer')
+    })
   })
 
   describe('T4 — typography scale, weights and padding', () => {
@@ -733,6 +766,10 @@ describe('runtime node styling', () => {
     it('getAccordionBodyAnimationClassName(false) returns animate-accordion-close', () => {
       expect(getAccordionBodyAnimationClassName(false)).toBe('animate-accordion-close')
     })
+
+    it('getAccordionHeaderClassName includes cursor-pointer', () => {
+      expect(getAccordionHeaderClassName()).toContain('cursor-pointer')
+    })
   })
 
   describe('T6 — tabs styling functions (D9 D10 D6 D7 D8)', () => {
@@ -769,10 +806,9 @@ describe('runtime node styling', () => {
       expect(cn).not.toContain('w-48')
     })
 
-    it('getTabsButtonClassName active horizontal includes primary tokens, font-semibold, px-3 py-1.5, shrink-0, whitespace-nowrap and transition-colors (D6 D7 D8 D10)', () => {
+    it('getTabsButtonClassName active horizontal includes text-primary-700, font-semibold, px-3 py-1.5, shrink-0, whitespace-nowrap, transition-colors and border-app-border-soft (D6 D7 D8 D10)', () => {
       const cn = getTabsButtonClassName(true, 'horizontal')
 
-      expect(cn).toContain('border-primary-600')
       expect(cn).toContain('text-primary-700')
       expect(cn).toContain('font-semibold')
       expect(cn).toContain('transition-colors')
@@ -780,6 +816,8 @@ describe('runtime node styling', () => {
       expect(cn).toContain('py-1.5')
       expect(cn).toContain('shrink-0')
       expect(cn).toContain('whitespace-nowrap')
+      expect(cn).toContain('border-app-border-soft')
+      expect(cn).not.toContain('border-primary-600')
       expect(cn).not.toMatch(/blue-/)
       expect(cn).not.toContain('font-medium')
     })
@@ -816,8 +854,71 @@ describe('runtime node styling', () => {
       expect(cn).not.toContain('shrink-0')
     })
 
-    it('getTabsPanelClassName returns flex-1', () => {
-      expect(getTabsPanelClassName()).toBe('flex-1')
+    it('getTabsPanelClassName includes flex-1 border border-app-border-soft p-4 flex flex-col gap-5 and no bg-', () => {
+      const cn = getTabsPanelClassName()
+
+      expect(cn).toContain('flex-1')
+      expect(cn).toContain('border')
+      expect(cn).toContain('border-app-border-soft')
+      expect(cn).toContain('p-4')
+      expect(cn).toContain('flex')
+      expect(cn).toContain('flex-col')
+      expect(cn).toContain('gap-5')
+      expect(cn).not.toContain('bg-')
+    })
+
+    it('getTabsButtonClassName active horizontal applies border to top left and right sides and not to bottom (connected tab technique)', () => {
+      const cn = getTabsButtonClassName(true, 'horizontal')
+
+      expect(cn).toContain('border-t')
+      expect(cn).toContain('border-l')
+      expect(cn).toContain('border-r')
+      expect(cn).not.toMatch(/border-b/)
+    })
+
+    it('getTabsButtonClassName active vertical applies border to top left and bottom sides and not to right (connected tab technique)', () => {
+      const cn = getTabsButtonClassName(true, 'vertical')
+
+      expect(cn).toContain('border-t')
+      expect(cn).toContain('border-l')
+      expect(cn).toContain('border-b')
+      expect(cn).not.toMatch(/border-r/)
+      expect(cn).toContain('border-app-border-soft')
+      expect(cn).not.toContain('border-primary-600')
+    })
+
+    it('getTabsButtonClassName active horizontal and vertical overlap the panel border by 1px with relative z-10 and bg-app-background', () => {
+      const cnH = getTabsButtonClassName(true, 'horizontal')
+      const cnV = getTabsButtonClassName(true, 'vertical')
+
+      expect(cnH).toContain('-mb-px')
+      expect(cnH).toContain('relative')
+      expect(cnH).toContain('z-10')
+      expect(cnH).toContain('bg-app-background')
+      expect(cnH).not.toContain('-mr-px')
+
+      expect(cnV).toContain('-mr-px')
+      expect(cnV).toContain('relative')
+      expect(cnV).toContain('z-10')
+      expect(cnV).toContain('bg-app-background')
+      expect(cnV).not.toContain('-mb-px')
+    })
+
+    it('getTabsButtonClassName inactive horizontal and vertical do not contain border-app-border-soft or border-primary-600', () => {
+      const cnH = getTabsButtonClassName(false, 'horizontal')
+      const cnV = getTabsButtonClassName(false, 'vertical')
+
+      expect(cnH).not.toContain('border-app-border-soft')
+      expect(cnH).not.toContain('border-primary-600')
+      expect(cnV).not.toContain('border-app-border-soft')
+      expect(cnV).not.toContain('border-primary-600')
+    })
+
+    it('getTabsButtonClassName includes cursor-pointer in all variants and orientations', () => {
+      expect(getTabsButtonClassName(true, 'horizontal')).toContain('cursor-pointer')
+      expect(getTabsButtonClassName(false, 'horizontal')).toContain('cursor-pointer')
+      expect(getTabsButtonClassName(true, 'vertical')).toContain('cursor-pointer')
+      expect(getTabsButtonClassName(false, 'vertical')).toContain('cursor-pointer')
     })
   })
 
@@ -1463,6 +1564,18 @@ describe('runtime node styling', () => {
           expect(cn).not.toMatch(/\b(blue|red|green|yellow|cyan|gray)-/)
         }
       })
+
+      it('primary variant includes cursor-pointer', () => {
+        expect(getFileManagerRowActionClassName('primary')).toContain('cursor-pointer')
+      })
+
+      it('danger variant still includes cursor-pointer (regression control)', () => {
+        expect(getFileManagerRowActionClassName('danger')).toContain('cursor-pointer')
+      })
+
+      it('disabled variant does not include cursor-pointer', () => {
+        expect(getFileManagerRowActionClassName('disabled')).not.toContain('cursor-pointer')
+      })
     })
 
     describe('getFileManagerListErrorClassName', () => {
@@ -1545,6 +1658,28 @@ describe('runtime node styling', () => {
           const cn = getFileManagerDropZoneClassName(phase)
           expect(cn).not.toMatch(/\b(blue|red|green|yellow|cyan|gray)-/)
         }
+      })
+
+      it('idle includes cursor-pointer', () => {
+        expect(getFileManagerDropZoneClassName('idle')).toContain('cursor-pointer')
+      })
+
+      it('drag-over includes cursor-pointer', () => {
+        expect(getFileManagerDropZoneClassName('drag-over')).toContain('cursor-pointer')
+      })
+
+      it('success includes cursor-pointer', () => {
+        expect(getFileManagerDropZoneClassName('success')).toContain('cursor-pointer')
+      })
+
+      it('error includes cursor-pointer', () => {
+        expect(getFileManagerDropZoneClassName('error')).toContain('cursor-pointer')
+      })
+
+      it('uploading does not include cursor-pointer and still includes cursor-not-allowed', () => {
+        const cn = getFileManagerDropZoneClassName('uploading')
+        expect(cn).not.toContain('cursor-pointer')
+        expect(cn).toContain('cursor-not-allowed')
       })
     })
 

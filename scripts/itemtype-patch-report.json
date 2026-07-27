@@ -1,0 +1,106 @@
+[
+  {
+    "file": "dist/unified-config/ADE_Unificado.json",
+    "patched": 0
+  },
+  {
+    "file": "src\\dev\\portal-config\\ADE_AnadirFoto.json",
+    "patched": 0
+  },
+  {
+    "file": "src\\dev\\portal-config\\ADE_AsociarPersona.json",
+    "patched": 0
+  },
+  {
+    "file": "src\\dev\\portal-config\\ADE_BuscarBanda.json",
+    "patched": 0
+  },
+  {
+    "file": "src\\dev\\portal-config\\ADE_BuscarPersona.json",
+    "patched": 0
+  },
+  {
+    "file": "src\\dev\\portal-config\\ADE_CrearHecho.json",
+    "patched": 2
+  },
+  {
+    "file": "src\\dev\\portal-config\\ADE_CrearPersona.json",
+    "patched": 3
+  },
+  {
+    "file": "src\\dev\\portal-config\\ADE_FichaBanda.json",
+    "patched": 0
+  },
+  {
+    "file": "src\\dev\\portal-config\\ADE_ModificarHecho.json",
+    "patched": 2
+  },
+  {
+    "file": "src\\dev\\portal-config\\ADE_ModificarPersona.json",
+    "patched": 2
+  },
+  {
+    "file": "src\\dev\\portal-config\\ADE_ObtenerFichaHecho.json",
+    "patched": 0
+  },
+  {
+    "file": "src\\dev\\portal-config\\ADE_ObtenerFichaPersona.json",
+    "patched": 0
+  },
+  {
+    "file": "src\\dev\\portal-config\\ADE_PantallaInicio.json",
+    "patched": 0
+  },
+  {
+    "file": "src\\dev\\portal-config\\Inicio.json",
+    "patched": 0
+  },
+  {
+    "file": "src\\dev\\tests-config\\ADE_AnadirFoto.json",
+    "patched": 0
+  },
+  {
+    "file": "src\\dev\\tests-config\\ADE_AsociarPersona.json",
+    "patched": 0
+  },
+  {
+    "file": "src\\dev\\tests-config\\ADE_BuscarBanda.json",
+    "patched": 0
+  },
+  {
+    "file": "src\\dev\\tests-config\\ADE_BuscarPersona.json",
+    "patched": 0
+  },
+  {
+    "file": "src\\dev\\tests-config\\ADE_CrearHecho.json",
+    "patched": 2
+  },
+  {
+    "file": "src\\dev\\tests-config\\ADE_CrearPersona.json",
+    "patched": 3
+  },
+  {
+    "file": "src\\dev\\tests-config\\ADE_FichaBanda.json",
+    "patched": 0
+  },
+  {
+    "file": "src\\dev\\tests-config\\ADE_ModificarHecho.json",
+    "patched": 2
+  },
+  {
+    "file": "src\\dev\\tests-config\\ADE_ModificarPersona.json",
+    "patched": 2
+  },
+  {
+    "file": "src\\dev\\tests-config\\ADE_ObtenerFichaHecho.json",
+    "patched": 0
+  },
+  {
+    "file": "src\\dev\\tests-config\\ADE_ObtenerFichaPersona.json",
+    "patched": 0
+  },
+  {
+    "file": "src\\dev\\tests-config\\ADE_PantallaInicio.json",
+    "patched": 0
+  }
+]

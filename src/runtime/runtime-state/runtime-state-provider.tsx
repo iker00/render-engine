@@ -538,7 +538,12 @@ export function RuntimeStateProvider({ config, dataValues, activeLanguage, child
     })
   }, [activeNavigationEntry, config, dispatchAndSyncState, state.pageEntry])
 
-  return <RuntimeStateContext.Provider value={contextValue}>{children}</RuntimeStateContext.Provider>
+  return (
+    <RuntimeStateContext.Provider value={contextValue}>
+      <RuntimeDocumentTitleEffect />
+      {children}
+    </RuntimeStateContext.Provider>
+  )
 }
 
 export function useRuntimeState() {

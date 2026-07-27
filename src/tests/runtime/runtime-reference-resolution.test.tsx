@@ -4,6 +4,7 @@ import {
   resolveRuntimeImageAlt,
   resolveRuntimeImageSource,
   resolveRuntimeReference,
+  resolveRuntimeTextReference,
   resolveRuntimeVisibleValue,
 } from '../../runtime/runtime-references/runtime-reference-resolver'
 import type { RuntimeState } from '../../runtime/runtime-state/runtime-state-types'
@@ -96,6 +97,8 @@ const iterationContext = {
     tags: ['news', 'featured'],
     stats: null,
   },
+  key: 'post-1',
+  itemIndex: 0,
 }
 
 const interpolationRuntimeState: RuntimeState = {
@@ -1064,7 +1067,7 @@ describe('Runtime reference resolution', () => {
     })
 
     it('resolves item.$key to the dictionary key when the iteration context provides itemKey', () => {
-      const iterationContextWithKey = { item: { name: 'Ada' }, key: 'entry-1', itemKey: 'vinfopol' }
+      const iterationContextWithKey = { item: { name: 'Ada' }, key: 'entry-1', itemKey: 'vinfopol', itemIndex: 0 }
 
       expect(resolveRuntimeReference('item.$key', runtimeState, { iterationContext: iterationContextWithKey })).toEqual({
         status: 'resolved',
@@ -1074,7 +1077,7 @@ describe('Runtime reference resolution', () => {
     })
 
     it('resolves item.$key as missing when iteration context does not provide itemKey (array source)', () => {
-      const iterationContextWithoutKey = { item: { name: 'Ada' }, key: 'entry-1' }
+      const iterationContextWithoutKey = { item: { name: 'Ada' }, key: 'entry-1', itemIndex: 0 }
 
       expect(resolveRuntimeReference('item.$key', runtimeState, { iterationContext: iterationContextWithoutKey })).toEqual({
         status: 'missing',
@@ -1091,7 +1094,7 @@ describe('Runtime reference resolution', () => {
 
     it('degrades item.$key to empty string in text surfaces when itemKey is absent', () => {
       const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
-      const iterationContextWithoutKey = { item: { name: 'Ada' }, key: 'entry-1' }
+      const iterationContextWithoutKey = { item: { name: 'Ada' }, key: 'entry-1', itemIndex: 0 }
 
       expect(
         resolveRuntimeVisibleValue('item.$key', runtimeState, 'heading.props.text', {
@@ -1103,7 +1106,7 @@ describe('Runtime reference resolution', () => {
     })
 
     it('resolves {{item.$key}} interpolated as the dictionary key string', () => {
-      const iterationContextWithKey = { item: { name: 'Ada' }, key: 'entry-1', itemKey: 'vinfopol' }
+      const iterationContextWithKey = { item: { name: 'Ada' }, key: 'entry-1', itemKey: 'vinfopol', itemIndex: 0 }
 
       expect(
         resolveRuntimeVisibleValue('Source: {{item.$key}}', runtimeState, 'heading.props.text', {
@@ -1117,6 +1120,7 @@ describe('Runtime reference resolution', () => {
         item: { name: 'Ada', $key: 'internal-value' },
         key: 'entry-1',
         itemKey: 'vinfopol',
+        itemIndex: 0,
       }
 
       expect(

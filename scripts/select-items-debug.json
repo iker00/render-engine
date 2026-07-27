@@ -1,0 +1,15 @@
+{
+  "items": {
+    "source": "queries.obtenerDatosFormularioCreacionHecho.data.DatosFormularioCreacionHechoSalidaDTO.TiposHechoDTO",
+    "label": "Nombre",
+    "value": "Id"
+  },
+  "result": {
+    "status": "error",
+    "error": {
+      "code": "invalid-layout",
+      "displayMode": "development-only",
+      "message": "Page \"crear-hecho\" has an invalid layout at \"layout[0].children[2].children[1].children[3].props.items\"."
+    }
+  }
+}

@@ -18,6 +18,7 @@ import { validateRuntimeApiRequestParams, validateActionTargets } from './valida
 import { validateLayoutCollection } from './validate-layout-nodes'
 import { validateFormSemantics, validateExecutionRequestParams } from './validate-form-nodes'
 import { validateFileManagerSemantics } from './validate-file-manager-nodes'
+import { validateFileInputSemantics } from './validate-file-input-nodes'
 import { validateTranslations } from './validate-translations'
 import { validateTokensConfig } from './validate-tokens-config'
 import type { BreadcrumbSegment } from './validation-breadcrumb'
@@ -94,6 +95,7 @@ export function validateRuntimeConfig(rawConfig: unknown): RuntimeConfigValidati
   const pageShellResults: Array<{
     id: string
     preloads?: RuntimePreloadConfig[]
+    title?: string
     layout: LayoutNodeCollection
   }> = []
 
@@ -118,6 +120,10 @@ export function validateRuntimeConfig(rawConfig: unknown): RuntimeConfigValidati
         return invalidLayout(`Page "${pageId}" has an invalid layout at "layout".`)
       }
 
+      if (pagePath === 'title') {
+        return invalidLayout(`The page at "pages[${index}].title" must be a string.`)
+      }
+
       return invalidLayout(`The page at "pages[${index}]" must be an object.`)
     }
 
@@ -131,11 +137,22 @@ export function validateRuntimeConfig(rawConfig: unknown): RuntimeConfigValidati
       return preloadsResult
     }
 
-    pageShellResults.push({
+    const pageShellEntry: {
+      id: string
+      preloads?: RuntimePreloadConfig[]
+      title?: string
+      layout: LayoutNodeCollection
+    } = {
       id: pageShellResult.data.id,
       preloads: preloadsResult.preloads,
       layout: pageShellResult.data.layout as LayoutNodeCollection,
-    })
+    }
+
+    if (pageShellResult.data.title !== undefined) {
+      pageShellEntry.title = pageShellResult.data.title
+    }
+
+    pageShellResults.push(pageShellEntry)
   }
 
   const pages: RuntimePageConfig[] = []
@@ -155,6 +172,10 @@ export function validateRuntimeConfig(rawConfig: unknown): RuntimeConfigValidati
 
     if (pageShell.preloads !== undefined) {
       pageConfig.preloads = pageShell.preloads
+    }
+
+    if (pageShell.title !== undefined) {
+      pageConfig.title = pageShell.title
     }
 
     pages.push(pageConfig)
@@ -206,6 +227,12 @@ export function validateRuntimeConfig(rawConfig: unknown): RuntimeConfigValidati
 
   if (fileManagerSemanticsError) {
     return fileManagerSemanticsError
+  }
+
+  const fileInputSemanticsError = validateFileInputSemantics(config)
+
+  if (fileInputSemanticsError) {
+    return fileInputSemanticsError
   }
 
   const modalRefsError = validateModalReferences(config)
