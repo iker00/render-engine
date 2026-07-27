@@ -390,15 +390,6 @@ describe('RuntimePage', () => {
               },
             },
             {
-              type: 'input',
-              props: {
-                fieldId: 'meetingTime',
-                label: 'Meeting time',
-                inputType: 'time',
-                defaultValue: '14:30',
-              },
-            },
-            {
               type: 'select',
               props: {
                 fieldId: 'scopes',
@@ -441,7 +432,6 @@ describe('RuntimePage', () => {
     expect(screen.getByLabelText('Age')).toHaveValue(42)
     expect(screen.getByLabelText('Birthday')).toHaveValue('2026-05-07')
     expect(screen.getByLabelText('Appointment')).toHaveValue('2026-05-07T12:30')
-    expect(screen.getByLabelText('Meeting time')).toHaveValue('14:30')
     expect(screen.getByRole('radio', { name: 'Admin' }).closest('div')).toHaveClass('grid', 'gap-2.5')
     expect(screen.getByRole('checkbox', { name: 'alpha' }).closest('div')).toHaveClass('grid', 'gap-2.5')
     expect(screen.getByRole('radio', { name: 'Admin' }).closest('label')).not.toHaveClass('border')

@@ -109,14 +109,6 @@ describe('validateRuntimeConfig', () => {
                 inputType: 'datetime-local',
               },
             },
-            {
-              type: 'input',
-              props: {
-                fieldId: 'startTime',
-                label: 'Start time',
-                inputType: 'time',
-              },
-            },
           ],
         }),
       )
@@ -475,7 +467,7 @@ describe('validateRuntimeConfig', () => {
           code: 'invalid-layout',
           displayMode: 'development-only',
           message:
-            'Page "home" has an invalid layout at "layout[0].children[0]": form nodes only accept input, textarea, select, radioGroup, checkboxGroup, fileInput, toggle, hidden, button, heading, paragraph, image, table, container, accordion, divider and tabs descendants.',
+            'Page "home" has an invalid layout at "layout[0].children[0]": form nodes only accept input, textarea, select, radioGroup, checkboxGroup, button, heading, paragraph, image, table, container, accordion, divider and tabs descendants.',
         },
       })
     })
@@ -1505,142 +1497,6 @@ describe('validateRuntimeConfig', () => {
         message:
           'Page "home" uses unsupported layout node type "hero-banner" at "layout[0].children[1]".',
       },
-    })
-  })
-
-  describe('input props.iconPosition', () => {
-    it('accepts iconPosition: "left" and the normalized node preserves it', () => {
-      const result = validateRuntimeConfig(
-        createConfigWithFormLayout({
-          children: [
-            {
-              type: 'input',
-              props: {
-                fieldId: 'email',
-                label: 'Email',
-                icon: 'Mail',
-                iconPosition: 'left',
-              },
-            },
-          ],
-        }),
-      )
-
-      expect(result.status).toBe('ready')
-      if (result.status !== 'ready') throw new Error('Expected ready')
-
-      const formNode = result.page.layout[0]
-      if (formNode.type !== 'form') throw new Error('Expected form')
-
-      expect(formNode.children?.[0]).toMatchObject({
-        type: 'input',
-        props: { fieldId: 'email', iconPosition: 'left' },
-      })
-    })
-
-    it('accepts iconPosition: "right" and the normalized node preserves it', () => {
-      const result = validateRuntimeConfig(
-        createConfigWithFormLayout({
-          children: [
-            {
-              type: 'input',
-              props: {
-                fieldId: 'email',
-                label: 'Email',
-                icon: 'Mail',
-                iconPosition: 'right',
-              },
-            },
-          ],
-        }),
-      )
-
-      expect(result.status).toBe('ready')
-      if (result.status !== 'ready') throw new Error('Expected ready')
-
-      const formNode = result.page.layout[0]
-      if (formNode.type !== 'form') throw new Error('Expected form')
-
-      expect(formNode.children?.[0]).toMatchObject({
-        type: 'input',
-        props: { fieldId: 'email', iconPosition: 'right' },
-      })
-    })
-
-    it('without iconPosition, the normalized node does not include the iconPosition key', () => {
-      const result = validateRuntimeConfig(
-        createConfigWithFormLayout({
-          children: [
-            {
-              type: 'input',
-              props: {
-                fieldId: 'email',
-                label: 'Email',
-              },
-            },
-          ],
-        }),
-      )
-
-      expect(result.status).toBe('ready')
-      if (result.status !== 'ready') throw new Error('Expected ready')
-
-      const formNode = result.page.layout[0]
-      if (formNode.type !== 'form') throw new Error('Expected form')
-
-      const inputNode = formNode.children?.[0]
-      expect(inputNode).not.toHaveProperty('props.iconPosition')
-    })
-
-    it('rejects iconPosition with a value outside the enum with code invalid-layout and the exact path', () => {
-      const result = validateRuntimeConfig(
-        createConfigWithFormLayout({
-          children: [
-            {
-              type: 'input',
-              props: {
-                fieldId: 'email',
-                label: 'Email',
-                iconPosition: 'center',
-              },
-            },
-          ],
-        }),
-      )
-
-      expect(result.status).toBe('error')
-      if (result.status !== 'error') throw new Error('Expected error')
-
-      expect(result.error.code).toBe('invalid-layout')
-      expect(result.error.message).toContain('layout[0].children[0].props.iconPosition')
-    })
-
-    it('accepts iconPosition declared without icon and the normalized node preserves iconPosition', () => {
-      const result = validateRuntimeConfig(
-        createConfigWithFormLayout({
-          children: [
-            {
-              type: 'input',
-              props: {
-                fieldId: 'email',
-                label: 'Email',
-                iconPosition: 'right',
-              },
-            },
-          ],
-        }),
-      )
-
-      expect(result.status).toBe('ready')
-      if (result.status !== 'ready') throw new Error('Expected ready')
-
-      const formNode = result.page.layout[0]
-      if (formNode.type !== 'form') throw new Error('Expected form')
-
-      expect(formNode.children?.[0]).toMatchObject({
-        type: 'input',
-        props: { fieldId: 'email', iconPosition: 'right' },
-      })
     })
   })
 })

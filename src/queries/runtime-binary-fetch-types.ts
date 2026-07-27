@@ -10,7 +10,7 @@ export interface ExecuteRuntimeBinaryFetchOptions {
 }
 
 export interface RuntimeBinaryFetchError {
-  code: 'request-build-failed' | 'token-refresh-failed' | 'network-error' | 'http-error' | 'invalid-binary-response'
+  code: 'request-build-failed' | 'network-error' | 'http-error' | 'invalid-binary-response'
   message: string
 }
 

@@ -37,21 +37,6 @@
 - Si `button.props.action.type: executeOperation` o `form.submitAction` declaran `body` sobre una operación `GET`, el config completo se rechaza antes del render.
 - Si `api.headers`, `button.props.action.headers` o `form.submitAction.headers` usan valores no string, el config completo se rechaza antes del render.
 - Si `api.query`, `api.headers`, `button.props.action.query`, `button.props.action.headers`, `form.submitAction.query` o `form.submitAction.headers` contienen claves vacías, el config completo se rechaza antes del render.
-- `tokens.*` solo es soportado en superficies de `headers`: `api.{op}.headers`, `button.props.action.headers`, `form.submitAction.headers`, `preloads[].headers` e `executeOperations[].headers`. Referencias `tokens.*` en `query`, `body`, `params`, `visibility`, `defaultValue`, orígenes de colección o fuera de las superficies admitidas causan que el config se rechace antes del render.
-
-## Reglas del bloque `tokens`
-
-- `tokens` es opcional; si está ausente o `undefined`, el runtime funciona exactamente igual que antes.
-- Si `tokens` está declarado, debe ser un objeto plano (no `null`, array o primitivo).
-- Cada entrada de `tokens` debe tener:
-  - `value`: string no vacío y obligatorio.
-  - `refresh`: objeto opcional que, si se declara, debe incluir:
-    - `operation`: string no vacío que referencia una operación existente en `api`. Si la operación no existe, el config completo se rechaza antes del render con ruta canónica `tokens.{tokenId}.refresh.operation`.
-    - `responsePath`: string no vacío, ruta dot-notation que indica dónde encontrar el nuevo valor en el body de respuesta de la operación.
-    - `intervalSeconds`: entero positivo que indica cada cuántos segundos ejecutar el refresco.
-- Si `refresh` está declarado pero falta `responsePath` o `intervalSeconds`, el config se rechaza con ruta canónica correspondiente.
-- Si `refresh.intervalSeconds` no es un entero positivo (cero, negativo, decimal, `null`, no número), el config se rechaza con ruta canónica `tokens.{tokenId}.refresh.intervalSeconds`.
-- Claves extra dentro de cada token o dentro de `refresh` se descartan sin invalidar el config.
 
 ## Reglas de formularios
 - `form.persistOnUnmount` sigue siendo opcional; si aparece con un valor no booleano, el config completo se rechaza antes del render sobre la ruta exacta.

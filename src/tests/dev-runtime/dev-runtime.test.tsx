@@ -224,7 +224,7 @@ describe('DevRuntime Copy', () => {
     fireEvent.click(screen.getByTestId('dev-runtime-toggle'))
     await waitFor(() => expect(screen.getByTestId('monaco-editor-mock')).toBeInTheDocument())
 
-    const editedJson = '{"custom":true}'
+    const editedJson = '{"custom": true}'
     fireEvent.change(screen.getByTestId('monaco-editor-mock'), {
       target: { value: editedJson },
     })

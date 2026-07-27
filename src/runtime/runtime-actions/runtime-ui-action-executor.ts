@@ -16,7 +16,7 @@ export interface RuntimeUiActionHandlers {
   ) => void
   openModal: (modalId: string, options?: { iterationContext?: RuntimeIterationContext }) => void
   closeModal: (modalId: string, options?: { iterationContext?: RuntimeIterationContext }) => void
-  resetForm: (formId: string, options?: { preserveFieldIds?: string[] }) => void
+  resetForm: (formId: string) => void
 }
 
 export function executeRuntimeUiAction(
@@ -65,9 +65,7 @@ export function executeRuntimeUiAction(
       handlers.closeModal(action.modalId, { iterationContext: options?.iterationContext })
       return
     case 'resetForm':
-      handlers.resetForm(action.formId, {
-        preserveFieldIds: action.preserveFieldIds,
-      })
+      handlers.resetForm(action.formId)
       return
   }
 }

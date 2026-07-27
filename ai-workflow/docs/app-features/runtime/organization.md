@@ -13,12 +13,10 @@
 
 ## Render y composición
 - `src/runtime/layout-renderer.tsx` renderiza colecciones ordenadas, conserva el soporte de varios hermanos raíz y propaga opcionalmente un contexto de iteración por subárbol.
-- `src/runtime/layout-node-renderer.tsx` centraliza la resolución `type -> pieza de render`, aplica el borde transversal de visibilidad efectiva antes de delegar al nodo concreto, mantiene `repeater` como expansión estructural sin wrapper visual, resuelve el wrapper genérico de `layout.span` solo cuando el padre efectivo es grid, y envuelve cada nodo en un borde de carga lazy + error por instancia.
-- `src/runtime/nodes/node-components-map.ts` exporta el mapa `type -> ComponentType` que `layout-node-renderer` consume. En test, cada entrada es un import estático directo del nodo (eager, sin Suspense). En dev/prod, cada entrada es un `React.lazy()` que descarga el chunk del nodo bajo demanda la primera vez que se necesita renderizar ese tipo.
-- `src/runtime/lazy-node.tsx` es un wrapper React que envuelve cada nodo cargado dinámicamente, combinando `<Suspense fallback={null}>` (posición no renderiza nada mientras se descarga el chunk) y una error boundary local (contiene fallos de carga de chunk en esa posición sin propagar al resto del runtime).
+- `src/runtime/layout-node-renderer.tsx` centraliza la resolución `type -> pieza de render`, aplica el borde transversal de visibilidad efectiva antes de delegar al nodo concreto, mantiene `repeater` como expansión estructural sin wrapper visual y resuelve también el wrapper genérico de `layout.span` solo cuando el padre efectivo es grid.
 - `src/runtime/runtime-layout-context.tsx` propaga un contexto mínimo de layout con las columnas efectivas fijas o responsive del grid padre, separado del store global del runtime.
 - `src/runtime/form-context.tsx` propaga el `formId` efectivo por descendencia sin acoplar los nodos de campo a props manuales repetidas.
-- `src/runtime/nodes/` contiene una pieza concreta por nodo soportado hoy: `container`, `repeater`, `heading`, `paragraph`, `list`, `image`, `table`, `button`, `form`, `input`, `textarea`, `select`, `radioGroup`, `checkboxGroup`, `tabs`, `accordion`, `badge`, `alert`, `stat`, `divider`, `skeleton` y `fileManager`.
+- `src/runtime/nodes/` contiene una pieza concreta por nodo soportado hoy: `container`, `repeater`, `heading`, `paragraph`, `list`, `image`, `table`, `button`, `form`, `input`, `textarea`, `select`, `radioGroup` y `checkboxGroup`.
 - `src/runtime/nodes/form-layout-node.tsx` fija hoy la frontera visible entre rerender, ocultación y desmontaje real del formulario, y usa el store compartido para distinguir entre resetear un formulario existente y eliminarlo completo.
 
 ## Acciones, estado y feedback

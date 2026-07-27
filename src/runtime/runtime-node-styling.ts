@@ -542,7 +542,6 @@ export function getTableFilterResetButtonClassName() {
     'leading-5',
     'text-app-text-strong',
     'transition-colors',
-    'cursor-pointer',
     'hover:bg-app-surface-subtle',
     'focus-visible:outline',
     'focus-visible:outline-2',
@@ -565,7 +564,6 @@ export function getTableSortButtonClassName(isActive = false) {
     'tracking-[0.16em]',
     isActive ? 'text-app-accent' : 'text-app-text-strong',
     'transition-colors',
-    'cursor-pointer',
     'hover:text-app-accent',
     'focus-visible:outline',
     'focus-visible:outline-2',
@@ -675,7 +673,6 @@ export function getRepeaterPaginationButtonClassName() {
     'leading-5',
     'text-app-text-strong',
     'transition-colors',
-    'cursor-pointer',
     'hover:bg-app-surface-subtle',
     'disabled:cursor-not-allowed',
     'disabled:border-app-border-soft',
@@ -747,7 +744,7 @@ export function getChoiceOptionClassName(optionLayout: ChoiceGroupOptionLayout =
 }
 
 export function getModalOverlayClassName() {
-  return 'fixed inset-0 z-50 flex items-center justify-center bg-black/50 cursor-pointer'
+  return 'fixed inset-0 z-50 flex items-center justify-center bg-black/50'
 }
 
 const modalPanelSizeClassMap: Record<string, string> = {
@@ -767,7 +764,6 @@ export function getModalPanelClassName(size: 'sm' | 'md' | 'lg' = 'md') {
     'bg-white',
     'p-6',
     'shadow-shell',
-    'cursor-auto',
     'sm:p-8',
   ].join(' ')
 }
@@ -826,7 +822,6 @@ export function getAccordionHeaderClassName() {
     'items-center',
     'justify-between',
     'bg-primary-50',
-    'cursor-pointer',
     'hover:bg-primary-100',
     'focus:outline-none',
     'focus-visible:ring-2',
@@ -862,7 +857,7 @@ export function getTabsRootClassName(orientation: 'horizontal' | 'vertical') {
 export function getTabsBarClassName(orientation: 'horizontal' | 'vertical') {
   return orientation === 'vertical'
     ? 'flex flex-col w-48 shrink-0'
-    : 'flex flex-row overflow-x-auto scrollbar-hide'
+    : 'flex flex-row overflow-x-auto'
 }
 
 export function getTabsButtonClassName(isActive: boolean, orientation: 'horizontal' | 'vertical') {
@@ -872,25 +867,14 @@ export function getTabsButtonClassName(isActive: boolean, orientation: 'horizont
       : 'shrink-0 whitespace-nowrap'
 
   if (isActive) {
-    const borderClasses =
-      orientation === 'vertical'
-        ? ['border-t', 'border-l', 'border-b', 'border-app-border-soft']
-        : ['border-t', 'border-l', 'border-r', 'border-app-border-soft']
-
-    const overlapClass = orientation === 'vertical' ? '-mr-px' : '-mb-px'
-
     return [
-      ...borderClasses,
-      overlapClass,
-      'relative',
-      'z-10',
-      'bg-app-background',
+      'border-b-2',
+      'border-primary-600',
       'text-primary-700',
       'font-semibold',
       'px-3',
       'py-1.5',
       'transition-colors',
-      'cursor-pointer',
       orientationClasses,
     ].join(' ')
   }
@@ -902,13 +886,12 @@ export function getTabsButtonClassName(isActive: boolean, orientation: 'horizont
     'px-3',
     'py-1.5',
     'transition-colors',
-    'cursor-pointer',
     orientationClasses,
   ].join(' ')
 }
 
 export function getTabsPanelClassName() {
-  return 'flex-1 border border-app-border-soft p-4 flex flex-col gap-5'
+  return 'flex-1'
 }
 
 export function getLinkNodeClassName() {
@@ -1122,9 +1105,8 @@ export function getSkeletonAnimateClassName(animate: boolean): string {
 
 // T12 — Input icon holder and icon styling functions (D9 D10 D7)
 
-export function getInputIconHolderClassName(position: 'left' | 'right' = 'left'): string {
-  const borderClass = position === 'right' ? 'border-l' : 'border-r'
-  return `flex items-center justify-center px-3 bg-neutral-50 ${borderClass} border-app-border-soft shrink-0`
+export function getInputIconHolderClassName(): string {
+  return 'flex items-center justify-center px-3 bg-neutral-50 border-r border-app-border-soft shrink-0'
 }
 
 export function getInputIconClassName(): string {
@@ -1162,7 +1144,7 @@ export function getFileManagerRowFileNameClassName(): string {
 
 export function getFileManagerRowActionClassName(variant: 'primary' | 'danger' | 'disabled'): string {
   if (variant === 'primary') {
-    return 'flex items-center gap-1 text-sm text-primary-600 hover:text-primary-800 cursor-pointer transition-colors'
+    return 'flex items-center gap-1 text-sm text-primary-600 hover:text-primary-800 transition-colors'
   }
   if (variant === 'danger') {
     return 'flex items-center gap-1 text-sm text-danger-600 hover:text-danger-700 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition-colors'
@@ -1187,11 +1169,11 @@ export function getFileManagerErrorItemClassName(): string {
 }
 
 const fileManagerDropZonePhaseClassMap: Record<string, string> = {
-  idle: 'border-neutral-300 bg-neutral-50 cursor-pointer hover:bg-neutral-100',
-  'drag-over': 'border-primary-500 bg-primary-50 cursor-pointer',
+  idle: 'border-neutral-300 bg-neutral-50 hover:bg-neutral-100',
+  'drag-over': 'border-primary-500 bg-primary-50',
   uploading: 'border-info-400 bg-info-50 cursor-not-allowed',
-  success: 'border-success-500 bg-success-50 cursor-pointer',
-  error: 'border-danger-400 bg-danger-50 cursor-pointer',
+  success: 'border-success-500 bg-success-50',
+  error: 'border-danger-400 bg-danger-50',
 }
 
 export function getFileManagerDropZoneClassName(phase: 'idle' | 'drag-over' | 'uploading' | 'success' | 'error'): string {

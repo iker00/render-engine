@@ -17,14 +17,6 @@
 - Si la página inicial declara `preloads`, el runtime dispara automáticamente esa tanda al montar la instancia.
 - Si `initialPage` no coincide con ningún `id`, el arranque falla con un error claro.
 
-## Title del documento
-- Cada página puede declarar un campo opcional `title` (string estático).
-- El runtime captura `document.title` una única vez al montar y lo mantiene como referencia durante toda la sesión.
-- Cuando el runtime navega a una página que declara `title` no vacío, actualiza `document.title` al formato `"{page.title} | {título inicial}"`.
-- Cuando navega a una página sin `title` (o con `title: ""` vacío), restaura `document.title` al título inicial capturado.
-- El campo `title` no admite interpolación dinámica; es un string literal.
-- El cambio de `document.title` es un efecto secundario del cambio de página y no produce renders adicionales.
-
 ## Foco al navegar
 - El `<section>` contenedor de la página renderizada lleva `tabIndex={-1}` para ser focalizable programáticamente sin entrar en el orden de tabulación natural.
 - Cada vez que el runtime cambia de página (cambio de `pageId`) o genera una nueva `pageEntry` sobre la misma página (reentrada, params distintos, preloads), el `<section>` activo recibe foco programático automáticamente.

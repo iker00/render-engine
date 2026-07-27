@@ -15,7 +15,6 @@ El escape literal con `\` permite mostrar una referencia completa tal cual, por 
 - `item`
 - `item.{segmentosAnidados}`
 - `item.$key`
-- `item.$index`
 - `forms.{formId}.{fieldId}`
 - `params.{paramName}`
 - `queries.{queryName}`
@@ -26,7 +25,6 @@ El escape literal con `\` permite mostrar una referencia completa tal cual, por 
 - `queries.{queryName}.error.code`
 - `queries.{queryName}.data.{segmentosAnidados}`
 - `translations.{key}`
-- `tokens.{tokenId}.value`
 
 ## Reglas funcionales generales
 - la navegación anidada adicional solo se admite bajo `queries.{queryName}.data` y bajo `queries.{queryName}.error` (limitada a `.message` y `.code`)
@@ -94,13 +92,6 @@ Las superficies de `query`, `body`, `params` y otras no listadas siguen fuera de
 - Cuando el valor de la entrada contiene una propiedad literal `$key`, `item.$key` devuelve siempre la clave del diccionario, nunca esa propiedad interna: la propiedad sintética tiene precedencia sobre la navegación dentro del valor.
 - Las mismas superficies donde aplica `item.*` admiten también `item.$key`.
 
-## Frontera específica de `item.$index`
-- `item.$index` es una referencia sintética soportada, distinta de la navegación genérica `item.{ruta}`. Expone el índice numérico (0, 1, 2…) de la iteración actual como número dentro del subárbol iterado de cualquier `repeater`, con independencia del valor de `props.items.key`.
-- Funciona tanto con fuentes array como con fuentes objeto plano. En ambos casos expone la posición ordinal dentro de la secuencia iterada.
-- `item.$index` tiene precedencia sobre cualquier propiedad literal `$index` que pudiera existir dentro del valor del item, de forma análoga a la precedencia de `item.$key`.
-- `item.$index` es la forma exacta soportada. Variantes como `item.$index.algo`, `item.algo.$index` u otras formas con `$` distintas del literal exacto son rutas inválidas.
-- Las mismas superficies donde aplica `item.*` e `item.$key` admiten también `item.$index`.
-
 ## Frontera específica de `translations.*`
 - `translations.{key}` resuelve valores desde el catálogo de traducciones declarado en la raíz del JSON de configuración, aplicando una cadena de fallback por idioma.
 - El idioma activo se declara mediante el atributo `data-lang` del elemento raíz; si no está presente o es vacío, el runtime usa `"es"` por defecto.
@@ -108,11 +99,3 @@ Las superficies de `query`, `body`, `params` y otras no listadas siguen fuera de
 - La cadena de fallback es: idioma activo → idioma por defecto (`"es"`) → en desarrollo: nombre de la clave; en producción: string vacío.
 - `translations.{key}` puede usarse en todas las superficies visibles interpolables que ya admiten referencias completas: `heading.props.text`, `paragraph.props.text`, `button.props.label`, `input.props.label`, `input.props.placeholder`, `textarea.props.label`, `textarea.props.placeholder`, `select.props.label`, `radioGroup.props.label`, `checkboxGroup.props.label`, elementos de `list.props.items`, celdas de `table`, `image.props.alt`, y dentro de placeholders `{{translations.key}}` en cualquiera de las anteriores.
 - `translations.*` queda fuera de alcance en `api.query`, `api.body`, `api.headers`, `visibility.reference`, orígenes de colección (`repeater.props.items.source`, `list.props.items.source`, `select.props.items.source`, `radioGroup.props.items.source`, `checkboxGroup.props.items.source`) y en `defaultValue` de campos de formulario; en esas superficies se trata como string literal.
-
-## Frontera específica de `tokens.*`
-- `tokens.{tokenId}.value` es la única forma soportada de referencia a tokens. Variantes como `tokens.{tokenId}` (sin `.value`), `tokens.{tokenId}.status` u otras rutas adicionales no forman parte del contrato válido y se tratan como referencias inválidas.
-- `tokens.{tokenId}.value` resuelve el valor actual de un token declarado en el bloque raíz `tokens` del JSON de configuración. Si el token no existe, la operación falla con `code: request-build-failed`.
-- Cuando un token está en estado de refresco (`status: refreshing`), su valor actual se sigue sirviendo sin bloqueo; cuando está en estado de error (`status: error`), cualquier operación que lo referencie en sus headers falla con `code: token-refresh-failed` sin emitir red.
-- `tokens.{tokenId}.value` **solo** está soportada en superficies de headers: `api.{op}.headers`, `button.props.action.headers`, `form.submitAction.headers`, `preloads[].headers` e incluidas dentro de `executeOperations[].headers`. Usarla en cualquier otra superficie (`query`, `body`, `params`, `visibility`, `defaultValue`, orígenes de colección) provoca error de bootstrap `invalid-layout`.
-- `tokens.*` no se puede interpolar en superficies visibles ni en placeholders `{{tokens...}}`; cualquier intento causa que el placeholder se degrade a string vacío sin exponerse el valor del token.
-- Los valores de tokens no aparecen en logs ni en diagnósticos de error expuestos al usuario (criterio de seguridad).

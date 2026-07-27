@@ -12,7 +12,6 @@ No sustituye a los artefactos obligatorios de cada fase ni a los indices especia
 - `conventions.md`: convenciones repetibles de implementacion y mantenimiento documental. Leer cuando se escriban planes, se implemente codigo o se cierre documentacion.
 - `current-state.md`: inventario de capacidades vigentes y limites actuales. Leer solo cuando haga falta confirmar si algo ya esta implementado, documentar estado estable o resolver dudas de alcance actual.
 - `onboarding.md`: entrada humana al proyecto. No leer por defecto en skills salvo que la tarea sea de onboarding o explicacion general.
-- `vcs.md`: convenciones de control de versiones: ramas `dev`/`master`, creación de rama de feature al inicio de la spec, Conventional Commits y commit único al cerrar el flujo documental. Leer cuando la skill inicie una feature o cierre artefactos que deban commitearse.
 - `../features/index.md`: mapa de features planificadas, archivadas y completadas. Leer cuando haga falta contexto historico, coordinacion entre features o actualizar el mapa de entregas.
 
 ## Indices especializados

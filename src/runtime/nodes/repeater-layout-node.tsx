@@ -31,7 +31,6 @@ interface RepeaterIteration {
   key: string
   item: unknown
   itemKey?: string
-  itemIndex: number
 }
 
 export function RepeaterNode({ node }: RepeaterNodeProps) {
@@ -55,7 +54,7 @@ export function RepeaterNode({ node }: RepeaterNodeProps) {
     const iterationKeys = new Set(iterations.map((iter) => iter.key))
     if (!iterationKeys.has(activeModal.activeIterationKey)) {
       closeModal(activeModal.activeModalId, {
-        iterationContext: { item: null, key: activeModal.activeIterationKey, itemIndex: -1 },
+        iterationContext: { item: null, key: activeModal.activeIterationKey },
       })
     }
   }, [iterations, activeModal, closeModal, templateModalIds])
@@ -111,7 +110,6 @@ function RepeaterNodeContent({
           item: iteration.item,
           key: iteration.key,
           itemKey: iteration.itemKey,
-          itemIndex: iteration.itemIndex,
         }
 
         return <LayoutRenderer key={iteration.key} nodes={node.props.template} iterationContext={iterationContext} />
@@ -322,9 +320,7 @@ function resolveRepeaterIterations(node: RepeaterLayoutNode, sourceItems: Repeat
     const entry = sourceItems.entries[index]
     let effectiveKey: string | null = null
 
-    if (keyPath === '$index') {
-      effectiveKey = String(index)
-    } else if (keyPath === '$key') {
+    if (keyPath === '$key') {
       if (entry.dictKey === undefined) {
         reportRepeaterKeyDiagnostic(node, index, 'invalid')
         continue
@@ -342,7 +338,7 @@ function resolveRepeaterIterations(node: RepeaterLayoutNode, sourceItems: Repeat
       effectiveKey = String(resolvedKey)
     }
 
-    if (keyPath !== '$index' && seenKeys.has(effectiveKey)) {
+    if (seenKeys.has(effectiveKey)) {
       reportRepeaterKeyDiagnostic(node, index, 'duplicate', effectiveKey)
       continue
     }
@@ -352,7 +348,6 @@ function resolveRepeaterIterations(node: RepeaterLayoutNode, sourceItems: Repeat
       key: effectiveKey,
       item: entry.value,
       itemKey: entry.dictKey,
-      itemIndex: index,
     })
   }
 

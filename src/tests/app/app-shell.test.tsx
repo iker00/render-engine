@@ -1,7 +1,10 @@
 import { render, screen } from '@testing-library/react'
 import { vi } from 'vitest'
 import { App } from '../../app/App'
+import defaultDevConfigJson from '../../dev/config.json'
 import type { RuntimeConfig } from '../../app/bootstrap/read-runtime-config'
+
+const defaultDevConfig = defaultDevConfigJson as RuntimeConfig
 
 const minimalDevConfig: RuntimeConfig = {
   api: {},
@@ -61,37 +64,6 @@ const minimalDevConfig: RuntimeConfig = {
   initialPage: 'bootstrap-home',
 }
 
-const shellFrameDevConfig: RuntimeConfig = {
-  api: {},
-  pages: [
-    {
-      id: 'shell-frame-home',
-      layout: [
-        {
-          type: 'container',
-          props: {
-            direction: 'row',
-            gap: 'sm',
-          },
-          children: [
-            {
-              type: 'button',
-              props: {
-                label: 'Limpiar formulario',
-                action: {
-                  type: 'resetForm',
-                  formId: 'generalRequestForm',
-                },
-              },
-            },
-          ],
-        },
-      ],
-    },
-  ],
-  initialPage: 'shell-frame-home',
-}
-
 function renderDevelopmentApp(devConfigOverride: RuntimeConfig) {
   return render(
     <App
@@ -129,7 +101,7 @@ describe('App shell', () => {
   it('renders the runtime inside a centered light shell frame', () => {
     const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
 
-    renderDevelopmentApp(shellFrameDevConfig)
+    renderDevelopmentApp(defaultDevConfig)
 
     expect(screen.getByTestId('runtime-app')).toHaveClass(
       'min-h-screen',

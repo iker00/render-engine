@@ -4,33 +4,27 @@ import type {
   ExecuteOperationsRuntimeUiAction,
   FormLayoutNode,
   FormOnErrorAction,
-  HiddenLayoutNode,
   InputLayoutNode, LayoutNode,
   LayoutNodeCollection,
   LayoutNodeFeedbackFields,
   RadioGroupLayoutNode,
-  RuntimeBooleanFlagValidationRule,
   RuntimeCollectionObjectItem,
   RuntimeConfigError,
   RuntimeFormFieldValidations,
   RuntimeFormValidationRuleName,
   RuntimeNumericValidationRule,
-  RuntimePatternValidationRule,
   RuntimeRequiredValidationRule,
   SelectLayoutNode,
   TextareaLayoutNode,
-  ToggleLayoutNode,
 } from './runtime-config-types'
 import {
   checkboxGroupNodeSchema,
   formNodeSchema,
-  hiddenNodeSchema,
   inputNodeSchema,
   radioGroupNodeSchema,
   selectItemSchema,
   selectNodeSchema,
   textareaNodeSchema,
-  toggleNodeSchema,
 } from './runtime-config-zod'
 import { invalidLayout } from './runtime-config-validation-errors'
 import { hasRuntimeTemplateDelimiter, parseRuntimeReference } from '../runtime/runtime-references/runtime-reference-parser'
@@ -42,7 +36,7 @@ import {
   mapLeafNodeIssue,
   mapLayoutNodeIssue,
 } from './validate-layout-nodes'
-import { mapQueryStateFeedbackIssue, mapVisibilityIssue, validateFormSubmitAction, validateWhenCondition } from './validate-actions-visibility'
+import { mapQueryStateFeedbackIssue, mapVisibilityIssue, validateFormSubmitAction } from './validate-actions-visibility'
 
 const collectionPathSegmentPattern = /^[A-Za-z0-9_-]+$/
 const supportedFormValidationRuleNames = new Set<RuntimeFormValidationRuleName>([
@@ -53,9 +47,6 @@ const supportedFormValidationRuleNames = new Set<RuntimeFormValidationRuleName>(
   'max',
   'minSelections',
   'maxSelections',
-  'pattern',
-  'email',
-  'url',
 ])
 
 type FormFieldValidationTarget =
@@ -64,7 +55,6 @@ type FormFieldValidationTarget =
   | { type: 'select'; multiple: boolean }
   | { type: 'radioGroup' }
   | { type: 'checkboxGroup' }
-  | { type: 'toggle' }
 
 export function validateFormNode(
   rawNode: Record<string, unknown>,
@@ -608,122 +598,6 @@ export function validateCheckboxGroupNode(
   }
 }
 
-export function validateToggleNode(
-  rawNode: Record<string, unknown>,
-  path: string,
-  pageId: string,
-): { status: 'ready'; node: ToggleLayoutNode } | { status: 'error'; error: RuntimeConfigError } {
-  const parseResult = toggleNodeSchema.safeParse(rawNode)
-
-  if (!parseResult.success) {
-    const feedbackIssue = mapQueryStateFeedbackIssue(pageId, path, parseResult.error.issues[0])
-
-    if (feedbackIssue) {
-      return feedbackIssue
-    }
-
-    const visibilityIssue = mapVisibilityIssue(pageId, path, parseResult.error.issues[0])
-
-    if (visibilityIssue) {
-      return visibilityIssue
-    }
-
-    return mapLeafNodeIssue(pageId, path, parseResult.error.issues[0]?.path ?? [])
-  }
-
-  const feedbackResult = validateQueryStateFeedback(
-    parseResult.data.queryStateFeedback as LayoutNodeFeedbackFields['queryStateFeedback'],
-    `${path}.queryStateFeedback`,
-    pageId,
-  )
-
-  if (feedbackResult.status === 'error') {
-    return feedbackResult
-  }
-
-  const visibilityResult = validateVisibility(
-    parseResult.data.visibility as LayoutNodeFeedbackFields['visibility'],
-    `${path}.visibility`,
-    pageId,
-  )
-
-  if (visibilityResult.status === 'error') {
-    return visibilityResult
-  }
-
-  if (typeof parseResult.data.props.defaultValue === 'string') {
-    const ref = parseRuntimeReference(parseResult.data.props.defaultValue, { allowItemReference: true })
-
-    if (ref.kind !== 'reference' || ref.status !== 'supported') {
-      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.defaultValue".`)
-    }
-  }
-
-  const validationsResult = validateFormFieldValidations(rawNode.props, parseResult.data.props.validations, { type: 'toggle' }, path, pageId)
-
-  if (validationsResult.status === 'error') {
-    return validationsResult
-  }
-
-  return {
-    status: 'ready',
-    node: {
-      type: 'toggle',
-      layout: parseResult.data.layout,
-      props: {
-        ...parseResult.data.props,
-        validations: validationsResult.validations,
-      },
-      queryStateFeedback: feedbackResult.queryStateFeedback,
-      visibility: visibilityResult.visibility,
-    },
-  }
-}
-
-const hiddenProhibitedProps = ['label', 'validations', 'defaultValue', 'placeholder', 'icon', 'iconPosition'] as const
-
-export function validateHiddenNode(
-  rawNode: Record<string, unknown>,
-  path: string,
-  pageId: string,
-): { status: 'ready'; node: HiddenLayoutNode } | { status: 'error'; error: RuntimeConfigError } {
-  // Reject prohibited transversals on the node itself
-  if (Object.hasOwn(rawNode, 'visibility')) {
-    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.visibility": hidden nodes do not support visibility.`)
-  }
-
-  if (Object.hasOwn(rawNode, 'queryStateFeedback')) {
-    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.queryStateFeedback": hidden nodes do not support queryStateFeedback.`)
-  }
-
-  // Reject prohibited props
-  const rawProps = rawNode.props
-  if (isRecord(rawProps)) {
-    for (const prop of hiddenProhibitedProps) {
-      if (Object.hasOwn(rawProps, prop)) {
-        return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.${prop}": hidden nodes do not support ${prop}.`)
-      }
-    }
-  }
-
-  const parseResult = hiddenNodeSchema.safeParse(rawNode)
-
-  if (!parseResult.success) {
-    return mapLeafNodeIssue(pageId, path, parseResult.error.issues[0]?.path ?? [])
-  }
-
-  return {
-    status: 'ready',
-    node: {
-      type: 'hidden',
-      props: {
-        fieldId: parseResult.data.props.fieldId,
-        value: parseResult.data.props.value,
-      },
-    },
-  }
-}
-
 export function validateFormFieldValidations(
   rawProps: unknown,
   rawValidations: unknown,
@@ -753,21 +627,10 @@ export function validateFormFieldValidations(
       return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.validations.${ruleName}".`)
     }
 
-    const rulePath = `${path}.props.validations.${ruleName}`
-
-    let validationResult:
-      | { status: 'ready'; rule: RuntimeRequiredValidationRule | RuntimeNumericValidationRule | RuntimePatternValidationRule | RuntimeBooleanFlagValidationRule }
-      | { status: 'error'; error: RuntimeConfigError }
-
-    if (ruleName === 'required') {
-      validationResult = validateRequiredRule(rawRule, rulePath, pageId)
-    } else if (ruleName === 'pattern') {
-      validationResult = validatePatternRule(rawRule, rulePath, pageId)
-    } else if (ruleName === 'email' || ruleName === 'url') {
-      validationResult = validateBooleanFlagRule(rawRule, rulePath, pageId)
-    } else {
-      validationResult = validateNumericRule(rawRule, rulePath, pageId)
-    }
+    const validationResult =
+      ruleName === 'required'
+        ? validateRequiredRule(rawRule, `${path}.props.validations.${ruleName}`, pageId)
+        : validateNumericRule(rawRule, `${path}.props.validations.${ruleName}`, pageId)
 
     if (validationResult.status === 'error') {
       return validationResult
@@ -800,15 +663,6 @@ export function validateFormFieldValidations(
         break
       case 'maxSelections':
         validations.maxSelections = validationResult.rule as RuntimeNumericValidationRule
-        break
-      case 'pattern':
-        validations.pattern = validationResult.rule as RuntimePatternValidationRule
-        break
-      case 'email':
-        validations.email = validationResult.rule as RuntimeBooleanFlagValidationRule
-        break
-      case 'url':
-        validations.url = validationResult.rule as RuntimeBooleanFlagValidationRule
         break
     }
   }
@@ -849,21 +703,9 @@ function validateRequiredRule(
     return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.message".`)
   }
 
-  const whenResult = validateWhenCondition(rawRule.when, `${path}.when`, pageId, { allowItem: true })
-
-  if (whenResult.status === 'error') {
-    return whenResult
-  }
-
-  const rule: RuntimeRequiredValidationRule = typeof rawRule.message === 'string' ? { value: true, message: rawRule.message } : { value: true }
-
-  if (whenResult.when) {
-    rule.when = whenResult.when
-  }
-
   return {
     status: 'ready',
-    rule,
+    rule: typeof rawRule.message === 'string' ? { value: true, message: rawRule.message } : { value: true },
   }
 }
 
@@ -895,127 +737,15 @@ function validateNumericRule(
     return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.message".`)
   }
 
-  const whenResult = validateWhenCondition(rawRule.when, `${path}.when`, pageId, { allowItem: true })
-
-  if (whenResult.status === 'error') {
-    return whenResult
-  }
-
-  const rule: RuntimeNumericValidationRule = typeof rawRule.message === 'string' ? { value: rawRule.value, message: rawRule.message } : { value: rawRule.value }
-
-  if (whenResult.when) {
-    rule.when = whenResult.when
-  }
-
   return {
     status: 'ready',
-    rule,
-  }
-}
-
-function validatePatternRule(
-  rawRule: unknown,
-  path: string,
-  pageId: string,
-): { status: 'ready'; rule: RuntimePatternValidationRule } | { status: 'error'; error: RuntimeConfigError } {
-  if (typeof rawRule === 'string') {
-    if (rawRule.length === 0) {
-      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}".`)
-    }
-
-    try {
-      new RegExp(rawRule)
-    } catch {
-      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.value".`)
-    }
-
-    return {
-      status: 'ready',
-      rule: { value: rawRule },
-    }
-  }
-
-  if (!isRecord(rawRule)) {
-    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}".`)
-  }
-
-  if (typeof rawRule.value !== 'string' || rawRule.value.length === 0) {
-    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.value".`)
-  }
-
-  try {
-    new RegExp(rawRule.value)
-  } catch {
-    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.value".`)
-  }
-
-  if (typeof rawRule.message !== 'undefined' && typeof rawRule.message !== 'string') {
-    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.message".`)
-  }
-
-  const whenResult = validateWhenCondition(rawRule.when, `${path}.when`, pageId, { allowItem: true })
-
-  if (whenResult.status === 'error') {
-    return whenResult
-  }
-
-  const rule: RuntimePatternValidationRule = typeof rawRule.message === 'string' ? { value: rawRule.value, message: rawRule.message } : { value: rawRule.value }
-
-  if (whenResult.when) {
-    rule.when = whenResult.when
-  }
-
-  return {
-    status: 'ready',
-    rule,
-  }
-}
-
-function validateBooleanFlagRule(
-  rawRule: unknown,
-  path: string,
-  pageId: string,
-): { status: 'ready'; rule: RuntimeBooleanFlagValidationRule } | { status: 'error'; error: RuntimeConfigError } {
-  if (rawRule === true) {
-    return {
-      status: 'ready',
-      rule: { value: true },
-    }
-  }
-
-  if (!isRecord(rawRule)) {
-    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}".`)
-  }
-
-  if (rawRule.value !== true) {
-    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.value".`)
-  }
-
-  if (typeof rawRule.message !== 'undefined' && typeof rawRule.message !== 'string') {
-    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.message".`)
-  }
-
-  const whenResult = validateWhenCondition(rawRule.when, `${path}.when`, pageId, { allowItem: true })
-
-  if (whenResult.status === 'error') {
-    return whenResult
-  }
-
-  const rule: RuntimeBooleanFlagValidationRule = typeof rawRule.message === 'string' ? { value: true, message: rawRule.message } : { value: true }
-
-  if (whenResult.when) {
-    rule.when = whenResult.when
-  }
-
-  return {
-    status: 'ready',
-    rule,
+    rule: typeof rawRule.message === 'string' ? { value: rawRule.value, message: rawRule.message } : { value: rawRule.value },
   }
 }
 
 function validateValidationCompatibility(
   ruleName: RuntimeFormValidationRuleName,
-  rule: RuntimeRequiredValidationRule | RuntimeNumericValidationRule | RuntimePatternValidationRule | RuntimeBooleanFlagValidationRule,
+  rule: RuntimeRequiredValidationRule | RuntimeNumericValidationRule,
   target: FormFieldValidationTarget,
   path: string,
   pageId: string,
@@ -1041,10 +771,6 @@ function validateValidationCompatibility(
       return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.validations.${ruleName}.value".`)
     }
 
-    return null
-  }
-
-  if ((ruleName === 'pattern' || ruleName === 'email' || ruleName === 'url') && supportsTextualValidations(target)) {
     return null
   }
 
@@ -1088,27 +814,12 @@ function supportsTextLengthValidations(target: FormFieldValidationTarget) {
     target.type === 'input' &&
     target.inputType !== 'number' &&
     target.inputType !== 'date' &&
-    target.inputType !== 'datetime-local' &&
-    target.inputType !== 'time'
+    target.inputType !== 'datetime-local'
   )
 }
 
 function supportsSelectionCardinalityValidations(target: FormFieldValidationTarget) {
   return target.type === 'checkboxGroup' || (target.type === 'select' && target.multiple)
-}
-
-function supportsTextualValidations(target: FormFieldValidationTarget) {
-  if (target.type === 'textarea') {
-    return true
-  }
-
-  return (
-    target.type === 'input' &&
-    target.inputType !== 'number' &&
-    target.inputType !== 'date' &&
-    target.inputType !== 'datetime-local' &&
-    target.inputType !== 'time'
-  )
 }
 
 export function validateSelectItemsContract(
@@ -1571,10 +1282,7 @@ function validateFormNodesInCollection(
       node.type === 'textarea' ||
       node.type === 'select' ||
       node.type === 'radioGroup' ||
-      node.type === 'checkboxGroup' ||
-      node.type === 'fileInput' ||
-      node.type === 'toggle' ||
-      node.type === 'hidden'
+      node.type === 'checkboxGroup'
     ) {
       if (!context.inForm || !context.currentFormId || !context.fieldIds) {
         return invalidLayout(`Page "${pageId}" has an invalid layout at "${nodePath}": ${node.type} nodes must be descendants of a form node.`)
@@ -1630,9 +1338,6 @@ function validateFormChildren(
       node.type !== 'select' &&
       node.type !== 'radioGroup' &&
       node.type !== 'checkboxGroup' &&
-      node.type !== 'fileInput' &&
-      node.type !== 'toggle' &&
-      node.type !== 'hidden' &&
       node.type !== 'button' &&
       node.type !== 'heading' &&
       node.type !== 'paragraph' &&
@@ -1644,7 +1349,7 @@ function validateFormChildren(
       node.type !== 'tabs'
     ) {
       return invalidLayout(
-        `Page "${pageId}" has an invalid layout at "${nodePath}": form nodes only accept input, textarea, select, radioGroup, checkboxGroup, fileInput, toggle, hidden, button, heading, paragraph, image, table, container, accordion, divider and tabs descendants.`,
+        `Page "${pageId}" has an invalid layout at "${nodePath}": form nodes only accept input, textarea, select, radioGroup, checkboxGroup, button, heading, paragraph, image, table, container, accordion, divider and tabs descendants.`,
       )
     }
 
@@ -1694,10 +1399,7 @@ function validateFormChildren(
       node.type === 'textarea' ||
       node.type === 'select' ||
       node.type === 'radioGroup' ||
-      node.type === 'checkboxGroup' ||
-      node.type === 'fileInput' ||
-      node.type === 'toggle' ||
-      node.type === 'hidden'
+      node.type === 'checkboxGroup'
     ) {
       if (!context.currentFormId || !context.fieldIds) {
         return invalidLayout(`Page "${pageId}" has an invalid layout at "${nodePath}": ${node.type} nodes must be descendants of a form node.`)

@@ -3,50 +3,20 @@ import type {
   InputLayoutNode,
   LayoutNode,
   RadioGroupLayoutNode,
-  RuntimeFileInputValidations,
   RuntimeFileManagerValidations,
   RuntimeFormFieldValidations,
   SelectLayoutNode,
 } from '../config/runtime-config'
-import { isLayoutNodeVisible, matchesVisibilityRule } from './runtime-layout-visibility'
+import { isLayoutNodeVisible } from './runtime-layout-visibility'
 import { normalizeChoiceFieldValue } from './runtime-collection-sources'
 import type { RuntimeIterationContext } from './runtime-references/runtime-reference-resolver'
-import { resolveRuntimeTextReference } from './runtime-references/runtime-reference-resolver'
 import { selectFormFieldState } from './runtime-state/runtime-state-selectors'
 import type { RuntimeState } from './runtime-state/runtime-state-types'
 
-export function formatValidationMessage({
-  rule,
-  defaultMessage,
-  state,
-  iterationContext,
-}: {
-  rule: { value: number | true | string; message?: string }
-  defaultMessage: string
-  state: RuntimeState
-  iterationContext?: RuntimeIterationContext
-}): string {
-  if (rule.message === undefined) {
-    return defaultMessage
-  }
-
-  if (rule.message === '') {
-    return ''
-  }
-
-  const valueStr = typeof rule.value === 'number' ? String(rule.value) : ''
-
-  return resolveRuntimeTextReference(rule.message, state, 'form.validation.message', {
-    iterationContext,
-    localPlaceholders: { value: valueStr },
-  })
-}
-
 export interface ResolvedFormFieldDefinition {
   fieldId: string
-  type: 'input' | 'textarea' | 'select' | 'radioGroup' | 'checkboxGroup' | 'fileInput' | 'toggle'
+  type: 'input' | 'textarea' | 'select' | 'radioGroup' | 'checkboxGroup'
   validations?: RuntimeFormFieldValidations
-  fileValidations?: RuntimeFileInputValidations
   queryStateFeedback?: LayoutNode['queryStateFeedback']
   visibility?: LayoutNode['visibility']
   items?: SelectLayoutNode['props']['items'] | RadioGroupLayoutNode['props']['items'] | CheckboxGroupLayoutNode['props']['items']
@@ -79,18 +49,11 @@ export function validateFormFields({
       continue
     }
 
-    const errorResult = getFirstVisibleValidationError(fieldDefinition, currentValue, state, iterationContext)
+    const error = getFirstVisibleValidationError(fieldDefinition, currentValue)
+    errorsByFieldId[fieldDefinition.fieldId] = error
 
-    if (errorResult !== null) {
-      errorsByFieldId[fieldDefinition.fieldId] = formatValidationMessage({
-        rule: errorResult.rule,
-        defaultMessage: errorResult.defaultMessage,
-        state,
-        iterationContext,
-      })
+    if (error !== null) {
       isValid = false
-    } else {
-      errorsByFieldId[fieldDefinition.fieldId] = null
     }
   }
 
@@ -113,82 +76,46 @@ export function resolveFormFieldValue(fieldDefinition: ResolvedFormFieldDefiniti
   return fieldState?.value ?? fieldDefinition.defaultValue
 }
 
-export interface ValidationErrorResult {
-  ruleName: string
-  rule: { value: number | true | string; message?: string }
-  defaultMessage: string
-}
-
-export function getFirstVisibleValidationError(
-  fieldDefinition: ResolvedFormFieldDefinition,
-  value: unknown,
-  state?: RuntimeState,
-  iterationContext?: RuntimeIterationContext,
-): ValidationErrorResult | null {
-  if (fieldDefinition.type === 'fileInput') {
-    return getFirstFileInputValidationError(fieldDefinition.fileValidations, value)
-  }
-
+export function getFirstVisibleValidationError(fieldDefinition: ResolvedFormFieldDefinition, value: unknown): string | null {
   for (const [ruleName, rule] of Object.entries(fieldDefinition.validations ?? {})) {
-    if (rule.when !== undefined && state !== undefined) {
-      if (!matchesVisibilityRule(rule.when, state, iterationContext)) {
-        continue
-      }
-    }
-
     switch (ruleName) {
       case 'required':
         if (!passesRequiredValidation(fieldDefinition, value)) {
-          return { ruleName, rule, defaultMessage: 'Required' }
+          return 'Required'
         }
         break
       case 'minLength':
         if (typeof value === 'string' && value.length < rule.value) {
-          return { ruleName, rule, defaultMessage: `Must be at least ${rule.value} characters.` }
+          return `Must be at least ${rule.value} characters.`
         }
         break
       case 'maxLength':
         if (typeof value === 'string' && value.length > rule.value) {
-          return { ruleName, rule, defaultMessage: `Must be at most ${rule.value} characters.` }
+          return `Must be at most ${rule.value} characters.`
         }
         break
       case 'min': {
         const numericValue = parseNumericFieldValue(value)
         if (numericValue !== null && numericValue < rule.value) {
-          return { ruleName, rule, defaultMessage: `Must be at least ${formatNumericRuleValue(rule.value)}.` }
+          return `Must be at least ${formatNumericRuleValue(rule.value)}.`
         }
         break
       }
       case 'max': {
         const numericValue = parseNumericFieldValue(value)
         if (numericValue !== null && numericValue > rule.value) {
-          return { ruleName, rule, defaultMessage: `Must be at most ${formatNumericRuleValue(rule.value)}.` }
+          return `Must be at most ${formatNumericRuleValue(rule.value)}.`
         }
         break
       }
       case 'minSelections':
         if (Array.isArray(value) && value.length < rule.value) {
-          return { ruleName, rule, defaultMessage: `Select at least ${rule.value} options.` }
+          return `Select at least ${rule.value} options.`
         }
         break
       case 'maxSelections':
         if (Array.isArray(value) && value.length > rule.value) {
-          return { ruleName, rule, defaultMessage: `Select no more than ${rule.value} options.` }
-        }
-        break
-      case 'pattern':
-        if (!passesPatternValidation(value, rule.value)) {
-          return { ruleName, rule, defaultMessage: 'Invalid format.' }
-        }
-        break
-      case 'email':
-        if (!passesEmailValidation(value)) {
-          return { ruleName, rule, defaultMessage: 'Invalid email address.' }
-        }
-        break
-      case 'url':
-        if (!passesUrlValidation(value)) {
-          return { ruleName, rule, defaultMessage: 'Invalid URL.' }
+          return `Select no more than ${rule.value} options.`
         }
         break
     }
@@ -236,51 +163,10 @@ export function getValidationErrorForEditedField({
   }
 
   const nextResolvedValue = resolveFormFieldValue(fieldDefinition, formId, nextState)
-  const errorResult = getFirstVisibleValidationError(fieldDefinition, nextResolvedValue, nextState, iterationContext)
-
-  if (errorResult === null) {
-    return null
-  }
-
-  return formatValidationMessage({
-    rule: errorResult.rule,
-    defaultMessage: errorResult.defaultMessage,
-    state: nextState,
-    iterationContext,
-  })
-}
-
-function getFirstFileInputValidationError(
-  fileValidations: RuntimeFileInputValidations | undefined,
-  value: unknown,
-): ValidationErrorResult | null {
-  const files = Array.isArray(value) ? value : []
-
-  if (fileValidations?.required !== undefined) {
-    if (files.length === 0) {
-      return { ruleName: 'required', rule: fileValidations.required, defaultMessage: 'Required' }
-    }
-  }
-
-  if (fileValidations?.minFiles !== undefined) {
-    const { value: minCount } = fileValidations.minFiles
-    if (files.length < minCount) {
-      return {
-        ruleName: 'minFiles',
-        rule: fileValidations.minFiles,
-        defaultMessage: `Select at least ${minCount} files.`,
-      }
-    }
-  }
-
-  return null
+  return getFirstVisibleValidationError(fieldDefinition, nextResolvedValue)
 }
 
 function passesRequiredValidation(fieldDefinition: ResolvedFormFieldDefinition, value: unknown) {
-  if (fieldDefinition.type === 'toggle') {
-    return value === true
-  }
-
   if (fieldDefinition.multiple) {
     return Array.isArray(value) && value.length > 0
   }
@@ -290,49 +176,6 @@ function passesRequiredValidation(fieldDefinition: ResolvedFormFieldDefinition, 
   }
 
   return typeof value === 'string' && value.trim().length > 0
-}
-
-function passesPatternValidation(value: unknown, pattern: unknown) {
-  if (typeof value !== 'string' || value === '') {
-    return true
-  }
-
-  if (typeof pattern !== 'string') {
-    return true
-  }
-
-  return new RegExp(pattern).test(value)
-}
-
-function passesEmailValidation(value: unknown) {
-  if (typeof value !== 'string' || value === '') {
-    return true
-  }
-
-  const atIndex = value.indexOf('@')
-  if (atIndex < 1) {
-    return false
-  }
-
-  const domain = value.slice(atIndex + 1)
-  if (domain.length === 0 || !domain.includes('.')) {
-    return false
-  }
-
-  return true
-}
-
-function passesUrlValidation(value: unknown) {
-  if (typeof value !== 'string' || value === '') {
-    return true
-  }
-
-  try {
-    const parsed = new URL(value)
-    return (parsed.protocol === 'http:' || parsed.protocol === 'https:') && value.includes('//')
-  } catch {
-    return false
-  }
 }
 
 function parseNumericFieldValue(value: unknown) {
@@ -380,47 +223,10 @@ export interface FileManagerValidationResult {
   rejection?: FileManagerRejection
 }
 
-// Resolves the override `message` of a file rule the same way standard form rules do (formatValidationMessage),
-// sharing the central interpolation engine. Kept as a separate helper because file rule values can be `string[]`
-// (accept, validFileNames), unlike formatValidationMessage's `number | true`, and because the diagnostic surface
-// is different ('fileManager.props.validations.message' vs 'form.validation.message').
-function formatFileRuleMessage({
-  ruleValue,
-  message,
-  defaultMessage,
-  state,
-  iterationContext,
-}: {
-  ruleValue: unknown
-  message: string | undefined
-  defaultMessage: string
-  state: RuntimeState
-  iterationContext?: RuntimeIterationContext
-}): string {
-  if (message === undefined) {
-    return defaultMessage
-  }
-
-  if (message === '') {
-    return ''
-  }
-
-  return resolveRuntimeTextReference(message, state, 'fileManager.props.validations.message', {
-    iterationContext,
-    localPlaceholders: { value: normalizeFileRuleValue(ruleValue) },
-  })
-}
-
-function normalizeFileRuleValue(ruleValue: unknown): string {
-  return typeof ruleValue === 'number' ? String(ruleValue) : ''
-}
-
 export function evaluateFileManagerBatch(
   validations: RuntimeFileManagerValidations | undefined,
   existingFiles: File[],
   incomingBatch: File[],
-  state: RuntimeState,
-  iterationContext?: RuntimeIterationContext,
 ): FileManagerValidationResult {
   const acceptedFiles: File[] = []
   let firstPerFileRejection: FileManagerRejectionPerFile | undefined
@@ -430,7 +236,7 @@ export function evaluateFileManagerBatch(
 
   // Step 1: per-file evaluation
   for (const file of incomingBatch) {
-    const rejection = evaluatePerFileRules(validations, file, acceptedNames, state, iterationContext)
+    const rejection = evaluatePerFileRules(validations, file, acceptedNames)
     if (rejection !== undefined) {
       if (firstPerFileRejection === undefined) {
         firstPerFileRejection = rejection
@@ -453,13 +259,7 @@ export function evaluateFileManagerBatch(
         rejection: {
           scope: 'batch',
           ruleName: 'maxFiles',
-          message: formatFileRuleMessage({
-            ruleValue: value,
-            message,
-            defaultMessage: `Se ha superado el número máximo de ficheros permitidos (${value}).`,
-            state,
-            iterationContext,
-          }),
+          message: message ?? `Se ha superado el número máximo de ficheros permitidos (${value}).`,
         },
       }
     }
@@ -475,13 +275,7 @@ export function evaluateFileManagerBatch(
         rejection: {
           scope: 'batch',
           ruleName: 'maxTotalSize',
-          message: formatFileRuleMessage({
-            ruleValue: value,
-            message,
-            defaultMessage: `El tamaño total del lote supera el límite (${value} MB).`,
-            state,
-            iterationContext,
-          }),
+          message: message ?? `El tamaño total del lote supera el límite (${value} MB).`,
         },
       }
     }
@@ -497,8 +291,6 @@ function evaluatePerFileRules(
   validations: RuntimeFileManagerValidations | undefined,
   file: File,
   existingNames: Set<string>,
-  state: RuntimeState,
-  iterationContext?: RuntimeIterationContext,
 ): FileManagerRejectionPerFile | undefined {
   const fileName = file.name
 
@@ -534,13 +326,7 @@ function evaluatePerFileRules(
         scope: 'per-file',
         file,
         ruleName: 'accept',
-        message: formatFileRuleMessage({
-          ruleValue: value,
-          message,
-          defaultMessage: `El fichero "${fileName}" no es de un tipo válido.`,
-          state,
-          iterationContext,
-        }),
+        message: message ?? `El fichero "${fileName}" no es de un tipo válido.`,
       }
     }
   }
@@ -554,13 +340,7 @@ function evaluatePerFileRules(
         scope: 'per-file',
         file,
         ruleName: 'maxFileSize',
-        message: formatFileRuleMessage({
-          ruleValue: value,
-          message,
-          defaultMessage: `El fichero "${fileName}" supera el tamaño máximo permitido (${value} MB).`,
-          state,
-          iterationContext,
-        }),
+        message: message ?? `El fichero "${fileName}" supera el tamaño máximo permitido (${value} MB).`,
       }
     }
   }
@@ -574,13 +354,7 @@ function evaluatePerFileRules(
         scope: 'per-file',
         file,
         ruleName: 'validFileNames',
-        message: formatFileRuleMessage({
-          ruleValue: value,
-          message,
-          defaultMessage: `El nombre del fichero "${fileName}" no coincide con los patrones permitidos.`,
-          state,
-          iterationContext,
-        }),
+        message: message ?? `El nombre del fichero "${fileName}" no coincide con los patrones permitidos.`,
       }
     }
   }

@@ -12,12 +12,7 @@ function makeConfig(overrides: Partial<RuntimeConfig> = {}): RuntimeConfig {
   } as RuntimeConfig
 }
 
-type MakeStateOverrides = Partial<RuntimeState> & {
-  i18n?: Partial<RuntimeState['i18n']>
-}
-
-function makeState(overrides: MakeStateOverrides = {}): RuntimeState {
-  const { i18n: i18nOverride, ...rest } = overrides
+function makeState(overrides: Partial<RuntimeState> = {}): RuntimeState {
   return {
     navigation: {
       currentPageId: 'home',
@@ -34,10 +29,7 @@ function makeState(overrides: MakeStateOverrides = {}): RuntimeState {
       preloadNames: [],
       status: 'idle',
     },
-    modal: { activeModalId: null, activeIterationKey: null },
-    i18n: { translations: {}, activeLanguage: 'es', ...i18nOverride },
-    tokens: {},
-    ...rest,
+    ...overrides,
   }
 }
 
@@ -411,122 +403,6 @@ describe('migrateRuntimeStateAcrossConfig', () => {
       expect(result.pageEntry.params).toEqual({})
       expect(result.pageEntry.preloadNames).toEqual(['loadData'])
       expect(result.pageEntry.status).toBe('idle')
-    })
-  })
-
-  describe('translations', () => {
-    it('uses translations from the new config instead of the previous state', () => {
-      const prevState = makeState({
-        i18n: {
-          translations: { greeting: { es: 'Hola', en: 'Hello' } },
-          activeLanguage: 'es',
-        },
-      })
-      const prevConfig = makeConfig({ translations: { greeting: { es: 'Hola', en: 'Hello' } } })
-      const nextConfig = makeConfig({ translations: { farewell: { es: 'Adiós', en: 'Goodbye' } } })
-
-      const result = migrateRuntimeStateAcrossConfig(prevState, prevConfig, nextConfig)
-
-      expect(result.i18n.translations).toEqual({ farewell: { es: 'Adiós', en: 'Goodbye' } })
-    })
-
-    it('sets translations to empty object when the new config omits translations', () => {
-      const prevState = makeState({
-        i18n: {
-          translations: { greeting: { es: 'Hola', en: 'Hello' } },
-          activeLanguage: 'es',
-        },
-      })
-      const prevConfig = makeConfig({ translations: { greeting: { es: 'Hola', en: 'Hello' } } })
-      const nextConfig = makeConfig()
-
-      const result = migrateRuntimeStateAcrossConfig(prevState, prevConfig, nextConfig)
-
-      expect(result.i18n.translations).toEqual({})
-    })
-
-    it('sets translations to empty object when the new config declares empty translations', () => {
-      const prevState = makeState({
-        i18n: {
-          translations: { greeting: { es: 'Hola', en: 'Hello' } },
-          activeLanguage: 'es',
-        },
-      })
-      const prevConfig = makeConfig({ translations: { greeting: { es: 'Hola', en: 'Hello' } } })
-      const nextConfig = makeConfig({ translations: {} })
-
-      const result = migrateRuntimeStateAcrossConfig(prevState, prevConfig, nextConfig)
-
-      expect(result.i18n.translations).toEqual({})
-    })
-
-    it('preserves activeLanguage from the previous state in all cases', () => {
-      const prevState = makeState({
-        i18n: {
-          translations: { greeting: { es: 'Hola', en: 'Hello' } },
-          activeLanguage: 'en',
-        },
-      })
-      const prevConfig = makeConfig({ translations: { greeting: { es: 'Hola', en: 'Hello' } } })
-      const nextConfig = makeConfig({ translations: { farewell: { es: 'Adiós', en: 'Goodbye' } } })
-
-      const result = migrateRuntimeStateAcrossConfig(prevState, prevConfig, nextConfig)
-
-      expect(result.i18n.activeLanguage).toBe('en')
-    })
-  })
-
-  describe('tokens', () => {
-    it('reconstructs tokens from the new config instead of copying the previous state', () => {
-      const prevState = makeState({
-        tokens: {
-          authToken: { value: 'old-token', status: 'ready', failedAttempts: 0 },
-        },
-      })
-      const prevConfig = makeConfig({
-        tokens: { authToken: { value: 'old-token' } },
-      } as unknown as Partial<RuntimeConfig>)
-      const nextConfig = makeConfig({
-        tokens: { sessionToken: { value: 'new-session' } },
-      } as unknown as Partial<RuntimeConfig>)
-
-      const result = migrateRuntimeStateAcrossConfig(prevState, prevConfig, nextConfig)
-
-      expect(result.tokens).toEqual({
-        sessionToken: { value: 'new-session', status: 'ready', failedAttempts: 0 },
-      })
-    })
-
-    it('sets tokens to empty object when the new config omits tokens', () => {
-      const prevState = makeState({
-        tokens: {
-          authToken: { value: 'old-token', status: 'ready', failedAttempts: 0 },
-        },
-      })
-      const prevConfig = makeConfig({
-        tokens: { authToken: { value: 'old-token' } },
-      } as unknown as Partial<RuntimeConfig>)
-      const nextConfig = makeConfig()
-
-      const result = migrateRuntimeStateAcrossConfig(prevState, prevConfig, nextConfig)
-
-      expect(result.tokens).toEqual({})
-    })
-
-    it('sets tokens to empty object when the new config declares empty tokens', () => {
-      const prevState = makeState({
-        tokens: {
-          authToken: { value: 'old-token', status: 'ready', failedAttempts: 0 },
-        },
-      })
-      const prevConfig = makeConfig({
-        tokens: { authToken: { value: 'old-token' } },
-      } as unknown as Partial<RuntimeConfig>)
-      const nextConfig = makeConfig({ tokens: {} })
-
-      const result = migrateRuntimeStateAcrossConfig(prevState, prevConfig, nextConfig)
-
-      expect(result.tokens).toEqual({})
     })
   })
 

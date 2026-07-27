@@ -27,14 +27,13 @@ El nodo reemplaza el componente `FileUpload` existente adoptando su semántica A
 | `deleteOperation` | `string \| false` | omitida | No | Operación para borrar un fichero. Si `false`, sin botón de eliminar. |
 | `viewOperation` | `string \| false` | omitida | No | Operación cuyo endpoint se usa para construir URL de visualización. Si `false`, sin botón Ver. |
 | `downloadOperation` | `string \| false` | omitida | No | Operación cuyo endpoint se usa para construir URL de descarga. Si `false`, sin botón Descargar. |
-| `validations.accept` | `{ value: string[]; message?: string }` | — | No | MIME types permitidos (ej.: `{ value: ["application/pdf", "image/jpeg"] }`). El campo `message` opcional soporta `{{translations.*}}` e interpolación. |
-| `validations.maxFileSize` | `{ value: number; message?: string }` | — | No | Tamaño máximo por fichero en **MB** (ej.: `{ value: 2 }`). El campo `message` opcional soporta `{{value}}`, `{{translations.*}}` e interpolación. |
-| `validations.maxTotalSize` | `{ value: number; message?: string }` | — | No | Tamaño máximo acumulado del lote a subir en **MB**. El campo `message` opcional soporta `{{value}}`, `{{translations.*}}` e interpolación. |
+| `validations.accept` | `string[]` | — | No | MIME types permitidos (ej.: `["application/pdf", "image/jpeg"]`). |
+| `validations.maxFileSize` | `number` | — | No | Tamaño máximo por fichero en **MB** (ej.: `2` = 2 MB, `0.5` = 512 KB). |
+| `validations.maxTotalSize` | `number` | — | No | Tamaño máximo acumulado del lote a subir en **MB**. |
 | `validations.minFiles` | `number` | — | No | Mínimo de ficheros que deben estar subidos (informativo). |
-| `validations.maxFiles` | `{ value: number; message?: string }` | — | No | Máximo de ficheros permitidos contando los ya presentes. El campo `message` opcional soporta `{{value}}`, `{{translations.*}}` e interpolación. |
-| `validations.validFileNames` | `{ value: string[]; message?: string }` | — | No | Patrones regex. El nombre del fichero debe coincidir con al menos uno (ej.: `{ value: ["^FACT_\\d{4}\\.pdf$"] }`). El campo `message` opcional soporta `{{translations.*}}` e interpolación. |
+| `validations.maxFiles` | `number` | — | No | Máximo de ficheros permitidos contando los ya presentes. |
+| `validations.validFileNames` | `string[]` | — | No | Patrones regex. El nombre del fichero debe coincidir con al menos uno (ej.: `["^FACT_\\d{4}\\.pdf$"]`). |
 | `pagination.pageSize` | `number` | `10` | No | Ítems por página en la lista. |
-| `labels` | `object` (claves opcionales) | — | No | Personalización de todos los textos visibles y aria-labels del componente. Ver sección "Personalización de textos" más abajo. |
 
 ### Modelo de operaciones: `string | false | omitida`
 
@@ -47,39 +46,6 @@ Cada operación sigue el mismo contrato:
 | Omitida | Comportamiento legacy por defecto (requiere `fieldName`). |
 
 `fieldName` es obligatorio si alguna operación está omitida. Si todas las operaciones están declaradas como `string` o `false`, `fieldName` no es necesario.
-
-### Personalización de textos (`props.labels`)
-
-El bloque `labels` permite personalizar todos los textos visibles y aria-labels del componente. Todas las claves son opcionales; si se omite una clave, se usa el texto por defecto actual. Cada valor admite:
-- String literal fijo.
-- Referencia completa `translations.{key}` que se resuelve según idioma activo.
-- Interpolación parcial con `{{translations.key}}` o placeholders dinámicos propios de cada literal.
-- Escape `\` para forzar que una referencia completa se trate como literal.
-
-| Clave en `labels` | Ubicación | Placeholders disponibles |
-|---|---|---|
-| `dropzoneIdle` | Zona DnD en reposo | — |
-| `dropzoneAcceptedFormats` | Zona DnD en reposo, solo si `acceptExtension` existe | `{{formats}}` |
-| `dropzoneUploading` | Zona DnD durante la subida | — |
-| `dropzoneProgress` | Contador durante la subida | `{{completed}}`, `{{total}}`, `{{percent}}` |
-| `dropzoneSuccess` | Zona DnD al completar con éxito | `{{count}}` |
-| `dropzoneMaxFilesReached` | Zona DnD cuando se alcanza el límite | `{{max}}` |
-| `dropzoneAriaLabel` | aria-label de la zona DnD | `{{fieldName}}` |
-| `listLoadError` | Lista cuando `getOperation` falla | — |
-| `listEmpty` | Lista vacía | — |
-| `paginationPrevious` | Control de paginación | — |
-| `paginationNext` | Control de paginación | — |
-| `rowViewLabel` | Enlace Ver | — |
-| `rowViewAriaLabel` | aria-label de Ver (URL disponible) | — |
-| `rowViewUnavailableAriaLabel` | aria-label de Ver (URL no disponible) | — |
-| `rowDownloadLabel` | Enlace Descargar | — |
-| `rowDownloadAriaLabel` | aria-label de Descargar (URL disponible) | — |
-| `rowDownloadUnavailableAriaLabel` | aria-label de Descargar (URL no disponible) | — |
-| `rowDeleteLabel` | Botón Eliminar | — |
-| `rowDeleteAriaLabel` | aria-label de Eliminar | — |
-| `uploadFileError` | Error inline de subida | `{{fileName}}` |
-| `uploadListPathMissing` | Error inline cuando `listPath` no resuelve | — |
-| `deleteError` | Error inline de eliminación | — |
 
 ### Ejemplo de contrato JSON
 
@@ -101,32 +67,15 @@ El bloque `labels` permite personalizar todos los textos visibles y aria-labels 
     "viewOperation": "viewDocument",
     "downloadOperation": false,
     "validations": {
-      "accept": {
-        "value": ["application/pdf", "image/jpeg"],
-        "message": "Solo se aceptan PDF e imágenes JPG"
-      },
-      "maxFileSize": {
-        "value": 2,
-        "message": "{{translations.file_max_size}}"
-      },
+      "accept": ["application/pdf", "image/jpeg"],
+      "maxFileSize": 2,
       "maxTotalSize": 10,
       "minFiles": 0,
-      "maxFiles": {
-        "value": 10,
-        "message": "Máximo {{value}} ficheros permitidos"
-      },
-      "validFileNames": {
-        "value": ["^FACT_\\d{4}_\\d{3}\\.pdf$"]
-      }
+      "maxFiles": 10,
+      "validFileNames": ["^FACT_\\d{4}_\\d{3}\\.pdf$"]
     },
     "pagination": {
       "pageSize": 5
-    },
-    "labels": {
-      "dropzoneIdle": "Arrastra tus documentos aquí",
-      "dropzoneAcceptedFormats": "Se aceptan: {{formats}}",
-      "uploadFileError": "No se pudo subir {{fileName}}",
-      "rowViewLabel": "{{translations.action_view}}"
     }
   }
 }
@@ -259,6 +208,6 @@ El nodo asume que las operaciones responden con el shape:
 - Reordenación de ficheros.
 - Edición de metadatos tras la subida.
 - Validaciones remotas de tipo o tamaño previas a la subida.
+- Mensajes de validación personalizados por regla.
 - Envío de ficheros desde `button.props.action` o `form.submitAction`; el submit del formulario no incluye ficheros.
 - Theming o colores configurables desde JSON.
-- Personalización de textos de paginación (`Anterior`/`Siguiente`) fuera de `fileManager` (en `table`, `repeater`, etc. siguen fijos).

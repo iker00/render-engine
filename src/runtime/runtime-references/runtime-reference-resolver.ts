@@ -20,12 +20,10 @@ export interface RuntimeIterationContext {
   item: unknown
   key: string
   itemKey?: string
-  itemIndex: number
 }
 
 interface ResolveRuntimeReferenceOptions {
   iterationContext?: RuntimeIterationContext
-  localPlaceholders?: Record<string, string>
 }
 
 const RUNTIME_TEMPLATE_PLACEHOLDER_DETECTOR = /\{\{[\s\S]*?\}\}/
@@ -144,10 +142,6 @@ function resolveRuntimeInterpolatedVisibleValue(
       return ''
     }
 
-    if (options.localPlaceholders && Object.hasOwn(options.localPlaceholders, referenceValue)) {
-      return options.localPlaceholders[referenceValue]
-    }
-
     const result = resolveRuntimeReference(referenceValue, state, options)
 
     if (result.status === 'literal') {
@@ -263,19 +257,6 @@ function resolveSupportedReferenceValue(
         return {
           found: true,
           value: iterationContext.itemKey,
-        } as const
-      }
-
-      return {
-        found: false,
-      } as const
-    }
-
-    if (reference.path.length === 1 && reference.path[0] === '$index') {
-      if (iterationContext?.itemIndex !== undefined) {
-        return {
-          found: true,
-          value: iterationContext.itemIndex,
         } as const
       }
 

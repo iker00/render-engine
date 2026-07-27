@@ -5,7 +5,6 @@ import type {
   StatLayoutNode,
   DividerLayoutNode,
   SkeletonLayoutNode,
-  FileInputLayoutNode,
   FileManagerLayoutNode,
   ButtonLayoutNode,
   ContainerLayoutNode,
@@ -43,7 +42,6 @@ import {
   statNodeSchema,
   dividerNodeSchema,
   skeletonNodeSchema,
-  fileInputNodeSchema,
   fileManagerNodeSchema,
   buttonNodeSchema,
   containerNodeSchema,
@@ -74,14 +72,11 @@ import {
   validateSelectNode,
   validateRadioGroupNode,
   validateCheckboxGroupNode,
-  validateToggleNode,
-  validateHiddenNode,
   validateCollectionSource,
 } from './validate-form-nodes'
 
 const collectionPathSegmentPattern = /^[A-Za-z0-9_-]+$/
 const modalAllowedChildTypes = new Set(['container', 'form', 'heading', 'paragraph', 'list', 'image', 'table', 'button', 'repeater', 'accordion', 'fileManager'])
-const linkAllowedChildTypes = new Set(['container', 'heading', 'paragraph', 'list', 'image', 'badge', 'alert', 'stat', 'divider', 'skeleton'])
 
 export function validateLayoutCollection(
   rawNodes: unknown,
@@ -174,14 +169,8 @@ export function validateLayoutNode(
       return validateDividerNode(rawNode, path, pageId)
     case 'skeleton':
       return validateSkeletonNode(rawNode, path, pageId)
-    case 'fileInput':
-      return validateFileInputNode(rawNode, path, pageId)
     case 'fileManager':
       return validateFileManagerNode(rawNode, path, pageId)
-    case 'toggle':
-      return validateToggleNode(rawNode, path, pageId)
-    case 'hidden':
-      return validateHiddenNode(rawNode, path, pageId)
   }
 
   return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.type".`)
@@ -1340,10 +1329,6 @@ function validateButtonNode(
       return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.fullWidth".`)
     }
 
-    if (issuePath[0] === 'props' && issuePath[1] === 'iconPosition') {
-      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.iconPosition".`)
-    }
-
     const layoutIssue = mapLayoutNodeIssue(pageId, path, issuePath)
 
     if (layoutIssue) {
@@ -1385,19 +1370,6 @@ function validateButtonNode(
     action = actionResult.action
   }
 
-  const buttonProps: ButtonLayoutNode['props'] = {
-    label: parseResult.data.props.label,
-    action,
-    color: parseResult.data.props.color,
-    variant: parseResult.data.props.variant,
-    fullWidth: parseResult.data.props.fullWidth,
-    icon: parseResult.data.props.icon,
-  }
-
-  if (parseResult.data.props.iconPosition !== undefined) {
-    buttonProps.iconPosition = parseResult.data.props.iconPosition
-  }
-
   return {
     status: 'ready',
     node: {
@@ -1406,7 +1378,14 @@ function validateButtonNode(
       queryStateFeedback: feedbackResult.queryStateFeedback,
       visibility: visibilityResult.visibility,
       layout: parseResult.data.layout,
-      props: buttonProps,
+      props: {
+        label: parseResult.data.props.label,
+        action,
+        color: parseResult.data.props.color,
+        variant: parseResult.data.props.variant,
+        fullWidth: parseResult.data.props.fullWidth,
+        icon: parseResult.data.props.icon,
+      },
     },
   }
 }
@@ -1459,10 +1438,6 @@ export function validateLinkNode(
       return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.action".`)
     }
 
-    if (issuePath[0] === 'props' && issuePath[1] === 'iconPosition') {
-      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.iconPosition".`)
-    }
-
     return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props".`)
   }
 
@@ -1482,81 +1457,31 @@ export function validateLinkNode(
 
   if (visibilityResult.status === 'error') return visibilityResult
 
-  const { href, download, target, action, label, icon, iconPosition } = parseResult.data.props
-  const hasChildren = parseResult.data.children !== undefined
-  const hasLabel = label !== undefined
-  const hasIcon = icon !== undefined
-  const hasIconPosition = iconPosition !== undefined
+  const { href, download, target, action, icon } = parseResult.data.props
   const hasHref = href !== undefined
   const hasAction = action !== undefined
 
-  // Cross-validation (1): children and props.label are mutually exclusive
-  if (hasChildren && hasLabel) {
-    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}": link nodes cannot have both props.label and children.`)
-  }
-
-  // Cross-validation (2): children and props.icon are mutually exclusive
-  if (hasChildren && hasIcon) {
-    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}": link nodes cannot have both props.icon and children.`)
-  }
-
-  // Cross-validation (2b): children and props.iconPosition are mutually exclusive
-  if (hasChildren && hasIconPosition) {
-    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}": link nodes cannot have both props.icon and children.`)
-  }
-
-  // Cross-validation (3): must have either props.label or children
-  if (!hasChildren && !hasLabel) {
-    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}": link nodes must have either props.label or children.`)
-  }
-
-  // Cross-validation (4): children cannot be empty
-  if (hasChildren && parseResult.data.children!.length === 0) {
-    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.children": link children cannot be empty.`)
-  }
-
-  // Cross-validation (5 & 6): validate children types (direct and recursive)
-  let children: LayoutNodeCollection | undefined
-
-  if (hasChildren) {
-    // Check direct type restriction before full validation
-    const directTypeCheck = checkLinkChildrenAllowedTypes(parseResult.data.children!, `${path}.children`, pageId)
-
-    if (directTypeCheck.status === 'error') {
-      return directTypeCheck
-    }
-
-    // Full validation of children
-    const childrenResult = validateLayoutCollection(parseResult.data.children!, `${path}.children`, pageId)
-
-    if (childrenResult.status === 'error') {
-      return childrenResult
-    }
-
-    children = childrenResult.nodes
-  }
-
-  // Cross-validation (7): href and action are mutually exclusive
+  // Cross-validation: href and action are mutually exclusive
   if (hasHref && hasAction) {
     return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}": link nodes cannot have both props.href and props.action.`)
   }
 
-  // Cross-validation (7): must have either href or action
+  // Cross-validation: must have either href or action
   if (!hasHref && !hasAction) {
     return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}": link nodes must have either props.href or props.action.`)
   }
 
-  // Cross-validation (7): download requires href
+  // Cross-validation: download requires href
   if (download !== undefined && !hasHref) {
     return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.download": download requires props.href.`)
   }
 
-  // Cross-validation (7): target requires href
+  // Cross-validation: target requires href
   if (target !== undefined && !hasHref) {
     return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.target": target requires props.href.`)
   }
 
-  // Cross-validation (7): action.type must be navigateTo or goBack
+  // Cross-validation: action.type must be navigateTo or goBack
   let validatedAction: LinkLayoutNode['props']['action'] | undefined
   if (hasAction) {
     const rawAction = action as Record<string, unknown>
@@ -1574,64 +1499,27 @@ export function validateLinkNode(
     validatedAction = linkActionResult.action as LinkLayoutNode['props']['action']
   }
 
-  const props: LinkLayoutNode['props'] = {}
+  const props: LinkLayoutNode['props'] = {
+    label: parseResult.data.props.label,
+  }
 
-  if (label !== undefined) props.label = label
   if (href !== undefined) props.href = href
   if (download !== undefined) props.download = download
   if (target !== undefined) props.target = target
   if (validatedAction !== undefined) props.action = validatedAction
   if (icon !== undefined) props.icon = icon
-  if (iconPosition !== undefined) props.iconPosition = iconPosition
-
-  const node: LinkLayoutNode = {
-    type: 'link',
-    id: parseResult.data.id,
-    queryStateFeedback: feedbackResult.queryStateFeedback,
-    visibility: visibilityResult.visibility,
-    layout: parseResult.data.layout,
-    props,
-  }
-
-  if (children !== undefined) {
-    node.children = children
-  }
 
   return {
     status: 'ready',
-    node,
+    node: {
+      type: 'link',
+      id: parseResult.data.id,
+      queryStateFeedback: feedbackResult.queryStateFeedback,
+      visibility: visibilityResult.visibility,
+      layout: parseResult.data.layout,
+      props,
+    },
   }
-}
-
-function checkLinkChildrenAllowedTypes(
-  children: unknown[],
-  basePath: string,
-  pageId: string,
-): { status: 'ready' } | { status: 'error'; error: RuntimeConfigError } {
-  for (let i = 0; i < children.length; i += 1) {
-    const child = children[i]
-
-    if (!isRecord(child)) {
-      return invalidLayout(`Page "${pageId}" has an invalid layout at "${basePath}[${i}]": link children may only be container, heading, paragraph, list, image, badge, alert, stat, divider or skeleton nodes.`)
-    }
-
-    const childType = typeof child.type === 'string' ? child.type : undefined
-
-    if (!childType || !linkAllowedChildTypes.has(childType)) {
-      return invalidLayout(`Page "${pageId}" has an invalid layout at "${basePath}[${i}]": link children may only be container, heading, paragraph, list, image, badge, alert, stat, divider or skeleton nodes.`)
-    }
-
-    // Recurse into container children
-    if (childType === 'container' && child.children !== undefined) {
-      const nestedCheck = checkLinkChildrenAllowedTypes(child.children as unknown[], `${basePath}[${i}].children`, pageId)
-
-      if (nestedCheck.status === 'error') {
-        return nestedCheck
-      }
-    }
-  }
-
-  return { status: 'ready' }
 }
 
 function validateTableHeaders(
@@ -2358,108 +2246,6 @@ function validateSkeletonNode(
   }
 }
 
-function validateFileInputNode(
-  rawNode: Record<string, unknown>,
-  path: string,
-  pageId: string,
-): { status: 'ready'; node: FileInputLayoutNode } | { status: 'error'; error: RuntimeConfigError } {
-  const parseResult = fileInputNodeSchema.safeParse(rawNode)
-
-  if (!parseResult.success) {
-    const issue = parseResult.error.issues[0]
-    const issuePath = issue?.path ?? []
-
-    const feedbackIssue = mapQueryStateFeedbackIssue(pageId, path, issue)
-    if (feedbackIssue) return feedbackIssue
-
-    const visibilityIssue = mapVisibilityIssue(pageId, path, issue)
-    if (visibilityIssue) return visibilityIssue
-
-    const layoutIssue = mapLayoutNodeIssue(pageId, path, issuePath)
-    if (layoutIssue) return layoutIssue
-
-    if (issuePath[0] === 'id') {
-      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.id".`)
-    }
-
-    if (issuePath[0] === 'props' && issuePath[1] === 'fieldId') {
-      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.fieldId".`)
-    }
-
-    if (issuePath[0] === 'props' && issuePath[1] === 'label') {
-      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.label".`)
-    }
-
-    if (issuePath[0] === 'props' && issuePath[1] === 'multiple') {
-      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.multiple".`)
-    }
-
-    if (issuePath[0] === 'props' && issuePath[1] === 'capture') {
-      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.capture".`)
-    }
-
-    if (issuePath[0] === 'props' && issuePath[1] === 'validations') {
-      const validationKey = issuePath[2]
-      if (typeof validationKey === 'string') {
-        return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.validations.${validationKey}".`)
-      }
-      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.validations".`)
-    }
-
-    if (issuePath[0] === 'props') {
-      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props".`)
-    }
-
-    return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}".`)
-  }
-
-  const feedbackResult = validateQueryStateFeedback(
-    parseResult.data.queryStateFeedback as LayoutNodeFeedbackFields['queryStateFeedback'],
-    `${path}.queryStateFeedback`,
-    pageId,
-  )
-
-  if (feedbackResult.status === 'error') return feedbackResult
-
-  const visibilityResult = validateVisibility(
-    parseResult.data.visibility as LayoutNodeFeedbackFields['visibility'],
-    `${path}.visibility`,
-    pageId,
-  )
-
-  if (visibilityResult.status === 'error') return visibilityResult
-
-  const rawProps = parseResult.data.props
-  const props: FileInputLayoutNode['props'] = {
-    fieldId: rawProps.fieldId,
-    label: rawProps.label,
-  }
-
-  if (rawProps.multiple !== undefined) {
-    props.multiple = rawProps.multiple
-  }
-
-  if (rawProps.capture !== undefined) {
-    props.capture = rawProps.capture
-  }
-
-  if (rawProps.validations !== undefined) {
-    props.validations = rawProps.validations as FileInputLayoutNode['props']['validations']
-  }
-
-  return {
-    status: 'ready',
-    node: {
-      type: 'fileInput',
-      id: parseResult.data.id,
-      queryStateFeedback: feedbackResult.queryStateFeedback,
-      visibility: visibilityResult.visibility,
-      layout: parseResult.data.layout,
-      props,
-    },
-  }
-}
-
 function validateFileManagerNode(
   rawNode: Record<string, unknown>,
   path: string,
@@ -2518,15 +2304,6 @@ function validateFileManagerNode(
 
     if (issuePath[0] === 'props' && issuePath[1] === 'validations') {
       return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.validations".`)
-    }
-
-    if (issuePath[0] === 'props' && issuePath[1] === 'labels') {
-      if (issue.code === 'unrecognized_keys' && Array.isArray(issue.keys) && issue.keys.length > 0) {
-        return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.labels.${issue.keys[0]}".`)
-      }
-      const labelKey = issuePath[2]
-      const labelSuffix = typeof labelKey === 'string' ? `.${labelKey}` : ''
-      return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.labels${labelSuffix}".`)
     }
 
     return mapLeafNodeIssue(pageId, path, issuePath)
@@ -2599,7 +2376,7 @@ function isValidCollectionProjectionPath(value: unknown): value is string {
 }
 
 function isValidRepeaterItemKeyPath(value: unknown): value is string {
-  if (value === '$key' || value === '$index') {
+  if (value === '$key') {
     return true
   }
 

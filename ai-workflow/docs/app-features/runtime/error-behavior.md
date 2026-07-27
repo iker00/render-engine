@@ -13,12 +13,7 @@
 ## Errores de navegación
 - Si el navegador entra con un hash inválido o con un slug de página inexistente, el runtime degrada a `initialPage` y reescribe la URL a `#/`.
 
-## Errores de carga de componentes
-- Cuando la descarga de un chunk de nodo falla (error de red, timeout, activo rechazado), la error boundary que envuelve ese nodo captura el fallo y renderiza un indicador visible de error: `<div role="alert">Error al cargar componente</div>`. El fallo queda contenido en esa posición sin propagar al resto del runtime ni a otros nodos.
-- Si el fallo es transiente, el usuario debe recargar la página para reintentar. Los reintentos automáticos no están soportados actualmente.
-
 ## Política de visibilidad de errores
 - En desarrollo, los errores de configuración deben ser diagnósticos y visibles.
 - En producción, los errores marcados como `development-only` degradan sin mostrar mensaje genérico visible.
 - En producción, los errores `development-only` degradan a una superficie vacía en lugar de mostrar un mensaje genérico o inventar contenido.
-- En dev/prod, los errores de carga de chunk de nodo muestran un indicador mínimo en su posición con `role="alert"` (accesible).

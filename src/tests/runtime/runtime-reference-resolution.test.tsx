@@ -4,7 +4,6 @@ import {
   resolveRuntimeImageAlt,
   resolveRuntimeImageSource,
   resolveRuntimeReference,
-  resolveRuntimeTextReference,
   resolveRuntimeVisibleValue,
 } from '../../runtime/runtime-references/runtime-reference-resolver'
 import type { RuntimeState } from '../../runtime/runtime-state/runtime-state-types'
@@ -97,8 +96,6 @@ const iterationContext = {
     tags: ['news', 'featured'],
     stats: null,
   },
-  key: 'post-1',
-  itemIndex: 0,
 }
 
 const interpolationRuntimeState: RuntimeState = {
@@ -1067,7 +1064,7 @@ describe('Runtime reference resolution', () => {
     })
 
     it('resolves item.$key to the dictionary key when the iteration context provides itemKey', () => {
-      const iterationContextWithKey = { item: { name: 'Ada' }, key: 'entry-1', itemKey: 'vinfopol', itemIndex: 0 }
+      const iterationContextWithKey = { item: { name: 'Ada' }, key: 'entry-1', itemKey: 'vinfopol' }
 
       expect(resolveRuntimeReference('item.$key', runtimeState, { iterationContext: iterationContextWithKey })).toEqual({
         status: 'resolved',
@@ -1077,7 +1074,7 @@ describe('Runtime reference resolution', () => {
     })
 
     it('resolves item.$key as missing when iteration context does not provide itemKey (array source)', () => {
-      const iterationContextWithoutKey = { item: { name: 'Ada' }, key: 'entry-1', itemIndex: 0 }
+      const iterationContextWithoutKey = { item: { name: 'Ada' }, key: 'entry-1' }
 
       expect(resolveRuntimeReference('item.$key', runtimeState, { iterationContext: iterationContextWithoutKey })).toEqual({
         status: 'missing',
@@ -1094,7 +1091,7 @@ describe('Runtime reference resolution', () => {
 
     it('degrades item.$key to empty string in text surfaces when itemKey is absent', () => {
       const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
-      const iterationContextWithoutKey = { item: { name: 'Ada' }, key: 'entry-1', itemIndex: 0 }
+      const iterationContextWithoutKey = { item: { name: 'Ada' }, key: 'entry-1' }
 
       expect(
         resolveRuntimeVisibleValue('item.$key', runtimeState, 'heading.props.text', {
@@ -1106,7 +1103,7 @@ describe('Runtime reference resolution', () => {
     })
 
     it('resolves {{item.$key}} interpolated as the dictionary key string', () => {
-      const iterationContextWithKey = { item: { name: 'Ada' }, key: 'entry-1', itemKey: 'vinfopol', itemIndex: 0 }
+      const iterationContextWithKey = { item: { name: 'Ada' }, key: 'entry-1', itemKey: 'vinfopol' }
 
       expect(
         resolveRuntimeVisibleValue('Source: {{item.$key}}', runtimeState, 'heading.props.text', {
@@ -1120,7 +1117,6 @@ describe('Runtime reference resolution', () => {
         item: { name: 'Ada', $key: 'internal-value' },
         key: 'entry-1',
         itemKey: 'vinfopol',
-        itemIndex: 0,
       }
 
       expect(
@@ -1510,129 +1506,6 @@ describe('Runtime reference resolution', () => {
       expect(
         resolveRuntimeVisibleValue('Bearer: {{tokens.session.value}}', stateWithReadyToken, 'heading.props.text'),
       ).toBe('Bearer: abc')
-    })
-  })
-
-  describe('T0092-T3 item.$index parser and resolver contract', () => {
-    it('classifies item.$index as a supported reference when iteration context is enabled', () => {
-      expect(parseRuntimeReference('item.$index', { allowItemReference: true })).toMatchObject({
-        kind: 'reference',
-        status: 'supported',
-        namespace: 'item',
-        path: ['$index'],
-      })
-    })
-
-    it('classifies item.$index as unsupported outside explicit iteration context', () => {
-      expect(parseRuntimeReference('item.$index', { allowItemReference: false })).toMatchObject({
-        kind: 'reference',
-        status: 'unsupported',
-        namespace: 'item',
-        path: ['$index'],
-      })
-    })
-
-    it('classifies item.$index.algo as invalid', () => {
-      expect(parseRuntimeReference('item.$index.algo', { allowItemReference: true })).toMatchObject({
-        kind: 'reference',
-        status: 'invalid',
-        namespace: 'item',
-      })
-    })
-
-    it('resolves item.$index to the numeric index with precedence over a literal $index property', () => {
-      const iterationContextWithIndex = {
-        item: { $index: 'shadow' },
-        key: '0',
-        itemIndex: 2,
-      }
-
-      expect(resolveRuntimeReference('item.$index', runtimeState, { iterationContext: iterationContextWithIndex })).toEqual({
-        status: 'resolved',
-        value: 2,
-        reference: parseRuntimeReference('item.$index', { allowItemReference: true }),
-      })
-    })
-
-    it('resolves item.$index to 0 when itemIndex is 0', () => {
-      const iterationContextWithZeroIndex = {
-        item: {},
-        key: '0',
-        itemIndex: 0,
-      }
-
-      expect(resolveRuntimeReference('item.$index', runtimeState, { iterationContext: iterationContextWithZeroIndex })).toEqual({
-        status: 'resolved',
-        value: 0,
-        reference: parseRuntimeReference('item.$index', { allowItemReference: true }),
-      })
-    })
-  })
-
-  describe('localPlaceholders', () => {
-    const stateWithTranslations: RuntimeState = {
-      ...runtimeState,
-      modal: {
-        activeModalId: null,
-        activeIterationKey: null,
-      },
-      i18n: {
-        translations: {
-          foo: { es: 'Zorro', en: 'Fox' },
-        },
-        activeLanguage: 'es',
-      },
-    }
-
-    it('substitutes a local placeholder verbatim without re-parsing it as a reference', () => {
-      expect(
-        resolveRuntimeVisibleValue('Error al subir "{{fileName}}"', stateWithTranslations, 'heading.props.text', {
-          localPlaceholders: { fileName: 'foo.pdf' },
-        }),
-      ).toBe('Error al subir "foo.pdf"')
-    })
-
-    it('resolves several local placeholders within the same pass', () => {
-      expect(
-        resolveRuntimeVisibleValue(
-          'Total {{completed}}/{{total}} — {{percent}}%',
-          stateWithTranslations,
-          'heading.props.text',
-          { localPlaceholders: { completed: '2', total: '5', percent: '40' } },
-        ),
-      ).toBe('Total 2/5 — 40%')
-    })
-
-    it('degrades a placeholder name absent from localPlaceholders and unsupported as a reference to empty string', () => {
-      expect(
-        resolveRuntimeVisibleValue('Total {{completed}}/{{total}}', stateWithTranslations, 'heading.props.text', {
-          localPlaceholders: { completed: '2' },
-        }),
-      ).toBe('Total 2/')
-    })
-
-    it('keeps resolving {{translations.*}} through the catalog while localPlaceholders holds unrelated keys', () => {
-      expect(
-        resolveRuntimeVisibleValue('{{translations.foo}}', stateWithTranslations, 'heading.props.text', {
-          localPlaceholders: { fileName: 'foo.pdf' },
-        }),
-      ).toBe('Zorro')
-    })
-
-    it('does not re-interpolate a localPlaceholders value that itself contains {{translations.foo}}', () => {
-      expect(
-        resolveRuntimeVisibleValue('Nombre: {{fileName}}', stateWithTranslations, 'heading.props.text', {
-          localPlaceholders: { fileName: '{{translations.foo}}' },
-        }),
-      ).toBe('Nombre: {{translations.foo}}')
-    })
-
-    it('propagates localPlaceholders from resolveRuntimeTextReference through resolveRuntimeVisibleValue', () => {
-      expect(
-        resolveRuntimeTextReference('Error al subir "{{fileName}}"', stateWithTranslations, 'heading.props.text', {
-          localPlaceholders: { fileName: 'bar.pdf' },
-        }),
-      ).toBe('Error al subir "bar.pdf"')
     })
   })
 })

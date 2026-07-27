@@ -17,8 +17,7 @@ Orden recomendado de lectura:
 | [`runtime/`](./runtime/index.md) | Visión global del runtime, organización interna de `src/`, política transversal de errores, límites globales de v1. |
 | [`config/`](./config/index.md) | Estructura del JSON soportado (`api`, `pages`, `initialPage`, `preloads`, `layout`), modelo de página, validación previa al render. |
 | [`references/`](./references/index.md) | Sistema de referencias dinámicas (`queries.*`, `forms.*`, `params.*`, `item.*`), interpolación `{{...}}`, `visibility`, `queryStateFeedback`. |
-| [`auth/`](./auth/index.md) | Tokens de autenticación, inyección en operaciones, refresco automático proactivo. |
-| [`nodes/`](./nodes/index.md) | Una ficha por nodo soportado: `container`, `repeater`, `table`, `image`, `form`, `input`, `textarea`, `select`, `choice-groups`, `toggle`, `hidden`, `button`, `heading-paragraph-list`. |
+| [`nodes/`](./nodes/index.md) | Una ficha por nodo soportado: `container`, `repeater`, `table`, `image`, `form`, `input`, `textarea`, `select`, `choice-groups`, `button`, `heading-paragraph-list`. |
 | [`forms/`](./forms/index.md) | Ciclo de vida del estado de formulario, valores por defecto, reglas de validación local, submit y reset. |
 | [`queries/`](./queries/index.md) | Modelo de estado de queries, ejecución declarativa de operaciones `api`, `preloads`, feedback visual por estado. |
 | [`navigation/`](./navigation/index.md) | Modelo de páginas, hash routing canónico, acciones `navigateTo`/`goBack`, params transportados, `pageEntry`. |

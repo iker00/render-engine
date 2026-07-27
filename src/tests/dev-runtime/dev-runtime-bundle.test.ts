@@ -2,10 +2,9 @@
 import { build } from 'vite'
 import { readdir, readFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import { fileURLToPath } from 'node:url'
 import { describe, expect, it, beforeAll } from 'vitest'
 
-const PROJECT_ROOT = fileURLToPath(new URL('../../../', import.meta.url))
+const PROJECT_ROOT = new URL('../../../', import.meta.url).pathname.replace(/\/$/, '')
 const DIST_ASSETS = join(PROJECT_ROOT, 'dist', 'assets')
 const DIST_INDEX = join(PROJECT_ROOT, 'dist', 'index.html')
 

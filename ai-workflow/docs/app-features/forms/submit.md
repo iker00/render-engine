@@ -18,15 +18,6 @@
 - El submit resuelve sus referencias contra el snapshot más reciente del runtime tras la validación local del formulario.
 - Si `submitAction` y la operación base aportan request params a la vez, `query` y `headers` combinan por clave con precedencia del submit, y `body` sigue la misma semántica limitada de merge superficial o sustitución total que usa el dominio `queries`.
 
-### Serialización multipart/form-data
-
-Cuando un formulario contiene campos `fileInput` con al menos un fichero seleccionado:
-- El payload se serializa como `multipart/form-data` en lugar de JSON o query params.
-- Los ficheros del campo `fileInput` se incluyen como partes binary: cada fichero ocupa una entrada con nombre `{fieldId}` en el FormData.
-- Si un campo `fileInput` tiene múltiples ficheros seleccionados (`multiple: true`), cada fichero se envía como una entrada separada con el mismo nombre de campo.
-- Los campos de texto del mismo formulario se incluyen como partes de texto del mismo FormData, manteniendo sus nombres de campo.
-- Un formulario sin `fileInput` con ficheros seleccionados sigue usando la serialización habitual (JSON o query params), sin regresión.
-
 ## Acciones post-éxito (`onSuccess`)
 - `submitAction` acepta opcionalmente `onSuccess`: una lista ordenada de acciones a ejecutar tras un submit exitoso.
 - Las acciones de `onSuccess` pueden ser cualquiera del catálogo de botón: `navigateTo`, `goBack`, `executeOperation`, `executeOperations`, `resetForm`, `openModal`, `closeModal`.

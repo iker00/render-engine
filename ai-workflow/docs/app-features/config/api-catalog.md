@@ -49,11 +49,10 @@ Ejemplo:
 ## Reglas funcionales
 - `GET` no admite `body`.
 - `POST`, `PUT`, `PATCH` y `DELETE` pueden declarar `body`.
-- **pre-frontapi (operaciones `/api/ss/Ade/v1/operations/...`)**: todo `POST` debe enviar un body JSON con **al menos una clave**. Un `body: {}` o la ausencia de `body` provoca error en el servidor. Si la operación no tiene parámetros de negocio, usar un flag acordado con API (p. ej. `"NoValidarPermisosTramiteWeb": false` en operaciones de permisos). Si no se conoce qué enviar, **preguntar al usuario** antes de integrar o distribuir.
 - `query` se mantiene plano; no existe soporte estable para nested params, claves repetidas ni arrays serializados en query string.
 - `body` puede contener objetos, arrays, strings, números, booleanos y `null` siempre que el árbol completo siga siendo JSON serializable.
 - `body: null` en la raíz es válido para métodos con body y significa petición explícita sin body JSON serializado.
-- `headers` se mantiene plano y solo admite valores string finales. Además de referencias `queries.*`, `forms.*`, `params.*` e `item.*`, también admite `tokens.{tokenId}.value` para inyectar valores de autenticación. Véase [[../auth/tokens.md]] para configuración de tokens.
+- `headers` se mantiene plano y solo admite valores string finales.
 - varias operaciones pueden reutilizar el mismo `endpoint` con distinto nombre o método sin colisionar.
 - la interpolación de `endpoint` no aplica a `preloads`.
 - `errorCondition` solo se evalúa si la respuesta HTTP es 200 con JSON válido; respuestas con otros códigos 4xx/5xx siguen usando el camino `http-error` existente.

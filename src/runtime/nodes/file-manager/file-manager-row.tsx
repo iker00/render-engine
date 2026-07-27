@@ -1,6 +1,5 @@
 import { Download, Eye, EyeOff, Trash2 } from 'lucide-react'
 import type { RuntimeConfig } from '../../../config/runtime-config'
-import type { FileManagerLabelKey } from '../../../config/runtime-config-types'
 import {
   getFileManagerRowActionClassName,
   getFileManagerRowClassName,
@@ -20,7 +19,6 @@ interface FileManagerRowProps {
   deletingFileId: string | number | null
   config: RuntimeConfig
   state: RuntimeState
-  resolvedLabels: Partial<Record<FileManagerLabelKey, string>>
   onDelete: (file: Record<string, unknown>) => void
 }
 
@@ -35,7 +33,6 @@ export function FileManagerRow({
   deletingFileId,
   config,
   state,
-  resolvedLabels,
   onDelete,
 }: FileManagerRowProps) {
   const fileId = file[fileIdField] as string | number
@@ -84,18 +81,15 @@ export function FileManagerRow({
               target="_blank"
               rel="noopener noreferrer"
               className={getFileManagerRowActionClassName('primary')}
-              aria-label={resolvedLabels.rowViewAriaLabel}
+              aria-label="Ver fichero"
             >
               <Eye size={14} />
-              {resolvedLabels.rowViewLabel}
+              Ver
             </a>
           ) : (
-            <span
-              className={getFileManagerRowActionClassName('disabled')}
-              aria-label={resolvedLabels.rowViewUnavailableAriaLabel}
-            >
+            <span className={getFileManagerRowActionClassName('disabled')} aria-label="Ver no disponible">
               <EyeOff size={14} />
-              {resolvedLabels.rowViewLabel}
+              Ver
             </span>
           )
         )}
@@ -106,18 +100,15 @@ export function FileManagerRow({
               href={downloadUrlResult.url}
               download
               className={getFileManagerRowActionClassName('primary')}
-              aria-label={resolvedLabels.rowDownloadAriaLabel}
+              aria-label="Descargar fichero"
             >
               <Download size={14} />
-              {resolvedLabels.rowDownloadLabel}
+              Descargar
             </a>
           ) : (
-            <span
-              className={getFileManagerRowActionClassName('disabled')}
-              aria-label={resolvedLabels.rowDownloadUnavailableAriaLabel}
-            >
+            <span className={getFileManagerRowActionClassName('disabled')} aria-label="Descargar no disponible">
               <Download size={14} />
-              {resolvedLabels.rowDownloadLabel}
+              Descargar
             </span>
           )
         )}
@@ -127,11 +118,11 @@ export function FileManagerRow({
             type="button"
             disabled={isDeleting}
             onClick={() => onDelete(file)}
-            aria-label={resolvedLabels.rowDeleteAriaLabel}
+            aria-label="Eliminar fichero"
             className={getFileManagerRowActionClassName('danger')}
           >
             <Trash2 size={14} />
-            {resolvedLabels.rowDeleteLabel}
+            Eliminar
           </button>
         )}
       </div>

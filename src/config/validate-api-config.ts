@@ -166,10 +166,6 @@ function validateApiOperation(
     operation.headers = shellResult.data.headers as RuntimeApiHeaders
   }
 
-  if (shellResult.data.mockResponse !== undefined) {
-    operation.mockResponse = shellResult.data.mockResponse
-  }
-
   if (shellResult.data.errorCondition !== undefined) {
     operation.errorCondition = shellResult.data.errorCondition as RuntimeApiErrorCondition
   }

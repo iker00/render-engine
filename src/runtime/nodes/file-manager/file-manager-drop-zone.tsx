@@ -1,9 +1,5 @@
 import { useRef } from 'react'
 import { Check, CloudAlert, CloudSync, CloudUpload } from 'lucide-react';
-import type { FileManagerLabelKey, FileManagerLabels } from '../../../config/runtime-config-types'
-import type { RuntimeIterationContext } from '../../runtime-references/runtime-reference-resolver'
-import type { RuntimeState } from '../../runtime-state/runtime-state-types'
-import { resolveFileManagerLabel } from './resolve-file-manager-label'
 import {
   getFileManagerDropZoneClassName,
   getFileManagerDropZoneIconColorClassName,
@@ -20,22 +16,21 @@ interface FileManagerDropZoneProps {
   dndPhase: 'idle' | 'drag-over' | 'uploading' | 'success' | 'error'
   isDisabled: boolean
   isLimitReached: boolean
-  maxFilesLimit: number | undefined
   completed: number
   total: number
-  resolvedLabels: Partial<Record<FileManagerLabelKey, string>>
-  rawLabels: FileManagerLabels | undefined
-  state: RuntimeState
-  iterationContext?: RuntimeIterationContext
   onSelectFiles: (files: File[]) => void
   onDragEnter: () => void
   onDragLeave: () => void
 }
 
-function ProgressBar({ text, percent }: { text: string; percent: number }) {
+function ProgressBar({ completed, total }: { completed: number; total: number }) {
+  const percent = total === 0 ? 0 : Math.round((completed / total) * 100)
+
   return (
     <div className="w-full mt-2">
-      <p className={`${getFileManagerDropZoneTextClassName('info')} mb-1`}>{text}</p>
+      <p className={`${getFileManagerDropZoneTextClassName('info')} mb-1`}>
+        {completed}/{total} — {percent}%
+      </p>
       <div className={getFileManagerDropZoneProgressTrackClassName()}>
         <div
           className={getFileManagerDropZoneProgressFillClassName()}
@@ -55,13 +50,8 @@ export function FileManagerDropZone({
   dndPhase,
   isDisabled,
   isLimitReached,
-  maxFilesLimit,
   completed,
   total,
-  resolvedLabels,
-  rawLabels,
-  state,
-  iterationContext,
   onSelectFiles,
   onDragEnter,
   onDragLeave,
@@ -70,16 +60,8 @@ export function FileManagerDropZone({
   const phaseClass = getFileManagerDropZoneClassName(dndPhase)
   const isUploading = dndPhase === 'uploading'
   const canInteract = !isDisabled && !isLimitReached && !isUploading
-  const ariaLabel = resolveFileManagerLabel({
-    labels: rawLabels,
-    key: 'dropzoneAriaLabel',
-    defaultText: `Drop zone for ${fieldName ?? 'files'}`,
-    placeholders: { fieldName: fieldName ?? 'files' },
-    state,
-    iterationContext,
-  })
+  const ariaLabel = `Drop zone for ${fieldName ?? 'files'}`
   const acceptAttr = acceptMimeTypes.length > 0 ? acceptMimeTypes.join(',') : undefined
-  const percent = total === 0 ? 0 : Math.round((completed / total) * 100)
 
   function handleFiles(files: FileList | null) {
     if (!files || files.length === 0 || !canInteract) {
@@ -147,69 +129,30 @@ export function FileManagerDropZone({
       {isLimitReached ? (
           <>
             <CloudAlert className={getFileManagerDropZoneIconColorClassName('muted')} size={100} />
-            <p className={getFileManagerDropZoneTextClassName('muted')}>
-              {resolveFileManagerLabel({
-                labels: rawLabels,
-                key: 'dropzoneMaxFilesReached',
-                defaultText: 'Límite alcanzado',
-                placeholders: { max: String(maxFilesLimit ?? '') },
-                state,
-                iterationContext,
-              })}
-            </p>
+            <p className={getFileManagerDropZoneTextClassName('muted')}>Límite alcanzado</p>
           </>
       ) : isUploading ? (
           <>
             <CloudSync className={getFileManagerDropZoneIconColorClassName('info')} size={100} />
             <div className="w-full text-center">
-                <p className={getFileManagerDropZoneTextClassName('info')}>{resolvedLabels.dropzoneUploading}</p>
-                <ProgressBar
-                  percent={percent}
-                  text={resolveFileManagerLabel({
-                    labels: rawLabels,
-                    key: 'dropzoneProgress',
-                    defaultText: `${completed}/${total} — ${percent}%`,
-                    placeholders: {
-                      completed: String(completed),
-                      total: String(total),
-                      percent: String(percent),
-                    },
-                    state,
-                    iterationContext,
-                  })}
-                />
+                <p className={getFileManagerDropZoneTextClassName('info')}>Subiendo ficheros...</p>
+                <ProgressBar completed={completed} total={total} />
             </div>
           </>
       ) : dndPhase === 'success' ? (
           <>
             <Check className={getFileManagerDropZoneIconColorClassName('success')} size={100} />
-            <p className={getFileManagerDropZoneTextClassName('success')}>
-              {resolveFileManagerLabel({
-                labels: rawLabels,
-                key: 'dropzoneSuccess',
-                defaultText: '¡Ficheros subidos correctamente!',
-                placeholders: { count: String(total) },
-                state,
-                iterationContext,
-              })}
-            </p>
+            <p className={getFileManagerDropZoneTextClassName('success')}>¡Ficheros subidos correctamente!</p>
           </>
       ) : (
         <>
           <CloudUpload size={100} />
           <p className={getFileManagerDropZoneTextClassName('muted')}>
-            {resolvedLabels.dropzoneIdle}
+            Arrastra los ficheros aquí o haz clic para seleccionar
           </p>
           {acceptExtension.length > 0 && (
             <p className={`text-xs ${getFileManagerDropZoneIconColorClassName('muted')} mt-1`}>
-              {resolveFileManagerLabel({
-                labels: rawLabels,
-                key: 'dropzoneAcceptedFormats',
-                defaultText: `Formatos aceptados: ${acceptExtension.join(', ')}`,
-                placeholders: { formats: acceptExtension.join(', ') },
-                state,
-                iterationContext,
-              })}
+              Formatos aceptados: {acceptExtension.join(', ')}
             </p>
           )}
         </>

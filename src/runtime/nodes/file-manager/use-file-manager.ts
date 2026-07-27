@@ -3,7 +3,6 @@ import type { FileManagerLayoutNode } from '../../../config/runtime-config'
 import { evaluateFileManagerBatch } from '../../runtime-form-validations'
 import { useRuntimeState, useRuntimeStateActions } from '../../runtime-state/runtime-state-provider'
 import { normalizeFileName } from './normalize-file-name'
-import { resolveFileManagerLabel } from './resolve-file-manager-label'
 import {
   buildLegacyGetOperation,
   buildLegacyUploadOperation,
@@ -169,7 +168,6 @@ export function useFileManager(
         props.validations,
         existingFilesForValidation,
         files,
-        currentState,
       )
 
       // Batch rejection: no uploads happen, show error
@@ -241,15 +239,7 @@ export function useFileManager(
         if (uploadResult.status === 'error') {
           dispatch({
             type: 'upload-error',
-            payload: {
-              message: resolveFileManagerLabel({
-                labels: props.labels,
-                key: 'uploadFileError',
-                defaultText: `Error al subir "${normalizedName}".`,
-                placeholders: { fileName: normalizedName },
-                state: readRuntimeState(),
-              }),
-            },
+            payload: { message: `Error al subir "${normalizedName}".` },
           })
           return
         }
@@ -259,14 +249,7 @@ export function useFileManager(
         if (resolvedList === null) {
           dispatch({
             type: 'upload-error',
-            payload: {
-              message: resolveFileManagerLabel({
-                labels: props.labels,
-                key: 'uploadListPathMissing',
-                defaultText: 'La respuesta de la subida no incluye la lista actualizada de ficheros.',
-                state: readRuntimeState(),
-              }),
-            },
+            payload: { message: 'La respuesta de la subida no incluye la lista actualizada de ficheros.' },
           })
           return
         }
@@ -309,7 +292,6 @@ export function useFileManager(
       props.uploadOperation,
       props.prefix,
       props.validations,
-      props.labels,
       readRuntimeState,
       setQuerySuccess,
     ],
@@ -362,14 +344,7 @@ export function useFileManager(
       if (deleteResult.status === 'error') {
         dispatch({
           type: 'upload-error',
-          payload: {
-            message: resolveFileManagerLabel({
-              labels: props.labels,
-              key: 'deleteError',
-              defaultText: 'Error al eliminar el fichero.',
-              state: readRuntimeState(),
-            }),
-          },
+          payload: { message: 'Error al eliminar el fichero.' },
         })
         return
       }
@@ -402,7 +377,6 @@ export function useFileManager(
       getSlotName,
       listPath,
       props.deleteOperation,
-      props.labels,
       readRuntimeState,
       setQuerySuccess,
     ],

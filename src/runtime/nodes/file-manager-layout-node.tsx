@@ -1,6 +1,5 @@
 import { useReducer } from 'react'
 import type { FileManagerLayoutNode } from '../../config/runtime-config'
-import type { FileManagerLabelKey } from '../../config/runtime-config-types'
 import type { RuntimeIterationContext } from '../runtime-references/runtime-reference-resolver'
 import { useRuntimeConfig, useRuntimeState } from '../runtime-state/runtime-state-provider'
 import { fileManagerReducer, initialFileManagerState } from './file-manager/file-manager-types'
@@ -8,35 +7,13 @@ import { useFileManager } from './file-manager/use-file-manager'
 import { FileManagerDropZone } from './file-manager/file-manager-drop-zone'
 import { FileManagerList } from './file-manager/file-manager-list'
 import { FileManagerErrorList } from './file-manager/file-manager-error-list'
-import { resolveFileManagerLabel } from './file-manager/resolve-file-manager-label'
 
 interface FileManagerNodeProps {
   node: FileManagerLayoutNode
   iterationContext?: RuntimeIterationContext
 }
 
-// Default text for the labels that have no local placeholders. These are resolved once per
-// render by the parent and handed down as `resolvedLabels`. Labels with local placeholders
-// (dropzoneAcceptedFormats, dropzoneProgress, dropzoneSuccess, dropzoneMaxFilesReached,
-// dropzoneAriaLabel, uploadFileError) are resolved by the consuming subcomponent instead.
-const RESOLVED_LABEL_DEFAULTS: Partial<Record<FileManagerLabelKey, string>> = {
-  dropzoneIdle: 'Arrastra los ficheros aquí o haz clic para seleccionar',
-  dropzoneUploading: 'Subiendo ficheros...',
-  listLoadError: 'Error al cargar los ficheros.',
-  listEmpty: 'No hay ficheros subidos.',
-  paginationPrevious: 'Anterior',
-  paginationNext: 'Siguiente',
-  rowViewLabel: 'Ver',
-  rowViewAriaLabel: 'Ver fichero',
-  rowViewUnavailableAriaLabel: 'Ver no disponible',
-  rowDownloadLabel: 'Descargar',
-  rowDownloadAriaLabel: 'Descargar fichero',
-  rowDownloadUnavailableAriaLabel: 'Descargar no disponible',
-  rowDeleteLabel: 'Eliminar',
-  rowDeleteAriaLabel: 'Eliminar fichero',
-}
-
-export function FileManagerNode({ node, iterationContext }: FileManagerNodeProps) {
+export function FileManagerNode({ node }: FileManagerNodeProps) {
   const config = useRuntimeConfig()
   const runtimeState = useRuntimeState()
   const { state: hookState, fileList, selectFiles, deleteFile } = useFileManager(node)
@@ -71,17 +48,6 @@ export function FileManagerNode({ node, iterationContext }: FileManagerNodeProps
   const currentPage = localState.page
   const dndPhase = hookState.dndPhase
 
-  const resolvedLabels: Partial<Record<FileManagerLabelKey, string>> = {}
-  for (const key of Object.keys(RESOLVED_LABEL_DEFAULTS) as FileManagerLabelKey[]) {
-    resolvedLabels[key] = resolveFileManagerLabel({
-      labels: props.labels,
-      key,
-      defaultText: RESOLVED_LABEL_DEFAULTS[key]!,
-      state: runtimeState,
-      iterationContext,
-    })
-  }
-
   function handleDragEnter() {
     localDispatch({ type: 'drag-enter' })
   }
@@ -111,13 +77,8 @@ export function FileManagerNode({ node, iterationContext }: FileManagerNodeProps
           dndPhase={dndPhase}
           isDisabled={false}
           isLimitReached={isLimitReached}
-          maxFilesLimit={maxFiles}
           completed={hookState.completed}
           total={hookState.total}
-          resolvedLabels={resolvedLabels}
-          rawLabels={props.labels}
-          state={runtimeState}
-          iterationContext={iterationContext}
           onSelectFiles={selectFiles}
           onDragEnter={handleDragEnter}
           onDragLeave={handleDragLeave}
@@ -140,7 +101,6 @@ export function FileManagerNode({ node, iterationContext }: FileManagerNodeProps
         getOperationStatus={getOperationStatus}
         config={config}
         state={runtimeState}
-        resolvedLabels={resolvedLabels}
         onDelete={deleteFile}
         onNextPage={handleNextPage}
         onPreviousPage={handlePreviousPage}

@@ -26,7 +26,7 @@ En producción sin el atributo, `main.tsx` monta `<App />` directamente y Monaco
 - Los cambios en el editor persisten en memoria entre cierres y aperturas del panel en la misma sesión. Recargar la página descarta cambios sin aplicar.
 
 ## Autocompletado JSON Schema
-El editor Monaco registra un JSON Schema derivado del schema Zod raíz (`runtimeConfigRootSchema` en `src/config/runtime-config-root-zod.ts`) usando el método built-in `toJSONSchema` de Zod v4. No se usa la librería externa `zod-to-json-schema` porque no es compatible con Zod v4 (el package está instalado como dependencia pero no se importa). El schema cubre el contrato completo del runtime config incluyendo la unión discriminada de nodos por `type`, y las propiedades opcionales `translations` y `tokens` con sus definiciones completas.
+El editor Monaco registra un JSON Schema derivado del schema Zod raíz (`runtimeConfigRootSchema` en `src/config/runtime-config-root-zod.ts`) usando el método built-in `toJSONSchema` de Zod v4. No se usa la librería externa `zod-to-json-schema` porque no es compatible con Zod v4 (el package está instalado como dependencia pero no se importa). El schema cubre el contrato completo del runtime config incluyendo la unión discriminada de nodos por `type`.
 
 ## Acción Aplicar
 1. Parsea el texto del editor como JSON; si falla, muestra el error de sintaxis en el panel adjunto y no actualiza el runtime.
@@ -44,8 +44,6 @@ Cuando se aplica un nuevo config (vía botón Aplicar o vía HMR, ver § HMR), `
 - **Queries**: las queries cacheadas cuyos nombres siguen declarados en `api` se preservan intactas (`data`, `status`, `error`, `requestSignature`). Las eliminadas desaparecen.
 - **Navegación**: si la página activa sigue existiendo en `pages`, la navegación se conserva con sus `params` y un histórico reducido a una entrada. Si no existe, degrada a `initialPage` del nuevo config con `params: {}`.
 - **PageEntry**: se recalcula coherentemente con la navegación migrada.
-- **Translations**: `i18n.translations` se reconstruye desde el bloque `translations` del nuevo config. Si el nuevo config no declara `translations`, se usa un objeto vacío. `i18n.activeLanguage` se preserva del estado previo.
-- **Tokens**: el estado de `tokens` se reconstruye desde el bloque `tokens` del nuevo config con la misma semántica que el bootstrap inicial (cada token con su `value` del config, `status: 'ready'`, `failedAttempts: 0`). Si el nuevo config no declara `tokens`, se usa un objeto vacío.
 
 El dispatch de migración de estado se lanza antes de actualizar `currentConfig` para que los `layoutEffect` del provider vean el estado migrado desde el primer render con el nuevo config.
 

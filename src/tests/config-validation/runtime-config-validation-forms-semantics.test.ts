@@ -260,7 +260,7 @@ describe('validateRuntimeConfig', () => {
         code: 'invalid-layout',
         displayMode: 'development-only',
         message:
-          'Page "home" has an invalid layout at "layout[0].children[0]": form nodes only accept input, textarea, select, radioGroup, checkboxGroup, fileInput, toggle, hidden, button, heading, paragraph, image, table, container, accordion, divider and tabs descendants.',
+          'Page "home" has an invalid layout at "layout[0].children[0]": form nodes only accept input, textarea, select, radioGroup, checkboxGroup, button, heading, paragraph, image, table, container, accordion, divider and tabs descendants.',
       },
     })
 
@@ -295,7 +295,7 @@ describe('validateRuntimeConfig', () => {
         code: 'invalid-layout',
         displayMode: 'development-only',
         message:
-          'Page "home" has an invalid layout at "layout[0].children[0]": form nodes only accept input, textarea, select, radioGroup, checkboxGroup, fileInput, toggle, hidden, button, heading, paragraph, image, table, container, accordion, divider and tabs descendants.',
+          'Page "home" has an invalid layout at "layout[0].children[0]": form nodes only accept input, textarea, select, radioGroup, checkboxGroup, button, heading, paragraph, image, table, container, accordion, divider and tabs descendants.',
         },
       })
 
@@ -2506,94 +2506,6 @@ describe('validateRuntimeConfig', () => {
       if (result.status === 'error') {
         expect(result.error.message).toContain('tokens.*')
       }
-    })
-  })
-
-  it('admits toggle in the list of allowed form children', () => {
-    const result = validateRuntimeConfig(
-      createConfigWithFormLayout({
-        children: [
-          {
-            type: 'toggle',
-            props: {
-              fieldId: 'agree',
-              label: 'I agree',
-            },
-          },
-        ],
-      }),
-    )
-    expect(result.status).toBe('ready')
-  })
-
-  it('rejects toggle outside a form by the form-only check', () => {
-    const result = validateRuntimeConfig(
-      createConfigWithPages([
-        {
-          id: 'home',
-          layout: [
-            {
-              type: 'toggle',
-              props: {
-                fieldId: 'agree',
-                label: 'I agree',
-              },
-            },
-          ],
-        },
-      ]),
-    )
-    expect(result).toEqual({
-      status: 'error',
-      error: {
-        code: 'invalid-layout',
-        displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0]": toggle nodes must be descendants of a form node.',
-      },
-    })
-  })
-
-  it('admits hidden in the list of allowed form children', () => {
-    const result = validateRuntimeConfig(
-      createConfigWithFormLayout({
-        children: [
-          {
-            type: 'hidden',
-            props: {
-              fieldId: 'token',
-              value: 'abc123',
-            },
-          },
-        ],
-      }),
-    )
-    expect(result.status).toBe('ready')
-  })
-
-  it('rejects hidden outside a form by the form-only check', () => {
-    const result = validateRuntimeConfig(
-      createConfigWithPages([
-        {
-          id: 'home',
-          layout: [
-            {
-              type: 'hidden',
-              props: {
-                fieldId: 'token',
-                value: 'abc123',
-              },
-            },
-          ],
-        },
-      ]),
-    )
-    expect(result).toEqual({
-      status: 'error',
-      error: {
-        code: 'invalid-layout',
-        displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0]": hidden nodes must be descendants of a form node.',
-      },
     })
   })
 })
