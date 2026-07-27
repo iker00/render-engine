@@ -57,11 +57,6 @@ function switchToVisualMode() {
   fireEvent.click(screen.getByTestId('dev-editor-toolbar-mode-visual'))
 }
 
-async function getMonacoValue(): Promise<string> {
-  await waitFor(() => expect(screen.getByTestId('monaco-editor-mock')).toBeInTheDocument())
-  return (screen.getByTestId('monaco-editor-mock') as HTMLTextAreaElement).value
-}
-
 beforeEach(() => {
   vi.clearAllMocks()
 })

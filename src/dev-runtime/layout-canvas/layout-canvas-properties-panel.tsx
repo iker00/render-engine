@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import type { LayoutNode, RuntimeConfigError } from '../../config/runtime-config'
 import { serializeLayoutNodePath, type LayoutNodePath } from '../../runtime/layout-node-path'
 import type { CommitCanvasMutationResult } from './layout-canvas-commit'
 import { getNodeTypeJsonSchema } from './layout-canvas-node-schema'
-import { PropertyFieldDispatcher, resolveUnionBranch } from './property-fields/property-field-dispatcher'
+import { PropertyFieldDispatcher } from './property-fields/property-field-dispatcher'
+import { resolveUnionBranch } from './property-fields/property-field-schema-resolution'
 
 export interface LayoutCanvasPropertiesPanelProps {
   node: LayoutNode
@@ -258,12 +259,16 @@ export function LayoutCanvasPropertiesPanel({
 
   // Selecting a different node discards any rejection pending on the previously selected
   // node — it belongs to that node's edit, not this one. A successful commit on this node
-  // clears its own entry explicitly below, so this effect must not also fire on every `node`
+  // clears its own entry explicitly below, so this must not also fire on every `node`
   // reference change (e.g. its own successful commit would otherwise race this reset).
+  // Adjusted during render (tracking the previous path in state) instead of an effect —
+  // the guard only fires once per actual path change, so it cannot loop.
   const serializedPath = serializeLayoutNodePath(path)
-  useEffect(() => {
+  const [prevSerializedPath, setPrevSerializedPath] = useState(serializedPath)
+  if (serializedPath !== prevSerializedPath) {
+    setPrevSerializedPath(serializedPath)
     setPendingRejections({})
-  }, [serializedPath])
+  }
 
   function recordCommitResult(key: PendingRejectionKey, attemptedValue: unknown, result: CommitCanvasMutationResult | void) {
     if (result && result.status === 'rejected') {

@@ -6,7 +6,7 @@ import {
   type RuntimeIterationContext,
 } from '../runtime-references/runtime-reference-resolver'
 import { executeRuntimeUiAction } from '../runtime-actions/runtime-ui-action-executor'
-import { useRuntimeConfig, useRuntimeState, useRuntimeStateActions } from '../runtime-state/runtime-state-provider'
+import { useRuntimeConfig, useRuntimeState, useRuntimeStateActions } from '../runtime-state/use-runtime-state'
 import { resolveLinkActionHref } from './link-action-href'
 import { IconNode } from './icon-node'
 import { getLinkNodeClassName } from '../runtime-node-styling'

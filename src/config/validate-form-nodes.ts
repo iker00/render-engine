@@ -1232,7 +1232,6 @@ export function validateCollectionSource(
   path: string,
   pageId: string,
   options: { allowItemReference?: boolean } = {},
-  breadcrumb: BreadcrumbSegment[] = [],
 ): { status: 'ready'; source: string } | { status: 'error'; error: RuntimeConfigError } {
   if (!isNonEmptyString(rawSource)) {
     return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}".`)

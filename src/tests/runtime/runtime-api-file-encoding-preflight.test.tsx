@@ -7,11 +7,8 @@ import {
   executeRuntimeApiOperation,
   resolveFileInputSourcesOverrides,
 } from '../../queries/runtime-api-executor'
-import {
-  RuntimeStateProvider,
-  useRuntimeState,
-  useRuntimeStateActions,
-} from '../../runtime/runtime-state/runtime-state-provider'
+import { RuntimeStateProvider } from '../../runtime/runtime-state/runtime-state-provider'
+import { useRuntimeState, useRuntimeStateActions } from '../../runtime/runtime-state/use-runtime-state'
 import type { RuntimeState } from '../../runtime/runtime-state/runtime-state-types'
 
 const runtimeState: RuntimeState = {

@@ -5,7 +5,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 URL.createObjectURL = vi.fn()
 URL.revokeObjectURL = vi.fn()
 import type { RuntimeConfig } from '../../config/runtime-config'
-import { RuntimeStateProvider, useRuntimeStateActions } from '../../runtime/runtime-state/runtime-state-provider'
+import { RuntimeStateProvider } from '../../runtime/runtime-state/runtime-state-provider'
+import { useRuntimeStateActions } from '../../runtime/runtime-state/use-runtime-state'
 import { RuntimePage } from '../../runtime/runtime-page'
 import { RuntimeStateSnapshot } from '../runtime-state/helpers'
 

@@ -2,12 +2,8 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { useEffect } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { RuntimeConfig } from '../../config/runtime-config'
-import type { RuntimeState } from '../../runtime/runtime-state/runtime-state-types'
-import {
-  RuntimeStateProvider,
-  useRuntimeState,
-  useRuntimeStateActions,
-} from '../../runtime/runtime-state/runtime-state-provider'
+import { RuntimeStateProvider } from '../../runtime/runtime-state/runtime-state-provider'
+import { useRuntimeState, useRuntimeStateActions } from '../../runtime/runtime-state/use-runtime-state'
 import { RuntimePage } from '../../runtime/runtime-page'
 
 afterEach(() => {
@@ -18,10 +14,6 @@ function RuntimeStateSnapshot({ testId }: { testId: string }) {
   const state = useRuntimeState()
 
   return <pre data-testid={testId}>{JSON.stringify(state)}</pre>
-}
-
-function readRuntimeStateSnapshot(testId: string) {
-  return JSON.parse(screen.getByTestId(testId).textContent ?? '') as RuntimeState
 }
 
 function DynamicSelectQueryFixture() {

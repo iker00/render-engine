@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import type { RuntimeConfig } from '../../config/runtime-config'
 import type { RuntimeState } from '../../runtime/runtime-state/runtime-state-types'
 import { executeTokenRefresh } from '../../runtime/runtime-tokens/execute-token-refresh'

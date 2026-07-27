@@ -1,12 +1,12 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useMemo } from 'react'
 import type React from 'react'
 import type { FileInputLayoutNode } from '../../config/runtime-config'
 import {
   resolveRuntimeTextReference,
   type RuntimeIterationContext,
 } from '../runtime-references/runtime-reference-resolver'
-import { useOptionalFormContext } from '../form-context'
-import { useRuntimeState, useRuntimeStateActions } from '../runtime-state/runtime-state-provider'
+import { useOptionalFormContext } from '../use-optional-form-context'
+import { useRuntimeState, useRuntimeStateActions } from '../runtime-state/use-runtime-state'
 import { selectFormFieldState } from '../runtime-state/runtime-state-selectors'
 import { evaluateFileManagerBatch } from '../runtime-form-validations'
 import {
@@ -21,61 +21,44 @@ interface FileInputNodeProps {
   iterationContext?: RuntimeIterationContext
 }
 
+// One object URL per image File, revoked when the File is swapped out or the component unmounts.
+// A dedicated component (rather than a shared ref/state map on FileInputNode) keeps the URL's
+// lifetime tied to a single `useMemo`/cleanup-effect pair scoped by File identity, with no ref
+// access or setState call happening during another component's render.
+function FilePreviewImage({ file }: { file: File }) {
+  const objectUrl = useMemo(() => URL.createObjectURL(file), [file])
+  useEffect(() => {
+    return () => URL.revokeObjectURL(objectUrl)
+  }, [objectUrl])
+
+  return <img src={objectUrl} alt={file.name} className="h-16 w-16 shrink-0 rounded object-cover" />
+}
+
 export function FileInputNode({ node }: FileInputNodeProps) {
   const formContext = useOptionalFormContext()
   const state = useRuntimeState()
   const { setFormFieldValue, setFormFieldError } = useRuntimeStateActions()
 
-  // Map from File to its object URL (images only). Entries are revoked on removal or unmount.
-  const objectUrlMapRef = useRef(new Map<File, string>())
-
-  useEffect(() => {
-    const urlMap = objectUrlMapRef.current
-    return () => {
-      for (const url of urlMap.values()) {
-        URL.revokeObjectURL(url)
-      }
-      urlMap.clear()
-    }
-  }, [])
+  const { fieldId } = node.props
+  const fieldState = formContext ? selectFormFieldState(state, formContext.formId, fieldId) : undefined
+  const currentFiles = Array.isArray(fieldState?.value) ? (fieldState.value as File[]) : []
 
   if (!formContext) {
     return null
   }
 
   const { formId } = formContext
-  const { fieldId, label, multiple, capture, validations } = node.props
+  const { label, multiple, capture, validations } = node.props
   const tooltip = node.props.tooltip !== undefined
     ? resolveRuntimeTextReference(node.props.tooltip, state, 'fileInput.props.tooltip', {})
     : ''
   const isMultiple = multiple !== false // default is true
-
-  const fieldState = selectFormFieldState(state, formId, fieldId)
-  const currentFiles = Array.isArray(fieldState?.value) ? (fieldState.value as File[]) : []
 
   const maxFilesValue = validations?.maxFiles?.value
   const isAtLimit = maxFilesValue !== undefined && currentFiles.length >= maxFilesValue
   const acceptString = validations?.accept?.value?.join(',') ?? undefined
   const error = fieldState?.error ?? null
   const hasError = error !== null
-
-  function getOrCreateObjectUrl(file: File): string {
-    const existing = objectUrlMapRef.current.get(file)
-    if (existing !== undefined) {
-      return existing
-    }
-    const url = URL.createObjectURL(file)
-    objectUrlMapRef.current.set(file, url)
-    return url
-  }
-
-  function revokeAndRemoveUrl(file: File) {
-    const url = objectUrlMapRef.current.get(file)
-    if (url !== undefined) {
-      URL.revokeObjectURL(url)
-      objectUrlMapRef.current.delete(file)
-    }
-  }
 
   function handleChange(event: React.ChangeEvent<HTMLInputElement>) {
     const incoming = Array.from(event.target.files ?? [])
@@ -89,16 +72,9 @@ export function FileInputNode({ node }: FileInputNodeProps) {
 
     const result = evaluateFileManagerBatch(validations, existingForEval, incoming, state)
 
-    let nextFiles: File[]
-    if (isMultiple) {
-      nextFiles = [...currentFiles, ...result.acceptedFiles]
-    } else {
-      // Revoke URLs for any existing image files before replacing
-      for (const f of currentFiles) {
-        revokeAndRemoveUrl(f)
-      }
-      nextFiles = result.acceptedFiles.slice(0, 1)
-    }
+    const nextFiles: File[] = isMultiple
+      ? [...currentFiles, ...result.acceptedFiles]
+      : result.acceptedFiles.slice(0, 1)
 
     setFormFieldValue(formId, fieldId, nextFiles)
 
@@ -113,7 +89,6 @@ export function FileInputNode({ node }: FileInputNodeProps) {
   }
 
   function handleRemove(file: File) {
-    revokeAndRemoveUrl(file)
     const nextFiles = currentFiles.filter((f) => f !== file)
     setFormFieldValue(formId, fieldId, nextFiles)
   }
@@ -144,11 +119,7 @@ export function FileInputNode({ node }: FileInputNodeProps) {
           {currentFiles.map((file, index) => (
             <li key={`${file.name}-${index}`} className="flex items-center gap-3">
               {file.type.startsWith('image/') ? (
-                <img
-                  src={getOrCreateObjectUrl(file)}
-                  alt={file.name}
-                  className="h-16 w-16 shrink-0 rounded object-cover"
-                />
+                <FilePreviewImage file={file} />
               ) : (
                 <span className="flex-1 truncate text-sm text-app-text">{file.name}</span>
               )}

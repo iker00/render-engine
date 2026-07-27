@@ -3,12 +3,10 @@ import { describe, expect, it, vi } from 'vitest'
 import type { RuntimeConfig, RuntimePageConfig } from '../../config/runtime-config'
 import { RuntimePage } from '../../runtime/runtime-page'
 import { RuntimeStateContext } from '../../runtime/runtime-state/runtime-state-context'
-import { createRuntimeState, runtimeStateReducer } from '../../runtime/runtime-state/runtime-state-reducer'
+import { createRuntimeState } from '../../runtime/runtime-state/runtime-state-reducer'
 import type { RuntimeState, RuntimeStateAction } from '../../runtime/runtime-state/runtime-state-types'
-import {
-  RuntimeStateProvider,
-  useRuntimeStateActions,
-} from '../../runtime/runtime-state/runtime-state-provider'
+import { RuntimeStateProvider } from '../../runtime/runtime-state/runtime-state-provider'
+import { useRuntimeStateActions } from '../../runtime/runtime-state/use-runtime-state'
 import { useEffect } from 'react'
 import { afterEach } from 'vitest'
 
@@ -116,100 +114,6 @@ function createRuntimePageState(
       params: navigation?.history[navigation.history.length - 1]?.params ?? baseState.pageEntry.params,
     },
   } satisfies RuntimeState
-}
-
-function seedRuntimeState(state: RuntimeState) {
-  return [
-    {
-      type: 'forms/initialize',
-      payload: {
-        formId: 'userSearch',
-        fields: {
-          name: {
-            defaultValue: 'Ada',
-          },
-        },
-      },
-    },
-    {
-      type: 'forms/set-value',
-      payload: {
-        formId: 'userSearch',
-        fieldId: 'name',
-        value: 'Grace',
-      },
-    },
-    {
-      type: 'queries/initialize',
-      payload: {
-        queryName: 'searchUsers',
-      },
-    },
-    {
-      type: 'queries/set-success',
-      payload: {
-        queryName: 'searchUsers',
-        data: {
-          user: {
-            profile: {
-              name: 'Ada',
-              active: true,
-            },
-          },
-          results: [
-            {
-              id: 'user-1',
-              name: 'Ada',
-            },
-            {
-              id: 'user-2',
-              name: 'Grace',
-            },
-          ],
-          stats: {
-            total: 2,
-          },
-        },
-      },
-    },
-    {
-      type: 'queries/set-error',
-      payload: {
-        queryName: 'searchUsers',
-        error: {
-          code: 'network',
-          message: 'Could not load users.',
-        },
-      },
-    },
-  ].reduce(runtimeStateReducer, state)
-}
-
-function renderRuntimePageWithSeed(activePage: RuntimePageConfig) {
-  const config: RuntimeConfig = {
-    api: {},
-    initialPage: activePage.id,
-    pages: [activePage],
-  }
-  const initialState = createRuntimeState(config)
-  const seededState = seedRuntimeState(initialState)
-  const dispatch = vi.fn<(action: RuntimeStateAction) => void>()
-  const dispatchAndSyncState = vi.fn<(action: RuntimeStateAction) => void>()
-
-  return render(
-    <RuntimeStateContext.Provider
-      value={{
-        config,
-        initialState: seededState,
-        state: seededState,
-        dispatch,
-        dispatchAndSyncState,
-        getLatestState: () => seededState,
-      }}
-    >
-        <RuntimePage />
-    </RuntimeStateContext.Provider>,
-  )
 }
 
 function CollectionSourceControls() {

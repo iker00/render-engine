@@ -1,11 +1,11 @@
 import type React from 'react'
 import type { InputLayoutNode } from '../../config/runtime-config'
-import { useOptionalFormContext } from '../form-context'
+import { useOptionalFormContext } from '../use-optional-form-context'
 import {
   resolveRuntimeTextReference,
   type RuntimeIterationContext,
 } from '../runtime-references/runtime-reference-resolver'
-import { resolveResolvedFormFieldDefinition } from './form-layout-node'
+import { resolveResolvedFormFieldDefinition } from './resolve-form-field-definition'
 import {
   getFieldControlClassName,
   getFieldErrorClassName,
@@ -17,10 +17,11 @@ import {
   getInputIconWrapperClassName,
 } from '../runtime-node-styling'
 import { getValidationErrorForEditedField } from '../runtime-form-validations'
-import { useRuntimeState, useRuntimeStateActions } from '../runtime-state/runtime-state-provider'
+import { useRuntimeState, useRuntimeStateActions } from '../runtime-state/use-runtime-state'
 import { selectFormFieldState } from '../runtime-state/runtime-state-selectors'
 import * as LucideIcons from 'lucide-react'
-import { IconNode, toPascalCase } from './icon-node'
+import { IconNode } from './icon-node'
+import { toPascalCase } from './icon-name-case'
 import { FieldTooltip } from './field-tooltip'
 
 interface InputNodeProps {

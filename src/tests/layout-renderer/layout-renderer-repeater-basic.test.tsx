@@ -379,7 +379,7 @@ describe('RuntimePage', () => {
     })
 
     it('renders zero iterations for null, undefined, number, string and empty object sources without errors', () => {
-      function createPage(queryData: unknown): RuntimePageConfig {
+      function createPage(_queryData: unknown): RuntimePageConfig {
         return {
           id: 'sources',
           layout: [

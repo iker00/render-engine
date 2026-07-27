@@ -1,4 +1,5 @@
-import { buildDefaultObjectForRequiredFields, PropertyFieldDispatcher, type DiscriminatedUnionVariant } from './property-field-dispatcher'
+import { PropertyFieldDispatcher } from './property-field-dispatcher'
+import { buildDefaultObjectForRequiredFields, type DiscriminatedUnionVariant } from './property-field-schema-resolution'
 import { EnumPropertyField } from './enum-property-field'
 
 export type { DiscriminatedUnionVariant }

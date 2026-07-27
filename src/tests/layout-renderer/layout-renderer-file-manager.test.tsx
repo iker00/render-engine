@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { RuntimeConfig, RuntimePageConfig } from '../../config/runtime-config'
 import { RuntimePage } from '../../runtime/runtime-page'
@@ -97,17 +97,6 @@ function makeFilesQueryState(files: Array<Record<string, unknown>>) {
     data: { files },
     requestedAt: 0,
     resolvedAt: 0,
-    error: null,
-    requestSignature: null,
-  }
-}
-
-function makeLoadingQueryState() {
-  return {
-    status: 'loading' as const,
-    data: null,
-    requestedAt: Date.now(),
-    resolvedAt: null,
     error: null,
     requestSignature: null,
   }

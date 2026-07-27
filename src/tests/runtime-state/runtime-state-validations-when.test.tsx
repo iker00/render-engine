@@ -5,7 +5,7 @@ import { RuntimeStateProvider } from '../../runtime/runtime-state/runtime-state-
 import { RuntimePage } from '../../runtime/runtime-page'
 import { RuntimeStateSnapshot } from './helpers'
 import { useEffect } from 'react'
-import { useRuntimeStateActions } from '../../runtime/runtime-state/runtime-state-provider'
+import { useRuntimeStateActions } from '../../runtime/runtime-state/use-runtime-state'
 
 function QuerySeedFixture() {
   const { initializeQuery, setQuerySuccess } = useRuntimeStateActions()
