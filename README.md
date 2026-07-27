@@ -47,4 +47,4 @@ El repositorio ya dispone de bootstrap técnico reproducible:
 - infraestructura de `lint`, `test` y `build`
 - frontera explícita de arranque para resolver configuración desde `data-config` o `src/dev/config.json`
 
-Todavía no existe el runtime declarativo funcional: no hay navegación, formularios, queries ni validación estructural completa del contrato JSON.
+El runtime declarativo ya está implementado y estable (navegación, formularios, queries, validación estructural completa del contrato JSON). Para el estado vigente por área, ver [`ai-workflow/docs/current-state.md`](ai-workflow/docs/current-state.md).
