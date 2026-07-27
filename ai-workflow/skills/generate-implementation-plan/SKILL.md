@@ -101,7 +101,6 @@ Si una tarea no requiere tests propios (refactor puro, doc-only), el sub-bloque 
 - Cada tarea debe dejar claro si habilita una tarea posterior o si bloquea el resto hasta quedar cerrada.
 - Cada tarea debe dejar claro cuándo se considera cerrada su implementación y cuándo se considera cerrado su estado documental.
 - Reflejar los límites arquitectónicos de `architecture.md`.
-- Reflejar los estándares de código, testing y manejo de errores definidos en `standards/`.
 - Marcar explícitamente el impacto en documentación para cada tarea en el campo `documentación afectada`, aunque el resultado sea `ninguno`.
 - Tratar `README.md` como documento de entrada breve; no incluirlo como documentación afectada salvo cambio de contrato público.
 - Preferir tareas que puedan completarse de principio a fin en una sola pasada de implementación.

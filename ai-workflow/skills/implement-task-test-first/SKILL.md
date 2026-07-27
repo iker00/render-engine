@@ -17,7 +17,7 @@ Lo mínimo para decidir qué tarea toca y mantener el estado:
 - `ai-workflow/features/NNNN-feature-name/tasks.md`
 - `ai-workflow/features/NNNN-feature-name/status.yaml`
 
-Los standards y las docs estables (workflow, conventions, architecture, test-index) más el propio contrato del subagente llegan al subagente vía el prefijo cacheable de `build-context.sh`. Lo específico de la tarea (código y tests del área, `notes.md` si existe, ficha de `app-features/` si la tarea la referencia) lo lee el propio subagente. El orquestador no acumula ninguno de esos contextos entre tareas.
+Los standards y las docs estables (conventions, architecture, test-index) más el propio contrato del subagente llegan al subagente vía el prefijo cacheable de `build-context.sh`. Lo específico de la tarea (código y tests del área, `notes.md` si existe, ficha de `app-features/` si la tarea la referencia) lo lee el propio subagente. El orquestador no acumula ninguno de esos contextos entre tareas.
 
 ## Objetivo
 Implementar las tareas planificadas de la feature en orden, una por una, lanzando un subagente por tarea hasta agotar el alcance solicitado o encontrar un bloqueo.
