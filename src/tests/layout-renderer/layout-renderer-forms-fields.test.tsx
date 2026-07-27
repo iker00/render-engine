@@ -6,10 +6,8 @@ import { RuntimePage } from '../../runtime/runtime-page'
 import { RuntimeStateContext } from '../../runtime/runtime-state/runtime-state-context'
 import { createRuntimeState, runtimeStateReducer } from '../../runtime/runtime-state/runtime-state-reducer'
 import type { RuntimeState, RuntimeStateAction } from '../../runtime/runtime-state/runtime-state-types'
-import {
-  RuntimeStateProvider,
-  useRuntimeStateActions,
-} from '../../runtime/runtime-state/runtime-state-provider'
+import { RuntimeStateProvider } from '../../runtime/runtime-state/runtime-state-provider'
+import { useRuntimeStateActions } from '../../runtime/runtime-state/use-runtime-state'
 
 afterEach(() => {
   vi.unstubAllGlobals()
@@ -56,31 +54,6 @@ function renderRuntimePageWithState(activePage: RuntimePageConfig, state: Runtim
     dispatch,
     dispatchAndSyncState,
   }
-}
-
-function createRuntimePageState(
-  activePage: RuntimePageConfig,
-  queries: RuntimeState['queries'],
-  navigation?: RuntimeState['navigation'],
-) {
-  const config: RuntimeConfig = {
-    api: {},
-    initialPage: activePage.id,
-    pages: [activePage],
-  }
-
-  const baseState = createRuntimeState(config)
-
-  return {
-    ...baseState,
-    queries,
-    navigation: navigation ?? baseState.navigation,
-    pageEntry: {
-      ...baseState.pageEntry,
-      pageId: (navigation ?? baseState.navigation).currentPageId,
-      params: navigation?.history[navigation.history.length - 1]?.params ?? baseState.pageEntry.params,
-    },
-  } satisfies RuntimeState
 }
 
 function seedRuntimeState(state: RuntimeState) {

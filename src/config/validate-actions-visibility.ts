@@ -8,7 +8,6 @@ import type {
   NavigateToButtonAction,
   OpenModalRuntimeUiAction,
   ResetFormRuntimeUiAction,
-  RuntimeApiConfig,
   RuntimeApiHeaders,
   RuntimeApiQuery,
   RuntimeApiRequestParams,
@@ -39,7 +38,7 @@ import {
   runtimeApiHeadersSchema,
 } from './runtime-config-zod'
 import { invalidLayout } from './runtime-config-validation-errors'
-import { hasRuntimeTemplateDelimiter, parseRuntimeReference } from '../runtime/runtime-references/runtime-reference-parser'
+import { parseRuntimeReference } from '../runtime/runtime-references/runtime-reference-parser'
 import { isTokensReference } from './runtime-reference-namespace-guards'
 
 const collectionPathSegmentPattern = /^[A-Za-z0-9_-]+$/

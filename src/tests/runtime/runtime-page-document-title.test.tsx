@@ -1,8 +1,9 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { useRef } from 'react'
+import { Profiler } from 'react'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import type { RuntimeConfig } from '../../config/runtime-config'
-import { RuntimeStateProvider, useRuntimeCurrentPage, useRuntimeStateActions } from '../../runtime/runtime-state/runtime-state-provider'
+import { RuntimeStateProvider } from '../../runtime/runtime-state/runtime-state-provider'
+import { useRuntimeCurrentPage, useRuntimeStateActions } from '../../runtime/runtime-state/use-runtime-state'
 
 afterEach(() => {
   window.history.replaceState(null, '', window.location.pathname + window.location.search)
@@ -209,20 +210,22 @@ describe('Runtime document title effect', () => {
   it('does not trigger additional renders in children when the document title effect runs', async () => {
     let renderCount = 0
 
-    // Uses context so it re-renders on navigation state changes — allows detecting extra renders from the title effect
+    // Uses context so it re-renders on navigation state changes — allows detecting extra renders from the title effect.
+    // Counted via React's own <Profiler onRender> (called by React once per commit, outside the
+    // render phase) instead of mutating a ref/outer variable inside the component body, which the
+    // React Compiler rejects as a render side effect.
     function RenderCounterWithContext() {
       useRuntimeCurrentPage()
-      const countRef = useRef(0)
-      countRef.current += 1
-      renderCount = countRef.current
 
-      return <span data-testid="render-counter">{countRef.current}</span>
+      return <span data-testid="render-counter" />
     }
 
     render(
       <RuntimeStateProvider config={configWithTitles}>
         <NavigationControls />
-        <RenderCounterWithContext />
+        <Profiler id="render-counter" onRender={() => { renderCount += 1 }}>
+          <RenderCounterWithContext />
+        </Profiler>
       </RuntimeStateProvider>,
     )
 

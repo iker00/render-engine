@@ -28,7 +28,6 @@ import type {
   RuntimeCollectionObjectItem,
   RuntimeConfigError,
   RuntimeUiAction,
-  RuntimeVisibilityConfig,
   TableCellNode,
   TableCellValue,
   TableColumnConfig,
@@ -62,7 +61,7 @@ import {
 import { invalidLayout, unsupportedNodeType } from './runtime-config-validation-errors'
 import type { BreadcrumbSegment } from './validation-breadcrumb'
 import { buildBreadcrumbSegment, enrichedInvalidLayout, enrichErrorResult } from './validation-breadcrumb'
-import { hasRuntimeTemplateDelimiter, parseRuntimeReference } from '../runtime/runtime-references/runtime-reference-parser'
+import { hasRuntimeTemplateDelimiter } from '../runtime/runtime-references/runtime-reference-parser'
 import {
   mapQueryStateFeedbackIssue,
   mapVisibilityIssue,

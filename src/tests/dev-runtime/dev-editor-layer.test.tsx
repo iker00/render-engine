@@ -1,12 +1,13 @@
 import { fireEvent, render, screen } from '@testing-library/react'
-import { useState, type MutableRefObject } from 'react'
+import { useEffect, useState, type MutableRefObject } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import type { LayoutNode, RuntimeConfig } from '../../config/runtime-config'
 import type { CommitCanvasMutationResult } from '../../dev-runtime/layout-canvas/layout-canvas-commit'
 import { DevEditorLayer } from '../../dev-runtime/floating-toolbar/dev-editor-layer'
-import { useLayoutEditModeContext } from '../../runtime/layout-edit-mode-context'
+import { useLayoutEditModeContext } from '../../runtime/use-layout-edit-mode-context'
 import { RuntimePage } from '../../runtime/runtime-page'
-import { RuntimeStateProvider, useRuntimeState } from '../../runtime/runtime-state/runtime-state-provider'
+import { RuntimeStateProvider } from '../../runtime/runtime-state/runtime-state-provider'
+import { useRuntimeState } from '../../runtime/runtime-state/use-runtime-state'
 
 function heading(text: string): LayoutNode {
   return { type: 'heading', props: { text, level: 2 } }
@@ -39,14 +40,16 @@ const noopCommitCanvasMutation = (): CommitCanvasMutationResult => ({ status: 'a
 // useLayoutEditModeContext() with a couple of clickable `[data-node-path]` anchors (mirroring
 // what layout-node-renderer.tsx produces for real nodes) is enough to observe everything
 // DevEditorLayer itself is responsible for, without pulling in the full node-render pipeline.
-// The lazy useState initializer runs exactly once per component instance, so
+// The mount-only effect (empty deps) runs exactly once per component instance, so
 // `mountCountRef` only increments on a genuine mount — not on a re-render — which is how the
 // "mode switch never remounts RuntimePage" behavior (design.md Decisión 1) gets verified.
+// `render()` from Testing Library flushes effects synchronously (wrapped in `act`), so the
+// counter is already up to date by the time assertions run right after `render`.
 function EditModeProbe({ mountCountRef }: { mountCountRef: MutableRefObject<number> }) {
   const editModeContext = useLayoutEditModeContext()
-  useState(() => {
+  useEffect(() => {
     mountCountRef.current += 1
-  })
+  }, [mountCountRef])
 
   return (
     <div>

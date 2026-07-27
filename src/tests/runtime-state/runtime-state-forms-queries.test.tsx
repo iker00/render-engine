@@ -8,11 +8,8 @@ import {
   resolveQueryStateFeedback,
   type RuntimeQueryVisibleState,
 } from '../../runtime/runtime-query-state-feedback'
-import {
-  RuntimeStateProvider,
-  useRuntimeState,
-  useRuntimeStateActions,
-} from '../../runtime/runtime-state/runtime-state-provider'
+import { RuntimeStateProvider } from '../../runtime/runtime-state/runtime-state-provider'
+import { useRuntimeState, useRuntimeStateActions } from '../../runtime/runtime-state/use-runtime-state'
 import { RuntimePage } from '../../runtime/runtime-page'
 import {
   selectFormFieldValue,
@@ -1995,7 +1992,6 @@ describe('Form submitAction.onError', () => {
   })
 
   it('executes both onError actions in order when neither has a when condition', async () => {
-    const fetchMock = makeErrorFetch()
     const callOrder: string[] = []
 
     const config: RuntimeConfig = {

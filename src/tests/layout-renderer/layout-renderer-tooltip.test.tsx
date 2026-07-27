@@ -4,8 +4,8 @@ import { FieldTooltip } from '../../runtime/nodes/field-tooltip'
 import type { RuntimeConfig, RuntimePageConfig } from '../../config/runtime-config'
 import { RuntimePage } from '../../runtime/runtime-page'
 import { RuntimeStateContext } from '../../runtime/runtime-state/runtime-state-context'
-import { createRuntimeState, runtimeStateReducer } from '../../runtime/runtime-state/runtime-state-reducer'
-import type { RuntimeState, RuntimeStateAction } from '../../runtime/runtime-state/runtime-state-types'
+import { createRuntimeState } from '../../runtime/runtime-state/runtime-state-reducer'
+import type { RuntimeStateAction } from '../../runtime/runtime-state/runtime-state-types'
 import { RuntimeStateProvider } from '../../runtime/runtime-state/runtime-state-provider'
 
 afterEach(() => {
@@ -24,58 +24,6 @@ function renderRuntimePage(activePage: RuntimePageConfig, api: RuntimeConfig['ap
       <RuntimePage />
     </RuntimeStateProvider>,
   )
-}
-
-function renderRuntimePageWithState(activePage: RuntimePageConfig, state: RuntimeState) {
-  const config: RuntimeConfig = {
-    api: {},
-    initialPage: activePage.id,
-    pages: [activePage],
-  }
-  const dispatch = vi.fn<(action: RuntimeStateAction) => void>()
-  const dispatchAndSyncState = vi.fn<(action: RuntimeStateAction) => void>()
-
-  return {
-    ...render(
-      <RuntimeStateContext.Provider
-        value={{
-          config,
-          initialState: state,
-          state,
-          dispatch,
-          dispatchAndSyncState,
-          getLatestState: () => state,
-        }}
-      >
-        <RuntimePage />
-      </RuntimeStateContext.Provider>,
-    ),
-    dispatch,
-    dispatchAndSyncState,
-  }
-}
-
-function createRuntimePageState(
-  activePage: RuntimePageConfig,
-  queries: RuntimeState['queries'],
-) {
-  const config: RuntimeConfig = {
-    api: {},
-    initialPage: activePage.id,
-    pages: [activePage],
-  }
-
-  const baseState = createRuntimeState(config)
-
-  return {
-    ...baseState,
-    queries,
-    pageEntry: {
-      ...baseState.pageEntry,
-      pageId: baseState.navigation.currentPageId,
-      params: baseState.pageEntry.params,
-    },
-  } satisfies RuntimeState
 }
 
 describe('FieldTooltip component', () => {

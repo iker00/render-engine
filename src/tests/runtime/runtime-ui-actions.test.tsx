@@ -28,7 +28,7 @@ const runtimeStateMock = {
   },
 }
 
-vi.mock('../../runtime/runtime-state/runtime-state-provider', () => ({
+vi.mock('../../runtime/runtime-state/use-runtime-state', () => ({
   useRuntimeState: () => runtimeStateMock,
   useRuntimeStateActions: () => useRuntimeStateActionsMock(),
 }))

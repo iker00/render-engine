@@ -22,7 +22,6 @@ export function templateContainsTokensReference(value: string): boolean {
   const pattern = /\{\{([^}]+)\}\}/g
   let match: RegExpExecArray | null
 
-  // eslint-disable-next-line no-cond-assign
   while ((match = pattern.exec(value)) !== null) {
     const rawReference = match[1].trim()
 

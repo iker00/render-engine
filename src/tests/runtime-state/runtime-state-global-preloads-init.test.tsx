@@ -5,7 +5,8 @@ import type { RuntimeState } from '../../runtime/runtime-state/runtime-state-typ
 import { createRuntimeState } from '../../runtime/runtime-state/runtime-state-reducer'
 import { buildRuntimeApiRequest } from '../../queries/runtime-api-executor'
 import { planGlobalPreloads } from '../../runtime/runtime-global-preloads'
-import { RuntimeStateProvider, useRuntimeState } from '../../runtime/runtime-state/runtime-state-provider'
+import { RuntimeStateProvider } from '../../runtime/runtime-state/runtime-state-provider'
+import { useRuntimeState } from '../../runtime/runtime-state/use-runtime-state'
 
 afterEach(() => {
   window.history.replaceState(null, '', window.location.pathname + window.location.search)

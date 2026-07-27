@@ -6,7 +6,7 @@ import { FORM_ONLY_LEAF_NODE_TYPES } from '../../config/layout-placement-rules'
 import { DevRuntimeReady } from '../../dev-runtime/dev-runtime'
 import { buildDefaultNodeInstance } from '../../dev-runtime/layout-canvas/layout-canvas-node-palette-defaults'
 import { getSupportedNodeTypesCatalog } from '../../dev-runtime/layout-canvas/layout-canvas-node-schema'
-import { serializePaletteDragId } from '../../dev-runtime/layout-canvas/layout-canvas-node-palette'
+import { serializePaletteDragId } from '../../dev-runtime/layout-canvas/layout-canvas-palette-drag-id'
 import {
   serializeDropZoneId,
   serializeLayoutNodePath,

@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 import { LayoutRenderer } from './layout-renderer'
 import { getRuntimePageClassName } from './runtime-node-styling'
 import { AccordionGroupProvider } from './runtime-accordion-group'
-import { useRuntimeCurrentPage, useRuntimeState } from './runtime-state/runtime-state-provider'
+import { useRuntimeCurrentPage, useRuntimeState } from './runtime-state/use-runtime-state'
 
 export function RuntimePage() {
   const page = useRuntimeCurrentPage()

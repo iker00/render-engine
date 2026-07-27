@@ -1,6 +1,7 @@
 import * as LucideIcons from 'lucide-react'
 import type { ComponentType, SVGProps } from 'react'
 import { createElement } from 'react'
+import { toPascalCase } from './icon-name-case'
 
 interface IconNodeProps {
   name: string | undefined
@@ -8,13 +9,6 @@ interface IconNodeProps {
 }
 
 type LucideIconComponent = ComponentType<SVGProps<SVGSVGElement> & { 'aria-hidden'?: string }>
-
-export function toPascalCase(name: string): string {
-  return name
-    .split('-')
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join('')
-}
 
 export function IconNode({ name, className }: IconNodeProps) {
   if (!name) return null

@@ -1,20 +1,11 @@
-import { screen } from '@testing-library/react'
 import { useEffect } from 'react'
-import type { RuntimeState } from '../../runtime/runtime-state/runtime-state-types'
-import {
-  useRuntimeState,
-  useRuntimeStateActions,
-} from '../../runtime/runtime-state/runtime-state-provider'
+import { useRuntimeState, useRuntimeStateActions } from '../../runtime/runtime-state/use-runtime-state'
 import { RuntimePage } from '../../runtime/runtime-page'
 
 export function RuntimeStateSnapshot({ testId }: { testId: string }) {
   const state = useRuntimeState()
 
   return <pre data-testid={testId}>{JSON.stringify(state)}</pre>
-}
-
-export function readRuntimeStateSnapshot(testId: string) {
-  return JSON.parse(screen.getByTestId(testId).textContent ?? '') as RuntimeState
 }
 
 export function FormRuntimeFixture() {

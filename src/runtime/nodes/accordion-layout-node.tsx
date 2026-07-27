@@ -1,11 +1,11 @@
-import { useEffect, useId, useState } from 'react'
+import { useId, useState } from 'react'
 import type { AccordionLayoutNode } from '../../config/runtime-config'
 import type { RuntimeIterationContext } from '../runtime-references/runtime-reference-resolver'
 import { resolveRuntimeTextReference } from '../runtime-references/runtime-reference-resolver'
-import { useRuntimeState } from '../runtime-state/runtime-state-provider'
+import { useRuntimeState } from '../runtime-state/use-runtime-state'
 import { LayoutRenderer } from '../layout-renderer'
-import { useAccordionGroup } from '../runtime-accordion-group'
-import { useLayoutEditModeContext } from '../layout-edit-mode-context'
+import { useAccordionGroup } from '../use-accordion-group'
+import { useLayoutEditModeContext } from '../use-layout-edit-mode-context'
 import type { LayoutNodePath } from '../layout-node-path'
 import {
   getAccordionBodyAnimationClassName,
@@ -43,22 +43,25 @@ export function AccordionNode({ node, iterationContext, path }: AccordionNodePro
   })
   const [isClosing, setIsClosing] = useState(false)
 
-  // For grouped accordions, sync local state with the group context
-  useEffect(() => {
-    if (!groupId) return
+  // For grouped accordions, sync local state with the group context. Adjusted during render
+  // (tracking the previous active instance id in state) instead of an effect: the guard below
+  // only reacts once per actual change of the group's active instance, so it cannot loop, and
+  // it skips re-running on renders unrelated to this accordion's group membership.
+  const activeGroupInstanceId = groupId ? getActiveInstanceId(groupId) : null
+  const [prevActiveGroupInstanceId, setPrevActiveGroupInstanceId] = useState(activeGroupInstanceId)
+  if (groupId && activeGroupInstanceId !== prevActiveGroupInstanceId) {
+    setPrevActiveGroupInstanceId(activeGroupInstanceId)
 
-    const activeId = getActiveInstanceId(groupId)
-
-    if (activeId !== null && activeId !== instanceId && isOpen) {
+    if (activeGroupInstanceId !== null && activeGroupInstanceId !== instanceId && isOpen) {
       setIsOpen(false)
       setIsClosing(true)
     }
 
-    if (activeId === instanceId && !isOpen) {
+    if (activeGroupInstanceId === instanceId && !isOpen) {
       setIsOpen(true)
       setIsClosing(false)
     }
-  })
+  }
 
   const resolvedLabel = resolveRuntimeTextReference(
     label,

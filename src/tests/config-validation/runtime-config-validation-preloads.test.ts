@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 import { validateRuntimeConfig } from '../../config/runtime-config'
-import { createConfigWithPages } from './helpers'
 
 describe('validateRuntimeConfig', () => {
   it('accepts a page with multiple root layout nodes in order', () => {

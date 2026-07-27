@@ -1583,7 +1583,7 @@ describe('validateRuntimeConfig', () => {
   })
 
   it('rejects submitAction.onSuccess with executeOperation referencing an inexistent operationName', () => {
-    const result = validateRuntimeConfig({
+    validateRuntimeConfig({
       api: {},
       pages: [
         {

@@ -29,10 +29,10 @@ import {
 } from '../../dev-runtime/layout-canvas/layout-canvas-commit'
 import {
   DevRuntimeReady,
-  triggerActiveConfigHmrApplyForTests,
   type CommitCanvasMutationResult,
   type DevRuntimeReadyHandle,
 } from '../../dev-runtime/dev-runtime'
+import { triggerActiveConfigHmrApplyForTests } from '../../dev-runtime/dev-runtime-hmr-bridge'
 import * as dyeRuntimeStateMigrationModule from '../../dev-runtime/dev-runtime-state-migration'
 import { validateRuntimeConfig } from '../../config/runtime-config'
 import type { LayoutNode, RuntimeConfig } from '../../config/runtime-config'

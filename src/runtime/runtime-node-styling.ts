@@ -353,7 +353,6 @@ export function getContainerNodeStyling({
   align,
   justify,
   wrap,
-  surface,
 }: ContainerNodeStylingOptions): ContainerNodeStyling {
   const isGridLayout = columns !== undefined
   const classNames = isGridLayout

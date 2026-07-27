@@ -166,7 +166,7 @@ describe('StatNode — tinted variant background and text color classes', () => 
         id: 'home',
         layout: [{ type: 'stat', props: { label: 'Label text', value: '100', variant: 'tinted', color } }],
       }
-      const { container } = renderRuntimePage(page)
+      renderRuntimePage(page)
       const labelEl = screen.getByText('Label text')
       expect(labelEl).toHaveClass(labelClass)
     })
@@ -176,7 +176,7 @@ describe('StatNode — tinted variant background and text color classes', () => 
         id: 'home',
         layout: [{ type: 'stat', props: { label: 'Label', value: 'Value text', variant: 'tinted', color } }],
       }
-      const { container } = renderRuntimePage(page)
+      renderRuntimePage(page)
       const valueEl = screen.getByText('Value text')
       expect(valueEl).toHaveClass(valueClass)
     })

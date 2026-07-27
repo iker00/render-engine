@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import type { ImageFetchConfig } from '../../config/runtime-config-types'
 import { executeRuntimeBinaryFetch } from '../../queries/runtime-binary-fetch'
 import type { RuntimeIterationContext } from '../runtime-references/runtime-reference-resolver'
-import { useRuntimeState } from '../runtime-state/runtime-state-provider'
+import { useRuntimeState } from '../runtime-state/use-runtime-state'
 
 interface ImageFetchSourceState {
   status: 'pending' | 'success' | 'error'

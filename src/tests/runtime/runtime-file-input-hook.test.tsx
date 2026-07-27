@@ -1,7 +1,8 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { FileInputLayoutNode, RuntimeConfig } from '../../config/runtime-config'
-import { RuntimeStateProvider, useRuntimeState } from '../../runtime/runtime-state/runtime-state-provider'
+import { RuntimeStateProvider } from '../../runtime/runtime-state/runtime-state-provider'
+import { useRuntimeState } from '../../runtime/runtime-state/use-runtime-state'
 import { FormContextProvider } from '../../runtime/form-context'
 import { FileInputNode } from '../../runtime/nodes/file-input-layout-node'
 

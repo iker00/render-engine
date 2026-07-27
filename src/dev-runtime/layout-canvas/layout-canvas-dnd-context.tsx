@@ -12,7 +12,7 @@ import {
 import type { LayoutNode, LayoutNodeType } from '../../config/runtime-config'
 import { deserializeLayoutNodePath, parseDropZoneId, type LayoutNodePath } from '../../runtime/layout-node-path'
 import { isValidDropTarget } from './layout-drop-validity'
-import { parsePaletteDragId } from './layout-canvas-node-palette'
+import { parsePaletteDragId } from './layout-canvas-palette-drag-id'
 
 /**
  * Raw, unvalidated drop intent (Decisión 7 / T12 de design.md): where a drag was released,

@@ -3,7 +3,7 @@ import {
   computeGridDropZoneRects,
   type DropZoneRectInput,
   type SectionRectInput,
-} from '../../runtime/layout-canvas-grid-drop-zones'
+} from '../../runtime/layout-canvas-grid-drop-zone-rects'
 
 function makeChild(overrides: Partial<DropZoneRectInput>): DropZoneRectInput {
   const top = overrides.top ?? 0

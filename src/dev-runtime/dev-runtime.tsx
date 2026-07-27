@@ -27,6 +27,7 @@ import {
 import { replaceNodeAt } from './layout-tree-mutations'
 import { DevEditorLayer } from './floating-toolbar/dev-editor-layer'
 import { FloatingMonacoPanel } from './floating-toolbar/floating-monaco-panel'
+import { setActiveConfigHmrApply } from './dev-runtime-hmr-bridge'
 
 export type { CommitCanvasMutationResult }
 
@@ -37,31 +38,6 @@ interface DevRuntimeProps {
 const defaultDevConfig = devConfigJson as unknown as RuntimeConfig
 const defaultDevConfigText = JSON.stringify(devConfigJson, null, 2)
 const defaultDevDataValues = devDataValuesJson as Record<string, unknown>
-
-let activeConfigHmrApply: ((nextConfig: unknown) => void) | null = null
-
-/**
- * Test-only seam: `activeConfigHmrApply` is only ever invoked in practice by
- * Vite's real HMR runtime when `../dev/config.json` changes on disk, which does
- * not happen inside a `vitest run` pass. This forwards to the exact same
- * function the `import.meta.hot.accept` callback below calls, so tests can
- * exercise the real HMR commit path without a live dev server.
- */
-export function triggerActiveConfigHmrApplyForTests(nextConfig: unknown): void {
-  activeConfigHmrApply?.(nextConfig)
-}
-
-if (import.meta.hot) {
-  // Fast Refresh re-evaluates this module on config.json HMR but preserves
-  // DevRuntimeReady's state, so the new config never reaches `currentConfig`
-  // through the initialConfig prop. Forward the update directly to the mounted
-  // component so it can re-apply via the same migration path as the drawer.
-  import.meta.hot.accept('../dev/config.json', (newModule) => {
-    if (newModule && activeConfigHmrApply) {
-      activeConfigHmrApply((newModule as unknown as { default: unknown }).default)
-    }
-  })
-}
 
 export function DevRuntime({ rootElement = document.getElementById('layout-renderer') }: DevRuntimeProps) {
   // Capture the raw text before validation so the editor shows the original format.
@@ -140,8 +116,12 @@ export const DevRuntimeReady = forwardRef<DevRuntimeReadyHandle, DevRuntimeReady
 
   // Track the current applied config in a ref so the HMR effect below can read
   // the latest value without adding it to deps (which would cause infinite loops).
+  // Synced via an effect (not during render) because writing to a ref's `.current`
+  // in the render body is a render side effect the React Compiler rejects.
   const currentConfigRef = useRef<RuntimeConfig>(currentConfig)
-  currentConfigRef.current = currentConfig
+  useEffect(() => {
+    currentConfigRef.current = currentConfig
+  }, [currentConfig])
 
   const prevInitialConfigRef = useRef(initialConfig)
   useEffect(() => {
@@ -163,15 +143,17 @@ export const DevRuntimeReady = forwardRef<DevRuntimeReadyHandle, DevRuntimeReady
     setParseError(null)
     setValidationError(null)
     setHasPendingChanges(false)
-  }, [initialConfig, initialConfigText])
+  }, [initialConfig, initialConfigText, dataValues])
 
   const hasPendingChangesRef = useRef(hasPendingChanges)
-  hasPendingChangesRef.current = hasPendingChanges
+  useEffect(() => {
+    hasPendingChangesRef.current = hasPendingChanges
+  }, [hasPendingChanges])
 
   useEffect(() => {
     if (!import.meta.hot) return
 
-    activeConfigHmrApply = (nextConfig) => {
+    setActiveConfigHmrApply((nextConfig) => {
       const validation = validateRuntimeConfig(nextConfig)
       if (validation.status === 'error') {
         setValidationError(validation.error)
@@ -206,12 +188,12 @@ export const DevRuntimeReady = forwardRef<DevRuntimeReadyHandle, DevRuntimeReady
           setEditorBuffer(reloadedModuleText)
         }
       })
-    }
+    })
 
     return () => {
-      activeConfigHmrApply = null
+      setActiveConfigHmrApply(null)
     }
-  }, [])
+  }, [dataValues])
 
   useEffect(() => {
     if (!hasAppliedChanges) return
@@ -231,14 +213,15 @@ export const DevRuntimeReady = forwardRef<DevRuntimeReadyHandle, DevRuntimeReady
 
   // The drawer's `handleToggle` used to seed `editorBuffer` with the original raw text the
   // first time it opened. With the drawer gone, `onMonacoOpenChange` is wired directly to
-  // `setMonacoOpen` (no wrapping handler — see the render below), so this effect is the
-  // equivalent hook: it seeds the buffer the first time the Monaco panel opens, preserving
-  // "first open shows the original raw text, not the re-serialized normalized config".
-  useEffect(() => {
-    if (monacoOpen && editorBuffer === null) {
-      setEditorBuffer(initialConfigText)
-    }
-  }, [monacoOpen, editorBuffer, initialConfigText])
+  // `setMonacoOpen` (no wrapping handler — see the render below), so this seeds the buffer
+  // the first time the Monaco panel opens, preserving "first open shows the original raw
+  // text, not the re-serialized normalized config". Done during render (the React-documented
+  // "adjust state when a prop changes" pattern) instead of an effect: the guard
+  // (`editorBuffer === null`) is only ever true once per null-buffer window, so it cannot
+  // loop, and it avoids a redundant extra commit versus doing this in a useEffect.
+  if (monacoOpen && editorBuffer === null) {
+    setEditorBuffer(initialConfigText)
+  }
 
   // Sole remaining keyboard entry point (design.md 0103, Decisión 7): `Esc` closes the Monaco
   // panel when it's open. The toggle shortcut (`Ctrl/Cmd+Shift+J`) and `useDevRuntimeKeyboard`
