@@ -1,7 +1,8 @@
 ---
 name: generate-feature-design
 description: Genera el design técnico de una feature de este proyecto cuando la spec ya está cerrada pero todavía hace falta decidir trade-offs técnicos, arquitectura o estrategia de cambio antes de planificar. Úsala para escribir `features/NNNN-feature-name/design.md` y dejar la feature lista para `generate-implementation-plan`.
-model: claude-opus-4-7
+model: sonnet
+allowed-tools: Read, Write, Edit
 ---
 
 # Generar design de feature
@@ -29,20 +30,19 @@ Si `requires_design` es `false` o `artifacts.design` ya es `ready`, esta skill n
 - `ai-workflow/docs/architecture.md`
 - `ai-workflow/docs/conventions.md`
 - `ai-workflow/docs/app-features/index.md`
-- solo las fichas de `ai-workflow/docs/app-features/` que el índice marque como relevantes para la feature
+- solo las fichas de `ai-workflow/docs/app-features/` que el índice marque como relevantes para la feature (típicamente 1-3, rara vez más de 5)
 - `ai-workflow/templates/design.md`
 
 ## Leer si aplica
 - `ai-workflow/docs/current-state.md` si hace falta confirmar el estado vigente o un límite actual.
 - `ai-workflow/standards/` según el tipo de riesgo a evaluar: React, errores, seguridad u otras reglas de calidad afectadas.
 - `ai-workflow/features/index.md` si hace falta coordinación con otras features o contexto histórico.
-- Código y tests actuales de las áreas afectadas cuando una decisión técnica dependa del estado real del runtime.
-- `ai-workflow/docs/index.md` solo como mapa documental auxiliar si no está claro qué contexto adicional seleccionar.
+- Código o tests actuales sólo si la spec o un `design.md` previo referencian explícitamente un símbolo o módulo concreto cuyo comportamiento actual no está descrito en `architecture.md` ni en `context.md`. Máximo 1 fichero por decisión técnica; justificar la lectura antes de abrirla.
 
 ## Objetivo
 Escribir o refinar `features/NNNN-feature-name/design.md` usando `ai-workflow/templates/design.md` como punto de partida.
 
-No trocear todavía la feature en tareas. No escribir `tasks.md`. No implementar código.
+No trocear todavía la feature en tareas; ver "Restricciones" para el resto de límites de esta fase.
 
 ## Qué debe incluir `design.md`
 Como mínimo, siguiendo el template del proyecto:

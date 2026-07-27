@@ -367,7 +367,7 @@ describe('validateRuntimeConfig', () => {
         error: {
           code: 'invalid-layout',
           displayMode: 'development-only',
-          message: 'Page "home" has an invalid layout at "layout[0].children[0].props.optionLayout".',
+          message: expect.stringContaining('layout[0].children[0].props.optionLayout'),
         },
       })
 
@@ -394,7 +394,7 @@ describe('validateRuntimeConfig', () => {
         error: {
           code: 'invalid-layout',
           displayMode: 'development-only',
-          message: 'Page "home" has an invalid layout at "layout[0].children[0].props.optionLayout".',
+          message: expect.stringContaining('layout[0].children[0].props.optionLayout'),
         },
       })
     })
@@ -418,7 +418,9 @@ describe('validateRuntimeConfig', () => {
         error: {
           code: 'invalid-layout',
           displayMode: 'development-only',
-          message: 'Page "home" has an invalid layout at "layout[0]": radioGroup nodes must be descendants of a form node.',
+          message: `Page "home" has an invalid layout at "layout[0]": radioGroup nodes must be descendants of a form node.
+  → radioGroup(fieldId: "role")
+  Node: {"type":"radioGroup","props":{"fieldId":"role","label":"Role"}}`,
         },
       })
 
@@ -442,7 +444,9 @@ describe('validateRuntimeConfig', () => {
         error: {
           code: 'invalid-layout',
           displayMode: 'development-only',
-          message: 'Page "home" has an invalid layout at "layout[0]": checkboxGroup nodes must be descendants of a form node.',
+          message: `Page "home" has an invalid layout at "layout[0]": checkboxGroup nodes must be descendants of a form node.
+  → checkboxGroup(fieldId: "scopes")
+  Node: {"type":"checkboxGroup","props":{"fieldId":"scopes","label":"Scopes"}}`,
         },
       })
     })
@@ -467,7 +471,9 @@ describe('validateRuntimeConfig', () => {
           code: 'invalid-layout',
           displayMode: 'development-only',
           message:
-            'Page "home" has an invalid layout at "layout[0].children[0]": form nodes only accept input, textarea, select, radioGroup, checkboxGroup, button, heading, paragraph, image, table, container, accordion, divider and tabs descendants.',
+            `Page "home" has an invalid layout at "layout[0].children[0]": form nodes only accept input, textarea, select, radioGroup, checkboxGroup, fileInput, toggle, hidden, button, heading, paragraph, image, table, container, accordion, divider and tabs descendants.
+  → form("user-form") > list[0]
+  Node: {"type":"list"}`,
         },
       })
     })
@@ -534,10 +540,8 @@ describe('validateRuntimeConfig', () => {
                 fieldId: 'assignees',
                 label: 'Assignees',
                 items: {
-                  values: [
-                    { id: 1, name: 'Ada' },
-                    { id: 2, name: 'Grace' },
-                  ],
+                  source: 'queries.searchUsers.data.results',
+                  itemType: 'object',
                   label: 'name',
                   value: 'id',
                 },
@@ -571,6 +575,7 @@ describe('validateRuntimeConfig', () => {
                         label: 'Dynamic users',
                         items: {
                           source: 'queries.searchUsers.data.results',
+                          itemType: 'object',
                           label: 'profile.name',
                           value: 'id',
                         },
@@ -583,6 +588,7 @@ describe('validateRuntimeConfig', () => {
                         label: 'Dynamic select',
                         items: {
                           source: 'queries.searchUsers.data.results',
+                          itemType: 'object',
                           label: 'profile.name',
                           value: 'id',
                         },
@@ -622,8 +628,7 @@ describe('validateRuntimeConfig', () => {
         error: {
           code: 'invalid-layout',
           displayMode: 'development-only',
-          message:
-            'Page "home" has an invalid layout at "layout[0].children[0].props.items.values": select item values must all be strings or all be numbers.',
+          message: expect.stringContaining('select item values must all be strings or all be numbers'),
         },
       })
 
@@ -650,8 +655,7 @@ describe('validateRuntimeConfig', () => {
         error: {
           code: 'invalid-layout',
           displayMode: 'development-only',
-          message:
-            'Page "home" has an invalid layout at "layout[0].children[0].props.items": select item values must all be strings or all be numbers.',
+          message: expect.stringContaining('select item values must all be strings or all be numbers'),
         },
       })
     })
@@ -681,8 +685,7 @@ describe('validateRuntimeConfig', () => {
         error: {
           code: 'invalid-layout',
           displayMode: 'development-only',
-          message:
-            'Page "home" has an invalid layout at "layout[0].children[0].props.defaultValue": multiple choice fields only accept array literals or supported runtime references.',
+          message: expect.stringContaining('multiple choice fields only accept array literals or supported runtime references'),
         },
       })
 
@@ -709,8 +712,7 @@ describe('validateRuntimeConfig', () => {
         error: {
           code: 'invalid-layout',
           displayMode: 'development-only',
-          message:
-            'Page "home" has an invalid layout at "layout[0].children[0].props.defaultValue": multiple choice fields only accept array literals or supported runtime references.',
+          message: expect.stringContaining('multiple choice fields only accept array literals or supported runtime references'),
         },
       })
 
@@ -758,8 +760,7 @@ describe('validateRuntimeConfig', () => {
         error: {
           code: 'invalid-layout',
           displayMode: 'development-only',
-          message:
-            'Page "home" has an invalid layout at "layout[0].children[0].props.defaultValue": single choice fields do not accept array literal defaultValue.',
+          message: expect.stringContaining('single choice fields do not accept array literal defaultValue'),
         },
       })
 
@@ -784,8 +785,7 @@ describe('validateRuntimeConfig', () => {
         error: {
           code: 'invalid-layout',
           displayMode: 'development-only',
-          message:
-            'Page "home" has an invalid layout at "layout[0].children[0].props.defaultValue": single choice fields do not accept array literal defaultValue.',
+          message: expect.stringContaining('single choice fields do not accept array literal defaultValue'),
         },
       })
     })
@@ -811,8 +811,7 @@ describe('validateRuntimeConfig', () => {
         error: {
           code: 'invalid-layout',
           displayMode: 'development-only',
-          message:
-            'Page "home" has an invalid layout at "layout[0].children[0].props.defaultValue": input fields do not accept array literal defaultValue.',
+          message: expect.stringContaining('input fields do not accept array literal defaultValue'),
         },
       })
 
@@ -836,8 +835,7 @@ describe('validateRuntimeConfig', () => {
         error: {
           code: 'invalid-layout',
           displayMode: 'development-only',
-          message:
-            'Page "home" has an invalid layout at "layout[0].children[0].props.defaultValue": textarea fields do not accept array literal defaultValue.',
+          message: expect.stringContaining('textarea fields do not accept array literal defaultValue'),
         },
       })
     })
@@ -866,8 +864,7 @@ describe('validateRuntimeConfig', () => {
         error: {
           code: 'invalid-layout',
           displayMode: 'development-only',
-          message:
-            'Page "home" has an invalid layout at "layout[0].children[0].props.defaultValue": multiple choice defaultValue arrays must contain only strings or only numbers.',
+          message: expect.stringContaining('multiple choice defaultValue arrays must contain only strings or only numbers'),
         },
       })
 
@@ -895,8 +892,7 @@ describe('validateRuntimeConfig', () => {
         error: {
           code: 'invalid-layout',
           displayMode: 'development-only',
-          message:
-            'Page "home" has an invalid layout at "layout[0].children[0].props.defaultValue[0]": multiple choice defaultValue arrays only accept string or number members.',
+          message: expect.stringContaining('multiple choice defaultValue arrays only accept string or number members'),
         },
       })
     })
@@ -1003,7 +999,7 @@ describe('validateRuntimeConfig', () => {
           error: {
             code: 'invalid-layout',
             displayMode: 'development-only',
-            message: 'Page "home" has an invalid layout at "layout[0].children[0].props.placeholder".',
+            message: expect.stringContaining('layout[0].children[0].props.placeholder'),
           },
         })
       })
@@ -1057,7 +1053,7 @@ describe('validateRuntimeConfig', () => {
           error: {
             code: 'invalid-layout',
             displayMode: 'development-only',
-            message: 'Page "home" has an invalid layout at "layout[0].children[0].props.placeholder".',
+            message: expect.stringContaining('layout[0].children[0].props.placeholder'),
           },
         })
       })
@@ -1143,7 +1139,7 @@ describe('validateRuntimeConfig', () => {
           error: {
             code: 'invalid-layout',
             displayMode: 'development-only',
-            message: 'Page "home" has an invalid layout at "layout[0].children[0].props.placeholder".',
+            message: expect.stringContaining('layout[0].children[0].props.placeholder'),
           },
         })
       })
@@ -1245,7 +1241,9 @@ describe('validateRuntimeConfig', () => {
         code: 'invalid-layout',
         displayMode: 'development-only',
         message:
-          'Page "home" has an invalid layout at "layout[0].queryStateFeedback.states.loading.fallback[0]": input nodes must be descendants of a form node.',
+          `Page "home" has an invalid layout at "layout[0].queryStateFeedback.states.loading.fallback[0]": input nodes must be descendants of a form node.
+  → heading("Title") > input(fieldId: "name")
+  Node: {"type":"input","props":{"fieldId":"name","label":"Name"}}`,
       },
     })
 
@@ -1288,7 +1286,9 @@ describe('validateRuntimeConfig', () => {
         code: 'invalid-layout',
         displayMode: 'development-only',
         message:
-          'Page "home" has an invalid layout at "layout[0].children[0].queryStateFeedback.states.loading.fallback[0].props.action.pageId": unknown page "missingPage".',
+          `Page "home" has an invalid layout at "layout[0].children[0].queryStateFeedback.states.loading.fallback[0].props.action.pageId": unknown page "missingPage".
+  → form("user-form") > paragraph("Profile") > button("Broken fallback navigation")
+  Node: {"type":"button","props":{"label":"Broken fallback navigation"}}`,
       },
     })
   })
@@ -1431,7 +1431,9 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].children".',
+        message: `Page "home" has an invalid layout at "layout[0].children".
+  → container[0]
+  Node: {"type":"container"}`,
       },
     })
   })
@@ -1497,6 +1499,188 @@ describe('validateRuntimeConfig', () => {
         message:
           'Page "home" uses unsupported layout node type "hero-banner" at "layout[0].children[1]".',
       },
+    })
+  })
+
+  describe('input props.iconPosition', () => {
+    it('accepts iconPosition: "left" and the normalized node preserves it', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithFormLayout({
+          children: [
+            {
+              type: 'input',
+              props: {
+                fieldId: 'email',
+                label: 'Email',
+                icon: 'Mail',
+                iconPosition: 'left',
+              },
+            },
+          ],
+        }),
+      )
+
+      expect(result.status).toBe('ready')
+      if (result.status !== 'ready') throw new Error('Expected ready')
+
+      const formNode = result.page.layout[0]
+      if (formNode.type !== 'form') throw new Error('Expected form')
+
+      expect(formNode.children?.[0]).toMatchObject({
+        type: 'input',
+        props: { fieldId: 'email', iconPosition: 'left' },
+      })
+    })
+
+    it('accepts iconPosition: "right" and the normalized node preserves it', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithFormLayout({
+          children: [
+            {
+              type: 'input',
+              props: {
+                fieldId: 'email',
+                label: 'Email',
+                icon: 'Mail',
+                iconPosition: 'right',
+              },
+            },
+          ],
+        }),
+      )
+
+      expect(result.status).toBe('ready')
+      if (result.status !== 'ready') throw new Error('Expected ready')
+
+      const formNode = result.page.layout[0]
+      if (formNode.type !== 'form') throw new Error('Expected form')
+
+      expect(formNode.children?.[0]).toMatchObject({
+        type: 'input',
+        props: { fieldId: 'email', iconPosition: 'right' },
+      })
+    })
+
+    it('without iconPosition, the normalized node does not include the iconPosition key', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithFormLayout({
+          children: [
+            {
+              type: 'input',
+              props: {
+                fieldId: 'email',
+                label: 'Email',
+              },
+            },
+          ],
+        }),
+      )
+
+      expect(result.status).toBe('ready')
+      if (result.status !== 'ready') throw new Error('Expected ready')
+
+      const formNode = result.page.layout[0]
+      if (formNode.type !== 'form') throw new Error('Expected form')
+
+      const inputNode = formNode.children?.[0]
+      expect(inputNode).not.toHaveProperty('props.iconPosition')
+    })
+
+    it('rejects iconPosition with a value outside the enum with code invalid-layout and the exact path', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithFormLayout({
+          children: [
+            {
+              type: 'input',
+              props: {
+                fieldId: 'email',
+                label: 'Email',
+                iconPosition: 'center',
+              },
+            },
+          ],
+        }),
+      )
+
+      expect(result.status).toBe('error')
+      if (result.status !== 'error') throw new Error('Expected error')
+
+      expect(result.error.code).toBe('invalid-layout')
+      expect(result.error.message).toContain('layout[0].children[0].props.iconPosition')
+    })
+
+    it('accepts iconPosition declared without icon and the normalized node preserves iconPosition', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithFormLayout({
+          children: [
+            {
+              type: 'input',
+              props: {
+                fieldId: 'email',
+                label: 'Email',
+                iconPosition: 'right',
+              },
+            },
+          ],
+        }),
+      )
+
+      expect(result.status).toBe('ready')
+      if (result.status !== 'ready') throw new Error('Expected ready')
+
+      const formNode = result.page.layout[0]
+      if (formNode.type !== 'form') throw new Error('Expected form')
+
+      expect(formNode.children?.[0]).toMatchObject({
+        type: 'input',
+        props: { fieldId: 'email', iconPosition: 'right' },
+      })
+    })
+  })
+
+  describe('breadcrumb enrichment', () => {
+    it('includes breadcrumb and excerpt for input error within a form', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithFormLayout({
+          children: [
+            {
+              type: 'input',
+              props: {
+                fieldId: 'name',
+                label: 'Name',
+                defaultValue: ['a', 'b'],
+              },
+            },
+          ],
+        }),
+      )
+
+      expect(result.status).toBe('error')
+      if (result.status !== 'error') throw new Error('Expected error')
+      expect(result.error.message).toContain('form("user-form") > input(fieldId: "name")')
+      expect(result.error.message).toContain('Node: {"type":"input","props":{"fieldId":"name","label":"Name"}}')
+    })
+
+    it('includes breadcrumb and excerpt for select items error', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithFormLayout({
+          children: [
+            {
+              type: 'select',
+              props: {
+                fieldId: 'role',
+                label: 'Role',
+                items: 'not-an-array',
+              },
+            },
+          ],
+        }),
+      )
+
+      expect(result.status).toBe('error')
+      if (result.status !== 'error') throw new Error('Expected error')
+      expect(result.error.message).toContain('form("user-form") > select(fieldId: "role")')
+      expect(result.error.message).toContain('Node: ')
     })
   })
 })

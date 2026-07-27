@@ -482,3 +482,261 @@ describe('StatNode — props.icon', () => {
     expect(stat!.querySelector('svg')).not.toBeInTheDocument()
   })
 })
+
+describe('StatNode — plain variant', () => {
+  const plainColors = ['neutral', 'primary', 'success', 'warning', 'danger', 'info'] as const
+  const tintedBgClasses = [
+    'bg-neutral-100',
+    'bg-primary-100',
+    'bg-success-100',
+    'bg-warning-100',
+    'bg-danger-100',
+    'bg-info-100',
+  ] as const
+
+  it('stat with variant: "plain" renders an element with data-layout-node="stat" in the DOM', () => {
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [{ type: 'stat', props: { label: 'Revenue', value: '$12,000', variant: 'plain' } }],
+    }
+    const { container } = renderRuntimePage(page)
+    expect(container.querySelector('[data-layout-node="stat"]')).toBeInTheDocument()
+  })
+
+  it('stat plain root element has no border-l-4 class and no colored tinted background classes', () => {
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [{ type: 'stat', props: { label: 'Revenue', value: '$12,000', variant: 'plain' } }],
+    }
+    const { container } = renderRuntimePage(page)
+    const stat = container.querySelector('[data-layout-node="stat"]')
+    expect(stat).toBeInTheDocument()
+    expect(stat).not.toHaveClass('border-l-4')
+    tintedBgClasses.forEach((bgClass) => {
+      expect(stat).not.toHaveClass(bgClass)
+    })
+  })
+
+  it('stat plain renders label and value text', () => {
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [{ type: 'stat', props: { label: 'Plain label', value: 'Plain value', variant: 'plain' } }],
+    }
+    renderRuntimePage(page)
+    expect(screen.getByText('Plain label')).toBeInTheDocument()
+    expect(screen.getByText('Plain value')).toBeInTheDocument()
+  })
+
+  it('stat plain with props.icon: "TrendingUp" renders an <svg> descendant inside [data-layout-node="stat"]', () => {
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [{ type: 'stat', props: { label: 'Growth', value: '+12%', variant: 'plain', icon: 'TrendingUp' } }],
+    }
+    const { container } = renderRuntimePage(page)
+    const stat = container.querySelector('[data-layout-node="stat"]')
+    expect(stat).toBeInTheDocument()
+    const svg = stat!.querySelector('svg')
+    expect(svg).toBeInTheDocument()
+    expect(svg).toHaveAttribute('aria-hidden', 'true')
+  })
+
+  it('stat plain with props.icon: "NonExistentIconXyz" renders no <svg> inside [data-layout-node="stat"]', () => {
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [{ type: 'stat', props: { label: 'Metric', value: '100', variant: 'plain', icon: 'NonExistentIconXyz' } }],
+    }
+    const { container } = renderRuntimePage(page)
+    const stat = container.querySelector('[data-layout-node="stat"]')
+    expect(stat).toBeInTheDocument()
+    expect(stat!.querySelector('svg')).not.toBeInTheDocument()
+  })
+
+  plainColors.forEach((color) => {
+    it(`stat plain with color="${color}" renders identically (outerHTML) to plain without color`, () => {
+      const pageWithoutColor: RuntimePageConfig = {
+        id: 'home',
+        layout: [{ type: 'stat', props: { label: 'Metric', value: '100', variant: 'plain' } }],
+      }
+      const pageWithColor: RuntimePageConfig = {
+        id: 'home',
+        layout: [{ type: 'stat', props: { label: 'Metric', value: '100', variant: 'plain', color } }],
+      }
+      const { container: containerWithout } = renderRuntimePage(pageWithoutColor)
+      const { container: containerWith } = renderRuntimePage(pageWithColor)
+      const statWithout = containerWithout.querySelector('[data-layout-node="stat"]')
+      const statWith = containerWith.querySelector('[data-layout-node="stat"]')
+      expect(statWithout).toBeInTheDocument()
+      expect(statWith).toBeInTheDocument()
+      expect(statWith!.outerHTML).toBe(statWithout!.outerHTML)
+    })
+  })
+
+  it('stat plain props.label with {{queries.foo.data}} resolves to query value when query has status success', () => {
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [{ type: 'stat', props: { label: '{{queries.foo.data}}', value: '100', variant: 'plain' } }],
+    }
+    const state = createRuntimePageState(page, {
+      foo: {
+        status: 'success',
+        data: 'Revenue',
+        requestedAt: 0,
+        resolvedAt: 0,
+        error: null,
+      },
+    })
+    renderRuntimePageWithState(page, state)
+    expect(screen.getByText('Revenue')).toBeInTheDocument()
+  })
+
+  it('stat plain props.value with {{queries.foo.data}} resolves to query value when query has status success', () => {
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [{ type: 'stat', props: { label: 'Metric', value: '{{queries.foo.data}}', variant: 'plain' } }],
+    }
+    const state = createRuntimePageState(page, {
+      foo: {
+        status: 'success',
+        data: '$42,000',
+        requestedAt: 0,
+        resolvedAt: 0,
+        error: null,
+      },
+    })
+    renderRuntimePageWithState(page, state)
+    expect(screen.getByText('$42,000')).toBeInTheDocument()
+  })
+
+  it('stat plain with visibility evaluated to false is not rendered in the DOM', () => {
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [
+        {
+          type: 'stat',
+          props: { label: 'Hidden', value: '100', variant: 'plain' },
+          visibility: {
+            reference: 'queries.q.data.show',
+            operator: 'isTruthy',
+          },
+        },
+      ],
+    }
+    const state = createRuntimePageState(page, {
+      q: {
+        status: 'success',
+        data: { show: false },
+        requestedAt: 0,
+        resolvedAt: 0,
+        error: null,
+      },
+    })
+    renderRuntimePageWithState(page, state)
+    expect(screen.queryByText('Hidden')).not.toBeInTheDocument()
+  })
+
+  it('stat plain with queryStateFeedback in loading state renders the fallback and hides the stat', () => {
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [
+        {
+          type: 'stat',
+          props: { label: 'Original', value: '100', variant: 'plain' },
+          queryStateFeedback: {
+            query: 'q',
+            states: {
+              loading: {
+                mode: 'fallback',
+                fallback: [{ type: 'paragraph', props: { text: 'Loading...' } }],
+              },
+            },
+          },
+        },
+      ],
+    }
+    const state = createRuntimePageState(page, {
+      q: {
+        status: 'loading',
+        data: null,
+        requestedAt: 0,
+        resolvedAt: null,
+        error: null,
+      },
+    })
+    renderRuntimePageWithState(page, state)
+    expect(screen.getByText('Loading...')).toBeInTheDocument()
+    expect(screen.queryByText('Original')).not.toBeInTheDocument()
+  })
+
+  it('stat plain with layout.span: 4 inside a container with columns: 12 is wrapped in div.col-span-4', () => {
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [
+        {
+          type: 'container',
+          props: { columns: 12 },
+          children: [
+            {
+              type: 'stat',
+              layout: { span: 4 },
+              props: { label: 'Metric', value: '100', variant: 'plain' },
+            },
+          ],
+        },
+      ],
+    }
+    const { container } = renderRuntimePage(page)
+    const spanWrapper = container.querySelector('.col-span-4')
+    expect(spanWrapper).toBeInTheDocument()
+    expect(spanWrapper!.querySelector('[data-layout-node="stat"]')).toBeInTheDocument()
+  })
+
+  it('stat without variant declared still renders as accent (regression: root has border-l-4)', () => {
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [{ type: 'stat', props: { label: 'Revenue', value: '$12,000' } }],
+    }
+    const { container } = renderRuntimePage(page)
+    const stat = container.querySelector('[data-layout-node="stat"]')
+    expect(stat).toBeInTheDocument()
+    expect(stat).toHaveClass('border-l-4')
+  })
+
+  it('stat plain inside repeater with two items renders two stats with item.* resolved in label and value', () => {
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [
+        {
+          type: 'repeater',
+          props: {
+            items: {
+              source: 'queries.metrics.data',
+              key: 'id',
+            },
+            template: [
+              { type: 'stat', props: { label: '{{item.label}}', value: '{{item.value}}', variant: 'plain' } },
+            ],
+          },
+        },
+      ],
+    }
+    const state = createRuntimePageState(page, {
+      metrics: {
+        status: 'success',
+        data: [
+          { id: '1', label: 'Revenue', value: '$1,000' },
+          { id: '2', label: 'Users', value: '500' },
+        ],
+        requestedAt: 0,
+        resolvedAt: 0,
+        error: null,
+      },
+    })
+    const { container } = renderRuntimePageWithState(page, state)
+    const stats = container.querySelectorAll('[data-layout-node="stat"]')
+    expect(stats).toHaveLength(2)
+    expect(screen.getByText('Revenue')).toBeInTheDocument()
+    expect(screen.getByText('$1,000')).toBeInTheDocument()
+    expect(screen.getByText('Users')).toBeInTheDocument()
+    expect(screen.getByText('500')).toBeInTheDocument()
+  })
+})

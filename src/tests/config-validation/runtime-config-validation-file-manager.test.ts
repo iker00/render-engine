@@ -667,3 +667,144 @@ describe('validateRuntimeConfig — fileManager node: cross-checks (T7)', () => 
     expect(result.status).toBe('ready')
   })
 })
+
+// ─── props.labels (T4) ────────────────────────────────────────────────────────
+
+describe('props.labels', () => {
+  it('accepts a fileManager node with labels omitted (no regression)', () => {
+    const result = validateRuntimeConfig(createConfigWithLayout([createFileManagerNode()]))
+    expect(result.status).toBe('ready')
+  })
+
+  it('accepts labels with one or several recognized keys as strings, including empty string', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithLayout([
+        createFileManagerNode({
+          labels: {
+            dropzoneIdle: 'Suelta aquí',
+            dropzoneAcceptedFormats: 'Formatos: {{formats}}',
+            listEmpty: '',
+            rowDeleteLabel: 'Eliminar',
+          },
+        }),
+      ]),
+    )
+    expect(result.status).toBe('ready')
+  })
+
+  it('accepts labels as an empty object', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithLayout([createFileManagerNode({ labels: {} })]),
+    )
+    expect(result.status).toBe('ready')
+  })
+
+  it('rejects labels with an unknown key with path ending in props.labels.dropzoneidle', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithLayout([
+        createFileManagerNode({ labels: { dropzoneidle: 'Suelta aquí' } }),
+      ]),
+    )
+    expect(result.status).toBe('error')
+    if (result.status === 'error') {
+      expect(result.error.code).toBe('invalid-layout')
+      expect(result.error.message).toContain('props.labels.dropzoneidle')
+    }
+  })
+
+  it('rejects labels.dropzoneIdle as a non-string value with path ending in props.labels.dropzoneIdle', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithLayout([createFileManagerNode({ labels: { dropzoneIdle: 42 } })]),
+    )
+    expect(result.status).toBe('error')
+    if (result.status === 'error') {
+      expect(result.error.code).toBe('invalid-layout')
+      expect(result.error.message).toContain('props.labels.dropzoneIdle')
+    }
+  })
+
+  it('rejects labels declared as a non-object value with path ending in props.labels', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithLayout([createFileManagerNode({ labels: 'no-es-objeto' })]),
+    )
+    expect(result.status).toBe('error')
+    if (result.status === 'error') {
+      expect(result.error.code).toBe('invalid-layout')
+      expect(result.error.message).toContain('props.labels')
+    }
+  })
+})
+
+// ─── Second-pass breadcrumb enrichment tests ─────────────────────────────────
+
+describe('validateRuntimeConfig — second-pass fileManager errors include breadcrumb', () => {
+  it('operation not declared in api includes breadcrumb with fileManager(operationName: "x")', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithFileManagerAndApi(
+        createFileManagerNode({ uploadOperation: 'noExiste' }),
+      ),
+    )
+    expect(result.status).toBe('error')
+    if (result.status !== 'error') throw new Error('Expected error')
+    expect(result.error.message).toContain('"noExiste" is not declared in api')
+    expect(result.error.message).toContain('\n  → ')
+    expect(result.error.message).toContain('fileManager(fieldName: "documentos")')
+    expect(result.error.message).toContain('\n  Node: ')
+    expect(result.error.message).toContain('"type":"fileManager"')
+  })
+
+  it('fileManager inside container shows breadcrumb with container ancestor', () => {
+    const result = validateRuntimeConfig({
+      api: {},
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'container',
+              children: [
+                createFileManagerNode({ uploadOperation: 'missingOp' }),
+              ],
+            },
+          ],
+        },
+      ],
+      initialPage: 'home',
+    })
+    expect(result.status).toBe('error')
+    if (result.status !== 'error') throw new Error('Expected error')
+    expect(result.error.message).toContain('"missingOp" is not declared in api')
+    expect(result.error.message).toContain('\n  → ')
+    expect(result.error.message).toContain('container[0]')
+    expect(result.error.message).toContain('fileManager(fieldName: "documentos")')
+    expect(result.error.message).toContain('\n  Node: ')
+  })
+
+  it('fileManager inside repeater template shows breadcrumb with repeater ancestor', () => {
+    const result = validateRuntimeConfig({
+      api: {},
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'repeater',
+              props: {
+                items: { source: 'queries.docs.data', key: 'id' },
+                template: [
+                  createFileManagerNode({ uploadOperation: 'gone' }),
+                ],
+              },
+            },
+          ],
+        },
+      ],
+      initialPage: 'home',
+    })
+    expect(result.status).toBe('error')
+    if (result.status !== 'error') throw new Error('Expected error')
+    expect(result.error.message).toContain('"gone" is not declared in api')
+    expect(result.error.message).toContain('repeater[0]')
+    expect(result.error.message).toContain('fileManager(fieldName: "documentos")')
+  })
+})

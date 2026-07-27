@@ -2,17 +2,25 @@ import { useCallback, useEffect, useLayoutEffect, useState } from 'react'
 import type { Dispatch, ReactNode } from 'react'
 import { useContext, useMemo, useReducer, useRef } from 'react'
 import { useRuntimeTokenScheduler } from '../runtime-tokens'
+import { planGlobalPreloads, useRuntimeGlobalPreloads } from '../runtime-global-preloads'
 import type {
   NavigateToRuntimeUiAction,
+  RuntimeApiBodyValue,
   RuntimeApiRequestParams,
   RuntimeConfig,
   RuntimeConfigValue,
   RuntimePageConfig,
   RuntimePreloadConfig,
 } from '../../config/runtime-config'
-import { buildRuntimeApiRequest, buildInlineRuntimeApiRequest, executeBuiltRuntimeApiRequest } from '../../queries/runtime-api-executor'
+import {
+  buildRuntimeApiRequest,
+  buildInlineRuntimeApiRequest,
+  executeBuiltRuntimeApiRequest,
+  hasEncodableFileInputSources,
+  resolveFileInputSourcesOverrides,
+} from '../../queries/runtime-api-executor'
 import type { RuntimeApiOperation } from '../../config/runtime-config'
-import type { RuntimeApiHiddenFormFields } from '../../queries/runtime-api-types'
+import type { RuntimeApiFileInputSources, RuntimeApiHiddenFormFields } from '../../queries/runtime-api-types'
 import {
   areBrowserHashNavigationEntriesEqual,
   createBrowserHashNavigationHash,
@@ -21,6 +29,8 @@ import {
 import type { RuntimeIterationContext } from '../runtime-references/runtime-reference-resolver'
 import { resolveRuntimeValueWithOptions } from '../runtime-references/runtime-reference-resolver'
 import { matchesVisibilityRule } from '../runtime-layout-visibility'
+import { RuntimeDocumentTitleEffect } from '../runtime-document-title'
+import { useLayoutEditModeContext } from '../layout-edit-mode-context'
 import { RuntimeStateContext } from './runtime-state-context'
 import { createRuntimeState, runtimeStateReducer } from './runtime-state-reducer'
 import { selectCurrentNavigationEntry, selectCurrentPage } from './runtime-state-selectors'
@@ -133,6 +143,7 @@ async function executeQueryOperationWithSnapshot({
   requestParams,
   iterationContext,
   hiddenFormFields,
+  fileInputSources,
   fetchImplementation,
   skipLoadingDispatch = false,
 }: {
@@ -143,9 +154,35 @@ async function executeQueryOperationWithSnapshot({
   requestParams?: RuntimeApiRequestParams
   iterationContext?: RuntimeIterationContext
   hiddenFormFields?: RuntimeApiHiddenFormFields
+  fileInputSources?: RuntimeApiFileInputSources
   fetchImplementation?: typeof fetch
   skipLoadingDispatch?: boolean
 }) {
+  // Only await the encoding preflight when there are files to encode: awaiting
+  // an async function always defers to a microtask even if it resolves
+  // immediately, which would otherwise push the `queries/set-loading` dispatch
+  // below one tick later than today for every operation, not just uploads.
+  let fileValueOverrides: ReadonlyMap<string, RuntimeApiBodyValue[]> | undefined
+
+  if (hasEncodableFileInputSources(fileInputSources)) {
+    const overridesResult = await resolveFileInputSourcesOverrides(fileInputSources)
+
+    if (overridesResult.status === 'error') {
+      dispatch({
+        type: 'queries/set-error',
+        payload: {
+          queryName: operationName,
+          error: overridesResult.error satisfies RuntimeQueryError,
+          requestSignature: null,
+        },
+      })
+
+      return overridesResult
+    }
+
+    fileValueOverrides = overridesResult.fileValueOverrides
+  }
+
   const requestResult = buildRuntimeApiRequest({
     config,
     operationName,
@@ -153,6 +190,7 @@ async function executeQueryOperationWithSnapshot({
     requestParams,
     iterationContext,
     hiddenFormFields,
+    fileValueOverrides,
   })
 
   if (requestResult.status === 'error') {
@@ -245,6 +283,7 @@ export function RuntimeStateProvider({ config, dataValues, activeLanguage, child
 
   const getLatestStateForScheduler = useCallback(() => latestStateRef.current, [])
   useRuntimeTokenScheduler({ config, dispatch: dispatchAndSyncState, getLatestState: getLatestStateForScheduler })
+  useRuntimeGlobalPreloads({ config, dispatch: dispatchAndSyncState, getLatestState: getLatestStateForScheduler })
 
   useLayoutEffect(() => {
     const normalizedHash = parseBrowserHashNavigationHash(window.location.hash, {
@@ -508,6 +547,7 @@ export function useRuntimeState() {
 
 export function useRuntimeStateActions() {
   const { config, dispatchAndSyncState, getLatestState, initialState } = useRuntimeStateContext()
+  const editModeContext = useLayoutEditModeContext()
 
   const navigateToPage = useCallback(
     (
@@ -515,6 +555,10 @@ export function useRuntimeStateActions() {
       params: NavigateToRuntimeUiAction['params'] = {},
       options?: { iterationContext?: RuntimeIterationContext },
     ) => {
+      if (editModeContext !== null && editModeContext.active) {
+        return
+      }
+
       const page = config.pages.find((entry) => entry.id === pageId)
 
       if (!page) {
@@ -578,10 +622,14 @@ export function useRuntimeStateActions() {
         pushBrowserHash(nextHash)
       }
     },
-    [config.initialPage, config.pages, dispatchAndSyncState, getLatestState],
+    [config.initialPage, config.pages, dispatchAndSyncState, editModeContext, getLatestState],
   )
 
   const goBackPage = useCallback(() => {
+    if (editModeContext !== null && editModeContext.active) {
+      return
+    }
+
     const runtimeState = getLatestState()
 
     if (runtimeState.navigation.currentEntryIndex < 1) {
@@ -589,7 +637,7 @@ export function useRuntimeStateActions() {
     }
 
     window.history.back()
-  }, [getLatestState])
+  }, [editModeContext, getLatestState])
 
   const initializeForm = useCallback(
     (formId: string, fields: Record<string, RuntimeFormFieldDefinition>) => {
@@ -635,6 +683,10 @@ export function useRuntimeStateActions() {
 
   const openModal = useCallback(
     (modalId: string, options?: { iterationContext?: RuntimeIterationContext }) => {
+      if (editModeContext !== null && editModeContext.active) {
+        return
+      }
+
       dispatchAndSyncState({
         type: 'modal/open',
         payload: {
@@ -643,11 +695,15 @@ export function useRuntimeStateActions() {
         },
       })
     },
-    [dispatchAndSyncState],
+    [dispatchAndSyncState, editModeContext],
   )
 
   const closeModal = useCallback(
     (modalId: string, options?: { iterationContext?: RuntimeIterationContext }) => {
+      if (editModeContext !== null && editModeContext.active) {
+        return
+      }
+
       dispatchAndSyncState({
         type: 'modal/close',
         payload: {
@@ -656,11 +712,15 @@ export function useRuntimeStateActions() {
         },
       })
     },
-    [dispatchAndSyncState],
+    [dispatchAndSyncState, editModeContext],
   )
 
   const resetForm = useCallback(
     (formId: string) => {
+      if (editModeContext !== null && editModeContext.active) {
+        return
+      }
+
       dispatchAndSyncState({
         type: 'forms/reset',
         payload: {
@@ -668,7 +728,7 @@ export function useRuntimeStateActions() {
         },
       })
     },
-    [dispatchAndSyncState],
+    [dispatchAndSyncState, editModeContext],
   )
 
   const removeForm = useCallback(
@@ -756,8 +816,13 @@ export function useRuntimeStateActions() {
         requestParams?: RuntimeApiRequestParams
         iterationContext?: RuntimeIterationContext
         hiddenFormFields?: RuntimeApiHiddenFormFields
+        fileInputSources?: RuntimeApiFileInputSources
       },
     ) => {
+      if (editModeContext !== null && editModeContext.active) {
+        return { status: 'skipped' as const }
+      }
+
       return executeQueryOperationWithSnapshot({
         config,
         dispatch: dispatchAndSyncState,
@@ -766,10 +831,11 @@ export function useRuntimeStateActions() {
         requestParams: options?.requestParams,
         iterationContext: options?.iterationContext,
         hiddenFormFields: options?.hiddenFormFields,
+        fileInputSources: options?.fileInputSources,
         fetchImplementation: options?.fetch,
       })
     },
-    [config, dispatchAndSyncState, getLatestState],
+    [config, dispatchAndSyncState, editModeContext, getLatestState],
   )
 
   const executeInlineQueryOperation = useCallback(
@@ -1110,9 +1176,29 @@ function createRuntimeStateFromBrowserHash(
   })
   const initialState = createRuntimeState(config, { dataValues, activeLanguage })
   const initialPage = config.pages.find((page) => page.id === parsedHash.entry.pageId)
+  const globalPreloadPlan = planGlobalPreloads({ config, state: initialState })
+  const queriesWithGlobalPreloadSeeds = { ...initialState.queries }
+
+  for (const item of globalPreloadPlan.items) {
+    // dataValues (embedder-provided seeds) win over the preload plan: a query
+    // name already present in `queries` at this point came from `dataValues`,
+    // since `initialState` has no other query source yet. Latest-only policy:
+    // never overwrite an existing entry with a `loading` marker.
+    if (Object.hasOwn(queriesWithGlobalPreloadSeeds, item.operationName)) {
+      continue
+    }
+
+    queriesWithGlobalPreloadSeeds[item.operationName] = {
+      status: 'loading',
+      data: null,
+      error: null,
+      requestSignature: item.requestSignature,
+    }
+  }
 
   return {
     ...initialState,
+    queries: queriesWithGlobalPreloadSeeds,
     navigation: {
       currentPageId: parsedHash.entry.pageId,
       history: [

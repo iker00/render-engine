@@ -7,8 +7,13 @@ import {
   selectQueryState,
   selectQueryReferenceValue,
 } from '../runtime-state/runtime-state-selectors'
-import { reportRuntimeReferenceDiagnostic } from './runtime-reference-diagnostics'
+import {
+  reportRuntimeFormatterChainDiagnostic,
+  reportRuntimeReferenceDiagnostic,
+} from './runtime-reference-diagnostics'
 import type { RuntimeReferenceSurface } from './runtime-reference-diagnostics'
+import { hasFormatterSyntax, parseFormatterPlaceholder } from './runtime-formatter-parser'
+import { applyFormatterChain, findFirstFailingFormatterName } from './runtime-formatter-registry'
 import { parseRuntimeReference } from './runtime-reference-parser'
 import type {
   RuntimeReferenceResolutionResult,
@@ -20,10 +25,12 @@ export interface RuntimeIterationContext {
   item: unknown
   key: string
   itemKey?: string
+  itemIndex: number
 }
 
 interface ResolveRuntimeReferenceOptions {
   iterationContext?: RuntimeIterationContext
+  localPlaceholders?: Record<string, string>
 }
 
 const RUNTIME_TEMPLATE_PLACEHOLDER_DETECTOR = /\{\{[\s\S]*?\}\}/
@@ -135,14 +142,32 @@ function resolveRuntimeInterpolatedVisibleValue(
   surface: RuntimeReferenceSurface,
   options: ResolveRuntimeReferenceOptions,
 ) {
-  return value.replace(RUNTIME_TEMPLATE_PLACEHOLDER_PATTERN, (_placeholder, rawReference) => {
+  return value.replace(RUNTIME_TEMPLATE_PLACEHOLDER_PATTERN, (placeholder, rawReference) => {
     const referenceValue = rawReference.trim()
 
     if (referenceValue.length === 0) {
       return ''
     }
 
-    const result = resolveRuntimeReference(referenceValue, state, options)
+    if (options.localPlaceholders && Object.hasOwn(options.localPlaceholders, referenceValue)) {
+      return options.localPlaceholders[referenceValue]
+    }
+
+    if (!hasFormatterSyntax(rawReference)) {
+      return resolveVisiblePlaceholderReference(referenceValue, state, surface, options)
+    }
+
+    const parseResult = parseFormatterPlaceholder(rawReference)
+
+    if (parseResult.status === 'unresolvable-chain') {
+      return ''
+    }
+
+    if (parseResult.status === 'no-formatters') {
+      return resolveVisiblePlaceholderReference(parseResult.reference, state, surface, options)
+    }
+
+    const result = resolveRuntimeReference(parseResult.reference, state, options)
 
     if (result.status === 'literal') {
       return ''
@@ -154,8 +179,37 @@ function resolveRuntimeInterpolatedVisibleValue(
       return ''
     }
 
-    return normalizeRuntimeTextValue(result.value)
+    const chainResult = applyFormatterChain(result.value, parseResult.formatters)
+
+    if (chainResult.status !== 'ok') {
+      const failingName = findFirstFailingFormatterName(result.value, parseResult.formatters)
+      reportRuntimeFormatterChainDiagnostic(placeholder, failingName, surface)
+      return ''
+    }
+
+    return normalizeRuntimeTextValue(chainResult.value)
   })
+}
+
+function resolveVisiblePlaceholderReference(
+  referenceValue: string,
+  state: RuntimeState,
+  surface: RuntimeReferenceSurface,
+  options: ResolveRuntimeReferenceOptions,
+) {
+  const result = resolveRuntimeReference(referenceValue, state, options)
+
+  if (result.status === 'literal') {
+    return ''
+  }
+
+  reportRuntimeReferenceDiagnostic(result, surface)
+
+  if (result.status !== 'resolved') {
+    return ''
+  }
+
+  return normalizeRuntimeTextValue(result.value)
 }
 
 export function resolveRuntimeImageSource(
@@ -257,6 +311,19 @@ function resolveSupportedReferenceValue(
         return {
           found: true,
           value: iterationContext.itemKey,
+        } as const
+      }
+
+      return {
+        found: false,
+      } as const
+    }
+
+    if (reference.path.length === 1 && reference.path[0] === '$index') {
+      if (iterationContext?.itemIndex !== undefined) {
+        return {
+          found: true,
+          value: iterationContext.itemIndex,
         } as const
       }
 

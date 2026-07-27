@@ -30,6 +30,48 @@ describe('validateRuntimeConfig — stat node: acceptance', () => {
     expect(result.status).toBe('ready')
   })
 
+  it('accepts stat with variant: "plain" explicit', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithLayout([createStatNode({ props: { label: 'Revenue', value: '$12,000', variant: 'plain' } })]),
+    )
+    expect(result.status).toBe('ready')
+  })
+
+  it.each(['neutral', 'primary', 'success', 'warning', 'danger', 'info'] as const)(
+    'accepts stat with variant "plain" combined with color %s',
+    (color) => {
+      const result = validateRuntimeConfig(
+        createConfigWithLayout([
+          createStatNode({ props: { label: 'X', value: '0', variant: 'plain', color } }),
+        ]),
+      )
+      expect(result.status).toBe('ready')
+    },
+  )
+
+  it('accepts stat with variant: "plain" and props.icon string', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithLayout([
+        createStatNode({ props: { label: 'Revenue', value: '$12,000', variant: 'plain', icon: 'TrendingUp' } }),
+      ]),
+    )
+    expect(result.status).toBe('ready')
+  })
+
+  it('accepts stat with variant: "plain" combined with visibility, queryStateFeedback and layout.span', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithLayout([
+        createStatNode({
+          props: { label: 'Revenue', value: '$12,000', variant: 'plain' },
+          visibility: { reference: 'queries.q.status', operator: 'equals', value: 'success' },
+          queryStateFeedback: { query: 'q' },
+          layout: { span: 6 },
+        }),
+      ]),
+    )
+    expect(result.status).toBe('ready')
+  })
+
   it('accepts stat with color: "neutral"', () => {
     const result = validateRuntimeConfig(
       createConfigWithLayout([createStatNode({ props: { label: 'X', value: '0', color: 'neutral' } })]),

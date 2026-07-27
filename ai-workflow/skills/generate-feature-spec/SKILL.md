@@ -2,6 +2,7 @@
 name: generate-feature-spec
 description: Genera o refina la spec funcional de una feature de este proyecto antes de la planificación de implementación. Úsala para solicitudes de escritura de `features/NNNN-feature-name/spec.md` a partir de los documentos de contexto del proyecto, manteniendo el resultado alineado, revisable e intencionadamente no técnico.
 model: sonnet
+allowed-tools: Read, Write, Edit, Bash
 ---
 
 # Generar spec de feature
@@ -27,23 +28,23 @@ Esta skill debe comportarse como la fase de alineamiento de un flujo guiado por 
 - `ai-workflow/docs/workflow.md`
 - `ai-workflow/docs/context.md`
 - `ai-workflow/docs/app-features/index.md`
-- solo las fichas de `ai-workflow/docs/app-features/` que el índice marque como relevantes para la petición
-- `ai-workflow/docs/architecture.md`
-- `ai-workflow/docs/conventions.md`
+- solo las fichas de `ai-workflow/docs/app-features/` que el índice marque como relevantes para la petición (típicamente 1-3, rara vez más de 5)
 - `ai-workflow/docs/current-state.md` si existe
 - `ai-workflow/features/NNNN-feature-name/status.yaml` si existe
 - `ai-workflow/features/NNNN-feature-name/spec.md` si ya existe
 
 ## Leer si aplica
+- `ai-workflow/docs/architecture.md` si la petición menciona un límite arquitectónico, una frontera de capa o un punto de extensión estable.
+- `ai-workflow/docs/conventions.md` si la petición menciona naming, estructura de carpetas o convenciones de código.
+- `ai-workflow/templates/status.yaml` si `status.yaml` de la feature no existe todavía y hay que crearlo.
 - `ai-workflow/features/index.md` si hace falta histórico reciente, coordinación con otras features o actualizar el mapa de entregas.
-- `ai-workflow/docs/index.md` solo como mapa documental auxiliar si no está claro qué contexto adicional seleccionar.
 
 ## Objetivo
 Cerrar las dudas mínimas necesarias de producto antes de escribir o refinar `features/NNNN-feature-name/spec.md`, y dejar `status.yaml` alineado con el estado de la feature.
 
 El resultado debe mantenerse en el nivel de producto y comportamiento. No conviertas todavía la spec en tareas de implementación.
 
-Si la feature requiere decisiones técnicas relevantes para su implementación (arquitectura, integración con runtime, migración, trade-offs técnicos), marcar `requires_design: true` en `status.yaml` y redirigir al usuario a `generate-feature-design` como siguiente paso. No escribir `design.md` desde esta skill.
+Si la feature requiere decisiones técnicas relevantes para su implementación (arquitectura, integración con runtime, migración, trade-offs técnicos), marcar `requires_design: true` en `status.yaml` y redirigir al usuario a `generate-feature-design` como siguiente paso.
 
 ## Fase obligatoria de aclaración
 Antes de generar o reescribir la spec:

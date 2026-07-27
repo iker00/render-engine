@@ -322,7 +322,7 @@ describe('validateRuntimeConfig', () => {
           error: {
             code: 'invalid-layout',
             displayMode: 'development-only',
-            message: `Page "home" has an invalid layout at "layout[0].${path}".`,
+            message: `Page "home" has an invalid layout at "layout[0].${path}".\n  → repeater[0]\n  Node: {"type":"repeater"}`,
           },
         })
       }
@@ -349,7 +349,9 @@ describe('validateRuntimeConfig', () => {
           code: 'invalid-layout',
           displayMode: 'development-only',
           message:
-            'Page "home" has an invalid layout at "layout[0].props.items.source": collection sources must use queries.{queryName}.data, queries.{queryName}.data.* or item.*.',
+            `Page "home" has an invalid layout at "layout[0].props.items.source": collection sources must use queries.{queryName}.data, queries.{queryName}.data.* or item.*.
+  → repeater[0]
+  Node: {"type":"repeater"}`,
         },
       })
     })
@@ -376,7 +378,9 @@ describe('validateRuntimeConfig', () => {
             code: 'invalid-layout',
             displayMode: 'development-only',
             message:
-              'Page "home" has an invalid layout at "layout[0].props.items.key": repeater item keys must use a non-empty relative item path.',
+              `Page "home" has an invalid layout at "layout[0].props.items.key": repeater item keys must use a non-empty relative item path.
+  → repeater[0]
+  Node: {"type":"repeater"}`,
           },
         })
       }
@@ -445,7 +449,9 @@ describe('validateRuntimeConfig', () => {
             code: 'invalid-layout',
             displayMode: 'development-only',
             message:
-              'Page "home" has an invalid layout at "layout[0].props.items.key": repeater item keys must use a non-empty relative item path.',
+              `Page "home" has an invalid layout at "layout[0].props.items.key": repeater item keys must use a non-empty relative item path.
+  → repeater[0]
+  Node: {"type":"repeater"}`,
           },
         })
       }
@@ -471,7 +477,9 @@ describe('validateRuntimeConfig', () => {
         error: {
           code: 'invalid-layout',
           displayMode: 'development-only',
-          message: 'Page "home" has an invalid layout at "layout[0].props.template".',
+          message: `Page "home" has an invalid layout at "layout[0].props.template".
+  → repeater[0]
+  Node: {"type":"repeater"}`,
         },
       })
 
@@ -494,7 +502,9 @@ describe('validateRuntimeConfig', () => {
         error: {
           code: 'invalid-layout',
           displayMode: 'development-only',
-          message: 'Page "home" has an invalid layout at "layout[0].props.template".',
+          message: `Page "home" has an invalid layout at "layout[0].props.template".
+  → repeater[0]
+  Node: {"type":"repeater"}`,
         },
       })
 
@@ -511,7 +521,9 @@ describe('validateRuntimeConfig', () => {
         error: {
           code: 'invalid-layout',
           displayMode: 'development-only',
-          message: 'Page "home" has an invalid layout at "layout[0].children".',
+          message: `Page "home" has an invalid layout at "layout[0].children".
+  → repeater[0]
+  Node: {"type":"repeater"}`,
         },
       })
     })

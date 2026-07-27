@@ -60,6 +60,14 @@ Mantener un código claro, predecible y fácil de modificar, priorizando la simp
 
 Estos límites son orientativos, no absolutos. Un fichero de 520 líneas bien cohesionado es preferible a una división artificial que rompa la lectura del flujo.
 
+### Señal de reflexión para split
+Cuando un fichero supera holgadamente el límite orientativo (>2× indicativo, aprox. >800L código, >1000L test), un split debe evaluarse activamente antes de añadirle más código. El umbral no es un mandato mecánico; es el punto en el que dividir o mantener debe ser una decisión consciente, no una inercia.
+
+Excepciones habituales que justifican no dividir aunque se supere el umbral:
+- Cambios que no aumentan el tamaño (rename, corrección puntual, borrado).
+- Cambios que lo reducen (refactor interno, extracción a otros ficheros).
+- Un flujo genuinamente cohesivo y difícil de partir sin dañar la legibilidad.
+
 ### Cuándo dividir
 - Cuando un fichero agrupa comportamientos de varios dominios funcionales distintos que podrían leerse y modificarse de forma independiente.
 - Cuando añadir un test o una función obliga a navegar cientos de líneas para entender el contexto local.

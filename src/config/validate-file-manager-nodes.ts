@@ -5,7 +5,8 @@ import type {
   RuntimeApiConfig,
   RuntimeConfigError,
 } from './runtime-config-types'
-import { invalidLayout } from './runtime-config-validation-errors'
+import type { BreadcrumbSegment } from './validation-breadcrumb'
+import { buildBreadcrumbSegmentFromNode, enrichedInvalidLayoutFromNode } from './validation-breadcrumb'
 
 export function validateFileManagerSemantics(
   config: { api: RuntimeApiConfig; pages: Array<{ id: string; layout: LayoutNodeCollection }> },
@@ -24,6 +25,7 @@ export function validateFileManagerSemantics(
       page.id,
       apiOperationNames,
       apiOperationMethods,
+      [],
     )
 
     if (error) {
@@ -40,10 +42,13 @@ function validateFileManagerNodesInCollection(
   pageId: string,
   apiOperationNames: ReadonlySet<string>,
   apiOperationMethods: Record<string, string>,
+  breadcrumb: BreadcrumbSegment[],
 ): { status: 'error'; error: RuntimeConfigError } | null {
   for (let index = 0; index < nodes.length; index += 1) {
     const node = nodes[index]
     const nodePath = `${path}[${index}]`
+    const nodeSegment = buildBreadcrumbSegmentFromNode(node, index)
+    const nodeBreadcrumb = [...breadcrumb, nodeSegment]
 
     if (node.type === 'fileManager') {
       const error = validateFileManagerNodeCrossChecks(
@@ -52,6 +57,7 @@ function validateFileManagerNodesInCollection(
         pageId,
         apiOperationNames,
         apiOperationMethods,
+        nodeBreadcrumb,
       )
 
       if (error) {
@@ -61,7 +67,7 @@ function validateFileManagerNodesInCollection(
       continue
     }
 
-    const childrenError = visitNodeChildren(node, nodePath, pageId, apiOperationNames, apiOperationMethods)
+    const childrenError = visitNodeChildren(node, nodePath, pageId, apiOperationNames, apiOperationMethods, nodeBreadcrumb)
 
     if (childrenError) {
       return childrenError
@@ -77,6 +83,7 @@ function visitNodeChildren(
   pageId: string,
   apiOperationNames: ReadonlySet<string>,
   apiOperationMethods: Record<string, string>,
+  breadcrumb: BreadcrumbSegment[],
 ): { status: 'error'; error: RuntimeConfigError } | null {
   if (
     (node.type === 'container' || node.type === 'form' || node.type === 'modal') &&
@@ -88,6 +95,7 @@ function visitNodeChildren(
       pageId,
       apiOperationNames,
       apiOperationMethods,
+      breadcrumb,
     )
   }
 
@@ -98,6 +106,7 @@ function visitNodeChildren(
       pageId,
       apiOperationNames,
       apiOperationMethods,
+      breadcrumb,
     )
   }
 
@@ -112,6 +121,7 @@ function visitNodeChildren(
           pageId,
           apiOperationNames,
           apiOperationMethods,
+          breadcrumb,
         )
 
         if (itemError) {
@@ -128,6 +138,7 @@ function visitNodeChildren(
       pageId,
       apiOperationNames,
       apiOperationMethods,
+      breadcrumb,
     )
   }
 
@@ -144,6 +155,7 @@ function visitNodeChildren(
         pageId,
         apiOperationNames,
         apiOperationMethods,
+        breadcrumb,
       )
 
       if (fallbackError) {
@@ -161,6 +173,7 @@ function validateFileManagerNodeCrossChecks(
   pageId: string,
   apiOperationNames: ReadonlySet<string>,
   apiOperationMethods: Record<string, string>,
+  breadcrumb: BreadcrumbSegment[],
 ): { status: 'error'; error: RuntimeConfigError } | null {
   const props = node.props
   const operationKeys = [
@@ -179,8 +192,10 @@ function validateFileManagerNodeCrossChecks(
     operationKeys.every((key) => props[key] === undefined) && !props.fieldName
 
   if (allExplicitlyFalse || allAbsentAndNoFieldName) {
-    return invalidLayout(
+    return enrichedInvalidLayoutFromNode(
       `Page "${pageId}" has an invalid layout at "${path}.props": at least one operation must be enabled.`,
+      breadcrumb,
+      node,
     )
   }
 
@@ -189,8 +204,10 @@ function validateFileManagerNodeCrossChecks(
   const hasOmittedOperation = operationKeys.some((key) => props[key] === undefined)
 
   if (hasOmittedOperation && !props.fieldName) {
-    return invalidLayout(
+    return enrichedInvalidLayoutFromNode(
       `Page "${pageId}" has an invalid layout at "${path}.props.fieldName": fieldName is required when an operation is omitted.`,
+      breadcrumb,
+      node,
     )
   }
 
@@ -200,8 +217,10 @@ function validateFileManagerNodeCrossChecks(
 
     if (typeof val === 'string') {
       if (!apiOperationNames.has(val)) {
-        return invalidLayout(
+        return enrichedInvalidLayoutFromNode(
           `Page "${pageId}" has an invalid layout at "${path}.props.${key}": operation "${val}" is not declared in api.`,
+          breadcrumb,
+          node,
         )
       }
     }
@@ -217,8 +236,10 @@ function validateFileManagerNodeCrossChecks(
       const method = apiOperationMethods[val]
 
       if (method && method !== 'GET') {
-        return invalidLayout(
+        return enrichedInvalidLayoutFromNode(
           `Page "${pageId}" has an invalid layout at "${path}.props.${key}": operation "${val}" must use method "GET" for view/download links.`,
+          breadcrumb,
+          node,
         )
       }
     }
@@ -232,8 +253,10 @@ function validateFileManagerNodeCrossChecks(
       try {
         new RegExp(patterns[i])
       } catch {
-        return invalidLayout(
+        return enrichedInvalidLayoutFromNode(
           `Page "${pageId}" has an invalid layout at "${path}.props.validations.validFileNames[${i}]": invalid regex.`,
+          breadcrumb,
+          node,
         )
       }
     }
@@ -246,8 +269,10 @@ function validateFileManagerNodeCrossChecks(
     const rule = props.validations?.[key]
 
     if (rule !== undefined && rule.value < 0) {
-      return invalidLayout(
+      return enrichedInvalidLayoutFromNode(
         `Page "${pageId}" has an invalid layout at "${path}.props.validations.${key}": value must be >= 0.`,
+        breadcrumb,
+        node,
       )
     }
   }
@@ -257,8 +282,10 @@ function validateFileManagerNodeCrossChecks(
   const minFiles = props.validations?.minFiles?.value
 
   if (maxFiles !== undefined && minFiles !== undefined && maxFiles < minFiles) {
-    return invalidLayout(
+    return enrichedInvalidLayoutFromNode(
       `Page "${pageId}" has an invalid layout at "${path}.props.validations.maxFiles": maxFiles must be greater than or equal to minFiles.`,
+      breadcrumb,
+      node,
     )
   }
 

@@ -72,14 +72,27 @@ export type RuntimeCollectionObjectItem = Record<string, RuntimeCollectionObject
 
 export type QueryStateFeedbackVisibleState = 'idle' | 'loading' | 'error' | 'empty' | 'success'
 export type RuntimeVisibilityOperator = 'equals' | 'notEquals' | 'isTruthy' | 'isFalsy' | 'greaterThan' | 'lessThan'
+export type RuntimeVisibilityGroupOperator = 'and' | 'or'
 
-export interface RuntimeVisibilityConfig {
+export interface RuntimeVisibilityCondition {
   reference: string
   operator: RuntimeVisibilityOperator
   value?: RuntimeConfigValue
+  negate?: boolean
 }
 
+export interface RuntimeVisibilityGroup {
+  operator: RuntimeVisibilityGroupOperator
+  conditions: RuntimeVisibilityCondition[]
+}
+
+export type RuntimeVisibilityConfig = RuntimeVisibilityCondition | RuntimeVisibilityGroup
+
 export type RuntimeWhenCondition = RuntimeVisibilityConfig
+
+export function isVisibilityGroup(config: RuntimeVisibilityConfig): config is RuntimeVisibilityGroup {
+  return 'conditions' in config
+}
 
 export interface QueryStateFeedbackShowRule {
   mode: 'show'
@@ -300,6 +313,7 @@ export interface RuntimeFileManagerValidations {
 export interface FormFieldLayoutNodeProps {
   fieldId: string
   label: string
+  tooltip?: string
   validations?: RuntimeFormFieldValidations
   defaultValue?: RuntimeConfigValue | unknown[]
 }
@@ -350,28 +364,28 @@ export type ListLayoutNodeItems =
   | ListManualScalarItemsSource
   | ListManualObjectItemsSource
 
-export interface SelectDynamicItemsSource {
+export interface SelectDynamicScalarItemsSource {
   source: string
-  itemType?: 'scalar'
-  label?: string
-  value?: string
+  itemType: 'scalar'
 }
+
+export interface SelectDynamicObjectItemsSource {
+  source: string
+  itemType: 'object'
+  label: string
+  value: string
+}
+
+export type SelectDynamicItemsSource = SelectDynamicScalarItemsSource | SelectDynamicObjectItemsSource
 
 export interface SelectManualScalarItemsSource {
   values: Array<string | number>
 }
 
-export interface SelectManualObjectItemsSource {
-  values: RuntimeCollectionObjectItem[]
-  label: string
-  value: string
-}
-
 export type SelectLayoutNodeItems =
   | SelectLayoutNodeItem[]
-  | SelectDynamicItemsSource
   | SelectManualScalarItemsSource
-  | SelectManualObjectItemsSource
+  | SelectDynamicItemsSource
 
 export interface SelectLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayoutFields {
   type: 'select'
@@ -478,7 +492,7 @@ export interface AlertLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLay
   children?: never
 }
 
-export type StatVariant = 'accent' | 'tinted'
+export type StatVariant = 'accent' | 'tinted' | 'plain'
 export type StatColor = 'neutral' | 'primary' | 'success' | 'warning' | 'danger' | 'info'
 
 export interface StatLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayoutFields {
@@ -608,9 +622,74 @@ export interface LinkLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayo
     target?: string
     action?: NavigateToRuntimeUiAction | GoBackRuntimeUiAction
     icon?: string
+    iconPosition?: 'left' | 'right'
+  }
+  children?: LayoutNodeCollection
+}
+
+export interface FileInputLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayoutFields {
+  type: 'fileInput'
+  id?: string
+  props: {
+    fieldId: string
+    label: string
+    tooltip?: string
+    multiple?: boolean
+    capture?: 'environment' | 'user'
+    validations?: RuntimeFileInputValidations
   }
   children?: unknown
 }
+
+export type ToggleLabelPosition = 'top' | 'inline'
+
+export interface ToggleLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayoutFields {
+  type: 'toggle'
+  id?: string
+  props: {
+    fieldId: string
+    label: string
+    tooltip?: string
+    labelPosition?: ToggleLabelPosition
+    defaultValue?: boolean | string
+    validations?: RuntimeFormFieldValidations
+  }
+  children?: unknown
+}
+
+export interface HiddenLayoutNode extends LayoutNodeFeedbackFields {
+  type: 'hidden'
+  props: {
+    fieldId: string
+    value: string | number | boolean
+  }
+}
+
+export type FileManagerLabelKey =
+  | 'dropzoneIdle'
+  | 'dropzoneAcceptedFormats'
+  | 'dropzoneUploading'
+  | 'dropzoneProgress'
+  | 'dropzoneSuccess'
+  | 'dropzoneMaxFilesReached'
+  | 'dropzoneAriaLabel'
+  | 'listLoadError'
+  | 'listEmpty'
+  | 'paginationPrevious'
+  | 'paginationNext'
+  | 'rowViewLabel'
+  | 'rowViewAriaLabel'
+  | 'rowViewUnavailableAriaLabel'
+  | 'rowDownloadLabel'
+  | 'rowDownloadAriaLabel'
+  | 'rowDownloadUnavailableAriaLabel'
+  | 'rowDeleteLabel'
+  | 'rowDeleteAriaLabel'
+  | 'uploadFileError'
+  | 'uploadListPathMissing'
+  | 'deleteError'
+
+export type FileManagerLabels = Partial<Record<FileManagerLabelKey, string>>
 
 export interface FileManagerLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayoutFields {
   type: 'fileManager'
@@ -688,6 +767,7 @@ export interface RuntimeConfig {
   api: RuntimeApiConfig
   pages: RuntimePageConfig[]
   initialPage: string
+  preloads?: RuntimePreloadConfig[]
   translations?: RuntimeTranslationsConfig
   tokens?: RuntimeTokensConfig
 }

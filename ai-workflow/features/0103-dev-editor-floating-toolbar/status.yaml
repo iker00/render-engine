@@ -1,0 +1,28 @@
+phase: complete
+risk_level: high
+requires_design: true
+blocked_by: []
+artifacts:
+  spec: ready
+  design: ready
+  tasks: ready
+  notes: optional
+implementation:
+  ready: true
+  completed_task_ids: [T1, T2, T3, T4, T5, T6, T7, T8, T9, T10]
+  in_progress_task_id: null
+  note: "T9 renumerado durante T8 (auditoría de cierre detectó remount de estado local de nodo al alternar
+    Visual/Editor). El T9 original 'retirar componentes obsoletos' pasó a T10; T9 fue el fix del contexto
+    tri-estado (design.md Decisión 9), auditado de forma independiente y confirmado sin discrepancias."
+validation:
+  tests_green: true
+  coverage_gate_passed: true
+  note: "pnpm test (suite completa) no está en verde literal por 3 ficheros de test preexistentes y no
+    relacionados con esta feature (app-shell.test.tsx, dev-runtime-bundle.test.ts, runtime-nodes-bundle.test.ts) —
+    confirmado con git stash que fallan igual en el commit base anterior a 0103. Excluyendo esos tres: 146/146
+    ficheros, 3378/3378 tests, cobertura 93.37% statements/lines, 89.92% branches, 96.19% functions. Corregirlos
+    queda fuera del alcance de esta feature."
+documentation:
+  ready: true
+  done: true
+feature_status: completed

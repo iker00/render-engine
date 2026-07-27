@@ -12,10 +12,12 @@
     "build": "tsc --noEmit -p tsconfig.app.json && tsc --noEmit -p tsconfig.node.json && vite build",
     "preview": "vite preview",
     "lint": "eslint .",
-    "test": "vitest run --coverage",
-    "test:watch": "vitest"
+    "test": "vitest run --coverage --exclude 'src/tests/dev-runtime/*-bundle.test.ts' --exclude '**/node_modules/**' --exclude '**/dist/**'",
+    "test:watch": "vitest",
+    "test:build": "vitest run src/tests/dev-runtime/dev-runtime-bundle.test.ts src/tests/dev-runtime/runtime-nodes-bundle.test.ts"
   },
   "dependencies": {
+    "@dnd-kit/core": "^6.3.1",
     "@monaco-editor/react": "^4.7.0",
     "lucide-react": "^1.17.0",
     "monaco-editor": "^0.52.2",

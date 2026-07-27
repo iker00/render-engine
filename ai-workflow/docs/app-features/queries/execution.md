@@ -40,6 +40,7 @@
 - `headers` admite solo valores finales string
 - referencias completas y strings escapados siguen la misma convención central del runtime
 - la interpolación parcial `{{...}}` aplica en valores de `api.headers`, `button.props.action.headers`, `form.submitAction.headers` y `preloads[].headers`, con semántica de error `request-build-failed` (no string vacío como en superficies visibles)
+- los placeholders de esos valores de header admiten cadenas de formatters (`{{ referencia | formatter[:arg] | ... }}`) con el catálogo y la gramática documentados en [[../references/dynamic-strings.md]]; una cadena no resoluble en un valor de header proyecta el mismo `request-build-failed` que un placeholder no resoluble sin formatter — los formatters no cambian la semántica de error de headers
 - la interpolación parcial `{{...}}` NO aplica en `api.query`, `api.body`, `button.props.action.query`, `button.props.action.body` ni `form.submitAction.query`, `form.submitAction.body`; esos strings no interpolan placeholders
 - referencias completas y `params.{paramName}` se admiten en todas las superficies de payload (`query`, `body`, `headers`)
 

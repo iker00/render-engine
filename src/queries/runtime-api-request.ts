@@ -23,7 +23,19 @@ import {
   resolveRuntimeReference,
   RUNTIME_TEMPLATE_PLACEHOLDER_PATTERN,
 } from '../runtime/runtime-references/runtime-reference-resolver'
-import { reportRuntimeReferenceDiagnostic } from '../runtime/runtime-references/runtime-reference-diagnostics'
+import {
+  reportRuntimeFormatterChainDiagnostic,
+  reportRuntimeReferenceDiagnostic,
+} from '../runtime/runtime-references/runtime-reference-diagnostics'
+import {
+  hasFormatterSyntax,
+  parseFormatterPlaceholder,
+} from '../runtime/runtime-references/runtime-formatter-parser'
+import type { RuntimeFormatterInvocation } from '../runtime/runtime-references/runtime-formatter-parser'
+import {
+  applyFormatterChain,
+  findFirstFailingFormatterName,
+} from '../runtime/runtime-references/runtime-formatter-registry'
 
 export function buildRuntimeApiRequest({
   config,
@@ -32,6 +44,7 @@ export function buildRuntimeApiRequest({
   requestParams,
   iterationContext,
   hiddenFormFields,
+  fileValueOverrides,
 }: BuildRuntimeApiRequestOptions): RuntimeApiRequestBuildResult {
   const operation = config.api[operationName]
 
@@ -45,7 +58,15 @@ export function buildRuntimeApiRequest({
     }
   }
 
-  return buildInlineRuntimeApiRequest({ operation, operationName, state, requestParams, iterationContext, hiddenFormFields })
+  return buildInlineRuntimeApiRequest({
+    operation,
+    operationName,
+    state,
+    requestParams,
+    iterationContext,
+    hiddenFormFields,
+    fileValueOverrides,
+  })
 }
 
 export function buildInlineRuntimeApiRequest({
@@ -55,6 +76,7 @@ export function buildInlineRuntimeApiRequest({
   requestParams,
   iterationContext,
   hiddenFormFields,
+  fileValueOverrides,
 }: BuildInlineRuntimeApiRequestOptions): RuntimeApiRequestBuildResult {
   const effectiveRequestParams = mergeRuntimeApiRequestParams(operation, requestParams)
   const resolveOptions = { state, iterationContext, hiddenFormFields }
@@ -74,7 +96,10 @@ export function buildInlineRuntimeApiRequest({
     return queryResult
   }
 
-  const bodyResult = resolveBody(effectiveRequestParams.body, messagePrefix, resolveOptions)
+  const bodyResult = resolveBody(effectiveRequestParams.body, messagePrefix, {
+    ...resolveOptions,
+    fileValueOverrides,
+  })
 
   if (bodyResult.status === 'error') {
     return bodyResult
@@ -165,12 +190,36 @@ function resolveEndpoint(
       return ''
     }
 
-    const referenceValue = rawReference.trim()
+    // Formatters (feature 0101, T5) reuse the same parser used by the visible
+    // surfaces (T3) and headers (T4). `api.endpoint` inherits the header-style
+    // failure semantics (D5/D6): a non-resoluble chain or a formatter failure
+    // escalates the placeholder to `request-build-failed` for the whole
+    // operation, mirroring what already happens when the raw reference itself
+    // is not resolvable.
+    let referenceValue: string
+    let formatters: readonly RuntimeFormatterInvocation[] = []
 
-    if (referenceValue.length === 0) {
-      failed = true
-      failedPlaceholder = _placeholder
-      return ''
+    if (!hasFormatterSyntax(rawReference)) {
+      referenceValue = rawReference.trim()
+
+      if (referenceValue.length === 0) {
+        failed = true
+        failedPlaceholder = _placeholder
+        return ''
+      }
+    } else {
+      const parseResult = parseFormatterPlaceholder(rawReference)
+
+      if (parseResult.status === 'unresolvable-chain') {
+        failed = true
+        failedPlaceholder = _placeholder
+        return ''
+      }
+
+      referenceValue = parseResult.reference
+      if (parseResult.status === 'ok') {
+        formatters = parseResult.formatters
+      }
     }
 
     const result = resolveRuntimeReference(referenceValue, state, { iterationContext })
@@ -182,7 +231,21 @@ function resolveEndpoint(
       return ''
     }
 
-    const value = result.value
+    let value: unknown = result.value
+
+    if (formatters.length > 0) {
+      const chainResult = applyFormatterChain(result.value, formatters)
+
+      if (chainResult.status !== 'ok') {
+        const failingName = findFirstFailingFormatterName(result.value, formatters)
+        reportRuntimeFormatterChainDiagnostic(_placeholder, failingName, 'api.endpoint')
+        failed = true
+        failedPlaceholder = referenceValue
+        return ''
+      }
+
+      value = chainResult.value
+    }
 
     if (typeof value === 'string') {
       return value

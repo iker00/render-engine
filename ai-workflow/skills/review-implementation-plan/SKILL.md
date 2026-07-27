@@ -1,7 +1,8 @@
 ---
 name: review-implementation-plan
 description: Revisa críticamente un plan de implementación antes de codificar. Úsala para validar que `tasks.md`, `status.yaml` y `design.md` cuando aplique formen un contrato de ejecución claro, secuencial y sin ambigüedad peligrosa, incluyendo el sub-bloque de tests de cada tarea.
-model: claude-opus-4-7
+model: sonnet
+allowed-tools: Read, Edit
 ---
 
 # Revisar plan de implementación
@@ -23,18 +24,14 @@ En ambos casos el contrato de la revisión es el mismo. La única diferencia es 
 - `ai-workflow/features/NNNN-feature-name/status.yaml`
 - `ai-workflow/features/NNNN-feature-name/design.md` si existe o si `status.yaml` marca `requires_design: true`
 - `ai-workflow/docs/context.md`
+- `ai-workflow/docs/architecture.md`
+- `ai-workflow/docs/conventions.md`
 - `ai-workflow/docs/app-features/index.md`
-- solo las fichas relevantes de `ai-workflow/docs/app-features/`
-- `ai-workflow/standards/testing-rules.md`
-- `ai-workflow/standards/coding-style.md`
+- solo las fichas de `ai-workflow/docs/app-features/` que el índice marque como relevantes (típicamente 1-3, rara vez más de 5)
 
 ## Leer si aplica
-- `ai-workflow/docs/architecture.md` si el plan cruza fronteras de capa o introduce puntos arquitectónicos nuevos.
-- `ai-workflow/docs/conventions.md` si el plan toca naming, estructura de carpetas, estilos, errores, logs o convenciones de documentación.
 - `ai-workflow/docs/current-state.md` si hace falta confirmar estado vigente o límites actuales.
-- Otros documentos de `ai-workflow/standards/` según el tipo de riesgo que deba revisarse: React, errores, seguridad u otras reglas de calidad afectadas.
 - `ai-workflow/features/index.md` si hace falta contexto histórico o coordinación con otras features.
-- `ai-workflow/docs/index.md` solo como mapa documental auxiliar si no está claro qué contexto adicional seleccionar.
 
 ## Objetivo
 Revisar si el plan está realmente listo para implementación y, si hace falta, refinar:

@@ -122,4 +122,27 @@
 - En desarrollo, los errores de configuración deben ser diagnósticos y visibles.
 - En producción, los errores `development-only` degradan sin mostrar mensaje genérico visible.
 
+## Enriquecimiento de errores `invalid-layout`
+
+Los errores `invalid-layout` generados sobre nodos del layout tree incluyen dos líneas adicionales de contexto bajo el mensaje posicional original:
+
+```
+Page "form-fields" has an invalid layout at "layout[3].children[30].children[2].props.validations.required".
+  → container[3] > container[30] > input(fieldId: "name")
+  Node: { "type": "input", "props": { "fieldId": "name", "label": "Nombre" } }
+```
+
+- **Breadcrumb** (segunda línea, prefijo `  → `): cadena de nodos desde la raíz del layout hasta el nodo problemático. Cada segmento muestra `type` más el identificador más relevante según el tipo:
+    - `type("id")` para nodos con `id` (`form`, `modal` y cualquier nodo que lo declare).
+    - `type(fieldId: "x")` para campos de formulario (`input`, `textarea`, `select`, `radioGroup`, `checkboxGroup`, `toggle`, `fileInput`).
+    - `type("label")` para nodos interactivos sin `fieldId` (`button`, `accordion`, `badge`, `link`).
+    - `type("text")` para nodos textuales (`heading`, `paragraph`).
+    - `type(operationName: "x")` para `fileManager`.
+    - `type[índice]` cuando el nodo no tiene identificador (`container`, `divider`, `repeater`) o su prop identificadora está ausente.
+    - Los segmentos se separan por ` > `. Los valores se truncan a 30 caracteres con `...` si son demasiado largos.
+- **Extracto del nodo** (tercera línea, prefijo `  Node: `): objeto JSON reducido en una sola línea con `type` y las props de identificación del nodo según la misma heurística. No incluye `children`, `visibility`, `queryStateFeedback`, `layout` ni el resto de `props`.
+- El path posicional de la primera línea se conserva intacto; el enriquecimiento es solo aditivo.
+- Los errores que no son `invalid-layout` (`unsupported-node-type`, errores de `api`, `tokens`, `preloads`, shell del config) no se modifican.
+- El enriquecimiento aplica tanto a validadores de primera pasada (nodos crudos durante el parseo recursivo) como a validadores de segunda pasada (nodos tipados en validaciones cruzadas semánticas).
+
 Las reglas de validación específicas por nodo viven en sus respectivos sub-documentos bajo [`../nodes/`](../nodes/index.md). Las reglas específicas de `queryStateFeedback` y `visibility` viven en [`../references/query-state-feedback.md`](../references/query-state-feedback.md) y [`../references/visibility.md`](../references/visibility.md).

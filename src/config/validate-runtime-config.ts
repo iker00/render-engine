@@ -13,13 +13,15 @@ import {
 } from './runtime-config-zod'
 import { initialPageNotFound, invalidLayout } from './runtime-config-validation-errors'
 import { validateApiConfig } from './validate-api-config'
-import { validatePagePreloads } from './validate-preloads'
+import { validatePagePreloads, validateGlobalPreloads } from './validate-preloads'
 import { validateRuntimeApiRequestParams, validateActionTargets } from './validate-actions-visibility'
 import { validateLayoutCollection } from './validate-layout-nodes'
 import { validateFormSemantics, validateExecutionRequestParams } from './validate-form-nodes'
 import { validateFileManagerSemantics } from './validate-file-manager-nodes'
 import { validateTranslations } from './validate-translations'
 import { validateTokensConfig } from './validate-tokens-config'
+import type { BreadcrumbSegment } from './validation-breadcrumb'
+import { buildBreadcrumbSegmentFromNode, enrichedInvalidLayoutFromNode } from './validation-breadcrumb'
 
 export function validateRuntimeConfig(rawConfig: unknown): RuntimeConfigValidationResult {
   // Extract and validate the optional translations block before the shell schema strips it
@@ -57,6 +59,10 @@ export function validateRuntimeConfig(rawConfig: unknown): RuntimeConfigValidati
       return invalidLayout('The runtime config field "initialPage" must be a non-empty string.')
     }
 
+    if (issue.path[0] === 'preloads') {
+      return invalidLayout('The runtime config field "preloads" must be an array.')
+    }
+
     return invalidLayout('The runtime config must be an object.')
   }
 
@@ -66,11 +72,23 @@ export function validateRuntimeConfig(rawConfig: unknown): RuntimeConfigValidati
     return apiResult
   }
 
+  const knownApiOperations = new Set(Object.keys(apiResult.api))
+
   // Validate the tokens block after api is validated (cross-check needs api operation names)
-  const tokensResult = validateTokensConfig(rawTokens, new Set(Object.keys(apiResult.api)))
+  const tokensResult = validateTokensConfig(rawTokens, knownApiOperations)
 
   if (tokensResult.status === 'error') {
     return { status: 'error', error: tokensResult.error }
+  }
+
+  const globalPreloadsResult = validateGlobalPreloads(
+    configShellResult.data.preloads,
+    validateRuntimeApiRequestParams,
+    knownApiOperations,
+  )
+
+  if (globalPreloadsResult.status === 'error') {
+    return globalPreloadsResult
   }
 
   const pageShellResults: Array<{
@@ -156,6 +174,10 @@ export function validateRuntimeConfig(rawConfig: unknown): RuntimeConfigValidati
     config.tokens = tokensResult.tokens
   }
 
+  if (globalPreloadsResult.status === 'ready' && globalPreloadsResult.preloads && globalPreloadsResult.preloads.length > 0) {
+    config.preloads = globalPreloadsResult.preloads
+  }
+
   const page = config.pages.find((entry) => entry.id === config.initialPage)
 
   if (!page) {
@@ -205,12 +227,12 @@ function validateModalReferences(
   const seenModalIds = new Map<string, string>()
 
   for (const page of config.pages) {
-    const error = collectModalIds(page.layout, 'layout', page.id, seenModalIds)
+    const error = collectModalIds(page.layout, 'layout', page.id, seenModalIds, [])
     if (error) return error
   }
 
   for (const page of config.pages) {
-    const error = checkModalRefs(page.layout, 'layout', page.id, seenModalIds, false)
+    const error = checkModalRefs(page.layout, 'layout', page.id, seenModalIds, false, [])
     if (error) return error
   }
 
@@ -222,29 +244,32 @@ function collectModalIds(
   path: string,
   pageId: string,
   seenModalIds: Map<string, string>,
+  breadcrumb: BreadcrumbSegment[],
 ): { status: 'error'; error: RuntimeConfigError } | null {
   for (let i = 0; i < nodes.length; i += 1) {
     const node = nodes[i]
     const nodePath = `${path}[${i}]`
+    const nodeSegment = buildBreadcrumbSegmentFromNode(node, i)
+    const nodeBreadcrumb = [...breadcrumb, nodeSegment]
 
-    const fallbackError = collectModalIdsInFallbacks(node, nodePath, seenModalIds)
+    const fallbackError = collectModalIdsInFallbacks(node, nodePath, seenModalIds, nodeBreadcrumb)
     if (fallbackError) return fallbackError
 
     if (node.type === 'modal') {
       if (seenModalIds.has(node.id)) {
-        return invalidLayout(`Page "${pageId}" has an invalid layout at "${nodePath}.id": duplicate modal id "${node.id}".`)
+        return enrichedInvalidLayoutFromNode(`Page "${pageId}" has an invalid layout at "${nodePath}.id": duplicate modal id "${node.id}".`, nodeBreadcrumb, node)
       }
       seenModalIds.set(node.id, nodePath)
 
       if (node.children) {
-        const error = collectModalIds(node.children, `${nodePath}.children`, pageId, seenModalIds)
+        const error = collectModalIds(node.children, `${nodePath}.children`, pageId, seenModalIds, nodeBreadcrumb)
         if (error) return error
       }
     } else if ((node.type === 'container' || node.type === 'form') && node.children) {
-      const error = collectModalIds(node.children, `${nodePath}.children`, pageId, seenModalIds)
+      const error = collectModalIds(node.children, `${nodePath}.children`, pageId, seenModalIds, nodeBreadcrumb)
       if (error) return error
     } else if (node.type === 'repeater') {
-      const error = collectModalIds(node.props.template, `${nodePath}.props.template`, pageId, seenModalIds)
+      const error = collectModalIds(node.props.template, `${nodePath}.props.template`, pageId, seenModalIds, nodeBreadcrumb)
       if (error) return error
     }
   }
@@ -256,6 +281,7 @@ function collectModalIdsInFallbacks(
   node: LayoutNode,
   nodePath: string,
   seenModalIds: Map<string, string>,
+  breadcrumb: BreadcrumbSegment[],
 ): { status: 'error'; error: RuntimeConfigError } | null {
   if (!node.queryStateFeedback?.states) return null
 
@@ -267,6 +293,7 @@ function collectModalIdsInFallbacks(
       `${nodePath}.queryStateFeedback.states.${stateName}.fallback`,
       nodePath,
       seenModalIds,
+      breadcrumb,
     )
     if (error) return error
   }
@@ -280,39 +307,46 @@ function checkModalRefs(
   pageId: string,
   modalIds: Map<string, string>,
   insideRepeaterTemplate: boolean,
+  breadcrumb: BreadcrumbSegment[],
 ): { status: 'error'; error: RuntimeConfigError } | null {
   for (let i = 0; i < nodes.length; i += 1) {
     const node = nodes[i]
     const nodePath = `${path}[${i}]`
+    const nodeSegment = buildBreadcrumbSegmentFromNode(node, i)
+    const nodeBreadcrumb = [...breadcrumb, nodeSegment]
 
-    const fallbackError = checkModalRefsInFallbacks(node, nodePath, pageId, modalIds, insideRepeaterTemplate)
+    const fallbackError = checkModalRefsInFallbacks(node, nodePath, pageId, modalIds, insideRepeaterTemplate, nodeBreadcrumb)
     if (fallbackError) return fallbackError
 
     if (node.type === 'button' && node.props.action) {
       const { action } = node.props
       if ((action.type === 'openModal' || action.type === 'closeModal') && !modalIds.has(action.modalId)) {
-        return invalidLayout(
+        return enrichedInvalidLayoutFromNode(
           `Page "${pageId}" has an invalid layout at "${nodePath}.props.action.modalId": unknown modal "${action.modalId}".`,
+          nodeBreadcrumb,
+          node,
         )
       }
     }
 
     if (node.type === 'modal') {
       if (insideRepeaterTemplate && node.props?.defaultOpen === true) {
-        return invalidLayout(
+        return enrichedInvalidLayoutFromNode(
           `Page "${pageId}" has an invalid layout at "${nodePath}.props.defaultOpen": modal defaultOpen is not supported inside a repeater template.`,
+          nodeBreadcrumb,
+          node,
         )
       }
 
       if (node.children) {
-        const error = checkModalRefs(node.children, `${nodePath}.children`, pageId, modalIds, insideRepeaterTemplate)
+        const error = checkModalRefs(node.children, `${nodePath}.children`, pageId, modalIds, insideRepeaterTemplate, nodeBreadcrumb)
         if (error) return error
       }
     } else if ((node.type === 'container' || node.type === 'form') && node.children) {
-      const error = checkModalRefs(node.children, `${nodePath}.children`, pageId, modalIds, insideRepeaterTemplate)
+      const error = checkModalRefs(node.children, `${nodePath}.children`, pageId, modalIds, insideRepeaterTemplate, nodeBreadcrumb)
       if (error) return error
     } else if (node.type === 'repeater') {
-      const error = checkModalRefs(node.props.template, `${nodePath}.props.template`, pageId, modalIds, true)
+      const error = checkModalRefs(node.props.template, `${nodePath}.props.template`, pageId, modalIds, true, nodeBreadcrumb)
       if (error) return error
     }
   }
@@ -326,6 +360,7 @@ function checkModalRefsInFallbacks(
   pageId: string,
   modalIds: Map<string, string>,
   insideRepeaterTemplate: boolean,
+  breadcrumb: BreadcrumbSegment[],
 ): { status: 'error'; error: RuntimeConfigError } | null {
   if (!node.queryStateFeedback?.states) return null
 
@@ -338,6 +373,7 @@ function checkModalRefsInFallbacks(
       pageId,
       modalIds,
       insideRepeaterTemplate,
+      breadcrumb,
     )
     if (error) return error
   }

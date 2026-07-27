@@ -35,7 +35,9 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].children[0]": input nodes must be descendants of a form node.',
+        message: `Page "home" has an invalid layout at "layout[0].children[0]": input nodes must be descendants of a form node.
+  → container[0] > input(fieldId: "name")
+  Node: {"type":"input","props":{"fieldId":"name","label":"Name"}}`,
       },
     })
 
@@ -61,7 +63,9 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0]": textarea nodes must be descendants of a form node.',
+        message: `Page "home" has an invalid layout at "layout[0]": textarea nodes must be descendants of a form node.
+  → textarea(fieldId: "bio")
+  Node: {"type":"textarea","props":{"fieldId":"bio","label":"Bio"}}`,
       },
     })
 
@@ -88,7 +92,9 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0]": select nodes must be descendants of a form node.',
+        message: `Page "home" has an invalid layout at "layout[0]": select nodes must be descendants of a form node.
+  → select(fieldId: "role")
+  Node: {"type":"select","props":{"fieldId":"role","label":"Role"}}`,
       },
     })
 
@@ -117,7 +123,9 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0]": button nodes without an action must be descendants of a form node.',
+        message: `Page "home" has an invalid layout at "layout[0]": button nodes without an action must be descendants of a form node.
+  → button("Broken submit")
+  Node: {"type":"button","props":{"label":"Broken submit"}}`,
       },
     })
 
@@ -147,8 +155,9 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message:
-          'Page "home" has an invalid layout at "layout[0].children[0]": button nodes without an action must be descendants of a form node.',
+        message: `Page "home" has an invalid layout at "layout[0].children[0]": button nodes without an action must be descendants of a form node.
+  → container[0] > button("Still broken")
+  Node: {"type":"button","props":{"label":"Still broken"}}`,
       },
     })
 
@@ -200,7 +209,9 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "details" has an invalid layout at "layout[0].id": duplicate form id "user-form".',
+        message: `Page "details" has an invalid layout at "layout[0].id": duplicate form id "user-form".
+  → form("user-form")
+  Node: {"type":"form","id":"user-form"}`,
       },
     })
 
@@ -235,7 +246,9 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].children[1].children[0].props.fieldId": duplicate fieldId "email" in form "user-form".',
+        message: `Page "home" has an invalid layout at "layout[0].children[1].children[0].props.fieldId": duplicate fieldId "email" in form "user-form".
+  → form("user-form") > container[1] > textarea(fieldId: "email")
+  Node: {"type":"textarea","props":{"fieldId":"email","label":"Email duplicate"}}`,
       },
     })
   })
@@ -259,8 +272,9 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message:
-          'Page "home" has an invalid layout at "layout[0].children[0]": form nodes only accept input, textarea, select, radioGroup, checkboxGroup, button, heading, paragraph, image, table, container, accordion, divider and tabs descendants.',
+        message: `Page "home" has an invalid layout at "layout[0].children[0]": form nodes only accept input, textarea, select, radioGroup, checkboxGroup, fileInput, toggle, hidden, button, heading, paragraph, image, table, container, accordion, divider and tabs descendants.
+  → form("user-form") > list[0]
+  Node: {"type":"list"}`,
       },
     })
 
@@ -294,8 +308,9 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message:
-          'Page "home" has an invalid layout at "layout[0].children[0]": form nodes only accept input, textarea, select, radioGroup, checkboxGroup, button, heading, paragraph, image, table, container, accordion, divider and tabs descendants.',
+        message: `Page "home" has an invalid layout at "layout[0].children[0]": form nodes only accept input, textarea, select, radioGroup, checkboxGroup, fileInput, toggle, hidden, button, heading, paragraph, image, table, container, accordion, divider and tabs descendants.
+  → form("user-form") > repeater[0]
+  Node: {"type":"repeater"}`,
         },
       })
 
@@ -329,7 +344,7 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].submitAction.type".',
+        message: expect.stringContaining('layout[0].submitAction.type'),
       },
     })
 
@@ -347,7 +362,9 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].submitAction.operationName": unknown operation "missingOperation".',
+        message: `Page "home" has an invalid layout at "layout[0].submitAction.operationName": unknown operation "missingOperation".
+  → form("user-form")
+  Node: {"type":"form","id":"user-form"}`,
       },
     })
 
@@ -373,7 +390,9 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].children[0].props.action.pageId": unknown page "missingPage".',
+        message: `Page "home" has an invalid layout at "layout[0].children[0].props.action.pageId": unknown page "missingPage".
+  → form("user-form") > button("Broken auxiliary navigation")
+  Node: {"type":"button","props":{"label":"Broken auxiliary navigation"}}`,
       },
     })
 
@@ -404,8 +423,9 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message:
-          'Page "home" has an invalid layout at "layout[0].children[0].children[0].props.action.operationName": unknown operation "missingNestedOperation".',
+        message: `Page "home" has an invalid layout at "layout[0].children[0].children[0].props.action.operationName": unknown operation "missingNestedOperation".
+  → form("user-form") > container[0] > button("Broken nested auxiliary submit")
+  Node: {"type":"button","props":{"label":"Broken nested auxiliary submit"}}`,
       },
     })
 
@@ -432,7 +452,9 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].resetOnSuccess": resetOnSuccess requires submitAction.',
+        message: `Page "home" has an invalid layout at "layout[0].resetOnSuccess": resetOnSuccess requires submitAction.
+  → form("user-form")
+  Node: {"type":"form","id":"user-form"}`,
       },
     })
   })
@@ -718,7 +740,7 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: 'Page "home" has an invalid layout at "layout[0].persistOnUnmount".',
+        message: expect.stringContaining('layout[0].persistOnUnmount'),
       },
     })
   })
@@ -1081,8 +1103,7 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message:
-          'Page "home" has an invalid layout at "layout[0].children[0].props.items": select item values must all be strings or all be numbers.',
+        message: expect.stringContaining('select item values must all be strings or all be numbers'),
       },
     })
   })
@@ -2506,6 +2527,546 @@ describe('validateRuntimeConfig', () => {
       if (result.status === 'error') {
         expect(result.error.message).toContain('tokens.*')
       }
+    })
+  })
+
+  it('admits toggle in the list of allowed form children', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithFormLayout({
+        children: [
+          {
+            type: 'toggle',
+            props: {
+              fieldId: 'agree',
+              label: 'I agree',
+            },
+          },
+        ],
+      }),
+    )
+    expect(result.status).toBe('ready')
+  })
+
+  it('rejects toggle outside a form by the form-only check', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithPages([
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'toggle',
+              props: {
+                fieldId: 'agree',
+                label: 'I agree',
+              },
+            },
+          ],
+        },
+      ]),
+    )
+    expect(result).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message: `Page "home" has an invalid layout at "layout[0]": toggle nodes must be descendants of a form node.
+  → toggle(fieldId: "agree")
+  Node: {"type":"toggle","props":{"fieldId":"agree","label":"I agree"}}`,
+      },
+    })
+  })
+
+  it('admits hidden in the list of allowed form children', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithFormLayout({
+        children: [
+          {
+            type: 'hidden',
+            props: {
+              fieldId: 'token',
+              value: 'abc123',
+            },
+          },
+        ],
+      }),
+    )
+    expect(result.status).toBe('ready')
+  })
+
+  it('rejects hidden outside a form by the form-only check', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithPages([
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'hidden',
+              props: {
+                fieldId: 'token',
+                value: 'abc123',
+              },
+            },
+          ],
+        },
+      ]),
+    )
+    expect(result).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message: `Page "home" has an invalid layout at "layout[0]": hidden nodes must be descendants of a form node.
+  → hidden(fieldId: "token")
+  Node: {"type":"hidden","props":{"fieldId":"token"}}`,
+      },
+    })
+  })
+
+  it('includes breadcrumb and excerpt for invalid form shape (missing id)', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithPages([
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'form',
+              children: [],
+            },
+          ],
+        },
+      ]),
+    )
+
+    expect(result.status).toBe('error')
+    if (result.status !== 'error') throw new Error('Expected error')
+    expect(result.error.message).toContain('layout[0].id')
+    expect(result.error.message).toContain('\n  → form[0]')
+    expect(result.error.message).toContain('Node: {"type":"form"}')
+  })
+
+  // T-3: semantic validation of composed groups in submitAction.onSuccess[*].when (allowItem: true)
+  describe('submitAction.onSuccess when semantics — composed groups', () => {
+    it('accepts submitAction.onSuccess entry with a valid group of two conditions (params.* + queries.*)', () => {
+      const result = validateRuntimeConfig({
+        api: {
+          submitUserForm: { method: 'POST', endpoint: '/api/forms' },
+        },
+        pages: [
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'form',
+                id: 'user-form',
+                submitAction: {
+                  type: 'executeOperation',
+                  operationName: 'submitUserForm',
+                  onSuccess: [
+                    {
+                      type: 'goBack',
+                      when: {
+                        operator: 'and',
+                        conditions: [
+                          { reference: 'params.mode', operator: 'equals', value: 'edit' },
+                          { reference: 'queries.submitUserForm.data.flag', operator: 'isTruthy' },
+                        ],
+                      },
+                    },
+                  ],
+                },
+                children: [],
+              },
+            ],
+          },
+        ],
+        initialPage: 'home',
+      })
+      expect(result.status).toBe('ready')
+    })
+
+    it('accepts submitAction.onSuccess entry with a group containing an item.* reference (allowItem: true)', () => {
+      const result = validateRuntimeConfig({
+        api: {
+          submitUserForm: { method: 'POST', endpoint: '/api/forms' },
+        },
+        pages: [
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'form',
+                id: 'user-form',
+                submitAction: {
+                  type: 'executeOperation',
+                  operationName: 'submitUserForm',
+                  onSuccess: [
+                    {
+                      type: 'goBack',
+                      when: {
+                        operator: 'or',
+                        conditions: [{ reference: 'item.foo', operator: 'isTruthy' }],
+                      },
+                    },
+                  ],
+                },
+                children: [],
+              },
+            ],
+          },
+        ],
+        initialPage: 'home',
+      })
+      expect(result.status).toBe('ready')
+    })
+
+    it('rejects submitAction.onSuccess entry with a group whose interior equals condition is missing value (path submitAction.onSuccess[0].when.conditions[0].value)', () => {
+      const result = validateRuntimeConfig({
+        api: {
+          submitUserForm: { method: 'POST', endpoint: '/api/forms' },
+        },
+        pages: [
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'form',
+                id: 'user-form',
+                submitAction: {
+                  type: 'executeOperation',
+                  operationName: 'submitUserForm',
+                  onSuccess: [
+                    {
+                      type: 'goBack',
+                      when: {
+                        operator: 'and',
+                        conditions: [{ reference: 'params.mode', operator: 'equals' }],
+                      },
+                    },
+                  ],
+                },
+                children: [],
+              },
+            ],
+          },
+        ],
+        initialPage: 'home',
+      })
+      expect(result.status).toBe('error')
+      if (result.status !== 'error') throw new Error('Expected error')
+      expect(result.error.message).toContain('submitAction.onSuccess[0].when.conditions[0].value')
+    })
+  })
+})
+
+// ─── Second-pass breadcrumb enrichment tests ─────────────────────────────────
+
+describe('validateRuntimeConfig — second-pass form semantics include breadcrumb', () => {
+  it('duplicate form id includes breadcrumb of the second form node', () => {
+    const result = validateRuntimeConfig({
+      api: {
+        submitUserForm: { method: 'POST', endpoint: '/api/forms' },
+      },
+      pages: [
+        {
+          id: 'home',
+          layout: [createFormNode()],
+        },
+        {
+          id: 'details',
+          layout: [createFormNode()],
+        },
+      ],
+      initialPage: 'home',
+    })
+    expect(result.status).toBe('error')
+    if (result.status !== 'error') throw new Error('Expected error')
+    expect(result.error.message).toContain('duplicate form id "user-form"')
+    expect(result.error.message).toContain('\n  → ')
+    expect(result.error.message).toContain('form("user-form")')
+    expect(result.error.message).toContain('\n  Node: ')
+    expect(result.error.message).toContain('"type":"form"')
+  })
+
+  it('duplicate fieldId includes breadcrumb with form > input path', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithFormLayout({
+        children: [
+          {
+            type: 'input',
+            props: {
+              fieldId: 'name',
+              label: 'Name',
+            },
+          },
+          {
+            type: 'container',
+            children: [
+              {
+                type: 'input',
+                props: {
+                  fieldId: 'name',
+                  label: 'Name duplicate',
+                },
+              },
+            ],
+          },
+        ],
+      }),
+    )
+    expect(result.status).toBe('error')
+    if (result.status !== 'error') throw new Error('Expected error')
+    expect(result.error.message).toContain('duplicate fieldId "name" in form "user-form"')
+    expect(result.error.message).toContain('\n  → ')
+    expect(result.error.message).toContain('form("user-form")')
+    expect(result.error.message).toContain('input(fieldId: "name")')
+    expect(result.error.message).toContain('\n  Node: ')
+    expect(result.error.message).toContain('"type":"input"')
+  })
+
+  it('submitAction.operationName unknown includes breadcrumb of the form node', () => {
+    const result = validateRuntimeConfig({
+      api: {},
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'form',
+              id: 'my-form',
+              submitAction: { type: 'executeOperation', operationName: 'nonExistentOp' },
+              children: [
+                { type: 'input', props: { fieldId: 'x', label: 'X' } },
+              ],
+            },
+          ],
+        },
+      ],
+      initialPage: 'home',
+    })
+    expect(result.status).toBe('error')
+    if (result.status !== 'error') throw new Error('Expected error')
+    expect(result.error.message).toContain('unknown operation "nonExistentOp"')
+    expect(result.error.message).toContain('\n  → ')
+    expect(result.error.message).toContain('form("my-form")')
+    expect(result.error.message).toContain('\n  Node: ')
+  })
+
+  it('fieldId duplicate inside tabs children includes correct breadcrumb ancestors', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithFormLayout({
+        children: [
+          {
+            type: 'input',
+            props: { fieldId: 'email', label: 'Email' },
+          },
+          {
+            type: 'tabs',
+            props: {
+              items: [
+                {
+                  label: 'Tab A',
+                  children: [
+                    {
+                      type: 'input',
+                      props: { fieldId: 'email', label: 'Email copy' },
+                    },
+                  ],
+                },
+              ],
+            },
+          },
+        ],
+      }),
+    )
+    expect(result.status).toBe('error')
+    if (result.status !== 'error') throw new Error('Expected error')
+    expect(result.error.message).toContain('duplicate fieldId "email"')
+    expect(result.error.message).toContain('\n  → ')
+    expect(result.error.message).toContain('form("user-form")')
+    expect(result.error.message).toContain('input(fieldId: "email")')
+    expect(result.error.message).toContain('\n  Node: ')
+  })
+
+  it('GET body error in executeExecutionRequestParams includes breadcrumb of the button', () => {
+    const result = validateRuntimeConfig({
+      api: {
+        searchUsers: { method: 'GET', endpoint: '/api/users' },
+      },
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'button',
+              props: {
+                label: 'Search',
+                action: {
+                  type: 'executeOperation',
+                  operationName: 'searchUsers',
+                  body: { filter: 'abc' },
+                },
+              },
+            },
+          ],
+        },
+      ],
+      initialPage: 'home',
+    })
+    expect(result.status).toBe('error')
+    if (result.status !== 'error') throw new Error('Expected error')
+    expect(result.error.message).toContain('GET operations do not support body')
+    expect(result.error.message).toContain('\n  → ')
+    expect(result.error.message).toContain('button("Search")')
+    expect(result.error.message).toContain('\n  Node: ')
+  })
+
+  describe('formSubmitActionSchema structural hardening (T3)', () => {
+    it('accepts form.submitAction absent', () => {
+      const result = validateRuntimeConfig({
+        api: {},
+        pages: [
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'form',
+                id: 'user-form',
+                children: [],
+              },
+            ],
+          },
+        ],
+        initialPage: 'home',
+      })
+
+      expect(result.status).toBe('ready')
+    })
+
+    it('accepts form.submitAction with type "executeOperation" with the same fields as before', () => {
+      expect(validateRuntimeConfig(createConfigWithFormLayout()).status).toBe('ready')
+    })
+
+    it('accepts form.submitAction with type "executeOperations" with the same fields as before', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithFormLayout({
+          submitAction: {
+            type: 'executeOperations',
+            operations: [{ operationName: 'submitUserForm' }],
+          },
+        }),
+      )
+
+      expect(result.status).toBe('ready')
+    })
+
+    it('rejects form.submitAction.type "navigateTo" (outside the submitAction catalog) at the schema level', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithFormLayout({
+          submitAction: {
+            type: 'navigateTo',
+            pageId: 'home',
+          },
+        }),
+      )
+
+      expect(result.status).toBe('error')
+    })
+
+    it('rejects a submitAction.onSuccess entry whose type is outside the 7-variant catalog', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithFormLayout({
+          submitAction: {
+            type: 'executeOperation',
+            operationName: 'submitUserForm',
+            onSuccess: [{ type: 'doSomethingUnsupported' }],
+          },
+        }),
+      )
+
+      expect(result.status).toBe('error')
+    })
+
+    it('rejects a submitAction.onError entry whose type is outside the 7-variant catalog', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithFormLayout({
+          submitAction: {
+            type: 'executeOperation',
+            operationName: 'submitUserForm',
+            onError: [{ type: 'doSomethingUnsupported' }],
+          },
+        }),
+      )
+
+      expect(result.status).toBe('error')
+    })
+
+    it('accepts submitAction.onSuccess and onError mixing all 7 action variants, each with an optional when condition', () => {
+      const result = validateRuntimeConfig({
+        api: {
+          submitUserForm: { method: 'POST', endpoint: '/api/forms' },
+          searchUsers: { method: 'POST', endpoint: '/api/users' },
+        },
+        pages: [
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'modal',
+                id: 'confirm-modal',
+                children: [],
+              },
+              {
+                type: 'form',
+                id: 'user-form',
+                submitAction: {
+                  type: 'executeOperation',
+                  operationName: 'submitUserForm',
+                  onSuccess: [
+                    { type: 'resetForm', formId: 'user-form' },
+                    {
+                      type: 'openModal',
+                      modalId: 'confirm-modal',
+                      when: { reference: 'queries.submitUserForm.data.flag', operator: 'isTruthy' },
+                    },
+                    { type: 'closeModal', modalId: 'confirm-modal' },
+                    { type: 'navigateTo', pageId: 'next' },
+                    { type: 'goBack' },
+                    { type: 'executeOperation', operationName: 'searchUsers' },
+                    {
+                      type: 'executeOperations',
+                      operations: [{ operationName: 'searchUsers' }],
+                    },
+                  ],
+                  onError: [
+                    { type: 'resetForm', formId: 'user-form' },
+                    { type: 'openModal', modalId: 'confirm-modal' },
+                    {
+                      type: 'closeModal',
+                      modalId: 'confirm-modal',
+                      when: { reference: 'queries.submitUserForm.error', operator: 'isTruthy' },
+                    },
+                    { type: 'navigateTo', pageId: 'next' },
+                    { type: 'goBack' },
+                    { type: 'executeOperation', operationName: 'searchUsers' },
+                    {
+                      type: 'executeOperations',
+                      operations: [{ operationName: 'searchUsers' }],
+                    },
+                  ],
+                },
+                children: [],
+              },
+            ],
+          },
+          {
+            id: 'next',
+            layout: [],
+          },
+        ],
+        initialPage: 'home',
+      })
+
+      expect(result.status).toBe('ready')
     })
   })
 })

@@ -77,6 +77,18 @@ src/
 - Si un requisito visual no encaja todavía en una escala de diseño estable, se debe resolver con utilidades de `Tailwind` locales y revisables, no con una API visual paralela.
 - Si una necesidad futura exige theming declarativo por JSON o variantes visuales configurables por nodo, debe abrirse como alcance nuevo en vez de mezclarse silenciosamente con la capa de tema global actual.
 
+## Componentes del runtime
+
+### Resolución de variantes visuales
+- Un nodo del runtime con variantes visuales (`variant`, o cualquier discriminador equivalente) debe resolver la selección de clases o estructura mediante un lookup map `Record<Variant, string>` o delegando en un único helper de `runtime-node-styling.ts`.
+- No repetir el esqueleto JSX del nodo por rama `if/else` cuando la única diferencia entre variantes es qué helper de estilo se invoca: la estructura común debe declararse una sola vez y la resolución por variante debe quedar centralizada.
+- Precedentes vigentes del patrón deseado en el propio código: `src/runtime/nodes/divider-layout-node.tsx` (lookup map `Record<Variant, string>`) y `src/runtime/nodes/button-layout-node.tsx` (delegación en un único helper de `runtime-node-styling.ts`).
+
+### JSX frente a `createElement`
+- JSX es la forma por defecto para renderizar el elemento raíz de un nodo y sus hijos.
+- El uso explícito de `createElement` sólo se admite cuando exista una razón técnica real, por ejemplo un nombre de tag verdaderamente dinámico sin alternativa JSX limpia (caso actual de `src/runtime/nodes/icon-node.tsx`).
+- Un tag dinámico entre elementos HTML conocidos (por ejemplo `h1`–`h6` según `props.level`) puede resolverse en JSX asignando el resultado del helper a una variable en `PascalCase` y usándola como componente; no justifica por sí solo recurrir a `createElement`.
+
 ## Errores
 
 ### Principios

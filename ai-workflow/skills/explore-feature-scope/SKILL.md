@@ -2,6 +2,7 @@
 name: explore-feature-scope
 description: Conversa sobre una posible feature antes de comprometer una spec. Úsala para explorar el problema, validar ideas, comparar alternativas o reducir ambigüedad funcional o técnica. Esta skill no genera artefactos: solo dialoga y deja la decisión final al usuario.
 model: haiku
+allowed-tools: Read
 ---
 
 # Explorar alcance de feature
@@ -14,14 +15,13 @@ Esta skill no produce artefactos. No crea ni modifica ficheros en `ai-workflow/f
 
 ## Leer siempre
 - `ai-workflow/docs/workflow.md`
-- `ai-workflow/docs/context.md`
 
 ## Leer si aplica
-- `ai-workflow/docs/app-features/index.md` y solo las fichas relevantes si la conversación afecta comportamiento de producto, contrato JSON, runtime visible, formularios, queries, navegación o modo de desarrollo local.
+- `ai-workflow/docs/context.md` si la conversación menciona un dominio del producto o un concepto de marco general no evidente.
+- `ai-workflow/docs/app-features/index.md` y solo las fichas relevantes si la conversación afecta comportamiento de producto, contrato JSON, runtime visible, formularios, queries, navegación o modo de desarrollo local. Típicamente 0-2 fichas; nunca más de 3 en una conversación de exploración.
 - `ai-workflow/docs/current-state.md` si hace falta confirmar si una capacidad ya existe o si sigue fuera de alcance.
 - `ai-workflow/docs/architecture.md` si hay dudas técnicas que condicionen el alcance de producto.
 - `ai-workflow/features/index.md` si hace falta contexto histórico o coordinación con features planificadas, archivadas o completadas.
-- `ai-workflow/docs/index.md` solo como mapa documental auxiliar si no está claro qué contexto adicional seleccionar.
 
 ## Objetivo
 Sostener un diálogo útil con el usuario para:
