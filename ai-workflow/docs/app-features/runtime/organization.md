@@ -23,7 +23,7 @@
 
 ## Acciones, estado y feedback
 - `src/runtime/runtime-actions/` concentra el ejecutor común `action.type -> handler del provider`, reutilizable por futuros triggers más allá de `button`.
-- `src/runtime/runtime-state/` concentra el provider, reducer, tipos, selectors y acciones del estado compartido del runtime.
+- `src/runtime/runtime-state/` concentra el provider, reducer, tipos, selectors y acciones del estado compartido del runtime. La planificación de precargas de `pages[].preloads` vive en `src/runtime/runtime-global-preloads/plan-page-preloads.ts`, junto a la del bloque raíz (`plan-global-preloads.ts`); el provider solo conserva `createRuntimeStateFromBrowserHash` de ese grupo. `replaceBrowserHash` vive en `src/runtime/runtime-navigation/browser-hash-navigation.ts`, junto al resto de utilidades puras de hash.
 - `src/runtime/runtime-query-state-feedback.ts` concentra la derivación de estado visible de query, incluida la distinción explícita entre `idle` y `loading`, la heurística común de `empty` y la resolución de la respuesta efectiva `show | hide | fallback`.
 - `src/runtime/runtime-layout-visibility.ts` compone `queryStateFeedback` y `visibility` en una única decisión reutilizable por renderer y formularios.
 
