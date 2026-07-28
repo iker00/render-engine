@@ -346,7 +346,7 @@ function validateValidationCompatibility(
     return null
   }
 
-  if ((ruleName === 'minLength' || ruleName === 'maxLength') && supportsTextLengthValidations(target)) {
+  if ((ruleName === 'minLength' || ruleName === 'maxLength') && supportsTextLengthAndPatternValidations(target)) {
     if (!Number.isInteger((rule as RuntimeNumericValidationRule).value)) {
       return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.validations.${ruleName}.value".`, breadcrumb, rawNode)
     }
@@ -366,7 +366,7 @@ function validateValidationCompatibility(
     return null
   }
 
-  if ((ruleName === 'pattern' || ruleName === 'email' || ruleName === 'url') && supportsTextualValidations(target)) {
+  if ((ruleName === 'pattern' || ruleName === 'email' || ruleName === 'url') && supportsTextLengthAndPatternValidations(target)) {
     return null
   }
 
@@ -403,7 +403,7 @@ function validateValidationRanges(
   return null
 }
 
-function supportsTextLengthValidations(target: FormFieldValidationTarget) {
+function supportsTextLengthAndPatternValidations(target: FormFieldValidationTarget) {
   if (target.type === 'textarea') {
     return true
   }
@@ -419,18 +419,4 @@ function supportsTextLengthValidations(target: FormFieldValidationTarget) {
 
 function supportsSelectionCardinalityValidations(target: FormFieldValidationTarget) {
   return target.type === 'checkboxGroup' || (target.type === 'select' && target.multiple)
-}
-
-function supportsTextualValidations(target: FormFieldValidationTarget) {
-  if (target.type === 'textarea') {
-    return true
-  }
-
-  return (
-    target.type === 'input' &&
-    target.inputType !== 'number' &&
-    target.inputType !== 'date' &&
-    target.inputType !== 'datetime-local' &&
-    target.inputType !== 'time'
-  )
 }
