@@ -20,7 +20,7 @@
 - si la operación no existe, el runtime deja `queries.{operationName}` en `status: error` con `code: operation-not-found` y no emite red
 - si faltan datos para resolver referencias en `query`, `body` o `headers`, el runtime deja `status: error` con `code: request-build-failed` y no emite red
 - si un header referencia un token en estado de error (tras dos intentos de refresco fallidos), el runtime deja `status: error` con `code: token-refresh-failed` y no emite red. El mensaje de error no expone el valor del token.
-- si la llamada falla por red, el runtime usa `code: network-error`
+- si la llamada falla por red, el runtime usa `code: network-error`. Cubre tanto el fallo del `fetch()` inicial como un fallo posterior al leer el cuerpo de la respuesta (por ejemplo, una conexión cortada a mitad de transferencia tras recibir cabeceras `ok`)
 - si la respuesta HTTP no es `ok`, el runtime usa `code: http-error`
 - si la respuesta satisfactoria trae JSON inválido, el runtime usa `code: invalid-json-response`
 - si la respuesta es 200 con JSON válido pero `errorCondition` se cumple, el runtime usa `code: business-error-condition` (o el extraído de `errorCodePath`), y la query transita a `status: error` con `data: null`

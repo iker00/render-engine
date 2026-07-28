@@ -5,6 +5,7 @@ import {
   buildInlineRuntimeApiRequest,
   executeRuntimeApiOperation,
   executeInlineRuntimeApiOperation,
+  executeBuiltRuntimeApiRequest,
 } from '../../queries/runtime-api-executor'
 import type { RuntimeState } from '../../runtime/runtime-state/runtime-state-types'
 
@@ -1292,6 +1293,82 @@ describe('Runtime api execution', () => {
       error: {
         code: 'invalid-json-response',
         message: 'The api operation "searchUsers" returned invalid JSON.',
+      },
+    })
+  })
+
+  it('normalizes a rejected response.text() to network-error instead of propagating the rejection (executeRuntimeApiOperation)', async () => {
+    const failingResponse = {
+      ok: true,
+      status: 200,
+      text: () => Promise.reject(new Error('stream cut off')),
+    } as unknown as Response
+
+    await expect(
+      executeRuntimeApiOperation({
+        config: runtimeConfig,
+        operationName: 'searchUsers',
+        state: runtimeState,
+        fetch: vi.fn().mockResolvedValue(failingResponse),
+      }),
+    ).resolves.toEqual({
+      status: 'error',
+      error: {
+        code: 'network-error',
+        message: 'The api operation "searchUsers" failed due to a network error while reading the response body.',
+      },
+    })
+  })
+
+  it('normalizes a rejected response.text() to network-error instead of propagating the rejection (executeInlineRuntimeApiOperation)', async () => {
+    const failingResponse = {
+      ok: true,
+      status: 200,
+      text: () => Promise.reject(new Error('stream cut off')),
+    } as unknown as Response
+
+    await expect(
+      executeInlineRuntimeApiOperation({
+        operation: runtimeConfig.api.searchUsers,
+        operationName: 'searchUsers',
+        state: runtimeState,
+        fetch: vi.fn().mockResolvedValue(failingResponse),
+      }),
+    ).resolves.toEqual({
+      status: 'error',
+      error: {
+        code: 'network-error',
+        message: 'The api operation "searchUsers" failed due to a network error while reading the response body.',
+      },
+    })
+  })
+
+  it('normalizes a rejected response.text() to network-error instead of propagating the rejection (executeBuiltRuntimeApiRequest)', async () => {
+    const failingResponse = {
+      ok: true,
+      status: 200,
+      text: () => Promise.reject(new Error('stream cut off')),
+    } as unknown as Response
+
+    const requestResult = buildRuntimeApiRequest({
+      config: runtimeConfig,
+      operationName: 'searchUsers',
+      state: runtimeState,
+    })
+
+    expect(requestResult.status).toBe('ready')
+    if (requestResult.status !== 'ready') return
+
+    await expect(
+      executeBuiltRuntimeApiRequest({
+        request: requestResult.request,
+        fetch: vi.fn().mockResolvedValue(failingResponse),
+      }),
+    ).resolves.toEqual({
+      status: 'error',
+      error: {
+        code: 'network-error',
+        message: 'The api operation "searchUsers" failed due to a network error while reading the response body.',
       },
     })
   })
