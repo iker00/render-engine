@@ -34,7 +34,7 @@ export const supportedNodeTypes = [
 export const tableCellAllowedNodeTypes = ['image', 'list', 'button', 'container', 'heading', 'paragraph'] as const
 export const supportedApiMethods = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'] as const
 export const supportedQueryStateFeedbackStates = ['idle', 'loading', 'error', 'empty', 'success'] as const
-export const supportedVisibilityOperators = ['equals', 'notEquals', 'isTruthy', 'isFalsy', 'greaterThan', 'lessThan'] as const
+export const supportedVisibilityOperators = ['equals', 'notEquals', 'isTruthy', 'isFalsy', 'greaterThan', 'lessThan', 'arrayContains'] as const
 export const supportedVisibilityGroupOperators = ['and', 'or'] as const
 export const supportedInputTypes = ['text', 'email', 'password', 'search', 'tel', 'url', 'number', 'date', 'datetime-local', 'time'] as const
 export const supportedContainerAlignValues = ['start', 'center', 'end', 'stretch'] as const
@@ -168,6 +168,7 @@ const visibilityConditionSchema = z
     operator: z.enum(supportedVisibilityOperators),
     value: z.unknown().optional(),
     negate: z.boolean().optional(),
+    itemField: z.string().optional(),
   })
   .strip()
 

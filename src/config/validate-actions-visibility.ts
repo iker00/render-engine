@@ -43,7 +43,7 @@ import { isTokensReference } from './runtime-reference-namespace-guards'
 
 const collectionPathSegmentPattern = /^[A-Za-z0-9_-]+$/
 const whenParamsReferencePattern = /^params\.[A-Za-z0-9_-]+$/
-const visibilityComparisonOperators = new Set<RuntimeVisibilityOperator>(['equals', 'notEquals', 'greaterThan', 'lessThan'])
+const visibilityComparisonOperators = new Set<RuntimeVisibilityOperator>(['equals', 'notEquals', 'greaterThan', 'lessThan', 'arrayContains'])
 const visibilityScalarOperators = new Set<RuntimeVisibilityOperator>(['equals', 'notEquals'])
 const visibilityTruthinessOperators = new Set<RuntimeVisibilityOperator>(['isTruthy', 'isFalsy'])
 
@@ -950,6 +950,14 @@ function validateSingleVisibilityCondition(
     return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.operator".`)
   }
 
+  const hasItemField = Object.prototype.hasOwnProperty.call(rawCondition, 'itemField')
+
+  if (hasItemField && operator !== 'arrayContains') {
+    return invalidLayout(
+      `Page "${pageId}" has an invalid layout at "${path}.itemField": itemField is only valid when operator is "arrayContains".`,
+    )
+  }
+
   const hasValue = Object.prototype.hasOwnProperty.call(rawCondition, 'value')
 
   if (visibilityTruthinessOperators.has(operator as RuntimeVisibilityOperator) && hasValue) {
@@ -972,6 +980,22 @@ function validateSingleVisibilityCondition(
     if (!isRuntimeConfigValue(rawCondition.value)) {
       return invalidLayout(
         `Page "${pageId}" has an invalid layout at "${path}.value": operator "${operator}" only accepts string, number, boolean or null.`,
+      )
+    }
+
+    return { status: 'ready' }
+  }
+
+  if (operator === 'arrayContains') {
+    if (!isRuntimeConfigValue(rawCondition.value)) {
+      return invalidLayout(
+        `Page "${pageId}" has an invalid layout at "${path}.value": operator "${operator}" only accepts string, number, boolean or null.`,
+      )
+    }
+
+    if (hasItemField && typeof rawCondition.itemField !== 'string') {
+      return invalidLayout(
+        `Page "${pageId}" has an invalid layout at "${path}.itemField": itemField must be a string.`,
       )
     }
 

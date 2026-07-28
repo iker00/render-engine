@@ -104,6 +104,14 @@ function evaluateConditionMatch(
     return resolvedReference.status !== 'resolved' || !isTruthyValue(resolvedReference.value)
   }
 
+  if (condition.operator === 'arrayContains') {
+    if (resolvedReference.status !== 'resolved' || !Array.isArray(resolvedReference.value)) {
+      return false
+    }
+
+    return arrayContainsMatch(resolvedReference.value, condition)
+  }
+
   if (resolvedReference.status !== 'resolved') {
     return false
   }
@@ -127,6 +135,45 @@ function evaluateConditionMatch(
   }
 
   return comparableValue < condition.value
+}
+
+const ARRAY_ITEM_FIELD_NOT_FOUND = Symbol('array-item-field-not-found')
+
+function arrayContainsMatch(value: unknown[], condition: RuntimeVisibilityCondition) {
+  if (!condition.itemField) {
+    return value.some((element) => Object.is(element, condition.value))
+  }
+
+  const segments = condition.itemField.split('.')
+
+  return value.some((element) => {
+    if (typeof element !== 'object' || element === null || Array.isArray(element)) {
+      return false
+    }
+
+    const resolvedValue = resolveArrayItemFieldValue(element as Record<string, unknown>, segments)
+    return resolvedValue !== ARRAY_ITEM_FIELD_NOT_FOUND && Object.is(resolvedValue, condition.value)
+  })
+}
+
+function resolveArrayItemFieldValue(element: Record<string, unknown>, segments: readonly string[]) {
+  let current: unknown = element
+
+  for (const segment of segments) {
+    if (segment === '' || typeof current !== 'object' || current === null || Array.isArray(current)) {
+      return ARRAY_ITEM_FIELD_NOT_FOUND
+    }
+
+    const record = current as Record<string, unknown>
+
+    if (!(segment in record)) {
+      return ARRAY_ITEM_FIELD_NOT_FOUND
+    }
+
+    current = record[segment]
+  }
+
+  return current
 }
 
 function normalizeComparableValue(value: unknown) {
