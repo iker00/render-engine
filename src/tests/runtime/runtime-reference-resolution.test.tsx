@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { parseRuntimeReference } from '../../runtime/runtime-references/runtime-reference-parser'
+import { parseRuntimeReference } from '../../config/runtime-reference-syntax'
 import {
   resolveRuntimeImageAlt,
   resolveRuntimeImageSource,

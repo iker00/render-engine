@@ -38,7 +38,7 @@ import {
   runtimeApiHeadersSchema,
 } from './runtime-config-zod'
 import { invalidLayout } from './runtime-config-validation-errors'
-import { parseRuntimeReference } from '../runtime/runtime-references/runtime-reference-parser'
+import { parseRuntimeReference } from './runtime-reference-syntax'
 import { isTokensReference } from './runtime-reference-namespace-guards'
 
 const collectionPathSegmentPattern = /^[A-Za-z0-9_-]+$/

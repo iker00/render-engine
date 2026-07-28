@@ -18,7 +18,7 @@ import {
 } from './runtime-config-zod'
 import type { BreadcrumbSegment } from './validation-breadcrumb'
 import { enrichedInvalidLayout, enrichErrorResult } from './validation-breadcrumb'
-import { parseRuntimeReference } from '../runtime/runtime-references/runtime-reference-parser'
+import { parseRuntimeReference } from './runtime-reference-syntax'
 import { isTokensReference } from './runtime-reference-namespace-guards'
 import { validateQueryStateFeedback } from './validate-layout-nodes-core'
 import { mapLeafNodeIssue } from './validate-layout-issue-mapping'

@@ -1,6 +1,6 @@
 import type { RuntimeConfigError } from './runtime-config-types'
 import { isNonEmptyString, isValidCollectionPathSegment } from './validate-node-shared-helpers'
-import { parseRuntimeReference } from '../runtime/runtime-references/runtime-reference-parser'
+import { parseRuntimeReference } from './runtime-reference-syntax'
 import { invalidLayout } from './runtime-config-validation-errors'
 
 export function validateCollectionSource(

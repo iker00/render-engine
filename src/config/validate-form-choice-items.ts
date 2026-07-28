@@ -5,7 +5,7 @@ import { enrichedInvalidLayout, enrichErrorResult } from './validation-breadcrum
 import { validateCollectionSource } from './validate-collection-source'
 import { formatPathSegment, isValidCollectionProjectionPath } from './validate-node-shared-helpers'
 import { isTokensReference } from './runtime-reference-namespace-guards'
-import { parseRuntimeReference } from '../runtime/runtime-references/runtime-reference-parser'
+import { parseRuntimeReference } from './runtime-reference-syntax'
 
 export function validateSelectItemsContract(
   rawItems: unknown,

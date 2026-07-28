@@ -1,4 +1,4 @@
-import { hasRuntimeTemplateDelimiter } from '../runtime/runtime-references/runtime-reference-parser'
+import { hasRuntimeTemplateDelimiter } from './runtime-reference-syntax'
 
 const collectionPathSegmentPattern = /^[A-Za-z0-9_-]+$/
 
