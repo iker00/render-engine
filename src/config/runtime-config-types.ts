@@ -74,13 +74,21 @@ export type RuntimeCollectionObjectValue =
 export type RuntimeCollectionObjectItem = Record<string, RuntimeCollectionObjectValue>
 
 export type QueryStateFeedbackVisibleState = 'idle' | 'loading' | 'error' | 'empty' | 'success'
-export type RuntimeVisibilityOperator = 'equals' | 'notEquals' | 'isTruthy' | 'isFalsy' | 'greaterThan' | 'lessThan'
+export type RuntimeVisibilityOperator =
+  | 'equals'
+  | 'notEquals'
+  | 'isTruthy'
+  | 'isFalsy'
+  | 'greaterThan'
+  | 'lessThan'
+  | 'arrayContains'
 export type RuntimeVisibilityGroupOperator = 'and' | 'or'
 
 export interface RuntimeVisibilityCondition {
   reference: string
   operator: RuntimeVisibilityOperator
   value?: RuntimeConfigValue
+  itemField?: string
   negate?: boolean
 }
 
