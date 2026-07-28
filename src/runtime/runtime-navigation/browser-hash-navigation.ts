@@ -105,6 +105,12 @@ export function areBrowserHashNavigationEntriesEqual(
   return leftKeys.every((key, index) => key === rightKeys[index] && leftParams[key] === rightParams[key])
 }
 
+export function replaceBrowserHash(hash: string) {
+  const currentUrl = new URL(window.location.href)
+  currentUrl.hash = hash
+  window.history.replaceState(window.history.state, '', currentUrl)
+}
+
 function createParseResult(
   entry: BrowserHashNavigationEntry,
   options: CreateBrowserHashNavigationHashOptions,
