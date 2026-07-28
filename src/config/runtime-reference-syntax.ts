@@ -1,10 +1,47 @@
-import type {
-  RuntimeInvalidReference,
-  RuntimeReferenceNamespace,
-  RuntimeReferenceParseResult,
-  RuntimeSupportedReference,
-  RuntimeUnsupportedReference,
-} from './runtime-reference-types'
+export type RuntimeReferenceNamespace =
+  | 'item'
+  | 'forms'
+  | 'queries'
+  | 'navigation'
+  | 'routeParams'
+  | 'params'
+  | 'translations'
+  | 'tokens'
+
+export type RuntimeReferenceParseResult =
+  | RuntimeLiteralReference
+  | RuntimeSupportedReference
+  | RuntimeUnsupportedReference
+  | RuntimeInvalidReference
+
+export interface RuntimeLiteralReference {
+  kind: 'literal'
+  value: string
+}
+
+export interface RuntimeSupportedReference {
+  kind: 'reference'
+  status: 'supported'
+  namespace: 'item' | 'forms' | 'queries' | 'params' | 'translations' | 'tokens'
+  path: string[]
+  source: string
+}
+
+export interface RuntimeUnsupportedReference {
+  kind: 'reference'
+  status: 'unsupported'
+  namespace: 'item' | 'navigation' | 'routeParams'
+  path: string[]
+  source: string
+}
+
+export interface RuntimeInvalidReference {
+  kind: 'reference'
+  status: 'invalid'
+  namespace: RuntimeReferenceNamespace
+  path: string[]
+  source: string
+}
 
 const SUPPORTED_NAMESPACES = new Set(['forms', 'queries', 'params', 'translations', 'tokens'] as const)
 const RESERVED_NAMESPACES = new Set(['navigation', 'routeParams'] as const)

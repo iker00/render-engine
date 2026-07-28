@@ -14,12 +14,12 @@ import {
 import type { RuntimeReferenceSurface } from './runtime-reference-diagnostics'
 import { hasFormatterSyntax, parseFormatterPlaceholder } from './runtime-formatter-parser'
 import { applyFormatterChain, findFirstFailingFormatterName } from './runtime-formatter-registry'
-import { parseRuntimeReference } from './runtime-reference-parser'
+import { parseRuntimeReference } from '../../config/runtime-reference-syntax'
 import type {
   RuntimeReferenceResolutionResult,
-  RuntimeSupportedReference,
   RuntimeTokenErrorResolution,
 } from './runtime-reference-types'
+import type { RuntimeSupportedReference } from '../../config/runtime-reference-syntax'
 
 export interface RuntimeIterationContext {
   item: unknown

@@ -8,7 +8,7 @@ import type {
   SelectManualScalarItemsSource,
 } from '../config/runtime-config'
 import type { RuntimeReferenceSurface } from './runtime-references/runtime-reference-diagnostics'
-import { hasRuntimeTemplateDelimiter } from './runtime-references/runtime-reference-parser'
+import { hasRuntimeTemplateDelimiter } from '../config/runtime-reference-syntax'
 import type { RuntimeIterationContext } from './runtime-references/runtime-reference-resolver'
 import {
   resolveRuntimeReference,

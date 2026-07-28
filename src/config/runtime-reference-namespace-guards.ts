@@ -1,4 +1,4 @@
-import { parseRuntimeReference } from '../runtime/runtime-references/runtime-reference-parser'
+import { parseRuntimeReference } from './runtime-reference-syntax'
 
 /**
  * Returns true if the given string value is a `tokens.*` reference
