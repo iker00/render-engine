@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import type { LayoutNode, ContainerLayoutNode, FormLayoutNode, InputLayoutNode, HeadingLayoutNode, ButtonLayoutNode, RuntimeConfigError } from '../../config/runtime-config-types'
+import type { ContainerLayoutNode, FormLayoutNode, InputLayoutNode, HeadingLayoutNode, ButtonLayoutNode, RuntimeConfigError } from '../../config/runtime-config-types'
 import {
   buildBreadcrumbSegment,
   buildBreadcrumbSegmentFromNode,

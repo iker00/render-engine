@@ -1,19 +1,11 @@
 import { useEffect, useMemo, useRef } from 'react'
 import type { FormEvent, ReactNode } from 'react'
 import type {
-  CheckboxGroupLayoutNode,
   FileInputLayoutNode,
   FormLayoutNode,
   FormOnErrorAction,
   FormOnSuccessAction,
-  HiddenLayoutNode,
-  InputLayoutNode,
-  LayoutNode,
   LayoutNodeCollection,
-  RadioGroupLayoutNode,
-  SelectLayoutNode,
-  TextareaLayoutNode,
-  ToggleLayoutNode,
 } from '../../config/runtime-config'
 import { FormContextProvider } from '../form-context'
 import { isLayoutNodeVisible, matchesVisibilityRule } from '../runtime-layout-visibility'
@@ -24,10 +16,15 @@ import {
 import { getFormNodeClassName } from '../runtime-node-styling'
 import { normalizeChoiceFieldValue } from '../runtime-collection-sources'
 import { type ResolvedFormFieldDefinition, validateFormFields } from '../runtime-form-validations'
-import { useRuntimeState, useRuntimeStateActions } from '../runtime-state/runtime-state-provider'
+import { useRuntimeState, useRuntimeStateActions } from '../runtime-state/use-runtime-state'
 import { selectFormFieldState } from '../runtime-state/runtime-state-selectors'
 import { executeRuntimeUiAction, type RuntimeUiActionHandlers } from '../runtime-actions/runtime-ui-action-executor'
 import type { RuntimeApiFileInputSources, RuntimeApiHiddenFormFields } from '../../queries/runtime-api-types'
+import {
+  getChoiceFieldSurface,
+  resolveResolvedFormFieldDefinition,
+  resolveToggleFieldDefinition,
+} from './resolve-form-field-definition'
 
 interface FormNodeProps {
   node: FormLayoutNode
@@ -109,8 +106,13 @@ export function FormNode({ node, children, iterationContext }: FormNodeProps) {
       return
     }
 
+    // Captured once per effect run (rather than reading `mountedPageEntryIdRef.current` inline
+    // in the cleanup) so the comparison below always uses the entryId that was current when
+    // this effect was scheduled, regardless of what the ref might point to by the time it runs.
+    const mountedPageEntryId = mountedPageEntryIdRef.current
+
     return () => {
-      if (readRuntimeState().pageEntry.entryId !== mountedPageEntryIdRef.current) {
+      if (readRuntimeState().pageEntry.entryId !== mountedPageEntryId) {
         removeForm(node.id)
       }
     }
@@ -138,7 +140,7 @@ export function FormNode({ node, children, iterationContext }: FormNodeProps) {
         setFormFieldValue(node.id, fieldDefinition.fieldId, normalizedValue)
       }
     }
-  }, [fieldDefinitions, node.id, setFormFieldValue, state])
+  }, [fieldDefinitions, iterationContext, node.id, setFormFieldValue, state])
 
   function buildHandlers(): RuntimeUiActionHandlers {
     return {
@@ -327,7 +329,7 @@ export function FormNode({ node, children, iterationContext }: FormNodeProps) {
   )
 }
 
-export function collectResolvedFormFieldDefinitions(
+function collectResolvedFormFieldDefinitions(
   nodes: LayoutNodeCollection,
   state: ReturnType<typeof useRuntimeState>,
   iterationContext?: RuntimeIterationContext,
@@ -385,7 +387,7 @@ export function collectResolvedFormFieldDefinitions(
  * Collects all field IDs in a form tree regardless of node visibility.
  * Used by handleSubmit to compute the set of hidden fieldIds at submit time.
  */
-export function collectAllFormFieldIds(nodes: LayoutNodeCollection): string[] {
+function collectAllFormFieldIds(nodes: LayoutNodeCollection): string[] {
   const fieldIds: string[] = []
 
   for (const node of nodes) {
@@ -467,110 +469,6 @@ function resolveFileInputFieldDefinition(node: FileInputLayoutNode): ResolvedFor
   }
 }
 
-export function resolveToggleFieldDefinition(
-  node: ToggleLayoutNode,
-  state: ReturnType<typeof useRuntimeState>,
-  iterationContext?: RuntimeIterationContext,
-): ResolvedFormFieldDefinition {
-  const resolvedValue = resolveRuntimeValueWithOptions(node.props.defaultValue, state, { iterationContext })
-  const defaultValue =
-    resolvedValue.status === 'resolved' && typeof resolvedValue.value === 'boolean'
-      ? resolvedValue.value
-      : false
-
-  return {
-    fieldId: node.props.fieldId,
-    type: 'toggle',
-    validations: node.props.validations,
-    queryStateFeedback: node.queryStateFeedback,
-    visibility: node.visibility,
-    multiple: false,
-    defaultValue,
-  }
-}
-
-export function resolveResolvedFormFieldDefinition(
-  node: InputLayoutNode | TextareaLayoutNode | SelectLayoutNode | RadioGroupLayoutNode | CheckboxGroupLayoutNode,
-  state: ReturnType<typeof useRuntimeState>,
-  iterationContext?: RuntimeIterationContext,
-): ResolvedFormFieldDefinition {
-  return {
-    fieldId: node.props.fieldId,
-    type: node.type,
-    validations: node.props.validations,
-    queryStateFeedback: node.queryStateFeedback,
-    visibility: node.visibility,
-    items: isChoiceFieldNode(node) ? node.props.items : undefined,
-    multiple: isMultipleChoiceFieldNode(node),
-    defaultValue: resolveFieldDefaultValue(node, state, iterationContext),
-    inputType: node.type === 'input' ? node.props.inputType : undefined,
-  }
-}
-export function resolveFieldDefaultValue(
-  node: InputLayoutNode | TextareaLayoutNode | SelectLayoutNode | RadioGroupLayoutNode | CheckboxGroupLayoutNode,
-  state: ReturnType<typeof useRuntimeState>,
-  iterationContext?: RuntimeIterationContext,
-) {
-  const resolvedValue = resolveRuntimeValueWithOptions(node.props.defaultValue, state, { iterationContext })
-  const fallbackValue = isMultipleChoiceFieldNode(node) ? [] : ''
-
-  if (resolvedValue.status !== 'resolved') {
-    return fallbackValue
-  }
-
-  if (isChoiceFieldNode(node)) {
-    return normalizeChoiceFieldValue(node.props.items, state, resolvedValue.value, {
-      multiple: isMultipleChoiceFieldNode(node),
-      surface: getChoiceFieldSurface(node.type),
-      iterationContext,
-    })
-  }
-
-  if (typeof resolvedValue.value === 'string') {
-    return resolvedValue.value
-  }
-
-  if (node.type === 'input' && typeof resolvedValue.value === 'number') {
-    return String(resolvedValue.value)
-  }
-
-  return fallbackValue
-}
-
-function isChoiceFieldNode(
-  node: LayoutNode,
-): node is SelectLayoutNode | RadioGroupLayoutNode | CheckboxGroupLayoutNode {
-  return node.type === 'select' || node.type === 'radioGroup' || node.type === 'checkboxGroup'
-}
-
-function isMultipleChoiceFieldNode(
-  node:
-    | Pick<ResolvedFormFieldDefinition, 'type' | 'multiple'>
-    | InputLayoutNode
-    | TextareaLayoutNode
-    | SelectLayoutNode
-    | CheckboxGroupLayoutNode
-    | RadioGroupLayoutNode,
-) {
-  if ('multiple' in node && typeof node.multiple === 'boolean') {
-    return node.multiple
-  }
-
-  return node.type === 'checkboxGroup' || (node.type === 'select' && 'props' in node && node.props.multiple === true)
-}
-
-function getChoiceFieldSurface(type: ResolvedFormFieldDefinition['type']) {
-  if (type === 'radioGroup') {
-    return 'radioGroup.props.items' as const
-  }
-
-  if (type === 'checkboxGroup') {
-    return 'checkboxGroup.props.items' as const
-  }
-
-  return 'select.props.items' as const
-}
-
 function areFieldValuesEqual(left: unknown, right: unknown) {
   if (Array.isArray(left) && Array.isArray(right)) {
     if (left.length !== right.length) {
@@ -619,7 +517,7 @@ function isPlaceholderFieldDefault(value: unknown) {
  * nodes with their resolved values. Used to initialize hidden fields at form
  * mount independently of whether ancestor containers are visible.
  */
-export function collectHiddenFieldDefinitions(
+function collectHiddenFieldDefinitions(
   nodes: LayoutNodeCollection,
   state: ReturnType<typeof useRuntimeState>,
   iterationContext?: RuntimeIterationContext,
@@ -659,7 +557,7 @@ export function collectHiddenFieldDefinitions(
  * These IDs must never be included in the "hidden fields" set that causes
  * payload omission at submit time.
  */
-export function collectHiddenNodeFieldIds(nodes: LayoutNodeCollection): Set<string> {
+function collectHiddenNodeFieldIds(nodes: LayoutNodeCollection): Set<string> {
   const fieldIds = new Set<string>()
 
   for (const node of nodes) {

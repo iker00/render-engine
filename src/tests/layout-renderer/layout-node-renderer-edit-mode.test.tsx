@@ -3,10 +3,8 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import type { LayoutNode, RuntimeConfig } from '../../config/runtime-config'
 import { LayoutRenderer } from '../../runtime/layout-renderer'
-import {
-  LayoutEditModeProvider,
-  type LayoutEditModeContextValue,
-} from '../../runtime/layout-edit-mode-context'
+import { LayoutEditModeProvider } from '../../runtime/layout-edit-mode-context'
+import type { LayoutEditModeContextValue } from '../../runtime/layout-edit-mode-context-value'
 import {
   getNodeAtPath,
   serializeLayoutNodePath,

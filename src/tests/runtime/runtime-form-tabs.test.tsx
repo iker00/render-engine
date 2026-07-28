@@ -2,9 +2,11 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { useEffect } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { RuntimeConfig } from '../../config/runtime-config'
-import { RuntimeStateProvider, useRuntimeStateActions } from '../../runtime/runtime-state/runtime-state-provider'
+import { RuntimeStateProvider } from '../../runtime/runtime-state/runtime-state-provider'
+import { useRuntimeStateActions } from '../../runtime/runtime-state/use-runtime-state'
 import { RuntimePage } from '../../runtime/runtime-page'
-import { RuntimeStateSnapshot, readRuntimeStateSnapshot } from '../runtime-state/helpers'
+import { RuntimeStateSnapshot } from '../runtime-state/helpers'
+import { readRuntimeStateSnapshot } from '../runtime-state/read-runtime-state-snapshot'
 
 afterEach(() => {
   window.history.replaceState(null, '', window.location.pathname + window.location.search)

@@ -35,14 +35,6 @@ function mockFetchFailure(): typeof fetch {
   return vi.fn().mockRejectedValue(new Error('network error'))
 }
 
-function mockFetchHttpError(status = 500): typeof fetch {
-  return vi.fn().mockResolvedValue({
-    ok: false,
-    status,
-    text: vi.fn().mockResolvedValue(''),
-  } as unknown as Response)
-}
-
 interface SchedulerTestHarness {
   state: RuntimeState
   dispatchedActions: RuntimeStateAction[]

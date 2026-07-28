@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { RuntimeConfig, RuntimePageConfig } from '../../config/runtime-config'
 import { RuntimePage } from '../../runtime/runtime-page'
 import { RuntimeStateContext } from '../../runtime/runtime-state/runtime-state-context'
-import { createRuntimeState, runtimeStateReducer } from '../../runtime/runtime-state/runtime-state-reducer'
+import { createRuntimeState } from '../../runtime/runtime-state/runtime-state-reducer'
 import type { RuntimeState, RuntimeStateAction } from '../../runtime/runtime-state/runtime-state-types'
 import {
   RuntimeStateProvider,

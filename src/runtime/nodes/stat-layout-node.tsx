@@ -1,6 +1,6 @@
 import type { StatColor, StatLayoutNode, StatVariant } from '../../config/runtime-config'
 import { resolveRuntimeTextReference, type RuntimeIterationContext } from '../runtime-references/runtime-reference-resolver'
-import { useRuntimeState } from '../runtime-state/runtime-state-provider'
+import { useRuntimeState } from '../runtime-state/use-runtime-state'
 import {
   getStatAccentRootClassName,
   getStatAccentIconClassName,

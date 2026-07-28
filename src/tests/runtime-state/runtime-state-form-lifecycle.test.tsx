@@ -3,11 +3,8 @@ import { useEffect } from 'react'
 import { afterEach, describe, expect, it } from 'vitest'
 import type { RuntimeConfig } from '../../config/runtime-config'
 import type { RuntimeState } from '../../runtime/runtime-state/runtime-state-types'
-import {
-  RuntimeStateProvider,
-  useRuntimeState,
-  useRuntimeStateActions,
-} from '../../runtime/runtime-state/runtime-state-provider'
+import { RuntimeStateProvider } from '../../runtime/runtime-state/runtime-state-provider'
+import { useRuntimeState, useRuntimeStateActions } from '../../runtime/runtime-state/use-runtime-state'
 import { RuntimePage } from '../../runtime/runtime-page'
 
 afterEach(() => {

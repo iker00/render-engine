@@ -1,7 +1,7 @@
 import type { ParagraphLayoutNode } from '../../config/runtime-config'
 import { resolveRuntimeTextReference, type RuntimeIterationContext } from '../runtime-references/runtime-reference-resolver'
 import { getParagraphNodeClassName } from '../runtime-node-styling'
-import { useRuntimeState } from '../runtime-state/runtime-state-provider'
+import { useRuntimeState } from '../runtime-state/use-runtime-state'
 import { IconNode } from './icon-node'
 
 interface ParagraphNodeProps {

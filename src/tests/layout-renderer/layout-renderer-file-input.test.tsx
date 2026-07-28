@@ -2,10 +2,8 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { RuntimeConfig, RuntimePageConfig } from '../../config/runtime-config'
 import { RuntimePage } from '../../runtime/runtime-page'
-import { RuntimeStateProvider, useRuntimeStateActions } from '../../runtime/runtime-state/runtime-state-provider'
-import { RuntimeStateContext } from '../../runtime/runtime-state/runtime-state-context'
-import { createRuntimeState } from '../../runtime/runtime-state/runtime-state-reducer'
-import type { RuntimeState, RuntimeStateAction } from '../../runtime/runtime-state/runtime-state-types'
+import { RuntimeStateProvider } from '../../runtime/runtime-state/runtime-state-provider'
+import { useRuntimeStateActions } from '../../runtime/runtime-state/use-runtime-state'
 import { useEffect } from 'react'
 
 // jsdom does not implement URL.createObjectURL / revokeObjectURL — install stubs
@@ -33,32 +31,6 @@ function renderRuntimePage(page: RuntimePageConfig) {
     <RuntimeStateProvider config={config}>
       <RuntimePage />
     </RuntimeStateProvider>,
-  )
-}
-
-function renderRuntimePageWithState(page: RuntimePageConfig, state: RuntimeState) {
-  const config: RuntimeConfig = {
-    api: {},
-    initialPage: page.id,
-    pages: [page],
-  }
-
-  const dispatch = vi.fn<(action: RuntimeStateAction) => void>()
-  const dispatchAndSyncState = vi.fn<(action: RuntimeStateAction) => void>()
-
-  return render(
-    <RuntimeStateContext.Provider
-      value={{
-        config,
-        initialState: state,
-        state,
-        dispatch,
-        dispatchAndSyncState,
-        getLatestState: () => state,
-      }}
-    >
-      <RuntimePage />
-    </RuntimeStateContext.Provider>,
   )
 }
 

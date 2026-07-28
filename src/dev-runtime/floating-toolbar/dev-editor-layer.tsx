@@ -2,11 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react'
 import type { LayoutNode, LayoutNodeType, RuntimeConfigError } from '../../config/runtime-config'
 import { LayoutEditModeProvider } from '../../runtime/layout-edit-mode-context'
 import { getNodeAtPath, serializeLayoutNodePath, type LayoutNodePath } from '../../runtime/layout-node-path'
-import {
-  useRuntimeConfig,
-  useRuntimeCurrentPage,
-  useRuntimeStateActions,
-} from '../../runtime/runtime-state/runtime-state-provider'
+import { useRuntimeConfig, useRuntimeCurrentPage, useRuntimeStateActions } from '../../runtime/runtime-state/use-runtime-state'
 import { findNodePath, insertNodeAt, movePathTo, removeNodeAt } from '../layout-tree-mutations'
 import { LayoutCanvasDndContext, type LayoutCanvasDropAttempt } from '../layout-canvas/layout-canvas-dnd-context'
 import { isValidDropTarget } from '../layout-canvas/layout-drop-validity'
@@ -87,23 +83,28 @@ export function DevEditorLayer({
   const activePageId = activePage?.id ?? config.initialPage
 
   // Edge case: navigating to a different page clears the selection — a selected node from a
-  // different page has no meaning on the new page (spec FR15).
-  useEffect(() => {
+  // different page has no meaning on the new page (spec FR15). Adjusted during render (the
+  // React-documented "adjust state when a prop changes" pattern) rather than in an effect:
+  // tracking the previous page id in state lets us detect the transition without an effect,
+  // and the guard below only fires once per actual change so it cannot loop.
+  const [prevActivePageId, setPrevActivePageId] = useState(activePage?.id)
+  if (activePage?.id !== prevActivePageId) {
+    setPrevActivePageId(activePage?.id)
     setSelectedPath(null)
     setHoveredPath(null)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activePage?.id])
+  }
 
   // Edge case: a config change (canvas commit or Monaco Aplicar) may remove the selected node.
   // Degrade the selection safely instead of pointing at a path that no longer resolves — same
-  // guard LayoutCanvas already applied before this task.
-  useEffect(() => {
-    if (selectedPath === null) return
-    if (getNodeAtPath(activePageLayout, selectedPath) === null) {
+  // guard LayoutCanvas already applied before this task. Same render-time adjustment pattern
+  // as above, keyed off the layout array reference instead of the page id.
+  const [prevActivePageLayout, setPrevActivePageLayout] = useState(activePageLayout)
+  if (activePageLayout !== prevActivePageLayout) {
+    setPrevActivePageLayout(activePageLayout)
+    if (selectedPath !== null && getNodeAtPath(activePageLayout, selectedPath) === null) {
       setSelectedPath(null)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activePageLayout])
+  }
 
   const selectedNode = selectedPath !== null ? getNodeAtPath(activePageLayout, selectedPath) : null
 

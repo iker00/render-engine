@@ -1,7 +1,7 @@
 import type { ListLayoutNode } from '../../config/runtime-config'
 import type { RuntimeIterationContext } from '../runtime-references/runtime-reference-resolver'
 import { getListItemClassName, getListNodeClassName } from '../runtime-node-styling'
-import { useRuntimeState } from '../runtime-state/runtime-state-provider'
+import { useRuntimeState } from '../runtime-state/use-runtime-state'
 import { resolveListCollectionItemsWithOptions } from '../runtime-collection-sources'
 
 interface ListNodeProps {

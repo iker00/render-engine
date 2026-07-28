@@ -1,23 +1,16 @@
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import { useEffect } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { RuntimeConfig, RuntimePageConfig } from '../../config/runtime-config'
+import type { RuntimeConfig } from '../../config/runtime-config'
 import { RuntimePage } from '../../runtime/runtime-page'
-import { RuntimeStateProvider, useRuntimeStateActions } from '../../runtime/runtime-state/runtime-state-provider'
+import { RuntimeStateProvider } from '../../runtime/runtime-state/runtime-state-provider'
+import { useRuntimeStateActions } from '../../runtime/runtime-state/use-runtime-state'
 
 afterEach(() => {
   vi.unstubAllGlobals()
 })
 
-function renderRuntime(config: RuntimeConfig) {
-  return render(
-    <RuntimeStateProvider config={config}>
-      <RuntimePage />
-    </RuntimeStateProvider>,
-  )
-}
-
-function makeConfigWithItems(items: Array<{ id: string; name: string }>) {
+function makeConfigWithItems(_items: Array<{ id: string; name: string }>) {
   const config: RuntimeConfig = {
     api: {},
     initialPage: 'home',

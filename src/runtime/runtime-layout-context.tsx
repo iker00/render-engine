@@ -1,13 +1,9 @@
-import { createContext, useContext, type ReactNode } from 'react'
-import type { RuntimeResponsiveLayoutValue } from '../config/runtime-config'
-
-interface RuntimeLayoutContextValue {
-  parentGridColumns: RuntimeResponsiveLayoutValue | null
-}
-
-const RuntimeLayoutContext = createContext<RuntimeLayoutContextValue>({
-  parentGridColumns: null,
-})
+import type { ReactNode } from 'react'
+// The context itself lives in `./runtime-layout-context-value` (not here) so this file's only
+// export is the component `RuntimeLayoutContextProvider` — Fast Refresh requires component-only
+// modules to preserve state across edits, and it also asks for React contexts to live in their
+// own file.
+import { RuntimeLayoutContext, type RuntimeLayoutContextValue } from './runtime-layout-context-value'
 
 export function RuntimeLayoutContextProvider({
   value,
@@ -17,8 +13,4 @@ export function RuntimeLayoutContextProvider({
   children: ReactNode
 }) {
   return <RuntimeLayoutContext.Provider value={value}>{children}</RuntimeLayoutContext.Provider>
-}
-
-export function useRuntimeLayoutContext() {
-  return useContext(RuntimeLayoutContext)
 }

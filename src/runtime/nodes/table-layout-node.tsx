@@ -41,7 +41,7 @@ import {
   getTableScrollContainerClassName,
   getTableSortButtonClassName,
 } from '../runtime-node-styling'
-import { useRuntimeState } from '../runtime-state/runtime-state-provider'
+import { useRuntimeState } from '../runtime-state/use-runtime-state'
 import { LayoutNodeRenderer } from '../layout-node-renderer'
 import { LayoutRenderer } from '../layout-renderer'
 
@@ -59,7 +59,13 @@ interface TablePaginationState {
 export function TableNode({ node, iterationContext }: TableNodeProps) {
   const state = useRuntimeState()
   const tableInstanceId = useId()
-  const { rows, rowItemMap } = resolveTableRows(node, state, iterationContext)
+  // Memoized so its identity is stable across renders that don't change these inputs (e.g. a
+  // local sort/filter/pagination interaction) — `processedRows` below depends on `rows`, and an
+  // unmemoized `rows` (a fresh array every render) would defeat that memoization entirely.
+  const { rows, rowItemMap } = useMemo(
+    () => resolveTableRows(node, state, iterationContext),
+    [node, state, iterationContext],
+  )
   const [filterValues, setFilterValues] = useState<TableFilterValues>({})
   const [sortState, setSortState] = useState<TableSortState | null>(null)
   const pageSize = node.props.pagination?.pageSize

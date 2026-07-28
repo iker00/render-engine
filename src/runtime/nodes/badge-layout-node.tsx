@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import type { BadgeLayoutNode } from '../../config/runtime-config'
 import { resolveRuntimeTextReference, type RuntimeIterationContext } from '../runtime-references/runtime-reference-resolver'
-import { useRuntimeState } from '../runtime-state/runtime-state-provider'
+import { useRuntimeState } from '../runtime-state/use-runtime-state'
 import {
   getBadgeCircleDotClassName,
   getBadgeCircleLabelClassName,

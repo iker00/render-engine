@@ -4,11 +4,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { RuntimeConfig } from '../../config/runtime-config'
 import type { RuntimeState } from '../../runtime/runtime-state/runtime-state-types'
 import { LayoutEditModeProvider } from '../../runtime/layout-edit-mode-context'
-import {
-  RuntimeStateProvider,
-  useRuntimeState,
-  useRuntimeStateActions,
-} from '../../runtime/runtime-state/runtime-state-provider'
+import { RuntimeStateProvider } from '../../runtime/runtime-state/runtime-state-provider'
+import { useRuntimeState, useRuntimeStateActions } from '../../runtime/runtime-state/use-runtime-state'
 import { RuntimePage } from '../../runtime/runtime-page'
 
 afterEach(() => {

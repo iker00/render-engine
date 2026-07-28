@@ -338,7 +338,6 @@ function resolveHeaderTemplateValue(
   const { state, iterationContext, hiddenFormFields } = options
 
   let failed = false
-  let failedPlaceholder = ''
   let tokenError: { tokenId: string } | null = null
   let shouldOmit = false
 
@@ -365,7 +364,6 @@ function resolveHeaderTemplateValue(
 
       if (referenceValue.length === 0) {
         failed = true
-        failedPlaceholder = _placeholder
         return ''
       }
     } else {
@@ -373,7 +371,6 @@ function resolveHeaderTemplateValue(
 
       if (parseResult.status === 'unresolvable-chain') {
         failed = true
-        failedPlaceholder = _placeholder
         return ''
       }
 
@@ -406,7 +403,6 @@ function resolveHeaderTemplateValue(
       }
 
       failed = true
-      failedPlaceholder = referenceValue
       return ''
     }
 
@@ -438,7 +434,6 @@ function resolveHeaderTemplateValue(
             `api.headers[${headerKey}]`,
           )
           failed = true
-          failedPlaceholder = referenceValue
           return ''
         }
 
@@ -455,13 +450,11 @@ function resolveHeaderTemplateValue(
 
       // null, object, array — not serializable as header value
       failed = true
-      failedPlaceholder = referenceValue
       return ''
     }
 
     // literal, invalid, unsupported — all produce request-build-failed
     failed = true
-    failedPlaceholder = referenceValue
     return ''
   })
 
