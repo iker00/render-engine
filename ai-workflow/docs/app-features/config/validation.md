@@ -80,6 +80,7 @@
 - Si un campo de selección múltiple (`select.props.multiple: true` o `checkboxGroup`) declara un `defaultValue` literal no array, el config completo se rechaza antes del render.
 - Si un campo de selección simple (`select` simple o `radioGroup`) declara un `defaultValue` literal array, el config completo se rechaza antes del render.
 - Si un `defaultValue` literal múltiple contiene miembros no escalares o mezcla strings y números, el config completo se rechaza antes del render.
+- Si `select.props.multiple: true` declara `props.emptySubmitValue`, el config completo se rechaza antes del render (el prop es exclusivo de selección simple).
 
 ## Reglas del nodo `tabs`
 

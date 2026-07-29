@@ -246,6 +246,14 @@ export function validateSelectNode(
     return defaultValueIssue
   }
 
+  if (parseResult.data.props.multiple === true && parseResult.data.props.emptySubmitValue !== undefined) {
+    return enrichedInvalidLayout(
+      `Page "${pageId}" has an invalid layout at "${path}.props.emptySubmitValue": emptySubmitValue is only valid for single-selection select fields (props.multiple must be absent or false).`,
+      breadcrumb,
+      rawNode,
+    )
+  }
+
   const validationsResult = validateFormFieldValidations(
     rawNode.props,
     parseResult.data.props.validations,

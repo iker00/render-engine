@@ -7,7 +7,11 @@ import {
   hasEncodableFileInputSources,
   resolveFileInputSourcesOverrides,
 } from '../../queries/runtime-api-executor'
-import type { RuntimeApiFileInputSources, RuntimeApiHiddenFormFields } from '../../queries/runtime-api-types'
+import type {
+  RuntimeApiEmptySubmitValues,
+  RuntimeApiFileInputSources,
+  RuntimeApiHiddenFormFields,
+} from '../../queries/runtime-api-types'
 import type { RuntimeIterationContext } from '../runtime-references/runtime-reference-resolver'
 import type { RuntimeQueryError, RuntimeState, RuntimeStateAction } from './runtime-state-types'
 
@@ -99,6 +103,7 @@ export async function executeQueryOperationWithSnapshot({
   requestParams,
   iterationContext,
   hiddenFormFields,
+  emptySubmitValues,
   fileInputSources,
   fetchImplementation,
   skipLoadingDispatch = false,
@@ -110,6 +115,7 @@ export async function executeQueryOperationWithSnapshot({
   requestParams?: RuntimeApiRequestParams
   iterationContext?: RuntimeIterationContext
   hiddenFormFields?: RuntimeApiHiddenFormFields
+  emptySubmitValues?: RuntimeApiEmptySubmitValues
   fileInputSources?: RuntimeApiFileInputSources
   fetchImplementation?: typeof fetch
   skipLoadingDispatch?: boolean
@@ -146,6 +152,7 @@ export async function executeQueryOperationWithSnapshot({
     requestParams,
     iterationContext,
     hiddenFormFields,
+    emptySubmitValues,
     fileValueOverrides,
   })
 

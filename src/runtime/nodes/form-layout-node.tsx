@@ -19,7 +19,11 @@ import { type ResolvedFormFieldDefinition, validateFormFields } from '../runtime
 import { useRuntimeState, useRuntimeStateActions } from '../runtime-state/use-runtime-state'
 import { selectFormFieldState } from '../runtime-state/runtime-state-selectors'
 import { executeRuntimeUiAction, type RuntimeUiActionHandlers } from '../runtime-actions/runtime-ui-action-executor'
-import type { RuntimeApiFileInputSources, RuntimeApiHiddenFormFields } from '../../queries/runtime-api-types'
+import type {
+  RuntimeApiEmptySubmitValues,
+  RuntimeApiFileInputSources,
+  RuntimeApiHiddenFormFields,
+} from '../../queries/runtime-api-types'
 import {
   getChoiceFieldSurface,
   resolveResolvedFormFieldDefinition,
@@ -255,6 +259,12 @@ export function FormNode({ node, children, iterationContext }: FormNodeProps) {
     )
     const hiddenFormFields: RuntimeApiHiddenFormFields = { formId: node.id, fieldIds: hiddenFieldIds }
 
+    const emptySubmitValueByFieldId = collectSelectEmptySubmitValues(node.children ?? [])
+    const emptySubmitValues: RuntimeApiEmptySubmitValues | undefined =
+      emptySubmitValueByFieldId.size > 0
+        ? { formId: node.id, valuesByFieldId: emptySubmitValueByFieldId }
+        : undefined
+
     const fileInputSources = buildFileInputSources(node.id, visibleFieldDefinitions, snapshotState)
 
     const submitAction = node.submitAction
@@ -275,6 +285,7 @@ export function FormNode({ node, children, iterationContext }: FormNodeProps) {
             },
             iterationContext,
             hiddenFormFields,
+            emptySubmitValues,
             fileInputSources,
           }),
         ),
@@ -306,6 +317,7 @@ export function FormNode({ node, children, iterationContext }: FormNodeProps) {
       },
       iterationContext,
       hiddenFormFields,
+      emptySubmitValues,
       fileInputSources,
     })
 
@@ -590,4 +602,43 @@ function collectHiddenNodeFieldIds(nodes: LayoutNodeCollection): Set<string> {
   }
 
   return fieldIds
+}
+
+/**
+ * Collects the configured `emptySubmitValue` for every simple-selection
+ * `select` field in the form subtree, keyed by fieldId.
+ */
+function collectSelectEmptySubmitValues(nodes: LayoutNodeCollection): Map<string, string | number> {
+  const valuesByFieldId = new Map<string, string | number>()
+
+  for (const node of nodes) {
+    if (node.type === 'container') {
+      for (const [id, value] of collectSelectEmptySubmitValues(node.children ?? [])) {
+        valuesByFieldId.set(id, value)
+      }
+      continue
+    }
+
+    if (node.type === 'repeater') {
+      for (const [id, value] of collectSelectEmptySubmitValues(node.props.template)) {
+        valuesByFieldId.set(id, value)
+      }
+      continue
+    }
+
+    if (node.type === 'tabs') {
+      for (const item of node.props.items) {
+        for (const [id, value] of collectSelectEmptySubmitValues(item.children ?? [])) {
+          valuesByFieldId.set(id, value)
+        }
+      }
+      continue
+    }
+
+    if (node.type === 'select' && node.props.multiple !== true && node.props.emptySubmitValue !== undefined) {
+      valuesByFieldId.set(node.props.fieldId, node.props.emptySubmitValue)
+    }
+  }
+
+  return valuesByFieldId
 }

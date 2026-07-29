@@ -1,6 +1,6 @@
-> Cuándo leer: nodo `select`, selección simple o múltiple, shapes de `items` manuales o dinámicos, semántica de valor efectivo cuando cambia la colección.
+> Cuándo leer: nodo `select`, selección simple o múltiple, shapes de `items` manuales o dinámicos, semántica de valor efectivo cuando cambia la colección, valor de sustitución en submit para selección vacía.
 > Tamaño: medio.
-> Relacionados: [[choice-groups.md]], [[../forms/defaults.md]], [[../forms/validation-rules.md]], [[../references/dynamic-strings.md]].
+> Relacionados: [[choice-groups.md]], [[../forms/defaults.md]], [[../forms/validation-rules.md]], [[../forms/submit.md]], [[../references/dynamic-strings.md]].
 
 # `select`
 
@@ -16,6 +16,7 @@
 - `props.defaultValue`: literal escalar para selección simple, array escalar homogéneo para selección múltiple o referencia dinámica completa soportada por el runtime.
 - `props.items`: obligatorio.
 - `props.multiple`: boolean opcional; cuando vale `true`, el valor efectivo del campo pasa a ser una colección ordenada.
+- `props.emptySubmitValue`: literal escalar (`string | number`) opcional, exclusivo de selección simple (`multiple` ausente o `false`). No necesita coincidir con ningún `value` de `props.items`. Ver comportamiento completo más abajo y en [[../forms/submit.md]].
 
 ## Shapes de `items`
 Contrato cerrado a exactamente tres shapes; cualquier otro shape rechaza el config completo en bootstrap con `code: invalid-layout` y ruta exacta al `props.items` del nodo.
@@ -49,6 +50,15 @@ El shape manual objeto (`{ values: Array<object>, label, value }`) y los dos sha
 - Si `props.placeholder` está ausente o resuelve a string vacío, la opción placeholder no se inserta y se preserva el comportamiento previo (primera opción vacía sin etiqueta).
 - En `select.multiple`, `props.placeholder` se ignora completamente aunque esté declarado.
 
+## Comportamiento de `emptySubmitValue` en selección simple
+- Cuando el valor efectivo del campo es `''` en el momento del submit, cualquier referencia `forms.{formId}.{fieldId}` de este campo usada en el payload (`body`/`query`/`headers` de la operación `api` base o de `submitAction`) resuelve al valor configurado en `emptySubmitValue`, normalizado a string, en vez de `''`.
+- Si el campo tiene un valor efectivo distinto de `''` en el momento del submit, `emptySubmitValue` no tiene ningún efecto: se envía el valor seleccionado real.
+- El store y la UI del campo no cambian: sigue almacenando `''` y mostrando el placeholder/estado vacío; la sustitución ocurre únicamente al construir el payload de submit.
+- `emptySubmitValue` no participa en `visibility`, `queryStateFeedback` ni en referencias `defaultValue` de otros campos: esas superficies siguen viendo `''` mientras el campo esté vacío.
+- `emptySubmitValue` no exime la validación `required`: un campo vacío con `props.validations.required` activo sigue bloqueando el submit aunque tenga `emptySubmitValue` configurado.
+- Un `emptySubmitValue: 0` se envía como `"0"`, sin omitirse ni tratarse como falsy. Un `emptySubmitValue: ''` declarado explícitamente equivale a no declarar el prop.
+- Si el campo está oculto por `visibility`/`queryStateFeedback` en el momento del submit, se aplica la omisión de campos ocultos del payload; `emptySubmitValue` nunca reintroduce una clave ya omitida (ver [[../queries/execution.md]]).
+
 ## Comportamiento ante opciones que cambian
 - En `select` simple, si el valor efectivo no coincide con ninguna opción disponible en la colección resuelta, el campo queda vacío.
 - En `select.multiple`, solo se conservan seleccionados los valores que sigan existiendo en la colección efectiva disponible.
@@ -65,6 +75,7 @@ El shape manual objeto (`{ values: Array<object>, label, value }`) y los dos sha
 - Si un campo de selección múltiple (`select.props.multiple: true`) declara un `defaultValue` literal no array, el config completo se rechaza antes del render.
 - Si un campo de selección simple declara un `defaultValue` literal array, el config completo se rechaza antes del render.
 - Si un `defaultValue` literal múltiple contiene miembros no escalares o mezcla strings y números, el config completo se rechaza antes del render.
+- Si `select.props.multiple: true` declara `props.emptySubmitValue`, el config completo se rechaza antes del render (el prop es exclusivo de selección simple).
 
 ## Solo dentro de `form`
 - Si `select` aparece fuera de un subárbol `form`, el config completo se rechaza antes del render.
