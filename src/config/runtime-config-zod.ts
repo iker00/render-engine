@@ -562,6 +562,7 @@ export const selectNodeSchema = z
         items: selectItemsSchema,
         multiple: z.boolean().optional(),
         placeholder: z.string().optional(),
+        emptySubmitValue: z.union([z.string(), z.number()]).optional(),
       })
       .strip(),
   })

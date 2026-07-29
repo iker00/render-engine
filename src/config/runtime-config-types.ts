@@ -436,6 +436,7 @@ export interface SelectLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLa
     items: SelectLayoutNodeItems
     multiple?: boolean
     placeholder?: string
+    emptySubmitValue?: string | number
   }
   children?: unknown
 }

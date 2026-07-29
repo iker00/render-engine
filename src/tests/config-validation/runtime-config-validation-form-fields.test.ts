@@ -905,6 +905,254 @@ describe('validateRuntimeConfig', () => {
       })
     })
 
+    describe('emptySubmitValue', () => {
+      it('accepts a single-selection select with a string emptySubmitValue', () => {
+        const result = validateRuntimeConfig(
+          createConfigWithFormLayout({
+            children: [
+              {
+                type: 'select',
+                props: {
+                  fieldId: 'role',
+                  label: 'Role',
+                  emptySubmitValue: 'N/A',
+                  items: [{ label: 'Admin', value: 'admin' }],
+                },
+              },
+            ],
+          }),
+        )
+
+        expect(result.status).toBe('ready')
+      })
+
+      it('accepts a single-selection select with a number emptySubmitValue', () => {
+        const result = validateRuntimeConfig(
+          createConfigWithFormLayout({
+            children: [
+              {
+                type: 'select',
+                props: {
+                  fieldId: 'priority',
+                  label: 'Priority',
+                  emptySubmitValue: 0,
+                  items: [{ label: 'High', value: 1 }],
+                },
+              },
+            ],
+          }),
+        )
+
+        expect(result.status).toBe('ready')
+      })
+
+      it('accepts a select without emptySubmitValue (no regression)', () => {
+        const result = validateRuntimeConfig(
+          createConfigWithFormLayout({
+            children: [
+              {
+                type: 'select',
+                props: {
+                  fieldId: 'role',
+                  label: 'Role',
+                  items: [{ label: 'Admin', value: 'admin' }],
+                },
+              },
+            ],
+          }),
+        )
+
+        expect(result.status).toBe('ready')
+      })
+
+      it('accepts an emptySubmitValue that does not match any item value across manual literal, manual scalar and dynamic items', () => {
+        const result = validateRuntimeConfig(
+          createConfigWithFormLayout({
+            children: [
+              {
+                type: 'select',
+                props: {
+                  fieldId: 'manualLiteral',
+                  label: 'Manual literal',
+                  emptySubmitValue: 'not-an-option',
+                  items: [{ label: 'Admin', value: 'admin' }],
+                },
+              },
+              {
+                type: 'select',
+                props: {
+                  fieldId: 'manualScalar',
+                  label: 'Manual scalar',
+                  emptySubmitValue: 'not-an-option',
+                  items: {
+                    values: ['read', 'write'],
+                  },
+                },
+              },
+              {
+                type: 'select',
+                props: {
+                  fieldId: 'dynamic',
+                  label: 'Dynamic',
+                  emptySubmitValue: 'not-an-option',
+                  items: {
+                    source: 'queries.searchUsers.data.results',
+                    itemType: 'object',
+                    label: 'name',
+                    value: 'id',
+                  },
+                },
+              },
+            ],
+          }),
+        )
+
+        expect(result.status).toBe('ready')
+      })
+
+      it('accepts multiple: false explicit with emptySubmitValue declared', () => {
+        const result = validateRuntimeConfig(
+          createConfigWithFormLayout({
+            children: [
+              {
+                type: 'select',
+                props: {
+                  fieldId: 'role',
+                  label: 'Role',
+                  multiple: false,
+                  emptySubmitValue: 'N/A',
+                  items: [{ label: 'Admin', value: 'admin' }],
+                },
+              },
+            ],
+          }),
+        )
+
+        expect(result.status).toBe('ready')
+      })
+
+      it('rejects multiple: true combined with a string emptySubmitValue', () => {
+        expect(
+          validateRuntimeConfig(
+            createConfigWithFormLayout({
+              children: [
+                {
+                  type: 'select',
+                  props: {
+                    fieldId: 'scopes',
+                    label: 'Scopes',
+                    multiple: true,
+                    emptySubmitValue: 'N/A',
+                    items: {
+                      values: ['read', 'write'],
+                    },
+                  },
+                },
+              ],
+            }),
+          ),
+        ).toEqual({
+          status: 'error',
+          error: {
+            code: 'invalid-layout',
+            displayMode: 'development-only',
+            message: expect.stringContaining(
+              'Page "home" has an invalid layout at "layout[0].children[0].props.emptySubmitValue": emptySubmitValue is only valid for single-selection select fields (props.multiple must be absent or false).',
+            ),
+          },
+        })
+      })
+
+      it('rejects multiple: true combined with a number emptySubmitValue', () => {
+        expect(
+          validateRuntimeConfig(
+            createConfigWithFormLayout({
+              children: [
+                {
+                  type: 'select',
+                  props: {
+                    fieldId: 'scopes',
+                    label: 'Scopes',
+                    multiple: true,
+                    emptySubmitValue: 0,
+                    items: {
+                      values: ['read', 'write'],
+                    },
+                  },
+                },
+              ],
+            }),
+          ),
+        ).toEqual({
+          status: 'error',
+          error: {
+            code: 'invalid-layout',
+            displayMode: 'development-only',
+            message: expect.stringContaining(
+              'Page "home" has an invalid layout at "layout[0].children[0].props.emptySubmitValue": emptySubmitValue is only valid for single-selection select fields (props.multiple must be absent or false).',
+            ),
+          },
+        })
+      })
+
+      it('rejects non-scalar emptySubmitValue shapes on single-selection select fields', () => {
+        const nonScalarValues: unknown[] = [['N/A'], { fallback: 'N/A' }, true, null]
+
+        for (const value of nonScalarValues) {
+          const result = validateRuntimeConfig(
+            createConfigWithFormLayout({
+              children: [
+                {
+                  type: 'select',
+                  props: {
+                    fieldId: 'role',
+                    label: 'Role',
+                    emptySubmitValue: value,
+                    items: [{ label: 'Admin', value: 'admin' }],
+                  },
+                },
+              ],
+            }),
+          )
+
+          expect(result.status).toBe('error')
+          if (result.status === 'error') {
+            expect(result.error.code).toBe('invalid-layout')
+          }
+        }
+      })
+
+      it('rejects non-scalar emptySubmitValue shapes on multiple-selection select fields', () => {
+        const nonScalarValues: unknown[] = [['N/A'], { fallback: 'N/A' }, true, null]
+
+        for (const value of nonScalarValues) {
+          const result = validateRuntimeConfig(
+            createConfigWithFormLayout({
+              children: [
+                {
+                  type: 'select',
+                  props: {
+                    fieldId: 'scopes',
+                    label: 'Scopes',
+                    multiple: true,
+                    emptySubmitValue: value,
+                    items: {
+                      values: ['read', 'write'],
+                    },
+                  },
+                },
+              ],
+            }),
+          )
+
+          expect(result.status).toBe('error')
+          if (result.status === 'error') {
+            expect(result.error.code).toBe('invalid-layout')
+          }
+        }
+      })
+    })
+
     describe('placeholder field on input, textarea and select nodes', () => {
       it('accepts input with props.placeholder as a string and exposes it in the normalized node', () => {
         const result = validateRuntimeConfig(

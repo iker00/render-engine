@@ -53,6 +53,13 @@
 - En `body` JSON anidado, cuando se omiten las claves: un objeto contenedor vacío se conserva como `{}`, no se poda.
 - Este comportamiento ocurre **solo en submit**; operaciones disparadas desde `button.props.action` u otros contextos mantienen la semántica de error si la referencia es missing.
 
+## Sustitución de valor vacío en submit para `select` (`emptySubmitValue`)
+- Un `select` de selección simple puede declarar `props.emptySubmitValue` (literal escalar `string | number`, ver [[../nodes/select.md]]).
+- Cuando el valor efectivo de ese campo es `''` en el momento del submit, cualquier referencia `forms.{formId}.{fieldId}` a ese campo en `body`/`query`/`headers` (de la operación `api` base o de `submitAction`) resuelve al valor configurado, normalizado a string, en vez de `''`.
+- La sustitución ocurre solo al resolver el payload de submit del formulario que declara el campo; no cambia el valor efectivo almacenado en el store ni lo que ven `visibility`, `queryStateFeedback` o `defaultValue` de otros campos.
+- Si el campo está oculto por `visibility`/`queryStateFeedback` en el momento del submit, la omisión de campos ocultos tiene prioridad: la clave se omite y `emptySubmitValue` no la reintroduce.
+- Si el campo tiene un valor efectivo distinto de `''`, `emptySubmitValue` no tiene ningún efecto.
+
 ## Refetch y mutadoras (estado actual)
 - Algunas acciones pueden necesitar relanzar queries después de éxito.
 - Caso típico: borrar un item y recargar el listado.

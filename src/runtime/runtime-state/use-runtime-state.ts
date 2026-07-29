@@ -5,7 +5,11 @@ import type {
   RuntimeApiRequestParams,
   RuntimeConfigValue,
 } from '../../config/runtime-config'
-import type { RuntimeApiFileInputSources, RuntimeApiHiddenFormFields } from '../../queries/runtime-api-types'
+import type {
+  RuntimeApiEmptySubmitValues,
+  RuntimeApiFileInputSources,
+  RuntimeApiHiddenFormFields,
+} from '../../queries/runtime-api-types'
 import {
   areBrowserHashNavigationEntriesEqual,
   createBrowserHashNavigationHash,
@@ -306,6 +310,7 @@ export function useRuntimeStateActions() {
         requestParams?: RuntimeApiRequestParams
         iterationContext?: RuntimeIterationContext
         hiddenFormFields?: RuntimeApiHiddenFormFields
+        emptySubmitValues?: RuntimeApiEmptySubmitValues
         fileInputSources?: RuntimeApiFileInputSources
       },
     ) => {
@@ -321,6 +326,7 @@ export function useRuntimeStateActions() {
         requestParams: options?.requestParams,
         iterationContext: options?.iterationContext,
         hiddenFormFields: options?.hiddenFormFields,
+        emptySubmitValues: options?.emptySubmitValues,
         fileInputSources: options?.fileInputSources,
         fetchImplementation: options?.fetch,
       })

@@ -44,6 +44,7 @@ export function buildRuntimeApiRequest({
   requestParams,
   iterationContext,
   hiddenFormFields,
+  emptySubmitValues,
   fileValueOverrides,
 }: BuildRuntimeApiRequestOptions): RuntimeApiRequestBuildResult {
   const operation = config.api[operationName]
@@ -65,6 +66,7 @@ export function buildRuntimeApiRequest({
     requestParams,
     iterationContext,
     hiddenFormFields,
+    emptySubmitValues,
     fileValueOverrides,
   })
 }
@@ -76,10 +78,11 @@ export function buildInlineRuntimeApiRequest({
   requestParams,
   iterationContext,
   hiddenFormFields,
+  emptySubmitValues,
   fileValueOverrides,
 }: BuildInlineRuntimeApiRequestOptions): RuntimeApiRequestBuildResult {
   const effectiveRequestParams = mergeRuntimeApiRequestParams(operation, requestParams)
-  const resolveOptions = { state, iterationContext, hiddenFormFields }
+  const resolveOptions = { state, iterationContext, hiddenFormFields, emptySubmitValues }
   const messagePrefix = `The api operation "${operationName}"`
 
   const endpointResult = resolveEndpoint(operationName, operation.endpoint, resolveOptions)
