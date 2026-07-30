@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import type { ShellSidebarConfig, SidebarItemConfig } from '../../config/runtime-config-types'
 import { IconNode } from '../nodes/icon-node'
 import { executeRuntimeUiAction } from '../runtime-actions/runtime-ui-action-executor'
@@ -34,23 +34,29 @@ export function AppShellSidebar({ sidebar }: AppShellSidebarProps) {
   const activePage = useRuntimeCurrentPage()
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(() => new Set())
   const [collapsed, setCollapsed] = useState<boolean>(() => sidebar?.defaultCollapsed ?? false)
+  const [lastAutoExpandedPageId, setLastAutoExpandedPageId] = useState<string | null>(null)
 
   const { activePaths } = computeActiveSidebarItemIds(sidebar?.items, activePage?.id ?? null)
 
-  // Auto-expands every ancestor branch of the active item on each navigation (requirement 15).
-  // Always a union with the previous `expandedPaths`, never a reset: a branch expanded manually by
-  // the user for an unrelated reason — or one the user had explicitly collapsed — must not be
-  // fought here except to reopen it when it becomes an ancestor of the newly active item (design
-  // decision 5). Adding a leaf's own path is harmless: `expandedPaths` is only ever read to decide
-  // whether a branch *trigger* shows its children, and a leaf is never a trigger.
-  useEffect(() => {
+  // Auto-expands every ancestor branch of the active item on each navigation (requirement 15), as
+  // a render-time state adjustment (React's documented alternative to an Effect for "reset/adjust
+  // state when a prop changes") rather than a `useEffect`: `activePage?.id` changing is detected by
+  // comparing against `lastAutoExpandedPageId`, and both setters fire in the same render pass,
+  // which React coalesces without committing the intermediate state to the screen. Always a union
+  // with the previous `expandedPaths`, never a reset: a branch expanded manually by the user for an
+  // unrelated reason — or one the user had explicitly collapsed — must not be fought here except to
+  // reopen it when it becomes an ancestor of the newly active item (design decision 5). Adding a
+  // leaf's own path is harmless: `expandedPaths` is only ever read to decide whether a branch
+  // *trigger* shows its children, and a leaf is never a trigger.
+  const currentPageId = activePage?.id ?? null
+  if (currentPageId !== lastAutoExpandedPageId) {
+    setLastAutoExpandedPageId(currentPageId)
     setExpandedPaths((previousExpandedPaths) => {
       const nextExpandedPaths = new Set(previousExpandedPaths)
       activePaths.forEach((path) => nextExpandedPaths.add(path))
       return nextExpandedPaths
     })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activePage?.id])
+  }
 
   if (sidebar === undefined || sidebar.items === undefined || sidebar.items.length === 0) {
     return null
