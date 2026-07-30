@@ -10,13 +10,17 @@ import type { LayoutNode } from '../config/runtime-config'
 import type { ShellConfig, ShellHeaderActionNode } from '../config/runtime-config-types'
 import { RuntimeStateProvider } from '../runtime/runtime-state/runtime-state-provider'
 import { RuntimePage } from '../runtime/runtime-page'
-import { AppShellHeader } from '../runtime/runtime-shell'
+import { AppShellHeader, AppShellSidebar } from '../runtime/runtime-shell'
 import type { LayoutNodePath } from '../runtime/layout-node-path'
 import {
   getAppShellClassName,
   getAppShellContentClassName,
   getAppShellFrameClassName,
 } from '../runtime/runtime-node-styling'
+import {
+  getAppShellBodyClassName,
+  getAppShellBodyContentClassName,
+} from '../runtime/runtime-node-styling-app-shell-sidebar'
 import { DevRuntimeStateBridge } from './dev-runtime-state-bridge'
 import type { DevRuntimeStateBridgeHandle } from './dev-runtime-state-bridge'
 import { migrateRuntimeStateAcrossConfig } from './dev-runtime-state-migration'
@@ -437,6 +441,33 @@ export const DevRuntimeReady = forwardRef<DevRuntimeReadyHandle, DevRuntimeReady
     }
   }
 
+  const devSidebarItems = currentConfig.shell?.sidebar?.items
+  const hasDevSidebarItems = devSidebarItems !== undefined && devSidebarItems.length > 0
+
+  const editorLayer = (
+    <DevEditorLayer
+      mode={mode}
+      onModeChange={setMode}
+      paletteOpen={paletteOpen}
+      onPaletteOpenChange={setPaletteOpen}
+      monacoOpen={monacoOpen}
+      onMonacoOpenChange={setMonacoOpen}
+      monaco={{
+        editorBuffer,
+        onEditorChange: handleEditorChange,
+        onApply: handleApply,
+        onCopy: handleCopy,
+        pendingChanges: hasPendingChanges,
+        errors: currentError,
+      }}
+      onCommitCanvasMutation={commitCanvasMutation}
+      onCommitNodeUpdate={handleCanvasNodeUpdate}
+      onCommitShellMutation={commitShellMutation}
+    >
+      <RuntimePage />
+    </DevEditorLayer>
+  )
+
   return (
     <>
       <main className={getAppShellClassName()} data-testid="runtime-app">
@@ -445,27 +476,14 @@ export const DevRuntimeReady = forwardRef<DevRuntimeReadyHandle, DevRuntimeReady
             <RuntimeStateProvider config={currentConfig} dataValues={dataValues}>
               <DevRuntimeStateBridge ref={bridgeRef} />
               <AppShellHeader header={currentConfig.shell?.header} />
-              <DevEditorLayer
-                mode={mode}
-                onModeChange={setMode}
-                paletteOpen={paletteOpen}
-                onPaletteOpenChange={setPaletteOpen}
-                monacoOpen={monacoOpen}
-                onMonacoOpenChange={setMonacoOpen}
-                monaco={{
-                  editorBuffer,
-                  onEditorChange: handleEditorChange,
-                  onApply: handleApply,
-                  onCopy: handleCopy,
-                  pendingChanges: hasPendingChanges,
-                  errors: currentError,
-                }}
-                onCommitCanvasMutation={commitCanvasMutation}
-                onCommitNodeUpdate={handleCanvasNodeUpdate}
-                onCommitShellMutation={commitShellMutation}
-              >
-                <RuntimePage />
-              </DevEditorLayer>
+              {hasDevSidebarItems ? (
+                <div className={getAppShellBodyClassName()}>
+                  <AppShellSidebar sidebar={currentConfig.shell?.sidebar} />
+                  <div className={getAppShellBodyContentClassName()}>{editorLayer}</div>
+                </div>
+              ) : (
+                editorLayer
+              )}
             </RuntimeStateProvider>
           </div>
         </section>

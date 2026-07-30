@@ -1,7 +1,7 @@
 > Cuándo leer: shape de `shell.header`, contrato de `menuItem` (raíz y anidado), render y desplegable del menú, estado
 > "activo" de navegación, y comportamiento de `shell.header.actions`.
 > Tamaño: medio.
-> Relacionados: [[../config/structure.md]], [[../config/validation.md]], [[../navigation/navigate-actions.md]],
+> Relacionados: [[sidebar.md]], [[../config/structure.md]], [[../config/validation.md]], [[../navigation/navigate-actions.md]],
 > [[../nodes/link.md]], [[../nodes/button.md]], [[../nodes/image.md]], [[../references/visibility.md]],
 > [[../development/dev-mode-editor.md]].
 
@@ -121,12 +121,17 @@ El resaltado de "activo" es un valor derivado en cada render, no un estado persi
 Cuando `shell.header` está declarado, se aplica a **todas** las páginas de la app sin excepción; no existe opt-out
 por página.
 
+## Composición con `shell.sidebar`
+
+`shell.header` y `shell.sidebar` (ver [[sidebar.md]]) son secciones independientes y aditivas de `shell`: cualquier
+combinación de ambas, incluida ninguna, es válida. Cuando coexisten, el header sigue ocupando el ancho completo en
+la parte superior sin cambios respecto a lo descrito aquí; el sidebar arranca debajo, ocupando la altura restante
+del viewport.
+
 ## Fuera de alcance (v1)
 
 - Comportamiento responsive/mobile del header y de sus desplegables (colapso, menú hamburguesa, wrapping ante
   título/menú largos).
-- `shell.sidebar` (navegación vertical jerárquica) — feature futura independiente que reutilizará el contrato de
-  `menuItem` ya anidado a un nivel, pudiendo ampliar su profundidad para ese contexto vertical.
 - Theming o estilos visuales configurables del shell más allá de las utilidades Tailwind ya usadas por el resto del
   runtime.
 - Cualquier tipo de nodo en `actions` distinto de `link`/`button`.

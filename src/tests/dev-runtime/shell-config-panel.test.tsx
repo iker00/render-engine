@@ -9,7 +9,7 @@ import {
   type CommitCanvasMutationResult,
 } from '../../dev-runtime/layout-canvas/layout-canvas-commit'
 import { ShellConfigPanel } from '../../dev-runtime/shell-config-panel/shell-config-panel'
-import { AppShellHeader } from '../../runtime/runtime-shell'
+import { AppShellHeader, AppShellSidebar } from '../../runtime/runtime-shell'
 import { RuntimeStateProvider } from '../../runtime/runtime-state/runtime-state-provider'
 
 // Same mocking pattern as layout-canvas-dnd-wiring.test.tsx: real pointer-drag simulation is
@@ -56,9 +56,10 @@ interface HarnessProps {
 // Stands in for the real dev-runtime.tsx pipeline (`commitShellMutation`), built directly on
 // `patchRootKey` + `validateRuntimeConfig` — the same two calls `commitShellMutation` makes — so
 // this test file can assert the full contract (config update, raw-text patch scoped to `shell`,
-// rejection surfacing) without mounting the entire `DevRuntimeReady` tree. `AppShellHeader` is
-// mounted alongside the panel, fed by the same `config.shell.header` the panel edits, standing in
-// for "the header mounted in production" from the acceptance criteria.
+// rejection surfacing) without mounting the entire `DevRuntimeReady` tree. `AppShellHeader`/
+// `AppShellSidebar` are mounted alongside the panel, fed by the same `config.shell.header`/
+// `config.shell.sidebar` the panel edits, standing in for "the header/sidebar mounted in
+// production" from the acceptance criteria.
 function ShellConfigPanelHarness({ initialConfig }: HarnessProps) {
   const base = initialConfig ?? buildBaseConfig()
   const [config, setConfig] = useState<RuntimeConfig>(base)
@@ -83,6 +84,7 @@ function ShellConfigPanelHarness({ initialConfig }: HarnessProps) {
     <RuntimeStateProvider config={config}>
       <ShellConfigPanel shell={config.shell} onCommitShellMutation={commitShellMutation} />
       <AppShellHeader header={config.shell?.header} />
+      <AppShellSidebar sidebar={config.shell?.sidebar} />
       <pre data-testid="raw-text">{rawText}</pre>
     </RuntimeStateProvider>
   )
@@ -137,6 +139,76 @@ describe('ShellConfigPanel / header toggle', () => {
     expect(parsed.pages).toEqual(base.pages)
     expect(parsed.initialPage).toBe(base.initialPage)
     expect(parsed.tokens).toEqual(base.tokens)
+  })
+})
+
+describe('ShellConfigPanel / sidebar toggle', () => {
+  it('starts with the sidebar toggle unchecked when shell is absent', () => {
+    renderHarness()
+    expect(screen.getByRole('checkbox', { name: 'Sidebar activo' })).not.toBeChecked()
+  })
+
+  it('activating the sidebar toggle from no shell produces shell: { sidebar: { items: [] } }', () => {
+    renderHarness()
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Sidebar activo' }))
+
+    expect(screen.getByRole('checkbox', { name: 'Sidebar activo' })).toBeChecked()
+    expect(rawConfig().shell).toEqual({ sidebar: { items: [] } })
+  })
+
+  it('activating the sidebar toggle with header already active preserves the existing header', () => {
+    renderHarness(buildBaseConfig({ shell: { header: { title: 'Hello' } } }))
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Sidebar activo' }))
+
+    expect(rawConfig().shell).toEqual({ header: { title: 'Hello' }, sidebar: { items: [] } })
+  })
+
+  it('deactivating the sidebar toggle with only sidebar active removes the shell key entirely', () => {
+    renderHarness(buildBaseConfig({ shell: { sidebar: { items: [] } } }))
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Sidebar activo' }))
+
+    expect(screen.getByRole('checkbox', { name: 'Sidebar activo' })).not.toBeChecked()
+    expect('shell' in rawConfig()).toBe(false)
+  })
+
+  it('deactivating the sidebar toggle with header also active preserves shell.header and only drops sidebar', () => {
+    renderHarness(buildBaseConfig({ shell: { header: { title: 'Hello' }, sidebar: { items: [] } } }))
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Sidebar activo' }))
+
+    expect(rawConfig().shell).toEqual({ header: { title: 'Hello' } })
+  })
+
+  it('regression: deactivating the header toggle with a non-empty sidebar preserves shell.sidebar intact', () => {
+    renderHarness(
+      buildBaseConfig({
+        shell: {
+          header: { title: 'Hello' },
+          sidebar: { items: [{ label: 'Home', href: '/home' }] },
+        },
+      }),
+    )
+
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Header activo' }))
+
+    expect(screen.getByRole('checkbox', { name: 'Header activo' })).not.toBeChecked()
+    expect(rawConfig().shell).toEqual({ sidebar: { items: [{ label: 'Home', href: '/home' }] } })
+  })
+
+  it('deactivating the header toggle with sidebar not active reproduces the pre-existing behavior (shell: undefined)', () => {
+    renderHarness(buildBaseConfig({ shell: { header: { title: 'Hello' } } }))
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Header activo' }))
+
+    expect('shell' in rawConfig()).toBe(false)
+  })
+
+  it('the sidebar toggle coexists with logo/title/menu/actions fields without side effects', () => {
+    renderHarness(buildBaseConfig({ shell: { header: {} } }))
+
+    fireEvent.change(screen.getByRole('textbox', { name: 'Title' }), { target: { value: 'My App' } })
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Sidebar activo' }))
+
+    expect(rawConfig().shell).toEqual({ header: { title: 'My App' }, sidebar: { items: [] } })
+    expect(screen.getByRole('textbox', { name: 'Title' })).toHaveValue('My App')
   })
 })
 
@@ -428,6 +500,100 @@ describe('ShellConfigPanel / actions', () => {
       'href',
       '/login',
     )
+  })
+})
+
+describe('ShellConfigPanel / sidebar items — recursive editor mounted in the panel', () => {
+  it('adding a root sidebar item with an action.navigateTo renders it live in the real sidebar', () => {
+    renderHarness(buildBaseConfig({ shell: { sidebar: { items: [] } } }))
+
+    fireEvent.click(screen.getByRole('button', { name: 'Añadir elemento de sidebar' }))
+    fireEvent.change(screen.getByRole('textbox', { name: 'Elemento de sidebar 1 — Etiqueta' }), {
+      target: { value: 'About' },
+    })
+    fireEvent.change(screen.getByRole('combobox', { name: 'Elemento de sidebar 1 — Modo' }), {
+      target: { value: 'action' },
+    })
+    fireEvent.change(screen.getByRole('combobox', { name: 'Elemento de sidebar 1 — Acción' }), {
+      target: { value: 'navigateTo' },
+    })
+    fireEvent.change(screen.getByRole('textbox', { name: 'pageId' }), { target: { value: 'about' } })
+
+    const items = (rawConfig().shell as { sidebar: { items: unknown[] } }).sidebar.items
+    expect(items).toEqual([{ label: 'About', action: { type: 'navigateTo', pageId: 'about' } }])
+    expect(within(screen.getByTestId('app-shell-sidebar')).getByRole('button', { name: 'About' })).toBeInTheDocument()
+  })
+
+  it('editing a root item with an href renders as a real link in the sidebar', () => {
+    renderHarness(buildBaseConfig({ shell: { sidebar: { items: [] } } }))
+
+    fireEvent.click(screen.getByRole('button', { name: 'Añadir elemento de sidebar' }))
+    fireEvent.change(screen.getByRole('textbox', { name: 'Elemento de sidebar 1 — Etiqueta' }), {
+      target: { value: 'Home' },
+    })
+    fireEvent.change(screen.getByRole('textbox', { name: 'Elemento de sidebar 1 — Href' }), {
+      target: { value: '/home' },
+    })
+
+    expect(within(screen.getByTestId('app-shell-sidebar')).getByRole('link', { name: 'Home' })).toHaveAttribute(
+      'href',
+      '/home',
+    )
+  })
+
+  it('switching a root item to "Con hijos" renders the nested sublist for editing without affecting shell.header', () => {
+    renderHarness(buildBaseConfig({ shell: { header: { title: 'Hello' }, sidebar: { items: [{ label: 'Products', href: '/products' }] } } }))
+
+    fireEvent.change(screen.getByRole('combobox', { name: 'Elemento de sidebar 1 — Modo' }), {
+      target: { value: 'children' },
+    })
+
+    expect(screen.getByRole('textbox', { name: 'Elemento de sidebar 1.1 — Etiqueta' })).toBeInTheDocument()
+    const shell = rawConfig().shell as { header: { title: string }; sidebar: { items: Array<{ children: unknown[] }> } }
+    expect(shell.header).toEqual({ title: 'Hello' })
+    expect(shell.sidebar.items[0].children).toEqual([{ label: 'Nuevo elemento', href: '' }])
+  })
+
+  it('a sidebar item commit only patches shell.sidebar.items, leaving shell.header/layout/api/initialPage/tokens untouched', () => {
+    const base = buildBaseConfig({
+      pages: [
+        { id: 'home', layout: [{ type: 'heading', props: { text: 'Hi', level: 1 } }] },
+        { id: 'about', layout: [] },
+      ],
+      shell: { header: { title: 'Hello' }, sidebar: { items: [] } },
+    } as Partial<RuntimeConfig>)
+    renderHarness(base)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Añadir elemento de sidebar' }))
+    fireEvent.change(screen.getByRole('textbox', { name: 'Elemento de sidebar 1 — Etiqueta' }), {
+      target: { value: 'About' },
+    })
+    fireEvent.change(screen.getByRole('textbox', { name: 'Elemento de sidebar 1 — Href' }), {
+      target: { value: '/about' },
+    })
+
+    const parsed = rawConfig()
+    expect((parsed.shell as { header: unknown }).header).toEqual({ title: 'Hello' })
+    expect(parsed.pages).toEqual(base.pages)
+    expect(parsed.api).toEqual(base.api)
+    expect(parsed.initialPage).toBe(base.initialPage)
+    expect(parsed.tokens).toEqual(base.tokens)
+  })
+
+  it('an unknown pageId in a sidebar item action is rejected, keeping the attempted value with role="alert"', () => {
+    renderHarness(
+      buildBaseConfig({
+        shell: { sidebar: { items: [{ label: 'About', action: { type: 'navigateTo', pageId: 'home' } }] } },
+      }),
+    )
+
+    fireEvent.change(screen.getByRole('textbox', { name: 'pageId' }), { target: { value: 'ghost' } })
+
+    const alert = screen.getByRole('alert')
+    expect(alert).toHaveTextContent('invalid-layout')
+    expect(screen.getByRole('textbox', { name: 'pageId' })).toHaveValue('ghost')
+    const items = (rawConfig().shell as { sidebar: { items: Array<{ action: { pageId: string } }> } }).sidebar.items
+    expect(items[0].action.pageId).toBe('home')
   })
 })
 

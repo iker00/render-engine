@@ -44,8 +44,13 @@ describe('runtimeConfigRootSchema — shell: root block', () => {
     expect(result.success).toBe(true)
   })
 
-  it('rejects shell with an unknown key (e.g. sidebar)', () => {
+  it('accepts shell: { sidebar: {} } (sibling of header, added in 0123-T1)', () => {
     const result = runtimeConfigRootSchema.safeParse(createRootConfig({ sidebar: {} }))
+    expect(result.success).toBe(true)
+  })
+
+  it('rejects shell with an unknown key (e.g. footer)', () => {
+    const result = runtimeConfigRootSchema.safeParse(createRootConfig({ footer: {} }))
     expect(result.success).toBe(false)
   })
 })

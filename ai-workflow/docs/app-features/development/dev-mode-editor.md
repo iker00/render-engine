@@ -1,6 +1,6 @@
 > Cuándo leer: si la tarea toca el editor de configuración en vivo, el drawer lateral, el editor visual del `layout` (canvas de arrastrar y soltar), la preservación de estado al aplicar cambios, el autocompletado JSON Schema o el comportamiento de recarga por HMR en desarrollo.
 > Tamaño: grande.
-> Relacionados: [[local-config.md]], [[../config/validation.md]], [[../config/structure.md]], [[../nodes/index.md]], [[../shell/header.md]].
+> Relacionados: [[local-config.md]], [[../config/validation.md]], [[../config/structure.md]], [[../nodes/index.md]], [[../shell/header.md]], [[../shell/sidebar.md]].
 
 # Editor de configuración en vivo (dev mode)
 
@@ -247,16 +247,18 @@ La sincronización entre canvas y Monaco es bidireccional e inmediata: cambios e
 ## Sección Shell (dominio de configuración)
 
 ### Objetivo y alcance
-Formulario de configuración para `shell.header` (ver [[../shell/header.md]] para el shape funcional completo),
-accesible seleccionando `Shell` en el selector de pestaña de dominio de la barra flotante. A diferencia de `Layout`,
-esta sección no manipula un árbol renderizado por selección directa: sustituye el área de canvas por un panel de
-formulario dedicado (`ShellConfigPanel`). No hay selección de nodo, breadcrumb ni panel de propiedades por nodo
-seleccionado — el panel de propiedades completo de `Layout` solo se reutiliza puntualmente dentro de la lista de
-acciones (ver más abajo).
+Formulario de configuración para `shell.header` (ver [[../shell/header.md]]) y `shell.sidebar` (ver
+[[../shell/sidebar.md]] para el shape funcional completo), accesible seleccionando `Shell` en el selector de
+pestaña de dominio de la barra flotante. A diferencia de `Layout`, esta sección no manipula un árbol renderizado
+por selección directa: sustituye el área de canvas por un panel de formulario dedicado (`ShellConfigPanel`). No
+hay selección de nodo, breadcrumb ni panel de propiedades por nodo seleccionado — el panel de propiedades completo
+de `Layout` solo se reutiliza puntualmente dentro de la lista de acciones del header (ver más abajo).
 
 ### Contenido del panel
 - **Toggle "Header activo"**: activarlo crea `shell.header: {}` (header vacío, sin renderizar nada visible hasta
-  añadir campos); desactivarlo elimina el bloque `shell` completo del config.
+  añadir campos); desactivarlo quita únicamente la clave `shell.header`, conservando `shell.sidebar` intacto si
+  estaba activo. El bloque `shell` solo desaparece del config por completo cuando ambos toggles ("Header activo" y
+  "Sidebar activo") quedan desactivados a la vez.
 - **Logo**: mismo editor genérico de `props` que ya usa el nodo `image` (selector `src`/`fetch`, mutuamente
   excluyentes).
 - **Título**: campo de texto simple.
@@ -269,12 +271,22 @@ acciones (ver más abajo).
 - **Lista de acciones**: alta, edición y borrado de nodos `link`/`button`, reutilizando el panel de propiedades
   completo ya existente para nodos de `Layout` (mismas secciones `Props`/`Layout`/`Visibilidad`/`Estado de
   consulta`). Se reordena con botones subir/bajar, no con arrastre.
+- **Toggle "Sidebar activo"**: activarlo crea `shell.sidebar: { items: [] }` sin afectar a `shell.header` ya
+  configurado; desactivarlo quita únicamente la clave `shell.sidebar`, conservando `shell.header` intacto si
+  estaba activo.
+- **Lista de elementos de sidebar**: alta, edición y borrado de `sidebarItem` mediante un único componente
+  recursivo que se renderiza a sí mismo para los `children` de cualquier item, sin límite de profundidad (a
+  diferencia de la lista de menú del header, que solo admite un nivel anidado). Cada item expone el mismo selector
+  de modo (`Sin acción`, `href`, `action`, `Con hijos`) y los mismos campos comunes `label`, `icon` y `visibility`;
+  un item en modo "Con hijos" expone inline su propia lista anidada de hijos, con los mismos controles, pudiendo
+  a su vez anidar otro nivel de "Con hijos" sin tope.
 
 ### Reordenar por arrastre
-La única interacción drag-and-drop disponible en la sección `Shell` es reordenar `menuItem` dentro de su mismo
-nivel: la lista raíz de `shell.header.menu`, o los hijos de un mismo padre. No es posible arrastrar un item entre
-niveles distintos (de la raíz a un submenú o viceversa). El resto de edición (añadir, quitar, editar campos) usa
-siempre controles de formulario estándar.
+La única interacción drag-and-drop disponible en la sección `Shell` es reordenar `menuItem` o `sidebarItem` dentro
+de su mismo nivel: la lista raíz de `shell.header.menu`/`shell.sidebar.items`, o los hijos de un mismo padre. No es
+posible arrastrar un item entre niveles distintos (de la raíz a un submenú/subrama o viceversa, ni entre la lista
+de menú y la de sidebar). El resto de edición (añadir, quitar, editar campos) usa siempre controles de formulario
+estándar.
 
 ### Feedback cuando un cambio no se puede guardar
 Cada cambio del formulario (logo, título, una fila de menú o de acciones) se valida contra el config completo antes

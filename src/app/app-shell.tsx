@@ -9,7 +9,11 @@ import {
   getAppShellErrorTitleClassName,
   getAppShellFrameClassName,
 } from '../runtime/runtime-node-styling'
-import { AppShellHeader } from '../runtime/runtime-shell'
+import {
+  getAppShellBodyClassName,
+  getAppShellBodyContentClassName,
+} from '../runtime/runtime-node-styling-app-shell-sidebar'
+import { AppShellHeader, AppShellSidebar } from '../runtime/runtime-shell'
 import { RuntimeStateProvider } from '../runtime/runtime-state/runtime-state-provider'
 
 interface AppShellProps {
@@ -51,13 +55,25 @@ export function AppShell({ isDevelopment, runtimeConfig, dataValues, dataValuesE
     return renderErrorBlock(dataValuesError.message, dataValuesError.displayMode, isDevelopment)
   }
 
+  const sidebarItems = runtimeConfig.config.shell?.sidebar?.items
+  const hasSidebarItems = sidebarItems !== undefined && sidebarItems.length > 0
+
   return (
     <main className={getAppShellClassName()} data-testid="runtime-app">
       <section className={`${getAppShellContentClassName()} items-center`} data-testid="runtime-shell-content">
         <div className={getAppShellFrameClassName()} data-testid="runtime-shell-frame">
           <RuntimeStateProvider config={runtimeConfig.config} dataValues={dataValues} activeLanguage={activeLanguage}>
             <AppShellHeader header={runtimeConfig.config.shell?.header} />
-            <RuntimePage />
+            {hasSidebarItems ? (
+              <div className={getAppShellBodyClassName()}>
+                <AppShellSidebar sidebar={runtimeConfig.config.shell?.sidebar} />
+                <div className={getAppShellBodyContentClassName()}>
+                  <RuntimePage />
+                </div>
+              </div>
+            ) : (
+              <RuntimePage />
+            )}
           </RuntimeStateProvider>
         </div>
       </section>

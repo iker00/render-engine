@@ -47,6 +47,8 @@ export type RuntimeReferenceSurface =
   | 'shell.header.title'
   | 'shell.header.menu.item.label'
   | 'shell.header.menu.item.href'
+  | 'shell.sidebar.item.label'
+  | 'shell.sidebar.item.href'
 
 export function reportRuntimeReferenceDiagnostic(
   result: RuntimeReferenceResolutionResult,
