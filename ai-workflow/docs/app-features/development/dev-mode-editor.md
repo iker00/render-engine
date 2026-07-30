@@ -1,6 +1,6 @@
 > Cuándo leer: si la tarea toca el editor de configuración en vivo, el drawer lateral, el editor visual del `layout` (canvas de arrastrar y soltar), la preservación de estado al aplicar cambios, el autocompletado JSON Schema o el comportamiento de recarga por HMR en desarrollo.
 > Tamaño: grande.
-> Relacionados: [[local-config.md]], [[../config/validation.md]], [[../config/structure.md]], [[../nodes/index.md]].
+> Relacionados: [[local-config.md]], [[../config/validation.md]], [[../config/structure.md]], [[../nodes/index.md]], [[../shell/header.md]].
 
 # Editor de configuración en vivo (dev mode)
 
@@ -24,7 +24,7 @@ En producción sin el atributo, `main.tsx` monta `<App />` directamente y Monaco
 Una barra de herramientas persistente permanece siempre visible en la base central de la pantalla mientras `DevRuntime` esté montado, independientemente de la página activa del runtime y del modo vigente. Contiene (de izquierda a derecha):
 
 1. **Selector de página**: dropdown que lista todas las páginas disponibles en `config.pages`. Cambiar la selección navega el runtime a esa página (con el mismo mecanismo que una navegación interna por hash), en cualquiera de los dos modos. Al navegar, se limpia cualquier nodo seleccionado en modo Editor.
-2. **Selector de pestaña de dominio**: cuatro botones (`Layout`, `Api`, `Páginas`, `Tokens`). Solo `Layout` es funcional; las otras tres se renderizan como deshabilitadas o con indicación "Próximamente", sin acción al interactuar. En esta feature solo `Layout` permite edición visual.
+2. **Selector de pestaña de dominio**: cinco botones (`Layout`, `Api`, `Páginas`, `Tokens`, `Shell`). `Layout` y `Shell` son funcionales; las otras tres siguen renderizándose deshabilitadas o con indicación "Próximamente", sin acción al interactuar. Ver [Sección Shell (dominio de configuración)](#sección-shell-dominio-de-configuración) para el comportamiento de `Shell`.
 3. **Botón "Añadir elemento"**: abre la paleta flotante de nodos (ver sección [[#Paleta flotante de nodos]]), desde la que se puede arrastrar un nodo hasta el contenido para insertarlo. Su estado (abierto/cerrado) se refleja visualmente en la barra.
 4. **Botón de acceso a Monaco** (icono `{}`): abre el panel flotante de Monaco (ver sección [[#Panel flotante de Monaco]]). Su estado se refleja visualmente en la barra.
 5. **Toggle Visual/Editor**: dos botones (`Visual`, `Editor`) que controlan el modo. Al arrancar, el modo por defecto es `Visual`. Solo pueden estar activos alternativamente. El toggle modifica el comportamiento del árbol renderizado sin necesidad de recarga (ver [[#Modo Visual]] y [[#Modo Editor]]).
@@ -63,7 +63,7 @@ Cuando se activa "Añadir elemento" desde la barra, aparece una paleta flotante 
 ### Estado del editor entre modos
 - **Alternar Visual ⇄ Editor sin cambiar de página**: la selección y el overlay se conservan (al volver a Editor, se ve el mismo nodo seleccionado que en la última vez que se estuvo en Editor).
 - **Cambiar de página**: se limpia toda selección previa, independientemente del modo.
-- **Cambiar de pestaña de dominio fuera de `Layout`**: se limpia la selección, ya que esas pestañas no contienen `layout` que editar en esta feature.
+- **Cambiar de pestaña de dominio fuera de `Layout`**: se limpia la selección, ya que esas pestañas no contienen `layout` que editar en esta feature. Al entrar en `Shell`, el canvas, el overlay de selección y la paleta de nodos de `Layout` desaparecen del área central y se sustituyen por el panel de Shell (ver [Sección Shell (dominio de configuración)](#sección-shell-dominio-de-configuración)) hasta volver a `Layout`.
 
 Los cambios en el editor (canvas y Monaco) persisten en memoria entre cierres y aperturas de paneles en la misma sesión. Recargar la página descarta cambios sin aplicar.
 
@@ -243,6 +243,51 @@ Estas interacciones no son acciones declarativas ni comportamiento de usuario so
 Cualquier cambio hecho en modo Editor (mover, insertar, borrar, editar propiedades) se confirma mediante el mismo pipeline de commit: valida el `layout` resultante con `validateRuntimeConfig` (el mismo validador que ya usa el botón Aplicar) y, solo si es válido, migra el estado del runtime y actualiza `currentConfig`. A diferencia del botón Aplicar de Monaco (que deja el buffer intacto tras aplicar), el commit del canvas parchea únicamente la clave `layout` de la página activa sobre el último texto crudo válido conocido, dejando intacto el resto del documento (`api`, `initialPage`, `tokens`, `translations`, y cualquier otra página, incluidos bloques con forma cruda como `preloads`). Un `form.onSuccess`/`form.onError` declarado a nivel superior se serializa anidado dentro de `submitAction`, igual que exige el contrato normalizado. Si la mutación resultante no fuera válida, se descarta sin tocar ningún estado — la validación de destino de drop y las reglas estructurales ya evitan que esto ocurra en el flujo normal, pero el commit es la última barrera de seguridad. Un commit exitoso desde el canvas activa la misma guardia de cambios aplicados (§ Guardia de cambios aplicados) que el botón Aplicar, y sobrescribe deliberadamente cualquier cambio sin aplicar que hubiera pendiente en Monaco en ese momento.
 
 La sincronización entre canvas y Monaco es bidireccional e inmediata: cambios en el canvas se reflejan en el buffer de Monaco, y cambios directamente editados en Monaco se reflejan en el canvas tras pulsar "Aplicar".
+
+## Sección Shell (dominio de configuración)
+
+### Objetivo y alcance
+Formulario de configuración para `shell.header` (ver [[../shell/header.md]] para el shape funcional completo),
+accesible seleccionando `Shell` en el selector de pestaña de dominio de la barra flotante. A diferencia de `Layout`,
+esta sección no manipula un árbol renderizado por selección directa: sustituye el área de canvas por un panel de
+formulario dedicado (`ShellConfigPanel`). No hay selección de nodo, breadcrumb ni panel de propiedades por nodo
+seleccionado — el panel de propiedades completo de `Layout` solo se reutiliza puntualmente dentro de la lista de
+acciones (ver más abajo).
+
+### Contenido del panel
+- **Toggle "Header activo"**: activarlo crea `shell.header: {}` (header vacío, sin renderizar nada visible hasta
+  añadir campos); desactivarlo elimina el bloque `shell` completo del config.
+- **Logo**: mismo editor genérico de `props` que ya usa el nodo `image` (selector `src`/`fetch`, mutuamente
+  excluyentes).
+- **Título**: campo de texto simple.
+- **Lista de menú**: alta, edición y borrado de `menuItem` mediante controles de formulario estándar. Cada item
+  expone un selector de modo (`Sin acción`, `href`, `action`, `Con submenú`) que determina qué campos adicionales se
+  muestran, más los campos comunes `label`, `icon` y `visibility` (este último con el mismo editor de condición
+  simple/grupo que usa el panel de propiedades de `Layout`). Un item en modo "Con submenú" expone su propia lista
+  anidada de hijos con los mismos controles, sin permitir un tercer nivel (los hijos no ofrecen la opción "Con
+  submenú").
+- **Lista de acciones**: alta, edición y borrado de nodos `link`/`button`, reutilizando el panel de propiedades
+  completo ya existente para nodos de `Layout` (mismas secciones `Props`/`Layout`/`Visibilidad`/`Estado de
+  consulta`). Se reordena con botones subir/bajar, no con arrastre.
+
+### Reordenar por arrastre
+La única interacción drag-and-drop disponible en la sección `Shell` es reordenar `menuItem` dentro de su mismo
+nivel: la lista raíz de `shell.header.menu`, o los hijos de un mismo padre. No es posible arrastrar un item entre
+niveles distintos (de la raíz a un submenú o viceversa). El resto de edición (añadir, quitar, editar campos) usa
+siempre controles de formulario estándar.
+
+### Feedback cuando un cambio no se puede guardar
+Cada cambio del formulario (logo, título, una fila de menú o de acciones) se valida contra el config completo antes
+de aplicarse, con el mismo pipeline (`validateRuntimeConfig`) que ya usa el commit del canvas de `Layout`. Si el
+commit se rechaza, el campo no revierte en silencio: conserva el valor introducido y muestra debajo un aviso
+(`role="alert"`) con el código y el mensaje del error, hasta que un cambio posterior de ese mismo campo se guarda
+correctamente.
+
+### Pipeline de commit
+El commit de Shell parchea únicamente la clave raíz `shell` sobre el último texto crudo válido conocido, dejando
+intacto el resto del documento (`layout` de cada página, `api`, `initialPage`, `tokens`, `translations`) — mismo
+patrón que ya usa el commit del canvas de `Layout` sobre la clave `layout`, aplicado aquí a una clave raíz distinta.
+Un commit exitoso desde Shell activa la misma guardia de cambios aplicados (ver [[#Guardia de cambios aplicados]]) que el resto de commits del editor.
 
 ## Límites del editor visual
 

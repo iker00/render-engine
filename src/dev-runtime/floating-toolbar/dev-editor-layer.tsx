@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import type { LayoutNode, LayoutNodeType, RuntimeConfigError } from '../../config/runtime-config'
+import type { ShellConfig } from '../../config/runtime-config-types'
 import { LayoutEditModeProvider } from '../../runtime/layout-edit-mode-context'
 import { getNodeAtPath, serializeLayoutNodePath, type LayoutNodePath } from '../../runtime/layout-node-path'
 import { useRuntimeConfig, useRuntimeCurrentPage, useRuntimeStateActions } from '../../runtime/runtime-state/use-runtime-state'
@@ -8,7 +9,8 @@ import { LayoutCanvasDndContext, type LayoutCanvasDropAttempt } from '../layout-
 import { isValidDropTarget } from '../layout-canvas/layout-drop-validity'
 import { buildDefaultNodeInstance } from '../layout-canvas/layout-canvas-node-palette-defaults'
 import type { CommitCanvasMutationResult } from '../layout-canvas/layout-canvas-commit'
-import { DevEditorFloatingToolbar } from './dev-editor-floating-toolbar'
+import { ShellConfigPanel } from '../shell-config-panel/shell-config-panel'
+import { DevEditorFloatingToolbar, type ToolbarDomain } from './dev-editor-floating-toolbar'
 import { FloatingNodePalette } from './floating-node-palette'
 import { FloatingSelectionOverlay } from './floating-selection-overlay'
 
@@ -40,6 +42,9 @@ interface DevEditorLayerProps {
     path: LayoutNodePath,
     updater: (node: LayoutNode) => LayoutNode,
   ) => CommitCanvasMutationResult
+  onCommitShellMutation: (
+    mutate: (shell: ShellConfig | undefined) => ShellConfig | undefined,
+  ) => CommitCanvasMutationResult
   children: ReactNode
 }
 
@@ -66,10 +71,15 @@ export function DevEditorLayer({
   onMonacoOpenChange,
   onCommitCanvasMutation,
   onCommitNodeUpdate,
+  onCommitShellMutation,
   children,
 }: DevEditorLayerProps) {
   const [selectedPath, setSelectedPath] = useState<LayoutNodePath | null>(null)
   const [hoveredPath, setHoveredPath] = useState<LayoutNodePath | null>(null)
+  // Domain tab (0122-T5): "layout" renders the canvas (default), "shell" swaps the central
+  // content area for `ShellConfigPanel`. `api`/`pages`/`tokens` stay disabled in the toolbar, so
+  // this type only needs to track the two domains that are actually selectable.
+  const [activeDomain, setActiveDomain] = useState<ToolbarDomain>('layout')
 
   // Read here, outside LayoutEditModeProvider (mounted further down this same component),
   // so navigateToPage is the real one — not the no-op useRuntimeStateActions() returns when
@@ -151,6 +161,21 @@ export function DevEditorLayer({
     onMonacoOpenChange(true)
   }
 
+  // Entering "shell" clears the canvas selection (same policy already documented for
+  // api/pages/tokens): the Shell panel doesn't use the "selected canvas node" model at all, so a
+  // selection carried over from Layout would just be stale state pointing at a hidden tree.
+  // Leaving "shell" back to "layout" has nothing else to reconcile — the panel's own local state
+  // (e.g. which menu item is mid-edit) lives inside `ShellConfigPanel`, which fully unmounts
+  // whenever `activeDomain !== 'shell'`, so there is no residue to clear explicitly.
+  function handleDomainSelected(domain: ToolbarDomain) {
+    if (domain === activeDomain) return
+    setActiveDomain(domain)
+    if (domain === 'shell') {
+      setSelectedPath(null)
+      setHoveredPath(null)
+    }
+  }
+
   // Same drop-commit logic LayoutCanvas.handleDropAttempt used (0102 T14/T15), reused as-is:
   // onDropAttempt (raw) always fires first, isValidDropTarget gates whether a commit can ever
   // happen, and a successful move of the selected node re-resolves its new path afterwards.
@@ -206,32 +231,38 @@ export function DevEditorLayer({
 
   return (
     <>
-      {/* dnd-kit does not support dragging across sibling DndContext instances, so the
-          palette (T6) lives inside this same context (design.md Decisión 7). Always mounted:
-          useDraggable/useDroppable inside layout-node-renderer.tsx/layout-renderer.tsx are
-          already gated on editModeContext !== null, so nothing drags in Visual mode even
-          though the DndContext itself is present. */}
-      <LayoutCanvasDndContext pageLayout={activePageLayout} onDropAttempt={handleDropAttempt}>
-        <LayoutEditModeProvider
-          value={
-            mode === 'editor'
-              ? { active: true, selectedPath, hoveredPath, onSelectNode: handleSelectNode, onHoverNode: setHoveredPath }
-              : { active: false }
-          }
-        >
-          {children}
-        </LayoutEditModeProvider>
-        {paletteOpen && <FloatingNodePalette open={true} onClose={() => onPaletteOpenChange(false)} />}
-      </LayoutCanvasDndContext>
+      {activeDomain === 'layout' ? (
+        <>
+          {/* dnd-kit does not support dragging across sibling DndContext instances, so the
+              palette (T6) lives inside this same context (design.md Decisión 7). Always mounted:
+              useDraggable/useDroppable inside layout-node-renderer.tsx/layout-renderer.tsx are
+              already gated on editModeContext !== null, so nothing drags in Visual mode even
+              though the DndContext itself is present. */}
+          <LayoutCanvasDndContext pageLayout={activePageLayout} onDropAttempt={handleDropAttempt}>
+            <LayoutEditModeProvider
+              value={
+                mode === 'editor'
+                  ? { active: true, selectedPath, hoveredPath, onSelectNode: handleSelectNode, onHoverNode: setHoveredPath }
+                  : { active: false }
+              }
+            >
+              {children}
+            </LayoutEditModeProvider>
+            {paletteOpen && <FloatingNodePalette open={true} onClose={() => onPaletteOpenChange(false)} />}
+          </LayoutCanvasDndContext>
 
-      {mode === 'editor' && (
-        <FloatingSelectionOverlay
-          pageLayout={activePageLayout}
-          selectedPath={selectedPath}
-          onSelectNode={handleSelectNode}
-          onCommitNodeUpdate={onCommitNodeUpdate}
-          onDeleteNode={handleDeleteSelectedNode}
-        />
+          {mode === 'editor' && (
+            <FloatingSelectionOverlay
+              pageLayout={activePageLayout}
+              selectedPath={selectedPath}
+              onSelectNode={handleSelectNode}
+              onCommitNodeUpdate={onCommitNodeUpdate}
+              onDeleteNode={handleDeleteSelectedNode}
+            />
+          )}
+        </>
+      ) : (
+        <ShellConfigPanel shell={config.shell} onCommitShellMutation={onCommitShellMutation} />
       )}
 
       <DevEditorFloatingToolbar
@@ -240,7 +271,8 @@ export function DevEditorLayer({
         pages={config.pages}
         activePageId={activePageId}
         onActivePageIdChange={(pageId) => navigateToPage(pageId)}
-        activeDomain="layout"
+        activeDomain={activeDomain}
+        onDomainSelected={handleDomainSelected}
         onOpenMonaco={handleOpenMonaco}
         isMonacoOpen={monacoOpen}
         onOpenPalette={() => onPaletteOpenChange(!paletteOpen)}

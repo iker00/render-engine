@@ -26,6 +26,7 @@ import {
   buildCommitCandidateConfig,
   denormalizeFormNodesForSerialization,
   patchRawConfigTextWithLayout,
+  patchRootKey,
 } from '../../dev-runtime/layout-canvas/layout-canvas-commit'
 import {
   DevRuntimeReady,
@@ -228,6 +229,50 @@ describe('patchRawConfigTextWithLayout', () => {
     expect(parsed.api).toEqual(rawConfig.api)
     expect(parsed.tokens).toEqual(rawConfig.tokens)
     expect(parsed.initialPage).toBe(rawConfig.initialPage)
+  })
+})
+
+describe('patchRootKey', () => {
+  const rawConfig = {
+    api: { loadUsers: { method: 'GET', endpoint: '/users' } },
+    pages: [{ id: 'home', layout: [heading('Old')] }],
+    initialPage: 'home',
+    tokens: { authToken: { value: 'xyz' } },
+    shell: { header: { title: 'Old title' } },
+  }
+  const rawText = JSON.stringify(rawConfig, null, 2)
+
+  it('replaces the given root key with the provided value, leaving every other root key untouched', () => {
+    const nextText = patchRootKey(rawText, 'shell', { header: { title: 'New title' } })
+    const parsed = JSON.parse(nextText)
+
+    expect(parsed.shell).toEqual({ header: { title: 'New title' } })
+    expect(parsed.api).toEqual(rawConfig.api)
+    expect(parsed.pages).toEqual(rawConfig.pages)
+    expect(parsed.tokens).toEqual(rawConfig.tokens)
+    expect(parsed.initialPage).toBe(rawConfig.initialPage)
+  })
+
+  it('removes the key entirely when value is undefined, instead of writing a literal null/undefined', () => {
+    const nextText = patchRootKey(rawText, 'shell', undefined)
+    const parsed = JSON.parse(nextText)
+
+    expect('shell' in parsed).toBe(false)
+    expect(parsed.api).toEqual(rawConfig.api)
+    expect(parsed.pages).toEqual(rawConfig.pages)
+  })
+
+  it('adds a root key that was not present in the original text', () => {
+    const rawTextWithoutShell = JSON.stringify(
+      { api: rawConfig.api, pages: rawConfig.pages, initialPage: rawConfig.initialPage },
+      null,
+      2,
+    )
+
+    const nextText = patchRootKey(rawTextWithoutShell, 'shell', { header: {} })
+    const parsed = JSON.parse(nextText)
+
+    expect(parsed.shell).toEqual({ header: {} })
   })
 })
 

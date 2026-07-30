@@ -9,6 +9,7 @@ import {
   getAppShellErrorTitleClassName,
   getAppShellFrameClassName,
 } from '../runtime/runtime-node-styling'
+import { AppShellHeader } from '../runtime/runtime-shell'
 import { RuntimeStateProvider } from '../runtime/runtime-state/runtime-state-provider'
 
 interface AppShellProps {
@@ -55,6 +56,7 @@ export function AppShell({ isDevelopment, runtimeConfig, dataValues, dataValuesE
       <section className={`${getAppShellContentClassName()} items-center`} data-testid="runtime-shell-content">
         <div className={getAppShellFrameClassName()} data-testid="runtime-shell-frame">
           <RuntimeStateProvider config={runtimeConfig.config} dataValues={dataValues} activeLanguage={activeLanguage}>
+            <AppShellHeader header={runtimeConfig.config.shell?.header} />
             <RuntimePage />
           </RuntimeStateProvider>
         </div>

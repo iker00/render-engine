@@ -1,6 +1,6 @@
 > Cuándo leer: cuando la tarea requiere conocer dónde vive una responsabilidad concreta en `src/`, qué módulo expone qué API o cómo se conectan validación, render y estado.
 > Tamaño: medio.
-> Relacionados: [[overview.md]], [[../config/validation.md]].
+> Relacionados: [[overview.md]], [[../config/validation.md]], [[../shell/header.md]].
 
 # Organización estable del runtime
 
@@ -10,6 +10,7 @@
 - `src/config/runtime-config-zod.ts` concentra los esquemas `Zod` internos del contrato estructural.
 - `src/config/runtime-config-validation-errors.ts` adapta los fallos internos a la taxonomía pública estable de errores.
 - `src/config/validate-runtime-config.ts` contiene la validación estructural previa al render y las validaciones cruzadas posteriores al parseo.
+- `src/config/validate-shell.ts` valida las referencias cruzadas del bloque raíz `shell` (páginas y operaciones existentes, `visibility`), con su propia política de mensajes de error porque `shell` no vive dentro de ninguna página.
 
 ## Render y composición
 - `src/runtime/layout-renderer.tsx` renderiza colecciones ordenadas, conserva el soporte de varios hermanos raíz y propaga opcionalmente un contexto de iteración por subárbol.
@@ -20,6 +21,7 @@
 - `src/runtime/form-context.tsx` propaga el `formId` efectivo por descendencia sin acoplar los nodos de campo a props manuales repetidas.
 - `src/runtime/nodes/` contiene una pieza concreta por nodo soportado hoy: `container`, `repeater`, `heading`, `paragraph`, `list`, `image`, `table`, `button`, `form`, `input`, `textarea`, `select`, `radioGroup`, `checkboxGroup`, `tabs`, `accordion`, `badge`, `alert`, `stat`, `divider`, `skeleton` y `fileManager`.
 - `src/runtime/nodes/form-layout-node.tsx` fija hoy la frontera visible entre rerender, ocultación y desmontaje real del formulario, y usa el store compartido para distinguir entre resetear un formulario existente y eliminarlo completo.
+- `src/runtime/runtime-shell/` concentra el render de `shell.header` (montado una única vez por sesión de runtime, fuera del ciclo de vida de `layout-renderer`/`pageEntry`), el desplegable de `menuItem.children` y la derivación pura del estado "activo" del menú a partir del `pageId` visible.
 
 ## Acciones, estado y feedback
 - `src/runtime/runtime-actions/` concentra el ejecutor común `action.type -> handler del provider`, reutilizable por futuros triggers más allá de `button`.
@@ -38,4 +40,4 @@
 
 ## Styling
 - `src/app/index.css` centraliza los tokens visuales globales del runtime con `@theme` de `Tailwind CSS v4`.
-- `src/runtime/runtime-node-styling.ts` centraliza la convención visual base, la selección entre modos `flex` y `grid`, la heurística `plain | form-section` para `container` dentro de `form`, la variante cerrada `card`, el mapeo fijo y responsive de `columns` y `layout.span`, `align`, `justify` y `wrap`, la compatibilidad acotada de `gap` y el cálculo de `col-span-*` con clamp seguro al grid padre. Es un barrel: la implementación por dominio vive en los ficheros internos `src/runtime/runtime-node-styling-<dominio>.ts` (`base`, `app-shell`, `content`, `form-fields`, `container`, `table`, `repeater-pagination`, `button`, `modal`, `accordion`, `tabs`, `stat`, `badge`, `alert`, `skeleton`, `input-icon`, `file-manager`); ningún consumidor externo debe importar directamente de esos ficheros internos, todos consumen la ruta pública del barrel.
+- `src/runtime/runtime-node-styling.ts` centraliza la convención visual base, la selección entre modos `flex` y `grid`, la heurística `plain | form-section` para `container` dentro de `form`, la variante cerrada `card`, el mapeo fijo y responsive de `columns` y `layout.span`, `align`, `justify` y `wrap`, la compatibilidad acotada de `gap` y el cálculo de `col-span-*` con clamp seguro al grid padre. Es un barrel: la implementación por dominio vive en los ficheros internos `src/runtime/runtime-node-styling-<dominio>.ts` (`base`, `app-shell`, `app-shell-header`, `content`, `form-fields`, `container`, `table`, `repeater-pagination`, `button`, `modal`, `accordion`, `tabs`, `stat`, `badge`, `alert`, `skeleton`, `input-icon`, `file-manager`); ningún consumidor externo debe importar directamente de esos ficheros internos, todos consumen la ruta pública del barrel.

@@ -56,6 +56,9 @@ Esa misma convención se reutiliza también en:
 - `table.props.rows.cells`
 - `repeater.props.items.source`
 - `visibility.reference`
+- `shell.header.title`
+- `shell.header.menu.item.label`
+- `shell.header.menu.item.href`
 
 Superficies de headers (referencias completas + interpolación parcial):
 - `api.headers`

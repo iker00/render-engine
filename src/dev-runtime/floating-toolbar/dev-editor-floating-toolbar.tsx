@@ -1,7 +1,7 @@
-import { LayoutTemplate, Plug, StickyNote, KeyRound, Braces, Plus, SquarePen } from 'lucide-react'
+import { LayoutTemplate, Plug, StickyNote, KeyRound, PanelTop, Braces, Plus, SquarePen } from 'lucide-react'
 
-type ToolbarMode = 'visual' | 'editor'
-type ToolbarDomain = 'layout'
+export type ToolbarMode = 'visual' | 'editor'
+export type ToolbarDomain = 'layout' | 'shell'
 
 interface DevEditorFloatingToolbarProps {
   mode: ToolbarMode
@@ -10,6 +10,7 @@ interface DevEditorFloatingToolbarProps {
   activePageId: string
   onActivePageIdChange: (pageId: string) => void
   activeDomain: ToolbarDomain
+  onDomainSelected: (domain: ToolbarDomain) => void
   onOpenMonaco: () => void
   isMonacoOpen: boolean
   onOpenPalette: () => void
@@ -54,12 +55,14 @@ export function DevEditorFloatingToolbar({
   activePageId,
   onActivePageIdChange,
   activeDomain,
+  onDomainSelected,
   onOpenMonaco,
   isMonacoOpen,
   onOpenPalette,
   isPaletteOpen,
 }: DevEditorFloatingToolbarProps) {
   const isLayoutActive = activeDomain === 'layout'
+  const isShellActive = activeDomain === 'shell'
 
   return (
     <div
@@ -91,6 +94,7 @@ export function DevEditorFloatingToolbar({
           data-testid="dev-editor-toolbar-domain-layout"
           className={buttonClasses({ pressed: isLayoutActive })}
           aria-pressed={isLayoutActive}
+          onClick={() => onDomainSelected('layout')}
         >
           <LayoutTemplate size={14} /> Layout
         </button>
@@ -123,6 +127,15 @@ export function DevEditorFloatingToolbar({
           title="Próximamente"
         >
           <KeyRound size={14} /> Tokens
+        </button>
+        <button
+          type="button"
+          data-testid="dev-editor-toolbar-domain-shell"
+          className={buttonClasses({ pressed: isShellActive })}
+          aria-pressed={isShellActive}
+          onClick={() => onDomainSelected('shell')}
+        >
+          <PanelTop size={14} /> Shell
         </button>
       </div>
 
