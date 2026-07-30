@@ -1,6 +1,12 @@
 import { useState } from 'react'
 import type { RuntimeConfigError } from '../../config/runtime-config'
-import type { MenuItemConfig, ShellConfig, ShellHeaderActionNode, ShellHeaderConfig } from '../../config/runtime-config-types'
+import type {
+  MenuItemConfig,
+  ShellConfig,
+  ShellHeaderActionNode,
+  ShellHeaderConfig,
+  SidebarItemConfig,
+} from '../../config/runtime-config-types'
 import { CommitRejectionBanner } from '../commit-rejection-banner'
 import type { CommitCanvasMutationResult } from '../layout-canvas/layout-canvas-commit'
 import { BooleanPropertyField } from '../layout-canvas/property-fields/boolean-property-field'
@@ -10,6 +16,7 @@ import { TextPropertyField } from '../layout-canvas/property-fields/text-propert
 import { ShellActionsListEditor } from './shell-actions-list-editor'
 import { getShellHeaderJsonSchema } from './shell-config-panel-schema'
 import { ShellMenuListEditor } from './shell-menu-list-editor'
+import { SidebarItemListEditor } from './sidebar-item-list-editor'
 
 export interface ShellConfigPanelProps {
   shell: ShellConfig | undefined
@@ -33,6 +40,8 @@ const EMPTY_HEADER: ShellHeaderConfig = {}
 export function ShellConfigPanel({ shell, onCommitShellMutation }: ShellConfigPanelProps) {
   const header = shell?.header
   const headerActive = header !== undefined
+  const sidebar = shell?.sidebar
+  const sidebarActive = sidebar !== undefined
   const [pendingRejections, setPendingRejections] = useState<ShellPendingRejections>({})
 
   function recordResult(key: ShellPendingKey, attemptedValue: unknown, result: CommitCanvasMutationResult) {
@@ -48,8 +57,21 @@ export function ShellConfigPanel({ shell, onCommitShellMutation }: ShellConfigPa
     })
   }
 
-  function handleToggleHeader(nextActive: boolean) {
-    onCommitShellMutation(() => (nextActive ? { header: {} } : undefined))
+  // Toggling one `shell` section (header/sidebar) on or off must never disturb the other: each
+  // is an additive, independent sibling of `shell` (see `shellSchema` in `runtime-config-zod.ts`).
+  // Replacing the whole `shell` object on every toggle — as the previous `handleToggleHeader`
+  // did — was harmless while `header` was the only possible key, but silently destroys a
+  // configured `shell.sidebar` once `sidebar` becomes a sibling (0123-T7 regression fix).
+  function commitShellSectionToggle(section: 'header' | 'sidebar', nextActive: boolean) {
+    onCommitShellMutation((prevShell) => {
+      const next = { ...(prevShell ?? {}) }
+      if (nextActive) {
+        next[section] = section === 'header' ? {} : { items: [] }
+      } else {
+        delete next[section]
+      }
+      return Object.keys(next).length === 0 ? undefined : next
+    })
   }
 
   function commitHeaderField(key: ShellPendingKey, value: unknown) {
@@ -74,6 +96,16 @@ export function ShellConfigPanel({ shell, onCommitShellMutation }: ShellConfigPa
     }))
   }
 
+  // Same "patch only this root key" pipeline as `commitMenu`/`commitActions` above: replaces
+  // `shell.sidebar.items` while conserving `defaultCollapsed` if it was already set, and never
+  // touches `shell.header`.
+  function commitSidebarItems(nextItems: SidebarItemConfig[]): CommitCanvasMutationResult {
+    return onCommitShellMutation((prevShell) => ({
+      ...(prevShell ?? {}),
+      sidebar: { ...(prevShell?.sidebar ?? {}), items: nextItems },
+    }))
+  }
+
   const shellHeaderSchema = getShellHeaderJsonSchema()
   const schemaProperties = isPlainObject(shellHeaderSchema.properties) ? shellHeaderSchema.properties : {}
   const logoSchema = isPlainObject(schemaProperties.logo) ? (schemaProperties.logo as Record<string, unknown>) : undefined
@@ -85,7 +117,11 @@ export function ShellConfigPanel({ shell, onCommitShellMutation }: ShellConfigPa
 
   return (
     <div data-testid="shell-config-panel" className="flex h-full flex-col gap-4 overflow-y-auto p-3">
-      <BooleanPropertyField label="Header activo" value={headerActive} onChange={handleToggleHeader} />
+      <BooleanPropertyField
+        label="Header activo"
+        value={headerActive}
+        onChange={(nextActive) => commitShellSectionToggle('header', nextActive)}
+      />
 
       {headerActive && header !== undefined && (
         <>
@@ -107,6 +143,16 @@ export function ShellConfigPanel({ shell, onCommitShellMutation }: ShellConfigPa
           <ShellMenuListEditor menu={header.menu ?? []} onCommitMenu={commitMenu} />
           <ShellActionsListEditor actions={header.actions ?? []} onCommitActions={commitActions} />
         </>
+      )}
+
+      <BooleanPropertyField
+        label="Sidebar activo"
+        value={sidebarActive}
+        onChange={(nextActive) => commitShellSectionToggle('sidebar', nextActive)}
+      />
+
+      {sidebarActive && sidebar !== undefined && (
+        <SidebarItemListEditor items={sidebar.items ?? []} path="root" onCommitItems={commitSidebarItems} />
       )}
     </div>
   )

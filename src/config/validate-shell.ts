@@ -6,6 +6,7 @@ import type {
   RuntimeVisibilityOperator,
   ShellConfig,
   ShellHeaderActionNode,
+  SidebarItemConfig,
 } from './runtime-config-types'
 import { isVisibilityGroup } from './runtime-config-types'
 import { shellSchema } from './runtime-config-zod'
@@ -76,39 +77,76 @@ function validateShellCrossReferences(
 ): { status: 'error'; error: RuntimeConfigError } | null {
   const header = shell.header
 
-  if (header === undefined) {
-    return null
-  }
-
   const pageIdSet = new Set(pageIds)
   const operationNameSet = new Set(apiOperationNames)
 
-  if (header.menu) {
-    for (let i = 0; i < header.menu.length; i += 1) {
-      const item = header.menu[i]
-      const basePath = `shell.header.menu[${i}]`
+  if (header !== undefined) {
+    if (header.menu) {
+      for (let i = 0; i < header.menu.length; i += 1) {
+        const item = header.menu[i]
+        const basePath = `shell.header.menu[${i}]`
 
-      const itemError = validateMenuItemCrossRefs(item, basePath, pageIdSet, operationNameSet)
-      if (itemError) return itemError
+        const itemError = validateMenuItemCrossRefs(item, basePath, pageIdSet, operationNameSet)
+        if (itemError) return itemError
 
-      if (item.children) {
-        for (let j = 0; j < item.children.length; j += 1) {
-          const childError = validateMenuItemCrossRefs(
-            item.children[j],
-            `${basePath}.children[${j}]`,
-            pageIdSet,
-            operationNameSet,
-          )
-          if (childError) return childError
+        if (item.children) {
+          for (let j = 0; j < item.children.length; j += 1) {
+            const childError = validateMenuItemCrossRefs(
+              item.children[j],
+              `${basePath}.children[${j}]`,
+              pageIdSet,
+              operationNameSet,
+            )
+            if (childError) return childError
+          }
         }
+      }
+    }
+
+    if (header.actions) {
+      for (let i = 0; i < header.actions.length; i += 1) {
+        const actionError = validateShellHeaderAction(header.actions[i], i, pageIdSet, operationNameSet)
+        if (actionError) return actionError
       }
     }
   }
 
-  if (header.actions) {
-    for (let i = 0; i < header.actions.length; i += 1) {
-      const actionError = validateShellHeaderAction(header.actions[i], i, pageIdSet, operationNameSet)
-      if (actionError) return actionError
+  if (shell.sidebar?.items) {
+    for (let i = 0; i < shell.sidebar.items.length; i += 1) {
+      const itemError = validateSidebarItemCrossRefs(
+        shell.sidebar.items[i],
+        `shell.sidebar.items[${i}]`,
+        pageIdSet,
+        operationNameSet,
+      )
+      if (itemError) return itemError
+    }
+  }
+
+  return null
+}
+
+function validateSidebarItemCrossRefs(
+  item: SidebarItemConfig,
+  path: string,
+  pageIds: ReadonlySet<string>,
+  operationNames: ReadonlySet<string>,
+): { status: 'error'; error: RuntimeConfigError } | null {
+  if (item.action?.type === 'navigateTo' && !pageIds.has(item.action.pageId)) {
+    return invalidLayout(
+      `Shell configuration is invalid at "${path}.action.pageId": pageId "${item.action.pageId}" is not declared in "pages".`,
+    )
+  }
+
+  if (item.visibility !== undefined) {
+    const visibilityError = validateShellVisibility(item.visibility, `${path}.visibility`, operationNames)
+    if (visibilityError) return visibilityError
+  }
+
+  if (item.children) {
+    for (let i = 0; i < item.children.length; i += 1) {
+      const childError = validateSidebarItemCrossRefs(item.children[i], `${path}.children[${i}]`, pageIds, operationNames)
+      if (childError) return childError
     }
   }
 

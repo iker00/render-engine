@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import type { RuntimeApiBodyValue } from './runtime-config-types'
+import type { RuntimeApiBodyValue, SidebarItemConfig } from './runtime-config-types'
 
 export const supportedNodeTypes = [
   'container',
@@ -1030,10 +1030,73 @@ export const shellHeaderSchema = z
   })
   .strict()
 
-// `.strict()` keeps `shell` closed today: an unknown key like a future `sidebar` is rejected
-// instead of silently stripped, making the additive-only intent explicit.
+// `sidebarItem` shares the same base fields as `menuItem`/`menuItemChild` (label, icon,
+// visibility, href, action) but is a genuinely recursive tree: any node, at any depth, can
+// declare its own non-empty `children` of the same shape. Kept as a distinct schema (not a
+// reuse of `menuItemFieldsSchema`) so the two contracts can diverge independently later.
+const sidebarItemBaseFieldsSchema = z
+  .object({
+    label: z.string(),
+    icon: z.string().optional(),
+    visibility: visibilitySchema.optional(),
+    href: z.string().optional(),
+    action: z.discriminatedUnion('type', [navigateToButtonActionSchema, goBackButtonActionSchema]).optional(),
+  })
+  .strict()
+
+const refineSidebarItemShape = (
+  data: { href?: string; action?: unknown; children?: unknown[] },
+  ctx: z.RefinementCtx,
+): void => {
+  const hasHref = data.href !== undefined
+  const hasAction = data.action !== undefined
+  const hasChildren = data.children !== undefined
+
+  if (hasChildren && (hasHref || hasAction)) {
+    ctx.addIssue({
+      code: 'custom',
+      path: hasHref ? ['href'] : ['action'],
+      message: 'Sidebar items with children cannot declare href or action.',
+    })
+    return
+  }
+
+  if (hasHref && hasAction) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['href'],
+      message: 'Sidebar items cannot declare both href and action.',
+    })
+    return
+  }
+
+  if (!hasHref && !hasAction && !hasChildren) {
+    ctx.addIssue({
+      code: 'custom',
+      path: [],
+      message: 'Sidebar items must declare either href, action or children.',
+    })
+  }
+}
+
+export const sidebarItemSchema: z.ZodType<SidebarItemConfig> = z.lazy(() =>
+  sidebarItemBaseFieldsSchema
+    .extend({ children: z.array(sidebarItemSchema).nonempty().optional() })
+    .superRefine(refineSidebarItemShape),
+) as z.ZodType<SidebarItemConfig>
+
+export const shellSidebarSchema = z
+  .object({
+    items: z.array(sidebarItemSchema).optional(),
+    defaultCollapsed: z.boolean().optional(),
+  })
+  .strict()
+
+// `.strict()` keeps `shell` closed: `header` and `sidebar` are additive, independent siblings —
+// each optional on its own, so a config may declare either, both or neither.
 export const shellSchema = z
   .object({
     header: shellHeaderSchema.optional(),
+    sidebar: shellSidebarSchema.optional(),
   })
   .strict()

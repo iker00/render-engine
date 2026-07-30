@@ -1,6 +1,6 @@
 > Cuándo leer: validación previa al render, fachada pública del validador, política de errores estructurales, comportamiento dev/prod, frontera de `src/config/`.
 > Tamaño: largo.
-> Relacionados: [[../runtime/error-behavior.md]], [[../runtime/organization.md]], [[structure.md]], [[../shell/header.md]].
+> Relacionados: [[../runtime/error-behavior.md]], [[../runtime/organization.md]], [[structure.md]], [[../shell/header.md]], [[../shell/sidebar.md]].
 
 # Validación del runtime config
 
@@ -70,6 +70,22 @@
 - `menuItem.visibility` sigue el contrato transversal estándar de `visibility` (ver [[../references/visibility.md]]), pero **rechaza referencias `item.*`** con el mensaje `"Shell menu items do not support item.* references."`, al no existir contexto de iteración a nivel de shell.
 - `shell.header.actions` solo admite nodos de tipo `link` o `button`; cualquier otro tipo (por ejemplo `table`) se rechaza. Cada entrada reutiliza sin modificar el contrato ya validado de `link`/`button`, incluidas las comprobaciones de `pageId` en `navigateTo` y de `operationName` en `executeOperation`/`executeOperations`.
 - Los errores de shape de `shell` (parseo `Zod`) usan el mensaje `'Shell configuration is invalid at "shell{ruta}".'` con la ruta canónica del campo afectado (por ejemplo `shell.header.menu[0].action.pageId` o `shell.header.actions[0].props.action.operationName`); esta política de mensajes es propia de `shell` y no coincide con el formato `Page "{pageId}" has an invalid layout at ...` que usan los nodos dentro de `pages[].layout`, porque `shell` no vive dentro de ninguna página.
+
+## Reglas de `shell.sidebar`
+
+- `shell.sidebar` es opcional, hermano independiente de `shell.header`; declarar uno no exige ni afecta al otro.
+- `shell.sidebar.items` es opcional; ausente o `[]` no renderiza ningún sidebar.
+- `shell.sidebar.defaultCollapsed`, si se declara, debe ser boolean.
+- Cada `sidebarItem` (a cualquier profundidad) debe declarar `label` como string.
+- Un `sidebarItem` debe declarar exactamente uno de `href`, `action` o `children`, sin límite de profundidad para `children` (a diferencia de `menuItem`). Mensajes exactos:
+  - Ambos `href` y `action` declarados a la vez: `"Sidebar items cannot declare both href and action."`
+  - `children` declarado junto con `href` o `action`: `"Sidebar items with children cannot declare href or action."`
+  - Ninguno de los tres declarado: `"Sidebar items must declare either href, action or children."`
+- `sidebarItem.children`, si se declara, no puede estar vacío (`children: []` se rechaza); a diferencia de `menuItem.children`, un `sidebarItem` dentro de `children` puede a su vez declarar su propio `children`, sin tope de profundidad.
+- `sidebarItem.action` solo admite `navigateTo` o `goBack`, con el mismo contrato de validación que `link.props.action`, incluida la comprobación de `action.navigateTo.pageId` existente en `pages`, verificada recursivamente en cada nivel del árbol.
+- `sidebarItem.href` admite el mismo contrato que `link.props.href` (literal o referencia dinámica completa).
+- `sidebarItem.visibility` sigue el contrato transversal estándar de `visibility` (ver [[../references/visibility.md]]), pero **rechaza referencias `item.*`** con el mismo mensaje compartido con `menuItem`, `"Shell menu items do not support item.* references."`, al no existir contexto de iteración a nivel de shell.
+- Los errores de shape de `shell.sidebar` (parseo `Zod`) siguen la misma política de mensajes que `shell.header` (`'Shell configuration is invalid at "shell{ruta}".'`); los errores de referencia cruzada (`pageId` inexistente) usan el prefijo `'Shell configuration is invalid at "shell.sidebar.items[i]...".'` con la ruta exacta del item, incluida su cadena de `children[j]` cuando está anidado.
 
 ## Reglas de formularios
 - `form.persistOnUnmount` sigue siendo opcional; si aparece con un valor no booleano, el config completo se rechaza antes del render sobre la ruta exacta.

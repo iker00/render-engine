@@ -16,7 +16,7 @@ No es histórico acumulado ni sustituto de las fichas funcionales. El detalle es
 | Formularios y validación | estable | [forms/](./app-features/forms/index.md) | `0095` |
 | Queries, preloads y feedback | estable | [queries/](./app-features/queries/index.md) | `0110` |
 | Navegación y páginas | estable | [navigation/](./app-features/navigation/index.md) | `0046` |
-| Shell de aplicación (cabecera compartida) | estable | [shell/](./app-features/shell/index.md) | `0122` |
+| Shell de aplicación (cabecera y sidebar) | estable | [shell/](./app-features/shell/index.md) | `0123` |
 | Accesibilidad | estable | [nodes/](./app-features/nodes/index.md), [queries/](./app-features/queries/index.md), [navigation/](./app-features/navigation/index.md) | `0046` |
 | Desarrollo local | estable | [development/](./app-features/development/index.md) | `0108` |
 | Subida de archivos | estable | [nodes/file-manager.md](./app-features/nodes/file-manager.md), [nodes/file-input.md](./app-features/nodes/file-input.md), [forms/validation-rules.md](./app-features/forms/validation-rules.md), [forms/submit.md](./app-features/forms/submit.md) | `0109` |

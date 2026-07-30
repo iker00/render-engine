@@ -3,10 +3,12 @@
 // module-level (same pattern as `layout-canvas-node-schema.ts`'s `getNodeTypeJsonSchema`) since
 // `toJSONSchema` re-derivation on every render would be wasted work: the schema is static.
 import { toJSONSchema } from 'zod'
-import { menuItemSchema, shellHeaderSchema } from '../../config/runtime-config-zod'
+import { menuItemSchema, shellHeaderSchema, shellSidebarSchema, sidebarItemSchema } from '../../config/runtime-config-zod'
 
 let cachedMenuItemJsonSchema: Record<string, unknown> | null = null
 let cachedShellHeaderJsonSchema: Record<string, unknown> | null = null
+let cachedSidebarItemJsonSchema: Record<string, unknown> | null = null
+let cachedShellSidebarJsonSchema: Record<string, unknown> | null = null
 
 /**
  * Schema for a `menuItem`/`menuItemChild` entry: `label`, `icon`, `visibility`, `href`,
@@ -27,4 +29,24 @@ export function getShellHeaderJsonSchema(): Record<string, unknown> {
     cachedShellHeaderJsonSchema = toJSONSchema(shellHeaderSchema) as unknown as Record<string, unknown>
   }
   return cachedShellHeaderJsonSchema
+}
+
+/**
+ * Schema for a `sidebarItem` entry: `label`, `icon`, `visibility`, `href`, `action`
+ * (discriminated union navigateTo/goBack) and a recursive, non-empty `children` of the same
+ * shape (unlike `menuItem`, `sidebarItem` allows nesting at any depth, not just one level).
+ */
+export function getSidebarItemJsonSchema(): Record<string, unknown> {
+  if (!cachedSidebarItemJsonSchema) {
+    cachedSidebarItemJsonSchema = toJSONSchema(sidebarItemSchema) as unknown as Record<string, unknown>
+  }
+  return cachedSidebarItemJsonSchema
+}
+
+/** Schema for `shell.sidebar`: `items` (array of `sidebarItem`) and `defaultCollapsed`. */
+export function getShellSidebarJsonSchema(): Record<string, unknown> {
+  if (!cachedShellSidebarJsonSchema) {
+    cachedShellSidebarJsonSchema = toJSONSchema(shellSidebarSchema) as unknown as Record<string, unknown>
+  }
+  return cachedShellSidebarJsonSchema
 }

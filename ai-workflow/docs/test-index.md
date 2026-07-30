@@ -21,6 +21,8 @@ src/tests/
 
 - `app-bootstrap.test.tsx` — lectura y parsing de la configuración en bootstrap
 - `app-shell.test.tsx` — composición del shell de la aplicación
+- `app-shell-sidebar.test.tsx` — `AppShellSidebar` end-to-end (feature `0123`): ausencia sin `shell`/con `items: []`, composición con el header y sin él, items de hoja (`href`/`action`), triggers de rama con expansión inline y múltiples ramas simultáneas hasta cuatro niveles de profundidad, `visibility`, estado activo con auto-expansión de ancestros, persistencia del nodo del sidebar y de las ramas expandidas/colapsadas manualmente a través de la navegación
+- `app-shell-sidebar-rail.test.tsx` — modo rail del sidebar (feature `0123`): estado inicial por `defaultCollapsed`, control propio de colapso/expansión, fallback de glifo por inicial de `label` sin `icon`, `SidebarRailFlyout` (apertura, `role="menu"`, cierre por Esc/click fuera/selección, expansión inline de un hijo de profundidad 3+ sin flyout anidado), persistencia del modo rail entre navegaciones
 - `main.test.tsx` — punto de entrada principal
 
 ## config-validation/
@@ -51,6 +53,7 @@ src/tests/
 - `runtime-config-validation-hidden.test.ts` — validación del nodo `hidden`: shape con fieldId y value (string/number/boolean/referencia), rechazo de props prohibidos (label/validations/defaultValue/placeholder/icon/iconPosition), rechazo de visibility y queryStateFeedback, form-only, repeater, fieldId duplicado (~nuevo)
 - `runtime-config-validation-tooltip.test.ts` — validación de `props.tooltip` en los siete field nodes: aceptación como string (vacío, no vacío, interpolado), rechazo como número/boolean/array, aceptación sin tooltip sin regresión (~nuevo)
 - `layout-placement-rules.test.ts` — predicados puros de colocación estructural (`nodeTypeAcceptsChildren`, `buttonRequiresFormAncestor`, `FORM_ONLY_LEAF_NODE_TYPES`, `FORM_ALLOWED_DESCENDANT_TYPES`, `MODAL_ALLOWED_CHILD_TYPES`, `LINK_ALLOWED_CHILD_TYPES`) reutilizados por la validación de config y por el motor de validez de drop del editor visual (~nuevo)
+- `runtime-config-validation-shell-sidebar.test.ts` — bloque `shell.sidebar` (feature `0123`): aceptación de `shell.sidebar` como hermano de `header`, aceptación de `sidebarItem` con `href`/`action`/`children` a profundidad arbitraria, rechazo de `href`+`action` simultáneos, `children`+`href`/`action`, ninguno de los tres, `children: []` vacío, `defaultCollapsed` no booleano; validación cruzada recursiva de `pageId` en `action.navigateTo` y de `visibility` (incluido el rechazo de `item.*`) a cualquier profundidad del árbol (~523 líneas)
 
 ## layout-renderer/
 
@@ -131,6 +134,7 @@ src/tests/
 - `runtime-api-empty-submit-value.test.ts` — resolución del canal `emptySubmitValues` en `resolvePayloadValue`/`resolveBody`/`resolveHeaders`: sustitución de `''` por el valor configurado (normalización numérica a string), sin efecto sobre un valor efectivo real, prioridad de la omisión de campos ocultos sobre la sustitución (feature `0121`)
 - `runtime-form-submit-empty-select-fallback.test.tsx` — end-to-end: submit de un `select` de selección simple vacío con `props.emptySubmitValue` envía el valor de sustitución en el payload, sin regresión cuando el prop no está declarado, sin efecto con selección real, `required` sigue bloqueando el submit, sin reintroducir una clave omitida por `visibility`, store/UI siguen mostrando `''`/placeholder (feature `0121`)
 - `runtime-plan-page-preloads.test.ts` — 8 funciones puras de planificación de `pages[].preloads` (feature `0117`, `src/runtime/runtime-global-preloads/plan-page-preloads.ts`, extraídas de `runtime-state-provider.tsx`): agregado de estado (`deriveAggregatePageEntryStatus`), reload vs no-reload por firma efectiva con compose correcto y fallido (`evaluatePreloadExecution`), plan completo vacío y con precargas filtradas por `when` (`planPagePreloadExecution`), snapshot de reseteo sin mutar el estado de entrada (`createPreloadPlanningSnapshot`), comparadores de igualdad (`isMatchingPageEntryState`, `arePageParamsEqual`, `arePreloadNamesEqual`) y estabilidad de la firma de batch (`createPlannedPreloadBatchSignature`); sin React ni `@testing-library/react` (~nuevo)
+- `runtime-shell-active-sidebar.test.ts` — función pura `computeActiveSidebarItemIds` (feature `0123`): codificación de `path` por índice (raíz) y `${parentPath}.children.${index}` (anidado), item activo y todos sus ancestros de cualquier profundidad, ausencia de página activa o `items` vacío, dos items en ramas distintas activos simultáneamente por el mismo `pageId` (~148 líneas)
 
 ## dev-runtime/
 
@@ -161,3 +165,4 @@ src/tests/
 - `layout-canvas-reorder-reinsert.test.tsx` — reordenar y reanidar nodos existentes vía drag end-to-end: commit, invalidez sin cambio de estado, seguimiento de la selección tras mover el nodo seleccionado (~nuevo)
 - `layout-canvas-palette-insert.test.tsx` — paleta de nodos e inserción vía drag: `buildDefaultNodeInstance` por tipo, inserción respetando las reglas de destino (~nuevo)
 - `layout-canvas-delete-node.test.tsx` — borrado del nodo seleccionado (y su subárbol) end-to-end, limpieza de selección, sincronización con Monaco (~nuevo)
+- `shell-sidebar-list-editor.test.tsx` — `SidebarItemListEditor` (feature `0123`): alta de item raíz, edición de campos (incluida la conmutación de modo a "Con hijos"), recursión de edición a profundidad arbitraria, borrado a nivel anidado, reordenación por arrastre limitada al mismo nivel, feedback de commit rechazado (~359 líneas)

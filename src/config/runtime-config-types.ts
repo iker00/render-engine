@@ -815,8 +815,26 @@ export interface ShellHeaderConfig {
   actions?: ShellHeaderActionNode[]
 }
 
+// Unlike `menuItem`/`menuItemChild` (two fixed shapes, one nesting level), `sidebarItem` is
+// genuinely recursive: any node in the tree accepts the same fields, including its own
+// `children`, with no depth limit.
+export interface SidebarItemConfig {
+  label: string
+  icon?: string
+  visibility?: RuntimeVisibilityConfig
+  href?: string
+  action?: NavigateToRuntimeUiAction | GoBackRuntimeUiAction
+  children?: SidebarItemConfig[]
+}
+
+export interface ShellSidebarConfig {
+  items?: SidebarItemConfig[]
+  defaultCollapsed?: boolean
+}
+
 export interface ShellConfig {
   header?: ShellHeaderConfig
+  sidebar?: ShellSidebarConfig
 }
 
 export interface RuntimePageConfig {

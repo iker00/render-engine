@@ -102,6 +102,49 @@ describe('DevRuntime shell header mount (regression: 0122-T5 wired the panel but
   })
 })
 
+describe('DevRuntime shell sidebar mount (regression: 0123 wired the panel but never mounted AppShellSidebar)', () => {
+  it('does not render AppShellSidebar when config has no shell block', () => {
+    render(<DevRuntime rootElement={makeRootElement(minimalConfig)} />)
+    expect(screen.queryByTestId('app-shell-sidebar')).not.toBeInTheDocument()
+  })
+
+  it('does not render AppShellSidebar when shell.sidebar.items is empty', () => {
+    const configWithEmptySidebar = {
+      ...minimalConfig,
+      shell: { sidebar: { items: [] } },
+    }
+    render(<DevRuntime rootElement={makeRootElement(configWithEmptySidebar)} />)
+    expect(screen.queryByTestId('app-shell-sidebar')).not.toBeInTheDocument()
+  })
+
+  it('renders AppShellSidebar from the initial config when shell.sidebar.items is non-empty', () => {
+    const configWithSidebar = {
+      ...minimalConfig,
+      shell: {
+        sidebar: {
+          items: [{ label: 'Home', href: '/home' }],
+        },
+      },
+    }
+    render(<DevRuntime rootElement={makeRootElement(configWithSidebar)} />)
+    expect(screen.getByTestId('app-shell-sidebar')).toBeInTheDocument()
+    expect(screen.getByText('Home')).toBeInTheDocument()
+  })
+
+  it('renders both AppShellHeader and AppShellSidebar together when both are configured', () => {
+    const configWithBoth = {
+      ...minimalConfig,
+      shell: {
+        header: { title: 'My App' },
+        sidebar: { items: [{ label: 'Home', href: '/home' }] },
+      },
+    }
+    render(<DevRuntime rootElement={makeRootElement(configWithBoth)} />)
+    expect(screen.getByTestId('app-shell-header')).toBeInTheDocument()
+    expect(screen.getByTestId('app-shell-sidebar')).toBeInTheDocument()
+  })
+})
+
 describe('DevRuntime floating toolbar surface', () => {
   it('renders the floating toolbar always visible, in "visual" mode by default', () => {
     render(<DevRuntime rootElement={makeRootElement(minimalConfig)} />)
