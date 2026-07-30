@@ -23,6 +23,7 @@ import {
   runtimeTokensConfigSchema,
   runtimeTranslationsSchema,
   selectNodeSchema,
+  shellSchema,
   skeletonNodeSchema,
   statNodeSchema,
   tabsNodeSchema,
@@ -129,5 +130,6 @@ export const runtimeConfigRootSchema = z
     initialPage: z.string().min(1),
     translations: runtimeTranslationsSchema.optional(),
     tokens: runtimeTokensConfigSchema.optional(),
+    shell: shellSchema.optional(),
   })
   .strip()

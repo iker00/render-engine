@@ -44,6 +44,7 @@ Este mismo shape se reutiliza en otros contextos del runtime para declarar condi
 
 ### Visibilidad transversal y precedencia
 - `visibility` es transversal a `container`, `heading`, `paragraph`, `list`, `image`, `table`, `button`, `form`, `input`, `textarea`, `select`, `radioGroup`, `checkboxGroup`, `modal`, `tabs`, `accordion`, `badge`, `alert`, `stat`, `divider`, `skeleton`, `fileManager`, `fileInput`, `toggle` y `hidden`.
+- `shell.header.menu[*].visibility` (raíz o dentro de `children`) y `shell.header.actions[*].visibility` reutilizan el mismo contrato, con una excepción: no admiten `item.*`, al no existir contexto de iteración a nivel de shell. Ver [[../shell/header.md]].
 - si un nodo no declara `visibility`, conserva su comportamiento visible previo.
 - si un nodo declara a la vez `queryStateFeedback` y `visibility`, primero se resuelve `queryStateFeedback`; `visibility` (simple o grupo) solo se evalúa cuando el resultado visible restante sigue siendo el nodo original.
 

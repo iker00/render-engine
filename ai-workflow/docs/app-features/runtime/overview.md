@@ -1,6 +1,6 @@
 > Cuándo leer: visión global del runtime, qué resuelve, áreas funcionales principales, estructura de alto nivel de la configuración.
 > Tamaño: medio.
-> Relacionados: [[organization.md]], [[../nodes/index.md]].
+> Relacionados: [[organization.md]], [[../nodes/index.md]], [[../shell/header.md]].
 
 # Visión general del runtime
 
@@ -32,6 +32,7 @@ El catálogo estable de formularios cubre selección simple y múltiple sobre un
 - Renderiza formularios declarativos reales con `form`, `input`, `textarea`, `select`, `radioGroup` y `checkboxGroup`, inicializa su estado lazy en `forms.{formId}.{fieldId}`, valida `required` solo sobre campos visibles, soporta submit con `executeOperation` y permite que `defaultValue`, colecciones dinámicas y requests lean `item.*` dentro de `repeater`, incluyendo la reentrada limpia de `defaultValue` dependiente de `preloads`.
 - Implementa la presentación visible del runtime con utilidades de `Tailwind CSS`, apoyada ya en tokens globales CSS-first declarados con `@theme` en `src/app/index.css`, sin abrir todavía theming declarativo desde JSON.
 - Mantiene la baseline institucional previa, pero con una densidad visible más compacta: shell, bloque introductorio, títulos, párrafos, secciones de formulario y cierre de acciones ocupan menos altura total y se acercan más a la referencia de "Solicitud general".
+- Permite declarar un bloque raíz opcional `shell` con un chrome de aplicación compartido y persistente entre páginas; hoy cubre `shell.header` (logo, título, menú de navegación con un nivel de desplegables y acciones de usuario restringidas a `link`/`button`), montado una única vez por sesión fuera del ciclo de vida de cada página.
 
 ## Áreas funcionales principales
 - Configuración y contrato JSON.

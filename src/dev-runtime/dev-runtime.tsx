@@ -7,8 +7,10 @@ import { readRuntimeConfig, type RuntimeConfig } from '../app/bootstrap/read-run
 import { readRuntimeDataValues } from '../app/bootstrap/read-runtime-data-values'
 import { validateRuntimeConfig } from '../config/runtime-config'
 import type { LayoutNode } from '../config/runtime-config'
+import type { ShellConfig, ShellHeaderActionNode } from '../config/runtime-config-types'
 import { RuntimeStateProvider } from '../runtime/runtime-state/runtime-state-provider'
 import { RuntimePage } from '../runtime/runtime-page'
+import { AppShellHeader } from '../runtime/runtime-shell'
 import type { LayoutNodePath } from '../runtime/layout-node-path'
 import {
   getAppShellClassName,
@@ -21,7 +23,9 @@ import { migrateRuntimeStateAcrossConfig } from './dev-runtime-state-migration'
 import type { RuntimeConfigError } from '../config/runtime-config'
 import {
   buildCommitCandidateConfig,
+  denormalizeFormNodesForSerialization,
   patchRawConfigTextWithLayout,
+  patchRootKey,
   type CommitCanvasMutationResult,
 } from './layout-canvas/layout-canvas-commit'
 import { replaceNodeAt } from './layout-tree-mutations'
@@ -348,6 +352,61 @@ export const DevRuntimeReady = forwardRef<DevRuntimeReadyHandle, DevRuntimeReady
     return { status: 'applied' }
   }
 
+  // Same pipeline as `commitCanvasMutation`, generalized for the `shell` root key instead of a
+  // single page's `layout` (0122-T5): mutate the in-memory value, patch only that key onto the
+  // last-known-valid raw text via `patchRootKey`, validate the patched text, and apply it. Unlike
+  // `layout`, `shell` is not nested inside `pages[]`, so there is no `activePageId` to resolve
+  // and no `buildCommitCandidateConfig`-style page lookup.
+  function commitShellMutation(
+    mutate: (shell: ShellConfig | undefined) => ShellConfig | undefined,
+  ): CommitCanvasMutationResult {
+    const mutatedShell = mutate(currentConfig.shell)
+
+    // `shell.header.actions` holds full `link`/`button` layout nodes (0122-T1) — the same raw/
+    // normalized divergence `denormalizeFormNodesForSerialization` already guards against for
+    // `layout` applies here too (e.g. a `link` action with a nested `form` inside its allowed
+    // container children), even though today's UI never nests a form under a shell action.
+    const rawMutatedShell =
+      mutatedShell?.header?.actions !== undefined
+        ? {
+            ...mutatedShell,
+            header: {
+              ...mutatedShell.header,
+              actions: denormalizeFormNodesForSerialization(mutatedShell.header.actions) as ShellHeaderActionNode[],
+            },
+          }
+        : mutatedShell
+
+    const nextText = patchRootKey(lastValidConfigText, 'shell', rawMutatedShell)
+
+    const parsed: unknown = JSON.parse(nextText)
+    const validation = validateRuntimeConfig(parsed)
+    if (validation.status === 'error') {
+      return { status: 'rejected', error: validation.error }
+    }
+
+    const prevState = bridgeRef.current?.getLatestState()
+    const nextState = prevState
+      ? migrateRuntimeStateAcrossConfig(prevState, currentConfig, validation.config, { dataValues })
+      : undefined
+
+    if (nextState && bridgeRef.current) {
+      bridgeRef.current.dispatchAndSyncState({ type: 'runtime/reset', payload: { state: nextState } })
+    }
+
+    flushSync(() => {
+      setCurrentConfig(validation.config)
+      setEditorBuffer(nextText)
+      setLastValidConfigText(nextText)
+      setHasPendingChanges(false)
+      setHasAppliedChanges(true)
+      setParseError(null)
+      setValidationError(null)
+    })
+
+    return { status: 'applied' }
+  }
+
   useImperativeHandle(ref, () => ({ commitCanvasMutation }))
 
   // LayoutCanvasPropertiesPanel edits a single node by path; replaceNodeAt (T3)
@@ -385,6 +444,7 @@ export const DevRuntimeReady = forwardRef<DevRuntimeReadyHandle, DevRuntimeReady
           <div className={getAppShellFrameClassName()} data-testid="runtime-shell-frame">
             <RuntimeStateProvider config={currentConfig} dataValues={dataValues}>
               <DevRuntimeStateBridge ref={bridgeRef} />
+              <AppShellHeader header={currentConfig.shell?.header} />
               <DevEditorLayer
                 mode={mode}
                 onModeChange={setMode}
@@ -402,6 +462,7 @@ export const DevRuntimeReady = forwardRef<DevRuntimeReadyHandle, DevRuntimeReady
                 }}
                 onCommitCanvasMutation={commitCanvasMutation}
                 onCommitNodeUpdate={handleCanvasNodeUpdate}
+                onCommitShellMutation={commitShellMutation}
               >
                 <RuntimePage />
               </DevEditorLayer>

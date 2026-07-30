@@ -85,6 +85,23 @@ describe('DevRuntime bootstrap', () => {
   })
 })
 
+describe('DevRuntime shell header mount (regression: 0122-T5 wired the panel but never mounted AppShellHeader)', () => {
+  it('does not render AppShellHeader when config has no shell block', () => {
+    render(<DevRuntime rootElement={makeRootElement(minimalConfig)} />)
+    expect(screen.queryByTestId('app-shell-header')).not.toBeInTheDocument()
+  })
+
+  it('renders AppShellHeader from the initial config when shell.header is non-empty', () => {
+    const configWithShell = {
+      ...minimalConfig,
+      shell: { header: { title: 'My App' } },
+    }
+    render(<DevRuntime rootElement={makeRootElement(configWithShell)} />)
+    expect(screen.getByTestId('app-shell-header')).toBeInTheDocument()
+    expect(screen.getByTestId('app-shell-header-title')).toHaveTextContent('My App')
+  })
+})
+
 describe('DevRuntime floating toolbar surface', () => {
   it('renders the floating toolbar always visible, in "visual" mode by default', () => {
     render(<DevRuntime rootElement={makeRootElement(minimalConfig)} />)

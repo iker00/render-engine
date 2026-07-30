@@ -82,6 +82,7 @@ interface HarnessProps {
   mountCountRef: MutableRefObject<number>
   onCommitCanvasMutation?: (mutate: (pageLayout: LayoutNode[]) => LayoutNode[]) => CommitCanvasMutationResult
   onCommitNodeUpdate?: (path: never, updater: never) => void
+  onCommitShellMutation?: (mutate: (shell: never) => never) => CommitCanvasMutationResult
   onMonacoOpenChangeSpy?: (open: boolean) => void
   initialMonacoOpen?: boolean
 }
@@ -91,6 +92,7 @@ function DevEditorLayerHarness({
   mountCountRef,
   onCommitCanvasMutation = noopCommitCanvasMutation,
   onCommitNodeUpdate = () => {},
+  onCommitShellMutation = noopCommitCanvasMutation,
   onMonacoOpenChangeSpy,
   initialMonacoOpen = false,
 }: HarnessProps) {
@@ -116,6 +118,7 @@ function DevEditorLayerHarness({
         monaco={NOOP_MONACO}
         onCommitCanvasMutation={onCommitCanvasMutation}
         onCommitNodeUpdate={onCommitNodeUpdate}
+        onCommitShellMutation={onCommitShellMutation}
       >
         <EditModeProbe mountCountRef={mountCountRef} />
       </DevEditorLayer>
@@ -259,6 +262,7 @@ describe('DevEditorLayer / selection degrades safely when the layout changes und
             monaco={NOOP_MONACO}
             onCommitCanvasMutation={commit}
             onCommitNodeUpdate={() => {}}
+            onCommitShellMutation={noopCommitCanvasMutation}
           >
             <EditModeProbe mountCountRef={mountCountRef} />
           </DevEditorLayer>
@@ -466,6 +470,7 @@ describe('DevEditorLayer / Esc closes the selection panel when Monaco is closed 
             monaco={NOOP_MONACO}
             onCommitCanvasMutation={noopCommitCanvasMutation}
             onCommitNodeUpdate={() => {}}
+            onCommitShellMutation={noopCommitCanvasMutation}
           >
             <EditModeProbe mountCountRef={mountCountRef} />
           </DevEditorLayer>
@@ -534,6 +539,7 @@ describe('DevEditorLayer / node-local state persists across mode switches (Decis
             monaco={NOOP_MONACO}
             onCommitCanvasMutation={noopCommitCanvasMutation}
             onCommitNodeUpdate={() => {}}
+            onCommitShellMutation={noopCommitCanvasMutation}
           >
             <RuntimePage />
           </DevEditorLayer>
@@ -561,5 +567,76 @@ describe('DevEditorLayer / node-local state persists across mode switches (Decis
     const headerBackInVisual = container.querySelector('[data-layout-node="accordion-header"]')
     expect(headerBackInVisual).toBe(headerBeforeToggle)
     expect(headerBackInVisual).toHaveAttribute('aria-expanded', 'true')
+  })
+})
+
+function switchToShellDomain() {
+  fireEvent.click(screen.getByTestId('dev-editor-toolbar-domain-shell'))
+}
+
+function switchToLayoutDomain() {
+  fireEvent.click(screen.getByTestId('dev-editor-toolbar-domain-layout'))
+}
+
+// 0122-T5: activating the "Shell" domain tab swaps the central content area for
+// `ShellConfigPanel`, in place of the Layout canvas — never alongside it.
+describe('DevEditorLayer / Shell domain (0122-T5)', () => {
+  it('renders ShellConfigPanel and stops rendering the canvas once the Shell tab is selected', () => {
+    renderHarness()
+    expect(screen.getByTestId('probe-node-a')).toBeInTheDocument()
+    expect(screen.queryByTestId('shell-config-panel')).not.toBeInTheDocument()
+
+    switchToShellDomain()
+
+    expect(screen.getByTestId('shell-config-panel')).toBeInTheDocument()
+    expect(screen.queryByTestId('probe-node-a')).not.toBeInTheDocument()
+  })
+
+  it('restores the canvas view when switching back to Layout', () => {
+    renderHarness()
+    switchToShellDomain()
+    expect(screen.getByTestId('shell-config-panel')).toBeInTheDocument()
+
+    switchToLayoutDomain()
+
+    expect(screen.queryByTestId('shell-config-panel')).not.toBeInTheDocument()
+    expect(screen.getByTestId('probe-node-a')).toBeInTheDocument()
+  })
+
+  it('marks the Shell tab as pressed and Layout as not pressed once selected', () => {
+    renderHarness()
+    switchToShellDomain()
+
+    expect(screen.getByTestId('dev-editor-toolbar-domain-shell')).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByTestId('dev-editor-toolbar-domain-layout')).toHaveAttribute('aria-pressed', 'false')
+  })
+
+  it('clears a canvas node selection when entering Shell (same policy as api/pages/tokens)', () => {
+    renderHarness()
+    switchToEditorMode()
+    fireEvent.click(screen.getByTestId('probe-node-a'))
+    expect((contextJson() as { selectedPath: unknown }).selectedPath).not.toBeNull()
+
+    switchToShellDomain()
+    switchToLayoutDomain()
+
+    expect((contextJson() as { selectedPath: unknown }).selectedPath).toBeNull()
+  })
+
+  it('does not render the FloatingSelectionOverlay while the Shell domain is active', () => {
+    renderHarness()
+    switchToEditorMode()
+    fireEvent.click(screen.getByTestId('probe-node-a'))
+    expect(screen.getByTestId('dev-editor-selection-overlay')).toBeInTheDocument()
+
+    switchToShellDomain()
+
+    expect(screen.queryByTestId('dev-editor-selection-overlay')).not.toBeInTheDocument()
+  })
+
+  it('keeps the toolbar visible while the Shell panel is rendered', () => {
+    renderHarness()
+    switchToShellDomain()
+    expect(screen.getByTestId('dev-editor-toolbar')).toBeInTheDocument()
   })
 })

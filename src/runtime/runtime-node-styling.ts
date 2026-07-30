@@ -102,6 +102,16 @@ export {
   getRepeaterPaginationCurrentButtonClassName,
 } from './runtime-node-styling-repeater-pagination'
 export {
+  getAppShellHeaderClassName,
+  getAppShellHeaderInnerClassName,
+  getAppShellHeaderLeftClassName,
+  getAppShellHeaderActionsClassName,
+  getAppShellHeaderTitleClassName,
+  getAppShellHeaderMenuItemClassName,
+  getAppShellHeaderDropdownClassName,
+  getAppShellHeaderDropdownItemClassName,
+} from './runtime-node-styling-app-shell-header'
+export {
   getTableContainerClassName,
   getTableScrollContainerClassName,
   getTableNodeClassName,

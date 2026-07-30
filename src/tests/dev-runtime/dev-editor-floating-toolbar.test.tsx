@@ -8,7 +8,8 @@ interface RenderOptions {
   pages?: ReadonlyArray<{ id: string }>
   activePageId?: string
   onActivePageIdChange?: (pageId: string) => void
-  activeDomain?: 'layout'
+  activeDomain?: 'layout' | 'shell'
+  onDomainSelected?: (domain: 'layout' | 'shell') => void
   onOpenMonaco?: () => void
   isMonacoOpen?: boolean
   onOpenPalette?: () => void
@@ -23,6 +24,7 @@ function renderToolbar(overrides: RenderOptions = {}) {
     activePageId: overrides.activePageId ?? 'home',
     onActivePageIdChange: overrides.onActivePageIdChange ?? vi.fn(),
     activeDomain: overrides.activeDomain ?? ('layout' as const),
+    onDomainSelected: overrides.onDomainSelected ?? vi.fn(),
     onOpenMonaco: overrides.onOpenMonaco ?? vi.fn(),
     isMonacoOpen: overrides.isMonacoOpen ?? false,
     onOpenPalette: overrides.onOpenPalette ?? vi.fn(),
@@ -67,18 +69,20 @@ describe('DevEditorFloatingToolbar', () => {
   })
 
   describe('domain tabs', () => {
-    it('renders the four domain tabs (layout, api, pages, tokens)', () => {
+    it('renders the five domain tabs (layout, api, pages, tokens, shell)', () => {
       renderToolbar()
       expect(screen.getByTestId('dev-editor-toolbar-domain-layout')).toBeInTheDocument()
       expect(screen.getByTestId('dev-editor-toolbar-domain-api')).toBeInTheDocument()
       expect(screen.getByTestId('dev-editor-toolbar-domain-pages')).toBeInTheDocument()
       expect(screen.getByTestId('dev-editor-toolbar-domain-tokens')).toBeInTheDocument()
+      expect(screen.getByTestId('dev-editor-toolbar-domain-shell')).toBeInTheDocument()
     })
 
     it('marks layout as pressed when activeDomain is "layout"', () => {
       renderToolbar({ activeDomain: 'layout' })
       const layoutBtn = screen.getByTestId('dev-editor-toolbar-domain-layout')
       expect(layoutBtn).toHaveAttribute('aria-pressed', 'true')
+      expect(screen.getByTestId('dev-editor-toolbar-domain-shell')).toHaveAttribute('aria-pressed', 'false')
     })
 
     it('renders api/pages/tokens as disabled with aria-disabled and title="Próximamente"', () => {
@@ -100,7 +104,8 @@ describe('DevEditorFloatingToolbar', () => {
       const onActivePageIdChange = vi.fn()
       const onOpenMonaco = vi.fn()
       const onOpenPalette = vi.fn()
-      renderToolbar({ onModeChange, onActivePageIdChange, onOpenMonaco, onOpenPalette })
+      const onDomainSelected = vi.fn()
+      renderToolbar({ onModeChange, onActivePageIdChange, onOpenMonaco, onOpenPalette, onDomainSelected })
       for (const testId of [
         'dev-editor-toolbar-domain-api',
         'dev-editor-toolbar-domain-pages',
@@ -112,6 +117,37 @@ describe('DevEditorFloatingToolbar', () => {
       expect(onActivePageIdChange).not.toHaveBeenCalled()
       expect(onOpenMonaco).not.toHaveBeenCalled()
       expect(onOpenPalette).not.toHaveBeenCalled()
+      expect(onDomainSelected).not.toHaveBeenCalled()
+    })
+
+    it('the shell tab is functional: not disabled, no "Próximamente" title', () => {
+      renderToolbar()
+      const shellBtn = screen.getByTestId('dev-editor-toolbar-domain-shell')
+      expect(shellBtn).not.toBeDisabled()
+      expect(shellBtn).not.toHaveAttribute('aria-disabled')
+      expect(shellBtn).not.toHaveAttribute('title', 'Próximamente')
+    })
+
+    it('marks shell as pressed (and layout as not pressed) when activeDomain is "shell"', () => {
+      renderToolbar({ activeDomain: 'shell' })
+      expect(screen.getByTestId('dev-editor-toolbar-domain-shell')).toHaveAttribute('aria-pressed', 'true')
+      expect(screen.getByTestId('dev-editor-toolbar-domain-layout')).toHaveAttribute('aria-pressed', 'false')
+    })
+
+    it('clicking the shell tab invokes onDomainSelected("shell")', () => {
+      const onDomainSelected = vi.fn()
+      renderToolbar({ activeDomain: 'layout', onDomainSelected })
+      fireEvent.click(screen.getByTestId('dev-editor-toolbar-domain-shell'))
+      expect(onDomainSelected).toHaveBeenCalledTimes(1)
+      expect(onDomainSelected).toHaveBeenCalledWith('shell')
+    })
+
+    it('clicking the layout tab invokes onDomainSelected("layout")', () => {
+      const onDomainSelected = vi.fn()
+      renderToolbar({ activeDomain: 'shell', onDomainSelected })
+      fireEvent.click(screen.getByTestId('dev-editor-toolbar-domain-layout'))
+      expect(onDomainSelected).toHaveBeenCalledTimes(1)
+      expect(onDomainSelected).toHaveBeenCalledWith('layout')
     })
   })
 
@@ -210,6 +246,7 @@ describe('DevEditorFloatingToolbar', () => {
         activePageId="home"
         onActivePageIdChange={vi.fn()}
         activeDomain="layout"
+        onDomainSelected={vi.fn()}
         onOpenMonaco={vi.fn()}
         isMonacoOpen={false}
         onOpenPalette={vi.fn()}

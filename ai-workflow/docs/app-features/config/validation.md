@@ -1,6 +1,6 @@
 > Cuándo leer: validación previa al render, fachada pública del validador, política de errores estructurales, comportamiento dev/prod, frontera de `src/config/`.
 > Tamaño: largo.
-> Relacionados: [[../runtime/error-behavior.md]], [[../runtime/organization.md]], [[structure.md]].
+> Relacionados: [[../runtime/error-behavior.md]], [[../runtime/organization.md]], [[structure.md]], [[../shell/header.md]].
 
 # Validación del runtime config
 
@@ -52,6 +52,24 @@
 - Si `refresh` está declarado pero falta `responsePath` o `intervalSeconds`, el config se rechaza con ruta canónica correspondiente.
 - Si `refresh.intervalSeconds` no es un entero positivo (cero, negativo, decimal, `null`, no número), el config se rechaza con ruta canónica `tokens.{tokenId}.refresh.intervalSeconds`.
 - Claves extra dentro de cada token o dentro de `refresh` se descartan sin invalidar el config.
+
+## Reglas del bloque `shell`
+
+- `shell` es opcional; si está ausente, el runtime funciona exactamente igual que antes de esta feature.
+- `shell.header` es opcional; si `shell` no declara `header`, o lo declara como `{}`, no se renderiza ninguna cabecera.
+- `shell.header.logo`, `.title`, `.menu` y `.actions` son todos opcionales de forma independiente; `menu: []` y `actions: []` son válidos y equivalentes a no declararlos.
+- `shell.header.logo`, si se declara, sigue exactamente las mismas reglas que las `props` del nodo `image` (ver más arriba): exactamente uno de `src` o `fetch`.
+- Cada `menuItem` (raíz o dentro de `children`) debe declarar `label` como string no vacío.
+- Un `menuItem` debe declarar exactamente uno de `href`, `action` o `children` (solo el nivel raíz admite `children`). Mensajes exactos:
+  - Ambos `href` y `action` declarados a la vez: `"Menu items cannot declare both href and action."`
+  - `children` declarado junto con `href` o `action`: `"Menu items with children cannot declare href or action."`
+  - Ninguno de los tres declarado: `"Menu items must declare either href, action or children."`
+- `menuItem.children`, si se declara, no puede estar vacío (`children: []` se rechaza); un `menuItem` dentro de `children` no puede a su vez declarar `children` (máximo un nivel de anidamiento, rechazado a nivel de shape).
+- `menuItem.action` solo admite `navigateTo` o `goBack`, con el mismo contrato de validación que `link.props.action`, incluida la comprobación de `action.navigateTo.pageId` existente en `pages`.
+- `menuItem.href` admite el mismo contrato que `link.props.href` (literal o referencia dinámica completa).
+- `menuItem.visibility` sigue el contrato transversal estándar de `visibility` (ver [[../references/visibility.md]]), pero **rechaza referencias `item.*`** con el mensaje `"Shell menu items do not support item.* references."`, al no existir contexto de iteración a nivel de shell.
+- `shell.header.actions` solo admite nodos de tipo `link` o `button`; cualquier otro tipo (por ejemplo `table`) se rechaza. Cada entrada reutiliza sin modificar el contrato ya validado de `link`/`button`, incluidas las comprobaciones de `pageId` en `navigateTo` y de `operationName` en `executeOperation`/`executeOperations`.
+- Los errores de shape de `shell` (parseo `Zod`) usan el mensaje `'Shell configuration is invalid at "shell{ruta}".'` con la ruta canónica del campo afectado (por ejemplo `shell.header.menu[0].action.pageId` o `shell.header.actions[0].props.action.operationName`); esta política de mensajes es propia de `shell` y no coincide con el formato `Page "{pageId}" has an invalid layout at ...` que usan los nodos dentro de `pages[].layout`, porque `shell` no vive dentro de ninguna página.
 
 ## Reglas de formularios
 - `form.persistOnUnmount` sigue siendo opcional; si aparece con un valor no booleano, el config completo se rechaza antes del render sobre la ruta exacta.

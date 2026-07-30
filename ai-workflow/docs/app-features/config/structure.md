@@ -1,6 +1,6 @@
 > Cuándo leer: bloques raíz del JSON (`api`, `pages`, `initialPage`), modelo de página, shape de `preloads`, shape general de la colección `layout`.
 > Tamaño: medio.
-> Relacionados: [[api-catalog.md]], [[validation.md]], [[../navigation/page-model.md]], [[../queries/preloads.md]].
+> Relacionados: [[api-catalog.md]], [[validation.md]], [[../navigation/page-model.md]], [[../queries/preloads.md]], [[../shell/header.md]].
 
 # Estructura del JSON
 
@@ -14,6 +14,7 @@ Bloques opcionales:
 - `translations`: objeto opcional que define un catálogo de traducciones por idioma. Su estructura es un mapa cuyas claves son strings arbitrarios (claves de traducción) y cuyos valores son mapas idioma-string. Véase [[../references/reference-resolution.md]] para superficies admitidas y semántica de fallback.
 - `tokens`: objeto opcional que define un catálogo de tokens de autenticación nombrados, cada uno con un valor inicial y refresco opcional proactivo. Véase [[../auth/tokens.md]] para configuración, ciclo de vida y refresco automático.
 - `preloads`: array opcional y ordenado de precargas globales de aplicación, hermano de `api`/`pages`/`initialPage`. Se dispara una única vez por carga del runtime, sin depender de `initialPage` ni de `pageEntry`. Reutiliza el mismo shape de entrada que `pages[].preloads` con reglas más restrictivas (ver más abajo). Véase [[../queries/preloads.md]] para el modelo completo de ejecución, reintentos y feedback.
+- `shell`: objeto opcional, hermano de `api`/`pages`/`initialPage`, que agrupa secciones de chrome de aplicación compartidas y persistentes entre páginas. Hoy admite únicamente `shell.header` (logo, título, menú con un nivel de desplegables, acciones de usuario restringidas a `link`/`button`). Ausencia del bloque, o `shell.header` ausente/vacío, reproduce el comportamiento previo a esta feature sin cambios visuales ni de validación. Véase [[../shell/header.md]] para el shape completo, el contrato de `menuItem` y el comportamiento de render.
 
 ## Modelo de página
 Cada página debe incluir:

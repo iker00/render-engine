@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { LayoutNode, RuntimeConfigError } from '../../config/runtime-config'
 import { serializeLayoutNodePath, type LayoutNodePath } from '../../runtime/layout-node-path'
+import { CommitRejectionBanner } from '../commit-rejection-banner'
 import type { CommitCanvasMutationResult } from './layout-canvas-commit'
 import { getNodeTypeJsonSchema } from './layout-canvas-node-schema'
 import { PropertyFieldDispatcher } from './property-fields/property-field-dispatcher'
@@ -204,23 +205,6 @@ function resolveTabsPropsSchema(propsSchema: Record<string, unknown>): Record<st
       },
     },
   }
-}
-
-// T9: rendered under a subsection's `PropertyFieldDispatcher` when its last commit attempt was
-// rejected by `commitCanvasMutation`. Same visual pattern as the error panel in
-// `floating-monaco-panel.tsx` (bold error code, then `: `, then the message).
-function CommitRejectionBanner({ dataTestId, error }: { dataTestId: string; error: RuntimeConfigError }) {
-  return (
-    <div
-      role="alert"
-      data-testid={dataTestId}
-      className="rounded bg-red-50 px-3 py-2 text-xs text-red-800"
-    >
-      No se pudo guardar este cambio: <span className="font-medium">{error.code}</span>
-      {': '}
-      {error.message}
-    </div>
-  )
 }
 
 /**

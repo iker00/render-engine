@@ -789,6 +789,36 @@ export type LayoutNode =
 
 export type LayoutNodeCollection = LayoutNode[]
 
+// `menuItem` (root) allows one nesting level via `children`; `menuItemChild` cannot declare
+// `children` itself — enforced by omitting the key from its type, not by a runtime check alone.
+export interface MenuItemChildConfig {
+  label: string
+  icon?: string
+  visibility?: RuntimeVisibilityConfig
+  href?: string
+  action?: NavigateToRuntimeUiAction | GoBackRuntimeUiAction
+}
+
+export interface MenuItemConfig extends MenuItemChildConfig {
+  children?: MenuItemChildConfig[]
+}
+
+// Same public shape as the `image` node's `props` (without the `type` wrapper).
+export type ShellHeaderLogoConfig = ImageLayoutNode['props']
+
+export type ShellHeaderActionNode = LinkLayoutNode | ButtonLayoutNode
+
+export interface ShellHeaderConfig {
+  logo?: ShellHeaderLogoConfig
+  title?: string
+  menu?: MenuItemConfig[]
+  actions?: ShellHeaderActionNode[]
+}
+
+export interface ShellConfig {
+  header?: ShellHeaderConfig
+}
+
 export interface RuntimePageConfig {
   id: string
   preloads?: RuntimePreloadConfig[]
@@ -819,6 +849,7 @@ export interface RuntimeConfig {
   preloads?: RuntimePreloadConfig[]
   translations?: RuntimeTranslationsConfig
   tokens?: RuntimeTokensConfig
+  shell?: ShellConfig
 }
 
 export interface RuntimeConfigError {

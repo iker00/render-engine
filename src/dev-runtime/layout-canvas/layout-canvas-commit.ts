@@ -123,6 +123,27 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 /**
+ * Patches a single top-level key of `rawConfigText`, leaving every other root key exactly as it
+ * was in the raw text — never reserializes the rest of the document from an in-memory
+ * `RuntimeConfig` (see `patchRawConfigTextWithLayout`, whose `pages` patch this generalizes, and
+ * design.md/0122-T5's Shell config panel, which uses this directly for the `shell` key).
+ *
+ * `value === undefined` removes the key entirely rather than writing a literal `"key": undefined`
+ * (not valid JSON) — this is how the Shell panel's "deactivate header" toggle drops `shell`
+ * from the document instead of leaving a stray empty block behind.
+ */
+export function patchRootKey(rawConfigText: string, key: string, value: unknown): string {
+  const rawConfigObject = JSON.parse(rawConfigText) as Record<string, unknown>
+
+  if (value === undefined) {
+    const { [key]: _removed, ...rest } = rawConfigObject
+    return JSON.stringify(rest, null, 2)
+  }
+
+  return JSON.stringify({ ...rawConfigObject, [key]: value }, null, 2)
+}
+
+/**
  * Patches only the `layout` key of the page `activePageId` inside `rawConfigText`,
  * leaving the rest of the document (other pages, their `preloads`/`title`, `api`,
  * `initialPage`, `tokens`, `translations`) exactly as it was in the raw text.
@@ -144,5 +165,5 @@ export function patchRawConfigTextWithLayout(
     return rawPage
   })
 
-  return JSON.stringify({ ...rawConfigObject, pages: nextPages }, null, 2)
+  return patchRootKey(rawConfigText, 'pages', nextPages)
 }

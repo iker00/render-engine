@@ -44,6 +44,9 @@ export type RuntimeReferenceSurface =
   | 'checkboxGroup.props.tooltip'
   | 'toggle.props.tooltip'
   | 'fileInput.props.tooltip'
+  | 'shell.header.title'
+  | 'shell.header.menu.item.label'
+  | 'shell.header.menu.item.href'
 
 export function reportRuntimeReferenceDiagnostic(
   result: RuntimeReferenceResolutionResult,

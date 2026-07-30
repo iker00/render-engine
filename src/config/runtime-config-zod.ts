@@ -951,3 +951,89 @@ export const fileInputNodeSchema = z
       .strip(),
   })
   .strip()
+
+// --- Shell (app-wide header) -------------------------------------------------------------
+// Additive root block, independent from the page layout tree. Uses `.strict()` throughout
+// (unlike most node schemas above, which `.strip()` extra keys) so the contract stays closed
+// and future unknown keys surface as validation errors instead of being silently dropped.
+
+// Fields shared by the root `menuItem` and its `menuItemChild` entries. `href`/`action` mirror
+// the same shape used by `link.props.href`/`link.props.action`. The mutually exclusive
+// combination with `children` (only added on the root variant below) is enforced by
+// `refineMenuItemShape` via `superRefine` so it is detected during Zod parsing and never needs
+// to be duplicated by cross-validation code later.
+const menuItemFieldsSchema = z
+  .object({
+    label: z.string(),
+    icon: z.string().optional(),
+    visibility: visibilitySchema.optional(),
+    href: z.string().optional(),
+    action: z.discriminatedUnion('type', [navigateToButtonActionSchema, goBackButtonActionSchema]).optional(),
+  })
+  .strict()
+
+const refineMenuItemShape = (
+  data: { href?: string; action?: unknown; children?: unknown[] },
+  ctx: z.RefinementCtx,
+): void => {
+  const hasHref = data.href !== undefined
+  const hasAction = data.action !== undefined
+  const hasChildren = data.children !== undefined
+
+  if (hasChildren && (hasHref || hasAction)) {
+    ctx.addIssue({
+      code: 'custom',
+      path: hasHref ? ['href'] : ['action'],
+      message: 'Menu items with children cannot declare href or action.',
+    })
+    return
+  }
+
+  if (hasHref && hasAction) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['href'],
+      message: 'Menu items cannot declare both href and action.',
+    })
+    return
+  }
+
+  if (!hasHref && !hasAction && !hasChildren) {
+    ctx.addIssue({
+      code: 'custom',
+      path: [],
+      message: 'Menu items must declare either href, action or children.',
+    })
+  }
+}
+
+// `menuItemChild` never accepts `children` itself: the key is absent from this schema's
+// shape, so `.strict()` rejects it at the Zod level rather than relying on the refinement.
+const menuItemChildSchema = menuItemFieldsSchema.superRefine(refineMenuItemShape)
+
+export const menuItemSchema = menuItemFieldsSchema
+  .extend({
+    children: z.array(menuItemChildSchema).nonempty().optional(),
+  })
+  .superRefine(refineMenuItemShape)
+
+// Restricted to `link`/`button` only — reuses the exact node schemas already defined above.
+export const shellHeaderActionNodeSchema = z.discriminatedUnion('type', [linkNodeSchema, buttonNodeSchema])
+
+export const shellHeaderSchema = z
+  .object({
+    // Same shape as `image.props` (already validated above), without the `type` wrapper.
+    logo: imagePropsSchema.optional(),
+    title: z.string().optional(),
+    menu: z.array(menuItemSchema).optional(),
+    actions: z.array(shellHeaderActionNodeSchema).optional(),
+  })
+  .strict()
+
+// `.strict()` keeps `shell` closed today: an unknown key like a future `sidebar` is rejected
+// instead of silently stripped, making the additive-only intent explicit.
+export const shellSchema = z
+  .object({
+    header: shellHeaderSchema.optional(),
+  })
+  .strict()
