@@ -1,13 +1,23 @@
 export function getAppShellClassName() {
-  return 'min-h-screen bg-app-background text-app-text'
+  return 'flex h-full w-full flex-col text-app-text'
 }
 
 export function getAppShellContentClassName() {
-  return 'mx-auto flex w-full max-w-shell px-4 py-8 sm:px-6 sm:py-10 lg:px-8 lg:py-12'
+  return 'flex w-full flex-1 min-w-0 min-h-0'
 }
 
 export function getAppShellFrameClassName() {
-  return 'w-full rounded-shell border border-app-border-strong bg-app-surface p-4 shadow-shell sm:p-6 lg:p-8'
+  return 'flex w-full flex-1 min-w-0 min-h-0 flex-col'
+}
+
+// Padding propio del área de contenido, equivalente al que hoy aporta la card que se elimina en
+// 0124. `shell.header` y `shell.sidebar` no llevan este padding: siguen anclados a los bordes del
+// contenedor de montaje ("edge to edge") y quedan visualmente separados del contenido por su propia
+// superficie/borde ya existente. Aplicado tanto por el envoltorio de `RuntimePage` cuando hay
+// sidebar como por el `RuntimePage` suelto cuando no lo hay, y por el bloque de error de
+// configuración.
+export function getAppShellContentPaddingClassName() {
+  return 'p-6 sm:p-8 lg:p-10'
 }
 
 export function getAppShellErrorEyebrowClassName() {

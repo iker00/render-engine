@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { ShellSidebarConfig, SidebarItemConfig } from '../../config/runtime-config-types'
+import type { ShellScrollBehavior, ShellSidebarConfig, SidebarItemConfig } from '../../config/runtime-config-types'
 import { IconNode } from '../nodes/icon-node'
 import { executeRuntimeUiAction } from '../runtime-actions/runtime-ui-action-executor'
 import type { RuntimeUiActionHandlers } from '../runtime-actions/runtime-ui-action-executor'
@@ -9,6 +9,7 @@ import {
   getAppShellSidebarChildrenClassName,
   getAppShellSidebarClassName,
   getAppShellSidebarItemClassName,
+  getAppShellSidebarStickyStyle,
   getAppShellSidebarToggleClassName,
   getAppShellSidebarTriggerClassName,
 } from '../runtime-node-styling-app-shell-sidebar'
@@ -20,6 +21,8 @@ import { SidebarRailFlyout } from './sidebar-rail-flyout'
 
 interface AppShellSidebarProps {
   sidebar?: ShellSidebarConfig
+  scrollBehavior?: ShellScrollBehavior
+  stickyTopPx?: number
 }
 
 // Manual expand/collapse state for branch triggers, keyed by the same `path` encoding used by
@@ -28,7 +31,7 @@ interface AppShellSidebarProps {
 // instead of an inline disclosure list) — `expandedPaths`/`onToggleExpand` stay the single source
 // of truth for "which branches are open" in both modes, including inside a flyout's own inline
 // expansion of depth-3+ children.
-export function AppShellSidebar({ sidebar }: AppShellSidebarProps) {
+export function AppShellSidebar({ sidebar, scrollBehavior = 'page', stickyTopPx = 0 }: AppShellSidebarProps) {
   const state = useRuntimeState()
   const handlers = useRuntimeStateActions()
   const activePage = useRuntimeCurrentPage()
@@ -75,7 +78,11 @@ export function AppShellSidebar({ sidebar }: AppShellSidebarProps) {
   }
 
   return (
-    <nav data-testid="app-shell-sidebar" className={getAppShellSidebarClassName({ collapsed })}>
+    <nav
+      data-testid="app-shell-sidebar"
+      className={getAppShellSidebarClassName({ collapsed, scrollBehavior })}
+      style={scrollBehavior === 'fixed' ? undefined : getAppShellSidebarStickyStyle(stickyTopPx)}
+    >
       <div className="flex flex-col gap-1 p-2">
         <button
           type="button"

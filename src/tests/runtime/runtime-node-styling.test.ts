@@ -9,6 +9,8 @@ import {
   getAlertIconClassName,
   getAlertTitleClassName,
   getAppShellClassName,
+  getAppShellContentPaddingClassName,
+  getAppShellHeaderClassName,
   getBadgeCircleDotClassName,
   getBadgeCircleLabelClassName,
   getBadgePillClassName,
@@ -91,18 +93,23 @@ import {
   getModalOverlayClassName,
   getModalPanelClassName,
 } from '../../runtime/runtime-node-styling'
+import {
+  getAppShellSidebarClassName,
+  getAppShellSidebarStickyStyle,
+} from '../../runtime/runtime-node-styling-app-shell-sidebar'
 
 describe('runtime node styling', () => {
   it('exposes stable shell and page slots for the light institutional baseline', () => {
     expect(getAppShellClassName()).toBe(
-      'min-h-screen bg-app-background text-app-text',
+      'flex h-full w-full flex-col text-app-text',
     )
     expect(getAppShellContentClassName()).toBe(
-      'mx-auto flex w-full max-w-shell px-4 py-8 sm:px-6 sm:py-10 lg:px-8 lg:py-12',
+      'flex w-full flex-1 min-w-0 min-h-0',
     )
     expect(getAppShellFrameClassName()).toBe(
-      'w-full rounded-shell border border-app-border-strong bg-app-surface p-4 shadow-shell sm:p-6 lg:p-8',
+      'flex w-full flex-1 min-w-0 min-h-0 flex-col',
     )
+    expect(getAppShellContentPaddingClassName()).toBe('p-6 sm:p-8 lg:p-10')
     expect(getRuntimePageClassName()).toBe('grid gap-5 lg:gap-6')
     expect(getAppShellErrorEyebrowClassName()).toBe(
       'text-xs font-semibold uppercase tracking-[0.24em] text-app-accent',
@@ -113,6 +120,35 @@ describe('runtime node styling', () => {
     expect(getAppShellErrorBodyClassName()).toBe(
       'max-w-2xl text-sm leading-6 text-app-text-muted sm:text-base sm:leading-7',
     )
+  })
+
+  it('resolves the app shell header pinned/unpinned variant via a lookup map (0124-T3)', () => {
+    expect(getAppShellHeaderClassName({ pinned: true })).toBe(
+      'sticky top-0 z-10 w-full border-b border-app-border-soft bg-app-surface shadow-shell',
+    )
+    expect(getAppShellHeaderClassName({ pinned: false })).toBe(
+      'w-full border-b border-app-border-soft bg-app-surface shadow-shell',
+    )
+  })
+
+  it('resolves the app shell sidebar class name by scrollBehavior, sticky + internal scroll in "page" mode and bounded scroll only in "fixed" mode (0124-T4)', () => {
+    expect(getAppShellSidebarClassName({ collapsed: false })).toBe(
+      'w-64 shrink-0 border-r border-app-border-soft bg-app-surface sticky top-[var(--shell-sidebar-sticky-top)] h-[calc(100vh_-_var(--shell-sidebar-sticky-top))] overflow-y-auto',
+    )
+    expect(getAppShellSidebarClassName({ collapsed: false, scrollBehavior: 'page' })).toBe(
+      'w-64 shrink-0 border-r border-app-border-soft bg-app-surface sticky top-[var(--shell-sidebar-sticky-top)] h-[calc(100vh_-_var(--shell-sidebar-sticky-top))] overflow-y-auto',
+    )
+    expect(getAppShellSidebarClassName({ collapsed: true, scrollBehavior: 'page' })).toBe(
+      'w-16 shrink-0 border-r border-app-border-soft bg-app-surface sticky top-[var(--shell-sidebar-sticky-top)] h-[calc(100vh_-_var(--shell-sidebar-sticky-top))] overflow-y-auto',
+    )
+    expect(getAppShellSidebarClassName({ collapsed: false, scrollBehavior: 'fixed' })).toBe(
+      'w-64 shrink-0 border-r border-app-border-soft bg-app-surface overflow-y-auto',
+    )
+  })
+
+  it('builds the sidebar sticky-top CSS variable from a pixel height (0124-T4)', () => {
+    expect(getAppShellSidebarStickyStyle(56)).toEqual({ '--shell-sidebar-sticky-top': '56px' })
+    expect(getAppShellSidebarStickyStyle(0)).toEqual({ '--shell-sidebar-sticky-top': '0px' })
   })
 
   it('returns stable Tailwind classes for container aliases without custom styles', () => {

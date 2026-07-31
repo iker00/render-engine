@@ -59,6 +59,7 @@
 - `shell.header` es opcional; si `shell` no declara `header`, o lo declara como `{}`, no se renderiza ninguna cabecera.
 - `shell.header.logo`, `.title`, `.menu` y `.actions` son todos opcionales de forma independiente; `menu: []` y `actions: []` son válidos y equivalentes a no declararlos.
 - `shell.header.logo`, si se declara, sigue exactamente las mismas reglas que las `props` del nodo `image` (ver más arriba): exactamente uno de `src` o `fetch`.
+- `shell.scrollBehavior` es opcional, hermano de `header` y `sidebar`; si se declara, admite únicamente los literales `"page"` o `"fixed"` — cualquier otro valor, incluido `null` o un tipo no-string, se rechaza con el mismo mensaje de shape descrito más abajo, con ruta `shell.scrollBehavior`. Ausente equivale a `"page"`.
 - Cada `menuItem` (raíz o dentro de `children`) debe declarar `label` como string no vacío.
 - Un `menuItem` debe declarar exactamente uno de `href`, `action` o `children` (solo el nivel raíz admite `children`). Mensajes exactos:
   - Ambos `href` y `action` declarados a la vez: `"Menu items cannot declare both href and action."`

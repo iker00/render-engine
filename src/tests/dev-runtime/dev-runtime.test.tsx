@@ -145,6 +145,79 @@ describe('DevRuntime shell sidebar mount (regression: 0123 wired the panel but n
   })
 })
 
+// jsdom does not implement ResizeObserver — install a controllable stub that captures the
+// registered callback so this describe block can drive a synthetic header resize deterministically
+// (same pattern as `src/tests/app/app-shell-scroll-behavior.test.tsx` /
+// `src/tests/dev-runtime/layout-canvas-grid-drop-zones.test.tsx`).
+describe('DevRuntime shell sidebar sticky positioning tracks the header height (0124-T4)', () => {
+  type ResizeObserverEntryLike = { contentRect: { height: number } }
+  type ResizeObserverCallbackLike = (entries: ResizeObserverEntryLike[]) => void
+  let resizeObserverCallbacks: ResizeObserverCallbackLike[] = []
+
+  class MockResizeObserver {
+    callback: ResizeObserverCallbackLike
+    constructor(callback: ResizeObserverCallbackLike) {
+      this.callback = callback
+      resizeObserverCallbacks.push(callback)
+    }
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  }
+
+  beforeEach(() => {
+    resizeObserverCallbacks = []
+    vi.stubGlobal('ResizeObserver', MockResizeObserver)
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('is sticky/scrollable in "page" mode and exposes --shell-sidebar-sticky-top from a measured ResizeObserver entry', () => {
+    const configWithBoth = {
+      ...minimalConfig,
+      shell: {
+        header: { title: 'My App' },
+        sidebar: { items: [{ label: 'Home', href: '/home' }] },
+      },
+    }
+    render(<DevRuntime rootElement={makeRootElement(configWithBoth)} />)
+
+    const sidebar = screen.getByTestId('app-shell-sidebar')
+    expect(sidebar).toHaveClass(
+      'sticky',
+      'top-[var(--shell-sidebar-sticky-top)]',
+      'h-[calc(100vh_-_var(--shell-sidebar-sticky-top))]',
+      'overflow-y-auto',
+    )
+
+    act(() => {
+      resizeObserverCallbacks.forEach((callback) => callback([{ contentRect: { height: 40 } }]))
+    })
+
+    expect(sidebar).toHaveStyle('--shell-sidebar-sticky-top: 40px')
+  })
+
+  it('is not sticky and carries no style attribute in "fixed" mode', () => {
+    const configWithBoth = {
+      ...minimalConfig,
+      shell: {
+        scrollBehavior: 'fixed',
+        header: { title: 'My App' },
+        sidebar: { items: [{ label: 'Home', href: '/home' }] },
+      },
+    }
+    render(<DevRuntime rootElement={makeRootElement(configWithBoth)} />)
+
+    const sidebar = screen.getByTestId('app-shell-sidebar')
+    expect(sidebar).not.toHaveClass('sticky')
+    expect(sidebar).not.toHaveClass('top-[var(--shell-sidebar-sticky-top)]')
+    expect(sidebar).not.toHaveClass('h-[calc(100vh_-_var(--shell-sidebar-sticky-top))]')
+    expect(sidebar).not.toHaveAttribute('style')
+  })
+})
+
 describe('DevRuntime floating toolbar surface', () => {
   it('renders the floating toolbar always visible, in "visual" mode by default', () => {
     render(<DevRuntime rootElement={makeRootElement(minimalConfig)} />)

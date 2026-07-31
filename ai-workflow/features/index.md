@@ -23,6 +23,36 @@ La política completa está definida en el documento de workflow del proyecto.
 
 ## Completadas
 
+- `0124-app-shell-layout-appearance`: elimina el contenedor tipo "tarjeta" que envolvía todo el runtime (borde,
+  sombra, fondo de superficie, padding perimetral vía `rounded-shell`/`p-4 sm:p-6 lg:p-8`) y el límite de ancho
+  centrado (`max-w-shell`, incluida la fila interna de `shell.header`), para que el runtime ocupe el 100% del ancho
+  y alto de su contenedor de montaje tanto en standalone como embebido; también retira el fondo general decorativo
+  (gradiente de `body` y `background: var(--color-app-background)` de `:root`) y el alto mínimo forzado
+  (`min-h-screen`, `body`/`#root { min-height: 100vh }`). `--color-app-background` sigue existiendo en la paleta
+  (consumido por otros nodos, p. ej. el estado activo de `tabs`) pero deja de aplicarse como fondo general;
+  `--radius-shell` queda declarado sin consumidor. Introduce `getAppShellContentPaddingClassName` (`p-6 sm:p-8
+  lg:p-10`), aplicado solo al área de contenido (con o sin sidebar) y al bloque de error de config, nunca al
+  chrome. Nuevo campo opcional `shell.scrollBehavior` (`"page"` | `"fixed"`, default `"page"`, validado con
+  `z.enum` dentro del `.strict()` ya existente de `shellSchema`): en `"page"` el comportamiento es idéntico al
+  previo (página completa hace scroll, header `sticky`); en `"fixed"`, `AppShell`/`dev-runtime.tsx` aplican una
+  cascada `overflow-hidden` (raíz) → `flex-1 min-h-0` (fila del body) → `flex-1 min-h-0 overflow-y-auto` (envoltorio
+  de contenido) para que el chrome quede fijo y solo el contenido de página haga scroll interno; `AppShellHeader`
+  pasa a `forwardRef` con una nueva prop `pinned` que resuelve `sticky top-0` frente a flujo normal vía un lookup
+  map (`appShellHeaderVariantClassNameMap`, sin rama `if/else`, siguiendo `conventions.md`). `shell.sidebar`
+  mantiene scroll propio independiente de `scrollBehavior` (FR11): en `"page"` se posiciona `sticky` bajo el header
+  con su alto acotado al viewport vía la variable CSS `--shell-sidebar-sticky-top`, alimentada por una medición en
+  tiempo de ejecución del alto real del header (`useLayoutEffect` + `ResizeObserver` en `AppShell`/`dev-runtime.tsx`,
+  con `getBoundingClientRect()` síncrono antes del primer paint para evitar un flash a `top: 0px`); en `"fixed"` el
+  sidebar ya queda confinado por la cascada flex del chrome fijo y solo necesita `overflow-y-auto` propio, sin
+  `sticky`. Como efecto colateral de que el `<nav>` del sidebar pase a ser su propio contenedor con scroll,
+  `SidebarRailFlyout` (modo rail) cambia su panel de `position: absolute` (que quedaría recortado por el nuevo
+  `overflow-y-auto` del sidebar) a `position: fixed`, con coordenadas medidas vía `getBoundingClientRect()` del
+  trigger al abrirse (variables CSS `--sidebar-rail-flyout-top`/`--sidebar-rail-flyout-left`) y cierre automático
+  ante cualquier scroll de un ancestro (listener de `scroll` en `document` con `capture: true`, ya que la posición
+  medida no se sigue en vivo). `src/tests/setup.ts` añade un stub global de `ResizeObserver` (jsdom no lo
+  implementa) para que cualquier test que monte un `shell.header` no vacío no falle por su ausencia, sobreescribible
+  por fichero con `vi.stubGlobal`. Nueva suite `app-shell-scroll-behavior.test.tsx` cubre las cinco combinaciones de
+  `scrollBehavior`/header/sidebar end-to-end.
 - `0123-app-shell-sidebar`: nuevo campo opcional `sidebar` dentro del bloque `shell` ya existente (`0122`), hermano
   aditivo de `header`, con árbol de navegación lateral de profundidad arbitraria y un modo compacto ("rail", solo
   iconos). `shell.sidebar` admite `items` (array opcional de `sidebarItem`) y `defaultCollapsed` (boolean,

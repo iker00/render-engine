@@ -98,36 +98,85 @@ describe('App shell', () => {
     consoleWarnSpy.mockRestore()
   }, 10000)
 
-  it('renders the runtime inside a centered light shell frame', () => {
+  it('renders the runtime at full width/height of the mount container, without card or global background', () => {
     const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
 
     renderDevelopmentApp(defaultDevConfig)
 
-    expect(screen.getByTestId('runtime-app')).toHaveClass(
-      'min-h-screen',
-      'bg-app-background',
-      'text-app-text',
-    )
+    const runtimeApp = screen.getByTestId('runtime-app')
+    expect(runtimeApp).toHaveClass('flex', 'h-full', 'w-full', 'flex-col', 'text-app-text')
+    expect(runtimeApp).not.toHaveClass('min-h-screen')
+    expect(runtimeApp).not.toHaveClass('bg-app-background')
 
-    expect(screen.getByTestId('runtime-shell-content')).toHaveClass(
-      'mx-auto',
-      'max-w-shell',
-      'px-4',
-      'py-8',
-      'lg:px-8',
-      'lg:py-12',
-    )
+    const shellContent = screen.getByTestId('runtime-shell-content')
+    expect(shellContent).toHaveClass('flex', 'w-full', 'flex-1', 'min-w-0', 'min-h-0')
+    expect(shellContent).not.toHaveClass('mx-auto')
+    expect(shellContent).not.toHaveClass('max-w-shell')
+    expect(shellContent).not.toHaveClass('px-4')
+    expect(shellContent).not.toHaveClass('py-8')
 
-    expect(screen.getByTestId('runtime-shell-frame')).toHaveClass(
-      'rounded-shell',
-      'border-app-border-strong',
-      'bg-app-surface',
-      'p-4',
-      'lg:p-8',
-    )
+    const shellFrame = screen.getByTestId('runtime-shell-frame')
+    expect(shellFrame).toHaveClass('flex', 'w-full', 'flex-1', 'min-w-0', 'min-h-0', 'flex-col')
+    expect(shellFrame).not.toHaveClass('rounded-shell')
+    expect(shellFrame).not.toHaveClass('border')
+    expect(shellFrame).not.toHaveClass('border-app-border-strong')
+    expect(shellFrame).not.toHaveClass('bg-app-surface')
+    expect(shellFrame).not.toHaveClass('shadow-shell')
+    expect(shellFrame).not.toHaveClass('p-4')
 
     expect(screen.getByTestId('runtime-page')).toHaveClass('grid', 'gap-5', 'lg:gap-6')
 
     consoleWarnSpy.mockRestore()
+  })
+
+  it('pads the page content wrapper with the content-area padding when there is no sidebar', () => {
+    const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+    renderDevelopmentApp(minimalDevConfig)
+
+    expect(screen.getByTestId('runtime-page-content')).toHaveClass('p-6', 'sm:p-8', 'lg:p-10')
+
+    consoleWarnSpy.mockRestore()
+  })
+
+  it('renders without shell.scrollBehavior identically to the T2 close (page mode, no overflow confinement)', () => {
+    const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+    renderDevelopmentApp(minimalDevConfig)
+
+    expect(screen.getByTestId('runtime-app')).not.toHaveClass('overflow-hidden')
+    const pageContent = screen.getByTestId('runtime-page-content')
+    expect(pageContent).not.toHaveClass('overflow-y-auto')
+    expect(pageContent).not.toHaveClass('flex-1')
+    expect(pageContent).not.toHaveClass('min-h-0')
+
+    consoleWarnSpy.mockRestore()
+  })
+
+  it('renders the config-error block with the same reset and the content-area padding applied to the frame', () => {
+    render(
+      <App
+        devConfigOverride={{ ...minimalDevConfig, initialPage: 'missing-page' }}
+        isDevelopment
+        rootElement={document.createElement('div')}
+      />,
+    )
+
+    const runtimeApp = screen.getByTestId('runtime-app')
+    expect(runtimeApp).toHaveClass('flex', 'h-full', 'w-full', 'flex-col', 'text-app-text')
+    expect(runtimeApp).not.toHaveClass('min-h-screen')
+    expect(runtimeApp).not.toHaveClass('bg-app-background')
+
+    const shellContent = screen.getByTestId('runtime-shell-content')
+    expect(shellContent).not.toHaveClass('max-w-shell')
+    expect(shellContent).not.toHaveClass('mx-auto')
+    expect(shellContent).not.toHaveClass('px-4')
+
+    const shellFrame = screen.getByTestId('runtime-shell-frame')
+    expect(shellFrame).not.toHaveClass('rounded-shell')
+    expect(shellFrame).not.toHaveClass('bg-app-surface')
+    expect(shellFrame).toHaveClass('p-6', 'sm:p-8', 'lg:p-10')
+
+    expect(screen.getByTestId('runtime-error-message')).toBeInTheDocument()
   })
 })

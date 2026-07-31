@@ -134,6 +134,45 @@ describe('AppShellSidebar — SidebarRailFlyout', () => {
     expect(within(menu).queryByRole('link', { name: 'Hidden' })).not.toBeInTheDocument()
   })
 
+  it('renders the panel as `fixed`, positioned from the trigger\'s measured rect — regression for the sidebar\'s own overflow-y-auto (0124-T4) clipping an `absolute` panel', () => {
+    renderApp(buildFlyoutConfig())
+
+    const trigger = screen.getByRole('button', { name: 'Admin' })
+    vi.spyOn(trigger, 'getBoundingClientRect').mockReturnValue({
+      top: 120,
+      left: 8,
+      right: 64,
+      bottom: 152,
+      width: 56,
+      height: 32,
+      x: 8,
+      y: 120,
+      toJSON: () => {},
+    } as DOMRect)
+
+    fireEvent.click(trigger)
+
+    const menu = screen.getByRole('menu')
+    expect(menu).toHaveClass('fixed')
+    expect(menu).not.toHaveClass('absolute')
+    expect(menu).not.toHaveClass('left-full')
+    expect(menu).toHaveStyle('--sidebar-rail-flyout-top: 120px')
+    expect(menu).toHaveStyle('--sidebar-rail-flyout-left: 68px')
+  })
+
+  it('closes the flyout when the sidebar scrolls, instead of leaving it visually detached from the trigger', () => {
+    renderApp(buildFlyoutConfig())
+
+    const trigger = screen.getByRole('button', { name: 'Admin' })
+    fireEvent.click(trigger)
+    expect(screen.getByRole('menu')).toBeInTheDocument()
+
+    fireEvent.scroll(screen.getByTestId('app-shell-sidebar'))
+
+    expect(trigger).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument()
+  })
+
   it('closes on Escape and returns focus to the trigger', () => {
     renderApp(buildFlyoutConfig())
 
