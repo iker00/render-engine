@@ -1,5 +1,4 @@
-import { forwardRef } from 'react'
-import type { KeyboardEvent } from 'react'
+import type { KeyboardEvent, Ref } from 'react'
 import type { MenuItemChildConfig, ShellHeaderActionNode, ShellHeaderConfig } from '../../config/runtime-config-types'
 import { LayoutNodeRenderer } from '../layout-node-renderer'
 import { LayoutRenderer } from '../layout-renderer'
@@ -26,6 +25,7 @@ import { MenuItemDropdown } from './menu-item-dropdown'
 interface AppShellHeaderProps {
   header?: ShellHeaderConfig
   pinned?: boolean
+  ref?: Ref<HTMLElement>
 }
 
 function isShellHeaderEmpty(header: ShellHeaderConfig) {
@@ -37,14 +37,11 @@ function isShellHeaderEmpty(header: ShellHeaderConfig) {
   )
 }
 
-// `forwardRef` (0124-T4): `AppShell`/`dev-runtime.tsx` measure the rendered header's height via
+// `ref` prop (0124-T4): `AppShell`/`dev-runtime.tsx` measure the rendered header's height via
 // `ResizeObserver` to feed the sidebar's sticky offset in `"page"` mode. When `header` is absent
 // or empty this still returns `null`, which React resolves the ref callback to — exactly the
 // signal that should drive the sidebar's sticky offset back to 0.
-export const AppShellHeader = forwardRef<HTMLElement, AppShellHeaderProps>(function AppShellHeader(
-  { header, pinned = true },
-  ref,
-) {
+export function AppShellHeader({ header, pinned = true, ref }: AppShellHeaderProps) {
   const state = useRuntimeState()
   const handlers = useRuntimeStateActions()
   const activePage = useRuntimeCurrentPage()
@@ -109,7 +106,7 @@ export const AppShellHeader = forwardRef<HTMLElement, AppShellHeaderProps>(funct
       </div>
     </header>
   )
-})
+}
 
 function renderShellHeaderAction(actionNode: ShellHeaderActionNode, key: number) {
   const renderedChildren =

@@ -616,14 +616,14 @@ conservan íntegros abajo como registro del contrato ya ejecutado; no deben reab
         `devHeaderHeightPx`/`setDevHeaderNode` para no colisionar con el resto de nombres `dev*` ya presentes en
         ese componente; insertarlas junto a `devScrollBehavior`/`isDevFixed` (línea ~448 de ese fichero, ya
         top-level y sin condicional previo).
-      - `AppShellHeader` (`src/runtime/runtime-shell/app-shell-header.tsx`): convertir a
-        `forwardRef<HTMLElement, AppShellHeaderProps>` reenviando el ref al `<header>` raíz existente
-        (`<header ref={ref} data-testid="app-shell-header" ...>`). Cuando `header` es `undefined` o
-        `isShellHeaderEmpty(header)`, el componente sigue devolviendo `null` sin cambios — React resuelve el ref
-        a `null` en ese caso, que es exactamente el valor que debe disparar `headerHeightPx = 0`. No cambiar la
-        firma de `AppShellHeaderProps` más allá de que ahora se consume vía `forwardRef` (sigue aceptando
-        `header`/`pinned` igual que hoy). Exportar `AppShellHeader` igual que hoy (`export const AppShellHeader =
-        forwardRef(...)`), sin tocar `src/runtime/runtime-shell/index.ts`.
+      - `AppShellHeader` (`src/runtime/runtime-shell/app-shell-header.tsx`): añadir `ref?: Ref<HTMLElement>` a
+        `AppShellHeaderProps` y reenviarlo al `<header>` raíz existente (`<header ref={ref}
+        data-testid="app-shell-header" ...>`). React 19 acepta `ref` como prop normal en componentes función, sin
+        `forwardRef`. Cuando `header` es `undefined` o `isShellHeaderEmpty(header)`, el componente sigue
+        devolviendo `null` sin cambios — React resuelve el ref a `null` en ese caso, que es exactamente el valor
+        que debe disparar `headerHeightPx = 0`. No cambiar el resto de la firma de `AppShellHeaderProps` (sigue
+        aceptando `header`/`pinned` igual que hoy). Exportar `AppShellHeader` igual que hoy (`export function
+        AppShellHeader(...)`), sin tocar `src/runtime/runtime-shell/index.ts`.
       - `AppShell`: pasar `ref={setHeaderNode}` a `<AppShellHeader>`. `dev-runtime.tsx`: pasar
         `ref={setDevHeaderNode}` a su `<AppShellHeader>`.
     - **Propagación al sidebar**: `AppShell` pasa `stickyTopPx={headerHeightPx}` a `<AppShellSidebar>` (rama con
@@ -681,7 +681,7 @@ conservan íntegros abajo como registro del contrato ya ejecutado; no deben reab
         getAppShellSidebarStickyStyle(stickyTopPx)}`. En modo `"fixed"`, sin `style` (idéntico a hoy — el ancho
         disponible se lo da la fila flex, no la variable CSS).
     - Ningún cambio a `RuntimeStateProvider`, `RuntimePage`, catálogo de nodos, `LayoutRenderer`,
-      `AppShellHeader` más allá del `forwardRef`, ni al contrato de `shell.scrollBehavior` (`0124-T1`, sin
+      `AppShellHeader` más allá de la nueva prop `ref`, ni al contrato de `shell.scrollBehavior` (`0124-T1`, sin
       tocar). El `<main>`/`<section>`/frame de `0124-T2`/`0124-T3` tampoco cambian.
   - Limitación aceptada y no resuelta por esta tarea (documentar si aplica, no bloquea el cierre): entre el
     primer render y el primer `useLayoutEffect`, si el navegador pintara ese frame intermedio (React aplica
@@ -705,7 +705,7 @@ conservan íntegros abajo como registro del contrato ya ejecutado; no deben reab
   - Código:
     - `src/runtime/runtime-node-styling-app-shell-sidebar.ts` (nueva firma de `getAppShellSidebarClassName`,
       nuevo `getAppShellSidebarStickyStyle`)
-    - `src/runtime/runtime-shell/app-shell-header.tsx` (`forwardRef`)
+    - `src/runtime/runtime-shell/app-shell-header.tsx` (prop `ref`)
     - `src/runtime/runtime-shell/app-shell-sidebar.tsx` (prop `stickyTopPx?`, `style` condicional)
     - `src/app/app-shell.tsx` (medición del header, `ref`/`stickyTopPx` cableados)
     - `src/dev-runtime/dev-runtime.tsx` (mismo cableado en espejo para la vista previa de desarrollo)
@@ -787,8 +787,8 @@ conservan íntegros abajo como registro del contrato ya ejecutado; no deben reab
     - `pnpm test --run src/tests/app/app-shell-scroll-behavior.test.tsx`
     - `pnpm test --run src/tests/dev-runtime/dev-runtime.test.tsx`
     - `pnpm test --run src/tests/app/app-shell-sidebar.test.tsx` (sanity)
-    - `pnpm test --run src/tests/app/app-shell-header.test.tsx` (sanity — `forwardRef` no debe cambiar ningún
-      comportamiento observable del header)
+    - `pnpm test --run src/tests/app/app-shell-header.test.tsx` (sanity — la nueva prop `ref` no debe cambiar
+      ningún comportamiento observable del header)
     - `pnpm test --run src/tests/app/app-shell.test.tsx` (sanity)
     - `pnpm test` (al cierre, para confirmar suite global y gate de cobertura)
   - **Restricciones**:

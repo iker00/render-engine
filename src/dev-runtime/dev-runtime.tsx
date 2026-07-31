@@ -1,4 +1,5 @@
-import { forwardRef, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useImperativeHandle, useLayoutEffect, useRef, useState } from 'react'
+import type { Ref } from 'react'
 import { flushSync } from 'react-dom'
 import devConfigJson from '../dev/config.json'
 import devDataValuesJson from '../dev/data-values.json'
@@ -93,16 +94,14 @@ interface DevRuntimeReadyProps {
   initialConfig: RuntimeConfig
   initialConfigText: string
   dataValues?: Record<string, unknown>
+  ref?: Ref<DevRuntimeReadyHandle>
 }
 
 export interface DevRuntimeReadyHandle {
   commitCanvasMutation: (mutate: (pageLayout: LayoutNode[]) => LayoutNode[]) => CommitCanvasMutationResult
 }
 
-export const DevRuntimeReady = forwardRef<DevRuntimeReadyHandle, DevRuntimeReadyProps>(function DevRuntimeReady(
-  { initialConfig, initialConfigText, dataValues },
-  ref,
-) {
+export function DevRuntimeReady({ initialConfig, initialConfigText, dataValues, ref }: DevRuntimeReadyProps) {
   const [currentConfig, setCurrentConfig] = useState<RuntimeConfig>(initialConfig)
   const [editorBuffer, setEditorBuffer] = useState<string | null>(null)
   const [hasPendingChanges, setHasPendingChanges] = useState(false)
@@ -545,6 +544,4 @@ export const DevRuntimeReady = forwardRef<DevRuntimeReadyHandle, DevRuntimeReady
       />
     </>
   )
-})
-
-DevRuntimeReady.displayName = 'DevRuntimeReady'
+}

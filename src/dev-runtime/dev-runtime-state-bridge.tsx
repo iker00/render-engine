@@ -1,4 +1,5 @@
-import { forwardRef, useContext, useImperativeHandle } from 'react'
+import { useContext, useImperativeHandle } from 'react'
+import type { Ref } from 'react'
 import { RuntimeStateContext } from '../runtime/runtime-state/runtime-state-context'
 import type { RuntimeState, RuntimeStateAction } from '../runtime/runtime-state/runtime-state-types'
 
@@ -7,7 +8,11 @@ export interface DevRuntimeStateBridgeHandle {
   dispatchAndSyncState: (action: RuntimeStateAction) => void
 }
 
-export const DevRuntimeStateBridge = forwardRef<DevRuntimeStateBridgeHandle>((_, ref) => {
+interface DevRuntimeStateBridgeProps {
+  ref?: Ref<DevRuntimeStateBridgeHandle>
+}
+
+export function DevRuntimeStateBridge({ ref }: DevRuntimeStateBridgeProps) {
   const context = useContext(RuntimeStateContext)
 
   if (context === null) {
@@ -20,6 +25,4 @@ export const DevRuntimeStateBridge = forwardRef<DevRuntimeStateBridgeHandle>((_,
   }))
 
   return null
-})
-
-DevRuntimeStateBridge.displayName = 'DevRuntimeStateBridge'
+}

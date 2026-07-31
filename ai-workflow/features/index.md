@@ -37,7 +37,7 @@ La política completa está definida en el documento de workflow del proyecto.
   previo (página completa hace scroll, header `sticky`); en `"fixed"`, `AppShell`/`dev-runtime.tsx` aplican una
   cascada `overflow-hidden` (raíz) → `flex-1 min-h-0` (fila del body) → `flex-1 min-h-0 overflow-y-auto` (envoltorio
   de contenido) para que el chrome quede fijo y solo el contenido de página haga scroll interno; `AppShellHeader`
-  pasa a `forwardRef` con una nueva prop `pinned` que resuelve `sticky top-0` frente a flujo normal vía un lookup
+  pasa a aceptar `ref` como prop normal (React 19, sin `forwardRef`) junto con una nueva prop `pinned` que resuelve `sticky top-0` frente a flujo normal vía un lookup
   map (`appShellHeaderVariantClassNameMap`, sin rama `if/else`, siguiendo `conventions.md`). `shell.sidebar`
   mantiene scroll propio independiente de `scrollBehavior` (FR11): en `"page"` se posiciona `sticky` bajo el header
   con su alto acotado al viewport vía la variable CSS `--shell-sidebar-sticky-top`, alimentada por una medición en
