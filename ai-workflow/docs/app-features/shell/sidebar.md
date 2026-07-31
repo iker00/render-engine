@@ -22,6 +22,7 @@ shell?: {
     items?: SidebarItem[]
     defaultCollapsed?: boolean  // default false
   }
+  scrollBehavior?: 'page' | 'fixed'  // ver header.md#shellscrollbehavior — default 'page'
 }
 
 SidebarItem = {
@@ -70,6 +71,21 @@ previa; ver [`../config/validation.md`](../config/validation.md#reglas-de-shells
   no-vacío; sin sidebar, la estructura previa (columna simple) se mantiene sin cambios, en modo desarrollo y en
   producción.
 
+## Scroll propio del sidebar
+
+`shell.sidebar`, cuando existe, permanece siempre visible durante el scroll de la página mediante un mecanismo de
+scroll propio, independiente de [`shell.scrollBehavior`](./header.md#shellscrollbehavior):
+
+- En `scrollBehavior: "page"` (default), el sidebar se posiciona `sticky` justo debajo de `shell.header` (o desde
+  arriba del todo si no hay header), con su alto acotado al viewport menos el alto real de la cabecera. Ese alto se
+  mide en tiempo de ejecución, no es un valor estático, porque varía según el contenido de la cabecera (logo,
+  título, menú con posible wrap, acciones); el sidebar reacciona en vivo a cambios de ese alto.
+- En `scrollBehavior: "fixed"`, el sidebar ya queda confinado por el frame fijo del propio chrome, por lo que solo
+  necesita su propio scroll interno, sin posicionamiento `sticky` adicional.
+- En ambos modos, si la lista de elementos visibles del sidebar excede el alto disponible bajo la cabecera, el
+  sidebar hace scroll interno propio que se detiene de forma natural al llegar al último elemento; si todos los
+  elementos caben, no aparece ningún scroll.
+
 ## Expansión de ramas
 
 - Click sobre un `sidebarItem` con `children` expande sus hijos inline, indentados debajo del propio item,
@@ -104,9 +120,13 @@ En modo rail, un `sidebarItem` con `children` muestra sus hijos como un desplega
 click/tap sobre su icono, reutilizando el mismo patrón de accesibilidad ya implementado para el desplegable de
 `shell.header.menu` (ver [[header.md#desplegable-de-menuitemchildren]]):
 - El trigger declara `aria-haspopup="menu"`/`aria-expanded`; el panel usa `role="menu"`, anclado con
-  `position: absolute` a la derecha del trigger (el rail vive en el borde izquierdo del shell).
-- Se cierra al hacer click fuera, al pulsar `Esc` (con retorno de foco al trigger), o al seleccionar un hijo
-  navegable. Al abrirse, el foco se mueve al primer item visible del panel.
+  `position: fixed` a la derecha del trigger (el rail vive en el borde izquierdo del shell), con coordenadas
+  medidas desde el propio trigger en el momento de abrirse.
+- Se cierra al hacer click fuera, al pulsar `Esc` (con retorno de foco al trigger), al seleccionar un hijo
+  navegable, o al hacer scroll de cualquier ancestro con scroll — la posición del panel es una medición puntual, no
+  se sigue en vivo, así que hacer scroll (típicamente el propio sidebar, que desde `0124` tiene scroll interno
+  propio) lo cierra en vez de dejarlo desanclado de su trigger. Al abrirse, el foco se mueve al primer item visible
+  del panel.
 - Un hijo dentro del flyout que a su vez declara `children` (rama de profundidad 3+) **no** abre un segundo
   flyout anidado: se expande inline dentro del mismo panel, con el mismo mecanismo de expansión que usa el modo
   expandido. El panel flotante es siempre una única capa, sin importar la profundidad del árbol.

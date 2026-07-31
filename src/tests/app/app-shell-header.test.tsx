@@ -271,6 +271,19 @@ describe('AppShellHeader — actions area', () => {
   })
 })
 
+describe('AppShellHeader — full-width inner row (0124-T2 reset)', () => {
+  it('renders the inner row edge-to-edge, without a centered max-width band', () => {
+    renderApp(buildConfig({ title: 'Acme' }))
+
+    const inner = screen.getByTestId('app-shell-header').firstElementChild as HTMLElement
+
+    expect(inner).not.toHaveClass('mx-auto')
+    expect(inner).not.toHaveClass('max-w-shell')
+    expect(inner).toHaveClass('flex', 'w-full', 'flex-wrap', 'items-center', 'justify-between', 'gap-4')
+    expect(inner).toHaveClass('px-4', 'py-3', 'sm:px-6', 'lg:px-8')
+  })
+})
+
 describe('AppShellHeader — persistence across navigation', () => {
   it('keeps the same <header> DOM node mounted across a page navigation', async () => {
     renderApp(buildConfig({ menu: [{ label: 'Settings', action: { type: 'navigateTo', pageId: 'settings' } }] }))

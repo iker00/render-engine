@@ -83,7 +83,11 @@ vacío; no hay ocultación automática del padre en ese caso.
 - Flujo natural izquierda→derecha: `logo`, `title` y `menu` aparecen en ese orden si existen (omitiendo los
   ausentes). `actions` se empuja siempre al extremo derecho, con independencia de qué otros elementos existan. El
   menú no se centra matemáticamente respecto al ancho total.
-- La cabecera es `sticky` en la parte superior del viewport.
+- La fila interna de la cabecera ocupa el ancho completo del contenedor de montaje, sin límite de ancho centrado
+  propio — consistente con el resto del chrome y del contenido.
+- La cabecera es `sticky` en la parte superior del viewport cuando `shell.scrollBehavior` es `"page"` (default); con
+  `"fixed"` deja de ser pegajosa, porque el confinamiento de scroll pasa a resolverlo el propio frame fijo — ver
+  [`shell.scrollBehavior`](#shellscrollbehavior).
 - Un `menuItem` de hoja (con `href` o `action`) se renderiza como `<a>` (modo `href`) o `<button type="button">`
   (modo `action`), con el mismo ejecutor común de acciones del runtime (`executeRuntimeUiAction`) que ya usan
   `button`/`link` del catálogo de layout.
@@ -115,6 +119,29 @@ El resaltado de "activo" es un valor derivado en cada render, no un estado persi
 - Si ningún `menuItem.action.navigateTo.pageId` coincide con la página visible, ningún item se marca como activo.
 - Si dos `menuItem` distintos (de cualquier nivel) navegan al mismo `pageId`, ambos se marcan como activos
   simultáneamente cuando esa página está visible, junto con sus respectivos padres si aplica.
+
+## `shell.scrollBehavior`
+
+Campo opcional del bloque raíz `shell`, hermano de `header` y `sidebar`, con dos valores admitidos:
+
+- `"page"` (default si se omite, o si `shell` no se declara): comportamiento clásico — la página completa hace
+  scroll; `shell.header`, si existe, permanece fijado arriba mediante scroll pegajoso (`sticky`).
+- `"fixed"`: `shell.header` y `shell.sidebar` (los que estén declarados) permanecen fijos y visibles ocupando el
+  alto disponible del contenedor de montaje; solo el área de contenido de la página activa hace scroll interno
+  cuando su contenido excede el alto disponible.
+
+Un valor fuera de `"page"`/`"fixed"` se rechaza en validación previa con diagnóstico de ruta exacta — ver
+[[../config/validation.md#reglas-del-bloque-shell]].
+
+Con `scrollBehavior: "fixed"` declarado pero sin que el contenedor de montaje tenga una altura acotada real (por
+ejemplo, un `<div>` embebido con alto `auto` dentro de una página que crece con el contenido), el confinamiento del
+área de contenido no tiene un límite de alto del que recortar, por lo que ese aspecto concreto degrada visualmente a
+un comportamiento equivalente a `"page"`; es responsabilidad de quien integra la app dar una altura acotada al
+contenedor de montaje si quiere ese confinamiento real. El posicionamiento pegajoso del chrome no depende de esa
+altura acotada — sigue funcionando igual, con o sin ella.
+
+Ver [[sidebar.md#scroll-propio-del-sidebar]] para el scroll propio de `shell.sidebar`, que es independiente de este
+campo.
 
 ## Ámbito por página
 

@@ -9,6 +9,16 @@ independientes y aditivas: `shell.header` (logo, título, menú de navegación c
 de usuario) y `shell.sidebar` (navegación lateral jerárquica, árbol de profundidad arbitraria, modo rail con
 flyouts). Ambas pueden declararse por separado, juntas o ninguna.
 
+Un tercer campo opcional y hermano de ambas secciones, `shell.scrollBehavior` (`"page"` | `"fixed"`, default
+`"page"`), controla el modelo de scroll de toda la aplicación: en `"page"` es la página completa la que hace scroll
+y el chrome permanece pegajoso; en `"fixed"` el chrome permanece fijo ocupando el alto del contenedor de montaje y
+solo el área de contenido de la página activa hace scroll interno. Ver
+[header.md](./header.md#shellscrollbehavior) para el detalle y [sidebar.md](./sidebar.md#scroll-propio-del-sidebar)
+para el scroll propio del sidebar, que es independiente de este campo. El runtime en sí (con o sin `shell`) ya no
+envuelve su contenido en una tarjeta ni en un límite de ancho centrado: ocupa el 100% del ancho y alto del
+contenedor de montaje, con un padding propio del área de contenido — ver
+[[../runtime/overview.md]] y [[../runtime/design-tokens.md]].
+
 ## Sub-documentos
 
 | Documento | Cuándo leerlo |

@@ -1,4 +1,5 @@
-import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react'
+import { useEffect, useImperativeHandle, useLayoutEffect, useRef, useState } from 'react'
+import type { Ref } from 'react'
 import { flushSync } from 'react-dom'
 import devConfigJson from '../dev/config.json'
 import devDataValuesJson from '../dev/data-values.json'
@@ -7,7 +8,7 @@ import { readRuntimeConfig, type RuntimeConfig } from '../app/bootstrap/read-run
 import { readRuntimeDataValues } from '../app/bootstrap/read-runtime-data-values'
 import { validateRuntimeConfig } from '../config/runtime-config'
 import type { LayoutNode } from '../config/runtime-config'
-import type { ShellConfig, ShellHeaderActionNode } from '../config/runtime-config-types'
+import type { ShellConfig, ShellHeaderActionNode, ShellScrollBehavior } from '../config/runtime-config-types'
 import { RuntimeStateProvider } from '../runtime/runtime-state/runtime-state-provider'
 import { RuntimePage } from '../runtime/runtime-page'
 import { AppShellHeader, AppShellSidebar } from '../runtime/runtime-shell'
@@ -15,6 +16,7 @@ import type { LayoutNodePath } from '../runtime/layout-node-path'
 import {
   getAppShellClassName,
   getAppShellContentClassName,
+  getAppShellContentPaddingClassName,
   getAppShellFrameClassName,
 } from '../runtime/runtime-node-styling'
 import {
@@ -92,16 +94,14 @@ interface DevRuntimeReadyProps {
   initialConfig: RuntimeConfig
   initialConfigText: string
   dataValues?: Record<string, unknown>
+  ref?: Ref<DevRuntimeReadyHandle>
 }
 
 export interface DevRuntimeReadyHandle {
   commitCanvasMutation: (mutate: (pageLayout: LayoutNode[]) => LayoutNode[]) => CommitCanvasMutationResult
 }
 
-export const DevRuntimeReady = forwardRef<DevRuntimeReadyHandle, DevRuntimeReadyProps>(function DevRuntimeReady(
-  { initialConfig, initialConfigText, dataValues },
-  ref,
-) {
+export function DevRuntimeReady({ initialConfig, initialConfigText, dataValues, ref }: DevRuntimeReadyProps) {
   const [currentConfig, setCurrentConfig] = useState<RuntimeConfig>(initialConfig)
   const [editorBuffer, setEditorBuffer] = useState<string | null>(null)
   const [hasPendingChanges, setHasPendingChanges] = useState(false)
@@ -444,6 +444,34 @@ export const DevRuntimeReady = forwardRef<DevRuntimeReadyHandle, DevRuntimeReady
   const devSidebarItems = currentConfig.shell?.sidebar?.items
   const hasDevSidebarItems = devSidebarItems !== undefined && devSidebarItems.length > 0
 
+  const devScrollBehavior: ShellScrollBehavior = currentConfig.shell?.scrollBehavior ?? 'page'
+  const isDevFixed = devScrollBehavior === 'fixed'
+
+  // Mirrors `AppShell`'s header-height measurement (FR11, 0124-T4) for the dev preview: the
+  // sidebar's sticky offset in "page" mode has to track the real, ResizeObserver-measured header
+  // height here too, not just in the production shell.
+  const [devHeaderNode, setDevHeaderNode] = useState<HTMLElement | null>(null)
+  const [devHeaderHeightPx, setDevHeaderHeightPx] = useState(0)
+
+  useLayoutEffect(() => {
+    // Local wrapper (same shape as `recompute` in `layout-canvas-grid-drop-zones.tsx`) so the
+    // effect body calls a local function rather than the `useState` setter directly.
+    const measureDevHeaderHeight = (heightPx: number) => {
+      setDevHeaderHeightPx(heightPx)
+    }
+
+    if (devHeaderNode === null) {
+      measureDevHeaderHeight(0)
+      return
+    }
+    measureDevHeaderHeight(devHeaderNode.getBoundingClientRect().height)
+    const observer = new ResizeObserver((entries) => {
+      measureDevHeaderHeight(entries[0].contentRect.height)
+    })
+    observer.observe(devHeaderNode)
+    return () => observer.disconnect()
+  }, [devHeaderNode])
+
   const editorLayer = (
     <DevEditorLayer
       mode={mode}
@@ -468,21 +496,34 @@ export const DevRuntimeReady = forwardRef<DevRuntimeReadyHandle, DevRuntimeReady
     </DevEditorLayer>
   )
 
+  const devAppShellClassName = isDevFixed ? `${getAppShellClassName()} overflow-hidden` : getAppShellClassName()
+  const devBodyRowClassName = isDevFixed ? `${getAppShellBodyClassName()} flex-1 min-h-0` : getAppShellBodyClassName()
+  const devContentWrapperClassName = isDevFixed
+    ? `${getAppShellBodyContentClassName()} ${getAppShellContentPaddingClassName()} flex-1 min-h-0 overflow-y-auto`
+    : `${getAppShellBodyContentClassName()} ${getAppShellContentPaddingClassName()}`
+  const devPageContentClassName = isDevFixed
+    ? `${getAppShellContentPaddingClassName()} flex-1 min-h-0 overflow-y-auto`
+    : getAppShellContentPaddingClassName()
+
   return (
     <>
-      <main className={getAppShellClassName()} data-testid="runtime-app">
-        <section className={`${getAppShellContentClassName()} items-center`} data-testid="runtime-shell-content">
+      <main className={devAppShellClassName} data-testid="runtime-app">
+        <section className={getAppShellContentClassName()} data-testid="runtime-shell-content">
           <div className={getAppShellFrameClassName()} data-testid="runtime-shell-frame">
             <RuntimeStateProvider config={currentConfig} dataValues={dataValues}>
               <DevRuntimeStateBridge ref={bridgeRef} />
-              <AppShellHeader header={currentConfig.shell?.header} />
+              <AppShellHeader ref={setDevHeaderNode} header={currentConfig.shell?.header} pinned={!isDevFixed} />
               {hasDevSidebarItems ? (
-                <div className={getAppShellBodyClassName()}>
-                  <AppShellSidebar sidebar={currentConfig.shell?.sidebar} />
-                  <div className={getAppShellBodyContentClassName()}>{editorLayer}</div>
+                <div className={devBodyRowClassName}>
+                  <AppShellSidebar
+                    sidebar={currentConfig.shell?.sidebar}
+                    scrollBehavior={devScrollBehavior}
+                    stickyTopPx={devHeaderHeightPx}
+                  />
+                  <div className={devContentWrapperClassName}>{editorLayer}</div>
                 </div>
               ) : (
-                editorLayer
+                <div className={devPageContentClassName}>{editorLayer}</div>
               )}
             </RuntimeStateProvider>
           </div>
@@ -503,6 +544,4 @@ export const DevRuntimeReady = forwardRef<DevRuntimeReadyHandle, DevRuntimeReady
       />
     </>
   )
-})
-
-DevRuntimeReady.displayName = 'DevRuntimeReady'
+}

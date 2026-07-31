@@ -51,14 +51,22 @@ describe('AppShellSidebar — absence', () => {
     renderApp(buildConfig(undefined))
 
     expect(screen.queryByTestId('app-shell-sidebar')).not.toBeInTheDocument()
-    expect(screen.getByTestId('runtime-page').parentElement).toBe(screen.getByTestId('runtime-shell-frame'))
+    // 0124-T2: RuntimePage is now wrapped in a padded `runtime-page-content` div (FR11); that
+    // wrapper, not RuntimePage itself, is the frame's sole body child.
+    const frame = screen.getByTestId('runtime-shell-frame')
+    expect(frame.children).toHaveLength(1)
+    expect(frame.children[0]).toBe(screen.getByTestId('runtime-page-content'))
+    expect(screen.getByTestId('runtime-page-content')).toContainElement(screen.getByTestId('runtime-page'))
   })
 
   it('renders no sidebar when sidebar.items is an empty array', () => {
     renderApp(buildConfig({ sidebar: { items: [] } }))
 
     expect(screen.queryByTestId('app-shell-sidebar')).not.toBeInTheDocument()
-    expect(screen.getByTestId('runtime-page').parentElement).toBe(screen.getByTestId('runtime-shell-frame'))
+    const frame = screen.getByTestId('runtime-shell-frame')
+    expect(frame.children).toHaveLength(1)
+    expect(frame.children[0]).toBe(screen.getByTestId('runtime-page-content'))
+    expect(screen.getByTestId('runtime-page-content')).toContainElement(screen.getByTestId('runtime-page'))
   })
 })
 

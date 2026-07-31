@@ -55,6 +55,82 @@ describe('runtimeConfigRootSchema — shell: root block', () => {
   })
 })
 
+describe('runtimeConfigRootSchema — shell.scrollBehavior (0124-T1)', () => {
+  it('accepts shell without scrollBehavior (no header, no sidebar)', () => {
+    const result = runtimeConfigRootSchema.safeParse(createRootConfig({}))
+    expect(result.success).toBe(true)
+  })
+
+  it('accepts shell without scrollBehavior alongside header and sidebar', () => {
+    const result = runtimeConfigRootSchema.safeParse(
+      createRootConfig({ header: { title: 'My App' }, sidebar: { items: [{ label: 'Home', href: '/' }] } }),
+    )
+    expect(result.success).toBe(true)
+  })
+
+  it('accepts shell.scrollBehavior: "page"', () => {
+    const result = runtimeConfigRootSchema.safeParse(createRootConfig({ scrollBehavior: 'page' }))
+    expect(result.success).toBe(true)
+  })
+
+  it('accepts shell.scrollBehavior: "fixed"', () => {
+    const result = runtimeConfigRootSchema.safeParse(createRootConfig({ scrollBehavior: 'fixed' }))
+    expect(result.success).toBe(true)
+  })
+
+  it('accepts shell.scrollBehavior: "fixed" alongside header and non-empty sidebar.items', () => {
+    const result = runtimeConfigRootSchema.safeParse(
+      createRootConfig({
+        scrollBehavior: 'fixed',
+        header: { title: 'My App' },
+        sidebar: { items: [{ label: 'Home', href: '/' }] },
+      }),
+    )
+    expect(result.success).toBe(true)
+  })
+
+  it('rejects shell.scrollBehavior with a value outside the catalog (e.g. "unknown")', () => {
+    const config = createShellCrossRefConfig({ scrollBehavior: 'unknown' })
+
+    const result = validateRuntimeConfig(config)
+
+    expect(result.status).toBe('error')
+    if (result.status === 'error') {
+      expect(result.error.code).toBe('invalid-layout')
+      expect(result.error.message).toBe('Shell configuration is invalid at "shell.scrollBehavior".')
+    }
+  })
+
+  it('rejects shell.scrollBehavior when it is not a string (e.g. 42)', () => {
+    const config = createShellCrossRefConfig({ scrollBehavior: 42 })
+
+    const result = validateRuntimeConfig(config)
+
+    expect(result.status).toBe('error')
+    if (result.status === 'error') {
+      expect(result.error.code).toBe('invalid-layout')
+      expect(result.error.message).toBe('Shell configuration is invalid at "shell.scrollBehavior".')
+    }
+  })
+
+  it('rejects shell.scrollBehavior: null (omitting the field is valid, null is not)', () => {
+    const config = createShellCrossRefConfig({ scrollBehavior: null })
+
+    const result = validateRuntimeConfig(config)
+
+    expect(result.status).toBe('error')
+    if (result.status === 'error') {
+      expect(result.error.code).toBe('invalid-layout')
+      expect(result.error.message).toBe('Shell configuration is invalid at "shell.scrollBehavior".')
+    }
+  })
+
+  it('still rejects an unknown key sibling of header/sidebar/scrollBehavior (regression on .strict())', () => {
+    const result = runtimeConfigRootSchema.safeParse(createRootConfig({ scrollBehavior: 'page', footer: {} }))
+    expect(result.success).toBe(false)
+  })
+})
+
 describe('runtimeConfigRootSchema — shell.header: individual fields', () => {
   it('accepts header with only logo (valid image props)', () => {
     const result = runtimeConfigRootSchema.safeParse(

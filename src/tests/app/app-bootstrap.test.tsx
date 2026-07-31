@@ -165,10 +165,12 @@ describe('App bootstrap', () => {
 
     expect(screen.getByRole('heading', { name: /runtime configuration could not be loaded/i })).toBeInTheDocument()
     expect(screen.getByText(/page "broken-layout" has an invalid layout at "layout\[0\]\.children"/i)).toBeInTheDocument()
-    expect(screen.getByTestId('runtime-shell-frame')).toHaveClass(
-      'rounded-shell',
-      'bg-app-surface',
-    )
+    // 0124-T2: the error block frame no longer renders as a card (no rounded-shell/bg-app-surface);
+    // it keeps the content-area padding so the message isn't flush against the edge.
+    const frame = screen.getByTestId('runtime-shell-frame')
+    expect(frame).not.toHaveClass('rounded-shell')
+    expect(frame).not.toHaveClass('bg-app-surface')
+    expect(frame).toHaveClass('p-6', 'sm:p-8', 'lg:p-10')
   })
 
   it('shows a readable development error when a node type is not supported', () => {

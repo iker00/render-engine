@@ -6,6 +6,7 @@ export {
 export {
   getAppShellClassName,
   getAppShellContentClassName,
+  getAppShellContentPaddingClassName,
   getAppShellFrameClassName,
   getAppShellErrorEyebrowClassName,
   getAppShellErrorTitleClassName,

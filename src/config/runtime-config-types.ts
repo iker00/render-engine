@@ -832,9 +832,12 @@ export interface ShellSidebarConfig {
   defaultCollapsed?: boolean
 }
 
+export type ShellScrollBehavior = 'page' | 'fixed'
+
 export interface ShellConfig {
   header?: ShellHeaderConfig
   sidebar?: ShellSidebarConfig
+  scrollBehavior?: ShellScrollBehavior
 }
 
 export interface RuntimePageConfig {

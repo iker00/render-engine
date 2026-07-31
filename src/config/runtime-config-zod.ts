@@ -1098,5 +1098,6 @@ export const shellSchema = z
   .object({
     header: shellHeaderSchema.optional(),
     sidebar: shellSidebarSchema.optional(),
+    scrollBehavior: z.enum(['page', 'fixed']).optional(),
   })
   .strict()

@@ -100,7 +100,6 @@
 
 :root {
   color: var(--color-app-text);
-  background: var(--color-app-background);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -111,8 +110,6 @@ body {
   margin: 0;
   min-width: 320px;
   font-family: var(--font-sans);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(237, 243, 248, 1) 48%, rgba(228, 237, 245, 1) 100%);
 }
 
 * {
@@ -125,9 +122,4 @@ body {
   &::-webkit-scrollbar {
     display: none;
   }
-}
-
-body,
-#root {
-  min-height: 100vh;
 }

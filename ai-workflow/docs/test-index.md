@@ -23,6 +23,7 @@ src/tests/
 - `app-shell.test.tsx` — composición del shell de la aplicación
 - `app-shell-sidebar.test.tsx` — `AppShellSidebar` end-to-end (feature `0123`): ausencia sin `shell`/con `items: []`, composición con el header y sin él, items de hoja (`href`/`action`), triggers de rama con expansión inline y múltiples ramas simultáneas hasta cuatro niveles de profundidad, `visibility`, estado activo con auto-expansión de ancestros, persistencia del nodo del sidebar y de las ramas expandidas/colapsadas manualmente a través de la navegación
 - `app-shell-sidebar-rail.test.tsx` — modo rail del sidebar (feature `0123`): estado inicial por `defaultCollapsed`, control propio de colapso/expansión, fallback de glifo por inicial de `label` sin `icon`, `SidebarRailFlyout` (apertura, `role="menu"`, cierre por Esc/click fuera/selección, expansión inline de un hijo de profundidad 3+ sin flyout anidado), persistencia del modo rail entre navegaciones
+- `app-shell-scroll-behavior.test.tsx` — `shell.scrollBehavior` end-to-end (feature `0124`): ausencia y `"page"` explícito reproducen el mismo output (sin `overflow-hidden`, header `sticky`, sidebar `sticky` con `--shell-sidebar-sticky-top` medido por `ResizeObserver`), `"fixed"` con/sin header y/o sidebar (cascada `overflow-hidden`/`flex-1`/`min-h-0`/`overflow-y-auto`, header y sidebar sin `sticky` ni `style`)
 - `main.test.tsx` — punto de entrada principal
 
 ## config-validation/

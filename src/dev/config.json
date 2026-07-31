@@ -8706,5 +8706,48 @@
         }
       ]
     }
-  ]
+  ],
+  "shell": {
+    "header": {
+      "logo": {
+        "src": "https://www.animsa.es/wp-content/uploads/2014/05/Logo_Animsa_40_15_300.png",
+        "alt": "animsa"
+      },
+      "title": "Título de la aplicación"
+    },
+    "sidebar": {
+      "items": [
+        {
+          "label": "Inicio",
+          "icon": "home",
+          "action": {
+            "type": "navigateTo",
+            "pageId": "home"
+          }
+        },
+        {
+          "label": "Catálogo de nodos",
+          "icon": "box",
+          "children": [
+            {
+              "label": "Nodos de texto",
+              "icon": "text-initial",
+              "action": {
+                "type": "navigateTo",
+                "pageId": "text-nodes"
+              }
+            },
+            {
+              "label": "Contenedores",
+              "action": {
+                "type": "navigateTo",
+                "pageId": "containers"
+              },
+              "icon": "panels-top-left"
+            }
+          ]
+        }
+      ]
+    }
+  }
 }
