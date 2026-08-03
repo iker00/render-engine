@@ -167,4 +167,7 @@ por página — misma política "todo o nada" ya fijada para `shell.header`.
 La edición de `shell.sidebar` en modo desarrollo (toggle "Sidebar activo" en la sección "Shell" de la barra de
 dominio, formulario recursivo de alta/edición/borrado/reordenación de `sidebarItem` a cualquier profundidad) está
 documentada en
-[`dev-mode-editor.md`](../development/dev-mode-editor.md#sección-shell-dominio-de-configuración).
+[`dev-mode-editor.md`](../development/dev-mode-editor.md#sección-shell-dominio-de-configuración). Esa misma
+reordenación admite arrastrar: reordenar dentro del mismo nivel, anidar sobre el cuerpo de otro `sidebarItem` o
+mover un item entre niveles distintos, sin tope de profundidad (a diferencia del menú del header, que sí lo
+tiene) — ver la sección "Reordenar por arrastre" de `dev-mode-editor.md` para el detalle.

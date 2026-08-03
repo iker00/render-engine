@@ -33,25 +33,70 @@
         {
           "label": "Inicio",
           "icon": "home",
-          "action": { "type": "navigateTo", "pageId": "home" }
+          "action": {
+            "type": "navigateTo",
+            "pageId": "home"
+          }
         },
         {
           "label": "Nodos",
           "icon": "layout-grid",
           "children": [
-            { "label": "Texto", "action": { "type": "navigateTo", "pageId": "text-nodes" } },
-            { "label": "Contenedores", "action": { "type": "navigateTo", "pageId": "containers" } },
-            { "label": "Tablas", "action": { "type": "navigateTo", "pageId": "tables" } },
-            { "label": "Botones", "action": { "type": "navigateTo", "pageId": "buttons" } }
+            {
+              "label": "Texto",
+              "action": {
+                "type": "navigateTo",
+                "pageId": "text-nodes"
+              }
+            },
+            {
+              "label": "Contenedores",
+              "action": {
+                "type": "navigateTo",
+                "pageId": "containers"
+              }
+            },
+            {
+              "label": "Tablas",
+              "action": {
+                "type": "navigateTo",
+                "pageId": "tables"
+              }
+            },
+            {
+              "label": "Botones",
+              "action": {
+                "type": "navigateTo",
+                "pageId": "buttons"
+              }
+            }
           ]
         },
         {
           "label": "Runtime",
           "icon": "database",
           "children": [
-            { "label": "Referencias dinamicas", "action": { "type": "navigateTo", "pageId": "references" } },
-            { "label": "Queries y preloads", "action": { "type": "navigateTo", "pageId": "queries" } },
-            { "label": "Shell", "action": { "type": "navigateTo", "pageId": "shell" } }
+            {
+              "label": "Referencias dinamicas",
+              "action": {
+                "type": "navigateTo",
+                "pageId": "references"
+              }
+            },
+            {
+              "label": "Queries y preloads",
+              "action": {
+                "type": "navigateTo",
+                "pageId": "queries"
+              }
+            },
+            {
+              "label": "Shell",
+              "action": {
+                "type": "navigateTo",
+                "pageId": "shell"
+              }
+            }
           ]
         }
       ],
@@ -60,84 +105,244 @@
           "type": "button",
           "props": {
             "label": "Recargar usuarios",
-            "icon": "refresh-cw",
-            "variant": "ghost",
+            "action": {
+              "type": "executeOperation",
+              "operationName": "fetchUsers"
+            },
             "color": "neutral",
-            "action": { "type": "executeOperation", "operationName": "fetchUsers" }
+            "variant": "ghost",
+            "icon": "refresh-cw"
           }
         },
         {
           "type": "link",
           "props": {
             "label": "Repositorio",
-            "icon": "external-link",
             "href": "https://github.com",
-            "target": "_blank"
+            "target": "_blank",
+            "icon": "external-link"
           }
         }
       ]
     },
     "sidebar": {
-      "defaultCollapsed": false,
       "items": [
         {
           "label": "Inicio",
           "icon": "home",
-          "action": { "type": "navigateTo", "pageId": "home" }
+          "action": {
+            "type": "navigateTo",
+            "pageId": "home"
+          }
         },
         {
           "label": "Catalogo de nodos",
           "icon": "layout-grid",
           "children": [
-            { "label": "Texto", "action": { "type": "navigateTo", "pageId": "text-nodes" } },
-            { "label": "Contenedores", "action": { "type": "navigateTo", "pageId": "containers" } },
-            { "label": "Imagenes", "action": { "type": "navigateTo", "pageId": "images" } },
-            { "label": "Tablas", "action": { "type": "navigateTo", "pageId": "tables" } },
-            { "label": "Botones", "action": { "type": "navigateTo", "pageId": "buttons" } },
-            { "label": "Enlaces", "action": { "type": "navigateTo", "pageId": "links" } }
+            {
+              "label": "Texto",
+              "icon": "type",
+              "action": {
+                "type": "navigateTo",
+                "pageId": "text-nodes"
+              }
+            },
+            {
+              "label": "Contenedores",
+              "icon": "box",
+              "action": {
+                "type": "navigateTo",
+                "pageId": "containers"
+              }
+            },
+            {
+              "label": "Imagenes",
+              "icon": "image",
+              "action": {
+                "type": "navigateTo",
+                "pageId": "images"
+              }
+            },
+            {
+              "label": "Tablas",
+              "icon": "table",
+              "action": {
+                "type": "navigateTo",
+                "pageId": "tables"
+              }
+            },
+            {
+              "label": "Botones",
+              "icon": "rectangle-ellipsis",
+              "action": {
+                "type": "navigateTo",
+                "pageId": "buttons"
+              }
+            },
+            {
+              "label": "Enlaces",
+              "icon": "link",
+              "action": {
+                "type": "navigateTo",
+                "pageId": "links"
+              }
+            }
           ]
         },
         {
           "label": "Formularios",
           "icon": "sliders-horizontal",
           "children": [
-            { "label": "Campos de formulario", "action": { "type": "navigateTo", "pageId": "form-fields" } },
-            { "label": "Validaciones", "action": { "type": "navigateTo", "pageId": "form-validations" } },
-            { "label": "Submit y reset", "action": { "type": "navigateTo", "pageId": "form-submit" } }
+            {
+              "label": "Campos de formulario",
+              "icon": "form",
+              "action": {
+                "type": "navigateTo",
+                "pageId": "form-fields"
+              }
+            },
+            {
+              "label": "Validaciones",
+              "icon": "list-checks",
+              "action": {
+                "type": "navigateTo",
+                "pageId": "form-validations"
+              }
+            },
+            {
+              "label": "Submit y reset",
+              "icon": "send",
+              "action": {
+                "type": "navigateTo",
+                "pageId": "form-submit"
+              }
+            }
           ]
         },
         {
           "label": "Decorativos y estructurales",
           "icon": "layers",
           "children": [
-            { "label": "Badge, alert, stat, divider", "action": { "type": "navigateTo", "pageId": "decorative-nodes" } },
-            { "label": "Skeleton", "action": { "type": "navigateTo", "pageId": "skeleton-nodes" } },
+            {
+              "label": "Badge, alert, stat, divider",
+              "icon": "tag",
+              "action": {
+                "type": "navigateTo",
+                "pageId": "decorative-nodes"
+              }
+            },
+            {
+              "label": "Skeleton",
+              "icon": "loader-circle",
+              "action": {
+                "type": "navigateTo",
+                "pageId": "skeleton-nodes"
+              }
+            },
             {
               "label": "Overlays",
               "icon": "square",
               "children": [
-                { "label": "Accordion", "action": { "type": "navigateTo", "pageId": "accordion-nodes" } },
-                { "label": "Tabs", "action": { "type": "navigateTo", "pageId": "tabs-nodes" } },
-                { "label": "Modal", "action": { "type": "navigateTo", "pageId": "modal-nodes" } }
+                {
+                  "label": "Accordion",
+                  "icon": "chevrons-down-up",
+                  "action": {
+                    "type": "navigateTo",
+                    "pageId": "accordion-nodes"
+                  }
+                },
+                {
+                  "label": "Tabs",
+                  "icon": "menu",
+                  "action": {
+                    "type": "navigateTo",
+                    "pageId": "tabs-nodes"
+                  }
+                },
+                {
+                  "label": "Modal",
+                  "icon": "square-arrow-out-up-right",
+                  "action": {
+                    "type": "navigateTo",
+                    "pageId": "modal-nodes"
+                  }
+                }
               ]
             },
-            { "label": "Gestor de ficheros", "action": { "type": "navigateTo", "pageId": "file-manager" } }
+            {
+              "label": "Gestor de ficheros",
+              "icon": "folder-open",
+              "action": {
+                "type": "navigateTo",
+                "pageId": "file-manager"
+              }
+            }
           ]
         },
         {
           "label": "Capacidades del runtime",
           "icon": "database",
           "children": [
-            { "label": "Visibilidad condicional", "action": { "type": "navigateTo", "pageId": "visibility" } },
-            { "label": "Referencias dinamicas", "action": { "type": "navigateTo", "pageId": "references" } },
-            { "label": "Queries, preloads y feedback", "action": { "type": "navigateTo", "pageId": "queries" } },
-            { "label": "Navegacion y params", "action": { "type": "navigateTo", "pageId": "navigation" } },
-            { "label": "Repeater", "action": { "type": "navigateTo", "pageId": "repeater" } },
-            { "label": "Tokens de autenticacion", "action": { "type": "navigateTo", "pageId": "auth-tokens" } },
-            { "label": "Shell (header + sidebar)", "icon": "panel-left", "action": { "type": "navigateTo", "pageId": "shell" } }
+            {
+              "label": "Visibilidad condicional",
+              "icon": "eye",
+              "action": {
+                "type": "navigateTo",
+                "pageId": "visibility"
+              }
+            },
+            {
+              "label": "Referencias dinamicas",
+              "icon": "book-marked",
+              "action": {
+                "type": "navigateTo",
+                "pageId": "references"
+              }
+            },
+            {
+              "label": "Queries, preloads y feedback",
+              "icon": "refresh-ccw",
+              "action": {
+                "type": "navigateTo",
+                "pageId": "queries"
+              }
+            },
+            {
+              "label": "Navegacion y params",
+              "icon": "navigation",
+              "action": {
+                "type": "navigateTo",
+                "pageId": "navigation"
+              }
+            },
+            {
+              "label": "Repeater",
+              "icon": "repeat",
+              "action": {
+                "type": "navigateTo",
+                "pageId": "repeater"
+              }
+            },
+            {
+              "label": "Tokens de autenticacion",
+              "icon": "braces",
+              "action": {
+                "type": "navigateTo",
+                "pageId": "auth-tokens"
+              }
+            },
+            {
+              "label": "Shell (header + sidebar)",
+              "icon": "panel-left",
+              "action": {
+                "type": "navigateTo",
+                "pageId": "shell"
+              }
+            }
           ]
         }
-      ]
+      ],
+      "defaultCollapsed": false
     },
     "scrollBehavior": "page"
   },
@@ -2116,7 +2321,12 @@
         {
           "type": "table",
           "props": {
-            "headers": ["Avatar", "Nombre", "Email", "Acciones"],
+            "headers": [
+              "Avatar",
+              "Nombre",
+              "Email",
+              "Acciones"
+            ],
             "rows": {
               "source": "queries.fetchUsers.data",
               "cells": [
@@ -2139,7 +2349,9 @@
                     "action": {
                       "type": "navigateTo",
                       "pageId": "nav-target",
-                      "params": { "userId": "item.id" }
+                      "params": {
+                        "userId": "item.id"
+                      }
                     }
                   }
                 }
@@ -2152,7 +2364,13 @@
               "loading": {
                 "mode": "fallback",
                 "fallback": [
-                  { "type": "skeleton", "props": { "variant": "text", "lines": 3 } }
+                  {
+                    "type": "skeleton",
+                    "props": {
+                      "variant": "text",
+                      "lines": 3
+                    }
+                  }
                 ]
               }
             }
@@ -2207,22 +2425,64 @@
         {
           "type": "table",
           "props": {
-            "headers": ["ID", "Tarea", "Estado"],
+            "headers": [
+              "ID",
+              "Tarea",
+              "Estado"
+            ],
             "pagination": {
               "enabled": true,
               "pageSize": 3,
-              "controls": { "variant": "scroll" }
+              "controls": {
+                "variant": "scroll"
+              }
             },
             "rows": [
-              ["1", "Configurar entorno", "Completada"],
-              ["2", "Disenar API", "Completada"],
-              ["3", "Implementar login", "En progreso"],
-              ["4", "Tests unitarios", "Pendiente"],
-              ["5", "Documentacion", "Pendiente"],
-              ["6", "Revision de codigo", "Pendiente"],
-              ["7", "Deploy staging", "Pendiente"],
-              ["8", "Tests E2E", "Pendiente"],
-              ["9", "Deploy produccion", "Pendiente"]
+              [
+                "1",
+                "Configurar entorno",
+                "Completada"
+              ],
+              [
+                "2",
+                "Disenar API",
+                "Completada"
+              ],
+              [
+                "3",
+                "Implementar login",
+                "En progreso"
+              ],
+              [
+                "4",
+                "Tests unitarios",
+                "Pendiente"
+              ],
+              [
+                "5",
+                "Documentacion",
+                "Pendiente"
+              ],
+              [
+                "6",
+                "Revision de codigo",
+                "Pendiente"
+              ],
+              [
+                "7",
+                "Deploy staging",
+                "Pendiente"
+              ],
+              [
+                "8",
+                "Tests E2E",
+                "Pendiente"
+              ],
+              [
+                "9",
+                "Deploy produccion",
+                "Pendiente"
+              ]
             ]
           }
         }
@@ -3046,7 +3306,9 @@
             },
             {
               "type": "divider",
-              "props": { "variant": "dashed" }
+              "props": {
+                "variant": "dashed"
+              }
             },
             {
               "type": "link",
@@ -3089,7 +3351,10 @@
                 "label": "Icono a la izquierda (default)",
                 "icon": "arrow-right",
                 "iconPosition": "left",
-                "action": { "type": "navigateTo", "pageId": "links" }
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "links"
+                }
               }
             },
             {
@@ -3098,7 +3363,10 @@
                 "label": "Icono a la derecha",
                 "icon": "arrow-right",
                 "iconPosition": "right",
-                "action": { "type": "navigateTo", "pageId": "links" }
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "links"
+                }
               }
             }
           ]
@@ -3567,7 +3835,9 @@
                     "action": {
                       "type": "executeOperation",
                       "operationName": "createPost",
-                      "body": { "country": "forms.fieldsDemo.countryField" }
+                      "body": {
+                        "country": "forms.fieldsDemo.countryField"
+                      }
                     }
                   }
                 }
@@ -3582,7 +3852,9 @@
               "queryStateFeedback": {
                 "query": "createPost",
                 "states": {
-                  "idle": { "mode": "hide" }
+                  "idle": {
+                    "mode": "hide"
+                  }
                 }
               }
             },
@@ -3979,7 +4251,10 @@
                     "multiple": false,
                     "validations": {
                       "accept": {
-                        "value": ["image/jpeg", "image/png"],
+                        "value": [
+                          "image/jpeg",
+                          "image/png"
+                        ],
                         "message": "Solo JPG o PNG"
                       },
                       "maxFileSize": {
@@ -4016,7 +4291,9 @@
                     "fieldId": "docsField",
                     "label": "Documentos adjuntos",
                     "validations": {
-                      "required": { "value": true },
+                      "required": {
+                        "value": true
+                      },
                       "maxFiles": {
                         "value": 3,
                         "message": "Maximo {{value}} ficheros"
@@ -4057,7 +4334,10 @@
                     "capture": "environment",
                     "validations": {
                       "accept": {
-                        "value": ["image/jpeg", "image/png"]
+                        "value": [
+                          "image/jpeg",
+                          "image/png"
+                        ]
                       }
                     }
                   }
@@ -4145,10 +4425,22 @@
                         "label": "Region",
                         "tooltip": "Selecciona la comunidad autonoma",
                         "items": [
-                          { "label": "Madrid", "value": "mad" },
-                          { "label": "Cataluna", "value": "cat" },
-                          { "label": "Andalucia", "value": "and" },
-                          { "label": "Pais Vasco", "value": "pvs" }
+                          {
+                            "label": "Madrid",
+                            "value": "mad"
+                          },
+                          {
+                            "label": "Cataluna",
+                            "value": "cat"
+                          },
+                          {
+                            "label": "Andalucia",
+                            "value": "and"
+                          },
+                          {
+                            "label": "Pais Vasco",
+                            "value": "pvs"
+                          }
                         ]
                       }
                     }
@@ -4692,8 +4984,14 @@
                     "label": "Tipo de cliente",
                     "optionLayout": "inline",
                     "items": [
-                      { "label": "Particular", "value": "individual" },
-                      { "label": "Empresa", "value": "company" }
+                      {
+                        "label": "Particular",
+                        "value": "individual"
+                      },
+                      {
+                        "label": "Empresa",
+                        "value": "company"
+                      }
                     ]
                   }
                 },
@@ -6771,11 +7069,22 @@
                 "label": "Etiquetas (para arrayContains, mas abajo)",
                 "optionLayout": "inline",
                 "items": [
-                  { "label": "Urgente", "value": "urgent" },
-                  { "label": "Baja prioridad", "value": "low" },
-                  { "label": "Revision", "value": "review" }
+                  {
+                    "label": "Urgente",
+                    "value": "urgent"
+                  },
+                  {
+                    "label": "Baja prioridad",
+                    "value": "low"
+                  },
+                  {
+                    "label": "Revision",
+                    "value": "review"
+                  }
                 ],
-                "defaultValue": ["urgent"]
+                "defaultValue": [
+                  "urgent"
+                ]
               }
             }
           ]
@@ -6798,7 +7107,10 @@
         },
         {
           "type": "container",
-          "props": { "variant": "card", "gap": "sm" },
+          "props": {
+            "variant": "card",
+            "gap": "sm"
+          },
           "children": [
             {
               "type": "paragraph",
@@ -6806,10 +7118,18 @@
                 "text": "Sin itemField, sobre el array de etiquetas de arriba: { \"reference\": \"forms.visibilityForm.tags\", \"operator\": \"arrayContains\", \"value\": \"urgent\" }"
               }
             },
-            { "type": "divider", "props": { "variant": "dashed" } },
+            {
+              "type": "divider",
+              "props": {
+                "variant": "dashed"
+              }
+            },
             {
               "type": "paragraph",
-              "props": { "text": "Tienes la etiqueta \"Urgente\" seleccionada.", "icon": "check-circle" },
+              "props": {
+                "text": "Tienes la etiqueta \"Urgente\" seleccionada.",
+                "icon": "check-circle"
+              },
               "visibility": {
                 "reference": "forms.visibilityForm.tags",
                 "operator": "arrayContains",
@@ -6818,7 +7138,10 @@
             },
             {
               "type": "paragraph",
-              "props": { "text": "No tienes la etiqueta \"Urgente\" seleccionada (negate: true sobre la misma condicion).", "icon": "circle" },
+              "props": {
+                "text": "No tienes la etiqueta \"Urgente\" seleccionada (negate: true sobre la misma condicion).",
+                "icon": "circle"
+              },
               "visibility": {
                 "reference": "forms.visibilityForm.tags",
                 "operator": "arrayContains",
@@ -6830,7 +7153,10 @@
         },
         {
           "type": "container",
-          "props": { "variant": "card", "gap": "sm" },
+          "props": {
+            "variant": "card",
+            "gap": "sm"
+          },
           "children": [
             {
               "type": "paragraph",
@@ -6838,7 +7164,12 @@
                 "text": "Con itemField, sobre queries.fetchUsers.data (array de objetos): { \"reference\": \"queries.fetchUsers.data\", \"operator\": \"arrayContains\", \"itemField\": \"address.city\", \"value\": \"Gwenborough\" }"
               }
             },
-            { "type": "divider", "props": { "variant": "dashed" } },
+            {
+              "type": "divider",
+              "props": {
+                "variant": "dashed"
+              }
+            },
             {
               "type": "paragraph",
               "props": {
@@ -6847,7 +7178,10 @@
             },
             {
               "type": "paragraph",
-              "props": { "text": "Al menos un usuario vive en Gwenborough.", "icon": "map-pin" },
+              "props": {
+                "text": "Al menos un usuario vive en Gwenborough.",
+                "icon": "map-pin"
+              },
               "visibility": {
                 "reference": "queries.fetchUsers.data",
                 "operator": "arrayContains",
@@ -6875,7 +7209,10 @@
         },
         {
           "type": "container",
-          "props": { "variant": "card", "gap": "sm" },
+          "props": {
+            "variant": "card",
+            "gap": "sm"
+          },
           "children": [
             {
               "type": "paragraph",
@@ -6883,7 +7220,12 @@
                 "text": "{ \"visibility\": { \"operator\": \"or\", \"conditions\": [ { \"reference\": \"forms.visibilityForm.userType\", \"operator\": \"equals\", \"value\": \"empresa\" }, { \"reference\": \"forms.visibilityForm.searchQuery\", \"operator\": \"isTruthy\" } ] } }"
               }
             },
-            { "type": "divider", "props": { "variant": "dashed" } },
+            {
+              "type": "divider",
+              "props": {
+                "variant": "dashed"
+              }
+            },
             {
               "type": "paragraph",
               "props": {
@@ -6893,8 +7235,15 @@
               "visibility": {
                 "operator": "or",
                 "conditions": [
-                  { "reference": "forms.visibilityForm.userType", "operator": "equals", "value": "empresa" },
-                  { "reference": "forms.visibilityForm.searchQuery", "operator": "isTruthy" }
+                  {
+                    "reference": "forms.visibilityForm.userType",
+                    "operator": "equals",
+                    "value": "empresa"
+                  },
+                  {
+                    "reference": "forms.visibilityForm.searchQuery",
+                    "operator": "isTruthy"
+                  }
                 ]
               }
             }
@@ -7305,7 +7654,13 @@
           "children": [
             {
               "type": "container",
-              "props": { "columns": { "base": 1, "sm": 2 }, "gap": "sm" },
+              "props": {
+                "columns": {
+                  "base": 1,
+                  "sm": 2
+                },
+                "gap": "sm"
+              },
               "children": [
                 {
                   "type": "input",
@@ -7335,12 +7690,18 @@
             },
             {
               "type": "divider",
-              "props": { "variant": "dashed" }
+              "props": {
+                "variant": "dashed"
+              }
             },
             {
               "type": "table",
               "props": {
-                "headers": ["Formatter", "Placeholder", "Resultado"],
+                "headers": [
+                  "Formatter",
+                  "Placeholder",
+                  "Resultado"
+                ],
                 "rows": [
                   [
                     "number",
@@ -7416,7 +7777,10 @@
         },
         {
           "type": "container",
-          "props": { "variant": "card", "gap": "sm" },
+          "props": {
+            "variant": "card",
+            "gap": "sm"
+          },
           "children": [
             {
               "type": "heading",
@@ -7427,7 +7791,9 @@
             },
             {
               "type": "divider",
-              "props": { "variant": "dashed" }
+              "props": {
+                "variant": "dashed"
+              }
             },
             {
               "type": "paragraph",
@@ -7437,7 +7803,9 @@
             },
             {
               "type": "divider",
-              "props": { "variant": "dashed" }
+              "props": {
+                "variant": "dashed"
+              }
             },
             {
               "type": "heading",
@@ -7902,7 +8270,9 @@
             },
             {
               "type": "divider",
-              "props": { "variant": "dashed" }
+              "props": {
+                "variant": "dashed"
+              }
             },
             {
               "type": "paragraph",
@@ -7921,15 +8291,23 @@
         {
           "type": "table",
           "props": {
-            "headers": ["ID", "Titulo"],
+            "headers": [
+              "ID",
+              "Titulo"
+            ],
             "pagination": {
               "enabled": true,
               "pageSize": 3,
-              "controls": { "variant": "previousNext" }
+              "controls": {
+                "variant": "previousNext"
+              }
             },
             "rows": {
               "source": "queries.fetchPosts.data",
-              "cells": ["item.id", "item.title"]
+              "cells": [
+                "item.id",
+                "item.title"
+              ]
             }
           },
           "queryStateFeedback": {
@@ -7938,7 +8316,13 @@
               "loading": {
                 "mode": "fallback",
                 "fallback": [
-                  { "type": "skeleton", "props": { "variant": "text", "lines": 3 } }
+                  {
+                    "type": "skeleton",
+                    "props": {
+                      "variant": "text",
+                      "lines": 3
+                    }
+                  }
                 ]
               }
             }
@@ -8764,7 +9148,13 @@
               "loading": {
                 "mode": "fallback",
                 "fallback": [
-                  { "type": "skeleton", "props": { "variant": "text", "lines": 3 } }
+                  {
+                    "type": "skeleton",
+                    "props": {
+                      "variant": "text",
+                      "lines": 3
+                    }
+                  }
                 ]
               }
             }
@@ -9697,7 +10087,9 @@
           "queryStateFeedback": {
             "query": "fetchTodos",
             "states": {
-              "idle": { "mode": "hide" }
+              "idle": {
+                "mode": "hide"
+              }
             }
           }
         }
@@ -9708,14 +10100,42 @@
       "layout": [
         {
           "type": "container",
-          "props": { "direction": "row", "justify": "between", "align": "center" },
+          "props": {
+            "direction": "row",
+            "justify": "between",
+            "align": "center"
+          },
           "children": [
-            { "type": "heading", "props": { "text": "Shell de aplicacion", "level": 1 } },
-            { "type": "button", "props": { "label": "Volver al inicio", "variant": "ghost", "action": { "type": "navigateTo", "pageId": "home" } } }
+            {
+              "type": "heading",
+              "props": {
+                "text": "Shell de aplicacion",
+                "level": 1
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Volver al inicio",
+                "variant": "ghost",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "home"
+                }
+              }
+            }
           ]
         },
-        { "type": "divider" },
-        { "type": "heading", "props": { "text": "shell.header", "level": 2 } },
+        {
+          "type": "divider"
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "shell.header",
+            "level": 2
+          }
+        },
         {
           "type": "paragraph",
           "props": {
@@ -9724,10 +10144,24 @@
         },
         {
           "type": "container",
-          "props": { "variant": "card", "gap": "sm" },
+          "props": {
+            "variant": "card",
+            "gap": "sm"
+          },
           "children": [
-            { "type": "heading", "props": { "text": "Config real de esta app de documentacion", "level": 3 } },
-            { "type": "divider", "props": { "variant": "dashed" } },
+            {
+              "type": "heading",
+              "props": {
+                "text": "Config real de esta app de documentacion",
+                "level": 3
+              }
+            },
+            {
+              "type": "divider",
+              "props": {
+                "variant": "dashed"
+              }
+            },
             {
               "type": "paragraph",
               "props": {
@@ -9736,41 +10170,97 @@
             }
           ]
         },
-        { "type": "heading", "props": { "text": "Contrato de menuItem", "level": 3 } },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Contrato de menuItem",
+            "level": 3
+          }
+        },
         {
           "type": "table",
           "props": {
-            "headers": ["Campo", "Tipo", "Notas"],
+            "headers": [
+              "Campo",
+              "Tipo",
+              "Notas"
+            ],
             "rows": [
-              ["label", "string, obligatorio", "referencia de texto dinamica (literal, referencia o interpolacion)"],
-              ["icon", "string, opcional", "catalogo Lucide; si no resuelve se ignora en silencio"],
-              ["visibility", "Visibility, opcional", "mismo contrato transversal, sin soporte de item.*"],
-              ["href", "string, condicional", "mismo contrato que link.props.href"],
-              ["action", "navigateTo | goBack, condicional", "mismo contrato que link.props.action"],
-              ["children", "menuItem[], condicional", "solo en el nivel raiz, maximo un nivel de profundidad"]
+              [
+                "label",
+                "string, obligatorio",
+                "referencia de texto dinamica (literal, referencia o interpolacion)"
+              ],
+              [
+                "icon",
+                "string, opcional",
+                "catalogo Lucide; si no resuelve se ignora en silencio"
+              ],
+              [
+                "visibility",
+                "Visibility, opcional",
+                "mismo contrato transversal, sin soporte de item.*"
+              ],
+              [
+                "href",
+                "string, condicional",
+                "mismo contrato que link.props.href"
+              ],
+              [
+                "action",
+                "navigateTo | goBack, condicional",
+                "mismo contrato que link.props.action"
+              ],
+              [
+                "children",
+                "menuItem[], condicional",
+                "solo en el nivel raiz, maximo un nivel de profundidad"
+              ]
             ]
           }
         },
         {
           "type": "paragraph",
-          "props": { "text": "href, action y children son mutuamente excluyentes: cada menuItem declara exactamente uno de los tres." }
+          "props": {
+            "text": "href, action y children son mutuamente excluyentes: cada menuItem declara exactamente uno de los tres."
+          }
         },
-        { "type": "heading", "props": { "text": "Desplegable de menuItem.children", "level": 3 } },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Desplegable de menuItem.children",
+            "level": 3
+          }
+        },
         {
           "type": "paragraph",
           "props": {
             "text": "Prueba en vivo el desplegable Nodos o Runtime de la cabecera de esta pagina: se abre con click/tap (role=menu, aria-haspopup, aria-expanded), se cierra con click fuera, con Esc (devolviendo el foco al trigger) o al seleccionar un item, y soporta navegacion con flecha arriba/abajo, Home/End y Enter/Espacio."
           }
         },
-        { "type": "heading", "props": { "text": "Estado activo de navegacion", "level": 3 } },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Estado activo de navegacion",
+            "level": 3
+          }
+        },
         {
           "type": "paragraph",
           "props": {
             "text": "Es un valor derivado en cada render: el menuItem (raiz o hijo) cuyo action.navigateTo.pageId coincide con la pagina visible se marca automaticamente como activo; si el item activo esta dentro de children, su padre tambien se marca activo aunque no sea navegable. Navega a Inicio y observa el resaltado del item Inicio en la cabecera y en el sidebar."
           }
         },
-        { "type": "divider" },
-        { "type": "heading", "props": { "text": "shell.sidebar", "level": 2 } },
+        {
+          "type": "divider"
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "shell.sidebar",
+            "level": 2
+          }
+        },
         {
           "type": "paragraph",
           "props": {
@@ -9779,10 +10269,24 @@
         },
         {
           "type": "container",
-          "props": { "variant": "card", "gap": "sm" },
+          "props": {
+            "variant": "card",
+            "gap": "sm"
+          },
           "children": [
-            { "type": "heading", "props": { "text": "Config real de esta app de documentacion (extracto)", "level": 3 } },
-            { "type": "divider", "props": { "variant": "dashed" } },
+            {
+              "type": "heading",
+              "props": {
+                "text": "Config real de esta app de documentacion (extracto)",
+                "level": 3
+              }
+            },
+            {
+              "type": "divider",
+              "props": {
+                "variant": "dashed"
+              }
+            },
             {
               "type": "paragraph",
               "props": {
@@ -9791,37 +10295,91 @@
             }
           ]
         },
-        { "type": "heading", "props": { "text": "Contrato de sidebarItem", "level": 3 } },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Contrato de sidebarItem",
+            "level": 3
+          }
+        },
         {
           "type": "table",
           "props": {
-            "headers": ["Campo", "Tipo", "Notas"],
+            "headers": [
+              "Campo",
+              "Tipo",
+              "Notas"
+            ],
             "rows": [
-              ["label", "string, obligatorio", "referencia de texto dinamica"],
-              ["icon", "string, opcional", "catalogo Lucide; sin icon en modo rail muestra la inicial del label"],
-              ["visibility", "Visibility, opcional", "sin soporte de item.*"],
-              ["href", "string, condicional", "mismo contrato que link.props.href"],
-              ["action", "navigateTo | goBack, condicional", "mismo contrato que link.props.action"],
-              ["children", "sidebarItem[], condicional", "recursivo, sin limite de profundidad (a diferencia de menuItem)"]
+              [
+                "label",
+                "string, obligatorio",
+                "referencia de texto dinamica"
+              ],
+              [
+                "icon",
+                "string, opcional",
+                "catalogo Lucide; sin icon en modo rail muestra la inicial del label"
+              ],
+              [
+                "visibility",
+                "Visibility, opcional",
+                "sin soporte de item.*"
+              ],
+              [
+                "href",
+                "string, condicional",
+                "mismo contrato que link.props.href"
+              ],
+              [
+                "action",
+                "navigateTo | goBack, condicional",
+                "mismo contrato que link.props.action"
+              ],
+              [
+                "children",
+                "sidebarItem[], condicional",
+                "recursivo, sin limite de profundidad (a diferencia de menuItem)"
+              ]
             ]
           }
         },
-        { "type": "heading", "props": { "text": "Modo rail y flyout", "level": 3 } },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Modo rail y flyout",
+            "level": 3
+          }
+        },
         {
           "type": "paragraph",
           "props": {
             "text": "El propio sidebar expone, antes de la lista de items, un control para colapsar toda la barra a modo rail (solo iconos). Pruebalo en el sidebar de esta pagina: en rail, una rama con children (por ejemplo Decorativos y estructurales) abre sus hijos como un flyout flotante al hacer click sobre su icono, en vez de expandirse inline."
           }
         },
-        { "type": "heading", "props": { "text": "Auto-expansion de ancestros", "level": 3 } },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Auto-expansion de ancestros",
+            "level": 3
+          }
+        },
         {
           "type": "paragraph",
           "props": {
             "text": "Navega a Accordion desde el catalogo de nodos: las ramas Decorativos y estructurales y Overlays se expanden automaticamente en el sidebar para mantener visible el item activo, sin colapsar ninguna rama que ya tuvieras abierta manualmente."
           }
         },
-        { "type": "divider" },
-        { "type": "heading", "props": { "text": "shell.scrollBehavior", "level": 2 } },
+        {
+          "type": "divider"
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "shell.scrollBehavior",
+            "level": 2
+          }
+        },
         {
           "type": "paragraph",
           "props": {
@@ -9831,19 +10389,42 @@
         {
           "type": "table",
           "props": {
-            "headers": ["Valor", "Comportamiento"],
+            "headers": [
+              "Valor",
+              "Comportamiento"
+            ],
             "rows": [
-              ["page (default)", "la pagina completa hace scroll; el header queda sticky arriba"],
-              ["fixed", "header y sidebar quedan fijos ocupando el alto del contenedor de montaje; solo el area de contenido de la pagina activa hace scroll interno"]
+              [
+                "page (default)",
+                "la pagina completa hace scroll; el header queda sticky arriba"
+              ],
+              [
+                "fixed",
+                "header y sidebar quedan fijos ocupando el alto del contenedor de montaje; solo el area de contenido de la pagina activa hace scroll interno"
+              ]
             ]
           }
         },
         {
           "type": "container",
-          "props": { "variant": "card", "gap": "sm" },
+          "props": {
+            "variant": "card",
+            "gap": "sm"
+          },
           "children": [
-            { "type": "heading", "props": { "text": "JSON de ejemplo con fixed", "level": 3 } },
-            { "type": "divider", "props": { "variant": "dashed" } },
+            {
+              "type": "heading",
+              "props": {
+                "text": "JSON de ejemplo con fixed",
+                "level": 3
+              }
+            },
+            {
+              "type": "divider",
+              "props": {
+                "variant": "dashed"
+              }
+            },
             {
               "type": "paragraph",
               "props": {
@@ -9858,8 +10439,16 @@
             }
           ]
         },
-        { "type": "divider" },
-        { "type": "heading", "props": { "text": "Fuera de alcance (v1)", "level": 2 } },
+        {
+          "type": "divider"
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Fuera de alcance (v1)",
+            "level": 2
+          }
+        },
         {
           "type": "list",
           "props": {

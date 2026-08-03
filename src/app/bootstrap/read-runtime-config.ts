@@ -8,7 +8,11 @@ import {
 export type { RuntimeConfig, RuntimeConfigError, RuntimePageConfig }
 
 interface ReadRuntimeConfigOptions {
-  devConfig: RuntimeConfig
+  // Raw, pre-validation config (same as data-config's parsed JSON) — always run through
+  // `validateRuntimeConfig` below, which accepts `unknown` and normalizes shorthand forms (e.g.
+  // preloads keyed by operation name) into the `RuntimeConfig` shape. Typing this as `RuntimeConfig`
+  // itself would be describing the output, not the input.
+  devConfig: unknown
   isDevelopment: boolean
   rootElement: HTMLElement | null
 }

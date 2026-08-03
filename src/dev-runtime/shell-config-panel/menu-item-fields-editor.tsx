@@ -20,6 +20,12 @@ interface MenuItemFieldsEditorProps {
   onChange: (next: MenuItemConfig | MenuItemChildConfig) => void
   /** Distinguishes rows across the form for accessible field labels (e.g. "Elemento de menú 1"). */
   labelText: string
+  /** Called right after switching this item into "Con desplegable" mode, once its first child has
+   * been seeded — lets the caller expand that brand-new child row (every row starts collapsed by
+   * default, but a freshly created one should open right away), the same as `addChild`. Optional
+   * so a caller that doesn't track collapse state (there is none today, but keeps this component
+   * usable standalone) doesn't have to pass a no-op. */
+  onEnterChildrenMode?: () => void
 }
 
 /**
@@ -27,7 +33,7 @@ interface MenuItemFieldsEditorProps {
  * selector (none/href/action/children), the active mode's own fields, and `visibility` — reused
  * identically by the root `menu` list and by every open `children` sublist (0122-T5).
  */
-export function MenuItemFieldsEditor({ item, allowChildren, onChange, labelText }: MenuItemFieldsEditorProps) {
+export function MenuItemFieldsEditor({ item, allowChildren, onChange, labelText, onEnterChildrenMode }: MenuItemFieldsEditorProps) {
   const mode = computeMenuItemMode(item)
   const modeOptions: MenuItemMode[] = allowChildren ? ['none', 'href', 'action', 'children'] : ['none', 'href', 'action']
 
@@ -62,6 +68,7 @@ export function MenuItemFieldsEditor({ item, allowChildren, onChange, labelText 
     // menuItemChild needs exactly one of href/action/children) — seeded with an empty `href`,
     // same convention `addItem`/`addChild` below use for a freshly added root item.
     onChange({ ...base, children: [{ label: NEW_CHILD_LABEL, href: '' }] } as MenuItemConfig)
+    onEnterChildrenMode?.()
   }
 
   return (

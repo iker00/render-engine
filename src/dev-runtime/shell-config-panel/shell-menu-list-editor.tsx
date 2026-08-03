@@ -1,19 +1,22 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
+import { ChevronDown, ChevronRight, ListTree } from 'lucide-react'
 import type { RuntimeConfigError } from '../../config/runtime-config'
 import type { MenuItemChildConfig, MenuItemConfig } from '../../config/runtime-config-types'
 import { CommitRejectionBanner } from '../commit-rejection-banner'
 import type { CommitCanvasMutationResult } from '../layout-canvas/layout-canvas-commit'
-import { ShellDndSortableList, ShellDndSortableRow } from './shell-config-panel-dnd'
+import { ShellTreeDndContext, ShellTreeDraggableRow, ShellTreeGapZone } from './shell-config-panel-dnd'
+import type { useShellCollapseState } from './shell-collapse-state'
+import type { ShellTreeDestination } from './shell-tree-mutations'
 import { MenuItemFieldsEditor } from './menu-item-fields-editor'
 
 const NEW_ROOT_ITEM_LABEL = 'Nuevo elemento'
 
-function reorder<T>(list: readonly T[], sourceIndex: number, targetIndex: number): T[] {
-  const next = list.slice()
-  const [moved] = next.splice(sourceIndex, 1)
-  next.splice(targetIndex, 0, moved)
-  return next
-}
+/**
+ * Shared collapse controls handed down from `ShellConfigPanel`'s single `useShellCollapseState()`
+ * instance for the whole `shell.header.menu` tree (0125-T2/T4). `ShellMenuListEditor` forwards it
+ * to `ShellMenuChildrenListEditor` unchanged — one hook instance covers both levels.
+ */
+type ShellCollapseControls = ReturnType<typeof useShellCollapseState>
 
 // Per-row commit feedback (0122-T5's acceptance criterion: a rejected edit — e.g. a blank
 // `label` — must keep the user's own attempted value on screen and show the same `role="alert"`
@@ -44,22 +47,64 @@ function usePendingRowRejections() {
   return { pending, record }
 }
 
+interface RowDisclosureButtonProps {
+  path: string
+  collapsed: boolean
+  label: string
+  icon: string | undefined
+  labelText: string
+  onToggle: () => void
+}
+
+/**
+ * Combined collapse toggle + name (0125, post-implementation simplification): a single button
+ * that both shows this row's name (so a collapsed row still reads at a glance) and toggles it —
+ * clicking the name itself opens/closes the row, there is no separate icon-only button and no
+ * separate read-only summary box below. Rendered as this row's `headerContent`, right beside the
+ * drag handle in `ShellTreeDraggableRow`, so the name a user drags by is also the name they click.
+ */
+function RowDisclosureButton({ path, collapsed, label, icon, labelText, onToggle }: RowDisclosureButtonProps) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-expanded={!collapsed}
+      aria-label={`${collapsed ? 'Expandir' : 'Colapsar'} ${labelText}`}
+      data-testid={`menu-item-collapse-toggle-${path}`}
+      className="flex min-w-0 items-center gap-2 truncate rounded border border-gray-300 px-2 py-1 text-xs text-gray-700 hover:bg-gray-100"
+    >
+      {collapsed ? <ChevronRight size={14} aria-hidden="true" /> : <ChevronDown size={14} aria-hidden="true" />}
+      {icon && <span aria-hidden="true">{icon}</span>}
+      <span className="truncate">{label}</span>
+    </button>
+  )
+}
+
 interface ShellMenuChildrenListEditorProps {
   parentIndex: number
   items: MenuItemChildConfig[]
   onCommitChildren: (nextChildren: MenuItemChildConfig[]) => CommitCanvasMutationResult
+  collapse: ShellCollapseControls
 }
 
 /**
  * `children` sublist of a single root `menuItem` (0122-T5). `menuItemChild` never accepts its
- * own `children` (0122-T1) — every row here uses `allowChildren={false}`. The schema requires at
- * least one child (`z.array(menuItemChildSchema).nonempty()`), so "Quitar" is disabled at the
- * last remaining entry rather than letting the array go empty (same `minItems` pattern the
- * generic `ArrayPropertyField` already uses for other schema-enforced minimums).
+ * own `children` (0122-T1) — every row here uses `allowChildren={false}` and never shows the
+ * branch indicator. The schema requires at least one child (`z.array(menuItemChildSchema).nonempty()`),
+ * so "Quitar" is disabled at the last remaining entry rather than letting the array go empty
+ * (same `minItems` pattern the generic `ArrayPropertyField` already uses for other
+ * schema-enforced minimums).
+ *
+ * Drag/drop (0125-T5): this list no longer owns its own `DndContext` — it only renders
+ * `ShellTreeDraggableRow`/`ShellTreeGapZone` inside the single tree-wide `ShellTreeDndContext`
+ * `ShellMenuListEditor` mounts once for the whole `shell.header.menu` tree. Reordering,
+ * nesting and cross-level moves are all resolved by `moveShellSubtree`/`isValidShellTreeDestination`
+ * one level up, in `ShellConfigPanel`'s `handleMoveMenuItem`/`isValidMenuDestination` — this
+ * component has no move logic of its own.
  */
-export function ShellMenuChildrenListEditor({ parentIndex, items, onCommitChildren }: ShellMenuChildrenListEditorProps) {
+export function ShellMenuChildrenListEditor({ parentIndex, items, onCommitChildren, collapse }: ShellMenuChildrenListEditorProps) {
   const canRemove = items.length > 1
-  const dndContextId = `shell-menu-children-${parentIndex}`
+  const parentPath = String(parentIndex)
   const { pending, record } = usePendingRowRejections()
 
   function updateChild(index: number, nextChild: MenuItemChildConfig) {
@@ -77,45 +122,73 @@ export function ShellMenuChildrenListEditor({ parentIndex, items, onCommitChildr
     // Same `refineMenuItemShape` constraint as the root list's `addItem`: a fresh entry needs
     // exactly one of href/action/children to be schema-valid, so it's seeded with an empty href.
     onCommitChildren([...items, { label: NEW_ROOT_ITEM_LABEL, href: '' }])
+    // Every row starts collapsed by default, but a freshly created one should open right away so
+    // its fields are ready to fill in without an extra click.
+    collapse.expand(`${parentPath}.${items.length}`)
   }
 
-  return (
-    <fieldset className="ml-4 flex flex-col gap-2 rounded border border-gray-200 p-2">
-      <legend className="px-1 text-xs font-medium text-gray-700">Elementos del desplegable</legend>
-      <ShellDndSortableList dndContextId={dndContextId} onReorder={(source, target) => onCommitChildren(reorder(items, source, target))}>
-        {items.map((child, index) => {
-          const pendingEntry = pending[index]
-          const displayedChild = (pendingEntry?.value ?? child) as MenuItemChildConfig
+  const rows: ReactNode[] = [<ShellTreeGapZone key="gap-0" parentPath={parentPath} index={0} />]
 
-          return (
-            <ShellDndSortableRow key={index} index={index} dragHandleLabel={`Reordenar elemento de desplegable ${index + 1}`}>
-              <div className="flex items-center justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => removeChild(index)}
-                  disabled={!canRemove}
-                  aria-label={`Quitar elemento de desplegable ${index + 1}`}
-                  className="rounded border border-gray-300 px-2 py-1 text-xs text-gray-600 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  Quitar
-                </button>
-              </div>
-              <MenuItemFieldsEditor
-                item={displayedChild}
-                allowChildren={false}
-                onChange={(next) => updateChild(index, next)}
-                labelText={`Elemento de desplegable ${index + 1}`}
-              />
-              {pendingEntry && (
-                <CommitRejectionBanner
-                  dataTestId={`shell-menu-children-${parentIndex}-${index}-error`}
-                  error={pendingEntry.error}
-                />
-              )}
-            </ShellDndSortableRow>
-          )
-        })}
-      </ShellDndSortableList>
+  items.forEach((child, index) => {
+    const path = `${parentIndex}.${index}`
+    const pendingEntry = pending[index]
+    const displayedChild = (pendingEntry?.value ?? child) as MenuItemChildConfig
+    const collapsed = collapse.isCollapsed(path)
+    const labelText = `Elemento de desplegable ${index + 1}`
+
+    const headerContent = (
+      <div className="flex min-w-0 flex-1 items-center justify-between gap-2">
+        <RowDisclosureButton
+          path={path}
+          collapsed={collapsed}
+          label={displayedChild.label}
+          icon={displayedChild.icon}
+          labelText={labelText}
+          onToggle={() => collapse.toggleCollapse(path)}
+        />
+        <button
+          type="button"
+          onClick={() => removeChild(index)}
+          disabled={!canRemove}
+          aria-label={`Quitar elemento de desplegable ${index + 1}`}
+          className="shrink-0 rounded border border-gray-300 px-2 py-1 text-xs text-gray-600 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          Quitar
+        </button>
+      </div>
+    )
+
+    rows.push(
+      <ShellTreeDraggableRow
+        key={`row-${index}`}
+        path={path}
+        dragHandleLabel={`Reordenar elemento de desplegable ${index + 1}`}
+        headerContent={headerContent}
+      >
+        {!collapsed && (
+          <MenuItemFieldsEditor
+            item={displayedChild}
+            allowChildren={false}
+            onChange={(next) => updateChild(index, next)}
+            labelText={labelText}
+          />
+        )}
+        {pendingEntry && (
+          <CommitRejectionBanner
+            dataTestId={`shell-menu-children-${parentIndex}-${index}-error`}
+            error={pendingEntry.error}
+          />
+        )}
+      </ShellTreeDraggableRow>,
+    )
+    rows.push(<ShellTreeGapZone key={`gap-${index + 1}`} parentPath={parentPath} index={index + 1} />)
+  })
+
+  return (
+    <fieldset className="ml-2 flex flex-col gap-2 border-l border-gray-200 pl-4">
+      <div data-testid={`shell-dnd-list-shell-menu-children-${parentIndex}`} className="flex flex-col gap-2">
+        {rows}
+      </div>
       <button
         type="button"
         onClick={addChild}
@@ -131,10 +204,21 @@ export function ShellMenuChildrenListEditor({ parentIndex, items, onCommitChildr
 interface ShellMenuListEditorProps {
   menu: MenuItemConfig[]
   onCommitMenu: (nextMenu: MenuItemConfig[]) => CommitCanvasMutationResult
+  collapse: ShellCollapseControls
+  onMoveItem: (sourcePath: string, destination: ShellTreeDestination) => void
+  isValidDestination: (sourcePath: string, destination: ShellTreeDestination) => boolean
 }
 
-/** Root `shell.header.menu` list editor: reorder by drag, add/remove entries, expand `children`. */
-export function ShellMenuListEditor({ menu, onCommitMenu }: ShellMenuListEditorProps) {
+/**
+ * Root `shell.header.menu` list editor: add/remove entries, expand `children`, collapse/expand
+ * each row's own field editor independently (0125-T4), and — since 0125-T5 — drag to reorder,
+ * nest as a child, or move across levels (root <-> a parent's `children`) capped at `menuItem`'s
+ * one-level nesting limit. Mounts the **single** `ShellTreeDndContext` for the whole menu tree:
+ * `ShellMenuChildrenListEditor` renders its rows/gaps inside this same context rather than
+ * mounting one of its own, so a drag can resolve to any `gap`/`nest` zone anywhere in the tree,
+ * not just within its own level.
+ */
+export function ShellMenuListEditor({ menu, onCommitMenu, collapse, onMoveItem, isValidDestination }: ShellMenuListEditorProps) {
   const { pending, record } = usePendingRowRejections()
 
   function updateItem(index: number, nextItem: MenuItemConfig) {
@@ -149,46 +233,85 @@ export function ShellMenuListEditor({ menu, onCommitMenu }: ShellMenuListEditorP
 
   function addItem() {
     onCommitMenu([...menu, { label: NEW_ROOT_ITEM_LABEL, href: '' }])
+    // Every row starts collapsed by default, but a freshly created one should open right away so
+    // its fields are ready to fill in without an extra click.
+    collapse.expand(String(menu.length))
   }
+
+  const rows: ReactNode[] = [<ShellTreeGapZone key="gap-0" parentPath="" index={0} />]
+
+  menu.forEach((item, index) => {
+    const path = String(index)
+    const pendingEntry = pending[index]
+    const displayedItem = (pendingEntry?.value ?? item) as MenuItemConfig
+    const collapsed = collapse.isCollapsed(path)
+    const labelText = `Elemento de menú ${index + 1}`
+    const hasChildren = displayedItem.children !== undefined
+
+    const headerContent = (
+      <div className="flex min-w-0 flex-1 items-center justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-2">
+          <RowDisclosureButton
+            path={path}
+            collapsed={collapsed}
+            label={displayedItem.label}
+            icon={displayedItem.icon}
+            labelText={labelText}
+            onToggle={() => collapse.toggleCollapse(path)}
+          />
+          {hasChildren && (
+            <ListTree size={14} aria-hidden="true" data-testid={`menu-item-branch-indicator-${path}`} className="shrink-0 text-gray-400" />
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={() => removeItem(index)}
+          aria-label={`Quitar elemento de menú ${index + 1}`}
+          className="shrink-0 rounded border border-gray-300 px-2 py-1 text-xs text-gray-600 hover:bg-gray-100"
+        >
+          Quitar
+        </button>
+      </div>
+    )
+
+    rows.push(
+      <ShellTreeDraggableRow
+        key={`row-${index}`}
+        path={path}
+        dragHandleLabel={`Reordenar elemento de menú ${index + 1}`}
+        headerContent={headerContent}
+      >
+        {!collapsed && (
+          <MenuItemFieldsEditor
+            item={displayedItem}
+            allowChildren
+            onChange={(next) => updateItem(index, next as MenuItemConfig)}
+            labelText={labelText}
+            onEnterChildrenMode={() => collapse.expand(`${path}.0`)}
+          />
+        )}
+        {pendingEntry && <CommitRejectionBanner dataTestId={`shell-menu-root-${index}-error`} error={pendingEntry.error} />}
+        {hasChildren && (
+          <ShellMenuChildrenListEditor
+            parentIndex={index}
+            items={displayedItem.children!}
+            onCommitChildren={(nextChildren) => onCommitMenu(reorderChildrenIntoMenu(menu, index, nextChildren))}
+            collapse={collapse}
+          />
+        )}
+      </ShellTreeDraggableRow>,
+    )
+    rows.push(<ShellTreeGapZone key={`gap-${index + 1}`} parentPath="" index={index + 1} />)
+  })
 
   return (
     <fieldset className="flex flex-col gap-2 rounded border border-gray-200 p-2">
       <legend className="px-1 text-xs font-medium text-gray-700">Menú</legend>
-      <ShellDndSortableList dndContextId="shell-menu-root" onReorder={(source, target) => onCommitMenu(reorder(menu, source, target))}>
-        {menu.map((item, index) => {
-          const pendingEntry = pending[index]
-          const displayedItem = (pendingEntry?.value ?? item) as MenuItemConfig
-
-          return (
-            <ShellDndSortableRow key={index} index={index} dragHandleLabel={`Reordenar elemento de menú ${index + 1}`}>
-              <div className="flex items-center justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => removeItem(index)}
-                  aria-label={`Quitar elemento de menú ${index + 1}`}
-                  className="rounded border border-gray-300 px-2 py-1 text-xs text-gray-600 hover:bg-gray-100"
-                >
-                  Quitar
-                </button>
-              </div>
-              <MenuItemFieldsEditor
-                item={displayedItem}
-                allowChildren
-                onChange={(next) => updateItem(index, next as MenuItemConfig)}
-                labelText={`Elemento de menú ${index + 1}`}
-              />
-              {pendingEntry && <CommitRejectionBanner dataTestId={`shell-menu-root-${index}-error`} error={pendingEntry.error} />}
-              {displayedItem.children !== undefined && (
-                <ShellMenuChildrenListEditor
-                  parentIndex={index}
-                  items={displayedItem.children}
-                  onCommitChildren={(nextChildren) => onCommitMenu(reorderChildrenIntoMenu(menu, index, nextChildren))}
-                />
-              )}
-            </ShellDndSortableRow>
-          )
-        })}
-      </ShellDndSortableList>
+      <ShellTreeDndContext treeId="shell-menu" onMoveAttempt={onMoveItem} isValidDestination={isValidDestination}>
+        <div data-testid="shell-dnd-list-shell-menu-root" className="flex flex-col gap-2">
+          {rows}
+        </div>
+      </ShellTreeDndContext>
       <button
         type="button"
         onClick={addItem}

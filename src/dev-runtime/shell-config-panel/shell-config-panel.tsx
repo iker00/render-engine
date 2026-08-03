@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { RuntimeConfigError } from '../../config/runtime-config'
 import type {
+  MenuItemChildConfig,
   MenuItemConfig,
   ShellConfig,
   ShellHeaderActionNode,
@@ -14,9 +15,68 @@ import { PropertyFieldDispatcher } from '../layout-canvas/property-fields/proper
 import { isPlainObject, resolveUnionBranch } from '../layout-canvas/property-fields/property-field-schema-resolution'
 import { TextPropertyField } from '../layout-canvas/property-fields/text-property-field'
 import { ShellActionsListEditor } from './shell-actions-list-editor'
+import { useShellCollapseState } from './shell-collapse-state'
 import { getShellHeaderJsonSchema } from './shell-config-panel-schema'
 import { ShellMenuListEditor } from './shell-menu-list-editor'
+import { isValidShellTreeDestination, moveShellSubtree, type ShellTreeDestination } from './shell-tree-mutations'
 import { SidebarItemListEditor } from './sidebar-item-list-editor'
+
+// `shell.header.menu`'s tree (root `MenuItemConfig` items + their `MenuItemChildConfig` children)
+// is addressed generically via `shell-tree-mutations.ts`'s `T extends { children?: T[] }`
+// constraint. `T = MenuItemChildConfig` does not typecheck there (TS2559): `MenuItemChildConfig`
+// deliberately never declares `children` at all (menuItemChild can't itself have children), so it
+// has zero properties in common with the weak type `{ children?: MenuItemChildConfig[] }`, which
+// TS treats as a likely mistake rather than resolving structurally. `MenuTreeItem` below is a
+// locally-declared, genuinely self-referential type that satisfies the constraint directly;
+// `MenuItemConfig[]`/`MenuItemChildConfig[]` values are structurally assignable to/from it without
+// a cast, since it differs from `MenuItemChildConfig` only by declaring the same optional
+// `children` field the constraint expects. `menuItem`'s own nesting limit (root items may have
+// `children`; a child may not) is enforced by `maxDepth: 1` below, not by this type choice.
+type MenuTreeItem = MenuItemChildConfig & { children?: MenuTreeItem[] }
+const MENU_TREE_MAX_DEPTH = 1
+
+// `appendChildAtPath` (T1) is deliberately domain-agnostic: it only ever adds/appends to
+// `children`, never touches any other field. `menuItem`'s own schema (`refineMenuItemShape` in
+// `runtime-config-zod.ts`) forbids `href`/`action` alongside `children`, so nesting a dragged item
+// onto a leaf `menuItem` (design.md Decisión 5) needs this domain-specific pass on top: whichever
+// node the move gave a `children` array to loses its previous `href`/`action`. Applied to the
+// whole tree unconditionally after every move (not only `nest` destinations) because it is a
+// no-op wherever the invariant already holds, which is simpler than threading "was this a nest
+// move, and onto which resulting path" through the result.
+function dropHrefActionWhereChildrenExist(item: MenuItemConfig): MenuItemConfig {
+  if (item.children === undefined) return item
+  const sanitizedChildren = item.children.map(
+    (child) => dropHrefActionWhereChildrenExist(child as MenuItemConfig) as MenuItemChildConfig,
+  )
+  if (item.href === undefined && item.action === undefined) {
+    return { ...item, children: sanitizedChildren }
+  }
+  const { href: _href, action: _action, ...rest } = item
+  return { ...rest, children: sanitizedChildren }
+}
+
+function sanitizeMenuTree(tree: MenuItemConfig[]): MenuItemConfig[] {
+  return tree.map(dropHrefActionWhereChildrenExist)
+}
+
+// `sidebarItem` shares the exact same "children forbids href/action" constraint as `menuItem`
+// (`refineSidebarItemShape` in `runtime-config-zod.ts`, design.md Decisión 5 — it applies to
+// nesting onto *any* item, `menuItem` or `sidebarItem` alike). A separate function (rather than
+// reusing `dropHrefActionWhereChildrenExist`) because the two config shapes, while structurally
+// identical in the fields this cares about, are distinct types with no common supertype declared.
+function dropHrefActionWhereChildrenExistFromSidebarItem(item: SidebarItemConfig): SidebarItemConfig {
+  if (item.children === undefined) return item
+  const sanitizedChildren = item.children.map(dropHrefActionWhereChildrenExistFromSidebarItem)
+  if (item.href === undefined && item.action === undefined) {
+    return { ...item, children: sanitizedChildren }
+  }
+  const { href: _href, action: _action, ...rest } = item
+  return { ...rest, children: sanitizedChildren }
+}
+
+function sanitizeSidebarTree(tree: SidebarItemConfig[]): SidebarItemConfig[] {
+  return tree.map(dropHrefActionWhereChildrenExistFromSidebarItem)
+}
 
 export interface ShellConfigPanelProps {
   shell: ShellConfig | undefined
@@ -28,6 +88,14 @@ type ShellPendingRejections = Partial<Record<ShellPendingKey, { value: unknown; 
 
 const EMPTY_HEADER: ShellHeaderConfig = {}
 
+// Sub-navigation (0125-T8, design.md Decisión 6): fixed ids are enough here — unlike a
+// list-editor row, `ShellConfigPanel` never mounts more than one instance of itself at a time.
+const HEADER_TAB_ID = 'shell-config-panel-tab-header'
+const SIDEBAR_TAB_ID = 'shell-config-panel-tab-sidebar'
+const HEADER_PANEL_ID = 'shell-config-panel-tabpanel-header'
+const SIDEBAR_PANEL_ID = 'shell-config-panel-tabpanel-sidebar'
+type ShellConfigSubView = 'header' | 'sidebar'
+
 /**
  * "Shell" section of the visual editor (0122-T5): toggles the header on/off, edits `logo`/
  * `title` through the same generic schema-driven widgets the canvas properties panel uses, and
@@ -36,13 +104,28 @@ const EMPTY_HEADER: ShellHeaderConfig = {}
  * Monaco buffer" pipeline `commitCanvasMutation` already uses for `layout` (see
  * `patchRootKey`/`layout-canvas-commit.ts`), so a Shell edit never touches `layout`/`api`/
  * `initialPage`/`preloads`/`tokens`/`translations`.
+ *
+ * The panel is split into two `role="tabpanel"` sub-views ("Header"/"Sidebar", 0125-T8, design.md
+ * Decisión 6) behind a `role="tablist"`. Both stay mounted at all times — only a Tailwind
+ * `hidden` class toggles which one is visible — the same "always present in the DOM" precedent
+ * already documented for `accordion`/`modal` bodies in Editor mode. Purely presentational: it
+ * changes nothing about `headerActive`/`sidebarActive` or either commit pipeline below.
  */
 export function ShellConfigPanel({ shell, onCommitShellMutation }: ShellConfigPanelProps) {
   const header = shell?.header
   const headerActive = header !== undefined
   const sidebar = shell?.sidebar
   const sidebarActive = sidebar !== undefined
+  const [activeSubView, setActiveSubView] = useState<ShellConfigSubView>('header')
   const [pendingRejections, setPendingRejections] = useState<ShellPendingRejections>({})
+  // Single collapse-state instance for the whole `shell.header.menu` tree (0125-T2/T4): one hook
+  // call here, forwarded down through `ShellMenuListEditor` to every nesting level, rather than
+  // one instance per row/list.
+  const menuCollapse = useShellCollapseState()
+  // Independent collapse-state instance for `shell.sidebar.items` (0125-T2/T6): a distinct tree
+  // from `shell.header.menu`, so it gets its own hook instance, forwarded down through
+  // `SidebarItemListEditor` unchanged on every recursive call.
+  const sidebarCollapse = useShellCollapseState()
 
   function recordResult(key: ShellPendingKey, attemptedValue: unknown, result: CommitCanvasMutationResult) {
     if (result.status === 'rejected') {
@@ -89,6 +172,21 @@ export function ShellConfigPanel({ shell, onCommitShellMutation }: ShellConfigPa
     }))
   }
 
+  // Drag/drop for `shell.header.menu` (0125-T5): reorder, nest, or move a `menuItem`/
+  // `menuItemChild` across levels, capped at `MENU_TREE_MAX_DEPTH`. `moveShellSubtree` also
+  // produces the `pathRemap` needed to carry each moved node's (and shifted sibling's) collapse
+  // state to its new path — applied only when the commit actually lands, so a rejected mutation
+  // never desyncs collapse state from the config that's still on screen.
+  function handleMoveMenuItem(sourcePath: string, destination: ShellTreeDestination): void {
+    const { tree, pathRemap } = moveShellSubtree<MenuTreeItem>(header?.menu ?? [], sourcePath, destination)
+    const result = commitMenu(sanitizeMenuTree(tree))
+    if (result.status !== 'rejected') menuCollapse.applyPathRemap(pathRemap)
+  }
+
+  function isValidMenuDestination(sourcePath: string, destination: ShellTreeDestination): boolean {
+    return isValidShellTreeDestination<MenuTreeItem>(header?.menu ?? [], sourcePath, destination, MENU_TREE_MAX_DEPTH)
+  }
+
   function commitActions(nextActions: ShellHeaderActionNode[]): CommitCanvasMutationResult {
     return onCommitShellMutation((prevShell) => ({
       ...(prevShell ?? {}),
@@ -106,6 +204,31 @@ export function ShellConfigPanel({ shell, onCommitShellMutation }: ShellConfigPa
     }))
   }
 
+  // `shell.sidebar.defaultCollapsed` (0125-T8): the field already existed in the schema/type
+  // (conserved by the spread above) but had no editor of its own yet. Direct `BooleanPropertyField`
+  // wiring, same style as the "Header activo"/"Sidebar activo" toggles above, rather than routing
+  // through `PropertyFieldDispatcher` — a single boolean field doesn't need schema-driven dispatch.
+  function commitSidebarDefaultCollapsed(nextValue: boolean): CommitCanvasMutationResult {
+    return onCommitShellMutation((prevShell) => ({
+      ...(prevShell ?? {}),
+      sidebar: { ...(prevShell?.sidebar ?? {}), defaultCollapsed: nextValue },
+    }))
+  }
+
+  // Drag/drop for `shell.sidebar.items` (0125-T7): same tree-wide reorder/nest/cross-level-move
+  // pattern `handleMoveMenuItem`/`isValidMenuDestination` above build for the header, but with
+  // `maxDepth: null` — `sidebarItem` has no nesting limit (0123-T1), unlike `menuItem`'s
+  // `MENU_TREE_MAX_DEPTH`.
+  function handleMoveSidebarItem(sourcePath: string, destination: ShellTreeDestination): void {
+    const { tree, pathRemap } = moveShellSubtree<SidebarItemConfig>(sidebar?.items ?? [], sourcePath, destination)
+    const result = commitSidebarItems(sanitizeSidebarTree(tree))
+    if (result.status !== 'rejected') sidebarCollapse.applyPathRemap(pathRemap)
+  }
+
+  function isValidSidebarDestination(sourcePath: string, destination: ShellTreeDestination): boolean {
+    return isValidShellTreeDestination<SidebarItemConfig>(sidebar?.items ?? [], sourcePath, destination, null)
+  }
+
   const shellHeaderSchema = getShellHeaderJsonSchema()
   const schemaProperties = isPlainObject(shellHeaderSchema.properties) ? shellHeaderSchema.properties : {}
   const logoSchema = isPlainObject(schemaProperties.logo) ? (schemaProperties.logo as Record<string, unknown>) : undefined
@@ -117,43 +240,108 @@ export function ShellConfigPanel({ shell, onCommitShellMutation }: ShellConfigPa
 
   return (
     <div data-testid="shell-config-panel" className="flex h-full flex-col gap-4 overflow-y-auto p-3">
-      <BooleanPropertyField
-        label="Header activo"
-        value={headerActive}
-        onChange={(nextActive) => commitShellSectionToggle('header', nextActive)}
-      />
+      <div role="tablist" aria-label="Sub-vistas de Shell" className="flex gap-1 border-b border-gray-200">
+        <button
+          type="button"
+          role="tab"
+          id={HEADER_TAB_ID}
+          aria-selected={activeSubView === 'header'}
+          aria-controls={HEADER_PANEL_ID}
+          onClick={() => setActiveSubView('header')}
+          className={`px-3 py-1.5 text-xs font-medium ${
+            activeSubView === 'header' ? 'border-b-2 border-gray-800 text-gray-900' : 'text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          Header
+        </button>
+        <button
+          type="button"
+          role="tab"
+          id={SIDEBAR_TAB_ID}
+          aria-selected={activeSubView === 'sidebar'}
+          aria-controls={SIDEBAR_PANEL_ID}
+          onClick={() => setActiveSubView('sidebar')}
+          className={`px-3 py-1.5 text-xs font-medium ${
+            activeSubView === 'sidebar' ? 'border-b-2 border-gray-800 text-gray-900' : 'text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          Sidebar
+        </button>
+      </div>
 
-      {headerActive && header !== undefined && (
-        <>
-          <div className="flex flex-col gap-2">
-            <PropertyFieldDispatcher
-              schema={resolveUnionBranch(logoSchema, displayedLogo)}
-              value={displayedLogo}
-              onChange={(nextLogo) => commitHeaderField('logo', nextLogo)}
-              label="Logo"
+      <div
+        role="tabpanel"
+        id={HEADER_PANEL_ID}
+        aria-labelledby={HEADER_TAB_ID}
+        data-testid={HEADER_PANEL_ID}
+        className={activeSubView === 'header' ? 'flex flex-col gap-4' : 'hidden'}
+      >
+        <BooleanPropertyField
+          label="Header activo"
+          value={headerActive}
+          onChange={(nextActive) => commitShellSectionToggle('header', nextActive)}
+        />
+
+        {headerActive && header !== undefined && (
+          <>
+            <div className="flex flex-col gap-2">
+              <PropertyFieldDispatcher
+                schema={resolveUnionBranch(logoSchema, displayedLogo)}
+                value={displayedLogo}
+                onChange={(nextLogo) => commitHeaderField('logo', nextLogo)}
+                label="Logo"
+              />
+              {logoPending && <CommitRejectionBanner dataTestId="shell-config-panel-logo-error" error={logoPending.error} />}
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <TextPropertyField label="Title" value={displayedTitle} onChange={(nextTitle) => commitHeaderField('title', nextTitle)} />
+              {titlePending && <CommitRejectionBanner dataTestId="shell-config-panel-title-error" error={titlePending.error} />}
+            </div>
+
+            <ShellMenuListEditor
+              menu={header.menu ?? []}
+              onCommitMenu={commitMenu}
+              collapse={menuCollapse}
+              onMoveItem={handleMoveMenuItem}
+              isValidDestination={isValidMenuDestination}
             />
-            {logoPending && <CommitRejectionBanner dataTestId="shell-config-panel-logo-error" error={logoPending.error} />}
-          </div>
+            <ShellActionsListEditor actions={header.actions ?? []} onCommitActions={commitActions} />
+          </>
+        )}
+      </div>
 
-          <div className="flex flex-col gap-2">
-            <TextPropertyField label="Title" value={displayedTitle} onChange={(nextTitle) => commitHeaderField('title', nextTitle)} />
-            {titlePending && <CommitRejectionBanner dataTestId="shell-config-panel-title-error" error={titlePending.error} />}
-          </div>
+      <div
+        role="tabpanel"
+        id={SIDEBAR_PANEL_ID}
+        aria-labelledby={SIDEBAR_TAB_ID}
+        data-testid={SIDEBAR_PANEL_ID}
+        className={activeSubView === 'sidebar' ? 'flex flex-col gap-4' : 'hidden'}
+      >
+        <BooleanPropertyField
+          label="Sidebar activo"
+          value={sidebarActive}
+          onChange={(nextActive) => commitShellSectionToggle('sidebar', nextActive)}
+        />
 
-          <ShellMenuListEditor menu={header.menu ?? []} onCommitMenu={commitMenu} />
-          <ShellActionsListEditor actions={header.actions ?? []} onCommitActions={commitActions} />
-        </>
-      )}
-
-      <BooleanPropertyField
-        label="Sidebar activo"
-        value={sidebarActive}
-        onChange={(nextActive) => commitShellSectionToggle('sidebar', nextActive)}
-      />
-
-      {sidebarActive && sidebar !== undefined && (
-        <SidebarItemListEditor items={sidebar.items ?? []} path="root" onCommitItems={commitSidebarItems} />
-      )}
+        {sidebarActive && sidebar !== undefined && (
+          <>
+            <BooleanPropertyField
+              label="Modo rail por defecto"
+              value={sidebar.defaultCollapsed ?? false}
+              onChange={(nextValue) => commitSidebarDefaultCollapsed(nextValue)}
+            />
+            <SidebarItemListEditor
+              items={sidebar.items ?? []}
+              path=""
+              onCommitItems={commitSidebarItems}
+              collapse={sidebarCollapse}
+              onMoveItem={handleMoveSidebarItem}
+              isValidDestination={isValidSidebarDestination}
+            />
+          </>
+        )}
+      </div>
     </div>
   )
 }

@@ -18,6 +18,10 @@ interface SidebarItemFieldsEditorProps {
   onChange: (next: SidebarItemConfig) => void
   /** Distinguishes rows across the form for accessible field labels (e.g. "Elemento de sidebar 1"). */
   labelText: string
+  /** Called right after switching this item into "Con hijos" mode, once its first child has been
+   * seeded — lets the caller expand that brand-new child row (every row starts collapsed by
+   * default, but a freshly created one should open right away), the same as `addItem`. */
+  onEnterChildrenMode?: () => void
 }
 
 /**
@@ -27,7 +31,7 @@ interface SidebarItemFieldsEditorProps {
  * `sidebarItem` is genuinely recursive (0123-T1), so every row — root or nested to any depth —
  * can switch into "Con hijos" mode.
  */
-export function SidebarItemFieldsEditor({ item, onChange, labelText }: SidebarItemFieldsEditorProps) {
+export function SidebarItemFieldsEditor({ item, onChange, labelText, onEnterChildrenMode }: SidebarItemFieldsEditorProps) {
   const mode = computeSidebarItemMode(item)
   const modeOptions: MenuItemMode[] = ['none', 'href', 'action', 'children']
 
@@ -62,6 +66,7 @@ export function SidebarItemFieldsEditor({ item, onChange, labelText }: SidebarIt
     // href/action/children) — seeded with an empty `href`, same convention `addItem` in
     // `SidebarItemListEditor` uses for a freshly added row at any level.
     onChange({ ...base, children: [{ label: NEW_CHILD_LABEL, href: '' }] })
+    onEnterChildrenMode?.()
   }
 
   return (
