@@ -2,14 +2,16 @@ import devConfig from '../dev/config.json'
 import devDataValues from '../dev/data-values.json'
 import { AppShell } from './app-shell'
 import { readRuntimeActiveLanguage } from './bootstrap/read-runtime-active-language'
-import { readRuntimeConfig, type RuntimeConfig } from './bootstrap/read-runtime-config'
+import { readRuntimeConfig } from './bootstrap/read-runtime-config'
 import { readRuntimeDataValues } from './bootstrap/read-runtime-data-values'
 
-const defaultDevConfig = devConfig as RuntimeConfig
+const defaultDevConfig: unknown = devConfig
 const defaultDevDataValues = devDataValues as Record<string, unknown>
 
 interface AppProps {
-  devConfigOverride?: RuntimeConfig
+  // Raw, pre-validation config — see `ReadRuntimeConfigOptions.devConfig` for why this isn't typed
+  // as `RuntimeConfig` (the normalized, post-validation shape).
+  devConfigOverride?: unknown
   devDataValuesOverride?: Record<string, unknown>
   isDevelopment?: boolean
   rootElement?: HTMLElement | null
