@@ -22,13 +22,17 @@ import { isValidShellTreeDestination, moveShellSubtree, type ShellTreeDestinatio
 import { SidebarItemListEditor } from './sidebar-item-list-editor'
 
 // `shell.header.menu`'s tree (root `MenuItemConfig` items + their `MenuItemChildConfig` children)
-// is addressed generically as `MenuItemChildConfig[]` when calling into `shell-tree-mutations.ts`
-// (T1's own type note): `MenuItemConfig extends MenuItemChildConfig` and `MenuItemChildConfig`
-// itself never declares `children`, so the whole tree already satisfies `T extends { children?:
-// T[] }` under `T = MenuItemChildConfig` without a union — no cast needed either way, since a
-// `MenuItemConfig[]`/`MenuItemChildConfig[]` differ only by one optional field and are mutually
-// assignable. `menuItem`'s own nesting limit (root items may have `children`; a child may not) is
-// enforced by `maxDepth: 1` below, not by this type choice.
+// is addressed generically via `shell-tree-mutations.ts`'s `T extends { children?: T[] }`
+// constraint. `T = MenuItemChildConfig` does not typecheck there (TS2559): `MenuItemChildConfig`
+// deliberately never declares `children` at all (menuItemChild can't itself have children), so it
+// has zero properties in common with the weak type `{ children?: MenuItemChildConfig[] }`, which
+// TS treats as a likely mistake rather than resolving structurally. `MenuTreeItem` below is a
+// locally-declared, genuinely self-referential type that satisfies the constraint directly;
+// `MenuItemConfig[]`/`MenuItemChildConfig[]` values are structurally assignable to/from it without
+// a cast, since it differs from `MenuItemChildConfig` only by declaring the same optional
+// `children` field the constraint expects. `menuItem`'s own nesting limit (root items may have
+// `children`; a child may not) is enforced by `maxDepth: 1` below, not by this type choice.
+type MenuTreeItem = MenuItemChildConfig & { children?: MenuTreeItem[] }
 const MENU_TREE_MAX_DEPTH = 1
 
 // `appendChildAtPath` (T1) is deliberately domain-agnostic: it only ever adds/appends to
@@ -174,13 +178,13 @@ export function ShellConfigPanel({ shell, onCommitShellMutation }: ShellConfigPa
   // state to its new path — applied only when the commit actually lands, so a rejected mutation
   // never desyncs collapse state from the config that's still on screen.
   function handleMoveMenuItem(sourcePath: string, destination: ShellTreeDestination): void {
-    const { tree, pathRemap } = moveShellSubtree<MenuItemChildConfig>(header?.menu ?? [], sourcePath, destination)
+    const { tree, pathRemap } = moveShellSubtree<MenuTreeItem>(header?.menu ?? [], sourcePath, destination)
     const result = commitMenu(sanitizeMenuTree(tree))
     if (result.status !== 'rejected') menuCollapse.applyPathRemap(pathRemap)
   }
 
   function isValidMenuDestination(sourcePath: string, destination: ShellTreeDestination): boolean {
-    return isValidShellTreeDestination<MenuItemChildConfig>(header?.menu ?? [], sourcePath, destination, MENU_TREE_MAX_DEPTH)
+    return isValidShellTreeDestination<MenuTreeItem>(header?.menu ?? [], sourcePath, destination, MENU_TREE_MAX_DEPTH)
   }
 
   function commitActions(nextActions: ShellHeaderActionNode[]): CommitCanvasMutationResult {
