@@ -4,9 +4,8 @@ import {
   ShellTreeDndContext,
   ShellTreeDraggableRow,
   ShellTreeGapZone,
-  parseShellTreeDropZoneId,
 } from '../../dev-runtime/shell-config-panel/shell-config-panel-dnd'
-import type { ShellTreeDestination } from '../../dev-runtime/shell-config-panel/shell-tree-mutations'
+import { parseShellTreeDropZoneId, type ShellTreeDestination } from '../../dev-runtime/shell-config-panel/shell-tree-mutations'
 
 // Same mocking pattern as layout-canvas-dnd-wiring.test.tsx / shell-config-panel.test.tsx: real
 // pointer-drag simulation is impractical in jsdom, so `DndContext` becomes a pass-through that

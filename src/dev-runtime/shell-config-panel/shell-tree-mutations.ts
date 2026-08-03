@@ -9,6 +9,32 @@
 
 export type ShellTreeDestination = { type: 'nest'; path: string } | { type: 'gap'; parentPath: string; index: number }
 
+/**
+ * Parses a droppable zone id produced by `ShellTreeGapZone`/`ShellTreeDraggableRow`
+ * (`shell-config-panel-dnd.tsx`) back into a structured `ShellTreeDestination`. Returns `null` for
+ * any id that doesn't match either shape, including a non-integer or negative `gap` index. Lives
+ * here rather than in `shell-config-panel-dnd.tsx` (moved post-implementation): it's a pure string
+ * parser with no React/DOM dependency, and keeping it out of a file that also exports React
+ * components avoids breaking Fast Refresh (`react-refresh/only-export-components`), the same
+ * component-only-exports convention `layout-canvas-dnd-context.tsx` already follows.
+ */
+export function parseShellTreeDropZoneId(id: string): ShellTreeDestination | null {
+  const parts = id.split(':')
+
+  if (parts[0] === 'gap' && parts.length === 3) {
+    const [, parentPath, indexText] = parts
+    if (!/^\d+$/.test(indexText)) return null
+    return { type: 'gap', parentPath, index: Number(indexText) }
+  }
+
+  if (parts[0] === 'nest' && parts.length === 2) {
+    const [, path] = parts
+    return { type: 'nest', path }
+  }
+
+  return null
+}
+
 function segmentsOf(path: string): number[] {
   return path.split('.').map(Number)
 }

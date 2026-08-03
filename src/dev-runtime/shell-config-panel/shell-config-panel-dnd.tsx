@@ -11,7 +11,7 @@ import {
 } from '@dnd-kit/core'
 import type { ReactNode } from 'react'
 import { useRef } from 'react'
-import type { ShellTreeDestination } from './shell-tree-mutations'
+import { parseShellTreeDropZoneId, type ShellTreeDestination } from './shell-tree-mutations'
 
 /**
  * Extended DnD module for the Shell config panel (Decisión 1 y 2 de design.md, feature 0125).
@@ -35,29 +35,6 @@ import type { ShellTreeDestination } from './shell-tree-mutations'
  * (`useDraggable`/`useDroppable`), the same way `layout-canvas-dnd-context.tsx` already does for
  * the canvas.
  */
-
-/**
- * Parses a droppable zone id produced by `ShellTreeGapZone`/`ShellTreeDraggableRow` back into a
- * structured `ShellTreeDestination` (the type `moveShellSubtree`/`isValidShellTreeDestination`
- * from `shell-tree-mutations.ts` already consume). Returns `null` for any id that doesn't match
- * either shape, including a non-integer or negative `gap` index.
- */
-export function parseShellTreeDropZoneId(id: string): ShellTreeDestination | null {
-  const parts = id.split(':')
-
-  if (parts[0] === 'gap' && parts.length === 3) {
-    const [, parentPath, indexText] = parts
-    if (!/^\d+$/.test(indexText)) return null
-    return { type: 'gap', parentPath, index: Number(indexText) }
-  }
-
-  if (parts[0] === 'nest' && parts.length === 2) {
-    const [, path] = parts
-    return { type: 'nest', path }
-  }
-
-  return null
-}
 
 // Same Tailwind outline convention T13 already established in `layout-canvas-dnd-context.tsx`
 // for the canvas's own drop-target validity indicator; declared locally (not imported from
