@@ -54,6 +54,8 @@ describe('LayoutRenderer empty container/form placeholders (edit mode)', () => {
   const emptyContainer: LayoutNode[] = [{ type: 'container', props: {}, children: [] }]
   const undefinedChildrenContainer: LayoutNode[] = [{ type: 'container', props: {} }]
   const emptyForm: LayoutNode[] = [{ type: 'form', id: 'form-1' }]
+  const emptyLink: LayoutNode[] = [{ type: 'link', props: { href: '#' }, children: [] }]
+  const textModeLink: LayoutNode[] = [{ type: 'link', props: { label: 'x' } }]
   const nonEmptyContainer: LayoutNode[] = [
     {
       type: 'container',
@@ -157,5 +159,49 @@ describe('LayoutRenderer empty container/form placeholders (edit mode)', () => {
     expect(screen.getByText('Page title')).toBeInTheDocument()
     expect(container.querySelectorAll('[data-empty-placeholder]')).toHaveLength(0)
     expect(container.querySelector('[data-layout-node="container"]')?.textContent).toBe('')
+  })
+
+  it('renders a visible, labeled placeholder for an empty link inside a LayoutEditModeProvider', () => {
+    renderNodes(emptyLink, { editMode: {} })
+
+    const placeholder = screen.getByText('Enlace vacío')
+    expect(placeholder).toHaveAttribute('data-empty-placeholder', 'true')
+    expect(placeholder.className).toContain('border-dashed')
+  })
+
+  it('renders no placeholder trace for an empty link without a LayoutEditModeProvider (production behavior)', () => {
+    const { container } = renderNodes(emptyLink)
+
+    expect(container.querySelectorAll('[data-empty-placeholder]')).toHaveLength(0)
+    expect(container.querySelector('[data-layout-node="link"]')?.textContent).toBe('')
+  })
+
+  it('gives the link placeholder its own data-node-path, connects it as the link\'s own drop zone, and selects itself on click', () => {
+    const { container, onSelectNode } = renderNodes(emptyLink, { editMode: {} })
+
+    const linkWrapper = container.querySelector('[data-node-path="children.0"]')
+    const placeholder = screen.getByText('Enlace vacío')
+
+    expect(linkWrapper).not.toBeNull()
+    expect(placeholder).toHaveAttribute('data-node-path', 'children.0.children.0')
+    expect(placeholder.getAttribute('data-node-path')).not.toBe(linkWrapper?.getAttribute('data-node-path'))
+
+    fireEvent.click(placeholder)
+
+    expect(onSelectNode).toHaveBeenCalledTimes(1)
+    expect(onSelectNode).toHaveBeenCalledWith([
+      { field: 'children', index: 0 },
+      { field: 'children', index: 0 },
+    ])
+  })
+
+  it('never shows a placeholder for a text-mode link (props.label set, no children field), in edit mode or production', () => {
+    const { container: withoutProvider } = renderNodes(textModeLink)
+    expect(withoutProvider.querySelectorAll('[data-empty-placeholder]')).toHaveLength(0)
+    expect(within(withoutProvider).getByText('x')).toBeInTheDocument()
+
+    const { container: withProvider } = renderNodes(textModeLink, { editMode: {} })
+    expect(withProvider.querySelectorAll('[data-empty-placeholder]')).toHaveLength(0)
+    expect(within(withProvider).getByText('x')).toBeInTheDocument()
   })
 })

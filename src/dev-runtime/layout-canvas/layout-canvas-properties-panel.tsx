@@ -4,6 +4,7 @@ import { serializeLayoutNodePath, type LayoutNodePath } from '../../runtime/layo
 import { CommitRejectionBanner } from '../commit-rejection-banner'
 import type { CommitCanvasMutationResult } from './layout-canvas-commit'
 import { getNodeTypeJsonSchema } from './layout-canvas-node-schema'
+import { LinkContentModePropertyField } from './property-fields/link-content-mode-property-field'
 import { PropertyFieldDispatcher } from './property-fields/property-field-dispatcher'
 import { resolveUnionBranch } from './property-fields/property-field-schema-resolution'
 
@@ -286,6 +287,13 @@ export function LayoutCanvasPropertiesPanel({
             Eliminar nodo
           </button>
         </div>
+      )}
+      {node.type === 'link' && (
+        <LinkContentModePropertyField
+          label="Contenido"
+          node={node}
+          onChange={(nextNode) => onCommitNodeUpdate(path, () => nextNode)}
+        />
       )}
       {SUBSECTIONS.map(({ key, label }) => {
         const subsectionSchema = schemaProperties[key]

@@ -134,17 +134,20 @@ function LayoutCanvasDropZoneGap({ parentPath, index, tabItemIndex }: LayoutCanv
   return <div ref={setNodeRef} data-drop-zone={dropZoneId} aria-hidden="true" className="h-1 min-w-1" />
 }
 
-type EmptyPlaceholderNodeType = 'container' | 'form'
+type EmptyPlaceholderNodeType = 'container' | 'form' | 'link'
 
 const EMPTY_PLACEHOLDER_LABEL: Record<EmptyPlaceholderNodeType, string> = {
   container: 'Contenedor vacío',
   form: 'Formulario vacío',
+  link: 'Enlace vacío',
 }
 
 function isEmptyPlaceholderCandidate(
   node: Extract<LayoutNode, { children?: LayoutNodeCollection }>,
 ): node is Extract<LayoutNode, { type: EmptyPlaceholderNodeType }> {
-  return (node.type === 'container' || node.type === 'form') && (node.children ?? []).length === 0
+  return (
+    (node.type === 'container' || node.type === 'form' || node.type === 'link') && (node.children ?? []).length === 0
+  )
 }
 
 interface EmptyContainerPlaceholderProps {

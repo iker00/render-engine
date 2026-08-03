@@ -49,7 +49,7 @@ Sin parámetros adicionales. Ejecuta navegación hacia atrás del runtime.
 
 ## Casos límite
 
-- **`children` vacío** (`children: []`): se rechaza en validación previa.
+- **`children` vacío** (`children: []`): se acepta; el anchor se renderiza sin contenido interior (`<a></a>` vacío), con `href`/`action` funcionando igual que con cualquier otro contenido.
 - **`children` con un único nodo `divider`**: se acepta; el anchor renderiza solo el divisor.
 - **`children` con un `container` sin hijos propios**: se acepta; el anchor renderiza un contenedor vacío.
 - **`children` con `skeleton`**: se acepta; el placeholder de carga se renderiza como contenido del anchor.
@@ -73,7 +73,6 @@ Sin parámetros adicionales. Ejecuta navegación hacia atrás del runtime.
 - Debe declararse exactamente uno de `props.label` o `children`. Si se declaran ambos, el config se rechaza con diagnóstico `link nodes cannot have both props.label and children.` Si ninguno está presente, el config se rechaza con diagnóstico `link nodes must have either props.label or children.`
 - `props.icon` sin `props.label` rechaza el config con diagnóstico `link nodes cannot have both props.icon and children.` (cuando `children` está presente).
 - `props.iconPosition` declarado junto con `children` rechaza el config con el mismo diagnóstico que la restricción existente `icon + children`: `link nodes cannot have both props.icon and children.` (la restricción se aplica a ambas propiedades de forma conjunta).
-- Si `children` está presente, debe no estar vacío. Un array vacío `children: []` rechaza el config con diagnóstico `link children cannot be empty.`
 - Si `children` está presente, todos los nodos dentro (en cualquier profundidad) deben pertenecer al subconjunto cerrado: `container`, `heading`, `paragraph`, `list`, `image`, `badge`, `alert`, `stat`, `divider`, `skeleton`. Cualquier otro tipo rechaza el config con diagnóstico exacto incluyendo la ruta del nodo prohibido, p.ej. `link children may only be container, heading, paragraph, list, image, badge, alert, stat, divider or skeleton nodes.`
 - `props.href` y `props.action` son mutuamente excluyentes. Si se declaran ambos, el config se rechaza con `invalid-layout` y diagnóstico de ruta `{path}`.
 - Debe declararse al menos uno de `props.href` o `props.action`. Si ninguno está presente, el config se rechaza con `invalid-layout` y diagnóstico de ruta `{path}`.

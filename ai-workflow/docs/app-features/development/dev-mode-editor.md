@@ -146,6 +146,30 @@ Cuando el sub-schema de un campo es una unión discriminada por la propiedad lit
 
 Debajo del selector se muestran únicamente los campos propios de la variante activa. Elegir una variante distinta reconstruye el valor desde cero con los valores por defecto de esa variante (ningún campo de la variante anterior sobrevive al cambio) y elegir "Sin acción" deja la propiedad completamente sin definir. Una condición `when` declarada en una entrada de `executeOperations.operations` o de `onSuccess`/`onError` se edita reutilizando el mismo control que `visibility` (condición simple o grupo `and`/`or`), sin un editor duplicado.
 
+### Selector de modo de contenido de `link`: Texto / Elementos anidados
+El panel de propiedades de un nodo `link` (tanto en la pestaña `Layout` como al reutilizarse dentro de la lista de
+acciones de `shell.header`) muestra, antes de las subsecciones `Props`/`Layout`/`Visibilidad`/`Estado de consulta`,
+un selector "Contenido" con dos opciones: "Texto" y "Elementos anidados". Sigue el mismo patrón visual y de
+interacción que el [selector de variante para uniones discriminadas por `type`](#selector-de-variante-para-uniones-discriminadas-por-type-acciones)
+de arriba, pero no es una instancia de ese mismo mecanismo: `link` no tiene un `type` discriminante en su schema
+para las dos formas de contenido, así que el modo activo se detecta a partir de la forma del propio nodo —
+presencia de `props.label` → "Texto"; presencia de `children` → "Elementos anidados" — en vez de leer un campo
+`type` literal.
+
+Elegir una opción reconstruye el nodo desde cero, igual que el selector de variante de acción:
+- **"Texto" → "Elementos anidados"**: retira `props.label`, `props.icon` e `props.iconPosition`, y añade
+  `children: []` (que activa el placeholder vacío descrito en
+  [[#Contenedores, formularios y links vacíos (modo Editor)]]).
+- **"Elementos anidados" → "Texto"**: retira `children` (y todo su subárbol), y añade `props.label` con el mismo
+  valor por defecto que usa la paleta al crear un `link` nuevo (`"Enlace"`), sin `props.icon`.
+
+En ambos sentidos, `props.href`, `props.download`, `props.target` y `props.action` sobreviven sin cambios: el modo
+de contenido es independiente del destino del enlace. Una vez en modo "Elementos anidados", el subárbol se edita
+arrastrando nodos del catálogo cerrado ya vigente para `link` (ver [[#Reglas de destino de drop (modo Editor)]] y
+[[../nodes/link.md]]) sobre el placeholder vacío o entre los hijos ya existentes — igual que ya ocurre con
+`container`/`form`. La paleta de nodos no cambia: sigue creando siempre un `link` nuevo en modo "Texto"; el modo
+"Elementos anidados" solo se alcanza desde este selector tras la creación.
+
 ### Widget dedicado para `props.items` de `select`, `radioGroup` y `checkboxGroup`
 `props.items` de estos tres nodos comparte un contrato de tres shapes (manual literal, manual escalar, dinámico unificado con `itemType`) que no encaja en el patrón de selector de variante anterior porque las variantes no comparten un discriminador `type` literal en el JSON (manual literal es un array puro, manual escalar y dinámico son objetos con claves distintas). Para este caso el panel usa un widget dedicado (`ChoiceItemsPropertyField`) en vez de los detectores genéricos del dispatcher:
 - Un selector de modo con tres opciones legibles ("Manual — literal", "Manual — escalar", "Dinámico"). El modo activo se detecta a partir de la forma del propio valor: array → manual literal, objeto con `values` → manual escalar, objeto con `source` → dinámico; cualquier valor no reconocible (por ejemplo `null`) cae a manual literal vacío sin lanzar error.
@@ -203,8 +227,8 @@ La validez de un destino (tanto para reordenar/reanidar como para insertar desde
 - `repeater` nunca acepta un drop de hijos fuera de la única instancia de `props.template` que representa en modo edición.
 - arrastrar un nodo sobre sí mismo o sobre uno de sus propios descendientes se trata siempre como destino inválido (evita ciclos).
 
-### Contenedores y formularios vacíos (modo Editor)
-Un `container` o `form` sin `children` (o con `children: []`) en modo Editor se renderiza con un placeholder visible (borde punteado y etiqueta), seleccionable y válido como destino de drop para insertar el primer hijo. Ese placeholder no existe en el render de producción del mismo `layout`: el nodo vacío sigue sin mostrar nada fuera de modo Editor.
+### Contenedores, formularios y links vacíos (modo Editor)
+Un `container`, `form` o `link` (en modo "Elementos anidados", ver [[#Selector de modo de contenido de `link`: Texto / Elementos anidados]]) sin `children` (o con `children: []`) en modo Editor se renderiza con un placeholder visible (borde punteado y etiqueta — "Enlace vacío" en el caso de `link`), seleccionable y válido como destino de drop para insertar el primer hijo. Ese placeholder no existe en el render de producción del mismo `layout`: el nodo vacío sigue sin mostrar nada fuera de modo Editor. En producción, un `link` con `children: []` es un config válido (ver [[../nodes/link.md]]) y se renderiza como un `<a>` sin contenido interior.
 
 ## Modo Editor: supresión de comportamiento propio
 
