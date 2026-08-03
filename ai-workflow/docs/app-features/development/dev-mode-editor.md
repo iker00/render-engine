@@ -254,7 +254,20 @@ por selección directa: sustituye el área de canvas por un panel de formulario 
 hay selección de nodo, breadcrumb ni panel de propiedades por nodo seleccionado — el panel de propiedades completo
 de `Layout` solo se reutiliza puntualmente dentro de la lista de acciones del header (ver más abajo).
 
+### Sub-vistas Header/Sidebar
+El panel se organiza en dos sub-vistas mutuamente excluyentes mediante un `role="tablist"` con dos
+`role="tab"` ("Header", "Sidebar") controlando `aria-selected`/`aria-controls` hacia sus respectivos
+`role="tabpanel"`. "Header" es la sub-vista activa por defecto al montar el editor. Igual que el
+cuerpo de `accordion` y el panel de `modal` en modo Editor (ver [[#Excepción explícita:
+interactividad local de `accordion` y `tabs`]]), **ambos `tabpanel` permanecen siempre montados en
+el DOM**: la sub-vista no activa se oculta con una clase Tailwind (`hidden`), nunca dejando de
+renderizarse. Como consecuencia, cambiar de sub-vista y volver nunca reinicia nada propio de la
+sub-vista que se deja de ver — ni el estado de colapso de sus filas, ni un aviso de commit
+rechazado (`role="alert"`) pendiente en uno de sus campos, ni ningún otro estado local — porque
+nunca llegó a desmontarse.
+
 ### Contenido del panel
+El `tabpanel` "Header" agrupa:
 - **Toggle "Header activo"**: activarlo crea `shell.header: {}` (header vacío, sin renderizar nada visible hasta
   añadir campos); desactivarlo quita únicamente la clave `shell.header`, conservando `shell.sidebar` intacto si
   estaba activo. El bloque `shell` solo desaparece del config por completo cuando ambos toggles ("Header activo" y
@@ -271,9 +284,14 @@ de `Layout` solo se reutiliza puntualmente dentro de la lista de acciones del he
 - **Lista de acciones**: alta, edición y borrado de nodos `link`/`button`, reutilizando el panel de propiedades
   completo ya existente para nodos de `Layout` (mismas secciones `Props`/`Layout`/`Visibilidad`/`Estado de
   consulta`). Se reordena con botones subir/bajar, no con arrastre.
+
+El `tabpanel` "Sidebar" agrupa:
 - **Toggle "Sidebar activo"**: activarlo crea `shell.sidebar: { items: [] }` sin afectar a `shell.header` ya
   configurado; desactivarlo quita únicamente la clave `shell.sidebar`, conservando `shell.header` intacto si
   estaba activo.
+- **Toggle "Modo rail por defecto"**: edita `shell.sidebar.defaultCollapsed` (ver [[../shell/sidebar.md]]) con el
+  mismo control booleano genérico que el resto del panel; ausente equivale a `false` (sidebar expandido al
+  arrancar la sesión).
 - **Lista de elementos de sidebar**: alta, edición y borrado de `sidebarItem` mediante un único componente
   recursivo que se renderiza a sí mismo para los `children` de cualquier item, sin límite de profundidad (a
   diferencia de la lista de menú del header, que solo admite un nivel anidado). Cada item expone el mismo selector
@@ -282,11 +300,85 @@ de `Layout` solo se reutiliza puntualmente dentro de la lista de acciones del he
   a su vez anidar otro nivel de "Con hijos" sin tope.
 
 ### Reordenar por arrastre
-La única interacción drag-and-drop disponible en la sección `Shell` es reordenar `menuItem` o `sidebarItem` dentro
-de su mismo nivel: la lista raíz de `shell.header.menu`/`shell.sidebar.items`, o los hijos de un mismo padre. No es
-posible arrastrar un item entre niveles distintos (de la raíz a un submenú/subrama o viceversa, ni entre la lista
-de menú y la de sidebar). El resto de edición (añadir, quitar, editar campos) usa siempre controles de formulario
-estándar.
+En la lista de menú del header (`shell.header.menu`), arrastrar admite tanto reordenar dentro del mismo nivel como
+anidar o mover un item entre niveles, dentro de un único árbol de arrastre que cubre toda la lista raíz y todos
+sus `children` a la vez:
+- Soltar sobre una zona intermedia (entre dos items, antes del primero o después del último, tanto en la raíz
+  como dentro de un desplegable) reordena en esa posición, dentro del mismo nivel o moviendo el item a otro nivel
+  distinto (por ejemplo, sacar un item de un desplegable a la raíz, o llevar un item de la raíz al desplegable de
+  otro item, soltándolo en una de sus zonas intermedias).
+- Soltar sobre el cuerpo de otro `menuItem` lo anida como su hijo (al final de sus `children` si ya tenía, o
+  sustituyendo su `href`/`action` por un nuevo `children` con ese único elemento si estaba en modo hoja). El tope
+  es un único nivel de anidado: un `menuItem` raíz (profundidad 0) puede recibir un nuevo hijo, pero un
+  `menuItemChild` (profundidad 1) nunca puede convertirse a su vez en destino de anidado ni moverse a un
+  desplegable ajeno si eso lo dejaría a profundidad 2 — ese intento se rechaza al soltar, sin cambiar el config.
+- Al mover un item que tiene sus propios hijos (o al moverlos a ellos individualmente), el estado de colapso de
+  cada fila implicada se conserva en su nueva posición.
+
+En la lista de elementos de sidebar (`shell.sidebar.items`), arrastrar admite el mismo repertorio que la lista de
+menú del header — reordenar dentro del mismo nivel, anidar sobre el cuerpo de otro `sidebarItem` (sustituyendo su
+`href`/`action` por un `children` si estaba en modo hoja, o añadiéndose al final si ya tenía hijos) y mover un item
+entre niveles distintos — dentro de un único árbol de arrastre que cubre la lista raíz y todos sus `children` a
+cualquier profundidad. A diferencia del menú del header, `sidebarItem` no tiene tope de anidado: un item puede
+recibir un hijo, y ese hijo a su vez anidar otro nivel, sin límite de profundidad, igual que ya ocurría con la
+edición manual. Un intento de anidar un item dentro de su propio descendiente se rechaza al soltar, sin cambiar el
+config. Al mover un item con sus propios hijos, el estado de colapso de cada fila implicada se conserva en su
+nueva posición.
+
+La lista de menú del header y la de elementos de sidebar mantienen árboles de arrastre completamente
+independientes entre sí: no es posible arrastrar un item de uno al otro, ya que cada árbol vive en su propio
+`DndContext` sin ninguna zona de destino compartida entre ambos. El resto de edición (añadir, quitar, editar
+campos) usa siempre controles de formulario estándar.
+
+La resolución del punto de soltado usa distancia al centro (no solapamiento literal de píxeles): el destino que
+gana es el que tiene el centro más cercano al elemento arrastrado, no el primero cuyo rectángulo se solape con él.
+Esto es lo que hace viable reordenar en la práctica pese a que la zona de "anidar" ocupa el cuerpo entero de cada
+fila y la zona de "reordenar" es una franja mucho más fina entre filas: sin este criterio, casi cualquier soltado
+cerca de una fila resolvería a "anidar" en vez de a la posición intermedia buscada.
+
+### Colapsar/expandir `menuItem` y `menuItemChild`
+Cada fila de la lista de menú (raíz o dentro de un desplegable) tiene su propio control de colapso independiente,
+identificado por su posición en el árbol (`0`, `1`, ... para items raíz; `0.0`, `0.1`, ... para los hijos del item
+`0`). El control es un único botón situado justo a la derecha del asa de arrastre (⠿), en la misma línea, que
+muestra el `icon` (si existe) y el `label` de la fila tal cual están configurados — sin resolver referencias
+`{{...}}`, igual que el breadcrumb de `Layout` — junto a un icono de flecha que indica el estado. No hay un botón
+de colapso separado ni una fila resumen aparte: pulsar sobre el propio nombre (en cualquier parte del botón) es lo
+que colapsa o expande la fila. Al montar el editor, todas las filas empiezan colapsadas; un item recién creado con
+"Añadir elemento de menú"/"Añadir elemento de desplegable" (o el hijo que se seedea al cambiar el modo de un item
+a "Con submenú") se expande automáticamente para poder rellenar sus campos sin un clic extra. Colapsar una fila:
+- Oculta el formulario completo de esa fila (etiqueta, icono, modo y campos del modo activo, visibilidad); el
+  nombre de la fila sigue visible en el botón de colapso, que no desaparece.
+- No afecta a los hijos del item: si un `menuItem` en modo "Con submenú" se colapsa, su lista de hijos sigue
+  visible e interactiva debajo, indentada.
+- No oculta un aviso de commit rechazado (`role="alert"`) pendiente en esa fila: se sigue mostrando igual
+  colapsada o expandida.
+- Es independiente por fila: colapsar un item no afecta al estado de colapso de ningún otro.
+
+Un `menuItem` en modo "Con submenú" muestra además, junto al botón de colapso, un icono indicador de rama (no es
+el `icon` propio del item) tanto colapsado como expandido; un item en cualquier otro modo nunca lo muestra.
+
+### Colapsar/expandir `sidebarItem`
+Cada fila de la lista de elementos de sidebar, a cualquier profundidad (raíz, hijo, nieto, ...), tiene su propio
+control de colapso independiente, identificado por su posición en el árbol (`0`, `1`, ... para items raíz; `0.0`,
+`0.1`, ... para los hijos del item `0`; `0.0.1`, ... para los nietos, y así sucesivamente sin límite de
+profundidad — a diferencia de la lista de menú del header, que solo admite un nivel anidado). Mismo patrón que el
+menú del header: un único botón junto al asa de arrastre, con el `icon`/`label` de la fila y un icono de flecha
+de estado; pulsar sobre el nombre colapsa o expande, sin botón ni fila resumen separados. Al montar el editor,
+todas las filas empiezan colapsadas; un item recién creado con "Añadir elemento de sidebar" (o el hijo que se
+seedea al cambiar el modo de un item a "Con hijos") se expande automáticamente para poder rellenar sus campos sin
+un clic extra. Colapsar una fila:
+- Oculta el formulario completo de esa fila (etiqueta, icono, modo y campos del modo activo, visibilidad); el
+  nombre de la fila sigue visible en el botón de colapso, que no desaparece.
+- No afecta a los hijos del item: si un `sidebarItem` en modo "Con hijos" se colapsa, su lista de hijos sigue
+  visible e interactiva debajo, indentada, a cualquier profundidad.
+- No oculta un aviso de commit rechazado (`role="alert"`) pendiente en esa fila: se sigue mostrando igual
+  colapsada o expandida.
+- Es independiente por fila: colapsar un item no afecta al estado de colapso de ningún otro, sea cual sea su
+  profundidad relativa.
+
+Un `sidebarItem` en modo "Con hijos" muestra además, junto al botón de colapso, un icono indicador de rama (no es
+el `icon` propio del item) tanto colapsado como expandido, a cualquier profundidad — sin la restricción "solo
+raíz" que tiene el indicador equivalente del menú del header; un item en cualquier otro modo nunca lo muestra.
 
 ### Feedback cuando un cambio no se puede guardar
 Cada cambio del formulario (logo, título, una fila de menú o de acciones) se valida contra el config completo antes

@@ -12,24 +12,23 @@ import { ShellConfigPanel } from '../../dev-runtime/shell-config-panel/shell-con
 import { AppShellHeader, AppShellSidebar } from '../../runtime/runtime-shell'
 import { RuntimeStateProvider } from '../../runtime/runtime-state/runtime-state-provider'
 
-// Same mocking pattern as layout-canvas-dnd-wiring.test.tsx: real pointer-drag simulation is
-// impractical in jsdom, so `DndContext` becomes a pass-through that records the `onDragEnd`
-// handler it was given, keyed by its own `id` prop (one distinct id per list: "shell-menu-root",
-// "shell-menu-children-<parentIndex>"). Tests then invoke the captured handler directly with a
-// synthetic {active, over} pair. `useDraggable`/`useDroppable` keep their real implementation so
-// the drag handle/row wiring itself still exercises the genuine hooks.
-const capturedOnDragEndByContextId = new Map<string, (event: { active: { id: string }; over: { id: string } | null }) => void>()
+// Only the "header and sidebar DnD tree isolation" describe below (0125-T7, closing acceptance
+// criterion 7) cares which `DndContext` instances get mounted; every other test in this file
+// exercises `ShellConfigPanel` end to end without touching drag at all, so this pass-through mock
+// is harmless for them — `useDraggable`/`useDroppable` keep their real implementation, same
+// convention as shell-menu-list-editor.test.tsx/shell-sidebar-list-editor.test.tsx.
+type CapturedHandlers = { onDragEnd?: (event: { active: { id: string }; over: { id: string } | null }) => void }
+const capturedDndContextIds = new Set<string>()
+const capturedHandlersByTreeId = new Map<string, CapturedHandlers>()
 
 vi.mock('@dnd-kit/core', async () => {
   const actual = await vi.importActual<typeof import('@dnd-kit/core')>('@dnd-kit/core')
   return {
     ...actual,
-    DndContext: (props: { id?: string; children: React.ReactNode; onDragEnd?: (event: unknown) => void }) => {
+    DndContext: (props: { id?: string; children: React.ReactNode; onDragEnd?: CapturedHandlers['onDragEnd'] }) => {
       if (props.id) {
-        capturedOnDragEndByContextId.set(
-          props.id,
-          props.onDragEnd as (event: { active: { id: string }; over: { id: string } | null }) => void,
-        )
+        capturedDndContextIds.add(props.id)
+        capturedHandlersByTreeId.set(props.id, { onDragEnd: props.onDragEnd })
       }
       return props.children
     },
@@ -91,12 +90,21 @@ function ShellConfigPanelHarness({ initialConfig }: HarnessProps) {
 }
 
 function renderHarness(initialConfig?: RuntimeConfig) {
-  capturedOnDragEndByContextId.clear()
+  capturedDndContextIds.clear()
+  capturedHandlersByTreeId.clear()
   return render(<ShellConfigPanelHarness initialConfig={initialConfig} />)
 }
 
 function rawConfig(): Record<string, unknown> {
   return JSON.parse(screen.getByTestId('raw-text').textContent ?? '{}')
+}
+
+// Header is the sub-view active by default (0125-T8); every test below that only exercises
+// sidebar-specific controls needs to switch into the Sidebar sub-view first, since its `tabpanel`
+// starts hidden (`className="hidden"`) and `getByRole` excludes elements outside the
+// accessibility tree.
+function openSidebarTab() {
+  fireEvent.click(screen.getByRole('tab', { name: 'Sidebar' }))
 }
 
 describe('ShellConfigPanel / header toggle', () => {
@@ -145,11 +153,13 @@ describe('ShellConfigPanel / header toggle', () => {
 describe('ShellConfigPanel / sidebar toggle', () => {
   it('starts with the sidebar toggle unchecked when shell is absent', () => {
     renderHarness()
+    openSidebarTab()
     expect(screen.getByRole('checkbox', { name: 'Sidebar activo' })).not.toBeChecked()
   })
 
   it('activating the sidebar toggle from no shell produces shell: { sidebar: { items: [] } }', () => {
     renderHarness()
+    openSidebarTab()
     fireEvent.click(screen.getByRole('checkbox', { name: 'Sidebar activo' }))
 
     expect(screen.getByRole('checkbox', { name: 'Sidebar activo' })).toBeChecked()
@@ -158,6 +168,7 @@ describe('ShellConfigPanel / sidebar toggle', () => {
 
   it('activating the sidebar toggle with header already active preserves the existing header', () => {
     renderHarness(buildBaseConfig({ shell: { header: { title: 'Hello' } } }))
+    openSidebarTab()
     fireEvent.click(screen.getByRole('checkbox', { name: 'Sidebar activo' }))
 
     expect(rawConfig().shell).toEqual({ header: { title: 'Hello' }, sidebar: { items: [] } })
@@ -165,6 +176,7 @@ describe('ShellConfigPanel / sidebar toggle', () => {
 
   it('deactivating the sidebar toggle with only sidebar active removes the shell key entirely', () => {
     renderHarness(buildBaseConfig({ shell: { sidebar: { items: [] } } }))
+    openSidebarTab()
     fireEvent.click(screen.getByRole('checkbox', { name: 'Sidebar activo' }))
 
     expect(screen.getByRole('checkbox', { name: 'Sidebar activo' })).not.toBeChecked()
@@ -173,6 +185,7 @@ describe('ShellConfigPanel / sidebar toggle', () => {
 
   it('deactivating the sidebar toggle with header also active preserves shell.header and only drops sidebar', () => {
     renderHarness(buildBaseConfig({ shell: { header: { title: 'Hello' }, sidebar: { items: [] } } }))
+    openSidebarTab()
     fireEvent.click(screen.getByRole('checkbox', { name: 'Sidebar activo' }))
 
     expect(rawConfig().shell).toEqual({ header: { title: 'Hello' } })
@@ -205,10 +218,14 @@ describe('ShellConfigPanel / sidebar toggle', () => {
     renderHarness(buildBaseConfig({ shell: { header: {} } }))
 
     fireEvent.change(screen.getByRole('textbox', { name: 'Title' }), { target: { value: 'My App' } })
+    openSidebarTab()
     fireEvent.click(screen.getByRole('checkbox', { name: 'Sidebar activo' }))
 
     expect(rawConfig().shell).toEqual({ header: { title: 'My App' }, sidebar: { items: [] } })
-    expect(screen.getByRole('textbox', { name: 'Title' })).toHaveValue('My App')
+    // The Header sub-view is hidden now (Sidebar is active) but never unmounted — the Title
+    // field it edited before switching still holds its value. `hidden: true` is required here
+    // because `getByRole` otherwise excludes elements outside the accessibility tree.
+    expect(screen.getByRole('textbox', { name: 'Title', hidden: true })).toHaveValue('My App')
   })
 })
 
@@ -247,188 +264,28 @@ describe('ShellConfigPanel / title', () => {
   })
 })
 
-describe('ShellConfigPanel / menu — add root item with href', () => {
-  it('adding a root item with label + href produces a valid config and renders it in the header', () => {
+describe('ShellConfigPanel / menu — list editor mounted in the panel', () => {
+  // Full matrix (add/action/children-mode/reordering) moved to
+  // shell-menu-list-editor.test.tsx (0125-T4, isolated `ShellMenuListEditor` harness). This
+  // describe only confirms `ShellMenuListEditor` is actually mounted with the real
+  // `shell.header.menu` and wired to the full commit pipeline (`validateRuntimeConfig` +
+  // `patchRootKey`) — same minimal-smoke role `sidebar items — recursive editor mounted in the
+  // panel` plays for `SidebarItemListEditor` below.
+  it('mounts with the real configured menu, rendering its fields', () => {
+    renderHarness(buildBaseConfig({ shell: { header: { menu: [{ label: 'Home', href: '/home' }] } } }))
+
+    // Every row starts collapsed by default; expand it to reach its fields.
+    fireEvent.click(screen.getByTestId('menu-item-collapse-toggle-0'))
+    expect(screen.getByRole('textbox', { name: 'Elemento de menú 1 — Etiqueta' })).toHaveValue('Home')
+  })
+
+  it('adding a root item via the mounted editor reflects in raw-text through the real commit pipeline', () => {
     renderHarness(buildBaseConfig({ shell: { header: {} } }))
 
     fireEvent.click(screen.getByRole('button', { name: 'Añadir elemento de menú' }))
-    fireEvent.change(screen.getByRole('textbox', { name: 'Elemento de menú 1 — Etiqueta' }), {
-      target: { value: 'Home' },
-    })
-    fireEvent.change(screen.getByRole('textbox', { name: 'Elemento de menú 1 — Href' }), {
-      target: { value: '/home' },
-    })
 
     const menu = (rawConfig().shell as { header: { menu: unknown[] } }).header.menu
-    expect(menu).toEqual([{ label: 'Home', href: '/home' }])
-    expect(screen.getByRole('link', { name: 'Home' })).toHaveAttribute('href', '/home')
-  })
-})
-
-describe('ShellConfigPanel / menu — action variant selector', () => {
-  it('choosing "Acción" then "Navegar a página" reveals pageId and commits a navigateTo action', () => {
-    renderHarness(buildBaseConfig({ shell: { header: {} } }))
-    fireEvent.click(screen.getByRole('button', { name: 'Añadir elemento de menú' }))
-    fireEvent.change(screen.getByRole('textbox', { name: 'Elemento de menú 1 — Etiqueta' }), {
-      target: { value: 'About' },
-    })
-
-    fireEvent.change(screen.getByRole('combobox', { name: 'Elemento de menú 1 — Modo' }), {
-      target: { value: 'action' },
-    })
-    fireEvent.change(screen.getByRole('combobox', { name: 'Elemento de menú 1 — Acción' }), {
-      target: { value: 'navigateTo' },
-    })
-    expect(screen.getByRole('textbox', { name: 'pageId' })).toBeInTheDocument()
-
-    fireEvent.change(screen.getByRole('textbox', { name: 'pageId' }), { target: { value: 'about' } })
-
-    const menu = (rawConfig().shell as { header: { menu: unknown[] } }).header.menu
-    expect(menu).toEqual([{ label: 'About', action: { type: 'navigateTo', pageId: 'about' } }])
-    expect(screen.getByRole('button', { name: 'About' })).toBeInTheDocument()
-  })
-})
-
-describe('ShellConfigPanel / menu — children mode', () => {
-  function renderWithOneRootItem() {
-    renderHarness(buildBaseConfig({ shell: { header: {} } }))
-    fireEvent.click(screen.getByRole('button', { name: 'Añadir elemento de menú' }))
-    fireEvent.change(screen.getByRole('textbox', { name: 'Elemento de menú 1 — Etiqueta' }), {
-      target: { value: 'Products' },
-    })
-  }
-
-  it('switching to "Con desplegable" replaces href/action with a children list (mutually exclusive per schema)', () => {
-    renderWithOneRootItem()
-
-    fireEvent.change(screen.getByRole('combobox', { name: 'Elemento de menú 1 — Modo' }), {
-      target: { value: 'children' },
-    })
-
-    const menu = (rawConfig().shell as { header: { menu: Array<Record<string, unknown>> } }).header.menu
-    expect(menu[0]).not.toHaveProperty('href')
-    expect(menu[0]).not.toHaveProperty('action')
-    expect(menu[0].children).toEqual([{ label: 'Nuevo elemento', href: '' }])
-    expect(screen.getByRole('button', { name: /Products/ })).toHaveAttribute('aria-haspopup', 'menu')
-  })
-
-  it('renders the "children" sublist and lets the user edit its own label', () => {
-    renderWithOneRootItem()
-    fireEvent.change(screen.getByRole('combobox', { name: 'Elemento de menú 1 — Modo' }), {
-      target: { value: 'children' },
-    })
-
-    fireEvent.change(screen.getByRole('textbox', { name: 'Elemento de desplegable 1 — Etiqueta' }), {
-      target: { value: 'Shoes' },
-    })
-
-    const menu = (rawConfig().shell as { header: { menu: Array<{ children: Array<{ label: string }> }> } }).header.menu
-    expect(menu[0].children[0].label).toBe('Shoes')
-  })
-
-  it('disables "Quitar" on the last remaining child (schema requires at least one)', () => {
-    renderWithOneRootItem()
-    fireEvent.change(screen.getByRole('combobox', { name: 'Elemento de menú 1 — Modo' }), {
-      target: { value: 'children' },
-    })
-
-    expect(screen.getByRole('button', { name: 'Quitar elemento de desplegable 1' })).toBeDisabled()
-  })
-
-  it('a menuItemChild row never offers "Con desplegable" as a mode option', () => {
-    renderWithOneRootItem()
-    fireEvent.change(screen.getByRole('combobox', { name: 'Elemento de menú 1 — Modo' }), {
-      target: { value: 'children' },
-    })
-
-    const childModeSelect = screen.getByRole('combobox', { name: 'Elemento de desplegable 1 — Modo' }) as HTMLSelectElement
-    const options = Array.from(childModeSelect.options).map((option) => option.value)
-    expect(options).not.toContain('children')
-  })
-})
-
-describe('ShellConfigPanel / menu — reordering by drag', () => {
-  function configWithThreeMenuItems(): RuntimeConfig {
-    return buildBaseConfig({
-      shell: {
-        header: {
-          menu: [
-            { label: 'First', href: '/1' },
-            { label: 'Second', href: '/2' },
-            { label: 'Third', href: '/3' },
-          ],
-        },
-      },
-    })
-  }
-
-  it('reordering the root menu via DnD persists the new order in the config', () => {
-    renderHarness(configWithThreeMenuItems())
-
-    const onDragEnd = capturedOnDragEndByContextId.get('shell-menu-root')
-    expect(onDragEnd).toBeDefined()
-    act(() => {
-      onDragEnd?.({ active: { id: '0' }, over: { id: '2' } })
-    })
-
-    const menu = (rawConfig().shell as { header: { menu: Array<{ label: string }> } }).header.menu
-    expect(menu.map((item) => item.label)).toEqual(['Second', 'Third', 'First'])
-  })
-
-  it('reordering a parent\'s children via DnD persists the new order within that children array', () => {
-    const config = buildBaseConfig({
-      shell: {
-        header: {
-          menu: [
-            {
-              label: 'Products',
-              children: [
-                { label: 'Shoes', href: '/shoes' },
-                { label: 'Hats', href: '/hats' },
-              ],
-            },
-          ],
-        },
-      },
-    })
-    renderHarness(config)
-
-    const onDragEnd = capturedOnDragEndByContextId.get('shell-menu-children-0')
-    expect(onDragEnd).toBeDefined()
-    act(() => {
-      onDragEnd?.({ active: { id: '0' }, over: { id: '1' } })
-    })
-
-    const menu = (rawConfig().shell as { header: { menu: Array<{ children: Array<{ label: string }> }> } }).header.menu
-    expect(menu[0].children.map((child) => child.label)).toEqual(['Hats', 'Shoes'])
-  })
-
-  it('an out-of-range/foreign drop id on a list is a no-op: no change, no crash', () => {
-    renderHarness(configWithThreeMenuItems())
-
-    const onDragEnd = capturedOnDragEndByContextId.get('shell-menu-root')
-    expect(() => act(() => onDragEnd?.({ active: { id: '0' }, over: { id: 'not-a-number' } }))).not.toThrow()
-
-    const menu = (rawConfig().shell as { header: { menu: Array<{ label: string }> } }).header.menu
-    expect(menu.map((item) => item.label)).toEqual(['First', 'Second', 'Third'])
-  })
-
-  it('root menu and a children sublist use independent DnD contexts (structurally no cross-level drag)', () => {
-    const config = buildBaseConfig({
-      shell: {
-        header: {
-          menu: [
-            { label: 'Products', children: [{ label: 'Shoes', href: '/shoes' }, { label: 'Hats', href: '/hats' }] },
-            { label: 'About', href: '/about' },
-          ],
-        },
-      },
-    })
-    renderHarness(config)
-
-    expect(capturedOnDragEndByContextId.get('shell-menu-root')).not.toBe(
-      capturedOnDragEndByContextId.get('shell-menu-children-0'),
-    )
+    expect(menu).toEqual([{ label: 'Nuevo elemento', href: '' }])
   })
 })
 
@@ -506,6 +363,7 @@ describe('ShellConfigPanel / actions', () => {
 describe('ShellConfigPanel / sidebar items — recursive editor mounted in the panel', () => {
   it('adding a root sidebar item with an action.navigateTo renders it live in the real sidebar', () => {
     renderHarness(buildBaseConfig({ shell: { sidebar: { items: [] } } }))
+    openSidebarTab()
 
     fireEvent.click(screen.getByRole('button', { name: 'Añadir elemento de sidebar' }))
     fireEvent.change(screen.getByRole('textbox', { name: 'Elemento de sidebar 1 — Etiqueta' }), {
@@ -526,6 +384,7 @@ describe('ShellConfigPanel / sidebar items — recursive editor mounted in the p
 
   it('editing a root item with an href renders as a real link in the sidebar', () => {
     renderHarness(buildBaseConfig({ shell: { sidebar: { items: [] } } }))
+    openSidebarTab()
 
     fireEvent.click(screen.getByRole('button', { name: 'Añadir elemento de sidebar' }))
     fireEvent.change(screen.getByRole('textbox', { name: 'Elemento de sidebar 1 — Etiqueta' }), {
@@ -543,6 +402,8 @@ describe('ShellConfigPanel / sidebar items — recursive editor mounted in the p
 
   it('switching a root item to "Con hijos" renders the nested sublist for editing without affecting shell.header', () => {
     renderHarness(buildBaseConfig({ shell: { header: { title: 'Hello' }, sidebar: { items: [{ label: 'Products', href: '/products' }] } } }))
+    openSidebarTab()
+    fireEvent.click(screen.getByTestId('sidebar-item-collapse-toggle-0'))
 
     fireEvent.change(screen.getByRole('combobox', { name: 'Elemento de sidebar 1 — Modo' }), {
       target: { value: 'children' },
@@ -563,6 +424,7 @@ describe('ShellConfigPanel / sidebar items — recursive editor mounted in the p
       shell: { header: { title: 'Hello' }, sidebar: { items: [] } },
     } as Partial<RuntimeConfig>)
     renderHarness(base)
+    openSidebarTab()
 
     fireEvent.click(screen.getByRole('button', { name: 'Añadir elemento de sidebar' }))
     fireEvent.change(screen.getByRole('textbox', { name: 'Elemento de sidebar 1 — Etiqueta' }), {
@@ -586,6 +448,8 @@ describe('ShellConfigPanel / sidebar items — recursive editor mounted in the p
         shell: { sidebar: { items: [{ label: 'About', action: { type: 'navigateTo', pageId: 'home' } }] } },
       }),
     )
+    openSidebarTab()
+    fireEvent.click(screen.getByTestId('sidebar-item-collapse-toggle-0'))
 
     fireEvent.change(screen.getByRole('textbox', { name: 'pageId' }), { target: { value: 'ghost' } })
 
@@ -609,6 +473,7 @@ describe('ShellConfigPanel / rejected commit feedback', () => {
         shell: { header: { menu: [{ label: 'About', action: { type: 'navigateTo', pageId: 'home' } }] } },
       }),
     )
+    fireEvent.click(screen.getByTestId('menu-item-collapse-toggle-0'))
   }
 
   it('an unknown pageId kept after a rejected commit shows role="alert" with the error code/message, without reverting', () => {
@@ -638,6 +503,41 @@ describe('ShellConfigPanel / rejected commit feedback', () => {
   })
 })
 
+describe('ShellConfigPanel / header and sidebar DnD tree isolation (closes acceptance criterion 7 — 0125-T7)', () => {
+  it('mounts the header menu tree and the sidebar items tree as two separate DndContext instances', () => {
+    renderHarness(
+      buildBaseConfig({
+        shell: {
+          header: { menu: [{ label: 'Home', href: '/home' }] },
+          sidebar: { items: [{ label: 'About', href: '/about' }] },
+        },
+      }),
+    )
+
+    expect(capturedDndContextIds.size).toBe(2)
+    expect(capturedDndContextIds.has('shell-menu')).toBe(true)
+    expect(capturedDndContextIds.has('shell-sidebar')).toBe(true)
+    expect(capturedHandlersByTreeId.get('shell-menu')).not.toBe(capturedHandlersByTreeId.get('shell-sidebar'))
+
+    // A drag that ends inside one tree's own `DndContext` can never resolve against the other
+    // tree's data: there is no `over.id` shared between the two `DndContext` instances at all, so
+    // invoking one tree's own captured `onDragEnd` never mutates the other tree's config.
+    act(() => {
+      capturedHandlersByTreeId.get('shell-sidebar')?.onDragEnd?.({ active: { id: '0' }, over: { id: 'gap::1' } })
+    })
+    act(() => {
+      capturedHandlersByTreeId.get('shell-menu')?.onDragEnd?.({ active: { id: '0' }, over: { id: 'gap::1' } })
+    })
+
+    const shell = rawConfig().shell as {
+      header: { menu: Array<{ label: string }> }
+      sidebar: { items: Array<{ label: string }> }
+    }
+    expect(shell.header.menu.map((item) => item.label)).toEqual(['Home'])
+    expect(shell.sidebar.items.map((item) => item.label)).toEqual(['About'])
+  })
+})
+
 describe('ShellConfigPanel / commit scope', () => {
   it('a Shell commit never touches layout/api/initialPage/tokens in the raw text', () => {
     const base = buildBaseConfig({
@@ -656,5 +556,94 @@ describe('ShellConfigPanel / commit scope', () => {
     expect(parsed.api).toEqual(base.api)
     expect(parsed.initialPage).toBe(base.initialPage)
     expect(parsed.tokens).toEqual(base.tokens)
+  })
+})
+
+describe('ShellConfigPanel / Header-Sidebar sub-navigation (0125-T8, closes acceptance criteria 8-9)', () => {
+  it('mounts with the Header sub-view active and the Sidebar sub-view mounted but hidden', () => {
+    renderHarness(buildBaseConfig({ shell: { header: {}, sidebar: { items: [] } } }))
+
+    expect(screen.getByRole('tab', { name: 'Header' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('tab', { name: 'Sidebar' })).toHaveAttribute('aria-selected', 'false')
+    expect(screen.getByTestId('shell-config-panel-tabpanel-header')).not.toHaveClass('hidden')
+    // Mounted (`getByTestId` finds it — not `queryByTestId` returning null) but hidden: the
+    // "always mounted" contract of acceptance criterion 8, not conditional rendering.
+    const sidebarPanel = screen.getByTestId('shell-config-panel-tabpanel-sidebar')
+    expect(sidebarPanel).toBeInTheDocument()
+    expect(sidebarPanel).toHaveClass('hidden')
+    // Same assertion as the "header toggle" describe above (starts checked when `header` is
+    // configured), now reached without switching tabs since Header is the default sub-view.
+    expect(screen.getByRole('checkbox', { name: 'Header activo' })).toBeChecked()
+  })
+
+  it('clicking the Sidebar tab activates it and hides Header, without unmounting either sub-view', () => {
+    renderHarness(
+      buildBaseConfig({
+        shell: {
+          header: { menu: [{ label: 'Home', href: '/home' }] },
+          sidebar: { items: [{ label: 'About', href: '/about' }] },
+        },
+      }),
+    )
+
+    // Expand the header menu item first — purely local, uncommitted UI state (0125-T4) that
+    // only survives a tab switch if `ShellMenuListEditor` is never unmounted.
+    fireEvent.click(screen.getByTestId('menu-item-collapse-toggle-0'))
+    expect(screen.getByTestId('menu-item-collapse-toggle-0')).toHaveAttribute('aria-expanded', 'true')
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Sidebar' }))
+
+    expect(screen.getByRole('tab', { name: 'Header' })).toHaveAttribute('aria-selected', 'false')
+    expect(screen.getByRole('tab', { name: 'Sidebar' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByTestId('shell-config-panel-tabpanel-header')).toHaveClass('hidden')
+    expect(screen.getByTestId('shell-config-panel-tabpanel-sidebar')).not.toHaveClass('hidden')
+    // Same assertion as the "sidebar toggle" describe above, now reached through the tab instead
+    // of being visible by default.
+    expect(screen.getByRole('checkbox', { name: 'Sidebar activo' })).toBeChecked()
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Header' }))
+
+    // The expand from before the switch survived — proof neither sub-view was ever unmounted,
+    // not just that the config value round-tripped.
+    expect(screen.getByTestId('menu-item-collapse-toggle-0')).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByRole('textbox', { name: 'Elemento de menú 1 — Etiqueta' })).toBeInTheDocument()
+  })
+
+  it('keeps a pending rejected-commit alert in the DOM while its sub-view is hidden, visible again on return', () => {
+    renderHarness(
+      buildBaseConfig({
+        shell: { sidebar: { items: [{ label: 'About', action: { type: 'navigateTo', pageId: 'home' } }] } },
+      }),
+    )
+    openSidebarTab()
+    fireEvent.click(screen.getByTestId('sidebar-item-collapse-toggle-0'))
+    fireEvent.change(screen.getByRole('textbox', { name: 'pageId' }), { target: { value: 'ghost' } })
+    expect(screen.getByRole('alert')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Header' }))
+
+    // The tabpanel itself is hidden (`className="hidden"`) — the CSS `display: none` it maps to
+    // is what actually removes its contents from the accessibility tree in a real browser; jsdom
+    // never applies Tailwind's stylesheet, so this assertion (rather than `queryByRole`) is what
+    // this test environment can actually verify: still mounted, not conditionally rendered away —
+    // acceptance criterion 9.
+    expect(screen.getByTestId('shell-config-panel-tabpanel-sidebar')).toHaveClass('hidden')
+    expect(screen.getByTestId('shell-sidebar--0-error')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Sidebar' }))
+
+    expect(screen.getByRole('alert')).toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: 'pageId' })).toHaveValue('ghost')
+  })
+
+  it('edits shell.sidebar.defaultCollapsed from a "Modo rail por defecto" boolean field inside the Sidebar sub-view', () => {
+    renderHarness(buildBaseConfig({ shell: { sidebar: { items: [] } } }))
+    openSidebarTab()
+
+    expect(screen.getByRole('checkbox', { name: 'Modo rail por defecto' })).not.toBeChecked()
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Modo rail por defecto' }))
+
+    expect(screen.getByRole('checkbox', { name: 'Modo rail por defecto' })).toBeChecked()
+    expect(rawConfig().shell).toEqual({ sidebar: { items: [], defaultCollapsed: true } })
   })
 })
