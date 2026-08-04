@@ -4,6 +4,7 @@ import { ChoiceItemsPropertyField } from './choice-items-property-field'
 import { DiscriminatedUnionPropertyField } from './discriminated-union-property-field'
 import { EnumPropertyField } from './enum-property-field'
 import { KeyValuePropertyField } from './key-value-property-field'
+import { LayoutSpanPropertyField } from './layout-span-property-field'
 import { NumberPropertyField } from './number-property-field'
 import { RawJsonPropertyField } from './raw-json-property-field'
 import { TextPropertyField } from './text-property-field'
@@ -27,6 +28,7 @@ interface WidgetComponentProps {
 // widget from outside this module, only this fixed catalog.
 const WIDGET_REGISTRY: Record<string, ComponentType<WidgetComponentProps>> = {
   'choice-items': ChoiceItemsPropertyField,
+  'layout-span': LayoutSpanPropertyField,
 }
 
 export interface PropertyFieldDispatcherProps {

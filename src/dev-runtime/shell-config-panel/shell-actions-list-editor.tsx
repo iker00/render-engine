@@ -96,6 +96,10 @@ export function ShellActionsListEditor({ actions, onCommitActions }: ShellAction
               </button>
             </div>
           </div>
+          {/* T2 (0127): no `pageLayout` here — `shell.header.actions` entries live outside the
+              page's `layout` tree entirely (see `actionRowPath` above), so there is never a
+              `container` ancestor to resolve `columns` from. The `Layout` subsection simply
+              doesn't render for these rows, same as any other node with no `pageLayout`. */}
           <LayoutCanvasPropertiesPanel
             node={action}
             path={actionRowPath(index)}

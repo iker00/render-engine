@@ -72,6 +72,7 @@ export function FloatingSelectionOverlay({
         <LayoutCanvasPropertiesPanel
           node={selectedNode}
           path={selectedPath}
+          pageLayout={pageLayout}
           onCommitNodeUpdate={onCommitNodeUpdate}
           onDeleteNode={onDeleteNode}
         />

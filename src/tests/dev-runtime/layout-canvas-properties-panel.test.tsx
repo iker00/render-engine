@@ -4,6 +4,7 @@ import type { LayoutNode } from '../../config/runtime-config'
 import { validateRuntimeConfig } from '../../config/runtime-config'
 import type { RuntimeConfig } from '../../config/runtime-config'
 import type { LayoutNodePath } from '../../runtime/layout-node-path'
+import { commitLayoutSpan } from '../../dev-runtime/layout-canvas/commit-layout-span'
 import { LayoutCanvasPropertiesPanel } from '../../dev-runtime/layout-canvas/layout-canvas-properties-panel'
 import { DevRuntimeReady } from '../../dev-runtime/dev-runtime'
 
@@ -124,49 +125,160 @@ describe('LayoutCanvasPropertiesPanel visibility section', () => {
   })
 })
 
-describe('LayoutCanvasPropertiesPanel layout.span edge case', () => {
-  it('preserves other breakpoints when editing a single breakpoint of a responsive layout.span', () => {
-    const node: LayoutNode = {
-      type: 'container',
-      layout: { span: { sm: 6, lg: 4 } },
-    } as LayoutNode
-    const onCommitNodeUpdate = vi.fn()
-    render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={onCommitNodeUpdate} />)
+// T2 (0127): `layout.span` is no longer editable through the generic dispatcher. The whole
+// `Layout` subsection only exists when the selected node sits inside a `container` ancestor with
+// `columns` declared (resolved via `resolveAncestorContainerColumns`, T1) and the caller passes
+// `pageLayout`. When it applies, `properties.span` is swapped for the `x-widget: 'layout-span'`
+// sentinel and rendered by `LayoutSpanPropertyField` (registered in `WIDGET_REGISTRY['layout-span']`)
+// instead of the generic numeric/responsive-map field. T3 (0127) replaced the wiring-only stub
+// with the real six-row widget; the two tests below that used to inspect the stub's raw
+// `data-parent-columns`/`data-span-value` attributes now assert the equivalent behavior on the
+// real rendered rows — see `layout-canvas-property-field-layout-span.test.tsx` for the widget's
+// own dedicated coverage.
+describe('LayoutCanvasPropertiesPanel layout subsection visibility', () => {
+  function containerWithColumns(columns: number | Record<string, number>, children: LayoutNode[] = []): LayoutNode {
+    return { type: 'container', props: { columns }, children } as LayoutNode
+  }
 
-    fireEvent.change(screen.getByLabelText('sm'), { target: { value: '8' } })
+  function plainContainer(children: LayoutNode[] = []): LayoutNode {
+    return { type: 'container', children } as LayoutNode
+  }
 
-    expect(onCommitNodeUpdate).toHaveBeenCalledTimes(1)
-    const [, updater] = onCommitNodeUpdate.mock.calls[0]
-    const result = updater(node) as Extract<LayoutNode, { type: 'container' }>
+  const nestedPath: LayoutNodePath = [
+    { field: 'children', index: 0 },
+    { field: 'children', index: 0 },
+  ]
 
-    expect(result.layout).toEqual({ span: { sm: 8, lg: 4 } })
+  it('renders the layout-span widget (not the generic numeric span input) when the node sits inside a container ancestor with columns, given pageLayout', () => {
+    const node: LayoutNode = { type: 'heading', props: { text: 'Hi', level: 2 }, layout: { span: 2 } } as LayoutNode
+    const pageLayout: LayoutNode[] = [containerWithColumns(4, [node])]
+
+    render(
+      <LayoutCanvasPropertiesPanel
+        node={node}
+        path={nestedPath}
+        pageLayout={pageLayout}
+        onCommitNodeUpdate={() => {}}
+      />,
+    )
+
+    expect(screen.getByTestId('layout-span-widget')).toBeInTheDocument()
+    expect(screen.queryByLabelText('span', { exact: false })).not.toBeInTheDocument()
   })
 
-  // Regression (T4): `layout.span` is a union nested one level inside `layout.properties.span`
-  // (integer | responsive per-breakpoint map). Resolution of that branch used to be a
-  // panel-specific `resolveLayoutSubsectionSchema` helper; it is now the dispatcher's own
-  // `ObjectPropertyField` recursion (T4) resolving it against `layout.span`'s current value.
-  // The plain-integer variant must keep rendering as a single numeric field, not the responsive
-  // per-breakpoint object form nor the disabled raw-JSON escape hatch.
-  it('edits an integer layout.span as a single numeric field, replacing the whole value', () => {
-    const node: LayoutNode = {
-      type: 'container',
-      layout: { span: 6 },
-    } as LayoutNode
+  it('does not render the Layout subsection at all when pageLayout is not passed', () => {
+    const node: LayoutNode = { type: 'heading', props: { text: 'Hi', level: 2 }, layout: { span: 2 } } as LayoutNode
+
+    render(<LayoutCanvasPropertiesPanel node={node} path={nestedPath} onCommitNodeUpdate={() => {}} />)
+
+    expect(screen.queryByTestId('layout-span-widget')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('span', { exact: false })).not.toBeInTheDocument()
+    expect(screen.queryByText('Layout')).not.toBeInTheDocument()
+  })
+
+  it('does not render the Layout subsection at all when pageLayout has no container ancestor with columns declared', () => {
+    const node: LayoutNode = { type: 'heading', props: { text: 'Hi', level: 2 }, layout: { span: 2 } } as LayoutNode
+    const pageLayout: LayoutNode[] = [plainContainer([node])]
+
+    render(
+      <LayoutCanvasPropertiesPanel
+        node={node}
+        path={nestedPath}
+        pageLayout={pageLayout}
+        onCommitNodeUpdate={() => {}}
+      />,
+    )
+
+    expect(screen.queryByTestId('layout-span-widget')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('span', { exact: false })).not.toBeInTheDocument()
+    expect(screen.queryByText('Layout')).not.toBeInTheDocument()
+  })
+
+  it('gives the widget the columns of the nearest container ancestor, not the outermost one, when nested', () => {
+    const node: LayoutNode = { type: 'heading', props: { text: 'Hi', level: 2 } } as LayoutNode
+    const pageLayout: LayoutNode[] = [containerWithColumns(2, [containerWithColumns(6, [node])])]
+    const deepPath: LayoutNodePath = [
+      { field: 'children', index: 0 },
+      { field: 'children', index: 0 },
+      { field: 'children', index: 0 },
+    ]
+
+    render(
+      <LayoutCanvasPropertiesPanel
+        node={node}
+        path={deepPath}
+        pageLayout={pageLayout}
+        onCommitNodeUpdate={() => {}}
+      />,
+    )
+
+    // T3 (0127): the real widget resolves the denominator ("/ N") of every row from
+    // `parentColumns` via `normalizeResponsiveLayoutValue` — an integer `6` cascades to `/ 6` on
+    // every breakpoint, so checking the `base` row's denominator is equivalent to (and more
+    // behavior-focused than) the removed stub's raw `data-parent-columns` attribute.
+    const baseRow = screen.getByTestId('layout-span-widget-row-base')
+    expect(within(baseRow).getByText('/ 6')).toBeInTheDocument()
+  })
+
+  it('exposes spanValue equal to node.layout?.span in the current render via the widget', () => {
+    const node: LayoutNode = { type: 'heading', props: { text: 'Hi', level: 2 }, layout: { span: { base: 2 } } } as LayoutNode
+    const pageLayout: LayoutNode[] = [containerWithColumns(4, [node])]
+
+    render(
+      <LayoutCanvasPropertiesPanel
+        node={node}
+        path={nestedPath}
+        pageLayout={pageLayout}
+        onCommitNodeUpdate={() => {}}
+      />,
+    )
+
+    // T3 (0127): with `spanValue = { base: 2 }`, the `base` row is explicit at `2` (and shows
+    // "Quitar"); the rest cascade from it as inherited `2`s. Checking the `base` row's own value
+    // and explicitness is the real-widget equivalent of the removed stub's raw
+    // `data-span-value` attribute.
+    const baseRow = screen.getByTestId('layout-span-widget-row-base')
+    expect(within(baseRow).getByLabelText('base')).toHaveValue(2)
+    expect(baseRow).toHaveAttribute('data-explicit', 'true')
+  })
+})
+
+// T2 (0127): `commitSpan`, exposed via `LayoutSpanWidgetContext`, is built by `commitLayoutSpan` —
+// exported so its commit contract can be tested directly without mounting the widget stub (T3
+// gives the widget its real rows/edition; this task only wires the context and the commit path).
+describe('commitLayoutSpan (T2, 0127)', () => {
+  it('calls onCommitNodeUpdate with the given path and an updater that sets layout.span to nextSpan while preserving other layout keys', () => {
     const onCommitNodeUpdate = vi.fn()
-    render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={onCommitNodeUpdate} />)
 
-    const spanField = screen.getByLabelText('span', { exact: false }) as HTMLInputElement
-    expect(spanField).toHaveAttribute('type', 'number')
-    expect(spanField.value).toBe('6')
-
-    fireEvent.change(spanField, { target: { value: '9' } })
+    commitLayoutSpan(onCommitNodeUpdate, somePath, { base: 4 })
 
     expect(onCommitNodeUpdate).toHaveBeenCalledTimes(1)
-    const [, updater] = onCommitNodeUpdate.mock.calls[0]
-    const result = updater(node) as Extract<LayoutNode, { type: 'container' }>
+    const [calledPath, updater] = onCommitNodeUpdate.mock.calls[0]
+    expect(calledPath).toBe(somePath)
 
-    expect(result.layout).toEqual({ span: 9 })
+    const node: LayoutNode = {
+      type: 'container',
+      layout: { span: { base: 2 }, extraKey: 'keep-me' },
+    } as unknown as LayoutNode
+    const result = updater(node) as Extract<LayoutNode, { type: 'container' }>
+    expect(result.layout).toEqual({ span: { base: 4 }, extraKey: 'keep-me' })
+  })
+
+  it('propagates the rejected CommitCanvasMutationResult returned by onCommitNodeUpdate as-is', () => {
+    const rejected = { status: 'rejected' as const, error: { code: 'invalid-layout', message: 'nope', displayMode: 'always' as const } }
+    const onCommitNodeUpdate = vi.fn().mockReturnValue(rejected)
+
+    const result = commitLayoutSpan(onCommitNodeUpdate, somePath, 4)
+
+    expect(result).toBe(rejected)
+  })
+
+  it('returns undefined when onCommitNodeUpdate returns nothing (plain vi.fn() double)', () => {
+    const onCommitNodeUpdate = vi.fn()
+
+    const result = commitLayoutSpan(onCommitNodeUpdate, somePath, 4)
+
+    expect(result).toBeUndefined()
   })
 })
 
