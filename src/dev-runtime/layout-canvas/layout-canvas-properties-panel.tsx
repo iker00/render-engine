@@ -1,11 +1,14 @@
 import { useState } from 'react'
-import type { LayoutNode, RuntimeConfigError } from '../../config/runtime-config'
+import type { LayoutNode, RuntimeConfigError, RuntimeResponsiveLayoutValue } from '../../config/runtime-config'
 import { serializeLayoutNodePath, type LayoutNodePath } from '../../runtime/layout-node-path'
 import { CommitRejectionBanner } from '../commit-rejection-banner'
+import { commitLayoutSpan } from './commit-layout-span'
 import type { CommitCanvasMutationResult } from './layout-canvas-commit'
 import { getNodeTypeJsonSchema } from './layout-canvas-node-schema'
+import { LayoutSpanWidgetContext } from './property-fields/layout-span-widget-context'
 import { PropertyFieldDispatcher } from './property-fields/property-field-dispatcher'
 import { resolveUnionBranch } from './property-fields/property-field-schema-resolution'
+import { resolveAncestorContainerColumns } from './resolve-ancestor-container-columns'
 
 export interface LayoutCanvasPropertiesPanelProps {
   node: LayoutNode
@@ -20,6 +23,12 @@ export interface LayoutCanvasPropertiesPanelProps {
   // component in isolation without a delete pipeline wired) don't have to pass it; when absent,
   // no delete action renders at all rather than rendering a dead button.
   onDeleteNode?: () => void
+  // T2 (0127): the full page layout tree the selected node lives in, needed to resolve the
+  // nearest `container` ancestor's `columns` (`resolveAncestorContainerColumns`, T1) and decide
+  // whether the `Layout` subsection renders at all. Optional because some callers render this
+  // panel for nodes that never live in a page's `layout` tree (e.g. `ShellActionsListEditor`'s
+  // shell header actions) — for those, the subsection is simply omitted.
+  pageLayout?: readonly LayoutNode[]
 }
 
 type NodeSubsectionKey = 'props' | 'layout' | 'visibility' | 'queryStateFeedback'
@@ -146,6 +155,28 @@ function resolveChoiceLikePropsSchema(propsSchema: Record<string, unknown>): Rec
   }
 }
 
+/**
+ * Replaces the generated sub-schema of `layout.span` (integer | responsive per-breakpoint map,
+ * T4's `layout.span` union) with the `{ 'x-widget': 'layout-span' }` sentinel the dispatcher's
+ * `x-widget` hook resolves to `LayoutSpanPropertyField` (T2, 0127). Same pattern as
+ * `resolveChoiceLikePropsSchema` above for `select.props.items`: only `properties.span` is
+ * swapped out, the rest of the `layout` subsection schema (currently just `span` itself) passes
+ * through unchanged. Only called when the panel has already established a `Layout` subsection
+ * should render at all (a `container` ancestor with `columns` exists) — see the caller below.
+ */
+function resolveLayoutSubsectionSchema(layoutSchema: Record<string, unknown>): Record<string, unknown> {
+  const properties = layoutSchema.properties
+  if (!isPlainObject(properties) || !('span' in properties)) return layoutSchema
+
+  return {
+    ...layoutSchema,
+    properties: {
+      ...properties,
+      span: { 'x-widget': 'layout-span' },
+    },
+  }
+}
+
 // RF2 (0105): label seeded onto a brand-new `tabs.props.items` entry via `handleAdd`'s generic
 // default-object builder (property-field-dispatcher.tsx). Named so a future copy change stays a
 // one-line edit.
@@ -233,6 +264,7 @@ export function LayoutCanvasPropertiesPanel({
   path,
   onCommitNodeUpdate,
   onDeleteNode,
+  pageLayout,
 }: LayoutCanvasPropertiesPanelProps) {
   const nodeSchema = getNodeTypeJsonSchema(node.type)
   const schemaProperties = isPlainObject(nodeSchema.properties) ? nodeSchema.properties : {}
@@ -300,10 +332,24 @@ export function LayoutCanvasPropertiesPanel({
           effectiveSchema = resolveChoiceLikePropsSchema(effectiveSchema)
         }
 
+        // T2 (0127): `Layout` only exists when a `container` ancestor with `columns` is
+        // resolvable — without one, `span` has nothing to be relative to, so the whole
+        // subsection is omitted rather than falling back to a generic editor. `pageLayout` is
+        // optional (see the prop's own doc comment above), so its absence is treated the same as
+        // "no ancestor found".
+        let parentColumns: RuntimeResponsiveLayoutValue | null = null
+        if (key === 'layout') {
+          parentColumns = pageLayout ? resolveAncestorContainerColumns(pageLayout, path) : null
+          if (parentColumns === null) return null
+          if (effectiveSchema) {
+            effectiveSchema = resolveLayoutSubsectionSchema(effectiveSchema)
+          }
+        }
+
         const pendingRejection = pendingRejections[key]
         const displayedValue = pendingRejection ? pendingRejection.value : currentValue
 
-        return (
+        const subsectionField = (
           <div key={key} className="flex flex-col gap-2">
             <PropertyFieldDispatcher
               schema={effectiveSchema}
@@ -322,6 +368,30 @@ export function LayoutCanvasPropertiesPanel({
               />
             )}
           </div>
+        )
+
+        if (key !== 'layout' || parentColumns === null) return subsectionField
+
+        const spanValue = isPlainObject(currentValue) ? (currentValue.span as RuntimeResponsiveLayoutValue | undefined) : undefined
+
+        return (
+          <LayoutSpanWidgetContext.Provider
+            // T4 (0127, bug fix): keyed by `serializedPath` (not just the constant subsection
+            // `key`) so selecting a different node remounts `LayoutSpanPropertyField` instead of
+            // reusing the same instance. The widget keeps its own per-row `rejections` state
+            // (commit-rejection feedback, T3) entirely inside that component — unlike the panel's
+            // own `pendingRejections` above, which the `prevSerializedPath` guard already resets
+            // per node — so without a path-scoped key a rejection banner left on a row would keep
+            // showing after switching to an unrelated node's `layout.span` widget.
+            key={`${key}-${serializedPath}`}
+            value={{
+              parentColumns,
+              spanValue,
+              commitSpan: (nextSpan) => commitLayoutSpan(onCommitNodeUpdate, path, nextSpan),
+            }}
+          >
+            {subsectionField}
+          </LayoutSpanWidgetContext.Provider>
         )
       })}
       {node.type === 'form' &&

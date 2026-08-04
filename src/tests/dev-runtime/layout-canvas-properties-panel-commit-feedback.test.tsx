@@ -1,7 +1,9 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import type { LayoutNode } from '../../config/runtime-config'
+import type { LayoutNode, RuntimeConfig } from '../../config/runtime-config'
+import { validateRuntimeConfig } from '../../config/runtime-config'
 import type { LayoutNodePath } from '../../runtime/layout-node-path'
+import { DevRuntimeReady } from '../../dev-runtime/dev-runtime'
 import { LayoutCanvasPropertiesPanel } from '../../dev-runtime/layout-canvas/layout-canvas-properties-panel'
 import type { CommitCanvasMutationResult } from '../../dev-runtime/layout-canvas/layout-canvas-commit'
 
@@ -109,5 +111,256 @@ describe('LayoutCanvasPropertiesPanel commit feedback (T9)', () => {
     expect(screen.getAllByLabelText('operationName', { exact: false })).toHaveLength(2)
     const banner = screen.getByRole('alert')
     expect(banner).toHaveAttribute('data-testid', 'layout-canvas-properties-panel-props-error')
+  })
+})
+
+// T4 (0127): end-to-end coverage of the `layout.span` widget through the real `DevRuntimeReady`
+// commit pipeline (`commitCanvasMutation` -> `patchRawConfigTextWithLayout` ->
+// `validateRuntimeConfig`), closing acceptance criteria 1-9 of the feature spec. The describes
+// above exercise `LayoutCanvasPropertiesPanel` in isolation with a test-double
+// `onCommitNodeUpdate`; this one mounts the real editor so a rejected commit is a genuine
+// `validateRuntimeConfig` rejection (not a canned return value) and a successful one is visible
+// in the Monaco buffer — same harness `layout-canvas-delete-node.test.tsx` and
+// `layout-canvas-properties-panel.test.tsx`'s own `DevRuntimeReady` describe already use.
+function buildReadyProps(rawConfig: unknown): { initialConfig: RuntimeConfig; initialConfigText: string } {
+  const initialConfigText = JSON.stringify(rawConfig, null, 2)
+  const validation = validateRuntimeConfig(rawConfig)
+  if (validation.status !== 'ready') {
+    throw new Error(`Fixture config failed to validate: ${validation.error.message}`)
+  }
+  return { initialConfig: validation.config, initialConfigText }
+}
+
+// DevRuntimeReady (0103, T8) edits the real `<RuntimePage />` in place — switching to Editor mode
+// from the floating toolbar activates the LayoutEditModeProvider/LayoutCanvasDndContext wiring on
+// that same tree, exactly like `layout-canvas-delete-node.test.tsx`'s `renderCanvas`.
+function renderCanvas(rawConfig: unknown): { root: HTMLElement } {
+  const { initialConfig, initialConfigText } = buildReadyProps(rawConfig)
+  const view = render(<DevRuntimeReady initialConfig={initialConfig} initialConfigText={initialConfigText} />)
+  fireEvent.click(screen.getByTestId('dev-editor-toolbar-mode-editor'))
+  return { root: view.container }
+}
+
+// Selects a node by its serialized `data-node-path` (same precise-click pattern as
+// `layout-canvas-delete-node.test.tsx`'s `selectRootContainer`), avoiding ambiguous text queries
+// when sibling nodes render overlapping text.
+function selectNodeByPath(root: HTMLElement, serializedPath: string) {
+  const wrapper = root.querySelector(`[data-node-path="${serializedPath}"]`)
+  expect(wrapper).not.toBeNull()
+  fireEvent.click(wrapper as Element)
+}
+
+async function getMonacoJson(): Promise<Record<string, unknown>> {
+  if (screen.queryByTestId('monaco-editor-mock') === null) {
+    fireEvent.click(screen.getByTestId('dev-editor-toolbar-monaco-toggle'))
+  }
+  await waitFor(() => expect(screen.getByTestId('monaco-editor-mock')).toBeInTheDocument())
+  return JSON.parse((screen.getByTestId('monaco-editor-mock') as HTMLTextAreaElement).value) as Record<string, unknown>
+}
+
+// First child ("Child A") of the container at `children.1`, the node every test below selects to
+// exercise the widget. Its own `layout.span` is seeded via `childASpan` when a test needs a
+// pre-existing value (e.g. the integer -> map conversion case); omitted otherwise so the node
+// starts with no `layout` key at all, matching the widget's "nothing declared" baseline.
+function spanWidgetConfig(containerColumns: number | Record<string, number>, childASpan?: number | Record<string, number>) {
+  return {
+    api: {},
+    initialPage: 'home',
+    pages: [
+      {
+        id: 'home',
+        layout: [
+          { type: 'heading', props: { text: 'Root heading', level: 1 } },
+          {
+            type: 'container',
+            props: { columns: containerColumns },
+            children: [
+              {
+                type: 'heading',
+                props: { text: 'Child A', level: 2 },
+                ...(childASpan !== undefined ? { layout: { span: childASpan } } : {}),
+              },
+              { type: 'heading', props: { text: 'Child B', level: 3 } },
+            ],
+          },
+        ],
+      },
+    ],
+  }
+}
+
+const CHILD_A_PATH = 'children.1.children.0'
+const CHILD_B_PATH = 'children.1.children.1'
+
+// Reads the raw (pre-validation) `children[0]` of the root container from a parsed Monaco JSON
+// buffer, matching `spanWidgetConfig`'s shape.
+function readChildAFromMonacoJson(parsed: Record<string, unknown>): Record<string, unknown> {
+  const pages = parsed.pages as Array<{ layout: Array<Record<string, unknown>> }>
+  const container = pages[0].layout[1] as { children: Array<Record<string, unknown>> }
+  return container.children[0]
+}
+
+describe('LayoutCanvasPropertiesPanel layout.span widget — end-to-end real pipeline (T4, 0127)', () => {
+  it('shows no layout.span field nor the Layout legend for a node with no container ancestor with columns (acceptance 1)', () => {
+    const { root } = renderCanvas(spanWidgetConfig(6))
+    selectNodeByPath(root, 'children.0')
+
+    const panel = screen.getByTestId('layout-canvas-properties-panel')
+    expect(within(panel).queryByTestId('layout-span-widget')).not.toBeInTheDocument()
+    // Scoped to the properties panel: the floating toolbar has its own unrelated "Layout"
+    // domain-selector button (`dev-editor-toolbar-domain-layout`) with the same visible text.
+    expect(within(panel).queryByText('Layout')).not.toBeInTheDocument()
+  })
+
+  it('renders the layout-span widget with all six rows for a node inside a container ancestor with columns (acceptance 2)', () => {
+    const { root } = renderCanvas(spanWidgetConfig(6))
+    selectNodeByPath(root, CHILD_A_PATH)
+
+    const widget = screen.getByTestId('layout-span-widget')
+    const rowTestIds = within(widget)
+      .getAllByTestId(/^layout-span-widget-row-/)
+      .map((row) => row.getAttribute('data-testid'))
+    expect(rowTestIds).toEqual(
+      ['base', 'sm', 'md', 'lg', 'xl', '2xl'].map((breakpoint) => `layout-span-widget-row-${breakpoint}`),
+    )
+  })
+
+  it("resolves each row's denominator from the real mobile-first cascade of the container's responsive columns (acceptance 3)", () => {
+    const { root } = renderCanvas(spanWidgetConfig({ base: 2, md: 4, xl: 12 }))
+    selectNodeByPath(root, CHILD_A_PATH)
+
+    expect(within(screen.getByTestId('layout-span-widget-row-base')).getByText('/ 2')).toBeInTheDocument()
+    expect(within(screen.getByTestId('layout-span-widget-row-sm')).getByText('/ 2')).toBeInTheDocument()
+    expect(within(screen.getByTestId('layout-span-widget-row-md')).getByText('/ 4')).toBeInTheDocument()
+    expect(within(screen.getByTestId('layout-span-widget-row-lg')).getByText('/ 4')).toBeInTheDocument()
+    expect(within(screen.getByTestId('layout-span-widget-row-xl')).getByText('/ 12')).toBeInTheDocument()
+    expect(within(screen.getByTestId('layout-span-widget-row-2xl')).getByText('/ 12')).toBeInTheDocument()
+  })
+
+  it('shows an inherited muted value with no "Quitar" until edited, then "Quitar" removes the explicit key through the real commit pipeline (acceptance 4-6)', async () => {
+    const { root } = renderCanvas(spanWidgetConfig(6))
+    selectNodeByPath(root, CHILD_A_PATH)
+
+    const initialBaseRow = screen.getByTestId('layout-span-widget-row-base')
+    expect(within(initialBaseRow).getByLabelText('base')).toHaveValue(1)
+    expect(initialBaseRow).toHaveAttribute('data-explicit', 'false')
+    expect(within(initialBaseRow).queryByRole('button', { name: 'Quitar base' })).not.toBeInTheDocument()
+
+    fireEvent.change(within(initialBaseRow).getByLabelText('base'), { target: { value: '3' } })
+
+    const editedBaseRow = screen.getByTestId('layout-span-widget-row-base')
+    expect(editedBaseRow).toHaveAttribute('data-explicit', 'true')
+    expect(within(editedBaseRow).getByLabelText('base')).toHaveValue(3)
+    expect(within(editedBaseRow).getByRole('button', { name: 'Quitar base' })).toBeInTheDocument()
+
+    fireEvent.click(within(editedBaseRow).getByRole('button', { name: 'Quitar base' }))
+
+    const clearedBaseRow = screen.getByTestId('layout-span-widget-row-base')
+    expect(clearedBaseRow).toHaveAttribute('data-explicit', 'false')
+    expect(within(clearedBaseRow).getByLabelText('base')).toHaveValue(1)
+    expect(within(clearedBaseRow).queryByRole('button', { name: 'Quitar base' })).not.toBeInTheDocument()
+
+    const parsed = await getMonacoJson()
+    const childA = readChildAFromMonacoJson(parsed)
+    expect((childA.layout as Record<string, unknown> | undefined)?.span).toBeUndefined()
+  })
+
+  it('converts a plain integer span to a per-breakpoint map when editing a non-base row, preserved through validateRuntimeConfig (acceptance 7)', async () => {
+    const { root } = renderCanvas(spanWidgetConfig(6, 3))
+    selectNodeByPath(root, CHILD_A_PATH)
+
+    const mdRow = screen.getByTestId('layout-span-widget-row-md')
+    expect(within(mdRow).getByLabelText('md')).toHaveValue(3)
+    expect(mdRow).toHaveAttribute('data-explicit', 'false')
+
+    fireEvent.change(within(mdRow).getByLabelText('md'), { target: { value: '5' } })
+
+    const editedMdRow = screen.getByTestId('layout-span-widget-row-md')
+    expect(editedMdRow).toHaveAttribute('data-explicit', 'true')
+    expect(within(editedMdRow).getByLabelText('md')).toHaveValue(5)
+
+    const parsed = await getMonacoJson()
+    const childA = readChildAFromMonacoJson(parsed)
+    expect((childA.layout as Record<string, unknown>).span).toEqual({ base: 3, md: 5 })
+  })
+
+  it('rejects an out-of-range value for a breakpoint via validateRuntimeConfig: alert appears scoped to that row, the typed value is kept, and currentConfig does not change (acceptance 8)', async () => {
+    const { root } = renderCanvas(spanWidgetConfig(6))
+    selectNodeByPath(root, CHILD_A_PATH)
+
+    const baseRow = screen.getByTestId('layout-span-widget-row-base')
+    fireEvent.change(within(baseRow).getByLabelText('base'), { target: { value: '13' } })
+
+    const rejectedBaseRow = screen.getByTestId('layout-span-widget-row-base')
+    expect(within(rejectedBaseRow).getByLabelText('base')).toHaveValue(13)
+    const alert = within(rejectedBaseRow).getByRole('alert')
+    expect(alert).toHaveTextContent('invalid-layout')
+    expect(alert.textContent).toContain('span')
+
+    const parsed = await getMonacoJson()
+    const childA = readChildAFromMonacoJson(parsed)
+    expect(childA.layout).toBeUndefined()
+  })
+
+  it('clears the alert once the same row is edited again with a value inside range, and that follow-up commit is applied (acceptance 8, follow-up)', async () => {
+    const { root } = renderCanvas(spanWidgetConfig(6))
+    selectNodeByPath(root, CHILD_A_PATH)
+
+    const baseRow = screen.getByTestId('layout-span-widget-row-base')
+    fireEvent.change(within(baseRow).getByLabelText('base'), { target: { value: '0' } })
+    expect(within(screen.getByTestId('layout-span-widget-row-base')).getByRole('alert')).toBeInTheDocument()
+
+    fireEvent.change(within(screen.getByTestId('layout-span-widget-row-base')).getByLabelText('base'), {
+      target: { value: '4' },
+    })
+
+    const clearedRow = screen.getByTestId('layout-span-widget-row-base')
+    expect(within(clearedRow).queryByRole('alert')).not.toBeInTheDocument()
+    expect(within(clearedRow).getByLabelText('base')).toHaveValue(4)
+    expect(clearedRow).toHaveAttribute('data-explicit', 'true')
+
+    const parsed = await getMonacoJson()
+    const childA = readChildAFromMonacoJson(parsed)
+    expect((childA.layout as Record<string, unknown>).span).toEqual({ base: 4 })
+  })
+
+  it('discards a pending layout.span row alert when the selected node changes, the same guard the rest of the panel already applies (edge case)', () => {
+    const { root } = renderCanvas(spanWidgetConfig(6))
+    selectNodeByPath(root, CHILD_A_PATH)
+
+    fireEvent.change(within(screen.getByTestId('layout-span-widget-row-base')).getByLabelText('base'), {
+      target: { value: '13' },
+    })
+    expect(within(screen.getByTestId('layout-span-widget-row-base')).getByRole('alert')).toBeInTheDocument()
+
+    selectNodeByPath(root, CHILD_B_PATH)
+
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    const baseRowB = screen.getByTestId('layout-span-widget-row-base')
+    expect(within(baseRowB).getByLabelText('base')).toHaveValue(1)
+    expect(baseRowB).toHaveAttribute('data-explicit', 'false')
+  })
+
+  it('leaves the rest of the panel (props field) editable and synced to Monaco alongside the layout.span widget (acceptance 9)', async () => {
+    const { root } = renderCanvas(spanWidgetConfig(6))
+    selectNodeByPath(root, CHILD_A_PATH)
+
+    expect(screen.getByTestId('layout-span-widget')).toBeInTheDocument()
+    fireEvent.change(screen.getByLabelText('text', { exact: false }), { target: { value: 'Edited child A' } })
+
+    const parsed = await getMonacoJson()
+    const childA = readChildAFromMonacoJson(parsed)
+    expect((childA.props as Record<string, unknown>).text).toBe('Edited child A')
+  })
+
+  it('keeps mutual exclusion with the Monaco panel intact when the selected node renders the layout.span widget (acceptance 9)', async () => {
+    const { root } = renderCanvas(spanWidgetConfig(6))
+    fireEvent.click(screen.getByTestId('dev-editor-toolbar-monaco-toggle'))
+    await waitFor(() => expect(screen.getByTestId('monaco-editor-mock')).toBeInTheDocument())
+
+    selectNodeByPath(root, CHILD_A_PATH)
+
+    expect(screen.queryByTestId('monaco-editor-mock')).not.toBeInTheDocument()
+    expect(screen.getByTestId('layout-span-widget')).toBeInTheDocument()
   })
 })

@@ -23,6 +23,27 @@ La política completa está definida en el documento de workflow del proyecto.
 
 ## Completadas
 
+- `0127-dev-editor-span-widget`: sustituye el editor genérico de `layout.span` en el panel de propiedades del
+  editor visual (modo Editor) por un widget dedicado (`LayoutSpanPropertyField`), registrado en el mismo
+  `WIDGET_REGISTRY` del dispatcher que ya usa `choice-items` (`0108`) bajo la clave `'layout-span'`, sin introducir
+  un segundo mecanismo de extensión. La subsección `Layout` completa (no solo el campo `span`) pasa a mostrarse
+  únicamente cuando el nodo seleccionado tiene al menos un `container` ancestro, a cualquier profundidad, con
+  `props.columns` declarado — sin ese ancestro no hay ningún campo de respaldo para `layout.span`, ni el widget ni
+  el editor genérico anterior. El widget muestra siempre las seis filas `base`/`sm`/`md`/`lg`/`xl`/`2xl`, cada una
+  con un input numérico y un indicador `/ N` cuyo denominador se resuelve del `container` ancestro más cercano
+  reutilizando la misma cascada mobile-first ya usada por el runtime para `container.props.columns` responsive
+  (`resolveAncestorContainerColumns`, nuevo módulo en `src/dev-runtime/layout-canvas/`), sin duplicar esa lógica.
+  Una fila sin clave explícita muestra en gris el valor heredado de esa misma cascada aplicada al propio
+  `layout.span` y no expone botón "Quitar"; una fila con clave explícita sí lo expone, y quitar la última clave
+  restante commitea `layout.span` como `undefined` en vez de un mapa vacío `{}`. Un `layout.span` como entero plano
+  se convierte a mapa responsive sembrado con `{ base: <entero previo> }` en la primera edición de cualquier fila.
+  Cada fila valida su commit con el mismo pipeline (`validateRuntimeConfig`) y sigue el mismo patrón de aviso
+  `role="alert"` por fila ya vigente en el resto del panel, con limpieza independiente por fila. El commit del
+  widget (`commitLayoutSpan`, `commit-layout-span.ts`) reutiliza el mismo `onCommitNodeUpdate` del panel sin
+  introducir un canal de mutación paralelo. Sin cambios en el contrato JSON de `layout.span` ni
+  `container.props.columns`, ni en su validación; sin cambios de comportamiento en producción ni en modo Visual.
+  Primera de una posible serie de widgets dedicados para el editor de nodos, tratada deliberadamente como piloto
+  acotado a este único campo.
 - `0124-app-shell-layout-appearance`: elimina el contenedor tipo "tarjeta" que envolvía todo el runtime (borde,
   sombra, fondo de superficie, padding perimetral vía `rounded-shell`/`p-4 sm:p-6 lg:p-8`) y el límite de ancho
   centrado (`max-w-shell`, incluida la fila interna de `shell.header`), para que el runtime ocupe el 100% del ancho
