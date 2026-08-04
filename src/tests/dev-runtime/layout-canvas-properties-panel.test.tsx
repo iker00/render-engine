@@ -848,6 +848,76 @@ describe('LayoutCanvasPropertiesPanel form submitAction selector (T5)', () => {
   })
 })
 
+describe('LayoutCanvasPropertiesPanel link content mode widget (T3, 0126)', () => {
+  function linkNode(overrides: Partial<Extract<LayoutNode, { type: 'link' }>['props']> = {}, children?: LayoutNode[]): LayoutNode {
+    return {
+      type: 'link',
+      props: { ...overrides },
+      ...(children !== undefined ? { children } : {}),
+    } as LayoutNode
+  }
+
+  it('renders the "Contenido" selector for a link node, preselecting "Texto" when props.label is present', () => {
+    const node = linkNode({ label: 'Ir a inicio' })
+    render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={() => {}} />)
+
+    const select = screen.getByLabelText('Contenido') as HTMLSelectElement
+    expect(select.value).toBe('text')
+    const optionTexts = Array.from(select.options).map((option) => option.textContent)
+    expect(optionTexts).toEqual(['Texto', 'Elementos anidados'])
+  })
+
+  it.each<LayoutNode['type']>(['container', 'form', 'button', 'heading'])(
+    'does not render the "Contenido" selector for a %s node',
+    (type) => {
+      const node = { type, props: { label: 'x', text: 'x' }, id: 'f1' } as unknown as LayoutNode
+      render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={() => {}} />)
+
+      expect(screen.queryByLabelText('Contenido')).not.toBeInTheDocument()
+    },
+  )
+
+  it('the "Contenido" selector renders alongside Props/Layout/Visibilidad/Estado de consulta', () => {
+    const node = linkNode({ label: 'Ir' })
+    render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={() => {}} />)
+
+    expect(screen.getByLabelText('Contenido')).toBeInTheDocument()
+    expect(screen.getByLabelText('label', { exact: false })).toBeInTheDocument()
+  })
+
+  it('switching to "Elementos anidados" invokes onCommitNodeUpdate with the correct path and a patch reconstructing the full node', () => {
+    const node = linkNode({ label: 'Ir', href: '/somewhere' })
+    const onCommitNodeUpdate = vi.fn()
+    render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={onCommitNodeUpdate} />)
+
+    fireEvent.change(screen.getByLabelText('Contenido'), { target: { value: 'children' } })
+
+    expect(onCommitNodeUpdate).toHaveBeenCalledTimes(1)
+    const [calledPath, patchFn] = onCommitNodeUpdate.mock.calls[0]
+    expect(calledPath).toBe(somePath)
+    const result = patchFn(node) as Extract<LayoutNode, { type: 'link' }>
+    expect(result.children).toEqual([])
+    expect(result.props).not.toHaveProperty('label')
+    expect(result.props.href).toBe('/somewhere')
+  })
+
+  it('switching to "Texto" from a link with children invokes onCommitNodeUpdate reconstructing the node with the default label', () => {
+    const node = linkNode({ href: '/somewhere' }, [{ type: 'heading', props: { text: 'Hi', level: 2 } }])
+    const onCommitNodeUpdate = vi.fn()
+    render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={onCommitNodeUpdate} />)
+
+    fireEvent.change(screen.getByLabelText('Contenido'), { target: { value: 'text' } })
+
+    expect(onCommitNodeUpdate).toHaveBeenCalledTimes(1)
+    const [calledPath, patchFn] = onCommitNodeUpdate.mock.calls[0]
+    expect(calledPath).toBe(somePath)
+    const result = patchFn(node) as Extract<LayoutNode, { type: 'link' }>
+    expect(result).not.toHaveProperty('children')
+    expect(result.props.label).toBe('Enlace')
+    expect(result.props.href).toBe('/somewhere')
+  })
+})
+
 function buildReadyProps(rawConfig: unknown): { initialConfig: RuntimeConfig; initialConfigText: string } {
   const initialConfigText = JSON.stringify(rawConfig, null, 2)
   const validation = validateRuntimeConfig(rawConfig)

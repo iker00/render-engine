@@ -69,6 +69,10 @@ function form(id: string, children: unknown[]) {
   return { type: 'form', id, children }
 }
 
+function link(children: unknown[]) {
+  return { type: 'link', props: { href: '#' }, children }
+}
+
 function buildReadyProps(rawConfig: unknown) {
   const initialConfigText = JSON.stringify(rawConfig, null, 2)
   const validation = validateRuntimeConfig(rawConfig)
@@ -283,6 +287,28 @@ describe('drag insert desde la paleta (FR8)', () => {
     expect(insertedTextsInOrder[0]).toBe('A')
     expect(insertedTextsInOrder[2]).toBe('B')
     expect(insertedTextsInOrder[3]).toBe('C')
+    expect(validateRuntimeConfig(parsed).status).toBe('ready')
+  })
+
+  // 0126-T3 restriction: confirm `link` is a valid palette-drop destination end-to-end, not just
+  // by analogy with `container`/`form` above — a `link` already in "Elementos anidados" mode
+  // (`children: []`, reachable from the properties panel's content-mode widget once T1's
+  // validation relaxation is in place) must accept a drag-inserted child the same way.
+  it('arrastrar heading desde la paleta hasta un link en modo "Elementos anidados" lo inserta dentro de children', async () => {
+    renderCanvas({
+      api: {},
+      initialPage: 'home',
+      pages: [{ id: 'home', layout: [link([])] }],
+    })
+
+    paletteDragEnd('heading', { parentPath: [{ field: 'children', index: 0 }], index: 0 })
+
+    const { parsed } = await getMonacoJson()
+    const linkNode = (parsed.pages as Array<{ layout: Array<{ type: string; children: Array<{ type: string }> }> }>)[0].layout[0]
+
+    expect(linkNode.type).toBe('link')
+    expect(linkNode.children).toHaveLength(1)
+    expect(linkNode.children[0].type).toBe('heading')
     expect(validateRuntimeConfig(parsed).status).toBe('ready')
   })
 

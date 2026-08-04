@@ -1813,7 +1813,61 @@ describe('validateRuntimeConfig', () => {
     })
   })
 
-  it('rejects a link with empty children array', () => {
+  it('accepts a link node with props.href and an empty children array (no props.label)', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithPages([
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'link',
+              props: { href: 'https://example.com' },
+              children: [],
+            },
+          ],
+        },
+      ]),
+    )
+    expect(result.status).toBe('ready')
+    if (result.status === 'ready') {
+      const node = result.config.pages[0].layout[0] as { type: string; children: unknown[] }
+      expect(node.type).toBe('link')
+      expect(Array.isArray(node.children)).toBe(true)
+      expect(node.children).toHaveLength(0)
+    }
+  })
+
+  it('accepts a link node with props.href and an empty children array when nested inside a container', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithPages([
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'container',
+              children: [
+                {
+                  type: 'link',
+                  props: { href: 'https://example.com' },
+                  children: [],
+                },
+              ],
+            },
+          ],
+        },
+      ]),
+    )
+    expect(result.status).toBe('ready')
+    if (result.status === 'ready') {
+      const containerNode = result.config.pages[0].layout[0] as { children: Array<{ type: string; children: unknown[] }> }
+      const linkNode = containerNode.children[0]
+      expect(linkNode.type).toBe('link')
+      expect(Array.isArray(linkNode.children)).toBe(true)
+      expect(linkNode.children).toHaveLength(0)
+    }
+  })
+
+  it('rejects a link with both props.label and an empty children array (mutual exclusion, not the removed empty-children rule)', () => {
     expect(
       validateRuntimeConfig(
         createConfigWithPages([
@@ -1822,7 +1876,7 @@ describe('validateRuntimeConfig', () => {
             layout: [
               {
                 type: 'link',
-                props: { href: 'https://example.com' },
+                props: { label: 'Go', href: 'https://example.com' },
                 children: [],
               },
             ],
@@ -1834,9 +1888,9 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: `Page "home" has an invalid layout at "layout[0].children": link children cannot be empty.
-  → link[0]
-  Node: {"type":"link"}`,
+        message: `Page "home" has an invalid layout at "layout[0]": link nodes cannot have both props.label and children.
+  → link("Go")
+  Node: {"type":"link","props":{"label":"Go"}}`,
       },
     })
   })

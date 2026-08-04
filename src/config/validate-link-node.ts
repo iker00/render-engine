@@ -116,11 +116,6 @@ export function validateLinkNode(
     return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}": link nodes must have either props.label or children.`, breadcrumb, rawNode)
   }
 
-  // Cross-validation (4): children cannot be empty
-  if (hasChildren && parseResult.data.children!.length === 0) {
-    return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}.children": link children cannot be empty.`, breadcrumb, rawNode)
-  }
-
   // Cross-validation (5 & 6): validate children types (direct and recursive)
   let children: LayoutNodeCollection | undefined
 
