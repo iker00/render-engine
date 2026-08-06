@@ -3,10 +3,12 @@ import { BooleanPropertyField } from './boolean-property-field'
 import { ChoiceItemsPropertyField } from './choice-items-property-field'
 import { DiscriminatedUnionPropertyField } from './discriminated-union-property-field'
 import { EnumPropertyField } from './enum-property-field'
+import { HeadingLevelPropertyField } from './heading-level-property-field'
 import { KeyValuePropertyField } from './key-value-property-field'
 import { LayoutSpanPropertyField } from './layout-span-property-field'
 import { NumberPropertyField } from './number-property-field'
 import { RawJsonPropertyField } from './raw-json-property-field'
+import { TabsOrientationPropertyField } from './tabs-orientation-property-field'
 import { TextPropertyField } from './text-property-field'
 import {
   buildDefaultValueForSchema,
@@ -29,6 +31,8 @@ interface WidgetComponentProps {
 const WIDGET_REGISTRY: Record<string, ComponentType<WidgetComponentProps>> = {
   'choice-items': ChoiceItemsPropertyField,
   'layout-span': LayoutSpanPropertyField,
+  'heading-level': HeadingLevelPropertyField,
+  'tabs-orientation': TabsOrientationPropertyField,
 }
 
 export interface PropertyFieldDispatcherProps {
