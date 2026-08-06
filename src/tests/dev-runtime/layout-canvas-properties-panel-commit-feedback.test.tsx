@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import type { LayoutNode, RuntimeConfig } from '../../config/runtime-config'
+import type { LayoutNode, RuntimeConfig, RuntimeConfigValidationResult } from '../../config/runtime-config'
 import { validateRuntimeConfig } from '../../config/runtime-config'
 import type { LayoutNodePath } from '../../runtime/layout-node-path'
 import { DevRuntimeReady } from '../../dev-runtime/dev-runtime'
@@ -28,6 +28,18 @@ vi.mock('@monaco-editor/react', () => ({
     )
   }),
 }))
+
+// T4 (0128): `validateRuntimeConfig` wraps the real implementation by default (every existing
+// test in this file, including `buildReadyProps` below, gets genuine validation behavior
+// unchanged). Only the heading-level/tabs-orientation rejection tests further down override a
+// single upcoming call with `mockReturnValueOnce` to force acceptance criterion 8 — see the doc
+// comment on that describe block for why mocking (rather than a naturally invalid typed value,
+// the `layout.span` widget's approach above) is the only way to reach that path for these two
+// widgets.
+vi.mock('../../config/runtime-config', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../config/runtime-config')>()
+  return { ...actual, validateRuntimeConfig: vi.fn(actual.validateRuntimeConfig) }
+})
 
 const somePath: LayoutNodePath = [{ field: 'children', index: 0 }]
 const otherPath: LayoutNodePath = [{ field: 'children', index: 1 }]
@@ -362,5 +374,389 @@ describe('LayoutCanvasPropertiesPanel layout.span widget — end-to-end real pip
 
     expect(screen.queryByTestId('monaco-editor-mock')).not.toBeInTheDocument()
     expect(screen.getByTestId('layout-span-widget')).toBeInTheDocument()
+  })
+})
+
+// T4 (0128): fixture with a top-level `heading` and a top-level `tabs` node, no container
+// ancestor involved — unlike the `layout.span` widget above, `heading-level`/`tabs-orientation`
+// don't depend on ancestor columns, so the fixture stays flat. `headingLevel` is always passed
+// explicitly (every acceptance criterion this file covers names a concrete level); `tabsOrientation`
+// is omitted to exercise the "undeclared" default (acceptance 10).
+function headingTabsWidgetConfig(headingLevel: number, tabsOrientation?: 'horizontal' | 'vertical') {
+  return {
+    api: {},
+    initialPage: 'home',
+    pages: [
+      {
+        id: 'home',
+        layout: [
+          { type: 'heading', props: { text: 'Título de la página', level: headingLevel } },
+          {
+            type: 'tabs',
+            props: {
+              items: [{ label: 'Uno' }, { label: 'Dos' }],
+              ...(tabsOrientation !== undefined ? { orientation: tabsOrientation } : {}),
+            },
+          },
+        ],
+      },
+    ],
+  }
+}
+
+const HEADING_PATH = 'children.0'
+const TABS_PATH = 'children.1'
+
+// Reads `pages[0].layout[index]` from a parsed Monaco JSON buffer, matching
+// `headingTabsWidgetConfig`'s flat (no-container) shape.
+function readTopLevelNodeFromMonacoJson(parsed: Record<string, unknown>, index: number): Record<string, unknown> {
+  const pages = parsed.pages as Array<{ layout: Array<Record<string, unknown>> }>
+  return pages[0].layout[index]
+}
+
+// A generic, schema-shaped rejection used to force acceptance criterion 8 for both widgets below.
+// Both `heading-level` and `tabs-orientation` only ever emit values from a closed set that the
+// runtime-config schema already accepts in full (see the widgets' own `resolveActiveValue`
+// comments: heading's 5 segments are a strict subset of the schema's unconstrained `level:
+// number`, and tabs' 2 segments are the exact same set as the schema's `orientation` enum), so
+// there is no value reachable through the widget's own UI that a genuine `validateRuntimeConfig`
+// call would reject — unlike `layout.span`'s free-typed numeric input above. Forcing the mocked
+// module's next `validateRuntimeConfig` call to fail is the only way to exercise the panel's
+// rejection-banner wiring (`layout-canvas-properties-panel-props-error`) for these two widgets.
+const forcedRejection: RuntimeConfigValidationResult = {
+  status: 'error',
+  error: { code: 'invalid-layout', message: 'Cambio no permitido', displayMode: 'always' },
+}
+
+describe('LayoutCanvasPropertiesPanel heading-level / tabs-orientation widgets — end-to-end real pipeline (T4, 0128)', () => {
+  it('shows the "Nivel" widget with the matching segment active for a level within 1..5, and no generic numeric input (acceptance 5)', () => {
+    const { root } = renderCanvas(headingTabsWidgetConfig(3))
+    selectNodeByPath(root, HEADING_PATH)
+
+    const radiogroup = screen.getByRole('radiogroup', { name: 'Nivel' })
+    expect(within(radiogroup).getByRole('radio', { name: 'H3', checked: true })).toBeInTheDocument()
+    expect(screen.queryByLabelText('level', { exact: false })).not.toBeInTheDocument()
+  })
+
+  it('shows the "Nivel" widget with no segment active for level 6 (acceptance 6)', () => {
+    const { root } = renderCanvas(headingTabsWidgetConfig(6))
+    selectNodeByPath(root, HEADING_PATH)
+
+    const radiogroup = screen.getByRole('radiogroup', { name: 'Nivel' })
+    expect(within(radiogroup).queryAllByRole('radio', { checked: true })).toHaveLength(0)
+  })
+
+  it('clicking "H3" on a heading with level 1 commits props.level = 3 through the real pipeline, preserving props.text (acceptance 7)', async () => {
+    const { root } = renderCanvas(headingTabsWidgetConfig(1))
+    selectNodeByPath(root, HEADING_PATH)
+
+    fireEvent.click(within(screen.getByRole('radiogroup', { name: 'Nivel' })).getByRole('radio', { name: 'H3' }))
+
+    expect(
+      within(screen.getByRole('radiogroup', { name: 'Nivel' })).getByRole('radio', { name: 'H3', checked: true }),
+    ).toBeInTheDocument()
+
+    const parsed = await getMonacoJson()
+    const heading = readTopLevelNodeFromMonacoJson(parsed, 0)
+    expect((heading.props as Record<string, unknown>).level).toBe(3)
+    expect((heading.props as Record<string, unknown>).text).toBe('Título de la página')
+  })
+
+  it('shows the "Orientación" widget with "Horizontal" active when orientation is undeclared (acceptance 10)', () => {
+    const { root } = renderCanvas(headingTabsWidgetConfig(2))
+    selectNodeByPath(root, TABS_PATH)
+
+    const radiogroup = screen.getByRole('radiogroup', { name: 'Orientación' })
+    expect(within(radiogroup).getByRole('radio', { name: 'Horizontal', checked: true })).toBeInTheDocument()
+  })
+
+  it('shows the "Orientación" widget with "Vertical" active for props.orientation = "vertical" (acceptance 11)', () => {
+    const { root } = renderCanvas(headingTabsWidgetConfig(2, 'vertical'))
+    selectNodeByPath(root, TABS_PATH)
+
+    const radiogroup = screen.getByRole('radiogroup', { name: 'Orientación' })
+    expect(within(radiogroup).getByRole('radio', { name: 'Vertical', checked: true })).toBeInTheDocument()
+  })
+
+  it('clicking "Vertical" on a tabs node with orientation "horizontal" commits props.orientation = "vertical" through the real pipeline, preserving props.items (acceptance 12)', async () => {
+    const { root } = renderCanvas(headingTabsWidgetConfig(2, 'horizontal'))
+    selectNodeByPath(root, TABS_PATH)
+
+    fireEvent.click(within(screen.getByRole('radiogroup', { name: 'Orientación' })).getByRole('radio', { name: 'Vertical' }))
+
+    expect(
+      within(screen.getByRole('radiogroup', { name: 'Orientación' })).getByRole('radio', {
+        name: 'Vertical',
+        checked: true,
+      }),
+    ).toBeInTheDocument()
+
+    const parsed = await getMonacoJson()
+    const tabs = readTopLevelNodeFromMonacoJson(parsed, 1)
+    expect((tabs.props as Record<string, unknown>).orientation).toBe('vertical')
+    expect((tabs.props as Record<string, unknown>).items).toEqual([{ label: 'Uno' }, { label: 'Dos' }])
+  })
+
+  it('rejects a heading level change forced by a mocked validateRuntimeConfig failure: alert appears below the widget, the chosen segment stays visible, and the Monaco buffer is untouched (acceptance 8)', async () => {
+    const { root } = renderCanvas(headingTabsWidgetConfig(1))
+    selectNodeByPath(root, HEADING_PATH)
+
+    vi.mocked(validateRuntimeConfig).mockReturnValueOnce(forcedRejection)
+    fireEvent.click(within(screen.getByRole('radiogroup', { name: 'Nivel' })).getByRole('radio', { name: 'H3' }))
+
+    const banner = screen.getByRole('alert')
+    expect(banner).toHaveAttribute('data-testid', 'layout-canvas-properties-panel-props-error')
+    expect(banner.textContent).toContain('invalid-layout')
+    expect(banner.textContent).toContain('Cambio no permitido')
+    expect(
+      within(screen.getByRole('radiogroup', { name: 'Nivel' })).getByRole('radio', { name: 'H3', checked: true }),
+    ).toBeInTheDocument()
+
+    const parsed = await getMonacoJson()
+    const heading = readTopLevelNodeFromMonacoJson(parsed, 0)
+    expect((heading.props as Record<string, unknown>).level).toBe(1)
+  })
+
+  it('clears the alert once a follow-up commit succeeds, applying the new level (acceptance 8, follow-up)', async () => {
+    const { root } = renderCanvas(headingTabsWidgetConfig(1))
+    selectNodeByPath(root, HEADING_PATH)
+
+    vi.mocked(validateRuntimeConfig).mockReturnValueOnce(forcedRejection)
+    fireEvent.click(within(screen.getByRole('radiogroup', { name: 'Nivel' })).getByRole('radio', { name: 'H3' }))
+    expect(screen.getByRole('alert')).toBeInTheDocument()
+
+    fireEvent.click(within(screen.getByRole('radiogroup', { name: 'Nivel' })).getByRole('radio', { name: 'H4' }))
+
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    expect(
+      within(screen.getByRole('radiogroup', { name: 'Nivel' })).getByRole('radio', { name: 'H4', checked: true }),
+    ).toBeInTheDocument()
+
+    const parsed = await getMonacoJson()
+    const heading = readTopLevelNodeFromMonacoJson(parsed, 0)
+    expect((heading.props as Record<string, unknown>).level).toBe(4)
+  })
+
+  it('discards a pending rejection on the "Nivel" widget when the selected node changes, the same guard the rest of the panel already applies (edge case)', () => {
+    const { root } = renderCanvas(headingTabsWidgetConfig(2))
+    selectNodeByPath(root, HEADING_PATH)
+
+    vi.mocked(validateRuntimeConfig).mockReturnValueOnce(forcedRejection)
+    fireEvent.click(within(screen.getByRole('radiogroup', { name: 'Nivel' })).getByRole('radio', { name: 'H5' }))
+    expect(screen.getByRole('alert')).toBeInTheDocument()
+
+    selectNodeByPath(root, TABS_PATH)
+
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    expect(
+      within(screen.getByRole('radiogroup', { name: 'Orientación' })).getByRole('radio', {
+        name: 'Horizontal',
+        checked: true,
+      }),
+    ).toBeInTheDocument()
+  })
+
+  it('leaves the rest of the panel (props.text) editable and synced to Monaco alongside the "Nivel" widget (acceptance 9)', async () => {
+    const { root } = renderCanvas(headingTabsWidgetConfig(2))
+    selectNodeByPath(root, HEADING_PATH)
+
+    fireEvent.change(screen.getByLabelText('text', { exact: false }), { target: { value: 'Nuevo título' } })
+
+    const parsed = await getMonacoJson()
+    const heading = readTopLevelNodeFromMonacoJson(parsed, 0)
+    expect((heading.props as Record<string, unknown>).text).toBe('Nuevo título')
+  })
+
+  it('keeps mutual exclusion with the Monaco panel intact when the selected node renders the "Orientación" widget (acceptance 9)', async () => {
+    const { root } = renderCanvas(headingTabsWidgetConfig(2))
+    fireEvent.click(screen.getByTestId('dev-editor-toolbar-monaco-toggle'))
+    await waitFor(() => expect(screen.getByTestId('monaco-editor-mock')).toBeInTheDocument())
+
+    selectNodeByPath(root, TABS_PATH)
+
+    expect(screen.queryByTestId('monaco-editor-mock')).not.toBeInTheDocument()
+    expect(screen.getByRole('radiogroup', { name: 'Orientación' })).toBeInTheDocument()
+  })
+})
+
+// T5 (0128): fixture with a single top-level `container`, matching `headingTabsWidgetConfig`'s
+// flat shape above — the "Modo" widget doesn't depend on ancestor columns either. `columns` is
+// passed explicitly whenever a test needs "Columnas" pre-selected; omitted otherwise to exercise
+// the "Grid" (absent `columns`) baseline. `direction`, when passed, is the prop the "regression:
+// rest of Props stays editable" test edits and the reconstruction tests check survives untouched.
+function containerModeWidgetConfig(columns?: number | Record<string, number>, direction?: string) {
+  return {
+    api: {},
+    initialPage: 'home',
+    pages: [
+      {
+        id: 'home',
+        layout: [
+          {
+            type: 'container',
+            props: {
+              ...(direction !== undefined ? { direction } : {}),
+              ...(columns !== undefined ? { columns } : {}),
+            },
+            children: [{ type: 'heading', props: { text: 'Child', level: 2 } }],
+          },
+        ],
+      },
+    ],
+  }
+}
+
+const CONTAINER_PATH = 'children.0'
+
+describe('LayoutCanvasPropertiesPanel container columns mode widget — end-to-end real pipeline (T5, 0128)', () => {
+  it('shows "Grid" active for a container without props.columns in the real config (acceptance 1)', () => {
+    const { root } = renderCanvas(containerModeWidgetConfig())
+    selectNodeByPath(root, CONTAINER_PATH)
+
+    const radiogroup = screen.getByRole('radiogroup', { name: 'Modo' })
+    expect(within(radiogroup).getByRole('radio', { name: /Grid/, checked: true })).toBeInTheDocument()
+  })
+
+  it('shows "Columnas" active for a container with a fixed integer props.columns in the real config (acceptance 2)', () => {
+    const { root } = renderCanvas(containerModeWidgetConfig(4))
+    selectNodeByPath(root, CONTAINER_PATH)
+
+    const radiogroup = screen.getByRole('radiogroup', { name: 'Modo' })
+    expect(within(radiogroup).getByRole('radio', { name: /Columnas/, checked: true })).toBeInTheDocument()
+  })
+
+  it('shows "Columnas" active for a container with a responsive columns map in the real config (acceptance 2)', () => {
+    const { root } = renderCanvas(containerModeWidgetConfig({ base: 2, md: 4 }))
+    selectNodeByPath(root, CONTAINER_PATH)
+
+    const radiogroup = screen.getByRole('radiogroup', { name: 'Modo' })
+    expect(within(radiogroup).getByRole('radio', { name: /Columnas/, checked: true })).toBeInTheDocument()
+  })
+
+  it('clicking "Columnas" commits props.columns = 2 through the real pipeline, preserving direction, and shows columns in Props (acceptance 3)', async () => {
+    const { root } = renderCanvas(containerModeWidgetConfig(undefined, 'row'))
+    selectNodeByPath(root, CONTAINER_PATH)
+
+    fireEvent.click(within(screen.getByRole('radiogroup', { name: 'Modo' })).getByRole('radio', { name: /Columnas/ }))
+
+    expect(
+      within(screen.getByRole('radiogroup', { name: 'Modo' })).getByRole('radio', { name: /Columnas/, checked: true }),
+    ).toBeInTheDocument()
+    expect(screen.getByLabelText('columns', { exact: false })).toBeInTheDocument()
+
+    const parsed = await getMonacoJson()
+    const container = readTopLevelNodeFromMonacoJson(parsed, 0)
+    expect((container.props as Record<string, unknown>).columns).toBe(2)
+    expect((container.props as Record<string, unknown>).direction).toBe('row')
+  })
+
+  it('clicking "Grid" commits props without columns through the real pipeline, preserving direction, and hides columns from Props (acceptance 4)', async () => {
+    const { root } = renderCanvas(containerModeWidgetConfig(4, 'row'))
+    selectNodeByPath(root, CONTAINER_PATH)
+
+    fireEvent.click(within(screen.getByRole('radiogroup', { name: 'Modo' })).getByRole('radio', { name: /Grid/ }))
+
+    expect(
+      within(screen.getByRole('radiogroup', { name: 'Modo' })).getByRole('radio', { name: /Grid/, checked: true }),
+    ).toBeInTheDocument()
+    expect(screen.queryByLabelText('columns', { exact: false })).not.toBeInTheDocument()
+
+    const parsed = await getMonacoJson()
+    const container = readTopLevelNodeFromMonacoJson(parsed, 0)
+    expect(container.props as Record<string, unknown>).not.toHaveProperty('columns')
+    expect((container.props as Record<string, unknown>).direction).toBe('row')
+  })
+
+  it('rejects a mode change forced by a mocked validateRuntimeConfig failure: alert appears below the widget, the chosen segment stays visible, and the Monaco buffer is untouched (acceptance 8)', async () => {
+    const { root } = renderCanvas(containerModeWidgetConfig())
+    selectNodeByPath(root, CONTAINER_PATH)
+
+    vi.mocked(validateRuntimeConfig).mockReturnValueOnce(forcedRejection)
+    fireEvent.click(within(screen.getByRole('radiogroup', { name: 'Modo' })).getByRole('radio', { name: /Columnas/ }))
+
+    const banner = screen.getByRole('alert')
+    expect(banner).toHaveAttribute('data-testid', 'layout-canvas-properties-panel-containerColumnsMode-error')
+    expect(banner.textContent).toContain('invalid-layout')
+    expect(banner.textContent).toContain('Cambio no permitido')
+    expect(
+      within(screen.getByRole('radiogroup', { name: 'Modo' })).getByRole('radio', { name: /Columnas/, checked: true }),
+    ).toBeInTheDocument()
+
+    const parsed = await getMonacoJson()
+    const container = readTopLevelNodeFromMonacoJson(parsed, 0)
+    expect(container.props as Record<string, unknown>).not.toHaveProperty('columns')
+  })
+
+  it('clears the alert once a follow-up commit succeeds, applying the new mode (acceptance 8, follow-up)', async () => {
+    const { root } = renderCanvas(containerModeWidgetConfig(4))
+    selectNodeByPath(root, CONTAINER_PATH)
+
+    vi.mocked(validateRuntimeConfig).mockReturnValueOnce(forcedRejection)
+    fireEvent.click(within(screen.getByRole('radiogroup', { name: 'Modo' })).getByRole('radio', { name: /Grid/ }))
+    expect(screen.getByRole('alert')).toBeInTheDocument()
+
+    // Follow-up: picking "Columnas" again is a genuine change relative to the widget's currently
+    // displayed (rejected-attempt) state of "Grid", so it fires a fresh, unmocked commit that
+    // succeeds through the real pipeline and clears the banner.
+    fireEvent.click(within(screen.getByRole('radiogroup', { name: 'Modo' })).getByRole('radio', { name: /Columnas/ }))
+
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    expect(
+      within(screen.getByRole('radiogroup', { name: 'Modo' })).getByRole('radio', { name: /Columnas/, checked: true }),
+    ).toBeInTheDocument()
+
+    const parsed = await getMonacoJson()
+    const container = readTopLevelNodeFromMonacoJson(parsed, 0)
+    // The follow-up "Columnas" commit reconstructs from the widget's displayed (rejected-attempt)
+    // node — which had already dropped `columns` — so it seeds the default `2`, not the original
+    // `4`. Same "no memory across mode switches" behavior the widget's own unit tests cover.
+    expect((container.props as Record<string, unknown>).columns).toBe(2)
+  })
+
+  it('discards a pending rejection on the "Modo" widget when the selected node changes, the same guard the rest of the panel already applies (edge case)', () => {
+    const { root } = renderCanvas({
+      api: {},
+      initialPage: 'home',
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            { type: 'heading', props: { text: 'Título', level: 1 } },
+            { type: 'container', props: {}, children: [{ type: 'heading', props: { text: 'Child', level: 2 } }] },
+          ],
+        },
+      ],
+    })
+    selectNodeByPath(root, 'children.1')
+
+    vi.mocked(validateRuntimeConfig).mockReturnValueOnce(forcedRejection)
+    fireEvent.click(within(screen.getByRole('radiogroup', { name: 'Modo' })).getByRole('radio', { name: /Columnas/ }))
+    expect(screen.getByRole('alert')).toBeInTheDocument()
+
+    selectNodeByPath(root, 'children.0')
+
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('leaves the rest of the panel (props.direction) editable and synced to Monaco alongside the "Modo" widget (acceptance 9)', async () => {
+    const { root } = renderCanvas(containerModeWidgetConfig(undefined, 'row'))
+    selectNodeByPath(root, CONTAINER_PATH)
+
+    fireEvent.change(screen.getByLabelText('direction', { exact: false }), { target: { value: 'column' } })
+
+    const parsed = await getMonacoJson()
+    const container = readTopLevelNodeFromMonacoJson(parsed, 0)
+    expect((container.props as Record<string, unknown>).direction).toBe('column')
+  })
+
+  it('keeps mutual exclusion with the Monaco panel intact when the selected node renders the "Modo" widget (acceptance 9)', async () => {
+    const { root } = renderCanvas(containerModeWidgetConfig())
+    fireEvent.click(screen.getByTestId('dev-editor-toolbar-monaco-toggle'))
+    await waitFor(() => expect(screen.getByTestId('monaco-editor-mock')).toBeInTheDocument())
+
+    selectNodeByPath(root, CONTAINER_PATH)
+
+    expect(screen.queryByTestId('monaco-editor-mock')).not.toBeInTheDocument()
+    expect(screen.getByRole('radiogroup', { name: 'Modo' })).toBeInTheDocument()
   })
 })

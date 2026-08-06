@@ -918,6 +918,196 @@ describe('LayoutCanvasPropertiesPanel link content mode widget (T3, 0126)', () =
   })
 })
 
+describe('LayoutCanvasPropertiesPanel heading level widget (T3, 0128)', () => {
+  it('renders the segmented level widget for a heading node, not the generic numeric input', () => {
+    const node = headingNode({ level: 2 })
+    render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={() => {}} />)
+
+    expect(screen.getByRole('radiogroup', { name: 'Nivel' })).toBeInTheDocument()
+    expect(screen.queryByLabelText('level', { exact: false })).not.toBeInTheDocument()
+  })
+
+  it('with level 5, only the "H5" segment is active', () => {
+    const node = headingNode({ level: 5 })
+    render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={() => {}} />)
+
+    const radiogroup = screen.getByRole('radiogroup', { name: 'Nivel' })
+    const activeSegments = within(radiogroup).getAllByRole('radio', { checked: true })
+    expect(activeSegments).toHaveLength(1)
+    expect(activeSegments[0]).toHaveAccessibleName('H5')
+  })
+
+  it('with level 6, no segment is active', () => {
+    const node = headingNode({ level: 6 })
+    render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={() => {}} />)
+
+    const radiogroup = screen.getByRole('radiogroup', { name: 'Nivel' })
+    expect(within(radiogroup).queryAllByRole('radio', { checked: true })).toHaveLength(0)
+  })
+
+  it('clicking "H4" with level 2 commits props.level = 4 without touching text or other keys', () => {
+    const node = headingNode({ text: 'Hello', icon: 'star', level: 2 })
+    const onCommitNodeUpdate = vi.fn()
+    render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={onCommitNodeUpdate} />)
+
+    const radiogroup = screen.getByRole('radiogroup', { name: 'Nivel' })
+    fireEvent.click(within(radiogroup).getByRole('radio', { name: 'H4' }))
+
+    expect(onCommitNodeUpdate).toHaveBeenCalledTimes(1)
+    const [calledPath, updater] = onCommitNodeUpdate.mock.calls[0]
+    expect(calledPath).toBe(somePath)
+    expect(updater(node)).toEqual(headingNode({ text: 'Hello', icon: 'star', level: 4 }))
+  })
+
+  it('regression: props.text and props.icon remain editable with the generic controls', () => {
+    const node = headingNode({ text: 'Hello', icon: 'star', level: 2 })
+    render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={() => {}} />)
+
+    expect(screen.getByLabelText('text', { exact: false })).toHaveValue('Hello')
+    expect(screen.getByLabelText('icon', { exact: false })).toHaveValue('star')
+  })
+})
+
+describe('LayoutCanvasPropertiesPanel tabs orientation widget (T3, 0128)', () => {
+  function tabsOrientationNode(overrides: Partial<Extract<LayoutNode, { type: 'tabs' }>['props']> = {}): LayoutNode {
+    return { type: 'tabs', props: { items: [{ label: 'Uno' }], ...overrides } } as LayoutNode
+  }
+
+  it('renders the segmented orientation widget with "Vertical" active, not the generic select', () => {
+    const node = tabsOrientationNode({ orientation: 'vertical' })
+    render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={() => {}} />)
+
+    const radiogroup = screen.getByRole('radiogroup', { name: 'Orientación' })
+    expect(within(radiogroup).getByRole('radio', { name: 'Vertical', checked: true })).toBeInTheDocument()
+    expect(screen.queryByLabelText('orientation', { exact: false })).not.toBeInTheDocument()
+  })
+
+  it('with orientation undeclared, the "Horizontal" segment is active', () => {
+    const node = tabsOrientationNode()
+    render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={() => {}} />)
+
+    const radiogroup = screen.getByRole('radiogroup', { name: 'Orientación' })
+    expect(within(radiogroup).getByRole('radio', { name: 'Horizontal', checked: true })).toBeInTheDocument()
+  })
+
+  it('clicking "Horizontal" with orientation "vertical" commits props.orientation = "horizontal" without touching items', () => {
+    const node = tabsOrientationNode({ orientation: 'vertical' })
+    const onCommitNodeUpdate = vi.fn()
+    render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={onCommitNodeUpdate} />)
+
+    const radiogroup = screen.getByRole('radiogroup', { name: 'Orientación' })
+    fireEvent.click(within(radiogroup).getByRole('radio', { name: 'Horizontal' }))
+
+    expect(onCommitNodeUpdate).toHaveBeenCalledTimes(1)
+    const [calledPath, updater] = onCommitNodeUpdate.mock.calls[0]
+    expect(calledPath).toBe(somePath)
+    const result = updater(node) as Extract<LayoutNode, { type: 'tabs' }>
+    expect(result.props.orientation).toBe('horizontal')
+    expect(result.props.items).toEqual([{ label: 'Uno' }])
+  })
+
+  it('regression: props.items and props.defaultTab remain editable with the existing controls', () => {
+    const node = tabsOrientationNode({ orientation: 'vertical', defaultTab: 0 })
+    render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={() => {}} />)
+
+    expect(screen.getByLabelText('label', { exact: false })).toHaveValue('Uno')
+    expect(screen.getByLabelText('defaultTab', { exact: false })).toHaveValue(0)
+  })
+})
+
+describe('LayoutCanvasPropertiesPanel heading-level / tabs-orientation widgets regression on other node types (T3, 0128)', () => {
+  it.each<LayoutNode['type']>(['container', 'paragraph', 'button', 'list', 'form', 'input'])(
+    'does not render the "Nivel" or "Orientación" widgets for a %s node',
+    (type) => {
+      const node = { type, props: { text: 'x', label: 'x', fieldId: 'f', items: [] }, id: 'f1' } as unknown as LayoutNode
+      render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={() => {}} />)
+
+      expect(screen.queryByRole('radiogroup', { name: 'Nivel' })).not.toBeInTheDocument()
+      expect(screen.queryByRole('radiogroup', { name: 'Orientación' })).not.toBeInTheDocument()
+    },
+  )
+})
+
+describe('LayoutCanvasPropertiesPanel container columns mode widget (T5, 0128)', () => {
+  function containerNode(overrides: Partial<NonNullable<Extract<LayoutNode, { type: 'container' }>['props']>> = {}): LayoutNode {
+    return { type: 'container', props: { ...overrides } } as LayoutNode
+  }
+
+  it('renders the "Modo" widget with "Grid" active when props.columns is absent', () => {
+    render(<LayoutCanvasPropertiesPanel node={containerNode()} path={somePath} onCommitNodeUpdate={() => {}} />)
+
+    const radiogroup = screen.getByRole('radiogroup', { name: 'Modo' })
+    expect(within(radiogroup).getByRole('radio', { name: /Grid/, checked: true })).toBeInTheDocument()
+  })
+
+  it('renders the "Modo" widget with "Columnas" active when props.columns is declared', () => {
+    render(<LayoutCanvasPropertiesPanel node={containerNode({ columns: 4 })} path={somePath} onCommitNodeUpdate={() => {}} />)
+
+    const radiogroup = screen.getByRole('radiogroup', { name: 'Modo' })
+    expect(within(radiogroup).getByRole('radio', { name: /Columnas/, checked: true })).toBeInTheDocument()
+  })
+
+  it.each<LayoutNode['type']>(['form', 'heading', 'tabs', 'link', 'button', 'paragraph', 'list', 'input'])(
+    'does not render the "Modo" widget for a %s node',
+    (type) => {
+      const node = { type, props: { text: 'x', label: 'x', fieldId: 'f', items: [] }, id: 'f1' } as unknown as LayoutNode
+      render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={() => {}} />)
+
+      expect(screen.queryByRole('radiogroup', { name: 'Modo' })).not.toBeInTheDocument()
+    },
+  )
+
+  it('the "Modo" widget renders above the Props subsection, in the same relative position as the link widget', () => {
+    const node = containerNode({ direction: 'row' })
+    render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={() => {}} />)
+
+    const modoGroup = screen.getByRole('radiogroup', { name: 'Modo' })
+    const directionInput = screen.getByLabelText('direction', { exact: false })
+    expect(modoGroup.compareDocumentPosition(directionInput) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  it('clicking "Columnas" invokes onCommitNodeUpdate with the correct path and a patch setting props.columns = 2, preserving direction', () => {
+    const node = containerNode({ direction: 'row' })
+    const onCommitNodeUpdate = vi.fn()
+    render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={onCommitNodeUpdate} />)
+
+    fireEvent.click(within(screen.getByRole('radiogroup', { name: 'Modo' })).getByRole('radio', { name: /Columnas/ }))
+
+    expect(onCommitNodeUpdate).toHaveBeenCalledTimes(1)
+    const [calledPath, patchFn] = onCommitNodeUpdate.mock.calls[0]
+    expect(calledPath).toBe(somePath)
+    const result = patchFn(node) as Extract<LayoutNode, { type: 'container' }>
+    expect(result.props?.columns).toBe(2)
+    expect(result.props?.direction).toBe('row')
+  })
+
+  it('clicking "Grid" invokes onCommitNodeUpdate with a patch that removes props.columns, preserving direction', () => {
+    const node = containerNode({ columns: 4, direction: 'row' })
+    const onCommitNodeUpdate = vi.fn()
+    render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={onCommitNodeUpdate} />)
+
+    fireEvent.click(within(screen.getByRole('radiogroup', { name: 'Modo' })).getByRole('radio', { name: /Grid/ }))
+
+    expect(onCommitNodeUpdate).toHaveBeenCalledTimes(1)
+    const [, patchFn] = onCommitNodeUpdate.mock.calls[0]
+    const result = patchFn(node) as Extract<LayoutNode, { type: 'container' }>
+    expect(result.props).not.toHaveProperty('columns')
+    expect(result.props?.direction).toBe('row')
+  })
+
+  it('when the mode is Columnas, props.columns still renders as an editable field in the Props subsection', () => {
+    render(<LayoutCanvasPropertiesPanel node={containerNode({ columns: 3 })} path={somePath} onCommitNodeUpdate={() => {}} />)
+
+    expect(screen.getByLabelText('columns', { exact: false })).toBeInTheDocument()
+  })
+
+  it('when the mode is Grid, props.columns does not render in the Props subsection', () => {
+    render(<LayoutCanvasPropertiesPanel node={containerNode({ direction: 'row' })} path={somePath} onCommitNodeUpdate={() => {}} />)
+
+    expect(screen.queryByLabelText('columns', { exact: false })).not.toBeInTheDocument()
+  })
+})
+
 function buildReadyProps(rawConfig: unknown): { initialConfig: RuntimeConfig; initialConfigText: string } {
   const initialConfigText = JSON.stringify(rawConfig, null, 2)
   const validation = validateRuntimeConfig(rawConfig)

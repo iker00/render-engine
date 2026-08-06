@@ -194,6 +194,40 @@ El dispatcher se apoya para esto en un hook `x-widget`: si el fragmento de schem
 - **Validación por fila**: cada valor se valida con el mismo pipeline (`validateRuntimeConfig`) que el resto del panel antes de aplicarse. Un commit rechazado (por ejemplo, fuera de rango `1..N` para ese breakpoint) conserva el valor tecleado en esa fila y muestra un aviso `role="alert"` con el código y mensaje del error, con el mismo criterio de limpieza que el resto del panel (ver [[#Feedback cuando un cambio del panel de propiedades no se puede guardar]]): desaparece al guardar correctamente esa misma fila o al cambiar de nodo seleccionado. El aviso es independiente por fila.
 - **Fuera de alcance**: el widget nunca ofrece un control para "simplificar" un `layout.span` ya convertido a mapa de vuelta a un único entero; un `layout.span` que siga siendo entero plano solo puede editarse como tal desde Monaco.
 
+### Widget de alternancia por segmentos (pill toggle)
+Un control reutilizable (`SegmentedTogglePropertyField`) cubre cualquier prop con catálogo cerrado y estable de 2 a 5
+opciones: una fila de segmentos dentro de un contenedor tipo píldora, un segmento por opción, con el segmento activo
+resaltado frente a los inactivos y, opcionalmente, un icono Lucide a la izquierda de la etiqueta de cada segmento.
+Implementa la semántica ARIA `radiogroup`/`radio` con roving tabindex (solo el segmento activo, o el primero si
+ninguno lo está, es parada de `Tab`) y navegación con flecha izquierda/derecha que mueve el foco al segmento
+adyacente y lo selecciona de inmediato, con ajuste circular en ambos extremos. Un `activeValue` nulo (ningún
+segmento activo) es un estado válido que el control nunca infiere por sí mismo — lo decide cada integración concreta
+a partir de la forma del nodo o del valor de la prop. Cada selección sigue el mismo pipeline de commit/validación y
+el mismo criterio de aviso `role="alert"` que el resto del panel (ver
+[[#Feedback cuando un cambio del panel de propiedades no se puede guardar]]).
+
+Tres usos concretos en el panel de propiedades comparten este componente sin duplicar su lógica:
+- **`container` — "Modo" (Grid / Columnas)**: se muestra fuera de las subsecciones `Props`/`Layout`/…, con el mismo
+  alcance de escritura de nodo completo que el
+  [selector de modo de contenido de `link`](#selector-de-modo-de-contenido-de-link-texto--elementos-anidados). El
+  segmento activo se detecta por la presencia de `props.columns` (declarado, fijo o responsive → "Columnas";
+  ausente → "Grid"), sin considerar `direction`. Pulsar "Columnas" desde "Grid" siembra `props.columns: 2` (entero
+  fijo), preservando el resto de `props` (incluida `direction`, si existía). Pulsar "Grid" desde "Columnas" quita
+  `props.columns` por completo, sin tocar `direction` ni el resto de `props`. Un `props.columns` responsive no se
+  recuerda: alternar a "Grid" y de vuelta a "Columnas" siembra de nuevo `2` como entero fijo, no el mapa anterior.
+  Mientras el segmento activo es "Columnas", el campo/widget ya existente para editar el valor concreto de
+  `columns` sigue visible en `Props`; mientras es "Grid", ese campo desaparece por completo de `Props` en vez de
+  mostrarse vacío o inválido.
+- **`heading` — "Nivel" (H1..H5)**: widget `x-widget: 'heading-level'` en la subsección `Props`, sustituye el campo
+  numérico genérico de `props.level`. Cinco segmentos fijos sin icono (solo etiqueta de texto), mapeados a los
+  enteros `1` a `5`. Un `props.level` igual a `6` o cualquier otro valor fuera de `1..5` deja el widget sin ningún
+  segmento activo; ese nivel solo es editable desde Monaco.
+- **`tabs` — "Orientación" (Horizontal / Vertical)**: widget `x-widget: 'tabs-orientation'` en la subsección
+  `Props`, sustituye el campo genérico de `props.orientation`. Dos segmentos con icono Lucide. Si el nodo no
+  declara `orientation` (default `"horizontal"` del runtime, ver [[../nodes/tabs.md]]), el widget muestra
+  "Horizontal" activo sin que eso implique que la clave se escribe explícitamente al reseleccionar ese mismo
+  segmento.
+
 ### Editor clave-valor (`params`, `query`, `headers`, `body`)
 Los campos de tipo mapa abierto `string → string` (`navigateTo.params`, `executeOperation`/`executeOperations`'s `query` y `headers`) se editan con un formulario de filas clave-valor: cada fila tiene un input de clave y un input de valor, con un botón "Quitar" por fila y un botón "Añadir" al final que crea una fila con clave y valor vacíos. Renombrar la clave de una fila conserva su valor; todos los valores se tratan como texto plano (sin coerción a número o booleano), lo que ya cubre literales, interpolación `{{...}}` y referencias dinámicas.
 

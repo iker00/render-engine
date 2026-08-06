@@ -5,6 +5,7 @@ import { CommitRejectionBanner } from '../commit-rejection-banner'
 import { commitLayoutSpan } from './commit-layout-span'
 import type { CommitCanvasMutationResult } from './layout-canvas-commit'
 import { getNodeTypeJsonSchema } from './layout-canvas-node-schema'
+import { ContainerColumnsModePropertyField } from './property-fields/container-columns-mode-property-field'
 import { LayoutSpanWidgetContext } from './property-fields/layout-span-widget-context'
 import { LinkContentModePropertyField } from './property-fields/link-content-mode-property-field'
 import { PropertyFieldDispatcher } from './property-fields/property-field-dispatcher'
@@ -35,8 +36,10 @@ export interface LayoutCanvasPropertiesPanelProps {
 type NodeSubsectionKey = 'props' | 'layout' | 'visibility' | 'queryStateFeedback'
 
 // T9: the key used to track a rejected commit for the `submitAction` block, which lives
-// outside `SUBSECTIONS` (see `buildSubmitActionFieldValue` below).
-type PendingRejectionKey = NodeSubsectionKey | 'submitAction'
+// outside `SUBSECTIONS` (see `buildSubmitActionFieldValue` below). T5 (0128) adds
+// `containerColumnsMode` for the same reason: the `container` "Modo" widget also commits the
+// entire node outside `SUBSECTIONS`, so it needs its own rejection-tracking key.
+type PendingRejectionKey = NodeSubsectionKey | 'submitAction' | 'containerColumnsMode'
 
 // T9 (bug fix): `commitCanvasMutation` validates the *entire* config before applying a panel
 // commit (see dev-runtime.tsx). Switching a discriminated-union variant (T5) or adding a new
@@ -157,6 +160,45 @@ function resolveChoiceLikePropsSchema(propsSchema: Record<string, unknown>): Rec
 }
 
 /**
+ * Replaces the generated sub-schema of `heading.props.level` (Zod's `z.number()` on
+ * `headingNodeSchema`, T7) with the `{ 'x-widget': 'heading-level' }` sentinel the dispatcher's
+ * `x-widget` hook (T2, 0128) resolves to `HeadingLevelPropertyField`. Same pattern as
+ * `resolveChoiceLikePropsSchema` above for `select.props.items`: only `properties.level` is
+ * swapped out, the rest of `props` (`text`, `icon`) passes through unchanged.
+ */
+function resolveHeadingPropsSchema(propsSchema: Record<string, unknown>): Record<string, unknown> {
+  const properties = propsSchema.properties
+  if (!isPlainObject(properties) || !('level' in properties)) return propsSchema
+
+  return {
+    ...propsSchema,
+    properties: {
+      ...properties,
+      level: { 'x-widget': 'heading-level' },
+    },
+  }
+}
+
+/**
+ * Omits `properties.columns` from `container.props`'s generated schema when the node's current
+ * `props.columns` is `undefined` (T5, 0128): `ObjectPropertyField` renders every declared schema
+ * property unconditionally, regardless of whether the node's own value has that key — unlike the
+ * `x-widget` swaps above, plainly declaring `columns` would always show its generic numeric/map
+ * input in `Props`, defeating the "Grid" mode the `ContainerColumnsModePropertyField` widget above
+ * represents (no `columns` key at all). When `columns` *is* declared ("Columnas" mode), this is a
+ * no-op: the property passes through unchanged and stays editable with the generic controls,
+ * exactly like every other `container.props` field.
+ */
+function resolveContainerPropsSchema(propsSchema: Record<string, unknown>, propsValue: unknown): Record<string, unknown> {
+  const properties = propsSchema.properties
+  if (!isPlainObject(properties) || !('columns' in properties)) return propsSchema
+  if (isPlainObject(propsValue) && propsValue.columns !== undefined) return propsSchema
+
+  const { columns: _columns, ...restProperties } = properties
+  return { ...propsSchema, properties: restProperties }
+}
+
+/**
  * Replaces the generated sub-schema of `layout.span` (integer | responsive per-breakpoint map,
  * T4's `layout.span` union) with the `{ 'x-widget': 'layout-span' }` sentinel the dispatcher's
  * `x-widget` hook resolves to `LayoutSpanPropertyField` (T2, 0127). Same pattern as
@@ -196,6 +238,11 @@ const NEW_TAB_DEFAULT_LABEL = 'Nueva pestaña'
  * `1` from the zod `.min(1)` on `tabs.props.items`) with a defensive fallback to `1` — the node
  * schema is this function's only input, so if it ever stopped declaring the minimum this keeps
  * the "at least one tab" guarantee the properties panel must honor.
+ *
+ * T3 (0128): also replaces `properties.orientation` (Zod's `z.enum(['horizontal', 'vertical'])`)
+ * with the `{ 'x-widget': 'tabs-orientation' }` sentinel, resolved to `TabsOrientationPropertyField`
+ * by the dispatcher's `x-widget` hook — same swap-only-that-key pattern as `level` above and
+ * `items` below, independent of the `items` transformation.
  */
 function resolveTabsPropsSchema(propsSchema: Record<string, unknown>): Record<string, unknown> {
   const properties = propsSchema.properties
@@ -223,19 +270,24 @@ function resolveTabsPropsSchema(propsSchema: Record<string, unknown>): Record<st
       ? { ...visibleItemProperties, label: { ...(labelSchema as Record<string, unknown>), default: NEW_TAB_DEFAULT_LABEL } }
       : visibleItemProperties
 
-  return {
-    ...propsSchema,
-    properties: {
-      ...properties,
+  const nextProperties: Record<string, unknown> = {
+    ...properties,
+    items: {
+      ...itemsFieldRecord,
+      minItems: typeof itemsFieldRecord.minItems === 'number' ? itemsFieldRecord.minItems : 1,
       items: {
-        ...itemsFieldRecord,
-        minItems: typeof itemsFieldRecord.minItems === 'number' ? itemsFieldRecord.minItems : 1,
-        items: {
-          ...itemRecord,
-          properties: nextItemProperties,
-        },
+        ...itemRecord,
+        properties: nextItemProperties,
       },
     },
+  }
+  if ('orientation' in properties) {
+    nextProperties.orientation = { 'x-widget': 'tabs-orientation' }
+  }
+
+  return {
+    ...propsSchema,
+    properties: nextProperties,
   }
 }
 
@@ -327,6 +379,30 @@ export function LayoutCanvasPropertiesPanel({
           onChange={(nextNode) => onCommitNodeUpdate(path, () => nextNode)}
         />
       )}
+      {node.type === 'container' &&
+        (() => {
+          const pendingRejection = pendingRejections.containerColumnsMode
+          const displayedNode = pendingRejection ? (pendingRejection.value as typeof node) : node
+
+          return (
+            <div className="flex flex-col gap-2">
+              <ContainerColumnsModePropertyField
+                label="Modo"
+                node={displayedNode}
+                onChange={(nextNode) => {
+                  const result = onCommitNodeUpdate(path, () => nextNode)
+                  recordCommitResult('containerColumnsMode', nextNode, result)
+                }}
+              />
+              {pendingRejection && (
+                <CommitRejectionBanner
+                  dataTestId="layout-canvas-properties-panel-containerColumnsMode-error"
+                  error={pendingRejection.error}
+                />
+              )}
+            </div>
+          )
+        })()}
       {SUBSECTIONS.map(({ key, label }) => {
         const subsectionSchema = schemaProperties[key]
         if (!subsectionSchema || typeof subsectionSchema !== 'object') return null
@@ -335,6 +411,12 @@ export function LayoutCanvasPropertiesPanel({
         let effectiveSchema = resolveUnionBranch(subsectionSchema as Record<string, unknown>, currentValue)
         if (key === 'props' && node.type === 'tabs' && effectiveSchema) {
           effectiveSchema = resolveTabsPropsSchema(effectiveSchema)
+        }
+        if (key === 'props' && node.type === 'heading' && effectiveSchema) {
+          effectiveSchema = resolveHeadingPropsSchema(effectiveSchema)
+        }
+        if (key === 'props' && node.type === 'container' && effectiveSchema) {
+          effectiveSchema = resolveContainerPropsSchema(effectiveSchema, currentValue)
         }
         if (key === 'props' && CHOICE_LIKE_NODE_TYPES.has(node.type) && effectiveSchema) {
           effectiveSchema = resolveChoiceLikePropsSchema(effectiveSchema)

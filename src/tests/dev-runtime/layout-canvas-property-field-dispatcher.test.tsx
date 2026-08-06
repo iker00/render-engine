@@ -536,6 +536,49 @@ describe('PropertyFieldDispatcher x-widget hook (T4, 0108)', () => {
     fireEvent.click(checkbox)
     expect(onChangeSpy).toHaveBeenCalledWith(true)
   })
+
+  it('delegates to HeadingLevelPropertyField for a schema declaring x-widget: "heading-level", instead of the generic number input (0128)', () => {
+    const onChangeSpy = vi.fn()
+    render(
+      <ControlledDispatcher
+        schema={{ type: 'integer', 'x-widget': 'heading-level' }}
+        initialValue={2}
+        label="level"
+        onChangeSpy={onChangeSpy}
+      />,
+    )
+
+    // The generic integer path would render a numeric <input>; the widget instead renders the
+    // shared segmented-toggle radiogroup with five fixed H1..H5 segments.
+    expect(screen.queryByRole('spinbutton')).not.toBeInTheDocument()
+    const radios = screen.getAllByRole('radio')
+    expect(radios.map((radio) => radio.textContent)).toEqual(['H1', 'H2', 'H3', 'H4', 'H5'])
+    expect(screen.getByRole('radio', { name: 'H2' })).toHaveAttribute('aria-checked', 'true')
+
+    fireEvent.click(screen.getByRole('radio', { name: 'H4' }))
+    expect(onChangeSpy).toHaveBeenCalledWith(4)
+  })
+
+  it('delegates to TabsOrientationPropertyField for a schema declaring x-widget: "tabs-orientation", instead of the generic EnumPropertyField (0128)', () => {
+    const onChangeSpy = vi.fn()
+    render(
+      <ControlledDispatcher
+        schema={{ type: 'string', enum: ['horizontal', 'vertical'], 'x-widget': 'tabs-orientation' }}
+        initialValue="horizontal"
+        label="orientation"
+        onChangeSpy={onChangeSpy}
+      />,
+    )
+
+    // The generic enum path would render a <select>; the widget instead renders the shared
+    // segmented-toggle radiogroup with the two fixed orientation segments.
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument()
+    expect(screen.getByRole('radio', { name: /Horizontal/ })).toHaveAttribute('aria-checked', 'true')
+    expect(screen.getByRole('radio', { name: /Vertical/ })).toHaveAttribute('aria-checked', 'false')
+
+    fireEvent.click(screen.getByRole('radio', { name: /Vertical/ }))
+    expect(onChangeSpy).toHaveBeenCalledWith('vertical')
+  })
 })
 
 describe('PropertyFieldDispatcher escape hatch', () => {
