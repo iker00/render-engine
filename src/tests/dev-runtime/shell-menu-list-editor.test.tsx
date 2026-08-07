@@ -43,6 +43,16 @@ vi.mock('@dnd-kit/core', async () => {
   }
 })
 
+// T3 (0129): `MenuItemFieldsEditor` mounts the real `IconPickerPropertyField` for `icon`, which
+// derives its catalog from the full `lucide-react` namespace — same rationale/mock as
+// shell-config-panel.test.tsx (slow + a rendering bug under jsdom against the real ~3900-icon
+// package). `OTHER_MODULE_ICON_NAMES` covers every other icon import in this file's render tree
+// (e.g. `ListTree`/`ChevronDown` in `ShellMenuListEditor` itself).
+vi.mock('lucide-react', async () => {
+  const { createLucideReactMock, OTHER_MODULE_ICON_NAMES } = await import('./lucide-react-mock')
+  return createLucideReactMock(OTHER_MODULE_ICON_NAMES)
+})
+
 // Isolated from `ShellConfigPanel`: this harness only owns a plain `menu` array, a real
 // `useShellCollapseState()` instance (the same one `ShellConfigPanel` wires in) and a commit
 // function that applies the mutation directly — no `RuntimeConfig`/Monaco text/patchRootKey/
@@ -415,6 +425,55 @@ describe('ShellMenuListEditor / menu — reordering by drag', () => {
   })
 })
 
+describe('ShellMenuListEditor / icon field (T3, 0129)', () => {
+  it('a root menuItem row shows the icon widget grid with the configured icon highlighted, not a text input', () => {
+    renderHarness([{ label: 'Home', href: '/home', icon: 'Home' }])
+    fireEvent.click(screen.getByTestId('menu-item-collapse-toggle-0'))
+    // The grid is hidden until the search input is focused (T5, 0129).
+    fireEvent.focus(screen.getByRole('textbox', { name: 'Buscar icono' }))
+
+    const grid = screen.getByRole('grid', { name: 'Elemento de menú 1 — Icono' })
+    const selected = within(grid)
+      .getAllByRole('gridcell')
+      .filter((cell) => cell.getAttribute('aria-selected') === 'true')
+    expect(selected).toHaveLength(1)
+    expect(selected[0]).toHaveTextContent('Home')
+    expect(screen.queryByRole('textbox', { name: /Elemento de menú 1 — Icono/i })).not.toBeInTheDocument()
+  })
+
+  it('a menuItemChild row (inside "Con desplegable") shows the icon widget with its own icon highlighted', () => {
+    renderHarness([{ label: 'Products', children: [{ label: 'Shoes', href: '/shoes', icon: 'ChevronRight' }] }])
+    fireEvent.click(screen.getByTestId('menu-item-collapse-toggle-0.0'))
+    fireEvent.focus(screen.getByRole('textbox', { name: 'Buscar icono' }))
+
+    const grid = screen.getByRole('grid', { name: 'Elemento de desplegable 1 — Icono' })
+    const selected = within(grid)
+      .getAllByRole('gridcell')
+      .filter((cell) => cell.getAttribute('aria-selected') === 'true')
+    expect(selected).toHaveLength(1)
+    expect(selected[0]).toHaveTextContent('ChevronRight')
+  })
+
+  it('choosing a different icon cell commits the menuItem with the new icon and every other field intact', () => {
+    renderHarness([{ label: 'Home', href: '/home', icon: 'Home' }])
+    fireEvent.click(screen.getByTestId('menu-item-collapse-toggle-0'))
+    fireEvent.focus(screen.getByRole('textbox', { name: 'Buscar icono' }))
+
+    fireEvent.click(screen.getByText('Settings').closest('[role="gridcell"]')!)
+
+    expect(currentMenu()).toEqual([{ label: 'Home', href: '/home', icon: 'Settings' }])
+  })
+
+  it('clicking "Quitar icono" clears icon, leaving the rest of the row unchanged', () => {
+    renderHarness([{ label: 'Home', href: '/home', icon: 'Home' }])
+    fireEvent.click(screen.getByTestId('menu-item-collapse-toggle-0'))
+
+    fireEvent.click(screen.getByRole('button', { name: /Quitar icono/i }))
+
+    expect(currentMenu()).toEqual([{ label: 'Home', href: '/home' }])
+  })
+})
+
 describe('ShellMenuListEditor / collapse control', () => {
   it('a newly mounted root item exposes its collapse control collapsed by default, with its fields hidden', () => {
     renderHarness([{ label: 'Home', href: '/home' }])
@@ -524,10 +583,14 @@ describe('ShellMenuListEditor / collapse control', () => {
   it('opens/closes the row by clicking its visible name, not a separate icon-only button', () => {
     renderHarness([{ label: 'Home', href: '/home' }])
 
-    fireEvent.click(screen.getByText('Home'))
-    expect(screen.getByTestId('menu-item-collapse-toggle-0')).toHaveAttribute('aria-expanded', 'true')
+    // Scoped to the toggle itself (T3, 0129): once expanded, the icon widget's own catalog grid
+    // also renders a cell labeled "Home" (a valid mocked icon name), so an unscoped `getByText`
+    // becomes ambiguous.
+    const toggle = screen.getByTestId('menu-item-collapse-toggle-0')
+    fireEvent.click(within(toggle).getByText('Home'))
+    expect(toggle).toHaveAttribute('aria-expanded', 'true')
 
-    fireEvent.click(screen.getByText('Home'))
-    expect(screen.getByTestId('menu-item-collapse-toggle-0')).toHaveAttribute('aria-expanded', 'false')
+    fireEvent.click(within(toggle).getByText('Home'))
+    expect(toggle).toHaveAttribute('aria-expanded', 'false')
   })
 })

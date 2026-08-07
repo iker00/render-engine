@@ -41,6 +41,18 @@ vi.mock('../../config/runtime-config', async (importOriginal) => {
   return { ...actual, validateRuntimeConfig: vi.fn(actual.validateRuntimeConfig) }
 })
 
+// The `icon` widget (T2, 0129) mounts the real `IconPickerPropertyField` for every node type whose
+// generated `props` schema declares `icon`. Without this mock, rendering it walks the real
+// ~3900-icon `lucide-react` namespace and blows the global Vitest timeout (same failure mode
+// documented in T1). `OTHER_MODULE_ICON_NAMES` covers every other icon name imported anywhere in
+// the `DevRuntimeReady` render tree this file mounts via `renderCanvas` (floating toolbar, shell
+// config panel, container-columns/tabs-orientation widgets) — ESM named imports resolve those
+// bindings at module-load time regardless of which of them actually renders in a given test.
+vi.mock('lucide-react', async () => {
+  const { createLucideReactMock, OTHER_MODULE_ICON_NAMES } = await import('./lucide-react-mock')
+  return createLucideReactMock(OTHER_MODULE_ICON_NAMES)
+})
+
 const somePath: LayoutNodePath = [{ field: 'children', index: 0 }]
 const otherPath: LayoutNodePath = [{ field: 'children', index: 1 }]
 
@@ -758,5 +770,194 @@ describe('LayoutCanvasPropertiesPanel container columns mode widget — end-to-e
 
     expect(screen.queryByTestId('monaco-editor-mock')).not.toBeInTheDocument()
     expect(screen.getByRole('radiogroup', { name: 'Modo' })).toBeInTheDocument()
+  })
+})
+
+// T2 (0129): fixture with a top-level `heading` (no icon widget, used by the edge-case test below
+// to switch selection away from the button) and a `button` — the representative node for
+// end-to-end coverage of the `icon` widget, per the task's own scope. The button has no `action`,
+// so it must sit inside a `form` node (`validate-form-nodes.ts`'s "button without action must be a
+// form descendant" rule) — the same shape `buttonNode` fixtures elsewhere in this file avoid only
+// because they always declare an `action`. `icon` is always passed explicitly (every test below
+// names a concrete starting value, recognized or not).
+function buttonIconWidgetConfig(icon?: string) {
+  return {
+    api: {},
+    initialPage: 'home',
+    pages: [
+      {
+        id: 'home',
+        layout: [
+          { type: 'heading', props: { text: 'Título', level: 1 } },
+          {
+            type: 'form',
+            id: 'f1',
+            children: [{ type: 'button', props: { label: 'Enviar', ...(icon !== undefined ? { icon } : {}) } }],
+          },
+        ],
+      },
+    ],
+  }
+}
+
+const HEADING_SIBLING_PATH = 'children.0'
+const BUTTON_PATH = 'children.1.children.0'
+
+// Reads the button nested inside the form's `children[0]`, matching `buttonIconWidgetConfig`'s shape.
+function readButtonFromMonacoJson(parsed: Record<string, unknown>): Record<string, unknown> {
+  const pages = parsed.pages as Array<{ layout: Array<Record<string, unknown>> }>
+  const form = pages[0].layout[1] as { children: Array<Record<string, unknown>> }
+  return form.children[0]
+}
+
+describe('LayoutCanvasPropertiesPanel icon widget — end-to-end real pipeline (T2, 0129)', () => {
+  it('shows the widget with the "Home" cell highlighted for a recognized props.icon (acceptance 1)', () => {
+    const { root } = renderCanvas(buttonIconWidgetConfig('Home'))
+    selectNodeByPath(root, BUTTON_PATH)
+    // The grid is hidden until the search input is focused (T5, 0129).
+    fireEvent.focus(screen.getByRole('textbox', { name: 'Buscar icono' }))
+
+    const grid = screen.getByRole('grid', { name: 'icon' })
+    const homeCell = within(grid).getByText('Home').closest('[role="gridcell"]')!
+    expect(homeCell).toHaveAttribute('aria-selected', 'true')
+  })
+
+  it('typing a substring in the search input filters the grid to matching names (acceptance 2)', () => {
+    const { root } = renderCanvas(buttonIconWidgetConfig('Home'))
+    selectNodeByPath(root, BUTTON_PATH)
+    const input = screen.getByRole('textbox', { name: 'Buscar icono' })
+    fireEvent.focus(input)
+
+    fireEvent.change(input, { target: { value: 'set' } })
+
+    // Scoped to the grid: the recognized-value preview chip (T5) keeps showing "Home" next to the
+    // input regardless of the search query, so the negative assertion below must not see it.
+    const grid = screen.getByRole('grid', { name: 'icon' })
+    expect(within(grid).queryByText('Home')).not.toBeInTheDocument()
+    expect(within(grid).getByText('Settings')).toBeInTheDocument()
+  })
+
+  it('clicking a different cell commits props.icon through the real pipeline, preserving props.label (acceptance 3)', async () => {
+    const { root } = renderCanvas(buttonIconWidgetConfig('Home'))
+    selectNodeByPath(root, BUTTON_PATH)
+    fireEvent.focus(screen.getByRole('textbox', { name: 'Buscar icono' }))
+
+    fireEvent.click(screen.getByText('Settings').closest('[role="gridcell"]')!)
+
+    const parsed = await getMonacoJson()
+    const button = readButtonFromMonacoJson(parsed)
+    expect((button.props as Record<string, unknown>).icon).toBe('Settings')
+    expect((button.props as Record<string, unknown>).label).toBe('Enviar')
+  })
+
+  it('shows no highlighted cell for an unrecognized props.icon, with the raw value visible and search still operative (acceptance 4)', () => {
+    const { root } = renderCanvas(buttonIconWidgetConfig('NombreQueNoExiste'))
+    selectNodeByPath(root, BUTTON_PATH)
+    const input = screen.getByRole('textbox', { name: 'Buscar icono' })
+    fireEvent.focus(input)
+
+    const grid = screen.getByRole('grid', { name: 'icon' })
+    expect(
+      within(grid)
+        .getAllByRole('gridcell')
+        .every((cell) => cell.getAttribute('aria-selected') === 'false'),
+    ).toBe(true)
+    expect(screen.getByText('NombreQueNoExiste')).toBeInTheDocument()
+
+    fireEvent.change(input, { target: { value: 'home' } })
+    expect(screen.getByText('Home')).toBeInTheDocument()
+    expect(screen.queryByText('Settings')).not.toBeInTheDocument()
+  })
+
+  it('clicking the clear button commits props.icon = undefined through the real pipeline, preserving props.label (acceptance 5)', async () => {
+    const { root } = renderCanvas(buttonIconWidgetConfig('Home'))
+    selectNodeByPath(root, BUTTON_PATH)
+
+    fireEvent.click(screen.getByRole('button', { name: /Quitar icono/i }))
+
+    const parsed = await getMonacoJson()
+    const button = readButtonFromMonacoJson(parsed)
+    expect(button.props as Record<string, unknown>).not.toHaveProperty('icon')
+    expect((button.props as Record<string, unknown>).label).toBe('Enviar')
+  })
+
+  it('rejects an icon change forced by a mocked validateRuntimeConfig failure: alert appears below the widget, the attempted cell stays highlighted, and the Monaco buffer is untouched (acceptance 6)', async () => {
+    const { root } = renderCanvas(buttonIconWidgetConfig('Home'))
+    selectNodeByPath(root, BUTTON_PATH)
+    fireEvent.focus(screen.getByRole('textbox', { name: 'Buscar icono' }))
+
+    vi.mocked(validateRuntimeConfig).mockReturnValueOnce(forcedRejection)
+    fireEvent.click(screen.getByText('Settings').closest('[role="gridcell"]')!)
+
+    const banner = screen.getByRole('alert')
+    expect(banner).toHaveAttribute('data-testid', 'layout-canvas-properties-panel-props-error')
+    expect(banner.textContent).toContain('invalid-layout')
+    expect(banner.textContent).toContain('Cambio no permitido')
+
+    // Selecting a cell closes the grid (T5): reopen it to inspect the attempted cell's highlight.
+    fireEvent.focus(screen.getByRole('textbox', { name: 'Buscar icono' }))
+    const grid = screen.getByRole('grid', { name: 'icon' })
+    const settingsCell = within(grid).getByText('Settings').closest('[role="gridcell"]')!
+    expect(settingsCell).toHaveAttribute('aria-selected', 'true')
+
+    const parsed = await getMonacoJson()
+    const button = readButtonFromMonacoJson(parsed)
+    expect((button.props as Record<string, unknown>).icon).toBe('Home')
+  })
+
+  it('clears the alert once a follow-up commit succeeds, applying the new icon (acceptance 6, follow-up)', async () => {
+    const { root } = renderCanvas(buttonIconWidgetConfig('Home'))
+    selectNodeByPath(root, BUTTON_PATH)
+    fireEvent.focus(screen.getByRole('textbox', { name: 'Buscar icono' }))
+
+    vi.mocked(validateRuntimeConfig).mockReturnValueOnce(forcedRejection)
+    fireEvent.click(screen.getByText('Settings').closest('[role="gridcell"]')!)
+    expect(screen.getByRole('alert')).toBeInTheDocument()
+
+    // Selecting a cell closes the grid (T5): reopen it before the follow-up selection.
+    fireEvent.focus(screen.getByRole('textbox', { name: 'Buscar icono' }))
+    fireEvent.click(screen.getByText('Bell').closest('[role="gridcell"]')!)
+
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    const parsed = await getMonacoJson()
+    const button = readButtonFromMonacoJson(parsed)
+    expect((button.props as Record<string, unknown>).icon).toBe('Bell')
+  })
+
+  it('discards a pending rejection on the icon widget when the selected node changes, the same guard the rest of the panel already applies (edge case)', () => {
+    const { root } = renderCanvas(buttonIconWidgetConfig('Home'))
+    selectNodeByPath(root, BUTTON_PATH)
+    fireEvent.focus(screen.getByRole('textbox', { name: 'Buscar icono' }))
+
+    vi.mocked(validateRuntimeConfig).mockReturnValueOnce(forcedRejection)
+    fireEvent.click(screen.getByText('Settings').closest('[role="gridcell"]')!)
+    expect(screen.getByRole('alert')).toBeInTheDocument()
+
+    selectNodeByPath(root, HEADING_SIBLING_PATH)
+
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('leaves the rest of the panel (props.label) editable and synced to Monaco alongside the icon widget (acceptance 9)', async () => {
+    const { root } = renderCanvas(buttonIconWidgetConfig('Home'))
+    selectNodeByPath(root, BUTTON_PATH)
+
+    fireEvent.change(screen.getByLabelText('label', { exact: false }), { target: { value: 'Nuevo label' } })
+
+    const parsed = await getMonacoJson()
+    const button = readButtonFromMonacoJson(parsed)
+    expect((button.props as Record<string, unknown>).label).toBe('Nuevo label')
+  })
+
+  it('keeps mutual exclusion with the Monaco panel intact when the selected node renders the icon widget (acceptance 9)', async () => {
+    const { root } = renderCanvas(buttonIconWidgetConfig('Home'))
+    fireEvent.click(screen.getByTestId('dev-editor-toolbar-monaco-toggle'))
+    await waitFor(() => expect(screen.getByTestId('monaco-editor-mock')).toBeInTheDocument())
+
+    selectNodeByPath(root, BUTTON_PATH)
+    fireEvent.focus(screen.getByRole('textbox', { name: 'Buscar icono' }))
+
+    expect(screen.queryByTestId('monaco-editor-mock')).not.toBeInTheDocument()
+    expect(screen.getByRole('grid', { name: 'icon' })).toBeInTheDocument()
   })
 })

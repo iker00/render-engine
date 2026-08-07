@@ -3,6 +3,17 @@ import { useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import { PropertyFieldDispatcher } from '../../dev-runtime/layout-canvas/property-fields/property-field-dispatcher'
 
+// The `icon` widget (T2, 0129) mounts the real `IconPickerPropertyField`, which enumerates the
+// full `lucide-react` namespace to build its catalog. Same mock as T1's own suite, required here
+// for the same reason: without it, every render walks ~3900 real icons and blows the global
+// Vitest timeout. `OTHER_MODULE_ICON_NAMES` covers the icons `PropertyFieldDispatcher`'s other
+// statically-imported widgets (e.g. `TabsOrientationPropertyField`) read from `lucide-react` at
+// module scope, regardless of which widget a given test actually renders.
+vi.mock('lucide-react', async () => {
+  const { createLucideReactMock, OTHER_MODULE_ICON_NAMES } = await import('./lucide-react-mock')
+  return createLucideReactMock(OTHER_MODULE_ICON_NAMES)
+})
+
 // PropertyFieldDispatcher is fully controlled: the caller owns `value` and must feed back
 // whatever `onChange` reports. This harness plays that role for the tests so each interaction
 // can be observed both as an onChange call and as the resulting re-render.
@@ -578,6 +589,41 @@ describe('PropertyFieldDispatcher x-widget hook (T4, 0108)', () => {
 
     fireEvent.click(screen.getByRole('radio', { name: /Vertical/ }))
     expect(onChangeSpy).toHaveBeenCalledWith('vertical')
+  })
+})
+
+describe('PropertyFieldDispatcher x-widget hook: icon (T2, 0129)', () => {
+  it('delegates to IconPickerPropertyField for a schema declaring x-widget: "icon", instead of the generic text input', () => {
+    const onChangeSpy = vi.fn()
+    render(
+      <ControlledDispatcher schema={{ 'x-widget': 'icon' }} initialValue="Home" label="icon" onChangeSpy={onChangeSpy} />,
+    )
+
+    // IconPickerPropertyField renders a `role="grid"` catalog with the mocked icon names; the
+    // generic string path would instead render a single free-text `<input>` with no grid at all.
+    expect(screen.queryByRole('textbox', { name: 'icon' })).not.toBeInTheDocument()
+
+    // The grid is hidden until the search input is focused (T5, 0129).
+    fireEvent.focus(screen.getByRole('textbox', { name: 'Buscar icono' }))
+    const grid = screen.getByRole('grid', { name: 'icon' })
+    expect(grid).toBeInTheDocument()
+
+    // Scoped to the grid: the recognized-value preview chip (T5) also renders "Home" next to the
+    // input, outside the grid.
+    const homeCell = within(grid).getByText('Home').closest('[role="gridcell"]')!
+    expect(homeCell).toHaveAttribute('aria-selected', 'true')
+
+    fireEvent.click(screen.getByText('Settings').closest('[role="gridcell"]')!)
+    expect(onChangeSpy).toHaveBeenCalledWith('Settings')
+  })
+
+  it('still renders the generic text input for a plain string schema with no x-widget (regression)', () => {
+    const onChangeSpy = vi.fn()
+    render(<ControlledDispatcher schema={{ type: 'string' }} initialValue="hola" label="Título" onChangeSpy={onChangeSpy} />)
+
+    const input = screen.getByLabelText('Título')
+    expect(input).toHaveAttribute('type', 'text')
+    expect(screen.queryByRole('grid')).not.toBeInTheDocument()
   })
 })
 

@@ -44,6 +44,16 @@ vi.mock('@dnd-kit/core', async () => {
   }
 })
 
+// T3 (0129): `SidebarItemFieldsEditor` mounts the real `IconPickerPropertyField` for `icon`, which
+// derives its catalog from the full `lucide-react` namespace — same rationale/mock as
+// shell-config-panel.test.tsx/shell-menu-list-editor.test.tsx (slow + a rendering bug under jsdom
+// against the real ~3900-icon package). `OTHER_MODULE_ICON_NAMES` covers every other icon import
+// in this file's render tree (e.g. `ListTree`/`ChevronDown` in `SidebarItemListEditor` itself).
+vi.mock('lucide-react', async () => {
+  const { createLucideReactMock, OTHER_MODULE_ICON_NAMES } = await import('./lucide-react-mock')
+  return createLucideReactMock(OTHER_MODULE_ICON_NAMES)
+})
+
 // Same domain-specific pass `ShellConfigPanel.handleMoveSidebarItem` applies after every move
 // (design.md Decisión 5, shared with the header's own `menuItem` rule): `sidebarItem` also forbids
 // `href`/`action` alongside `children` (`refineSidebarItemShape` in `runtime-config-zod.ts`), so
@@ -148,14 +158,13 @@ describe('SidebarItemListEditor / editing a root item', () => {
     expect(currentItems()[0].label).toBe('Dashboard')
   })
 
-  it('editing icon updates the item, and clearing it removes the field', () => {
+  it('choosing an icon cell updates the item, and clearing it removes the field', () => {
     renderWithOneRootItem()
-    fireEvent.change(screen.getByRole('textbox', { name: 'Elemento de sidebar 1 — Icono' }), {
-      target: { value: 'home' },
-    })
-    expect(currentItems()[0].icon).toBe('home')
+    fireEvent.focus(screen.getByRole('textbox', { name: 'Buscar icono' }))
+    fireEvent.click(screen.getByText('LayoutDashboard').closest('[role="gridcell"]')!)
+    expect(currentItems()[0].icon).toBe('LayoutDashboard')
 
-    fireEvent.change(screen.getByRole('textbox', { name: 'Elemento de sidebar 1 — Icono' }), { target: { value: '' } })
+    fireEvent.click(screen.getByRole('button', { name: /Quitar icono/i }))
     expect(currentItems()[0].icon).toBeUndefined()
   })
 
@@ -207,6 +216,51 @@ describe('SidebarItemListEditor / editing a root item', () => {
     })
 
     expect(currentItems()[0].visibility).toEqual({ reference: 'params.role', operator: 'isTruthy' })
+  })
+})
+
+describe('SidebarItemListEditor / icon field (T3, 0129)', () => {
+  it('a root sidebarItem row shows the icon widget grid with the configured icon highlighted, not a text input', () => {
+    renderHarness([{ label: 'Home', href: '/home', icon: 'LayoutDashboard' }])
+    fireEvent.click(screen.getByTestId('sidebar-item-collapse-toggle-0'))
+    // The grid is hidden until the search input is focused (T5, 0129).
+    fireEvent.focus(screen.getByRole('textbox', { name: 'Buscar icono' }))
+
+    const grid = screen.getByRole('grid', { name: 'Elemento de sidebar 1 — Icono' })
+    const selected = within(grid)
+      .getAllByRole('gridcell')
+      .filter((cell) => cell.getAttribute('aria-selected') === 'true')
+    expect(selected).toHaveLength(1)
+    expect(selected[0]).toHaveTextContent('LayoutDashboard')
+    expect(screen.queryByRole('textbox', { name: /Elemento de sidebar 1 — Icono/i })).not.toBeInTheDocument()
+  })
+
+  it('a sidebarItem nested at depth >= 2 (children -> children) shows the icon widget with its own icon highlighted', () => {
+    renderHarness([
+      {
+        label: 'Parent',
+        children: [{ label: 'Child', children: [{ label: 'Grandchild', href: '/g', icon: 'Users' }] }],
+      },
+    ])
+    fireEvent.click(screen.getByTestId('sidebar-item-collapse-toggle-0.0.0'))
+    fireEvent.focus(screen.getByRole('textbox', { name: 'Buscar icono' }))
+
+    const grid = screen.getByRole('grid', { name: 'Elemento de sidebar 1.1.1 — Icono' })
+    const selected = within(grid)
+      .getAllByRole('gridcell')
+      .filter((cell) => cell.getAttribute('aria-selected') === 'true')
+    expect(selected).toHaveLength(1)
+    expect(selected[0]).toHaveTextContent('Users')
+  })
+
+  it('choosing a different icon cell commits the sidebarItem with the new icon and every other field intact', () => {
+    renderHarness([{ label: 'Home', href: '/home', icon: 'LayoutDashboard' }])
+    fireEvent.click(screen.getByTestId('sidebar-item-collapse-toggle-0'))
+    fireEvent.focus(screen.getByRole('textbox', { name: 'Buscar icono' }))
+
+    fireEvent.click(screen.getByText('Settings').closest('[role="gridcell"]')!)
+
+    expect(currentItems()).toEqual([{ label: 'Home', href: '/home', icon: 'Settings' }])
   })
 })
 
@@ -677,10 +731,14 @@ describe('SidebarItemListEditor / collapse control', () => {
   it('opens/closes the row by clicking its visible name, not a separate icon-only button', () => {
     renderHarness([{ label: 'Home', href: '/home' }])
 
-    fireEvent.click(screen.getByText('Home'))
-    expect(screen.getByTestId('sidebar-item-collapse-toggle-0')).toHaveAttribute('aria-expanded', 'true')
+    // Scoped to the toggle itself (T3, 0129): once expanded, the icon widget's own catalog grid
+    // also renders a cell labeled "Home" (a valid mocked icon name), so an unscoped `getByText`
+    // becomes ambiguous.
+    const toggle = screen.getByTestId('sidebar-item-collapse-toggle-0')
+    fireEvent.click(within(toggle).getByText('Home'))
+    expect(toggle).toHaveAttribute('aria-expanded', 'true')
 
-    fireEvent.click(screen.getByText('Home'))
-    expect(screen.getByTestId('sidebar-item-collapse-toggle-0')).toHaveAttribute('aria-expanded', 'false')
+    fireEvent.click(within(toggle).getByText('Home'))
+    expect(toggle).toHaveAttribute('aria-expanded', 'false')
   })
 })

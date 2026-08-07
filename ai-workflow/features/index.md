@@ -23,6 +23,29 @@ La política completa está definida en el documento de workflow del proyecto.
 
 ## Completadas
 
+- `0129-dev-editor-icon-widget`: sustituye el input de texto libre de todo campo `icon` del editor visual (panel
+  de propiedades de `Layout` y panel `Shell`) por un widget reutilizable de búsqueda y selección
+  (`IconPickerPropertyField`, presentacional puro, `{ label, value, onChange }`): input de búsqueda con filtro
+  substring case-insensitive sobre el catálogo completo de nombres válidos de `lucide-react` (derivado del
+  registro canónico `icons` del paquete, no de su namespace completo con alias `Icon`-suffixed, mismo criterio de
+  validez que ya usa `IconNode` en runtime), cuadrícula de resultados paginada (4 columnas, 60 celdas por página,
+  del orden de mil setecientas entradas en total) con semántica accesible `role="grid"`/`gridcell` (no
+  `listbox`) y navegación en dos ejes con flechas, clamp en los bordes de página, roving tabindex y `ArrowDown`
+  desde el input para entrar a la cuadrícula. La cuadrícula permanece desmontada hasta que el input recibe foco;
+  un chip de previsualización (icono + nombre) sigue mostrando el valor reconocido con la cuadrícula cerrada.
+  Seleccionar una celda (click/Enter) aplica el nombre y cierra la cuadrícula devolviendo el foco al input, sea o
+  no un cambio real (idempotente sin `onChange` al reelegir la celda ya activa); `Escape` o un click fuera del
+  widget también cierran sin aplicar cambio. Un valor no reconocido se muestra sin preview, con una nota "Valor
+  actual" y sin bloquear la búsqueda — misma degradación silenciosa que producción. Un botón "Quitar icono"
+  aplica `undefined`. Integración en `Layout`: el hook `x-widget` del dispatcher (`WIDGET_REGISTRY`, clave
+  `'icon'`) se activa por convención de nombre de campo (`resolveIconPropsSchema`: cualquier nodo cuyo `props`
+  generado declare `icon` recibe el widget) en vez de una lista explícita de `node.type`, cubriendo los seis
+  nodos ya existentes (`button`, `heading`, `paragraph`, `link`, `stat`, `input`) y heredable automáticamente por
+  cualquier nodo futuro con la misma forma. Integración en `Shell`: `MenuItemFieldsEditor` y
+  `SidebarItemFieldsEditor` montan el mismo componente directamente (fuera del hook `x-widget`, exclusivo de
+  `Layout`) para `menuItem`/`menuItemChild`/`sidebarItem`, con el mismo pipeline de commit y patrón de aviso
+  `role="alert"` ya vigente en ambos paneles. Sin cambios en el contrato JSON de `icon` ni en su resolución o
+  degradación en producción o modo Visual.
 - `0127-dev-editor-span-widget`: sustituye el editor genérico de `layout.span` en el panel de propiedades del
   editor visual (modo Editor) por un widget dedicado (`LayoutSpanPropertyField`), registrado en el mismo
   `WIDGET_REGISTRY` del dispatcher que ya usa `choice-items` (`0108`) bajo la clave `'layout-span'`, sin introducir

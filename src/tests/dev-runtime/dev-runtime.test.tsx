@@ -20,6 +20,19 @@ vi.mock('@monaco-editor/react', () => ({
   }),
 }))
 
+// T2 (0129): every `heading` fixture in this file now mounts the real `IconPickerPropertyField`
+// when selected in editor mode (its generated `props` schema always declares `icon`, regardless
+// of whether a given fixture sets it — see `resolveIconPropsSchema`). Without this mock, selecting
+// any node walks the real ~3900-icon `lucide-react` namespace and blows the global Vitest timeout
+// (same failure mode documented in T1/T2's own suites). `OTHER_MODULE_ICON_NAMES` covers every
+// other icon name imported anywhere in the `DevRuntime` render tree (floating toolbar, shell
+// config panel, container-columns/tabs-orientation widgets) — ESM named imports resolve those
+// bindings at module-load time regardless of which of them actually renders in a given test.
+vi.mock('lucide-react', async () => {
+  const { createLucideReactMock, OTHER_MODULE_ICON_NAMES } = await import('./lucide-react-mock')
+  return createLucideReactMock(OTHER_MODULE_ICON_NAMES)
+})
+
 import { DevRuntime } from '../../dev-runtime/dev-runtime'
 
 const minimalConfig = {

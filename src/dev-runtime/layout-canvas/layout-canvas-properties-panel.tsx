@@ -180,6 +180,29 @@ function resolveHeadingPropsSchema(propsSchema: Record<string, unknown>): Record
 }
 
 /**
+ * Replaces the generated sub-schema of `props.icon` (Zod's `z.string().optional()`, declared
+ * identically on `button`/`heading`/`paragraph`/`link`/`stat`/`input` in `runtime-config-zod.ts`)
+ * with the `{ 'x-widget': 'icon' }` sentinel the dispatcher's `x-widget` hook (T2, 0129) resolves
+ * to `IconPickerPropertyField`. Same swap-only-that-key pattern as `resolveHeadingPropsSchema`
+ * above, but keyed purely by field-name convention rather than `node.type`: any node whose
+ * generated `props` schema declares an `icon` property gets the widget, with no explicit list of
+ * node types to maintain — a future node that reuses the same `icon: z.string().optional()` shape
+ * inherits it automatically (spec risk 1, deliberate).
+ */
+function resolveIconPropsSchema(propsSchema: Record<string, unknown>): Record<string, unknown> {
+  const properties = propsSchema.properties
+  if (!isPlainObject(properties) || !('icon' in properties)) return propsSchema
+
+  return {
+    ...propsSchema,
+    properties: {
+      ...properties,
+      icon: { 'x-widget': 'icon' },
+    },
+  }
+}
+
+/**
  * Omits `properties.columns` from `container.props`'s generated schema when the node's current
  * `props.columns` is `undefined` (T5, 0128): `ObjectPropertyField` renders every declared schema
  * property unconditionally, regardless of whether the node's own value has that key — unlike the
@@ -420,6 +443,9 @@ export function LayoutCanvasPropertiesPanel({
         }
         if (key === 'props' && CHOICE_LIKE_NODE_TYPES.has(node.type) && effectiveSchema) {
           effectiveSchema = resolveChoiceLikePropsSchema(effectiveSchema)
+        }
+        if (key === 'props' && effectiveSchema) {
+          effectiveSchema = resolveIconPropsSchema(effectiveSchema)
         }
 
         // T2 (0127): `Layout` only exists when a `container` ancestor with `columns` is

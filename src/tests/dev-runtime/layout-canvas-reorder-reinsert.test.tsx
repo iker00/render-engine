@@ -30,6 +30,19 @@ vi.mock('@monaco-editor/react', () => ({
   }),
 }))
 
+// T2 (0129): the node fixtures below (headings among them) now mount the real
+// `IconPickerPropertyField` when selected in the properties panel (their generated `props` schema
+// always declares `icon` — see `resolveIconPropsSchema`). Without this mock, selecting a node
+// walks the real ~3900-icon `lucide-react` namespace and blows the global Vitest timeout (same
+// failure mode documented in T1/T2's own suites). `OTHER_MODULE_ICON_NAMES` covers every other
+// icon name imported anywhere in the `DevRuntimeReady` render tree (floating toolbar, shell
+// config panel, container-columns/tabs-orientation widgets) — ESM named imports resolve those
+// bindings at module-load time regardless of which of them actually renders in a given test.
+vi.mock('lucide-react', async () => {
+  const { createLucideReactMock, OTHER_MODULE_ICON_NAMES } = await import('./lucide-react-mock')
+  return createLucideReactMock(OTHER_MODULE_ICON_NAMES)
+})
+
 // Light mock of @dnd-kit/core (see layout-canvas-dnd-wiring.test.tsx, T12): real pointer
 // simulation against PointerSensor is impractical in jsdom, so DndContext is replaced with a
 // pass-through that captures the onDragEnd handler LayoutCanvasDndContext registers, letting
