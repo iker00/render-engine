@@ -35,6 +35,20 @@ vi.mock('@dnd-kit/core', async () => {
   }
 })
 
+// T2 (0129): the header "actions" describe block below renders `link`/`button` action nodes
+// through the same `LayoutCanvasPropertiesPanel` the `Layout` domain uses, which now mounts the
+// real `IconPickerPropertyField` for those node types (their generated `props` schema always
+// declares `icon` — see `resolveIconPropsSchema`). Without this mock, selecting an action walks
+// the real ~3900-icon `lucide-react` namespace, which is slow and — per this file's own observed
+// failure — trips an unrelated rendering bug in the installed `lucide-react` version under jsdom.
+// `OTHER_MODULE_ICON_NAMES` covers every other icon name imported anywhere in `ShellConfigPanel`'s
+// own render tree (its list editors among them) — ESM named imports resolve those bindings at
+// module-load time regardless of which of them actually renders in a given test.
+vi.mock('lucide-react', async () => {
+  const { createLucideReactMock, OTHER_MODULE_ICON_NAMES } = await import('./lucide-react-mock')
+  return createLucideReactMock(OTHER_MODULE_ICON_NAMES)
+})
+
 function buildBaseConfig(overrides: Partial<RuntimeConfig> = {}): RuntimeConfig {
   return {
     api: { loadUsers: { method: 'GET', endpoint: '/users' } },
@@ -458,6 +472,72 @@ describe('ShellConfigPanel / sidebar items — recursive editor mounted in the p
     expect(screen.getByRole('textbox', { name: 'pageId' })).toHaveValue('ghost')
     const items = (rawConfig().shell as { sidebar: { items: Array<{ action: { pageId: string } }> } }).sidebar.items
     expect(items[0].action.pageId).toBe('home')
+  })
+})
+
+describe('ShellConfigPanel / icon field (T3, 0129)', () => {
+  it('choosing an icon cell for a menuItem runs through the real commit pipeline and persists in the config', () => {
+    renderHarness(buildBaseConfig({ shell: { header: { menu: [{ label: 'Home', href: '/home', icon: 'Home' }] } } }))
+    fireEvent.click(screen.getByTestId('menu-item-collapse-toggle-0'))
+    // The grid is hidden until the search input is focused (T5, 0129).
+    fireEvent.focus(screen.getByRole('textbox', { name: 'Buscar icono' }))
+
+    fireEvent.click(screen.getByText('Bell').closest('[role="gridcell"]')!)
+
+    const menu = (rawConfig().shell as { header: { menu: Array<{ label: string; icon?: string }> } }).header.menu
+    expect(menu).toEqual([{ label: 'Home', href: '/home', icon: 'Bell' }])
+  })
+
+  it('choosing an icon cell for a sidebarItem runs through the real commit pipeline and persists in the config', () => {
+    renderHarness(buildBaseConfig({ shell: { sidebar: { items: [{ label: 'Home', href: '/home', icon: 'LayoutDashboard' }] } } }))
+    openSidebarTab()
+    fireEvent.click(screen.getByTestId('sidebar-item-collapse-toggle-0'))
+    fireEvent.focus(screen.getByRole('textbox', { name: 'Buscar icono' }))
+
+    fireEvent.click(screen.getByText('Settings').closest('[role="gridcell"]')!)
+
+    const items = (rawConfig().shell as { sidebar: { items: Array<{ label: string; icon?: string }> } }).sidebar.items
+    expect(items).toEqual([{ label: 'Home', href: '/home', icon: 'Settings' }])
+  })
+
+  it('an unrecognized preexisting icon on a menuItem shows the widget with no cell highlighted, and the rest of the panel stays operative', () => {
+    renderHarness(buildBaseConfig({ shell: { header: { menu: [{ label: 'Home', href: '/home', icon: 'NombreQueNoExiste' }] } } }))
+    fireEvent.click(screen.getByTestId('menu-item-collapse-toggle-0'))
+    fireEvent.focus(screen.getByRole('textbox', { name: 'Buscar icono' }))
+
+    const grid = screen.getByRole('grid', { name: 'Elemento de menú 1 — Icono' })
+    expect(within(grid).getAllByRole('gridcell').some((cell) => cell.getAttribute('aria-selected') === 'true')).toBe(false)
+    // Two independent renders of the raw string are expected: the row toggle's own icon-name span
+    // (pre-existing, unrelated to the widget) and the widget's "Valor actual" note — both prove
+    // the unrecognized value stays visible rather than being silently dropped.
+    expect(screen.getAllByText('NombreQueNoExiste').length).toBeGreaterThan(0)
+
+    fireEvent.change(screen.getByRole('textbox', { name: 'Elemento de menú 1 — Etiqueta' }), {
+      target: { value: 'Homepage' },
+    })
+    const menu = (rawConfig().shell as { header: { menu: Array<{ label: string; icon?: string }> } }).header.menu
+    expect(menu).toEqual([{ label: 'Homepage', href: '/home', icon: 'NombreQueNoExiste' }])
+  })
+
+  it('an icon commit for a menuItem only touches shell, leaving layout/api/initialPage/tokens untouched', () => {
+    const base = buildBaseConfig({
+      pages: [
+        { id: 'home', layout: [{ type: 'heading', props: { text: 'Hi', level: 1 } }] },
+        { id: 'about', layout: [] },
+      ],
+      shell: { header: { menu: [{ label: 'Home', href: '/home', icon: 'Home' }] } },
+    } as Partial<RuntimeConfig>)
+    renderHarness(base)
+    fireEvent.click(screen.getByTestId('menu-item-collapse-toggle-0'))
+    fireEvent.focus(screen.getByRole('textbox', { name: 'Buscar icono' }))
+
+    fireEvent.click(screen.getByText('Bell').closest('[role="gridcell"]')!)
+
+    const parsed = rawConfig()
+    expect(parsed.pages).toEqual(base.pages)
+    expect(parsed.api).toEqual(base.api)
+    expect(parsed.initialPage).toBe(base.initialPage)
+    expect(parsed.tokens).toEqual(base.tokens)
   })
 })
 

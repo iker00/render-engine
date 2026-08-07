@@ -2,6 +2,7 @@ import type { GoBackRuntimeUiAction, NavigateToRuntimeUiAction, RuntimeVisibilit
 import type { MenuItemChildConfig, MenuItemConfig } from '../../config/runtime-config-types'
 import { DiscriminatedUnionPropertyField } from '../layout-canvas/property-fields/discriminated-union-property-field'
 import { EnumPropertyField } from '../layout-canvas/property-fields/enum-property-field'
+import { IconPickerPropertyField } from '../layout-canvas/property-fields/icon-picker-property-field'
 import { PropertyFieldDispatcher } from '../layout-canvas/property-fields/property-field-dispatcher'
 import {
   buildDefaultObjectForRequiredFields,
@@ -79,10 +80,10 @@ export function MenuItemFieldsEditor({ item, allowChildren, onChange, labelText,
         onChange={(value) => onChange({ ...item, label: value })}
         required
       />
-      <TextPropertyField
+      <IconPickerPropertyField
         label={`${labelText} — Icono`}
-        value={item.icon ?? ''}
-        onChange={(value) => onChange({ ...item, icon: value.length > 0 ? value : undefined })}
+        value={item.icon}
+        onChange={(value) => onChange({ ...item, icon: typeof value === 'string' && value.length > 0 ? value : undefined })}
       />
       <EnumPropertyField
         label={`${labelText} — Modo`}

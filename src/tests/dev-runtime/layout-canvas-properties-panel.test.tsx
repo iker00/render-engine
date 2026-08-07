@@ -8,6 +8,19 @@ import { commitLayoutSpan } from '../../dev-runtime/layout-canvas/commit-layout-
 import { LayoutCanvasPropertiesPanel } from '../../dev-runtime/layout-canvas/layout-canvas-properties-panel'
 import { DevRuntimeReady } from '../../dev-runtime/dev-runtime'
 
+// The `icon` widget (T2, 0129) mounts the real `IconPickerPropertyField` for every node type whose
+// generated `props` schema declares `icon` (heading among them, used pervasively by this file's own
+// fixtures). Without this mock every such render — including tests unrelated to icons — walks the
+// real ~3900-icon `lucide-react` namespace and blows the global Vitest timeout (same failure mode
+// documented in T1). `OTHER_MODULE_ICON_NAMES` covers every other icon name imported anywhere in
+// the `DevRuntimeReady` render tree this file also mounts further down (floating toolbar, shell
+// config panel, container-columns/tabs-orientation widgets) — ESM named imports resolve those
+// bindings at module-load time regardless of which of them actually renders in a given test.
+vi.mock('lucide-react', async () => {
+  const { createLucideReactMock, OTHER_MODULE_ICON_NAMES } = await import('./lucide-react-mock')
+  return createLucideReactMock(OTHER_MODULE_ICON_NAMES)
+})
+
 // Mock @monaco-editor/react with a controllable textarea, matching the pattern
 // already established in dev-runtime.test.tsx / layout-canvas-commit.test.tsx.
 vi.mock('@monaco-editor/react', () => ({
@@ -959,12 +972,14 @@ describe('LayoutCanvasPropertiesPanel heading level widget (T3, 0128)', () => {
     expect(updater(node)).toEqual(headingNode({ text: 'Hello', icon: 'star', level: 4 }))
   })
 
-  it('regression: props.text and props.icon remain editable with the generic controls', () => {
-    const node = headingNode({ text: 'Hello', icon: 'star', level: 2 })
+  // T2 (0129): `props.icon` no longer renders through the generic text control — it now mounts
+  // the icon widget (`resolveIconPropsSchema`), covered in its own describe block below. This
+  // regression narrows to `props.text`, the field that still goes through the generic dispatcher.
+  it('regression: props.text remains editable with the generic control', () => {
+    const node = headingNode({ text: 'Hello', level: 2 })
     render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={() => {}} />)
 
     expect(screen.getByLabelText('text', { exact: false })).toHaveValue('Hello')
-    expect(screen.getByLabelText('icon', { exact: false })).toHaveValue('star')
   })
 })
 
@@ -1105,6 +1120,93 @@ describe('LayoutCanvasPropertiesPanel container columns mode widget (T5, 0128)',
     render(<LayoutCanvasPropertiesPanel node={containerNode({ direction: 'row' })} path={somePath} onCommitNodeUpdate={() => {}} />)
 
     expect(screen.queryByLabelText('columns', { exact: false })).not.toBeInTheDocument()
+  })
+})
+
+// T2 (0129): the six node types whose generated `props` schema declares `icon: z.string().optional()`
+// (`runtime-config-zod.ts`) — `resolveIconPropsSchema` swaps that key for the `{ 'x-widget': 'icon' }`
+// sentinel by field-name convention, independent of `node.type`. One builder per type below supplies
+// the minimal valid `props` shape for that node.
+const ICON_NODE_BUILDERS: Record<'button' | 'heading' | 'paragraph' | 'link' | 'stat' | 'input', (icon?: string) => LayoutNode> = {
+  button: (icon) => ({ type: 'button', props: { label: 'Enviar', variant: 'solid', ...(icon !== undefined ? { icon } : {}) } }) as LayoutNode,
+  heading: (icon) => headingNode(icon !== undefined ? { icon } : {}),
+  paragraph: (icon) => ({ type: 'paragraph', props: { text: 'Hola', ...(icon !== undefined ? { icon } : {}) } }) as LayoutNode,
+  link: (icon) => ({ type: 'link', props: { label: 'Ir', ...(icon !== undefined ? { icon } : {}) } }) as LayoutNode,
+  stat: (icon) => ({ type: 'stat', props: { label: 'Total', value: '10', ...(icon !== undefined ? { icon } : {}) } }) as LayoutNode,
+  input: (icon) => ({ type: 'input', props: { fieldId: 'f1', label: 'Campo', ...(icon !== undefined ? { icon } : {}) } }) as LayoutNode,
+}
+
+describe('LayoutCanvasPropertiesPanel icon widget (T2, 0129)', () => {
+  describe.each(Object.keys(ICON_NODE_BUILDERS) as Array<keyof typeof ICON_NODE_BUILDERS>)('%s node', (type) => {
+    it('renders the icon widget with the current value highlighted, not a generic text input', () => {
+      const node = ICON_NODE_BUILDERS[type]('Home')
+      render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={() => {}} />)
+      // The grid is hidden until the search input is focused (T5, 0129).
+      fireEvent.focus(screen.getByRole('textbox', { name: 'Buscar icono' }))
+
+      const grid = screen.getByRole('grid', { name: 'icon' })
+      const homeCell = within(grid).getByText('Home').closest('[role="gridcell"]')!
+      expect(homeCell).toHaveAttribute('aria-selected', 'true')
+      expect(screen.queryByRole('textbox', { name: 'icon' })).not.toBeInTheDocument()
+    })
+  })
+
+  it('clicking a different cell on a button commits props.icon to the selected PascalCase name, preserving other props', () => {
+    const node = ICON_NODE_BUILDERS.button('Home')
+    const onCommitNodeUpdate = vi.fn()
+    render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={onCommitNodeUpdate} />)
+    fireEvent.focus(screen.getByRole('textbox', { name: 'Buscar icono' }))
+
+    fireEvent.click(screen.getByText('Settings').closest('[role="gridcell"]')!)
+
+    expect(onCommitNodeUpdate).toHaveBeenCalledTimes(1)
+    const [calledPath, updater] = onCommitNodeUpdate.mock.calls[0]
+    expect(calledPath).toBe(somePath)
+    expect(updater(node)).toEqual(ICON_NODE_BUILDERS.button('Settings'))
+  })
+
+  it('clicking the clear button on a button with props.icon = "Home" commits props.icon = undefined, preserving other props', () => {
+    const node = ICON_NODE_BUILDERS.button('Home')
+    const onCommitNodeUpdate = vi.fn()
+    render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={onCommitNodeUpdate} />)
+
+    fireEvent.click(screen.getByRole('button', { name: /Quitar icono/i }))
+
+    expect(onCommitNodeUpdate).toHaveBeenCalledTimes(1)
+    const [, updater] = onCommitNodeUpdate.mock.calls[0]
+    expect(updater(node)).toEqual(ICON_NODE_BUILDERS.button(undefined))
+  })
+
+  it('regression: a heading with both props.level and props.icon mounts both widgets independently, keeping props.text editable', () => {
+    const node = headingNode({ text: 'Hello', level: 3, icon: 'Home' })
+    render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={() => {}} />)
+    fireEvent.focus(screen.getByRole('textbox', { name: 'Buscar icono' }))
+
+    expect(screen.getByRole('radiogroup', { name: 'Nivel' })).toBeInTheDocument()
+    expect(screen.getByRole('grid', { name: 'icon' })).toBeInTheDocument()
+    expect(screen.getByLabelText('text', { exact: false })).toHaveValue('Hello')
+  })
+
+  it.each<LayoutNode['type']>(['container', 'divider', 'select', 'list'])(
+    'regression: does not render the icon widget for a %s node (no props.icon in its schema)',
+    (type) => {
+      const node = { type, props: { text: 'x', label: 'x', fieldId: 'f', items: [] }, id: 'f1' } as unknown as LayoutNode
+      render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={() => {}} />)
+
+      expect(screen.queryByRole('grid', { name: 'icon' })).not.toBeInTheDocument()
+    },
+  )
+
+  it('regression: a container with children still renders its own props editable, with no icon widget', () => {
+    const node: LayoutNode = {
+      type: 'container',
+      props: { direction: 'row' },
+      children: [{ type: 'heading', props: { text: 'Child', level: 2 } }],
+    } as LayoutNode
+    render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={() => {}} />)
+
+    expect(screen.getByLabelText('direction', { exact: false })).toBeInTheDocument()
+    expect(screen.queryByRole('grid', { name: 'icon' })).not.toBeInTheDocument()
   })
 })
 

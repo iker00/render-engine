@@ -228,6 +228,63 @@ Tres usos concretos en el panel de propiedades comparten este componente sin dup
   "Horizontal" activo sin que eso implique que la clave se escribe explícitamente al reseleccionar ese mismo
   segmento.
 
+### Widget de búsqueda y selección de iconos Lucide
+Un componente compartido (`IconPickerPropertyField`) sustituye el input de texto libre en todo campo `icon` del
+panel: input de búsqueda más una cuadrícula de resultados con el icono ya renderizado y su nombre, en vez de
+tener que conocer o adivinar el nombre exacto en PascalCase. Es puramente presentacional (`{ label, value,
+onChange }`, sin conocimiento propio de `x-widget` ni de los schemas de `Shell`) y se monta desde dos vías
+distintas sin duplicar su lógica de filtrado, preview o commit (ver [[#Integración en `Layout`]] y
+[[#Integración en `Shell`]] más abajo).
+
+- **Catálogo**: derivado una sola vez al cargar el módulo desde el registro canónico `icons` de `lucide-react`
+  (no su namespace completo, que además expone un alias `Icon`-suffixed por cada icono — p. ej. `Home` y
+  `HomeIcon` resuelven al mismo componente — y helpers no-icono como `createLucideIcon`) — mismo criterio de
+  validez que ya usa `IconNode` para resolver nombre→componente en el runtime.
+- **Apertura bajo demanda**: la cuadrícula permanece desmontada por defecto, con independencia del valor actual,
+  y solo aparece al enfocar el input de búsqueda (`aria-haspopup="grid"`/`aria-expanded`). Mientras está cerrada,
+  un chip de previsualización (icono ya renderizado + nombre) sigue mostrando el valor actualmente reconocido
+  junto al input, si lo hay — es la única señal visible del valor con la cuadrícula oculta.
+- **Filtro**: substring case-insensitive sobre el nombre; sin coincidencias, la cuadrícula queda vacía sin
+  ningún mensaje de error y el input sigue editable. Cambiar el texto de búsqueda siempre reinicia a la primera
+  página del nuevo resultado filtrado.
+- **Cuadrícula paginada**: 4 columnas fijas, 60 celdas por página — el catálogo completo (del orden de mil
+  setecientas entradas) no se monta de una sola vez. Los controles "Anterior"/"Siguiente" solo aparecen cuando
+  el resultado visible ocupa más de una página.
+- **Selección**: click o `Enter` sobre una celda aplica ese nombre con el mismo pipeline de commit/validación
+  (`validateRuntimeConfig`) que el resto del panel. Reseleccionar la celda ya activa no repite el commit
+  (idempotente, sin `onChange`), pero sigue cerrando la cuadrícula y devolviendo el foco al input de búsqueda,
+  igual que cualquier otra selección.
+- **Accesibilidad de tipo grid**: `role="grid"`/`role="row"`/`role="gridcell"` con `aria-selected` en la celda
+  activa — no `listbox` lineal — y roving tabindex (la celda seleccionada, o la primera si ninguna lo está, es
+  la única parada de `Tab`). Navegación en dos ejes dentro de la página visible: flecha izquierda/derecha entre
+  celdas de la misma fila, arriba/abajo entre filas de la misma columna, con clamp en los bordes de la página
+  (sin wraparound ni avance automático a la página siguiente/anterior). `ArrowDown` desde el input abre la
+  cuadrícula si estaba cerrada y mueve el foco a la primera celda visible en una sola interacción. `Escape`
+  (desde el input o desde cualquier celda) cierra la cuadrícula y devuelve el foco al input sin aplicar ningún
+  cambio; un click fuera del widget también la cierra, sin mover el foco.
+- **Valor actual no reconocido**: si no coincide con ningún nombre del catálogo, se muestra sin preview de
+  icono — misma degradación silenciosa que en producción — conservando el texto en una nota "Valor actual: …",
+  sin ninguna celda resaltada ni bloqueo de la búsqueda ni del resto del panel.
+- **Control de limpieza**: botón "Quitar icono" visible siempre que el valor sea un string no vacío; aplica
+  `undefined` al pulsarlo.
+
+#### Integración en `Layout`
+El hook `x-widget` del dispatcher (`WIDGET_REGISTRY`, clave `'icon'`) resuelve a este widget, pero a diferencia
+del resto de entradas de ese registro (`layout-span`, `heading-level`, `tabs-orientation`, `choice-items`, todas
+activadas por `node.type`), el sentinel `{ 'x-widget': 'icon' }` se inyecta por convención de nombre de campo
+(`resolveIconPropsSchema`): cualquier nodo cuyo schema `props` generado declare una propiedad `icon` recibe el
+widget, sin una lista explícita de tipos que mantener. Cubre hoy los seis nodos que ya declaran `props.icon`
+(`button`, `heading`, `paragraph`, `link`, `stat`, `input`); un nodo futuro que reutilice esa misma forma
+(`icon: z.string().optional()`) lo hereda automáticamente sin cambios en el dispatcher.
+
+#### Integración en `Shell`
+`MenuItemFieldsEditor` y `SidebarItemFieldsEditor` (ver [Sección Shell](#sección-shell-dominio-de-configuración))
+montan el mismo componente directamente para el campo `icon` de `menuItem`/`menuItemChild` y `sidebarItem`,
+sustituyendo su input de texto libre anterior — el hook `x-widget` es exclusivo del dispatcher de `Layout`, así
+que aquí la integración es una sustitución de componente directa, no un registro adicional. Mismo comportamiento
+de filtro, selección y limpieza que en `Layout`, con el mismo pipeline de commit del panel `Shell` (ver
+[Pipeline de commit](#pipeline-de-commit)).
+
 ### Editor clave-valor (`params`, `query`, `headers`, `body`)
 Los campos de tipo mapa abierto `string → string` (`navigateTo.params`, `executeOperation`/`executeOperations`'s `query` y `headers`) se editan con un formulario de filas clave-valor: cada fila tiene un input de clave y un input de valor, con un botón "Quitar" por fila y un botón "Añadir" al final que crea una fila con clave y valor vacíos. Renombrar la clave de una fila conserva su valor; todos los valores se tratan como texto plano (sin coerción a número o booleano), lo que ya cubre literales, interpolación `{{...}}` y referencias dinámicas.
 
@@ -347,8 +404,9 @@ El `tabpanel` "Header" agrupa:
 - **Título**: campo de texto simple.
 - **Lista de menú**: alta, edición y borrado de `menuItem` mediante controles de formulario estándar. Cada item
   expone un selector de modo (`Sin acción`, `href`, `action`, `Con submenú`) que determina qué campos adicionales se
-  muestran, más los campos comunes `label`, `icon` y `visibility` (este último con el mismo editor de condición
-  simple/grupo que usa el panel de propiedades de `Layout`). Un item en modo "Con submenú" expone su propia lista
+  muestran, más los campos comunes `label`, `icon` (con el [widget de búsqueda y selección de iconos
+  Lucide](#widget-de-búsqueda-y-selección-de-iconos-lucide)) y `visibility` (este último con el mismo editor de
+  condición simple/grupo que usa el panel de propiedades de `Layout`). Un item en modo "Con submenú" expone su propia lista
   anidada de hijos con los mismos controles, sin permitir un tercer nivel (los hijos no ofrecen la opción "Con
   submenú").
 - **Lista de acciones**: alta, edición y borrado de nodos `link`/`button`, reutilizando el panel de propiedades
@@ -365,8 +423,9 @@ El `tabpanel` "Sidebar" agrupa:
 - **Lista de elementos de sidebar**: alta, edición y borrado de `sidebarItem` mediante un único componente
   recursivo que se renderiza a sí mismo para los `children` de cualquier item, sin límite de profundidad (a
   diferencia de la lista de menú del header, que solo admite un nivel anidado). Cada item expone el mismo selector
-  de modo (`Sin acción`, `href`, `action`, `Con hijos`) y los mismos campos comunes `label`, `icon` y `visibility`;
-  un item en modo "Con hijos" expone inline su propia lista anidada de hijos, con los mismos controles, pudiendo
+  de modo (`Sin acción`, `href`, `action`, `Con hijos`) y los mismos campos comunes `label`, `icon` (mismo [widget de
+  búsqueda y selección de iconos Lucide](#widget-de-búsqueda-y-selección-de-iconos-lucide) que la lista de menú del
+  header) y `visibility`; un item en modo "Con hijos" expone inline su propia lista anidada de hijos, con los mismos controles, pudiendo
   a su vez anidar otro nivel de "Con hijos" sin tope.
 
 ### Reordenar por arrastre

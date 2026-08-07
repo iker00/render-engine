@@ -9,6 +9,19 @@ import { RuntimePage } from '../../runtime/runtime-page'
 import { RuntimeStateProvider } from '../../runtime/runtime-state/runtime-state-provider'
 import { useRuntimeState } from '../../runtime/runtime-state/use-runtime-state'
 
+// T2 (0129): every `heading` fixture in this file now mounts the real `IconPickerPropertyField`
+// when selected (its generated `props` schema always declares `icon`, regardless of whether a
+// given fixture sets it — see `resolveIconPropsSchema`). Without this mock, selecting any node
+// walks the real ~3900-icon `lucide-react` namespace and blows the global Vitest timeout (same
+// failure mode documented in T1/T2's own suites). `OTHER_MODULE_ICON_NAMES` covers every other
+// icon name imported anywhere in `DevEditorLayer`'s render tree (it mounts `ShellConfigPanel`
+// internally) — ESM named imports resolve those bindings at module-load time regardless of which
+// of them actually renders in a given test.
+vi.mock('lucide-react', async () => {
+  const { createLucideReactMock, OTHER_MODULE_ICON_NAMES } = await import('./lucide-react-mock')
+  return createLucideReactMock(OTHER_MODULE_ICON_NAMES)
+})
+
 function heading(text: string): LayoutNode {
   return { type: 'heading', props: { text, level: 2 } }
 }

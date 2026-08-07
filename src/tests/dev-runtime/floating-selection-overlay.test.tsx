@@ -4,6 +4,18 @@ import type { LayoutNode } from '../../config/runtime-config'
 import { FloatingSelectionOverlay } from '../../dev-runtime/floating-toolbar/floating-selection-overlay'
 import type { LayoutNodePath } from '../../runtime/layout-node-path'
 
+// T2 (0129): the `heading` fixtures below now mount the real `IconPickerPropertyField` when
+// selected (their generated `props` schema always declares `icon` — see `resolveIconPropsSchema`).
+// Without this mock, selecting a node walks the real ~3900-icon `lucide-react` namespace and blows
+// the global Vitest timeout (same failure mode documented in T1/T2's own suites).
+// `OTHER_MODULE_ICON_NAMES` covers every other icon name imported anywhere in the properties
+// panel's own widget registry — ESM named imports resolve those bindings at module-load time
+// regardless of which of them actually renders in a given test.
+vi.mock('lucide-react', async () => {
+  const { createLucideReactMock, OTHER_MODULE_ICON_NAMES } = await import('./lucide-react-mock')
+  return createLucideReactMock(OTHER_MODULE_ICON_NAMES)
+})
+
 function buildLayout(): LayoutNode[] {
   return [
     {

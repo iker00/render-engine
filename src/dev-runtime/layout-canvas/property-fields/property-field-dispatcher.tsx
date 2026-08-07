@@ -4,6 +4,7 @@ import { ChoiceItemsPropertyField } from './choice-items-property-field'
 import { DiscriminatedUnionPropertyField } from './discriminated-union-property-field'
 import { EnumPropertyField } from './enum-property-field'
 import { HeadingLevelPropertyField } from './heading-level-property-field'
+import { IconPickerPropertyField } from './icon-picker-property-field'
 import { KeyValuePropertyField } from './key-value-property-field'
 import { LayoutSpanPropertyField } from './layout-span-property-field'
 import { NumberPropertyField } from './number-property-field'
@@ -33,6 +34,7 @@ const WIDGET_REGISTRY: Record<string, ComponentType<WidgetComponentProps>> = {
   'layout-span': LayoutSpanPropertyField,
   'heading-level': HeadingLevelPropertyField,
   'tabs-orientation': TabsOrientationPropertyField,
+  icon: IconPickerPropertyField,
 }
 
 export interface PropertyFieldDispatcherProps {
