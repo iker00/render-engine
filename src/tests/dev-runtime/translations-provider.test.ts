@@ -56,7 +56,7 @@ describe('createPlatagesTranslationsProvider — baseUrl resolution', () => {
     await provider.searchTexts({ text: 'foo', token: 'abc' })
 
     const url = fetchMock.mock.calls[0][0] as string
-    expect(url).toBe(`https://pre-frontapi.entidad.es${SEARCH_TEXTS_PATH_SUFFIX}`)
+    expect(url).toBe(`https://pre-frontapi.pamplona.es${SEARCH_TEXTS_PATH_SUFFIX}`)
   })
 
   it('uses the provided baseUrl for both operations', async () => {
