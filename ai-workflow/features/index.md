@@ -23,6 +23,30 @@ La política completa está definida en el documento de workflow del proyecto.
 
 ## Completadas
 
+- `0130-dev-editor-translations-panel`: nueva sección de nivel superior "Traducciones" en la barra flotante del
+  editor visual (sexto botón del selector de dominio, entre `Tokens` y `Shell`; mismo tipo de panel de formulario
+  dedicado que `Shell`, sustituye el canvas al seleccionarse), que gestiona el bloque raíz `translations` sin editar
+  JSON a mano en Monaco. Cubre gestión manual completa (tabla con una fila por clave y una columna por idioma —
+  unión de idiomas presentes en cualquier entrada —, alta con clave no vacía/no duplicada, edición de celda con
+  commit al perder el foco y borrado de la clave de idioma en vez de string vacío al dejar una celda en blanco,
+  borrado de entrada completa, añadir columna de idioma nueva) y sincronización de solo lectura con un proveedor
+  externo de gestión de textos ya identificado para esta instalación (PlataGes, `pre-frontapi.pamplona.es`): acción
+  "Buscar y añadir" (busca por coincidencia parcial, marca como "Ya existe" y bloquea selección de un resultado cuyo
+  identificador ya es clave de `translations`, añade los seleccionados con clave = identificador y solo el idioma
+  por defecto del proveedor poblado) y acción "Refrescar todo" (recopila las claves de `translations` que son
+  literalmente un entero válido, las envía en un único lote, sobrescribe por idioma usando una tabla fija de mapeo
+  código de proveedor → código de app `1 → "es"`, `2 → "eu"`, nunca borra entradas, deja intactas las claves sin
+  respuesta, atómica: un fallo de red no aplica ningún cambio). Ambas acciones requieren elegir un `tokens.*` ya
+  declarado en un desplegable como Bearer; sin ningún token declarado quedan deshabilitadas con mensaje explicativo.
+  Toda mutación confirmada pasa por el mismo pipeline commit/validación/patch de clave raíz
+  (`commitTranslationsMutation` en `dev-runtime.tsx`, análogo a `commitShellMutation`) que ya usan `Layout` y
+  `Shell`, con el mismo patrón de aviso `role="alert"` (`CommitRejectionBanner`) ante un commit rechazado. El
+  cliente HTTP del proveedor externo (`createPlatagesTranslationsProvider`, interfaz `TranslationsProvider`) vive
+  aislado en un módulo propio (`src/dev-runtime/translations-panel/translations-provider.ts`), separado de la UI y
+  del pipeline de commit, para que sustituirlo por otro proveedor en el futuro sea un cambio localizado, sin
+  construir todavía una capa de configuración genérica de "proveedores de traducción". Exclusivo del editor de
+  desarrollo: sin cambios en el runtime de producción ni en el contrato de `translations` consumido por
+  `{{translations.*}}`.
 - `0129-dev-editor-icon-widget`: sustituye el input de texto libre de todo campo `icon` del editor visual (panel
   de propiedades de `Layout` y panel `Shell`) por un widget reutilizable de búsqueda y selección
   (`IconPickerPropertyField`, presentacional puro, `{ label, value, onChange }`): input de búsqueda con filtro

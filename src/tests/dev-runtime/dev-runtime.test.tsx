@@ -34,6 +34,42 @@ vi.mock('lucide-react', async () => {
 })
 
 import { DevRuntime } from '../../dev-runtime/dev-runtime'
+import type { CommitCanvasMutationResult } from '../../dev-runtime/layout-canvas/layout-canvas-commit'
+import type { TranslationsConfigPanelProps } from '../../dev-runtime/translations-panel/translations-config-panel'
+import { validateRuntimeConfig } from '../../config/runtime-config'
+
+// `validateRuntimeConfig` is wrapped (not stubbed) so every existing test in this file keeps
+// exercising the real validation pipeline unchanged; only 0130-T3's own "invalid commit" test
+// below overrides a single call via `mockReturnValueOnce` to simulate a rejection that isn't
+// otherwise reachable through the translations panel's own client-side guards (which already
+// block the only locally-invalid shapes — blank/duplicate keys and language codes — before a
+// commit is ever attempted).
+vi.mock('../../config/runtime-config', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../config/runtime-config')>()
+  return { ...actual, validateRuntimeConfig: vi.fn(actual.validateRuntimeConfig) }
+})
+
+// 0130-T2 introduced this ref to capture the `onCommitTranslationsMutation` prop the panel
+// receives, back when `TranslationsConfigPanel` was a read-only skeleton with no commit-triggering
+// UI of its own (the only way to exercise `commitTranslationsMutation` end-to-end was to invoke
+// the captured prop directly). 0130-T3 gives the panel real editing UI, so the mock below now
+// renders the actual component (rather than `null`) while still capturing its props through this
+// ref — existing tests that call `translationsPanelPropsRef.current!.onCommitTranslationsMutation`
+// directly keep working unchanged, and newer tests can also interact with the real rendered panel.
+// `vi.hoisted` (rather than a bare top-level `let`) is required here: `vi.mock` factories are
+// hoisted above ordinary variable declarations, so referencing an out-of-scope binding that isn't
+// itself hoisted throws at mock-setup time.
+const translationsPanelPropsRef = vi.hoisted(() => ({ current: null as TranslationsConfigPanelProps | null }))
+
+vi.mock('../../dev-runtime/translations-panel/translations-config-panel', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../dev-runtime/translations-panel/translations-config-panel')>()
+  return {
+    TranslationsConfigPanel: (props: TranslationsConfigPanelProps) => {
+      translationsPanelPropsRef.current = props
+      return <actual.TranslationsConfigPanel {...props} />
+    },
+  }
+})
 
 const minimalConfig = {
   api: {},
@@ -45,6 +81,17 @@ const secondConfig = {
   api: {},
   pages: [{ id: 'home', layout: [{ type: 'heading', props: { text: 'Updated Title', level: 1 } }] }],
   initialPage: 'home',
+}
+
+// Carries a value on every root key `commitTranslationsMutation` must leave untouched, so a
+// regression on any of them is observable in the patched raw text (0130-T2).
+const configWithSiblingRootKeys = {
+  api: {},
+  pages: [{ id: 'home', layout: [{ type: 'heading', props: { text: 'Hello World', level: 1 } }] }],
+  initialPage: 'home',
+  tokens: { authToken: { value: 'abc123' } },
+  shell: { header: { title: 'My App' } },
+  preloads: [],
 }
 
 function makeRootElement(config?: object): HTMLDivElement {
@@ -72,7 +119,12 @@ function switchToVisualMode() {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  translationsPanelPropsRef.current = null
 })
+
+function switchToTranslationsDomain() {
+  fireEvent.click(screen.getByTestId('dev-editor-toolbar-domain-translations'))
+}
 
 afterEach(() => {
   window.history.replaceState(null, '', window.location.pathname + window.location.search)
@@ -842,5 +894,139 @@ describe('DevRuntime / properties panel surfaces rejected commits instead of dis
     // in commitCanvasMutation is untouched), so the rest of the page renders exactly as before.
     expect(screen.getByRole('link', { name: 'Go via link' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Section one' })).toBeInTheDocument()
+  })
+})
+
+// 0130-T2: `commitTranslationsMutation` end-to-end through DevRuntimeReady/DevEditorLayer.
+// `ShellConfigPanel`'s equivalent pipeline (`commitShellMutation`) has no direct coverage in this
+// file, so this is the first such pipeline test here rather than an extension of an existing one.
+describe('DevRuntime / commitTranslationsMutation pipeline (0130-T2)', () => {
+  it('applies a valid mutation: updates currentConfig (visible after switching back to Layout), the Monaco buffer, and touches no sibling root key', async () => {
+    render(<DevRuntime rootElement={makeRootElement(configWithSiblingRootKeys)} />)
+    switchToTranslationsDomain()
+
+    expect(translationsPanelPropsRef.current).not.toBeNull()
+
+    let result: CommitCanvasMutationResult | undefined
+    act(() => {
+      result = translationsPanelPropsRef.current!.onCommitTranslationsMutation(() => ({ hola: { es: 'Hola' } }))
+    })
+    expect(result).toEqual({ status: 'applied' })
+
+    fireEvent.click(screen.getByTestId('dev-editor-toolbar-domain-layout'))
+    expect(screen.getByText('Hello World')).toBeInTheDocument()
+
+    openMonaco()
+    await waitFor(() => expect(screen.getByTestId('monaco-editor-mock')).toBeInTheDocument())
+    const parsedBuffer = JSON.parse((screen.getByTestId('monaco-editor-mock') as HTMLTextAreaElement).value)
+
+    expect(parsedBuffer.translations).toEqual({ hola: { es: 'Hola' } })
+    // Regression: no sibling root key changed shape or value.
+    expect(parsedBuffer.api).toEqual(configWithSiblingRootKeys.api)
+    expect(parsedBuffer.initialPage).toBe(configWithSiblingRootKeys.initialPage)
+    expect(parsedBuffer.pages).toEqual(configWithSiblingRootKeys.pages)
+    expect(parsedBuffer.tokens).toEqual(configWithSiblingRootKeys.tokens)
+    expect(parsedBuffer.shell).toEqual(configWithSiblingRootKeys.shell)
+    expect(parsedBuffer.preloads).toEqual(configWithSiblingRootKeys.preloads)
+  })
+
+  it('rejects an invalid mutation (non-string translation value) without touching currentConfig or the Monaco buffer', async () => {
+    render(<DevRuntime rootElement={makeRootElement(configWithSiblingRootKeys)} />)
+    switchToTranslationsDomain()
+
+    expect(translationsPanelPropsRef.current).not.toBeNull()
+
+    let result: CommitCanvasMutationResult | undefined
+    act(() => {
+      result = translationsPanelPropsRef.current!.onCommitTranslationsMutation(
+        () => ({ hola: { es: 42 as unknown as string } }),
+      )
+    })
+
+    expect(result?.status).toBe('rejected')
+    if (result?.status === 'rejected') {
+      expect(result.error.code).toBe('invalid-layout')
+    }
+
+    // currentConfig was never overwritten: switching back to Layout still shows the original page.
+    fireEvent.click(screen.getByTestId('dev-editor-toolbar-domain-layout'))
+    expect(screen.getByText('Hello World')).toBeInTheDocument()
+
+    // editorBuffer was never set by the rejected commit: it is still the pristine `null` state.
+    // Opening Monaco for the first time seeds it lazily from `initialConfigText` (dev-runtime.tsx,
+    // unrelated to the commit pipeline), so the buffer at this point is exactly the original raw
+    // config text — no `translations` key, none of the sibling keys altered.
+    openMonaco()
+    await waitFor(() => expect(screen.getByTestId('monaco-editor-mock')).toBeInTheDocument())
+    const parsedBuffer = JSON.parse((screen.getByTestId('monaco-editor-mock') as HTMLTextAreaElement).value)
+    expect(parsedBuffer).toEqual(configWithSiblingRootKeys)
+    expect(parsedBuffer.translations).toBeUndefined()
+  })
+})
+
+// 0130-T3: the manual editor's own real UI (add entry, add language, edit cell, delete) driving
+// `commitTranslationsMutation` end-to-end. The full add/edit/delete/add-language/token-dropdown
+// matrix is covered in isolation in `translations-config-panel.test.tsx`; this only confirms the
+// real panel is wired into the real pipeline the same way `ShellConfigPanel` is.
+describe('DevRuntime / TranslationsConfigPanel manual editor end-to-end (0130-T3)', () => {
+  it('adds a manual entry with two languages from the real panel, reflected in currentConfig/Monaco buffer, leaving sibling root keys untouched', async () => {
+    render(<DevRuntime rootElement={makeRootElement(configWithSiblingRootKeys)} />)
+    switchToTranslationsDomain()
+
+    // No translations yet, so no language column exists: add both language columns first, then
+    // fill them in on the "Añadir entrada" form.
+    fireEvent.change(screen.getByLabelText('Código de idioma'), { target: { value: 'es' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Añadir idioma' }))
+    fireEvent.change(screen.getByLabelText('Código de idioma'), { target: { value: 'eu' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Añadir idioma' }))
+
+    fireEvent.change(screen.getByLabelText('Clave'), { target: { value: 'hola' } })
+    fireEvent.change(screen.getByLabelText('es'), { target: { value: 'Hola' } })
+    fireEvent.change(screen.getByLabelText('eu'), { target: { value: 'Kaixo' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Añadir' }))
+
+    fireEvent.click(screen.getByTestId('dev-editor-toolbar-domain-layout'))
+    expect(screen.getByText('Hello World')).toBeInTheDocument()
+
+    openMonaco()
+    await waitFor(() => expect(screen.getByTestId('monaco-editor-mock')).toBeInTheDocument())
+    const parsedBuffer = JSON.parse((screen.getByTestId('monaco-editor-mock') as HTMLTextAreaElement).value)
+
+    expect(parsedBuffer.translations).toEqual({ hola: { es: 'Hola', eu: 'Kaixo' } })
+    // Regression: no sibling root key changed shape or value.
+    expect(parsedBuffer.api).toEqual(configWithSiblingRootKeys.api)
+    expect(parsedBuffer.initialPage).toBe(configWithSiblingRootKeys.initialPage)
+    expect(parsedBuffer.pages).toEqual(configWithSiblingRootKeys.pages)
+    expect(parsedBuffer.tokens).toEqual(configWithSiblingRootKeys.tokens)
+    expect(parsedBuffer.shell).toEqual(configWithSiblingRootKeys.shell)
+    expect(parsedBuffer.preloads).toEqual(configWithSiblingRootKeys.preloads)
+  })
+
+  it('shows the rejection alert without touching currentConfig or the Monaco buffer when the commit is invalid', async () => {
+    render(<DevRuntime rootElement={makeRootElement(configWithSiblingRootKeys)} />)
+    switchToTranslationsDomain()
+
+    // Every shape the panel's own client-side guards let through is schema-valid, so a genuine
+    // rejection is simulated the same way the task's own restrictions allow: override a single
+    // `validateRuntimeConfig` call. Queued only now (after the initial bootstrap validation has
+    // already run for real) so it lands on the commit triggered by "Añadir" below, not on mount.
+    vi.mocked(validateRuntimeConfig).mockReturnValueOnce({
+      status: 'error',
+      error: { code: 'invalid-layout', displayMode: 'development-only', message: 'Simulated rejection' },
+    })
+
+    fireEvent.change(screen.getByLabelText('Clave'), { target: { value: 'hola' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Añadir' }))
+
+    expect(screen.getByRole('alert')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByTestId('dev-editor-toolbar-domain-layout'))
+    expect(screen.getByText('Hello World')).toBeInTheDocument()
+
+    openMonaco()
+    await waitFor(() => expect(screen.getByTestId('monaco-editor-mock')).toBeInTheDocument())
+    const parsedBuffer = JSON.parse((screen.getByTestId('monaco-editor-mock') as HTMLTextAreaElement).value)
+    expect(parsedBuffer).toEqual(configWithSiblingRootKeys)
+    expect(parsedBuffer.translations).toBeUndefined()
   })
 })

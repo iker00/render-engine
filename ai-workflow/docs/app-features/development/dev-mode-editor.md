@@ -1,11 +1,11 @@
-> Cuándo leer: si la tarea toca el editor de configuración en vivo, el drawer lateral, el editor visual del `layout` (canvas de arrastrar y soltar), la preservación de estado al aplicar cambios, el autocompletado JSON Schema o el comportamiento de recarga por HMR en desarrollo.
+> Cuándo leer: si la tarea toca el editor de configuración en vivo, el drawer lateral, el editor visual del `layout` (canvas de arrastrar y soltar), la sección `Shell`, la sección `Traducciones` (gestión manual y sincronización con el proveedor externo PlataGes), la preservación de estado al aplicar cambios, el autocompletado JSON Schema o el comportamiento de recarga por HMR en desarrollo.
 > Tamaño: grande.
-> Relacionados: [[local-config.md]], [[../config/validation.md]], [[../config/structure.md]], [[../nodes/index.md]], [[../shell/header.md]], [[../shell/sidebar.md]].
+> Relacionados: [[local-config.md]], [[../config/validation.md]], [[../config/structure.md]], [[../nodes/index.md]], [[../shell/header.md]], [[../shell/sidebar.md]], [[../auth/tokens.md]].
 
 # Editor de configuración en vivo (dev mode)
 
 ## Objetivo
-Permitir editar el JSON de configuración directamente en el navegador durante el desarrollo, validarlo con el mismo validador del runtime y aplicarlo para ver el resultado al instante, sin recargar la página ni depender de backend. Junto al editor de texto Monaco, una **barra de herramientas flotante** persistente ofrece también un editor visual del árbol `layout` de la página activa mediante manipulación directa sobre el propio preview real renderizado — no un árbol duplicado, sino el mismo contenido que ve el usuario — con controles para cambiar de página, seleccionar modo Visual/Editor, abrir la paleta de nodos y acceder a Monaco (ver [[#Barra flotante]] y [[#Editor visual del layout]]).
+Permitir editar el JSON de configuración directamente en el navegador durante el desarrollo, validarlo con el mismo validador del runtime y aplicarlo para ver el resultado al instante, sin recargar la página ni depender de backend. Junto al editor de texto Monaco, una **barra de herramientas flotante** persistente ofrece también un editor visual del árbol `layout` de la página activa mediante manipulación directa sobre el propio preview real renderizado — no un árbol duplicado, sino el mismo contenido que ve el usuario — con controles para cambiar de página, seleccionar modo Visual/Editor, abrir la paleta de nodos y acceder a Monaco (ver [[#Barra flotante]] y [[#Editor visual del layout]]). La barra incluye además dos secciones de dominio con panel de formulario dedicado en vez de canvas: `Shell` (ver [[#Sección Shell (dominio de configuración)]]) y `Traducciones` (ver [[#Sección Traducciones (dominio de configuración)]]), esta última con gestión manual del bloque `translations` y sincronización de solo lectura con un proveedor externo de gestión de textos.
 
 ## Activación
 El editor solo existe si el host monta `<DevRuntime />` desde `src/dev-runtime/dev-runtime.tsx`. La decisión se toma en el bootstrap (`main.tsx`) y responde a dos condiciones:
@@ -24,7 +24,7 @@ En producción sin el atributo, `main.tsx` monta `<App />` directamente y Monaco
 Una barra de herramientas persistente permanece siempre visible en la base central de la pantalla mientras `DevRuntime` esté montado, independientemente de la página activa del runtime y del modo vigente. Contiene (de izquierda a derecha):
 
 1. **Selector de página**: dropdown que lista todas las páginas disponibles en `config.pages`. Cambiar la selección navega el runtime a esa página (con el mismo mecanismo que una navegación interna por hash), en cualquiera de los dos modos. Al navegar, se limpia cualquier nodo seleccionado en modo Editor.
-2. **Selector de pestaña de dominio**: cinco botones (`Layout`, `Api`, `Páginas`, `Tokens`, `Shell`). `Layout` y `Shell` son funcionales; las otras tres siguen renderizándose deshabilitadas o con indicación "Próximamente", sin acción al interactuar. Ver [Sección Shell (dominio de configuración)](#sección-shell-dominio-de-configuración) para el comportamiento de `Shell`.
+2. **Selector de pestaña de dominio**: seis botones, en este orden: `Layout`, `Api`, `Páginas`, `Tokens`, `Traducciones`, `Shell`. `Layout`, `Traducciones` y `Shell` son funcionales; `Api`, `Páginas` y `Tokens` siguen renderizándose deshabilitadas con `aria-disabled` y el título "Próximamente", sin acción al interactuar. Ver [Sección Shell (dominio de configuración)](#sección-shell-dominio-de-configuración) y [Sección Traducciones (dominio de configuración)](#sección-traducciones-dominio-de-configuración) para el comportamiento de cada una.
 3. **Botón "Añadir elemento"**: abre la paleta flotante de nodos (ver sección [[#Paleta flotante de nodos]]), desde la que se puede arrastrar un nodo hasta el contenido para insertarlo. Su estado (abierto/cerrado) se refleja visualmente en la barra.
 4. **Botón de acceso a Monaco** (icono `{}`): abre el panel flotante de Monaco (ver sección [[#Panel flotante de Monaco]]). Su estado se refleja visualmente en la barra.
 5. **Toggle Visual/Editor**: dos botones (`Visual`, `Editor`) que controlan el modo. Al arrancar, el modo por defecto es `Visual`. Solo pueden estar activos alternativamente. El toggle modifica el comportamiento del árbol renderizado sin necesidad de recarga (ver [[#Modo Visual]] y [[#Modo Editor]]).
@@ -63,7 +63,7 @@ Cuando se activa "Añadir elemento" desde la barra, aparece una paleta flotante 
 ### Estado del editor entre modos
 - **Alternar Visual ⇄ Editor sin cambiar de página**: la selección y el overlay se conservan (al volver a Editor, se ve el mismo nodo seleccionado que en la última vez que se estuvo en Editor).
 - **Cambiar de página**: se limpia toda selección previa, independientemente del modo.
-- **Cambiar de pestaña de dominio fuera de `Layout`**: se limpia la selección, ya que esas pestañas no contienen `layout` que editar en esta feature. Al entrar en `Shell`, el canvas, el overlay de selección y la paleta de nodos de `Layout` desaparecen del área central y se sustituyen por el panel de Shell (ver [Sección Shell (dominio de configuración)](#sección-shell-dominio-de-configuración)) hasta volver a `Layout`.
+- **Cambiar de pestaña de dominio fuera de `Layout`**: se limpia la selección, ya que esas pestañas no contienen `layout` que editar en esta feature. Al entrar en `Shell` o en `Traducciones`, el canvas, el overlay de selección y la paleta de nodos de `Layout` desaparecen del área central y se sustituyen por el panel correspondiente (ver [Sección Shell (dominio de configuración)](#sección-shell-dominio-de-configuración) y [Sección Traducciones (dominio de configuración)](#sección-traducciones-dominio-de-configuración)) hasta volver a `Layout`.
 
 Los cambios en el editor (canvas y Monaco) persisten en memoria entre cierres y aperturas de paneles en la misma sesión. Recargar la página descarta cambios sin aplicar.
 
@@ -522,13 +522,120 @@ intacto el resto del documento (`layout` de cada página, `api`, `initialPage`, 
 patrón que ya usa el commit del canvas de `Layout` sobre la clave `layout`, aplicado aquí a una clave raíz distinta.
 Un commit exitoso desde Shell activa la misma guardia de cambios aplicados (ver [[#Guardia de cambios aplicados]]) que el resto de commits del editor.
 
+## Sección Traducciones (dominio de configuración)
+
+### Objetivo y alcance
+Panel de formulario dedicado (`TranslationsConfigPanel`) para el bloque raíz `translations`, accesible seleccionando
+`Traducciones` en el selector de pestaña de dominio de la barra flotante — mismo tipo de sección que `Shell`: sin
+selección de nodo, breadcrumb ni panel de propiedades por nodo, sustituye por completo el área de canvas. Cubre dos
+necesidades: gestión manual de entradas (alta, edición, borrado, añadir columna de idioma) y sincronización de solo
+lectura con un proveedor externo de gestión de textos (PlataGes) para buscar textos ya existentes y para refrescar en
+bloque las entradas ya sincronizadas. Toda mutación confirmada pasa por el mismo pipeline commit/validación/patch de
+clave raíz que ya usan `Layout` y `Shell` (`commitTranslationsMutation` en `dev-runtime.tsx`, análogo a
+`commitShellMutation`: parchea solo la clave `translations` sobre el último texto crudo válido conocido vía
+`patchRootKey`, valida con `validateRuntimeConfig` y solo entonces migra estado y aplica). A diferencia de `shell`,
+`translations` nunca embebe nodos de `layout`, por lo que no existe divergencia raw/normalizado que gestionar. Un
+commit exitoso desde este panel activa la misma guardia de cambios aplicados que el resto del editor.
+
+### Tabla de entradas
+Con `translations` sin declarar, vacío (`{}`) o con al menos una clave sin ninguna entrada, el panel muestra
+`"Sin traducciones definidas"` en vez de tabla. Con al menos una entrada, una tabla muestra una fila por clave
+existente y una columna por cada código de idioma presente en la unión de todas las entradas (más cualquier columna
+de idioma añadida localmente y todavía sin persistir, ver más abajo). Cada celda es un input de texto que commitea
+al perder el foco (`blur`), no en cada pulsación: si el valor no cambió respecto al ya persistido, no dispara ningún
+commit; si el valor editado queda vacío, la clave de ese idioma se elimina de la entrada en vez de persistir una
+cadena vacía. Un commit rechazado por validación deja el valor tecleado en la celda (no revierte en silencio) y
+muestra debajo un aviso (`role="alert"`, `CommitRejectionBanner`) independiente por celda.
+
+### Alta, borrado y columnas de idioma
+- **Alta manual**: formulario "Añadir entrada" con un campo de clave y un campo de texto por cada columna de idioma
+  conocida en ese momento (todos opcionales). Una clave vacía o ya existente en `translations` se rechaza con un
+  aviso local (mismo componente `CommitRejectionBanner`) antes de intentar ningún commit — no llega a invocar
+  `onCommitTranslationsMutation`.
+- **Borrado**: botón "Borrar" por fila; elimina la clave completa de `translations`. Sin validación cruzada de
+  referencias `{{translations.clave}}` existentes en otro punto del config antes de borrar — el runtime ya degrada
+  de forma controlada ante una clave no resoluble. Borrar la última entrada deja `translations` como objeto vacío
+  `{}`, sin eliminar la clave raíz.
+- **La clave de una entrada existente no es editable**: para "renombrarla" hay que borrar la entrada y crear una
+  nueva.
+- **Añadir idioma nuevo**: control a nivel de panel (no por entrada) que añade una columna nueva, vacía para todas
+  las filas existentes, disponible de inmediato en alta y edición manual. Un código vacío o ya existente entre las
+  columnas actuales se rechaza con aviso local. La columna es únicamente estado local del panel hasta que la primera
+  edición de una celda bajo esa columna la persiste en `translations`; no hay commit al pulsar "Añadir idioma".
+
+### Selección de token para el proveedor externo
+Ambas acciones de sincronización requieren un Bearer JWT. El panel incluye un desplegable con los `tokens.*`
+declarados en la configuración activa (ver [[../auth/tokens.md]]); el valor del token elegido se envía como cabecera
+`Authorization: Bearer <valor>` en las llamadas al proveedor externo — un uso puramente del editor, no una superficie
+nueva de interpolación `{{tokens.*}}` en el config. Si la configuración activa no declara ningún `tokens.*`, el
+desplegable se sustituye por un mensaje explicando que hace falta declarar un token en la sección Tokens, y los
+botones "Buscar" y "Refrescar todo" quedan deshabilitados. Cambiar de token seleccionado limpia cualquier aviso de
+commit rechazado pendiente de un "Refrescar todo" previo.
+
+### Acción "Buscar y añadir"
+Campo de texto más botón "Buscar" (deshabilitado sin token seleccionado o mientras una búsqueda está en curso, con
+indicador `role="status"` de carga). Llama a `provider.searchTexts` con el texto introducido; los resultados
+(identificador + texto en el idioma por defecto del proveedor) se listan con un checkbox de selección por resultado.
+Un resultado cuyo identificador ya es una clave existente en `translations` se muestra marcado "Ya existe" con su
+checkbox deshabilitado. Una búsqueda sin resultados muestra `"Sin resultados"` sin tratarse como error. Pulsar
+"Añadir seleccionados" crea, para cada resultado marcado, una entrada nueva con clave = identificador (convertido a
+string) y solo el idioma por defecto del proveedor (`es`) poblado con el texto devuelto — el resto de idiomas quedan
+vacíos —, en un único commit para todos los seleccionados a la vez. Tras un commit exitoso la lista de resultados se
+limpia; un fallo de red o HTTP (incluido 401/403, mapeado a un mensaje de error de autenticación) se muestra con
+`role="alert"` sin modificar `translations`.
+
+### Acción "Refrescar todo"
+Botón deshabilitado sin token seleccionado o mientras un refresco ya está en curso (evita disparar dos refrescos
+simultáneos con doble clic). Al pulsarlo:
+1. Recopila las claves de `translations` que son literalmente un entero válido (`isNumericTranslationKey`, regex
+   `^\d+$`) — incluida cualquier clave creada a mano que por coincidencia sea un número; las no numéricas se
+   excluyen siempre. Sin ninguna clave numérica, no se envía ninguna petición y se muestra el aviso "Sin claves
+   refrescables".
+2. Envía esa lista completa en un único lote a `provider.getTranslationsBatch`. Un fallo de red o HTTP se muestra
+   con `role="alert"` y no aplica ningún cambio a `translations` (ni parcial ni total) — el commit solo se intenta
+   tras una respuesta exitosa del proveedor, garantizando la atomicidad exigida por la spec.
+3. Por cada identificador que la respuesta sí incluye, sobrescribe el texto de cada idioma devuelto usando una tabla
+   fija código de idioma del proveedor → código de idioma de la app (`1 → "es"`, `2 → "eu"`, fijada en código, no
+   configurable); un código de idioma en la respuesta que no está en esa tabla se ignora para esa entrada sin afectar
+   al resto de idiomas mapeados de la misma entrada.
+4. Claves numéricas enviadas que no aparecen en la respuesta se dejan exactamente igual que antes — "Refrescar todo"
+   nunca borra ninguna entrada de `translations`, tenga o no correspondencia en el proveedor externo.
+
+### Proveedor externo integrado (PlataGes)
+El cliente HTTP concreto (`createPlatagesTranslationsProvider`, interfaz `TranslationsProvider`) vive en un módulo
+propio (`src/dev-runtime/translations-panel/translations-provider.ts`), separado del resto del panel, para que
+sustituir este proveedor por otro en el futuro sea un cambio localizado a ese módulo sin tocar la UI, el pipeline de
+commit ni la gestión manual de entradas. `DevEditorLayer` crea una única instancia a nivel de módulo y la pasa
+explícitamente al panel vía la prop `provider` (opcional en el tipo del componente, para que llamadores/tests que no
+ejercitan "Buscar" o "Refrescar todo" no necesiten suministrarla).
+
+Expone dos operaciones, ambas `POST` con `Authorization: Bearer <token>` contra un host fijo
+(`https://pre-frontapi.pamplona.es`, sobreescribible solo vía la variable de entorno de build
+`VITE_PLATAGES_API_BASE_URL`, no configurable desde la UI):
+- búsqueda de textos por coincidencia parcial (`.../buscartextos`), payload `{ BuscarTextosEntradaDTO: { ParteTexto } }`;
+- obtención de traducciones por lote de identificadores (`.../obtenertextos`), payload `{ ObtenerTextosEntradaDTO: { IdTextos } }`.
+
+Un `401`/`403` de cualquiera de las dos se mapea a un mensaje de error de autenticación fijo; cualquier otro fallo
+HTTP usa el `message` del cuerpo de error si lo trae, o un mensaje genérico con el código HTTP; un fallo de red
+(`fetch` rechazada) usa un mensaje genérico de "no se pudo contactar". El proveedor expone además en su API real una
+tercera operación de gestión de configuración no relacionada con textos/idiomas, deliberadamente no integrada por
+esta feature.
+
+### Fuera de alcance de la sección Traducciones
+- No hay flujo de escritura hacia el proveedor externo: la sincronización es siempre de lectura desde PlataGes hacia
+  `translations`, nunca al revés.
+- El panel no edita ni gestiona los `tokens.*` en sí (eso sigue siendo exclusivo de la sección Tokens, `0078`); solo
+  consume los ya declarados para elegir cuál usar como Bearer.
+- Sin paginación propia sobre los resultados de "Buscar"; el panel muestra la respuesta del proveedor tal cual.
+- Sin deshacer/rehacer ni confirmación modal en el borrado de una entrada.
+
 ## Límites del editor visual
 
 ### Alcance funcional
 - No hay deshacer/rehacer (undo/redo) de las operaciones del canvas; Monaco sigue disponible como red de seguridad manual.
 - No hay selección múltiple de nodos, duplicar/copiar un nodo, ni atajos de teclado dedicados.
 - El panel de propiedades no incluye pickers contextuales para referencias string (`queries.x`, `forms.x`, `params.x`, `{{...}}`); esos campos se editan como texto plano, igual que el resto de propiedades del schema.
-- Edita únicamente `layout`; `api`, `pages` (alta/baja/`initialPage`), `tokens` y `translations` quedan fuera de esta entrega (son features futuras independientes).
+- El canvas de esta sección edita únicamente `layout`; `api`, `pages` (alta/baja/`initialPage`) y `tokens` quedan fuera de esta entrega (son features futuras independientes). `shell` y `translations` ya tienen panel de formulario dedicado propio (ver [Sección Shell](#sección-shell-dominio-de-configuración) y [Sección Traducciones](#sección-traducciones-dominio-de-configuración)), fuera del modelo de canvas/selección de `Layout`.
 
 ### Persistencia y entorno
 - No persiste cambios entre sesiones del navegador (`localStorage`/`sessionStorage` fuera de alcance). Los cambios aplicados viven solo en memoria de sesión, igual que el buffer de Monaco.

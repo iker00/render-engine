@@ -96,6 +96,7 @@ interface HarnessProps {
   onCommitCanvasMutation?: (mutate: (pageLayout: LayoutNode[]) => LayoutNode[]) => CommitCanvasMutationResult
   onCommitNodeUpdate?: (path: never, updater: never) => void
   onCommitShellMutation?: (mutate: (shell: never) => never) => CommitCanvasMutationResult
+  onCommitTranslationsMutation?: (mutate: (prev: never) => never) => CommitCanvasMutationResult
   onMonacoOpenChangeSpy?: (open: boolean) => void
   initialMonacoOpen?: boolean
 }
@@ -106,6 +107,7 @@ function DevEditorLayerHarness({
   onCommitCanvasMutation = noopCommitCanvasMutation,
   onCommitNodeUpdate = () => {},
   onCommitShellMutation = noopCommitCanvasMutation,
+  onCommitTranslationsMutation = noopCommitCanvasMutation,
   onMonacoOpenChangeSpy,
   initialMonacoOpen = false,
 }: HarnessProps) {
@@ -132,6 +134,7 @@ function DevEditorLayerHarness({
         onCommitCanvasMutation={onCommitCanvasMutation}
         onCommitNodeUpdate={onCommitNodeUpdate}
         onCommitShellMutation={onCommitShellMutation}
+        onCommitTranslationsMutation={onCommitTranslationsMutation}
       >
         <EditModeProbe mountCountRef={mountCountRef} />
       </DevEditorLayer>
@@ -276,6 +279,7 @@ describe('DevEditorLayer / selection degrades safely when the layout changes und
             onCommitCanvasMutation={commit}
             onCommitNodeUpdate={() => {}}
             onCommitShellMutation={noopCommitCanvasMutation}
+            onCommitTranslationsMutation={noopCommitCanvasMutation}
           >
             <EditModeProbe mountCountRef={mountCountRef} />
           </DevEditorLayer>
@@ -484,6 +488,7 @@ describe('DevEditorLayer / Esc closes the selection panel when Monaco is closed 
             onCommitCanvasMutation={noopCommitCanvasMutation}
             onCommitNodeUpdate={() => {}}
             onCommitShellMutation={noopCommitCanvasMutation}
+            onCommitTranslationsMutation={noopCommitCanvasMutation}
           >
             <EditModeProbe mountCountRef={mountCountRef} />
           </DevEditorLayer>
@@ -553,6 +558,7 @@ describe('DevEditorLayer / node-local state persists across mode switches (Decis
             onCommitCanvasMutation={noopCommitCanvasMutation}
             onCommitNodeUpdate={() => {}}
             onCommitShellMutation={noopCommitCanvasMutation}
+            onCommitTranslationsMutation={noopCommitCanvasMutation}
           >
             <RuntimePage />
           </DevEditorLayer>
@@ -651,5 +657,105 @@ describe('DevEditorLayer / Shell domain (0122-T5)', () => {
     renderHarness()
     switchToShellDomain()
     expect(screen.getByTestId('dev-editor-toolbar')).toBeInTheDocument()
+  })
+})
+
+function switchToTranslationsDomain() {
+  fireEvent.click(screen.getByTestId('dev-editor-toolbar-domain-translations'))
+}
+
+// 0130-T2: activating the "Traducciones" domain tab swaps the central content area for
+// `TranslationsConfigPanel`, in place of the Layout canvas — same pattern the Shell domain
+// already established, never alongside the canvas.
+describe('DevEditorLayer / Translations domain (0130-T2)', () => {
+  it('renders TranslationsConfigPanel and stops rendering the canvas once the Traducciones tab is selected', () => {
+    renderHarness()
+    expect(screen.getByTestId('probe-node-a')).toBeInTheDocument()
+    expect(screen.queryByTestId('translations-config-panel')).not.toBeInTheDocument()
+
+    switchToTranslationsDomain()
+
+    expect(screen.getByTestId('translations-config-panel')).toBeInTheDocument()
+    expect(screen.queryByTestId('probe-node-a')).not.toBeInTheDocument()
+  })
+
+  it('restores the canvas view when switching back to Layout', () => {
+    renderHarness()
+    switchToTranslationsDomain()
+    expect(screen.getByTestId('translations-config-panel')).toBeInTheDocument()
+
+    switchToLayoutDomain()
+
+    expect(screen.queryByTestId('translations-config-panel')).not.toBeInTheDocument()
+    expect(screen.getByTestId('probe-node-a')).toBeInTheDocument()
+  })
+
+  it('marks the Traducciones tab as pressed and Layout as not pressed once selected', () => {
+    renderHarness()
+    switchToTranslationsDomain()
+
+    expect(screen.getByTestId('dev-editor-toolbar-domain-translations')).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByTestId('dev-editor-toolbar-domain-layout')).toHaveAttribute('aria-pressed', 'false')
+  })
+
+  it('clears a canvas node selection when entering Layout from Translations, with a node selected before switching to Layout again', () => {
+    renderHarness()
+    switchToEditorMode()
+    fireEvent.click(screen.getByTestId('probe-node-a'))
+    expect((contextJson() as { selectedPath: unknown }).selectedPath).not.toBeNull()
+
+    switchToTranslationsDomain()
+    switchToLayoutDomain()
+
+    expect((contextJson() as { selectedPath: unknown }).selectedPath).toBeNull()
+  })
+
+  it('entering Translations from Shell does not break: the panel renders and the toolbar stays functional', () => {
+    renderHarness()
+    switchToShellDomain()
+    expect(screen.getByTestId('shell-config-panel')).toBeInTheDocument()
+
+    switchToTranslationsDomain()
+
+    expect(screen.queryByTestId('shell-config-panel')).not.toBeInTheDocument()
+    expect(screen.getByTestId('translations-config-panel')).toBeInTheDocument()
+    expect(screen.getByTestId('dev-editor-toolbar-domain-translations')).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('does not render the FloatingSelectionOverlay while the Translations domain is active', () => {
+    renderHarness()
+    switchToEditorMode()
+    fireEvent.click(screen.getByTestId('probe-node-a'))
+    expect(screen.getByTestId('dev-editor-selection-overlay')).toBeInTheDocument()
+
+    switchToTranslationsDomain()
+
+    expect(screen.queryByTestId('dev-editor-selection-overlay')).not.toBeInTheDocument()
+  })
+
+  it('keeps the toolbar visible while the Translations panel is rendered', () => {
+    renderHarness()
+    switchToTranslationsDomain()
+    expect(screen.getByTestId('dev-editor-toolbar')).toBeInTheDocument()
+  })
+
+  // Regression: shell/translations domains must not participate in the canvas-selection <->
+  // Monaco mutual exclusion (T2 of 0104) — that exclusion only concerns the selection overlay.
+  it('regression: with Monaco open, clicking Traducciones does not affect the Monaco panel state', () => {
+    const onMonacoOpenChangeSpy = vi.fn()
+    const mountCountRef = { current: 0 }
+    render(
+      <DevEditorLayerHarness
+        config={buildConfig()}
+        mountCountRef={mountCountRef}
+        onMonacoOpenChangeSpy={onMonacoOpenChangeSpy}
+        initialMonacoOpen={true}
+      />,
+    )
+
+    switchToTranslationsDomain()
+
+    expect(screen.getByTestId('translations-config-panel')).toBeInTheDocument()
+    expect(onMonacoOpenChangeSpy).not.toHaveBeenCalled()
   })
 })
