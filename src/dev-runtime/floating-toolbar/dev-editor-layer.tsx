@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import type { LayoutNode, LayoutNodeType, RuntimeConfigError } from '../../config/runtime-config'
-import type { ShellConfig } from '../../config/runtime-config-types'
+import type { RuntimeTranslationsConfig, ShellConfig } from '../../config/runtime-config-types'
 import { LayoutEditModeProvider } from '../../runtime/layout-edit-mode-context'
 import { getNodeAtPath, serializeLayoutNodePath, type LayoutNodePath } from '../../runtime/layout-node-path'
 import { useRuntimeConfig, useRuntimeCurrentPage, useRuntimeStateActions } from '../../runtime/runtime-state/use-runtime-state'
@@ -10,6 +10,8 @@ import { isValidDropTarget } from '../layout-canvas/layout-drop-validity'
 import { buildDefaultNodeInstance } from '../layout-canvas/layout-canvas-node-palette-defaults'
 import type { CommitCanvasMutationResult } from '../layout-canvas/layout-canvas-commit'
 import { ShellConfigPanel } from '../shell-config-panel/shell-config-panel'
+import { TranslationsConfigPanel } from '../translations-panel/translations-config-panel'
+import { createPlatagesTranslationsProvider } from '../translations-panel/translations-provider'
 import { DevEditorFloatingToolbar, type ToolbarDomain } from './dev-editor-floating-toolbar'
 import { FloatingNodePalette } from './floating-node-palette'
 import { FloatingSelectionOverlay } from './floating-selection-overlay'
@@ -45,6 +47,9 @@ interface DevEditorLayerProps {
   onCommitShellMutation: (
     mutate: (shell: ShellConfig | undefined) => ShellConfig | undefined,
   ) => CommitCanvasMutationResult
+  onCommitTranslationsMutation: (
+    mutate: (prev: RuntimeTranslationsConfig | undefined) => RuntimeTranslationsConfig | undefined,
+  ) => CommitCanvasMutationResult
   children: ReactNode
 }
 
@@ -52,6 +57,12 @@ interface DevEditorLayerProps {
 // into `onCommitCanvasMutation`'s `(pageLayout: LayoutNode[]) => LayoutNode[]` mutate callback
 // — it is only ever read, never pushed to.
 const EMPTY_LAYOUT: LayoutNode[] = []
+
+// Single real `TranslationsProvider` instance for the whole app (0130-T4): created once at module
+// scope so it isn't rebuilt on every render, and passed explicitly to `TranslationsConfigPanel`
+// instead of relying on a component-level default — tests inject their own mock via the panel's
+// `provider` prop instead of touching this one.
+const translationsProvider = createPlatagesTranslationsProvider()
 
 /**
  * Mounted inside DevRuntimeReady's single RuntimeStateProvider (design.md Decisión 1/2 de
@@ -72,6 +83,7 @@ export function DevEditorLayer({
   onCommitCanvasMutation,
   onCommitNodeUpdate,
   onCommitShellMutation,
+  onCommitTranslationsMutation,
   children,
 }: DevEditorLayerProps) {
   const [selectedPath, setSelectedPath] = useState<LayoutNodePath | null>(null)
@@ -161,16 +173,16 @@ export function DevEditorLayer({
     onMonacoOpenChange(true)
   }
 
-  // Entering "shell" clears the canvas selection (same policy already documented for
-  // api/pages/tokens): the Shell panel doesn't use the "selected canvas node" model at all, so a
-  // selection carried over from Layout would just be stale state pointing at a hidden tree.
-  // Leaving "shell" back to "layout" has nothing else to reconcile — the panel's own local state
-  // (e.g. which menu item is mid-edit) lives inside `ShellConfigPanel`, which fully unmounts
-  // whenever `activeDomain !== 'shell'`, so there is no residue to clear explicitly.
+  // Entering "shell" or "translations" clears the canvas selection (same policy already
+  // documented for api/pages/tokens): neither panel uses the "selected canvas node" model at
+  // all, so a selection carried over from Layout would just be stale state pointing at a hidden
+  // tree. Leaving either domain back to "layout" has nothing else to reconcile — each panel's own
+  // local state lives inside itself and fully unmounts whenever `activeDomain` moves away from it,
+  // so there is no residue to clear explicitly.
   function handleDomainSelected(domain: ToolbarDomain) {
     if (domain === activeDomain) return
     setActiveDomain(domain)
-    if (domain === 'shell') {
+    if (domain === 'shell' || domain === 'translations') {
       setSelectedPath(null)
       setHoveredPath(null)
     }
@@ -261,8 +273,15 @@ export function DevEditorLayer({
             />
           )}
         </>
-      ) : (
+      ) : activeDomain === 'shell' ? (
         <ShellConfigPanel shell={config.shell} onCommitShellMutation={onCommitShellMutation} />
+      ) : (
+        <TranslationsConfigPanel
+          translations={config.translations}
+          tokens={config.tokens}
+          onCommitTranslationsMutation={onCommitTranslationsMutation}
+          provider={translationsProvider}
+        />
       )}
 
       <DevEditorFloatingToolbar

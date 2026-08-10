@@ -1,7 +1,7 @@
-import { LayoutTemplate, Plug, StickyNote, KeyRound, PanelTop, Braces, Plus, SquarePen } from 'lucide-react'
+import { LayoutTemplate, Plug, StickyNote, KeyRound, Languages, PanelTop, Braces, Plus, SquarePen } from 'lucide-react'
 
 export type ToolbarMode = 'visual' | 'editor'
-export type ToolbarDomain = 'layout' | 'shell'
+export type ToolbarDomain = 'layout' | 'shell' | 'translations'
 
 interface DevEditorFloatingToolbarProps {
   mode: ToolbarMode
@@ -63,6 +63,7 @@ export function DevEditorFloatingToolbar({
 }: DevEditorFloatingToolbarProps) {
   const isLayoutActive = activeDomain === 'layout'
   const isShellActive = activeDomain === 'shell'
+  const isTranslationsActive = activeDomain === 'translations'
 
   return (
     <div
@@ -127,6 +128,15 @@ export function DevEditorFloatingToolbar({
           title="Próximamente"
         >
           <KeyRound size={14} /> Tokens
+        </button>
+        <button
+          type="button"
+          data-testid="dev-editor-toolbar-domain-translations"
+          className={buttonClasses({ pressed: isTranslationsActive })}
+          aria-pressed={isTranslationsActive}
+          onClick={() => onDomainSelected('translations')}
+        >
+          <Languages size={14} /> Traducciones
         </button>
         <button
           type="button"

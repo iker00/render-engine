@@ -40,7 +40,8 @@ export const OTHER_MODULE_ICON_NAMES = [
   'PanelTop',
   'Braces',
   'Plus',
-  'SquarePen', // dev-editor-floating-toolbar.tsx
+  'SquarePen',
+  'Languages', // dev-editor-floating-toolbar.tsx (feature 0130)
   'Check',
   'CloudAlert',
   'CloudSync',

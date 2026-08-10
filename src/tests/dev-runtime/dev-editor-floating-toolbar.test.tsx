@@ -8,8 +8,8 @@ interface RenderOptions {
   pages?: ReadonlyArray<{ id: string }>
   activePageId?: string
   onActivePageIdChange?: (pageId: string) => void
-  activeDomain?: 'layout' | 'shell'
-  onDomainSelected?: (domain: 'layout' | 'shell') => void
+  activeDomain?: 'layout' | 'shell' | 'translations'
+  onDomainSelected?: (domain: 'layout' | 'shell' | 'translations') => void
   onOpenMonaco?: () => void
   isMonacoOpen?: boolean
   onOpenPalette?: () => void
@@ -148,6 +148,50 @@ describe('DevEditorFloatingToolbar', () => {
       fireEvent.click(screen.getByTestId('dev-editor-toolbar-domain-layout'))
       expect(onDomainSelected).toHaveBeenCalledTimes(1)
       expect(onDomainSelected).toHaveBeenCalledWith('layout')
+    })
+
+    // 0130-T2: "Traducciones" tab, same functional pattern as "Shell".
+    it('the translations tab exists, is enabled and reads "Traducciones"', () => {
+      renderToolbar()
+      const translationsBtn = screen.getByTestId('dev-editor-toolbar-domain-translations')
+      expect(translationsBtn).toBeInTheDocument()
+      expect(translationsBtn).not.toBeDisabled()
+      expect(translationsBtn).not.toHaveAttribute('aria-disabled')
+      expect(translationsBtn).toHaveTextContent('Traducciones')
+    })
+
+    it('marks translations as pressed (and layout/shell as not pressed) when activeDomain is "translations"', () => {
+      renderToolbar({ activeDomain: 'translations' })
+      expect(screen.getByTestId('dev-editor-toolbar-domain-translations')).toHaveAttribute('aria-pressed', 'true')
+      expect(screen.getByTestId('dev-editor-toolbar-domain-layout')).toHaveAttribute('aria-pressed', 'false')
+      expect(screen.getByTestId('dev-editor-toolbar-domain-shell')).toHaveAttribute('aria-pressed', 'false')
+    })
+
+    it('marks translations as not pressed when activeDomain is "layout"', () => {
+      renderToolbar({ activeDomain: 'layout' })
+      expect(screen.getByTestId('dev-editor-toolbar-domain-translations')).toHaveAttribute('aria-pressed', 'false')
+    })
+
+    it('clicking the translations tab invokes onDomainSelected("translations")', () => {
+      const onDomainSelected = vi.fn()
+      renderToolbar({ activeDomain: 'layout', onDomainSelected })
+      fireEvent.click(screen.getByTestId('dev-editor-toolbar-domain-translations'))
+      expect(onDomainSelected).toHaveBeenCalledTimes(1)
+      expect(onDomainSelected).toHaveBeenCalledWith('translations')
+    })
+
+    it('regression: api/pages/tokens remain disabled with aria-disabled and "Próximamente" after adding the translations tab', () => {
+      renderToolbar()
+      for (const testId of [
+        'dev-editor-toolbar-domain-api',
+        'dev-editor-toolbar-domain-pages',
+        'dev-editor-toolbar-domain-tokens',
+      ]) {
+        const btn = screen.getByTestId(testId)
+        expect(btn).toBeDisabled()
+        expect(btn).toHaveAttribute('aria-disabled', 'true')
+        expect(btn).toHaveAttribute('title', 'Próximamente')
+      }
     })
   })
 

@@ -8,7 +8,12 @@ import { readRuntimeConfig, type RuntimeConfig } from '../app/bootstrap/read-run
 import { readRuntimeDataValues } from '../app/bootstrap/read-runtime-data-values'
 import { validateRuntimeConfig } from '../config/runtime-config'
 import type { LayoutNode } from '../config/runtime-config'
-import type { ShellConfig, ShellHeaderActionNode, ShellScrollBehavior } from '../config/runtime-config-types'
+import type {
+  RuntimeTranslationsConfig,
+  ShellConfig,
+  ShellHeaderActionNode,
+  ShellScrollBehavior,
+} from '../config/runtime-config-types'
 import { RuntimeStateProvider } from '../runtime/runtime-state/runtime-state-provider'
 import { RuntimePage } from '../runtime/runtime-page'
 import { AppShellHeader, AppShellSidebar } from '../runtime/runtime-shell'
@@ -411,6 +416,46 @@ export function DevRuntimeReady({ initialConfig, initialConfigText, dataValues, 
     return { status: 'applied' }
   }
 
+  // Same pipeline as `commitShellMutation`, generalized for the `translations` root key
+  // (0130-T2): mutate the in-memory value, patch only that key onto the last-known-valid raw
+  // text via `patchRootKey`, validate the patched text, and apply it. Unlike `shell`, a
+  // translations map never embeds `layout` nodes, so there is no raw/normalized divergence to
+  // guard against and no `denormalizeFormNodesForSerialization`-style pass is needed here.
+  function commitTranslationsMutation(
+    mutate: (prev: RuntimeTranslationsConfig | undefined) => RuntimeTranslationsConfig | undefined,
+  ): CommitCanvasMutationResult {
+    const mutatedTranslations = mutate(currentConfig.translations)
+
+    const nextText = patchRootKey(lastValidConfigText, 'translations', mutatedTranslations)
+
+    const parsed: unknown = JSON.parse(nextText)
+    const validation = validateRuntimeConfig(parsed)
+    if (validation.status === 'error') {
+      return { status: 'rejected', error: validation.error }
+    }
+
+    const prevState = bridgeRef.current?.getLatestState()
+    const nextState = prevState
+      ? migrateRuntimeStateAcrossConfig(prevState, currentConfig, validation.config, { dataValues })
+      : undefined
+
+    if (nextState && bridgeRef.current) {
+      bridgeRef.current.dispatchAndSyncState({ type: 'runtime/reset', payload: { state: nextState } })
+    }
+
+    flushSync(() => {
+      setCurrentConfig(validation.config)
+      setEditorBuffer(nextText)
+      setLastValidConfigText(nextText)
+      setHasPendingChanges(false)
+      setHasAppliedChanges(true)
+      setParseError(null)
+      setValidationError(null)
+    })
+
+    return { status: 'applied' }
+  }
+
   useImperativeHandle(ref, () => ({ commitCanvasMutation }))
 
   // LayoutCanvasPropertiesPanel edits a single node by path; replaceNodeAt (T3)
@@ -491,6 +536,7 @@ export function DevRuntimeReady({ initialConfig, initialConfigText, dataValues, 
       onCommitCanvasMutation={commitCanvasMutation}
       onCommitNodeUpdate={handleCanvasNodeUpdate}
       onCommitShellMutation={commitShellMutation}
+      onCommitTranslationsMutation={commitTranslationsMutation}
     >
       <RuntimePage />
     </DevEditorLayer>
