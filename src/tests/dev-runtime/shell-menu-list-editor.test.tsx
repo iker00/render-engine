@@ -474,6 +474,70 @@ describe('ShellMenuListEditor / icon field (T3, 0129)', () => {
   })
 })
 
+describe('ShellMenuListEditor / visibility widget (T4, 0132)', () => {
+  it('a root menuItem with a simple-condition visibility mounts the widget in "Condición simple" mode with its fields visible', () => {
+    renderHarness([
+      { label: 'Home', href: '/home', visibility: { reference: 'params.userId', operator: 'equals', value: 'admin' } },
+    ])
+    fireEvent.click(screen.getByTestId('menu-item-collapse-toggle-0'))
+
+    const shape = screen.getByRole('radiogroup', { name: 'Elemento de menú 1 — Visibilidad — Forma' })
+    expect(within(shape).getByRole('radio', { name: 'Condición simple' })).toHaveAttribute('aria-checked', 'true')
+    expect(screen.getByRole('textbox', { name: 'Elemento de menú 1 — Visibilidad — Referencia' })).toHaveValue(
+      'params.userId',
+    )
+    expect(screen.getByRole('combobox', { name: 'Elemento de menú 1 — Visibilidad — Operador' })).toHaveValue('equals')
+    // Regression: the previous generic object editor exposed a raw `reference` textbox with no
+    // row-specific prefix — the widget now consumes the whole `visibility` subsection instead.
+    expect(screen.queryByRole('textbox', { name: 'reference' })).not.toBeInTheDocument()
+  })
+
+  it('a menuItemChild inside "Con desplegable" with an "or" group visibility mounts the widget with the group toggle and two rows', () => {
+    renderHarness([
+      {
+        label: 'Products',
+        children: [
+          {
+            label: 'Shoes',
+            href: '/shoes',
+            visibility: {
+              operator: 'or',
+              conditions: [
+                { reference: 'a', operator: 'equals', value: 1 },
+                { reference: 'b', operator: 'equals', value: 2 },
+              ],
+            },
+          },
+        ],
+      },
+    ])
+    fireEvent.click(screen.getByTestId('menu-item-collapse-toggle-0.0'))
+
+    const shape = screen.getByRole('radiogroup', { name: 'Elemento de desplegable 1 — Visibilidad — Forma' })
+    expect(within(shape).getByRole('radio', { name: 'Grupo (y/o)' })).toHaveAttribute('aria-checked', 'true')
+    const groupOperator = screen.getByRole('radiogroup', { name: 'Elemento de desplegable 1 — Visibilidad — Operador del grupo' })
+    expect(within(groupOperator).getByRole('radio', { name: 'or' })).toHaveAttribute('aria-checked', 'true')
+    expect(screen.getByRole('group', { name: 'Elemento de desplegable 1 — Visibilidad — Condición 1' })).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: 'Elemento de desplegable 1 — Visibilidad — Condición 2' })).toBeInTheDocument()
+  })
+
+  it('choosing "Grupo (y/o)" from the widget wraps the previous simple condition without touching other fields', () => {
+    renderHarness([{ label: 'Home', href: '/home', visibility: { reference: 'x', operator: 'equals', value: 'y' } }])
+    fireEvent.click(screen.getByTestId('menu-item-collapse-toggle-0'))
+
+    const shape = screen.getByRole('radiogroup', { name: 'Elemento de menú 1 — Visibilidad — Forma' })
+    fireEvent.click(within(shape).getByRole('radio', { name: 'Grupo (y/o)' }))
+
+    expect(currentMenu()).toEqual([
+      {
+        label: 'Home',
+        href: '/home',
+        visibility: { operator: 'and', conditions: [{ reference: 'x', operator: 'equals', value: 'y' }] },
+      },
+    ])
+  })
+})
+
 describe('ShellMenuListEditor / collapse control', () => {
   it('a newly mounted root item exposes its collapse control collapsed by default, with its fields hidden', () => {
     renderHarness([{ label: 'Home', href: '/home' }])

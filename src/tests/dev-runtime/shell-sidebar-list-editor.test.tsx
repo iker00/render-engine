@@ -204,18 +204,98 @@ describe('SidebarItemListEditor / editing a root item', () => {
 
   it('editing visibility sets a simple condition on the item', () => {
     renderWithOneRootItem()
-    // The visibility widget defaults to the "single condition" branch (reference/operator), and
-    // — same as the generic `ObjectPropertyField` used for `src`/`alt`/`pageId` elsewhere in this
-    // panel (see shell-config-panel.test.tsx) — labels each sub-field with its raw property key,
-    // not prefixed by the row's own label.
-    fireEvent.change(screen.getByRole('textbox', { name: 'reference' }), {
+    // T4 (0132): `visibility` now goes through `ConditionGroupPropertyField` (the shared
+    // condition/group widget), not the generic `ObjectPropertyField` — its fields are prefixed by
+    // the row's own label (`<labelText> — Visibilidad — <field>`), unlike the raw property-key
+    // labels the old generic editor exposed for `src`/`alt`/`pageId` elsewhere in this panel.
+    fireEvent.change(screen.getByRole('textbox', { name: 'Elemento de sidebar 1 — Visibilidad — Referencia' }), {
       target: { value: 'params.role' },
     })
-    fireEvent.change(screen.getByRole('combobox', { name: 'operator' }), {
+    fireEvent.change(screen.getByRole('combobox', { name: 'Elemento de sidebar 1 — Visibilidad — Operador' }), {
       target: { value: 'isTruthy' },
     })
 
     expect(currentItems()[0].visibility).toEqual({ reference: 'params.role', operator: 'isTruthy' })
+  })
+})
+
+describe('SidebarItemListEditor / visibility widget (T4, 0132)', () => {
+  it('a root sidebarItem with a group visibility mounts the widget with the shape selector matching that shape', () => {
+    renderHarness([
+      {
+        label: 'Home',
+        href: '/home',
+        visibility: { operator: 'and', conditions: [{ reference: 'params.role', operator: 'equals', value: 'admin' }] },
+      },
+    ])
+    fireEvent.click(screen.getByTestId('sidebar-item-collapse-toggle-0'))
+
+    const shape = screen.getByRole('radiogroup', { name: 'Elemento de sidebar 1 — Visibilidad — Forma' })
+    expect(within(shape).getByRole('radio', { name: 'Grupo (y/o)' })).toHaveAttribute('aria-checked', 'true')
+    const groupOperator = screen.getByRole('radiogroup', { name: 'Elemento de sidebar 1 — Visibilidad — Operador del grupo' })
+    expect(within(groupOperator).getByRole('radio', { name: 'and' })).toHaveAttribute('aria-checked', 'true')
+    expect(screen.getByRole('group', { name: 'Elemento de sidebar 1 — Visibilidad — Condición 1' })).toBeInTheDocument()
+  })
+
+  // Risk flagged in design.md: `sidebarItem` recursion is genuinely unbounded, and the widget must
+  // keep working through the schema's `$defs`-based recursion at depth >= 2 (children -> children),
+  // not just at the root — a case no other `x-widget` in this codebase exercised before T4.
+  it('a sidebarItem nested at depth >= 2 (children -> children) with a simple-condition visibility mounts the widget correctly', () => {
+    renderHarness([
+      {
+        label: 'Parent',
+        children: [
+          {
+            label: 'Child',
+            children: [
+              {
+                label: 'Grandchild',
+                href: '/g',
+                visibility: { reference: 'params.role', operator: 'equals', value: 'admin' },
+              },
+            ],
+          },
+        ],
+      },
+    ])
+    fireEvent.click(screen.getByTestId('sidebar-item-collapse-toggle-0.0.0'))
+
+    const shape = screen.getByRole('radiogroup', { name: 'Elemento de sidebar 1.1.1 — Visibilidad — Forma' })
+    expect(within(shape).getByRole('radio', { name: 'Condición simple' })).toHaveAttribute('aria-checked', 'true')
+    expect(screen.getByRole('textbox', { name: 'Elemento de sidebar 1.1.1 — Visibilidad — Referencia' })).toHaveValue(
+      'params.role',
+    )
+  })
+
+  it('changing the operator of a nested (depth >= 2) sidebarItem visibility commits the mutation at that exact depth', () => {
+    renderHarness([
+      {
+        label: 'Parent',
+        children: [
+          {
+            label: 'Child',
+            children: [
+              {
+                label: 'Grandchild',
+                href: '/g',
+                visibility: { reference: 'params.role', operator: 'equals', value: 'admin' },
+              },
+              { label: 'Grandchild sibling', href: '/g2' },
+            ],
+          },
+        ],
+      },
+    ])
+    fireEvent.click(screen.getByTestId('sidebar-item-collapse-toggle-0.0.0'))
+
+    fireEvent.change(screen.getByRole('combobox', { name: 'Elemento de sidebar 1.1.1 — Visibilidad — Operador' }), {
+      target: { value: 'isTruthy' },
+    })
+
+    const items = currentItems() as Array<{ children: Array<{ children: Array<{ label: string; visibility?: unknown }> }> }>
+    expect(items[0].children[0].children[0].visibility).toEqual({ reference: 'params.role', operator: 'isTruthy' })
+    // The grandchild's sibling at the same depth is untouched by the mutation.
+    expect(items[0].children[0].children[1]).toEqual({ label: 'Grandchild sibling', href: '/g2' })
   })
 })
 

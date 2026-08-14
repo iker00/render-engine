@@ -9,6 +9,11 @@ import {
   type CommitCanvasMutationResult,
 } from '../../dev-runtime/layout-canvas/layout-canvas-commit'
 import { ShellConfigPanel } from '../../dev-runtime/shell-config-panel/shell-config-panel'
+import {
+  getMenuItemJsonSchema,
+  getSidebarItemJsonSchema,
+  getShellSidebarJsonSchema,
+} from '../../dev-runtime/shell-config-panel/shell-config-panel-schema'
 import { AppShellHeader, AppShellSidebar } from '../../runtime/runtime-shell'
 import { RuntimeStateProvider } from '../../runtime/runtime-state/runtime-state-provider'
 
@@ -538,6 +543,93 @@ describe('ShellConfigPanel / icon field (T3, 0129)', () => {
     expect(parsed.api).toEqual(base.api)
     expect(parsed.initialPage).toBe(base.initialPage)
     expect(parsed.tokens).toEqual(base.tokens)
+  })
+})
+
+describe('ShellConfigPanel / visibility widget (T4, 0132)', () => {
+  it('changing a menuItem visibility to "Grupo (y/o)" from the widget runs through the real commit pipeline', () => {
+    const base = buildBaseConfig({
+      shell: {
+        header: { menu: [{ label: 'Home', href: '/home', visibility: { reference: 'params.userId', operator: 'equals', value: 'y' } }] },
+      },
+    })
+    renderHarness(base)
+    fireEvent.click(screen.getByTestId('menu-item-collapse-toggle-0'))
+
+    const shape = screen.getByRole('radiogroup', { name: 'Elemento de menú 1 — Visibilidad — Forma' })
+    fireEvent.click(within(shape).getByRole('radio', { name: 'Grupo (y/o)' }))
+
+    const parsed = rawConfig()
+    const menu = (parsed.shell as { header: { menu: Array<Record<string, unknown>> } }).header.menu
+    expect(menu).toEqual([
+      {
+        label: 'Home',
+        href: '/home',
+        visibility: { operator: 'and', conditions: [{ reference: 'params.userId', operator: 'equals', value: 'y' }] },
+      },
+    ])
+    // Commit scope: only `shell` is touched.
+    expect(parsed.pages).toEqual(base.pages)
+    expect(parsed.api).toEqual(base.api)
+    expect(parsed.initialPage).toBe(base.initialPage)
+    expect(parsed.tokens).toEqual(base.tokens)
+  })
+
+  it('changing the operator of a nested (depth >= 2) sidebarItem visibility runs through the real commit pipeline and touches only that node', () => {
+    const base = buildBaseConfig({
+      shell: {
+        sidebar: {
+          items: [
+            {
+              label: 'Parent',
+              children: [
+                {
+                  label: 'Child',
+                  href: '/child',
+                  visibility: { reference: 'params.role', operator: 'equals', value: 'admin' },
+                },
+                { label: 'Sibling', href: '/sibling' },
+              ],
+            },
+          ],
+        },
+      },
+    })
+    renderHarness(base)
+    openSidebarTab()
+    fireEvent.click(screen.getByTestId('sidebar-item-collapse-toggle-0.0'))
+
+    fireEvent.change(screen.getByRole('combobox', { name: 'Elemento de sidebar 1.1 — Visibilidad — Operador' }), {
+      target: { value: 'isTruthy' },
+    })
+
+    const parsed = rawConfig()
+    const items = (parsed.shell as { sidebar: { items: Array<{ children: Array<Record<string, unknown>> }> } }).sidebar.items
+    expect(items[0].children[0].visibility).toEqual({ reference: 'params.role', operator: 'isTruthy' })
+    expect(items[0].children[1]).toEqual({ label: 'Sibling', href: '/sibling' })
+    // Commit scope: only `shell` is touched.
+    expect(parsed.pages).toEqual(base.pages)
+    expect(parsed.api).toEqual(base.api)
+    expect(parsed.initialPage).toBe(base.initialPage)
+    expect(parsed.tokens).toEqual(base.tokens)
+  })
+
+  it('the cached schemas replace visibility with the condition-group sentinel, including the $defs-based recursive branch (acceptance criterion 14)', () => {
+    const sentinel = { 'x-widget': 'condition-group' }
+    expect((getMenuItemJsonSchema().properties as Record<string, unknown>).visibility).toEqual(sentinel)
+    expect((getSidebarItemJsonSchema().properties as Record<string, unknown>).visibility).toEqual(sentinel)
+
+    // `sidebarItem` recurses through `$defs` once nested inside another schema
+    // (`shell.sidebar.items`) — unlike its own standalone schema, which self-references its root
+    // instead. This exercises the transform's `$defs` branch structurally, without depending on
+    // the exact `$defs` key name.
+    const shellSidebarSchema = getShellSidebarJsonSchema()
+    const defs = shellSidebarSchema.$defs as Record<string, { properties?: Record<string, unknown> }> | undefined
+    expect(defs).toBeDefined()
+    const defsWithVisibilitySentinel = Object.values(defs ?? {}).filter(
+      (def) => JSON.stringify(def.properties?.visibility) === JSON.stringify(sentinel),
+    )
+    expect(defsWithVisibilitySentinel.length).toBeGreaterThan(0)
   })
 })
 

@@ -1,6 +1,6 @@
 > Cuándo leer: si la tarea toca el editor de configuración en vivo, el drawer lateral, el editor visual del `layout` (canvas de arrastrar y soltar), la sección `Shell`, la sección `Traducciones` (gestión manual y sincronización con el proveedor externo PlataGes), el botón "Guardar" y el atajo Ctrl+S/Cmd+S hacia un backend externo, la preservación de estado al aplicar cambios, el autocompletado JSON Schema o el comportamiento de recarga por HMR en desarrollo.
 > Tamaño: grande.
-> Relacionados: [[local-config.md]], [[../config/validation.md]], [[../config/structure.md]], [[../nodes/index.md]], [[../shell/header.md]], [[../shell/sidebar.md]], [[../auth/tokens.md]].
+> Relacionados: [[local-config.md]], [[../config/validation.md]], [[../config/structure.md]], [[../nodes/index.md]], [[../shell/header.md]], [[../shell/sidebar.md]], [[../auth/tokens.md]], [[../references/visibility.md]].
 
 # Editor de configuración en vivo (dev mode)
 
@@ -172,7 +172,7 @@ Cuando el sub-schema de un campo es una unión discriminada por la propiedad lit
 - `link.props.action`: solo `navigateTo` y `goBack` más "Sin acción".
 - `form.submitAction`: solo `executeOperation` y `executeOperations` más "Sin acción". Cada entrada de sus listas opcionales `onSuccess`/`onError`, y cada entrada de `executeOperations.operations`, ofrece de nuevo las 7 variantes.
 
-Debajo del selector se muestran únicamente los campos propios de la variante activa. Elegir una variante distinta reconstruye el valor desde cero con los valores por defecto de esa variante (ningún campo de la variante anterior sobrevive al cambio) y elegir "Sin acción" deja la propiedad completamente sin definir. Una condición `when` declarada en una entrada de `executeOperations.operations` o de `onSuccess`/`onError` se edita reutilizando el mismo control que `visibility` (condición simple o grupo `and`/`or`), sin un editor duplicado.
+Debajo del selector se muestran únicamente los campos propios de la variante activa. Elegir una variante distinta reconstruye el valor desde cero con los valores por defecto de esa variante (ningún campo de la variante anterior sobrevive al cambio) y elegir "Sin acción" deja la propiedad completamente sin definir. Una condición `when` declarada en una entrada de `executeOperations.operations` o de `onSuccess`/`onError` se edita reutilizando el mismo [widget de condición/grupo](#widget-de-condicióngrupo-visibilitywhen) que `visibility`, sin un editor duplicado.
 
 ### Selector de modo de contenido de `link`: Texto / Elementos anidados
 El panel de propiedades de un nodo `link` (tanto en la pestaña `Layout` como al reutilizarse dentro de la lista de
@@ -311,6 +311,55 @@ que aquí la integración es una sustitución de componente directa, no un regis
 de filtro, selección y limpieza que en `Layout`, con el mismo pipeline de commit del panel `Shell` (ver
 [Pipeline de commit](#pipeline-de-commit)).
 
+### Widget de condición/grupo (`visibility`/`when`)
+Un componente compartido (`ConditionGroupPropertyField`) sustituye el editor genérico anterior para la forma unión
+condición/grupo que usan `node.visibility`, `when` de `executeOperations.operations`/`onSuccess`/`onError` (ver
+[selector de variante para uniones discriminadas por `type`](#selector-de-variante-para-uniones-discriminadas-por-type-acciones))
+y `visibility` de `menuItem`/`menuItemChild`/`sidebarItem` en `Shell` — mismo componente en las tres superficies,
+sin editor duplicado ni lógica de detección de forma, de edición de condición o de edición de `value` repetida
+entre ellas (ver [[../references/visibility.md]] para el contrato funcional completo de esta forma).
+
+- **Enganche**: mismo hook `x-widget` del dispatcher de `Layout` que ya usan `choice-items`/`layout-span`/
+  `heading-level`/`tabs-orientation`/`icon` (clave `'condition-group'` en `WIDGET_REGISTRY`). El sentinel
+  `{ 'x-widget': 'condition-group' }` sustituye cualquier propiedad llamada literalmente `visibility` o `when` en
+  el JSON Schema derivado, en el origen cacheado (`getNodeTypeJsonSchema` para `Layout`; `getMenuItemJsonSchema` y
+  `getSidebarItemJsonSchema` para `Shell`), recorriendo `properties`/`items`/`oneOf`/`anyOf`/`$defs` — incluida la
+  rama recursiva de `sidebarItem.children` a cualquier profundidad. El schema que consume Monaco no se toca: sigue
+  mostrando el `oneOf` real completo, mismo criterio que el resto de widgets de este registro.
+- **Selector de forma**: dos opciones explícitas ("Condición simple", "Grupo (y/o)"), visibles siempre que se edita
+  un valor de esta forma. La opción activa se detecta a partir de la forma del propio `value` al montar (un objeto
+  con `conditions` y `operator` en `and`/`or` → grupo; cualquier otro caso, incluido valor ausente → condición
+  simple), sin reutilizar `resolveUnionBranch`. Cambiar de "Condición simple" a "Grupo (y/o)" construye un grupo
+  `and` con la condición actual como única fila; cambiar de "Grupo (y/o)" a "Condición simple" aplica la primera
+  condición del grupo como nuevo valor, descartando el resto de filas si había más de una.
+- **Grupo (y/o)**: control de dos segmentos (`SegmentedTogglePropertyField`) para el `operator` del grupo
+  (`and`/`or`), y una fila por condición de `conditions`. Botón "Añadir" al final que agrega una condición con
+  valores mínimos válidos; botón "Quitar" por fila, deshabilitado mientras `conditions` tenga longitud 1 (un grupo
+  no puede quedar vacío). Sin límite superior de filas.
+- **Fila de condición** (compartida entre "Condición simple" y cada fila de grupo): `reference` (texto) y `negate`
+  (booleano) siempre visibles; selector de `operator` con el catálogo completo (`equals`, `notEquals`, `isTruthy`,
+  `isFalsy`, `greaterThan`, `lessThan`, `arrayContains`); `itemField` (texto) visible únicamente con
+  `operator: 'arrayContains'`; `value` visible con cualquier `operator` salvo `isTruthy`/`isFalsy`.
+- **Editor de `value`**: con `operator` en `equals`/`notEquals`/`arrayContains`, un selector de cuatro tipos
+  (Texto/Número/Booleano/Null, mismo `SegmentedTogglePropertyField`) detectado por el tipo JS del valor actual
+  (string/number/boolean/null; ausente o no reconocible degrada a Texto vacío sin convertir el valor previo) con el
+  control correspondiente debajo (input de texto, input numérico, control booleano de dos estados, o ningún campo
+  para Null); cambiar de tipo reconstruye `value` con el valor por defecto de ese tipo (`''`, `0`, `false`, `null`).
+  Con `operator` en `greaterThan`/`lessThan`, `value` se edita directamente como input numérico simple, sin
+  selector de tipo.
+- **Reconstrucción al cambiar de `operator`** de una fila: a `isTruthy`/`isFalsy` elimina `value` (queda ausente,
+  no `undefined`); a `arrayContains` desde otro operador siembra `value: ''` si no había ya un valor válido, sin
+  tocar `itemField`; desde `arrayContains` a cualquier otro elimina `itemField` si estaba declarado; a
+  `greaterThan`/`lessThan` con un `value` que no sea ya numérico lo reconstruye a `0`. Entre `equals`/`notEquals`/
+  `arrayContains` entre sí, `value` se conserva tal cual.
+- **Commit y validación**: cada cambio (forma, operador de grupo, alta/baja de fila, cualquier campo de una fila,
+  tipo o contenido de `value`) sigue el mismo pipeline (`validateRuntimeConfig`) y el mismo criterio de aviso
+  `role="alert"` ante un commit rechazado que el resto del panel (ver
+  [Feedback cuando un cambio del panel de propiedades no se puede guardar](#feedback-cuando-un-cambio-del-panel-de-propiedades-no-se-puede-guardar)
+  y, para `Shell`, [Feedback cuando un cambio no se puede guardar](#feedback-cuando-un-cambio-no-se-puede-guardar)).
+- **Fuera de alcance**: no anida grupos dentro de grupos (el contrato no lo soporta); `reference` sigue como texto
+  libre, sin picker contextual.
+
 ### Editor clave-valor (`params`, `query`, `headers`, `body`)
 Los campos de tipo mapa abierto `string → string` (`navigateTo.params`, `executeOperation`/`executeOperations`'s `query` y `headers`) se editan con un formulario de filas clave-valor: cada fila tiene un input de clave y un input de valor, con un botón "Quitar" por fila y un botón "Añadir" al final que crea una fila con clave y valor vacíos. Renombrar la clave de una fila conserva su valor; todos los valores se tratan como texto plano (sin coerción a número o booleano), lo que ya cubre literales, interpolación `{{...}}` y referencias dinámicas.
 
@@ -431,8 +480,9 @@ El `tabpanel` "Header" agrupa:
 - **Lista de menú**: alta, edición y borrado de `menuItem` mediante controles de formulario estándar. Cada item
   expone un selector de modo (`Sin acción`, `href`, `action`, `Con submenú`) que determina qué campos adicionales se
   muestran, más los campos comunes `label`, `icon` (con el [widget de búsqueda y selección de iconos
-  Lucide](#widget-de-búsqueda-y-selección-de-iconos-lucide)) y `visibility` (este último con el mismo editor de
-  condición simple/grupo que usa el panel de propiedades de `Layout`). Un item en modo "Con submenú" expone su propia lista
+  Lucide](#widget-de-búsqueda-y-selección-de-iconos-lucide)) y `visibility` (este último con el
+  [widget de condición/grupo](#widget-de-condicióngrupo-visibilitywhen) que usa también el panel de propiedades de
+  `Layout`). Un item en modo "Con submenú" expone su propia lista
   anidada de hijos con los mismos controles, sin permitir un tercer nivel (los hijos no ofrecen la opción "Con
   submenú").
 - **Lista de acciones**: alta, edición y borrado de nodos `link`/`button`, reutilizando el panel de propiedades
@@ -451,7 +501,8 @@ El `tabpanel` "Sidebar" agrupa:
   diferencia de la lista de menú del header, que solo admite un nivel anidado). Cada item expone el mismo selector
   de modo (`Sin acción`, `href`, `action`, `Con hijos`) y los mismos campos comunes `label`, `icon` (mismo [widget de
   búsqueda y selección de iconos Lucide](#widget-de-búsqueda-y-selección-de-iconos-lucide) que la lista de menú del
-  header) y `visibility`; un item en modo "Con hijos" expone inline su propia lista anidada de hijos, con los mismos controles, pudiendo
+  header) y `visibility` (mismo [widget de condición/grupo](#widget-de-condicióngrupo-visibilitywhen) que la lista
+  de menú del header); un item en modo "Con hijos" expone inline su propia lista anidada de hijos, con los mismos controles, pudiendo
   a su vez anidar otro nivel de "Con hijos" sin tope.
 
 ### Reordenar por arrastre
