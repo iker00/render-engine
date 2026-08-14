@@ -1,11 +1,11 @@
-> Cuándo leer: si la tarea toca el editor de configuración en vivo, el drawer lateral, el editor visual del `layout` (canvas de arrastrar y soltar), la sección `Shell`, la sección `Traducciones` (gestión manual y sincronización con el proveedor externo PlataGes), la preservación de estado al aplicar cambios, el autocompletado JSON Schema o el comportamiento de recarga por HMR en desarrollo.
+> Cuándo leer: si la tarea toca el editor de configuración en vivo, el drawer lateral, el editor visual del `layout` (canvas de arrastrar y soltar), la sección `Shell`, la sección `Traducciones` (gestión manual y sincronización con el proveedor externo PlataGes), el botón "Guardar" y el atajo Ctrl+S/Cmd+S hacia un backend externo, la preservación de estado al aplicar cambios, el autocompletado JSON Schema o el comportamiento de recarga por HMR en desarrollo.
 > Tamaño: grande.
 > Relacionados: [[local-config.md]], [[../config/validation.md]], [[../config/structure.md]], [[../nodes/index.md]], [[../shell/header.md]], [[../shell/sidebar.md]], [[../auth/tokens.md]].
 
 # Editor de configuración en vivo (dev mode)
 
 ## Objetivo
-Permitir editar el JSON de configuración directamente en el navegador durante el desarrollo, validarlo con el mismo validador del runtime y aplicarlo para ver el resultado al instante, sin recargar la página ni depender de backend. Junto al editor de texto Monaco, una **barra de herramientas flotante** persistente ofrece también un editor visual del árbol `layout` de la página activa mediante manipulación directa sobre el propio preview real renderizado — no un árbol duplicado, sino el mismo contenido que ve el usuario — con controles para cambiar de página, seleccionar modo Visual/Editor, abrir la paleta de nodos y acceder a Monaco (ver [[#Barra flotante]] y [[#Editor visual del layout]]). La barra incluye además dos secciones de dominio con panel de formulario dedicado en vez de canvas: `Shell` (ver [[#Sección Shell (dominio de configuración)]]) y `Traducciones` (ver [[#Sección Traducciones (dominio de configuración)]]), esta última con gestión manual del bloque `translations` y sincronización de solo lectura con un proveedor externo de gestión de textos.
+Permitir editar el JSON de configuración directamente en el navegador durante el desarrollo, validarlo con el mismo validador del runtime y aplicarlo para ver el resultado al instante, sin recargar la página ni depender de backend. Junto al editor de texto Monaco, una **barra de herramientas flotante** persistente ofrece también un editor visual del árbol `layout` de la página activa mediante manipulación directa sobre el propio preview real renderizado — no un árbol duplicado, sino el mismo contenido que ve el usuario — con controles para cambiar de página, seleccionar modo Visual/Editor, abrir la paleta de nodos y acceder a Monaco (ver [[#Barra flotante]] y [[#Editor visual del layout]]). La barra incluye también un botón "Guardar" (con atajo Ctrl+S/Cmd+S) que persiste el config activo hacia un backend externo (ver [[#Botón Guardar]]), y dos secciones de dominio con panel de formulario dedicado en vez de canvas: `Shell` (ver [[#Sección Shell (dominio de configuración)]]) y `Traducciones` (ver [[#Sección Traducciones (dominio de configuración)]]), esta última con gestión manual del bloque `translations` y sincronización de solo lectura con un proveedor externo de gestión de textos.
 
 ## Activación
 El editor solo existe si el host monta `<DevRuntime />` desde `src/dev-runtime/dev-runtime.tsx`. La decisión se toma en el bootstrap (`main.tsx`) y responde a dos condiciones:
@@ -28,6 +28,7 @@ Una barra de herramientas persistente permanece siempre visible en la base centr
 3. **Botón "Añadir elemento"**: abre la paleta flotante de nodos (ver sección [[#Paleta flotante de nodos]]), desde la que se puede arrastrar un nodo hasta el contenido para insertarlo. Su estado (abierto/cerrado) se refleja visualmente en la barra.
 4. **Botón de acceso a Monaco** (icono `{}`): abre el panel flotante de Monaco (ver sección [[#Panel flotante de Monaco]]). Su estado se refleja visualmente en la barra.
 5. **Toggle Visual/Editor**: dos botones (`Visual`, `Editor`) que controlan el modo. Al arrancar, el modo por defecto es `Visual`. Solo pueden estar activos alternativamente. El toggle modifica el comportamiento del árbol renderizado sin necesidad de recarga (ver [[#Modo Visual]] y [[#Modo Editor]]).
+6. **Botón "Guardar"**: persiste el config activo hacia un backend externo, con atajo de teclado Ctrl+S/Cmd+S equivalente. Siempre visible, en cualquier dominio y modo (ver [[#Botón Guardar]]).
 
 ### Modo Visual
 Por defecto al arrancar `DevRuntime`, el contenido se comporta exactamente igual que en producción: navegación por `link`/`button`, envío de formularios, ejecución de queries, campos de formulario editables. No hay selección, breadcrumb, panel de propiedades ni indicadores de arrastre visibles. Esta es la experiencia del usuario final, reflejada en el mismo árbol real renderizado.
@@ -59,6 +60,31 @@ El lado derecho de la pantalla muestra como máximo uno de los dos paneles a la 
 
 ### Paleta flotante de nodos
 Cuando se activa "Añadir elemento" desde la barra, aparece una paleta flotante lateral mostrando el catálogo completo de tipos de nodo. Desde la paleta se puede arrastrar cualquier tipo hasta una posición válida del contenido para insertarlo como nodo nuevo con valores por defecto. La paleta permanece abierta hasta que se cierra desde su botón de cierre o se vuelve a clicar "Añadir elemento".
+
+### Botón Guardar
+Persiste hacia un backend externo el config activo ya aplicado y válido (`currentConfig`, el mismo que gestiona
+la guardia de cambios aplicados) — nunca el buffer de Monaco sin aplicar. Disponible desde cualquier dominio de
+la barra (`Layout`, `Shell`, `Traducciones`) y en cualquiera de los dos modos (Visual/Editor).
+
+- **Habilitación**: el botón está habilitado solo cuando la operación de guardado está declarada en la config de
+  endpoints externos (ver [[local-config.md#Config de endpoints externos]]) con un `tokenId` que resuelve a un
+  `tokens.*` existente en el config activo. En caso contrario permanece visible pero deshabilitado, con un
+  `title` explicando la causa (operación no declarada, o token declarado sin correspondencia en `tokens.*`).
+- **Atajo Ctrl+S/Cmd+S**: equivalente al click del botón. Captura el evento con `preventDefault` mientras
+  `DevRuntime` está montado, para suprimir el diálogo nativo "Guardar página" del navegador — incluso cuando el
+  botón está deshabilitado (el atajo siempre suprime el diálogo nativo, pero solo dispara el envío si "Guardar"
+  está habilitado). El listener es global (`document`), no está acotado a que ningún panel tenga el foco.
+- **Envío**: serializa `currentConfig` como JSON minificado y lo envía a la URL/`path` de la operación de
+  guardado configurada, con el token resuelto como cabecera `Authorization: Bearer`.
+- **Feedback**: mientras la petición está en curso, el botón queda deshabilitado y muestra un indicador
+  `role="status"` ("Guardando...") — evita un segundo envío por doble click o Ctrl+S repetido. Un guardado
+  exitoso muestra una confirmación `role="status"` ("Configuración guardada"). Un guardado fallido (red, HTTP,
+  incluido 401/403, o un rechazo de negocio del backend) muestra un aviso `role="alert"` con el mensaje recibido
+  o uno genérico — `currentConfig` no cambia en ningún caso.
+- **Cambiar de página/dominio con un guardado en curso**: no cancela la petición; el resultado (éxito o error) se
+  sigue mostrando cuando llegue.
+- **Sin segunda validación**: `currentConfig` ya pasó `validateRuntimeConfig` al aplicarse, así que Guardar no lo
+  vuelve a validar antes de enviarlo.
 
 ### Estado del editor entre modos
 - **Alternar Visual ⇄ Editor sin cambiar de página**: la selección y el overlay se conservan (al volver a Editor, se ve el mismo nodo seleccionado que en la última vez que se estuvo en Editor).
@@ -563,18 +589,22 @@ muestra debajo un aviso (`role="alert"`, `CommitRejectionBanner`) independiente 
   columnas actuales se rechaza con aviso local. La columna es únicamente estado local del panel hasta que la primera
   edición de una celda bajo esa columna la persiste en `translations`; no hay commit al pulsar "Añadir idioma".
 
-### Selección de token para el proveedor externo
-Ambas acciones de sincronización requieren un Bearer JWT. El panel incluye un desplegable con los `tokens.*`
-declarados en la configuración activa (ver [[../auth/tokens.md]]); el valor del token elegido se envía como cabecera
-`Authorization: Bearer <valor>` en las llamadas al proveedor externo — un uso puramente del editor, no una superficie
-nueva de interpolación `{{tokens.*}}` en el config. Si la configuración activa no declara ningún `tokens.*`, el
-desplegable se sustituye por un mensaje explicando que hace falta declarar un token en la sección Tokens, y los
-botones "Buscar" y "Refrescar todo" quedan deshabilitados. Cambiar de token seleccionado limpia cualquier aviso de
-commit rechazado pendiente de un "Refrescar todo" previo.
+### Resolución de URL y token desde la config de endpoints
+Ambas acciones de sincronización requieren una `baseUrl` y un Bearer JWT, resueltos de forma independiente cada una
+desde la [config de endpoints externos](./local-config.md#config-de-endpoints-externos): "Buscar y añadir" contra
+la operación `searchTexts` y "Refrescar todo" contra `getTranslationsBatch`. Ya no hay un desplegable de selección
+de token en el panel — el token se resuelve automáticamente vía el `tokenId` declarado para cada operación, contra
+los `tokens.*` del config activo (ver [[../auth/tokens.md]]); sigue siendo un uso puramente interno del editor, no
+una superficie nueva de interpolación `{{tokens.*}}` en el config.
+
+Sin la operación correspondiente declarada en la config de endpoints, o con un `tokenId` que no resuelve contra
+ningún `tokens.*` del config activo, la acción afectada queda deshabilitada con un mensaje explicando la causa,
+junto a su botón — de forma independiente para cada una: es válido tener "Buscar y añadir" habilitada y "Refrescar
+todo" deshabilitada, o viceversa.
 
 ### Acción "Buscar y añadir"
-Campo de texto más botón "Buscar" (deshabilitado sin token seleccionado o mientras una búsqueda está en curso, con
-indicador `role="status"` de carga). Llama a `provider.searchTexts` con el texto introducido; los resultados
+Campo de texto más botón "Buscar" (deshabilitado sin la operación resuelta o mientras una búsqueda está en curso,
+con indicador `role="status"` de carga). Llama a `provider.searchTexts` con el texto introducido; los resultados
 (identificador + texto en el idioma por defecto del proveedor) se listan con un checkbox de selección por resultado.
 Un resultado cuyo identificador ya es una clave existente en `translations` se muestra marcado "Ya existe" con su
 checkbox deshabilitado. Una búsqueda sin resultados muestra `"Sin resultados"` sin tratarse como error. Pulsar
@@ -585,7 +615,7 @@ limpia; un fallo de red o HTTP (incluido 401/403, mapeado a un mensaje de error 
 `role="alert"` sin modificar `translations`.
 
 ### Acción "Refrescar todo"
-Botón deshabilitado sin token seleccionado o mientras un refresco ya está en curso (evita disparar dos refrescos
+Botón deshabilitado sin la operación resuelta o mientras un refresco ya está en curso (evita disparar dos refrescos
 simultáneos con doble clic). Al pulsarlo:
 1. Recopila las claves de `translations` que son literalmente un entero válido (`isNumericTranslationKey`, regex
    `^\d+$`) — incluida cualquier clave creada a mano que por coincidencia sea un número; las no numéricas se
@@ -605,21 +635,29 @@ simultáneos con doble clic). Al pulsarlo:
 El cliente HTTP concreto (`createPlatagesTranslationsProvider`, interfaz `TranslationsProvider`) vive en un módulo
 propio (`src/dev-runtime/translations-panel/translations-provider.ts`), separado del resto del panel, para que
 sustituir este proveedor por otro en el futuro sea un cambio localizado a ese módulo sin tocar la UI, el pipeline de
-commit ni la gestión manual de entradas. `DevEditorLayer` crea una única instancia a nivel de módulo y la pasa
-explícitamente al panel vía la prop `provider` (opcional en el tipo del componente, para que llamadores/tests que no
-ejercitan "Buscar" o "Refrescar todo" no necesiten suministrarla).
+commit ni la gestión manual de entradas. El transporte HTTP y el mapeo de errores viven en un cliente compartido
+(`platages-http-client.ts`), reutilizado también por el proveedor de guardado de Guardar (ver [[#Botón Guardar]]).
+`DevEditorLayer` construye la instancia una sola vez por `baseUrl` (memoizada, se reconstruye solo si la `baseUrl`
+resuelta cambia) y la pasa explícitamente al panel vía la prop `provider` (opcional en el tipo del componente, para
+que llamadores/tests que no ejercitan "Buscar" o "Refrescar todo" no necesiten suministrarla).
 
-Expone dos operaciones, ambas `POST` con `Authorization: Bearer <token>` contra un host fijo
-(`https://pre-frontapi.pamplona.es`, sobreescribible solo vía la variable de entorno de build
-`VITE_PLATAGES_API_BASE_URL`, no configurable desde la UI):
+Expone dos operaciones, ambas `POST` con `Authorization: Bearer <token>`:
 - búsqueda de textos por coincidencia parcial (`.../buscartextos`), payload `{ BuscarTextosEntradaDTO: { ParteTexto } }`;
 - obtención de traducciones por lote de identificadores (`.../obtenertextos`), payload `{ ObtenerTextosEntradaDTO: { IdTextos } }`.
+
+La `baseUrl` usada es la declarada en la config de endpoints (ver
+[[local-config.md#Config de endpoints externos]]) cuando esa config existe — que es siempre el caso cuando alguna
+de las dos acciones está habilitada, ya que sin config de endpoints ambas quedan deshabilitadas. **El `path` de cada
+operación sigue fijo dentro de este módulo** (las mismas rutas `.../buscartextos`/`.../obtenertextos` de siempre):
+el campo `path` que la config de endpoints declara para `searchTexts`/`getTranslationsBatch` no se usa para
+construir la URL de estas dos llamadas — a diferencia de la operación de guardado, cuyo `path` sí se usa íntegro
+(ver [[#Botón Guardar]]).
 
 Un `401`/`403` de cualquiera de las dos se mapea a un mensaje de error de autenticación fijo; cualquier otro fallo
 HTTP usa el `message` del cuerpo de error si lo trae, o un mensaje genérico con el código HTTP; un fallo de red
 (`fetch` rechazada) usa un mensaje genérico de "no se pudo contactar". El proveedor expone además en su API real una
-tercera operación de gestión de configuración no relacionada con textos/idiomas, deliberadamente no integrada por
-esta feature.
+tercera operación de gestión de configuración, que sí está integrada por esta feature a través de Guardar (ver
+[[#Botón Guardar]]), como cliente aparte (`save-config-provider.ts`).
 
 ### Fuera de alcance de la sección Traducciones
 - No hay flujo de escritura hacia el proveedor externo: la sincronización es siempre de lectura desde PlataGes hacia

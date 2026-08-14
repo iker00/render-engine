@@ -42,6 +42,7 @@ export const OTHER_MODULE_ICON_NAMES = [
   'Plus',
   'SquarePen',
   'Languages', // dev-editor-floating-toolbar.tsx (feature 0130)
+  'Save', // dev-editor-floating-toolbar.tsx (feature 0131)
   'Check',
   'CloudAlert',
   'CloudSync',

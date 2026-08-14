@@ -1,11 +1,13 @@
-import { useEffect, useImperativeHandle, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { Ref } from 'react'
 import { flushSync } from 'react-dom'
 import devConfigJson from '../dev/config.json'
 import devDataValuesJson from '../dev/data-values.json'
+import devEndpointsConfigJson from '../dev/endpoints-config.json'
 import { AppShell } from '../app/app-shell'
 import { readRuntimeConfig, type RuntimeConfig } from '../app/bootstrap/read-runtime-config'
 import { readRuntimeDataValues } from '../app/bootstrap/read-runtime-data-values'
+import { readRuntimeEndpointsConfig } from '../app/bootstrap/read-runtime-endpoints-config'
 import { validateRuntimeConfig } from '../config/runtime-config'
 import type { LayoutNode } from '../config/runtime-config'
 import type {
@@ -43,6 +45,9 @@ import { replaceNodeAt } from './layout-tree-mutations'
 import { DevEditorLayer } from './floating-toolbar/dev-editor-layer'
 import { FloatingMonacoPanel } from './floating-toolbar/floating-monaco-panel'
 import { setActiveConfigHmrApply } from './dev-runtime-hmr-bridge'
+import { resolveEndpointOperation } from './endpoints-config/resolve-endpoint-operation'
+import { createPlatagesSaveConfigProvider } from './endpoints-config/save-config-provider'
+import type { RuntimeEndpointsConfig } from './endpoints-config/runtime-endpoints-config-schema'
 
 export type { CommitCanvasMutationResult }
 
@@ -54,11 +59,23 @@ const defaultDevConfig = devConfigJson as unknown as RuntimeConfig
 const defaultDevConfigText = JSON.stringify(devConfigJson, null, 2)
 const defaultDevDataValues = devDataValuesJson as Record<string, unknown>
 
+// Single real `SaveConfigProvider` instance for the whole app (T5), analogous to how
+// `translationsProvider` is instantiated once at module scope in `dev-editor-layer.tsx`.
+const saveConfigProvider = createPlatagesSaveConfigProvider()
+
 export function DevRuntime({ rootElement = document.getElementById('layout-renderer') }: DevRuntimeProps) {
   // Capture the raw text before validation so the editor shows the original format.
   // The validator normalizes preloads from { "opName": {} } to { operationName, requestParams },
   // so re-serializing the normalized config would break re-validation.
   const rawConfigText = rootElement?.dataset.config ?? defaultDevConfigText
+
+  // Endpoints config is read once here (same bootstrap point as readRuntimeConfig/
+  // readRuntimeDataValues below) and is not reactive to HMR — it isn't part of the document
+  // Monaco/the canvas edit (design.md D3).
+  const endpointsConfig = readRuntimeEndpointsConfig({
+    devEndpointsConfig: devEndpointsConfigJson,
+    rootElement,
+  })
 
   const bootstrapResult = readRuntimeConfig({
     devConfig: defaultDevConfig,
@@ -91,6 +108,7 @@ export function DevRuntime({ rootElement = document.getElementById('layout-rende
       initialConfig={bootstrapResult.config}
       initialConfigText={rawConfigText}
       dataValues={dataValuesResult.dataValues}
+      endpointsConfig={endpointsConfig}
     />
   )
 }
@@ -99,6 +117,7 @@ interface DevRuntimeReadyProps {
   initialConfig: RuntimeConfig
   initialConfigText: string
   dataValues?: Record<string, unknown>
+  endpointsConfig?: RuntimeEndpointsConfig
   ref?: Ref<DevRuntimeReadyHandle>
 }
 
@@ -106,7 +125,19 @@ export interface DevRuntimeReadyHandle {
   commitCanvasMutation: (mutate: (pageLayout: LayoutNode[]) => LayoutNode[]) => CommitCanvasMutationResult
 }
 
-export function DevRuntimeReady({ initialConfig, initialConfigText, dataValues, ref }: DevRuntimeReadyProps) {
+// Save-config request state (design.md D8), independent from the parse/validation error state
+// above: a save failure is a network/business-integration error from an external provider, not a
+// local JSON/schema rejection, so it gets its own state slice rather than reusing
+// validationError/parseError.
+type SaveConfigErrorInfo = { kind: 'auth' | 'integration'; message: string }
+
+export function DevRuntimeReady({
+  initialConfig,
+  initialConfigText,
+  dataValues,
+  endpointsConfig,
+  ref,
+}: DevRuntimeReadyProps) {
   const [currentConfig, setCurrentConfig] = useState<RuntimeConfig>(initialConfig)
   const [editorBuffer, setEditorBuffer] = useState<string | null>(null)
   const [hasPendingChanges, setHasPendingChanges] = useState(false)
@@ -124,6 +155,8 @@ export function DevRuntimeReady({ initialConfig, initialConfigText, dataValues, 
   const [mode, setMode] = useState<'visual' | 'editor'>('visual')
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [monacoOpen, setMonacoOpen] = useState(false)
+  const [saveState, setSaveState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
+  const [saveError, setSaveError] = useState<SaveConfigErrorInfo | null>(null)
 
   const bridgeRef = useRef<DevRuntimeStateBridgeHandle>(null)
 
@@ -224,6 +257,74 @@ export function DevRuntimeReady({ initialConfig, initialConfigText, dataValues, 
 
   const currentError = parseError ?? validationError
 
+  // Single point of resolution for the three PlataGes operations the dev editor consumes
+  // (Guardar, Buscar textos, Refrescar traducciones). Centralized here — not in DevEditorLayer —
+  // because the global Ctrl+S listener and handleSaveConfig below need `save` to decide
+  // enablement and to read url/token; duplicating the resolveEndpointOperation calls in both
+  // places would break the "single shared resolution point" from design.md D2 (design.md D7,
+  // clarified for the T5/T6 split). The three resolutions are propagated to DevEditorLayer as
+  // props so the toolbar (T6) can reuse them for its own enablement/messaging.
+  const endpointResolutions = useMemo(
+    () => ({
+      search: resolveEndpointOperation(endpointsConfig, 'searchTexts', currentConfig.tokens),
+      refresh: resolveEndpointOperation(endpointsConfig, 'getTranslationsBatch', currentConfig.tokens),
+      save: resolveEndpointOperation(endpointsConfig, 'saveConfig', currentConfig.tokens),
+    }),
+    [endpointsConfig, currentConfig.tokens],
+  )
+
+  // Save-config pipeline (FR7/FR9, design.md D5/D8). Invocable both from the Ctrl+S/Cmd+S
+  // listener below and from a future click handler in the floating toolbar (T6) — takes no
+  // arguments, reading the resolution and current config from this closure instead.
+  const handleSaveConfig = useCallback(async () => {
+    // Guards against a double send from a double click or a double Ctrl+S while a request is
+    // already in flight (FR7).
+    if (saveState === 'loading') return
+
+    const save = endpointResolutions.save
+    // Never sends when the resolution is `unavailable`, regardless of the reason
+    // (operation-not-declared or token-not-resolvable).
+    if (save.status !== 'ready') return
+
+    // Guaranteed to exist when `save.status === 'ready'` (resolveEndpointOperation only
+    // resolves 'ready' once `endpointsConfig.operations.saveConfig` is present) — this guard
+    // exists purely to narrow the type without a non-null assertion.
+    const saveOperation = endpointsConfig?.operations?.saveConfig
+    if (!saveOperation) return
+
+    setSaveState('loading')
+    setSaveError(null)
+
+    // lastValidConfigText, not JSON.stringify(currentConfig): currentConfig holds the runtime's
+    // normalized in-memory shape, which diverges from the raw config shape the same document
+    // must round-trip through validateRuntimeConfig as (e.g. root/page preloads normalize from
+    // the raw `{ "opName": {...}, when? }` to `{ operationName, requestParams, when? }` — see the
+    // comment on lastValidConfigText's declaration below, and the same pitfall handleApply already
+    // avoids by keeping editorBuffer as-is instead of re-serializing validation.config). Sending
+    // the normalized shape would persist a document that is no longer valid input the next time
+    // it's loaded (e.g. back through `data-config`). lastValidConfigText always mirrors
+    // currentConfig exactly, so parsing and re-minifying it is equivalent to "the active, already
+    // applied config" the spec asks for, without the raw/normalized divergence.
+    const configJson = JSON.stringify(JSON.parse(lastValidConfigText))
+
+    const outcome = await saveConfigProvider.save({
+      url: save.url,
+      token: save.token,
+      idGestion: saveOperation.idGestion,
+      idSeccion: saveOperation.idSeccion,
+      idObjetoOcurrencia: saveOperation.idObjetoOcurrencia,
+      configJson,
+    })
+
+    if (outcome.status === 'ok') {
+      setSaveState('success')
+      setSaveError(null)
+    } else {
+      setSaveState('error')
+      setSaveError(outcome.error)
+    }
+  }, [saveState, endpointResolutions, endpointsConfig, lastValidConfigText])
+
   // The drawer's `handleToggle` used to seed `editorBuffer` with the original raw text the
   // first time it opened. With the drawer gone, `onMonacoOpenChange` is wired directly to
   // `setMonacoOpen` (no wrapping handler — see the render below), so this seeds the buffer
@@ -251,6 +352,24 @@ export function DevRuntimeReady({ initialConfig, initialConfigText, dataValues, 
       document.removeEventListener('keydown', handleKeyDown)
     }
   }, [monacoOpen])
+
+  // Global Ctrl+S/Cmd+S shortcut (FR7/FR9, design.md D6): independent effect from the Escape
+  // listener above, same document-level keydown pattern, active for as long as DevRuntimeReady
+  // is mounted — not scoped to a particular panel having focus. Always calls preventDefault to
+  // suppress the browser's native "Save page" dialog, even when handleSaveConfig itself ends up
+  // being a no-op (a request already in flight, or the save operation isn't available yet).
+  useEffect(() => {
+    function handleSaveShortcut(event: KeyboardEvent) {
+      if (event.key !== 's' || !(event.ctrlKey || event.metaKey)) return
+      event.preventDefault()
+      handleSaveConfig()
+    }
+
+    document.addEventListener('keydown', handleSaveShortcut)
+    return () => {
+      document.removeEventListener('keydown', handleSaveShortcut)
+    }
+  }, [handleSaveConfig])
 
   function handleEditorChange(value: string) {
     setEditorBuffer(value)
@@ -537,6 +656,13 @@ export function DevRuntimeReady({ initialConfig, initialConfigText, dataValues, 
       onCommitNodeUpdate={handleCanvasNodeUpdate}
       onCommitShellMutation={commitShellMutation}
       onCommitTranslationsMutation={commitTranslationsMutation}
+      endpointsConfig={endpointsConfig}
+      saveResolution={endpointResolutions.save}
+      searchResolution={endpointResolutions.search}
+      refreshResolution={endpointResolutions.refresh}
+      saveState={saveState}
+      saveError={saveError}
+      handleSaveConfig={handleSaveConfig}
     >
       <RuntimePage />
     </DevEditorLayer>

@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import type { LayoutNode, LayoutNodeType, RuntimeConfigError } from '../../config/runtime-config'
 import type { RuntimeTranslationsConfig, ShellConfig } from '../../config/runtime-config-types'
 import { LayoutEditModeProvider } from '../../runtime/layout-edit-mode-context'
@@ -9,10 +9,17 @@ import { LayoutCanvasDndContext, type LayoutCanvasDropAttempt } from '../layout-
 import { isValidDropTarget } from '../layout-canvas/layout-drop-validity'
 import { buildDefaultNodeInstance } from '../layout-canvas/layout-canvas-node-palette-defaults'
 import type { CommitCanvasMutationResult } from '../layout-canvas/layout-canvas-commit'
+import type { ResolvedEndpointOperation } from '../endpoints-config/resolve-endpoint-operation'
+import type { RuntimeEndpointsConfig } from '../endpoints-config/runtime-endpoints-config-schema'
 import { ShellConfigPanel } from '../shell-config-panel/shell-config-panel'
 import { TranslationsConfigPanel } from '../translations-panel/translations-config-panel'
 import { createPlatagesTranslationsProvider } from '../translations-panel/translations-provider'
-import { DevEditorFloatingToolbar, type ToolbarDomain } from './dev-editor-floating-toolbar'
+import {
+  DevEditorFloatingToolbar,
+  type SaveConfigErrorInfo,
+  type SaveState,
+  type ToolbarDomain,
+} from './dev-editor-floating-toolbar'
 import { FloatingNodePalette } from './floating-node-palette'
 import { FloatingSelectionOverlay } from './floating-selection-overlay'
 
@@ -50,6 +57,15 @@ interface DevEditorLayerProps {
   onCommitTranslationsMutation: (
     mutate: (prev: RuntimeTranslationsConfig | undefined) => RuntimeTranslationsConfig | undefined,
   ) => CommitCanvasMutationResult
+  // T6 (0131): all computed once by DevRuntimeReady (T5/D7) and threaded through here unchanged —
+  // this component never recalculates a resolution nor tracks its own save state.
+  endpointsConfig: RuntimeEndpointsConfig | undefined
+  saveResolution: ResolvedEndpointOperation
+  searchResolution: ResolvedEndpointOperation
+  refreshResolution: ResolvedEndpointOperation
+  saveState: SaveState
+  saveError: SaveConfigErrorInfo | null
+  handleSaveConfig: () => void
   children: ReactNode
 }
 
@@ -57,12 +73,6 @@ interface DevEditorLayerProps {
 // into `onCommitCanvasMutation`'s `(pageLayout: LayoutNode[]) => LayoutNode[]` mutate callback
 // — it is only ever read, never pushed to.
 const EMPTY_LAYOUT: LayoutNode[] = []
-
-// Single real `TranslationsProvider` instance for the whole app (0130-T4): created once at module
-// scope so it isn't rebuilt on every render, and passed explicitly to `TranslationsConfigPanel`
-// instead of relying on a component-level default — tests inject their own mock via the panel's
-// `provider` prop instead of touching this one.
-const translationsProvider = createPlatagesTranslationsProvider()
 
 /**
  * Mounted inside DevRuntimeReady's single RuntimeStateProvider (design.md Decisión 1/2 de
@@ -84,6 +94,13 @@ export function DevEditorLayer({
   onCommitNodeUpdate,
   onCommitShellMutation,
   onCommitTranslationsMutation,
+  endpointsConfig,
+  saveResolution,
+  searchResolution,
+  refreshResolution,
+  saveState,
+  saveError,
+  handleSaveConfig,
   children,
 }: DevEditorLayerProps) {
   const [selectedPath, setSelectedPath] = useState<LayoutNodePath | null>(null)
@@ -103,6 +120,21 @@ export function DevEditorLayer({
 
   const activePageLayout = activePage?.layout ?? EMPTY_LAYOUT
   const activePageId = activePage?.id ?? config.initialPage
+
+  // Single real `TranslationsProvider` instance (T6, 0131 — replaces the former module-scope
+  // singleton from 0130-T4): memoized by `endpointsConfig?.baseUrl` only, not by the whole
+  // `endpointsConfig` object nor by `currentConfig.tokens`, so it stays stable across renders that
+  // don't change the base URL and in practice settles right after bootstrap. Built unconditionally
+  // (never `undefined`) — when `baseUrl` isn't declared, `createPlatagesTranslationsProvider` is
+  // called with no options, its current signature (unchanged by this task, see T3).
+  const endpointsBaseUrl = endpointsConfig?.baseUrl
+  const translationsProvider = useMemo(
+    () =>
+      endpointsBaseUrl
+        ? createPlatagesTranslationsProvider({ baseUrl: endpointsBaseUrl })
+        : createPlatagesTranslationsProvider(),
+    [endpointsBaseUrl],
+  )
 
   // Edge case: navigating to a different page clears the selection — a selected node from a
   // different page has no meaning on the new page (spec FR15). Adjusted during render (the
@@ -278,9 +310,10 @@ export function DevEditorLayer({
       ) : (
         <TranslationsConfigPanel
           translations={config.translations}
-          tokens={config.tokens}
           onCommitTranslationsMutation={onCommitTranslationsMutation}
           provider={translationsProvider}
+          searchResolution={searchResolution}
+          refreshResolution={refreshResolution}
         />
       )}
 
@@ -296,6 +329,10 @@ export function DevEditorLayer({
         isMonacoOpen={monacoOpen}
         onOpenPalette={() => onPaletteOpenChange(!paletteOpen)}
         isPaletteOpen={paletteOpen}
+        saveResolution={saveResolution}
+        saveState={saveState}
+        saveError={saveError}
+        onSave={handleSaveConfig}
       />
     </>
   )

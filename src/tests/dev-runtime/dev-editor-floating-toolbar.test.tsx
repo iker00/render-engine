@@ -1,6 +1,11 @@
 import { render, screen, fireEvent } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { DevEditorFloatingToolbar } from '../../dev-runtime/floating-toolbar/dev-editor-floating-toolbar'
+import type {
+  SaveConfigErrorInfo,
+  SaveState,
+} from '../../dev-runtime/floating-toolbar/dev-editor-floating-toolbar'
+import type { ResolvedEndpointOperation } from '../../dev-runtime/endpoints-config/resolve-endpoint-operation'
 
 interface RenderOptions {
   mode?: 'visual' | 'editor'
@@ -14,6 +19,19 @@ interface RenderOptions {
   isMonacoOpen?: boolean
   onOpenPalette?: () => void
   isPaletteOpen?: boolean
+  saveResolution?: ResolvedEndpointOperation
+  saveState?: SaveState
+  saveError?: SaveConfigErrorInfo | null
+  onSave?: () => void
+}
+
+// T6 (0131): the "ready" resolution used as the default for every test that doesn't specifically
+// exercise the "unavailable" branch, mirroring `resolveEndpointOperation`'s own `status: 'ready'`
+// shape (url/token already resolved).
+const READY_SAVE_RESOLUTION: ResolvedEndpointOperation = {
+  status: 'ready',
+  url: 'https://example.test/save',
+  token: 'tok-1',
 }
 
 function renderToolbar(overrides: RenderOptions = {}) {
@@ -29,6 +47,10 @@ function renderToolbar(overrides: RenderOptions = {}) {
     isMonacoOpen: overrides.isMonacoOpen ?? false,
     onOpenPalette: overrides.onOpenPalette ?? vi.fn(),
     isPaletteOpen: overrides.isPaletteOpen ?? false,
+    saveResolution: overrides.saveResolution ?? READY_SAVE_RESOLUTION,
+    saveState: overrides.saveState ?? ('idle' as const),
+    saveError: overrides.saveError ?? null,
+    onSave: overrides.onSave ?? vi.fn(),
   }
   const utils = render(<DevEditorFloatingToolbar {...props} />)
   return { ...utils, props }
@@ -295,8 +317,92 @@ describe('DevEditorFloatingToolbar', () => {
         isMonacoOpen={false}
         onOpenPalette={vi.fn()}
         isPaletteOpen={false}
+        saveResolution={READY_SAVE_RESOLUTION}
+        saveState="idle"
+        saveError={null}
+        onSave={vi.fn()}
       />,
     )
     expect(screen.getAllByTestId('dev-editor-toolbar')).toHaveLength(1)
+  })
+
+  // T6 (0131): "Guardar" button — always in the DOM (FR4), enablement/messaging driven by
+  // saveResolution (declared by resolveEndpointOperation, T1) and saveState/saveError (owned by
+  // DevRuntimeReady, T5). This component receives both already computed — no local save state.
+  describe('save button', () => {
+    it('always renders the Guardar button regardless of state (FR4)', () => {
+      renderToolbar()
+      expect(screen.getByTestId('dev-editor-toolbar-save')).toBeInTheDocument()
+      expect(screen.getByTestId('dev-editor-toolbar-save')).toHaveTextContent('Guardar')
+    })
+
+    it('is enabled and invokes onSave on click when the resolution is ready and saveState is idle', () => {
+      const onSave = vi.fn()
+      renderToolbar({ saveResolution: READY_SAVE_RESOLUTION, saveState: 'idle', onSave })
+      const button = screen.getByTestId('dev-editor-toolbar-save')
+      expect(button).not.toBeDisabled()
+
+      fireEvent.click(button)
+      expect(onSave).toHaveBeenCalledTimes(1)
+    })
+
+    it('is disabled with aria-disabled and an explanatory title when the operation is not declared', () => {
+      renderToolbar({ saveResolution: { status: 'unavailable', reason: 'operation-not-declared' } })
+      const button = screen.getByTestId('dev-editor-toolbar-save')
+      expect(button).toBeDisabled()
+      expect(button).toHaveAttribute('aria-disabled', 'true')
+      expect(button).toHaveAttribute(
+        'title',
+        'La operación de guardado no está declarada en la configuración de endpoints',
+      )
+    })
+
+    it('is disabled with aria-disabled and an explanatory title when the token cannot be resolved', () => {
+      renderToolbar({ saveResolution: { status: 'unavailable', reason: 'token-not-resolvable' } })
+      const button = screen.getByTestId('dev-editor-toolbar-save')
+      expect(button).toBeDisabled()
+      expect(button).toHaveAttribute('aria-disabled', 'true')
+      expect(button).toHaveAttribute('title', 'El token declarado para la operación de guardado no existe en tokens')
+    })
+
+    it('clicking the button while unavailable does not invoke onSave', () => {
+      const onSave = vi.fn()
+      renderToolbar({ saveResolution: { status: 'unavailable', reason: 'operation-not-declared' }, onSave })
+      fireEvent.click(screen.getByTestId('dev-editor-toolbar-save'))
+      expect(onSave).not.toHaveBeenCalled()
+    })
+
+    it('is disabled with a role="status" "Guardando..." indicator while saveState is loading, and a double click does not call onSave twice', () => {
+      const onSave = vi.fn()
+      renderToolbar({ saveState: 'loading', onSave })
+      const button = screen.getByTestId('dev-editor-toolbar-save')
+      expect(button).toBeDisabled()
+      expect(screen.getByRole('status')).toHaveTextContent('Guardando...')
+
+      fireEvent.click(button)
+      fireEvent.click(button)
+      expect(onSave).not.toHaveBeenCalled()
+    })
+
+    it('shows saveError.message inside a role="alert" when saveState is error', () => {
+      renderToolbar({
+        saveState: 'error',
+        saveError: { kind: 'integration', message: 'No se pudo contactar con el proveedor externo.' },
+      })
+      expect(screen.getByRole('alert')).toHaveTextContent('No se pudo contactar con el proveedor externo.')
+    })
+
+    it('the button stays enabled during an error so the user can retry', () => {
+      renderToolbar({
+        saveState: 'error',
+        saveError: { kind: 'auth', message: 'La autenticación falló.' },
+      })
+      expect(screen.getByTestId('dev-editor-toolbar-save')).not.toBeDisabled()
+    })
+
+    it('shows a confirmation message inside a role="status" when saveState is success', () => {
+      renderToolbar({ saveState: 'success' })
+      expect(screen.getByRole('status')).toHaveTextContent('Configuración guardada')
+    })
   })
 })

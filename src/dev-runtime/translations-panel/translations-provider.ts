@@ -1,8 +1,15 @@
 /**
- * HTTP client for the two read-only PlataGes operations consumed by the translations panel:
- * searching texts and fetching the translations of a batch of ids. Types and error mapping are
- * scoped to what the panel needs; the raw PlataGes wire shape stays private to this module.
+ * Provider for the two read-only PlataGes operations consumed by the translations panel:
+ * searching texts and fetching the translations of a batch of ids. The HTTP transport and error
+ * mapping live in the shared `platages-http-client`; this module keeps the raw PlataGes wire
+ * shape and the domain mapping specific to translations.
  */
+
+import {
+  postToPlatages,
+  type PlatagesRequestError,
+  type PlatagesRequestOutcome,
+} from '../platages-http-client'
 
 export interface TranslationsProviderSearchResult {
   idTexto: number
@@ -19,13 +26,9 @@ export interface TranslationsProviderBatchResult {
   traducciones: TranslationsProviderBatchLanguage[]
 }
 
-export type TranslationsProviderError =
-  | { kind: 'auth'; message: string }
-  | { kind: 'integration'; message: string }
+export type TranslationsProviderError = PlatagesRequestError
 
-export type TranslationsProviderOutcome<T> =
-  | { status: 'ok'; data: T }
-  | { status: 'error'; error: TranslationsProviderError }
+export type TranslationsProviderOutcome<T> = PlatagesRequestOutcome<T>
 
 export interface TranslationsProvider {
   searchTexts(input: {
@@ -45,10 +48,6 @@ const SEARCH_TEXTS_PATH =
 const GET_TRANSLATIONS_BATCH_PATH =
   '/platages/platages/v1/operations/0B48D3E7-92AC-4F51-8D06-5E9B27A4C6F3/obtenertextos'
 
-const AUTH_ERROR_MESSAGE =
-  'La autenticación con el proveedor externo falló. Revisa el token seleccionado.'
-const NETWORK_ERROR_MESSAGE = 'No se pudo contactar con el proveedor externo.'
-
 interface RawSearchTextsResponse {
   BuscarTextosSalidaDTO?: {
     Textos?: Array<{ IdTexto: number; Texto: string }> | null
@@ -64,65 +63,11 @@ interface RawBatchResponse {
   }
 }
 
-interface RawErrorPayload {
-  code?: string
-  message?: string
-}
-
 function resolveBaseUrl(options?: { baseUrl?: string }): string {
   if (options?.baseUrl) {
     return options.baseUrl
   }
   return import.meta.env.VITE_PLATAGES_API_BASE_URL || DEFAULT_BASE_URL
-}
-
-async function mapErrorResponse(response: Response): Promise<TranslationsProviderError> {
-  if (response.status === 401 || response.status === 403) {
-    return { kind: 'auth', message: AUTH_ERROR_MESSAGE }
-  }
-
-  const fallbackMessage = `La llamada al proveedor externo falló (HTTP ${response.status}).`
-
-  try {
-    const body = (await response.json()) as RawErrorPayload | null
-    if (body && typeof body.message === 'string' && body.message.trim() !== '') {
-      return { kind: 'integration', message: body.message }
-    }
-    return { kind: 'integration', message: fallbackMessage }
-  } catch {
-    return { kind: 'integration', message: fallbackMessage }
-  }
-}
-
-async function postToPlatages<TRaw>(
-  url: string,
-  body: unknown,
-  token: string,
-): Promise<TranslationsProviderOutcome<TRaw>> {
-  let response: Response
-  try {
-    response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(body),
-    })
-  } catch {
-    return { status: 'error', error: { kind: 'integration', message: NETWORK_ERROR_MESSAGE } }
-  }
-
-  if (!response.ok) {
-    return { status: 'error', error: await mapErrorResponse(response) }
-  }
-
-  try {
-    const data = (await response.json()) as TRaw
-    return { status: 'ok', data }
-  } catch {
-    return { status: 'error', error: { kind: 'integration', message: NETWORK_ERROR_MESSAGE } }
-  }
 }
 
 export function createPlatagesTranslationsProvider(options?: {

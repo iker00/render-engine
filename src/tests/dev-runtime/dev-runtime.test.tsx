@@ -38,6 +38,35 @@ import type { CommitCanvasMutationResult } from '../../dev-runtime/layout-canvas
 import type { TranslationsConfigPanelProps } from '../../dev-runtime/translations-panel/translations-config-panel'
 import { validateRuntimeConfig } from '../../config/runtime-config'
 
+// 0131-T5: `saveConfigProvider` is instantiated once at module scope in `dev-runtime.tsx`
+// (`createPlatagesSaveConfigProvider()`), same pattern as `translationsProvider` in
+// `dev-editor-layer.tsx`. Mocked here so every save-pipeline test controls the outcome of
+// `.save(...)` directly, without hitting `fetch`/`postToPlatages`.
+const mockSaveConfig = vi.hoisted(() => vi.fn())
+
+vi.mock('../../dev-runtime/endpoints-config/save-config-provider', () => ({
+  createPlatagesSaveConfigProvider: () => ({ save: mockSaveConfig }),
+}))
+
+// 0131-T5: `DevEditorLayer` doesn't declare the new save-pipeline props yet (endpointsConfig,
+// saveResolution/searchResolution/refreshResolution, saveState, saveError, handleSaveConfig) —
+// that's T6's contract. This wraps the REAL component (same pattern as the
+// `TranslationsConfigPanel` wrap below) purely to capture the full props object `DevRuntimeReady`
+// passes down, so tests here can invoke `handleSaveConfig` directly (simulating a future "click"
+// from the toolbar) and assert on the resolved props, without depending on T6's UI.
+const devEditorLayerPropsRef = vi.hoisted(() => ({ current: null as Record<string, unknown> | null }))
+
+vi.mock('../../dev-runtime/floating-toolbar/dev-editor-layer', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../dev-runtime/floating-toolbar/dev-editor-layer')>()
+  return {
+    DevEditorLayer: (props: Record<string, unknown>) => {
+      devEditorLayerPropsRef.current = props
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return <actual.DevEditorLayer {...(props as any)} />
+    },
+  }
+})
+
 // `validateRuntimeConfig` is wrapped (not stubbed) so every existing test in this file keeps
 // exercising the real validation pipeline unchanged; only 0130-T3's own "invalid commit" test
 // below overrides a single call via `mockReturnValueOnce` to simulate a rejection that isn't
@@ -94,10 +123,40 @@ const configWithSiblingRootKeys = {
   preloads: [],
 }
 
-function makeRootElement(config?: object): HTMLDivElement {
+// 0131-T5 fixtures: an endpoints config that declares only `saveConfig` (so `searchTexts`/
+// `getTranslationsBatch` resolve to 'operation-not-declared', irrelevant to this task) with a
+// `tokenId` of `apiKey`, and a runtime config carrying a matching `tokens.apiKey` entry so
+// `resolveEndpointOperation` resolves `saveConfig` to `status: 'ready'`.
+const endpointsConfigWithSave = {
+  baseUrl: 'https://example.test',
+  operations: {
+    saveConfig: {
+      path: '/save',
+      tokenId: 'apiKey',
+      idGestion: 123,
+      idSeccion: 55,
+      idObjetoOcurrencia: 267,
+    },
+  },
+}
+
+const endpointsConfigWithoutSaveOperation = {
+  baseUrl: 'https://example.test',
+  operations: {},
+}
+
+const configWithApiKeyToken = {
+  ...minimalConfig,
+  tokens: { apiKey: { value: 'secret-token' } },
+}
+
+function makeRootElement(config?: object, options?: { endpointsConfig?: object }): HTMLDivElement {
   const el = document.createElement('div')
   if (config) {
     el.dataset.config = JSON.stringify(config)
+  }
+  if (options?.endpointsConfig !== undefined) {
+    el.dataset.endpointsConfig = JSON.stringify(options.endpointsConfig)
   }
   return el
 }
@@ -120,6 +179,7 @@ function switchToVisualMode() {
 beforeEach(() => {
   vi.clearAllMocks()
   translationsPanelPropsRef.current = null
+  devEditorLayerPropsRef.current = null
 })
 
 function switchToTranslationsDomain() {
@@ -1028,5 +1088,351 @@ describe('DevRuntime / TranslationsConfigPanel manual editor end-to-end (0130-T3
     const parsedBuffer = JSON.parse((screen.getByTestId('monaco-editor-mock') as HTMLTextAreaElement).value)
     expect(parsedBuffer).toEqual(configWithSiblingRootKeys)
     expect(parsedBuffer.translations).toBeUndefined()
+  })
+})
+
+// 0131-T5: the save-config pipeline (handleSaveConfig + the global Ctrl+S/Cmd+S listener) end to
+// end through the real DevRuntime tree. `DevEditorLayer` is wrapped (not replaced) so these tests
+// can invoke `handleSaveConfig` directly, simulating the future toolbar "Guardar" click that T6
+// wires up, and can inspect the three endpoint resolutions/save state passed down to it.
+describe('DevRuntime / save-config pipeline (0131-T5)', () => {
+  it('reads endpointsConfig once at bootstrap and passes the three resolutions to DevEditorLayer', () => {
+    render(
+      <DevRuntime
+        rootElement={makeRootElement(configWithApiKeyToken, { endpointsConfig: endpointsConfigWithSave })}
+      />,
+    )
+
+    expect(devEditorLayerPropsRef.current?.endpointsConfig).toEqual(endpointsConfigWithSave)
+    expect(devEditorLayerPropsRef.current?.saveResolution).toEqual({
+      status: 'ready',
+      url: 'https://example.test/save',
+      token: 'secret-token',
+    })
+    // Neither declared in `endpointsConfigWithSave.operations`, out of scope for this task but
+    // observable here as a side effect of the shared useMemo (design.md D7).
+    expect(devEditorLayerPropsRef.current?.searchResolution).toEqual({
+      status: 'unavailable',
+      reason: 'operation-not-declared',
+    })
+    expect(devEditorLayerPropsRef.current?.refreshResolution).toEqual({
+      status: 'unavailable',
+      reason: 'operation-not-declared',
+    })
+    expect(devEditorLayerPropsRef.current?.saveState).toBe('idle')
+    expect(devEditorLayerPropsRef.current?.saveError).toBeNull()
+  })
+
+  it('sends the minified lastValidConfigText (not JSON.stringify(currentConfig)) with the three IDs from endpointsConfig.operations.saveConfig, transitioning loading -> success without touching currentConfig/editorBuffer', async () => {
+    mockSaveConfig.mockResolvedValueOnce({ status: 'ok' })
+
+    // dataset.config is deliberately pretty-printed to prove the sent JSON is minified
+    // (no literal newlines) regardless of the source text's own formatting (design.md D5,
+    // corrected: Guardar re-minifies lastValidConfigText, it does not reserialize the
+    // normalized in-memory currentConfig — see the "preloads raw vs. normalized shape" test
+    // below for the case where the two would actually diverge).
+    const el = makeRootElement(configWithApiKeyToken, { endpointsConfig: endpointsConfigWithSave })
+    const prettyConfigText = JSON.stringify(configWithApiKeyToken, null, 2)
+    el.dataset.config = prettyConfigText
+
+    render(<DevRuntime rootElement={el} />)
+
+    expect(devEditorLayerPropsRef.current?.saveState).toBe('idle')
+
+    fireEvent.keyDown(document, { key: 's', ctrlKey: true })
+
+    expect(devEditorLayerPropsRef.current?.saveState).toBe('loading')
+
+    await waitFor(() => expect(devEditorLayerPropsRef.current?.saveState).toBe('success'))
+
+    expect(mockSaveConfig).toHaveBeenCalledTimes(1)
+    const sentArgs = mockSaveConfig.mock.calls[0][0]
+    expect(sentArgs.url).toBe('https://example.test/save')
+    expect(sentArgs.token).toBe('secret-token')
+    expect(sentArgs.idGestion).toBe(123)
+    expect(sentArgs.idSeccion).toBe(55)
+    expect(sentArgs.idObjetoOcurrencia).toBe(267)
+    expect(sentArgs.configJson).not.toContain('\n')
+    expect(JSON.parse(sentArgs.configJson)).toEqual(configWithApiKeyToken)
+
+    // currentConfig/editorBuffer untouched: the layout still renders unchanged, and opening
+    // Monaco for the first time still lazily seeds from the original raw (pretty) text.
+    expect(screen.getByText('Hello World')).toBeInTheDocument()
+    openMonaco()
+    await waitFor(() => expect(screen.getByTestId('monaco-editor-mock')).toBeInTheDocument())
+    expect(screen.getByTestId('monaco-editor-mock')).toHaveValue(prettyConfigText)
+  })
+
+  it('regression: sends preloads in their raw config shape, not the normalized runtime shape (bug: JSON.stringify(currentConfig) previously sent { operationName, requestParams, when } instead of the raw { "opName": {...}, when })', async () => {
+    mockSaveConfig.mockResolvedValueOnce({ status: 'ok' })
+
+    // `pages[].preloads` accepts `when` (unlike root `preloads`, which rejects it — see
+    // validate-preloads.ts). The raw shape keys the operation name directly (`{ "opName": {...} }`);
+    // validateRuntimeConfig normalizes that in currentConfig to `{ operationName, requestParams }`.
+    // Sending the normalized shape back out is not valid input the next time this document is
+    // loaded (design.md D5, corrected).
+    const configWithPagePreloads = {
+      api: {
+        obtenerFichaPersonaOrigen: { method: 'GET', endpoint: '/ficha' },
+      },
+      pages: [
+        {
+          id: 'home',
+          layout: [{ type: 'heading', props: { text: 'Hello World', level: 1 } }],
+          preloads: [
+            {
+              obtenerFichaPersonaOrigen: {},
+              when: { reference: 'params.id_persona', operator: 'isTruthy' },
+            },
+          ],
+        },
+      ],
+      initialPage: 'home',
+      tokens: { apiKey: { value: 'secret-token' } },
+    }
+
+    render(
+      <DevRuntime
+        rootElement={makeRootElement(configWithPagePreloads, { endpointsConfig: endpointsConfigWithSave })}
+      />,
+    )
+
+    fireEvent.keyDown(document, { key: 's', ctrlKey: true })
+    await waitFor(() => expect(mockSaveConfig).toHaveBeenCalledTimes(1))
+
+    const sentConfig = JSON.parse(mockSaveConfig.mock.calls[0][0].configJson)
+    expect(sentConfig.pages[0].preloads).toEqual([
+      {
+        obtenerFichaPersonaOrigen: {},
+        when: { reference: 'params.id_persona', operator: 'isTruthy' },
+      },
+    ])
+    // The normalized shape must NOT be what gets sent.
+    expect(sentConfig.pages[0].preloads[0].operationName).toBeUndefined()
+    expect(sentConfig.pages[0].preloads[0].requestParams).toBeUndefined()
+  })
+
+  it('transitions to error with saveError.kind "auth" on an auth failure, without touching currentConfig', async () => {
+    mockSaveConfig.mockResolvedValueOnce({
+      status: 'error',
+      error: { kind: 'auth', message: 'La autenticación falló.' },
+    })
+
+    render(
+      <DevRuntime
+        rootElement={makeRootElement(configWithApiKeyToken, { endpointsConfig: endpointsConfigWithSave })}
+      />,
+    )
+
+    fireEvent.keyDown(document, { key: 's', ctrlKey: true })
+
+    await waitFor(() => expect(devEditorLayerPropsRef.current?.saveState).toBe('error'))
+    expect(devEditorLayerPropsRef.current?.saveError).toEqual({ kind: 'auth', message: 'La autenticación falló.' })
+    expect(screen.getByText('Hello World')).toBeInTheDocument()
+  })
+
+  it('transitions to error with saveError.kind "integration" on an integration failure, without touching currentConfig', async () => {
+    mockSaveConfig.mockResolvedValueOnce({
+      status: 'error',
+      error: { kind: 'integration', message: 'No se pudo contactar con el proveedor externo.' },
+    })
+
+    render(
+      <DevRuntime
+        rootElement={makeRootElement(configWithApiKeyToken, { endpointsConfig: endpointsConfigWithSave })}
+      />,
+    )
+
+    fireEvent.keyDown(document, { key: 's', ctrlKey: true })
+
+    await waitFor(() => expect(devEditorLayerPropsRef.current?.saveState).toBe('error'))
+    expect(devEditorLayerPropsRef.current?.saveError).toEqual({
+      kind: 'integration',
+      message: 'No se pudo contactar con el proveedor externo.',
+    })
+    expect(screen.getByText('Hello World')).toBeInTheDocument()
+  })
+
+  it('does not send a second request when handleSaveConfig is invoked again while a save is already loading (click/prop double-invocation, FR7)', async () => {
+    let resolveSave!: (value: { status: 'ok' }) => void
+    mockSaveConfig.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveSave = resolve
+        }),
+    )
+
+    render(
+      <DevRuntime
+        rootElement={makeRootElement(configWithApiKeyToken, { endpointsConfig: endpointsConfigWithSave })}
+      />,
+    )
+
+    act(() => {
+      devEditorLayerPropsRef.current!.handleSaveConfig()
+    })
+    expect(devEditorLayerPropsRef.current?.saveState).toBe('loading')
+
+    act(() => {
+      devEditorLayerPropsRef.current!.handleSaveConfig()
+    })
+
+    expect(mockSaveConfig).toHaveBeenCalledTimes(1)
+
+    await act(async () => {
+      resolveSave({ status: 'ok' })
+    })
+  })
+
+  it('does not send a second request on a second Ctrl+S while the first is still loading', async () => {
+    let resolveSave!: (value: { status: 'ok' }) => void
+    mockSaveConfig.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveSave = resolve
+        }),
+    )
+
+    render(
+      <DevRuntime
+        rootElement={makeRootElement(configWithApiKeyToken, { endpointsConfig: endpointsConfigWithSave })}
+      />,
+    )
+
+    fireEvent.keyDown(document, { key: 's', ctrlKey: true })
+    fireEvent.keyDown(document, { key: 's', ctrlKey: true })
+
+    expect(mockSaveConfig).toHaveBeenCalledTimes(1)
+
+    await act(async () => {
+      resolveSave({ status: 'ok' })
+    })
+  })
+
+  it('a second Ctrl+S after a valid Apply sends the newly applied currentConfig, not a stale one', async () => {
+    mockSaveConfig.mockResolvedValue({ status: 'ok' })
+
+    render(
+      <DevRuntime
+        rootElement={makeRootElement(configWithApiKeyToken, { endpointsConfig: endpointsConfigWithSave })}
+      />,
+    )
+
+    fireEvent.keyDown(document, { key: 's', ctrlKey: true })
+    await waitFor(() => expect(mockSaveConfig).toHaveBeenCalledTimes(1))
+    expect(JSON.parse(mockSaveConfig.mock.calls[0][0].configJson)).toEqual(configWithApiKeyToken)
+
+    openMonaco()
+    await waitFor(() => expect(screen.getByTestId('monaco-editor-mock')).toBeInTheDocument())
+
+    const updatedConfig = { ...secondConfig, tokens: configWithApiKeyToken.tokens }
+    fireEvent.change(screen.getByTestId('monaco-editor-mock'), { target: { value: JSON.stringify(updatedConfig) } })
+    fireEvent.click(screen.getByTestId('dev-editor-floating-monaco-apply'))
+    await waitFor(() => expect(screen.getByText('Updated Title')).toBeInTheDocument())
+
+    fireEvent.keyDown(document, { key: 's', ctrlKey: true })
+    await waitFor(() => expect(mockSaveConfig).toHaveBeenCalledTimes(2))
+    expect(JSON.parse(mockSaveConfig.mock.calls[1][0].configJson)).toEqual(updatedConfig)
+  })
+})
+
+describe('DevRuntime / Ctrl+S / Cmd+S global shortcut (0131-T5, design.md D6/D9)', () => {
+  it('triggers the save pipeline and calls preventDefault with Ctrl+S', async () => {
+    mockSaveConfig.mockResolvedValueOnce({ status: 'ok' })
+    render(
+      <DevRuntime
+        rootElement={makeRootElement(configWithApiKeyToken, { endpointsConfig: endpointsConfigWithSave })}
+      />,
+    )
+
+    const event = new KeyboardEvent('keydown', { key: 's', ctrlKey: true, cancelable: true })
+    act(() => {
+      document.dispatchEvent(event)
+    })
+
+    expect(event.defaultPrevented).toBe(true)
+    expect(mockSaveConfig).toHaveBeenCalledTimes(1)
+
+    // Waited out (not left fire-and-forget) so handleSaveConfig's post-await state update
+    // (setSaveState('success')) settles here instead of leaking into the next test.
+    await waitFor(() => expect(devEditorLayerPropsRef.current?.saveState).toBe('success'))
+  })
+
+  it('triggers the save pipeline and calls preventDefault with Cmd+S (metaKey)', async () => {
+    mockSaveConfig.mockResolvedValueOnce({ status: 'ok' })
+    render(
+      <DevRuntime
+        rootElement={makeRootElement(configWithApiKeyToken, { endpointsConfig: endpointsConfigWithSave })}
+      />,
+    )
+
+    const event = new KeyboardEvent('keydown', { key: 's', metaKey: true, cancelable: true })
+    act(() => {
+      document.dispatchEvent(event)
+    })
+
+    expect(event.defaultPrevented).toBe(true)
+    expect(mockSaveConfig).toHaveBeenCalledTimes(1)
+
+    await waitFor(() => expect(devEditorLayerPropsRef.current?.saveState).toBe('success'))
+  })
+
+  it('does nothing on a plain "s" keydown without Ctrl/Cmd', () => {
+    render(
+      <DevRuntime
+        rootElement={makeRootElement(configWithApiKeyToken, { endpointsConfig: endpointsConfigWithSave })}
+      />,
+    )
+
+    const event = new KeyboardEvent('keydown', { key: 's', cancelable: true })
+    act(() => {
+      document.dispatchEvent(event)
+    })
+
+    expect(event.defaultPrevented).toBe(false)
+    expect(mockSaveConfig).not.toHaveBeenCalled()
+  })
+
+  it('still calls preventDefault but does not call the provider when saveConfig is not declared (operation-not-declared, FR5/FR9)', () => {
+    render(
+      <DevRuntime
+        rootElement={makeRootElement(configWithApiKeyToken, { endpointsConfig: endpointsConfigWithoutSaveOperation })}
+      />,
+    )
+
+    expect(devEditorLayerPropsRef.current?.saveResolution).toEqual({
+      status: 'unavailable',
+      reason: 'operation-not-declared',
+    })
+
+    const event = new KeyboardEvent('keydown', { key: 's', ctrlKey: true, cancelable: true })
+    act(() => {
+      document.dispatchEvent(event)
+    })
+
+    expect(event.defaultPrevented).toBe(true)
+    expect(mockSaveConfig).not.toHaveBeenCalled()
+  })
+
+  it('still calls preventDefault but does not call the provider when the token cannot be resolved (token-not-resolvable, FR5/FR9)', () => {
+    // minimalConfig has no `tokens` block at all, so the `apiKey` tokenId declared by
+    // `endpointsConfigWithSave.operations.saveConfig` cannot resolve — independent regression
+    // from the `operation-not-declared` case above, covering the other FR5 cause.
+    render(
+      <DevRuntime rootElement={makeRootElement(minimalConfig, { endpointsConfig: endpointsConfigWithSave })} />,
+    )
+
+    expect(devEditorLayerPropsRef.current?.saveResolution).toEqual({
+      status: 'unavailable',
+      reason: 'token-not-resolvable',
+    })
+
+    const event = new KeyboardEvent('keydown', { key: 's', ctrlKey: true, cancelable: true })
+    act(() => {
+      document.dispatchEvent(event)
+    })
+
+    expect(event.defaultPrevented).toBe(true)
+    expect(mockSaveConfig).not.toHaveBeenCalled()
   })
 })

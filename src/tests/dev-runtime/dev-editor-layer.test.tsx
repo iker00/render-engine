@@ -4,6 +4,12 @@ import { describe, expect, it, vi } from 'vitest'
 import type { LayoutNode, RuntimeConfig } from '../../config/runtime-config'
 import type { CommitCanvasMutationResult } from '../../dev-runtime/layout-canvas/layout-canvas-commit'
 import { DevEditorLayer } from '../../dev-runtime/floating-toolbar/dev-editor-layer'
+import type {
+  SaveConfigErrorInfo,
+  SaveState,
+} from '../../dev-runtime/floating-toolbar/dev-editor-floating-toolbar'
+import type { ResolvedEndpointOperation } from '../../dev-runtime/endpoints-config/resolve-endpoint-operation'
+import type { RuntimeEndpointsConfig } from '../../dev-runtime/endpoints-config/runtime-endpoints-config-schema'
 import { useLayoutEditModeContext } from '../../runtime/use-layout-edit-mode-context'
 import { RuntimePage } from '../../runtime/runtime-page'
 import { RuntimeStateProvider } from '../../runtime/runtime-state/runtime-state-provider'
@@ -21,6 +27,22 @@ vi.mock('lucide-react', async () => {
   const { createLucideReactMock, OTHER_MODULE_ICON_NAMES } = await import('./lucide-react-mock')
   return createLucideReactMock(OTHER_MODULE_ICON_NAMES)
 })
+
+// T6 (0131): `TranslationsConfigPanel` is mocked purely to observe the props `DevEditorLayer`
+// forwards to it (`searchResolution`/`refreshResolution`/`provider`) — this task doesn't change
+// anything about the panel's own real behavior (T7 does), and none of that behavior is observable
+// from these new props yet. Every existing assertion in this file only checks for the
+// `translations-config-panel` testid, so replacing the real render with this stub doesn't affect
+// them. `vi.hoisted` is required because `vi.mock` factories are hoisted above ordinary
+// declarations.
+const { translationsConfigPanelSpy } = vi.hoisted(() => ({ translationsConfigPanelSpy: vi.fn() }))
+
+vi.mock('../../dev-runtime/translations-panel/translations-config-panel', () => ({
+  TranslationsConfigPanel: (props: Record<string, unknown>) => {
+    translationsConfigPanelSpy(props)
+    return <div data-testid="translations-config-panel" />
+  },
+}))
 
 function heading(text: string): LayoutNode {
   return { type: 'heading', props: { text, level: 2 } }
@@ -47,6 +69,16 @@ const NOOP_MONACO = {
 }
 
 const noopCommitCanvasMutation = (): CommitCanvasMutationResult => ({ status: 'applied' })
+
+// T6 (0131): default resolution for every test in this file that doesn't specifically exercise
+// the save-config pipeline — matches `resolveEndpointOperation`'s own shape for an operation with
+// no matching entry in `endpointsConfig.operations` (the common case when no `endpointsConfig` is
+// passed at all).
+const UNAVAILABLE_RESOLUTION: ResolvedEndpointOperation = {
+  status: 'unavailable',
+  reason: 'operation-not-declared',
+}
+const NOOP_SAVE = () => {}
 
 // Stands in for `<RuntimePage />` (which DevRuntimeReady actually passes as `children` in
 // production) — DevEditorLayer treats `children` opaquely, so a small consumer of
@@ -99,6 +131,13 @@ interface HarnessProps {
   onCommitTranslationsMutation?: (mutate: (prev: never) => never) => CommitCanvasMutationResult
   onMonacoOpenChangeSpy?: (open: boolean) => void
   initialMonacoOpen?: boolean
+  endpointsConfig?: RuntimeEndpointsConfig
+  saveResolution?: ResolvedEndpointOperation
+  searchResolution?: ResolvedEndpointOperation
+  refreshResolution?: ResolvedEndpointOperation
+  saveState?: SaveState
+  saveError?: SaveConfigErrorInfo | null
+  handleSaveConfig?: () => void
 }
 
 function DevEditorLayerHarness({
@@ -110,6 +149,13 @@ function DevEditorLayerHarness({
   onCommitTranslationsMutation = noopCommitCanvasMutation,
   onMonacoOpenChangeSpy,
   initialMonacoOpen = false,
+  endpointsConfig,
+  saveResolution = UNAVAILABLE_RESOLUTION,
+  searchResolution = UNAVAILABLE_RESOLUTION,
+  refreshResolution = UNAVAILABLE_RESOLUTION,
+  saveState = 'idle',
+  saveError = null,
+  handleSaveConfig = NOOP_SAVE,
 }: HarnessProps) {
   const [mode, setMode] = useState<'visual' | 'editor'>('visual')
   const [paletteOpen, setPaletteOpen] = useState(false)
@@ -135,6 +181,13 @@ function DevEditorLayerHarness({
         onCommitNodeUpdate={onCommitNodeUpdate}
         onCommitShellMutation={onCommitShellMutation}
         onCommitTranslationsMutation={onCommitTranslationsMutation}
+        endpointsConfig={endpointsConfig}
+        saveResolution={saveResolution}
+        searchResolution={searchResolution}
+        refreshResolution={refreshResolution}
+        saveState={saveState}
+        saveError={saveError}
+        handleSaveConfig={handleSaveConfig}
       >
         <EditModeProbe mountCountRef={mountCountRef} />
       </DevEditorLayer>
@@ -142,9 +195,9 @@ function DevEditorLayerHarness({
   )
 }
 
-function renderHarness(config: RuntimeConfig = buildConfig()) {
+function renderHarness(config: RuntimeConfig = buildConfig(), overrides: Partial<HarnessProps> = {}) {
   const mountCountRef = { current: 0 }
-  render(<DevEditorLayerHarness config={config} mountCountRef={mountCountRef} />)
+  render(<DevEditorLayerHarness config={config} mountCountRef={mountCountRef} {...overrides} />)
   return { mountCountRef }
 }
 
@@ -280,6 +333,13 @@ describe('DevEditorLayer / selection degrades safely when the layout changes und
             onCommitNodeUpdate={() => {}}
             onCommitShellMutation={noopCommitCanvasMutation}
             onCommitTranslationsMutation={noopCommitCanvasMutation}
+            endpointsConfig={undefined}
+            saveResolution={UNAVAILABLE_RESOLUTION}
+            searchResolution={UNAVAILABLE_RESOLUTION}
+            refreshResolution={UNAVAILABLE_RESOLUTION}
+            saveState="idle"
+            saveError={null}
+            handleSaveConfig={NOOP_SAVE}
           >
             <EditModeProbe mountCountRef={mountCountRef} />
           </DevEditorLayer>
@@ -489,6 +549,13 @@ describe('DevEditorLayer / Esc closes the selection panel when Monaco is closed 
             onCommitNodeUpdate={() => {}}
             onCommitShellMutation={noopCommitCanvasMutation}
             onCommitTranslationsMutation={noopCommitCanvasMutation}
+            endpointsConfig={undefined}
+            saveResolution={UNAVAILABLE_RESOLUTION}
+            searchResolution={UNAVAILABLE_RESOLUTION}
+            refreshResolution={UNAVAILABLE_RESOLUTION}
+            saveState="idle"
+            saveError={null}
+            handleSaveConfig={NOOP_SAVE}
           >
             <EditModeProbe mountCountRef={mountCountRef} />
           </DevEditorLayer>
@@ -559,6 +626,13 @@ describe('DevEditorLayer / node-local state persists across mode switches (Decis
             onCommitNodeUpdate={() => {}}
             onCommitShellMutation={noopCommitCanvasMutation}
             onCommitTranslationsMutation={noopCommitCanvasMutation}
+            endpointsConfig={undefined}
+            saveResolution={UNAVAILABLE_RESOLUTION}
+            searchResolution={UNAVAILABLE_RESOLUTION}
+            refreshResolution={UNAVAILABLE_RESOLUTION}
+            saveState="idle"
+            saveError={null}
+            handleSaveConfig={NOOP_SAVE}
           >
             <RuntimePage />
           </DevEditorLayer>
@@ -757,5 +831,118 @@ describe('DevEditorLayer / Translations domain (0130-T2)', () => {
 
     expect(screen.getByTestId('translations-config-panel')).toBeInTheDocument()
     expect(onMonacoOpenChangeSpy).not.toHaveBeenCalled()
+  })
+})
+
+// T6 (0131): DevEditorLayer receives the three endpoint-operation resolutions and the save state
+// already computed by DevRuntimeReady (T5) — it only propagates them to the toolbar (Guardar) and
+// to the Translations panel, and builds the single `translationsProvider` instance via `useMemo`
+// instead of the former module-scope singleton.
+describe('DevEditorLayer / endpoints-config resolutions + translations provider (T6, 0131)', () => {
+  it('propagates saveResolution to the toolbar Save button when unavailable (disabled + reason title)', () => {
+    renderHarness(buildConfig(), {
+      saveResolution: { status: 'unavailable', reason: 'token-not-resolvable' },
+    })
+
+    const saveButton = screen.getByTestId('dev-editor-toolbar-save')
+    expect(saveButton).toBeDisabled()
+    expect(saveButton).toHaveAttribute('title', 'El token declarado para la operación de guardado no existe en tokens')
+  })
+
+  it('propagates saveResolution to the toolbar Save button when ready (enabled, click invokes handleSaveConfig)', () => {
+    const handleSaveConfig = vi.fn()
+    renderHarness(buildConfig(), {
+      saveResolution: { status: 'ready', url: 'https://example.test/save', token: 'tok' },
+      handleSaveConfig,
+    })
+
+    const saveButton = screen.getByTestId('dev-editor-toolbar-save')
+    expect(saveButton).not.toBeDisabled()
+
+    fireEvent.click(saveButton)
+    expect(handleSaveConfig).toHaveBeenCalledTimes(1)
+  })
+
+  it('propagates saveState/saveError to the toolbar (loading indicator, error alert)', () => {
+    renderHarness(buildConfig(), {
+      saveState: 'error',
+      saveError: { kind: 'integration', message: 'No se pudo contactar con el proveedor externo.' },
+    })
+
+    expect(screen.getByRole('alert')).toHaveTextContent('No se pudo contactar con el proveedor externo.')
+  })
+
+  it('propagates searchResolution and refreshResolution to TranslationsConfigPanel unchanged', () => {
+    const searchResolution: ResolvedEndpointOperation = {
+      status: 'ready',
+      url: 'https://example.test/search',
+      token: 'tok-search',
+    }
+    const refreshResolution: ResolvedEndpointOperation = { status: 'unavailable', reason: 'operation-not-declared' }
+
+    renderHarness(buildConfig(), { searchResolution, refreshResolution })
+    switchToTranslationsDomain()
+
+    const lastProps = translationsConfigPanelSpy.mock.calls.at(-1)?.[0] as Record<string, unknown>
+    expect(lastProps.searchResolution).toBe(searchResolution)
+    expect(lastProps.refreshResolution).toBe(refreshResolution)
+  })
+
+  // T7 (0131): the `tokens` prop is retired along with the token dropdown (FR10/FR11/D7) —
+  // DevEditorLayer must not forward `config.tokens` to the panel any more, and since the panel is
+  // mocked as a plain stub `<div>` in this file, no `<select>` can ever render through it either.
+  it('no longer passes tokens to TranslationsConfigPanel, and no token <select> renders when the layer mounts the panel', () => {
+    const config = buildConfig()
+    config.tokens = { apiKey: { value: 'secret' } }
+
+    renderHarness(config)
+    switchToTranslationsDomain()
+
+    const lastProps = translationsConfigPanelSpy.mock.calls.at(-1)?.[0] as Record<string, unknown>
+    expect(lastProps.tokens).toBeUndefined()
+    expect(screen.queryByRole('combobox', { name: 'Token' })).not.toBeInTheDocument()
+  })
+
+  it('builds the translations provider via useMemo: stable across re-renders with the same baseUrl, recreated when it changes', () => {
+    const endpointsConfigA: RuntimeEndpointsConfig = { baseUrl: 'https://a.example.test', operations: {} }
+    const endpointsConfigB: RuntimeEndpointsConfig = { baseUrl: 'https://b.example.test', operations: {} }
+    const config = buildConfig()
+    const mountCountRef = { current: 0 }
+
+    const { rerender } = render(
+      <DevEditorLayerHarness config={config} mountCountRef={mountCountRef} endpointsConfig={endpointsConfigA} />,
+    )
+    switchToTranslationsDomain()
+
+    const providerAfterFirstRender = (translationsConfigPanelSpy.mock.calls.at(-1)?.[0] as Record<string, unknown>)
+      .provider
+
+    // Re-render with a structurally-equal but distinct config object carrying the same baseUrl:
+    // the memoized provider must not be rebuilt (it depends on the baseUrl string, not on
+    // endpointsConfig's object identity).
+    rerender(
+      <DevEditorLayerHarness
+        config={config}
+        mountCountRef={mountCountRef}
+        endpointsConfig={{ baseUrl: 'https://a.example.test', operations: {} }}
+      />,
+    )
+    const providerAfterSameBaseUrl = (translationsConfigPanelSpy.mock.calls.at(-1)?.[0] as Record<string, unknown>)
+      .provider
+    expect(providerAfterSameBaseUrl).toBe(providerAfterFirstRender)
+
+    // Re-render with a different baseUrl: the memoized provider must be rebuilt.
+    rerender(<DevEditorLayerHarness config={config} mountCountRef={mountCountRef} endpointsConfig={endpointsConfigB} />)
+    const providerAfterDifferentBaseUrl = (translationsConfigPanelSpy.mock.calls.at(-1)?.[0] as Record<string, unknown>)
+      .provider
+    expect(providerAfterDifferentBaseUrl).not.toBe(providerAfterFirstRender)
+  })
+
+  it('builds the translations provider with the current signature (no options) when endpointsConfig is undefined', () => {
+    renderHarness(buildConfig(), { endpointsConfig: undefined })
+    switchToTranslationsDomain()
+
+    const lastProps = translationsConfigPanelSpy.mock.calls.at(-1)?.[0] as Record<string, unknown>
+    expect(lastProps.provider).toBeDefined()
   })
 })
