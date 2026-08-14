@@ -23,6 +23,26 @@ La política completa está definida en el documento de workflow del proyecto.
 
 ## Completadas
 
+- `0131-dev-editor-external-config-save`: primera vía real de persistencia del config JSON del editor de
+  desarrollo hacia un backend externo (hasta ahora, "Aplicar" solo actualizaba `currentConfig` en memoria de
+  sesión). Añade un nuevo bloque de config de endpoints externos declarado en runtime (`data-endpoints-config` /
+  `src/dev/endpoints-config.json`, mismo patrón atributo-de-host/fichero-local que `data-config`): una `baseUrl`
+  común más, por operación (`searchTexts`, `getTranslationsBatch`, `saveConfig`), su `path`, un `tokenId` que
+  resuelve contra `tokens.*` del config activo, y — solo para `saveConfig` — los tres identificadores de negocio
+  fijos (`idGestion`, `idSeccion`, `idObjetoOcurrencia`) que exige la operación real de PlataGes
+  (`ActualizarJSONConfiguracionEnPlataGes`). Las tres operaciones se declaran de forma independiente; sin la
+  operación declarada, o con un `tokenId` no resoluble, el control afectado queda deshabilitado con mensaje
+  explicativo, sin bloquear el resto del editor (una config sintácticamente inválida se trata igual que ausente).
+  Añade el botón "Guardar" a la barra flotante (con atajo Ctrl+S/Cmd+S global, `preventDefault` siempre activo
+  mientras `DevRuntime` está montado) que serializa `currentConfig` como JSON minificado y lo envía con
+  `Authorization: Bearer <token resuelto>`, con feedback `role="status"`/`role="alert"` y guard contra doble envío
+  mientras la petición está en curso. Migra las dos operaciones de Traducciones (`0130`) para resolver `baseUrl` y
+  token desde esta misma config en vez del host fijo `VITE_PLATAGES_API_BASE_URL` y el desplegable manual de
+  token, que se retira; el `path` declarado para esas dos operaciones queda sin usar en la URL real (siguen las
+  rutas internas fijas del proveedor) — solo la operación de guardado usa su `path` íntegro. El transporte HTTP y
+  el mapeo de errores de PlataGes se extraen a un cliente compartido (`platages-http-client.ts`), reutilizado por
+  el proveedor de guardado (`save-config-provider.ts`) y por el de Traducciones. Exclusivo del editor de
+  desarrollo: sin cambios en el runtime de producción ni en su contrato observable.
 - `0130-dev-editor-translations-panel`: nueva sección de nivel superior "Traducciones" en la barra flotante del
   editor visual (sexto botón del selector de dominio, entre `Tokens` y `Shell`; mismo tipo de panel de formulario
   dedicado que `Shell`, sustituye el canvas al seleccionarse), que gestiona el bloque raíz `translations` sin editar

@@ -1,11 +1,11 @@
 import { useState } from 'react'
 import type { RuntimeConfigError } from '../../config/runtime-config'
-import type {
-  RuntimeTokensConfig,
-  RuntimeTranslationsConfig,
-  RuntimeTranslationsLangMap,
-} from '../../config/runtime-config-types'
+import type { RuntimeTranslationsConfig, RuntimeTranslationsLangMap } from '../../config/runtime-config-types'
 import { CommitRejectionBanner } from '../commit-rejection-banner'
+import type {
+  EndpointOperationUnavailableReason,
+  ResolvedEndpointOperation,
+} from '../endpoints-config/resolve-endpoint-operation'
 import type { CommitCanvasMutationResult } from '../layout-canvas/layout-canvas-commit'
 import type {
   TranslationsProvider,
@@ -16,13 +16,31 @@ import { isNumericTranslationKey } from './translations-panel-helpers'
 
 export interface TranslationsConfigPanelProps {
   translations: RuntimeTranslationsConfig | undefined
-  tokens: RuntimeTokensConfig | undefined
   onCommitTranslationsMutation: (
     mutate: (prev: RuntimeTranslationsConfig | undefined) => RuntimeTranslationsConfig | undefined,
   ) => CommitCanvasMutationResult
   // Optional so existing/older call sites and tests that don't exercise "Buscar y añadir" (0130-T4)
   // don't need to supply one. The real app always wires a resolved provider — see DevEditorLayer.
   provider?: TranslationsProvider
+  // T7 (0131): replaces the former `tokens` prop + token dropdown (FR10/FR11/D7). Each action
+  // enables/disables independently from its own resolution, with an explanatory message when
+  // `unavailable`.
+  searchResolution: ResolvedEndpointOperation
+  refreshResolution: ResolvedEndpointOperation
+}
+
+// FR11/D7: one message per `EndpointOperationUnavailableReason`, shown next to each action's
+// button instead of the retired token dropdown. Same wording pattern as
+// `DevEditorFloatingToolbar`'s `SAVE_UNAVAILABLE_MESSAGES` (0131-T6) for consistency across the
+// editor.
+const SEARCH_UNAVAILABLE_MESSAGES: Record<EndpointOperationUnavailableReason, string> = {
+  'operation-not-declared': 'La operación de búsqueda de textos no está declarada en la configuración de endpoints',
+  'token-not-resolvable': 'El token declarado para la operación de búsqueda de textos no existe en tokens',
+}
+
+const REFRESH_UNAVAILABLE_MESSAGES: Record<EndpointOperationUnavailableReason, string> = {
+  'operation-not-declared': 'La operación de refresco de traducciones no está declarada en la configuración de endpoints',
+  'token-not-resolvable': 'El token declarado para la operación de refresco de traducciones no existe en tokens',
 }
 
 // PlataGes' "idioma 1" is the provider's default language (Decisión D3): every key created from a
@@ -87,13 +105,20 @@ type PendingRejections = Partial<Record<string, PendingEntry>>
 
 /**
  * Manual editor for the `translations` config block (0130-T3): a table with one row per key and
- * one column per known language, inline cell editing committed on blur, entry add/delete, adding
- * a new language column, and a token dropdown (selection kept as local state for T4/T5's "Buscar"/
- * "Refrescar todo", not committed here). Every mutation goes through `onCommitTranslationsMutation`
- * — the same "mutate, validate, patch only `translations`" pipeline `ShellConfigPanel` uses for
- * `shell` (see `commitTranslationsMutation` in `dev-runtime.tsx`).
+ * one column per known language, inline cell editing committed on blur, entry add/delete, and
+ * adding a new language column. "Buscar y añadir"/"Refrescar todo" (T4/T5) each enable
+ * independently from `searchResolution`/`refreshResolution` (T7, 0131) — there is no token
+ * dropdown. Every mutation goes through `onCommitTranslationsMutation` — the same "mutate,
+ * validate, patch only `translations`" pipeline `ShellConfigPanel` uses for `shell` (see
+ * `commitTranslationsMutation` in `dev-runtime.tsx`).
  */
-export function TranslationsConfigPanel({ translations, tokens, onCommitTranslationsMutation, provider }: TranslationsConfigPanelProps) {
+export function TranslationsConfigPanel({
+  translations,
+  onCommitTranslationsMutation,
+  provider,
+  searchResolution,
+  refreshResolution,
+}: TranslationsConfigPanelProps) {
   const keys = translations ? Object.keys(translations) : []
   const [pendingLanguages, setPendingLanguages] = useState<string[]>([])
   const columns = computeColumns(translations, pendingLanguages)
@@ -105,10 +130,6 @@ export function TranslationsConfigPanel({ translations, tokens, onCommitTranslat
   const [newEntryValues, setNewEntryValues] = useState<Record<string, string>>({})
 
   const [newLanguageCode, setNewLanguageCode] = useState('')
-
-  const tokenKeys = tokens ? Object.keys(tokens) : []
-  const [selectedToken, setSelectedToken] = useState<string | undefined>(() => tokenKeys[0])
-  const selectedTokenValue = selectedToken ? tokens?.[selectedToken]?.value : undefined
 
   // 0130-T4: "Buscar y añadir" against `provider.searchTexts`. `searchResults === null` means no
   // search has produced a list to show yet (initial state, or cleared after a successful commit);
@@ -258,10 +279,10 @@ export function TranslationsConfigPanel({ translations, tokens, onCommitTranslat
 
   async function handleSearch() {
     const text = searchText.trim()
-    if (text === '' || !provider || !selectedTokenValue || searchLoading) return
+    if (text === '' || !provider || searchResolution.status !== 'ready' || searchLoading) return
 
     setSearchLoading(true)
-    const outcome = await provider.searchTexts({ text, token: selectedTokenValue })
+    const outcome = await provider.searchTexts({ text, token: searchResolution.token })
     setSearchLoading(false)
 
     if (outcome.status === 'error') {
@@ -309,15 +330,8 @@ export function TranslationsConfigPanel({ translations, tokens, onCommitTranslat
     }
   }
 
-  function handleTokenChange(value: string) {
-    setSelectedToken(value)
-    // Spec: a token change clears a pending "Refrescar todo" rejection banner.
-    clearPending('refresh')
-    setRefreshError(null)
-  }
-
   async function handleRefreshAll() {
-    if (!provider || !selectedTokenValue || refreshLoading) return
+    if (!provider || refreshResolution.status !== 'ready' || refreshLoading) return
 
     clearPending('refresh')
     setRefreshError(null)
@@ -332,7 +346,7 @@ export function TranslationsConfigPanel({ translations, tokens, onCommitTranslat
     setRefreshLoading(true)
     const outcome = await provider.getTranslationsBatch({
       ids: numericKeys.map(Number),
-      token: selectedTokenValue,
+      token: refreshResolution.token,
     })
     setRefreshLoading(false)
 
@@ -513,30 +527,6 @@ export function TranslationsConfigPanel({ translations, tokens, onCommitTranslat
       </form>
 
       <div className="flex flex-col gap-2 rounded border border-gray-200 p-2">
-        {tokenKeys.length === 0 ? (
-          <p className="text-sm text-gray-500">
-            No hay ningún token declarado. Declara un token en la sección Tokens antes de poder usar esta función.
-          </p>
-        ) : (
-          <div className="flex flex-col gap-1">
-            <label htmlFor="translations-token-select" className="text-xs text-gray-600">
-              Token
-            </label>
-            <select
-              id="translations-token-select"
-              value={selectedToken}
-              onChange={(event) => handleTokenChange(event.target.value)}
-              className="w-full rounded border border-gray-300 px-1 py-0.5 text-sm"
-            >
-              {tokenKeys.map((tokenKey) => (
-                <option key={tokenKey} value={tokenKey}>
-                  {tokenKey}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
-
         <form
           onSubmit={(event) => {
             event.preventDefault()
@@ -558,13 +548,16 @@ export function TranslationsConfigPanel({ translations, tokens, onCommitTranslat
               />
               <button
                 type="submit"
-                disabled={!selectedTokenValue || searchLoading}
+                disabled={searchResolution.status !== 'ready' || searchLoading}
                 className="shrink-0 rounded border border-gray-300 px-2 py-1 text-xs text-gray-600 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Buscar
               </button>
             </div>
           </div>
+          {searchResolution.status === 'unavailable' && (
+            <p className="text-xs text-gray-500">{SEARCH_UNAVAILABLE_MESSAGES[searchResolution.reason]}</p>
+          )}
           {searchLoading && (
             <span role="status" className="text-xs text-gray-500">
               Buscando...
@@ -585,7 +578,7 @@ export function TranslationsConfigPanel({ translations, tokens, onCommitTranslat
           <button
             type="button"
             onClick={() => void handleRefreshAll()}
-            disabled={!selectedTokenValue || refreshLoading}
+            disabled={refreshResolution.status !== 'ready' || refreshLoading}
             className="shrink-0 rounded border border-gray-300 px-2 py-1 text-xs text-gray-600 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
           >
             Refrescar todo
@@ -596,6 +589,9 @@ export function TranslationsConfigPanel({ translations, tokens, onCommitTranslat
             </span>
           )}
         </div>
+        {refreshResolution.status === 'unavailable' && (
+          <p className="text-xs text-gray-500">{REFRESH_UNAVAILABLE_MESSAGES[refreshResolution.reason]}</p>
+        )}
         {noRefreshableKeysNotice && <p className="text-xs text-gray-500">Sin claves refrescables</p>}
         {refreshError && (
           <p

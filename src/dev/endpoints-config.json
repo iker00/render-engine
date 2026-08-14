@@ -1,0 +1,20 @@
+{
+  "baseUrl": "https://pre-frontapi.pamplona.es",
+  "operations": {
+    "searchTexts": {
+      "path": "/platages/buscartextos",
+      "tokenId": "apiKey"
+    },
+    "getTranslationsBatch": {
+      "path": "/platages/obtenertextos",
+      "tokenId": "apiKey"
+    },
+    "saveConfig": {
+      "path": "/platages/actualizarjsonconfiguracionenplatages",
+      "tokenId": "apiKey",
+      "idGestion": 123,
+      "idSeccion": 55,
+      "idObjetoOcurrencia": 267
+    }
+  }
+}

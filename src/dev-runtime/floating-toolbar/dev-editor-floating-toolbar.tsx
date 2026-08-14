@@ -1,7 +1,20 @@
-import { LayoutTemplate, Plug, StickyNote, KeyRound, Languages, PanelTop, Braces, Plus, SquarePen } from 'lucide-react'
+import { LayoutTemplate, Plug, StickyNote, KeyRound, Languages, PanelTop, Braces, Plus, SquarePen, Save } from 'lucide-react'
+import type {
+  EndpointOperationUnavailableReason,
+  ResolvedEndpointOperation,
+} from '../endpoints-config/resolve-endpoint-operation'
 
 export type ToolbarMode = 'visual' | 'editor'
 export type ToolbarDomain = 'layout' | 'shell' | 'translations'
+
+// T6 (0131): save-config request state, owned by DevRuntimeReady (T5) and received here already
+// computed — this component never tracks its own save state.
+export type SaveState = 'idle' | 'loading' | 'success' | 'error'
+
+export interface SaveConfigErrorInfo {
+  kind: 'auth' | 'integration'
+  message: string
+}
 
 interface DevEditorFloatingToolbarProps {
   mode: ToolbarMode
@@ -15,6 +28,17 @@ interface DevEditorFloatingToolbarProps {
   isMonacoOpen: boolean
   onOpenPalette: () => void
   isPaletteOpen: boolean
+  saveResolution: ResolvedEndpointOperation
+  saveState: SaveState
+  saveError: SaveConfigErrorInfo | null
+  onSave: () => void
+}
+
+// FR4: the "Guardar" button is always visible, but disabled with an explanatory `title` when the
+// operation can't be resolved yet — one message per `EndpointOperationUnavailableReason` (T1).
+const SAVE_UNAVAILABLE_MESSAGES: Record<EndpointOperationUnavailableReason, string> = {
+  'operation-not-declared': 'La operación de guardado no está declarada en la configuración de endpoints',
+  'token-not-resolvable': 'El token declarado para la operación de guardado no existe en tokens',
 }
 
 const CONTAINER_CLASSES = [
@@ -60,10 +84,19 @@ export function DevEditorFloatingToolbar({
   isMonacoOpen,
   onOpenPalette,
   isPaletteOpen,
+  saveResolution,
+  saveState,
+  saveError,
+  onSave,
 }: DevEditorFloatingToolbarProps) {
   const isLayoutActive = activeDomain === 'layout'
   const isShellActive = activeDomain === 'shell'
   const isTranslationsActive = activeDomain === 'translations'
+
+  const isSaveUnavailable = saveResolution.status === 'unavailable'
+  const isSaving = saveState === 'loading'
+  const saveDisabled = isSaveUnavailable || isSaving
+  const saveTitle = isSaveUnavailable ? SAVE_UNAVAILABLE_MESSAGES[saveResolution.reason] : undefined
 
   return (
     <div
@@ -189,6 +222,43 @@ export function DevEditorFloatingToolbar({
         >
           <SquarePen /> Editor
         </button>
+      </div>
+
+      <div className={GROUP_CLASSES} role="group" aria-label="Guardar configuración">
+        <button
+          type="button"
+          data-testid="dev-editor-toolbar-save"
+          className={buttonClasses({ disabled: saveDisabled })}
+          disabled={saveDisabled}
+          aria-disabled={isSaveUnavailable ? 'true' : undefined}
+          title={saveTitle}
+          onClick={onSave}
+        >
+          <Save size={14} /> Guardar
+        </button>
+        {isSaving && (
+          <span role="status" data-testid="dev-editor-toolbar-save-status" className="text-xs text-gray-600">
+            <Save size={14} /> Guardando...
+          </span>
+        )}
+        {saveState === 'error' && saveError && (
+          <span
+            role="alert"
+            data-testid="dev-editor-toolbar-save-error"
+            className="rounded bg-red-50 px-2 py-1 text-xs text-red-800"
+          >
+            {saveError.message}
+          </span>
+        )}
+        {saveState === 'success' && (
+          <span
+            role="status"
+            data-testid="dev-editor-toolbar-save-success"
+            className="rounded bg-green-50 px-2 py-1 text-xs text-green-800"
+          >
+            Configuración guardada
+          </span>
+        )}
       </div>
     </div>
   )
