@@ -1,6 +1,7 @@
 import type { ComponentType } from 'react'
 import { BooleanPropertyField } from './boolean-property-field'
 import { ChoiceItemsPropertyField } from './choice-items-property-field'
+import { ConditionGroupPropertyField } from './condition-group-property-field'
 import { DiscriminatedUnionPropertyField } from './discriminated-union-property-field'
 import { EnumPropertyField } from './enum-property-field'
 import { HeadingLevelPropertyField } from './heading-level-property-field'
@@ -35,6 +36,7 @@ const WIDGET_REGISTRY: Record<string, ComponentType<WidgetComponentProps>> = {
   'heading-level': HeadingLevelPropertyField,
   'tabs-orientation': TabsOrientationPropertyField,
   icon: IconPickerPropertyField,
+  'condition-group': ConditionGroupPropertyField,
 }
 
 export interface PropertyFieldDispatcherProps {

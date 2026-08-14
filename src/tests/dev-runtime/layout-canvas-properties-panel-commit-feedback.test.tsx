@@ -6,6 +6,7 @@ import type { LayoutNodePath } from '../../runtime/layout-node-path'
 import { DevRuntimeReady } from '../../dev-runtime/dev-runtime'
 import { LayoutCanvasPropertiesPanel } from '../../dev-runtime/layout-canvas/layout-canvas-properties-panel'
 import type { CommitCanvasMutationResult } from '../../dev-runtime/layout-canvas/layout-canvas-commit'
+import { getNodeTypeJsonSchema } from '../../dev-runtime/layout-canvas/layout-canvas-node-schema'
 
 // Mock @monaco-editor/react, matching the pattern already established in
 // layout-canvas-properties-panel.test.tsx / dev-runtime.test.tsx — not exercised directly by
@@ -959,5 +960,218 @@ describe('LayoutCanvasPropertiesPanel icon widget — end-to-end real pipeline (
 
     expect(screen.queryByTestId('monaco-editor-mock')).not.toBeInTheDocument()
     expect(screen.getByRole('grid', { name: 'icon' })).toBeInTheDocument()
+  })
+})
+
+// T3 (0132): fixture with two top-level `button` nodes — one exercising `node.visibility`
+// (Visibilidad subsection, the "Layout" surface of criterion 12) and the other exercising
+// `props.action.operations[].when` for an `executeOperations` action (Props subsection, the
+// "when de acción" surface) — for end-to-end coverage of the `condition-group` widget (T2/T3)
+// through the real `DevRuntimeReady` commit pipeline. Both buttons live directly in `home`'s flat
+// layout (no container ancestor), matching `headingTabsWidgetConfig`'s shape elsewhere in this
+// file; each needs its own `action` (or, for the visibility button, a trivial one) so the
+// "button without action must be a form descendant" cross-check in `validate-form-nodes.ts`
+// doesn't reject the fixture itself.
+function conditionGroupWidgetConfig() {
+  return {
+    api: {},
+    initialPage: 'home',
+    pages: [
+      {
+        id: 'home',
+        layout: [
+          {
+            type: 'button',
+            props: { label: 'Ver detalle', action: { type: 'navigateTo', pageId: 'home' } },
+            // `isFalsy` with no `value` key, referencing a query that isn't declared in `api`
+            // (resolves to `undefined`, itself falsy): guarantees the condition evaluates `true`
+            // so the node stays visible/selectable on the real canvas (`resolveLayoutNodeVisibility`
+            // hides the node entirely when its own `visibility` evaluates `false` — even in Editor
+            // mode), without needing a real query in the fixture.
+            visibility: { reference: 'queries.list.status', operator: 'isFalsy' },
+          },
+          {
+            type: 'button',
+            props: {
+              label: 'Enviar',
+              action: {
+                type: 'executeOperations',
+                operations: [
+                  { operationName: 'save', when: { reference: 'forms.f1.urgent', operator: 'equals', value: 'yes' } },
+                ],
+              },
+            },
+          },
+        ],
+      },
+    ],
+  }
+}
+
+const VISIBILITY_BUTTON_PATH = 'children.0'
+const WHEN_BUTTON_PATH = 'children.1'
+
+describe('LayoutCanvasPropertiesPanel condition-group widget — end-to-end real pipeline (T3, 0132)', () => {
+  // Criterion 12 (partial, Layout surface): switching the shape selector from "Condición simple"
+  // to "Grupo (y/o)" on `node.visibility` runs the real pipeline and the resulting config wraps
+  // the previous condition in a group, exactly like the widget's own unit coverage (T2) predicts.
+  it('changing visibility from a simple condition to a group commits through the real pipeline (criterion 12, Layout)', async () => {
+    const { root } = renderCanvas(conditionGroupWidgetConfig())
+    selectNodeByPath(root, VISIBILITY_BUTTON_PATH)
+
+    const shapeSelector = screen.getByRole('radiogroup', { name: 'Visibilidad — Forma' })
+    expect(within(shapeSelector).getByRole('radio', { name: 'Condición simple', checked: true })).toBeInTheDocument()
+
+    fireEvent.click(within(shapeSelector).getByRole('radio', { name: 'Grupo (y/o)' }))
+
+    expect(
+      within(screen.getByRole('radiogroup', { name: 'Visibilidad — Forma' })).getByRole('radio', {
+        name: 'Grupo (y/o)',
+        checked: true,
+      }),
+    ).toBeInTheDocument()
+
+    const parsed = await getMonacoJson()
+    const button = readTopLevelNodeFromMonacoJson(parsed, 0)
+    expect(button.visibility).toEqual({
+      operator: 'and',
+      conditions: [{ reference: 'queries.list.status', operator: 'isFalsy' }],
+    })
+  })
+
+  // Criterion 12 (partial, "when" surface, shape change): same shape switch as above, applied to
+  // `executeOperations.operations[0].when` inside the Props subsection instead of `visibility`.
+  it('changing an executeOperations operation\'s "when" from a simple condition to a group commits through the real pipeline (criterion 12, when — forma)', async () => {
+    const { root } = renderCanvas(conditionGroupWidgetConfig())
+    selectNodeByPath(root, WHEN_BUTTON_PATH)
+
+    const shapeSelector = screen.getByRole('radiogroup', { name: 'when — Forma' })
+    fireEvent.click(within(shapeSelector).getByRole('radio', { name: 'Grupo (y/o)' }))
+
+    expect(
+      within(screen.getByRole('radiogroup', { name: 'when — Forma' })).getByRole('radio', {
+        name: 'Grupo (y/o)',
+        checked: true,
+      }),
+    ).toBeInTheDocument()
+
+    const parsed = await getMonacoJson()
+    const button = readTopLevelNodeFromMonacoJson(parsed, 1)
+    const action = (button.props as Record<string, unknown>).action as Record<string, unknown>
+    expect(action.operations).toEqual([
+      {
+        operationName: 'save',
+        when: { operator: 'and', conditions: [{ reference: 'forms.f1.urgent', operator: 'equals', value: 'yes' }] },
+      },
+    ])
+  })
+
+  // Criterion 12 (partial, "when" surface, operator + value type change): changing the row's
+  // operator, then choosing "Número" on the value type selector while `value` was still `''`
+  // (spec's own example), also runs the real pipeline; `operationName` survives untouched.
+  it('changing the operator and the value type of an executeOperations "when" condition commits through the real pipeline (criterion 12, when — operador y tipo de value)', async () => {
+    const config = conditionGroupWidgetConfig()
+    const whenButton = config.pages[0].layout[1] as { props: { action: Record<string, unknown> } }
+    ;(whenButton.props.action.operations as Array<Record<string, unknown>>)[0].when = {
+      reference: 'forms.f1.urgent',
+      operator: 'equals',
+      value: '',
+    }
+    const { root } = renderCanvas(config)
+    selectNodeByPath(root, WHEN_BUTTON_PATH)
+
+    fireEvent.change(screen.getByLabelText('when — Operador'), { target: { value: 'notEquals' } })
+    fireEvent.click(within(screen.getByRole('radiogroup', { name: 'when — Valor — Tipo' })).getByRole('radio', { name: 'Número' }))
+
+    const parsed = await getMonacoJson()
+    const button = readTopLevelNodeFromMonacoJson(parsed, 1)
+    const action = (button.props as Record<string, unknown>).action as Record<string, unknown>
+    expect(action.operations).toEqual([
+      { operationName: 'save', when: { reference: 'forms.f1.urgent', operator: 'notEquals', value: 0 } },
+    ])
+  })
+
+  // Criterion 13: forcing a real-shaped rejection (same `forcedRejection` pattern the
+  // heading-level/tabs-orientation/icon widgets above already use) on a visibility change keeps
+  // the attempted value visible in the widget, shows the alert under the Visibilidad subsection,
+  // and leaves the Monaco buffer untouched.
+  it('rejects a visibility change forced by a mocked validateRuntimeConfig failure: alert appears under Visibilidad, the attempted condition stays visible, and the Monaco buffer is untouched (criterion 13)', async () => {
+    const { root } = renderCanvas(conditionGroupWidgetConfig())
+    selectNodeByPath(root, VISIBILITY_BUTTON_PATH)
+
+    vi.mocked(validateRuntimeConfig).mockReturnValueOnce(forcedRejection)
+    fireEvent.change(screen.getByLabelText('Visibilidad — Operador'), { target: { value: 'greaterThan' } })
+
+    const banner = screen.getByRole('alert')
+    expect(banner).toHaveAttribute('data-testid', 'layout-canvas-properties-panel-visibility-error')
+    expect(banner.textContent).toContain('invalid-layout')
+    expect(banner.textContent).toContain('Cambio no permitido')
+
+    expect((screen.getByLabelText('Visibilidad — Operador') as HTMLSelectElement).value).toBe('greaterThan')
+    expect(screen.getByLabelText('Visibilidad — Valor')).toHaveValue(0)
+
+    const parsed = await getMonacoJson()
+    const button = readTopLevelNodeFromMonacoJson(parsed, 0)
+    expect(button.visibility).toEqual({ reference: 'queries.list.status', operator: 'isFalsy' })
+  })
+
+  it('clears the visibility alert once a valid follow-up commit succeeds (criterion 13, follow-up)', async () => {
+    const { root } = renderCanvas(conditionGroupWidgetConfig())
+    selectNodeByPath(root, VISIBILITY_BUTTON_PATH)
+
+    vi.mocked(validateRuntimeConfig).mockReturnValueOnce(forcedRejection)
+    fireEvent.change(screen.getByLabelText('Visibilidad — Operador'), { target: { value: 'greaterThan' } })
+    expect(screen.getByRole('alert')).toBeInTheDocument()
+
+    fireEvent.change(screen.getByLabelText('Visibilidad — Valor'), { target: { value: '5' } })
+
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    const parsed = await getMonacoJson()
+    const button = readTopLevelNodeFromMonacoJson(parsed, 0)
+    expect(button.visibility).toEqual({ reference: 'queries.list.status', operator: 'greaterThan', value: 5 })
+  })
+
+  it('discards a pending visibility rejection when the selected node changes (criterion 13, follow-up)', () => {
+    const { root } = renderCanvas(conditionGroupWidgetConfig())
+    selectNodeByPath(root, VISIBILITY_BUTTON_PATH)
+
+    vi.mocked(validateRuntimeConfig).mockReturnValueOnce(forcedRejection)
+    fireEvent.change(screen.getByLabelText('Visibilidad — Operador'), { target: { value: 'greaterThan' } })
+    expect(screen.getByRole('alert')).toBeInTheDocument()
+
+    selectNodeByPath(root, WHEN_BUTTON_PATH)
+
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+})
+
+// Criterion 14 (regression, non-functional): the sentinel injection (T1/T3) happens once on the
+// cold cache path of `getNodeTypeJsonSchema`, so both `node.visibility` and every `when` nested
+// inside `props.action`'s `executeOperations` variant carry the sentinel, and the getter itself
+// keeps returning the same cached reference across calls.
+describe('LayoutCanvasPropertiesPanel condition-group widget schema sentinel (T3, 0132, criterion 14)', () => {
+  it('injects the condition-group sentinel into node.visibility for a representative node type, and into props.action.oneOf[executeOperations].operations[].when for button', () => {
+    const containerSchema = getNodeTypeJsonSchema('container')
+    expect((containerSchema.properties as Record<string, unknown>).visibility).toEqual({ 'x-widget': 'condition-group' })
+
+    const buttonSchema = getNodeTypeJsonSchema('button')
+    expect((buttonSchema.properties as Record<string, unknown>).visibility).toEqual({ 'x-widget': 'condition-group' })
+
+    const propsSchema = (buttonSchema.properties as Record<string, unknown>).props as Record<string, unknown>
+    const actionSchema = (propsSchema.properties as Record<string, unknown>).action as Record<string, unknown>
+    const actionVariants = actionSchema.oneOf as Array<Record<string, unknown>>
+    const executeOperationsVariant = actionVariants.find((variant) => {
+      const typeSchema = (variant.properties as Record<string, unknown>).type as Record<string, unknown>
+      return typeSchema.const === 'executeOperations'
+    })
+    expect(executeOperationsVariant).toBeDefined()
+
+    const operationsFieldSchema = (executeOperationsVariant!.properties as Record<string, unknown>).operations as Record<string, unknown>
+    const operationItemSchema = operationsFieldSchema.items as Record<string, unknown>
+    expect((operationItemSchema.properties as Record<string, unknown>).when).toEqual({ 'x-widget': 'condition-group' })
+
+    // The transform runs once, on the cold cache path: a second call returns the exact same
+    // object reference, not a freshly-transformed equal-but-distinct one.
+    expect(getNodeTypeJsonSchema('button')).toBe(buttonSchema)
   })
 })

@@ -85,12 +85,21 @@ describe('LayoutCanvasPropertiesPanel visibility section', () => {
     } as LayoutNode
   }
 
-  it('changing a visibility field updates only node.visibility, leaving props untouched', () => {
+  // T3 (0132): `visibility` now mounts `ConditionGroupPropertyField` (via the `x-widget:
+  // 'condition-group'` sentinel `injectConditionGroupWidgetSentinel` injects onto the node schema,
+  // T1/T3) instead of the previous generic object/union rendering — the widget consumes the whole
+  // subsection, so there is no separate generic field labelled plainly "reference" any more.
+  it('changing a visibility field through the widget updates only node.visibility, leaving props untouched', () => {
     const node = containerWithVisibility()
     const onCommitNodeUpdate = vi.fn()
     render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={onCommitNodeUpdate} />)
 
-    fireEvent.change(screen.getByLabelText('reference', { exact: false }), { target: { value: 'queries.list.otherState' } })
+    // Regression: no generic TextPropertyField labelled plainly "reference" renders on its own —
+    // the widget's own row exposes it as "Visibilidad — Referencia" instead.
+    expect(screen.queryByLabelText('reference', { exact: true })).not.toBeInTheDocument()
+
+    const referenceField = screen.getByLabelText('Visibilidad — Referencia')
+    fireEvent.change(referenceField, { target: { value: 'queries.list.otherState' } })
 
     expect(onCommitNodeUpdate).toHaveBeenCalledTimes(1)
     const [, updater] = onCommitNodeUpdate.mock.calls[0]
@@ -104,36 +113,94 @@ describe('LayoutCanvasPropertiesPanel visibility section', () => {
     })
   })
 
-  // Regression (T4): `visibility` is a union at the subsection's own top-level `schema` (single
-  // condition | group), still resolved by the panel's own `resolveUnionBranch` call before ever
-  // reaching the dispatcher — the group branch must keep rendering as an editable form (with its
-  // own nested `conditions` array of condition objects), not fall back to the disabled raw-JSON
-  // escape hatch, now that the helper lives in the dispatcher module.
-  it('renders the group branch (operator + conditions) of visibility, not the single-condition branch, when the current value is a group', () => {
+  // Regression (T4/T3): `visibility` is a union at the subsection's own top-level `schema` (single
+  // condition | group). The panel's own `resolveUnionBranch` call still runs before the
+  // dispatcher, but now that `visibility`'s schema is the `x-widget` sentinel (no `oneOf` any
+  // more), it passes through unchanged — group-vs-condition detection moves entirely into the
+  // widget itself (T2), keyed off the runtime shape of `value`. Two conditions here (not one) so
+  // the "two rows" behavior is actually exercised.
+  it('renders the group branch of visibility in group mode with two rows, not the single-condition branch, when the current value is a group', () => {
     const node: LayoutNode = {
       type: 'container',
       props: { direction: 'row' },
       visibility: {
         operator: 'and',
-        conditions: [{ reference: 'queries.list.state', operator: 'equals', value: 'ready' }],
+        conditions: [
+          { reference: 'queries.list.state', operator: 'equals', value: 'ready' },
+          { reference: 'queries.list.other', operator: 'notEquals', value: 'pending' },
+        ],
       },
     } as LayoutNode
     const onCommitNodeUpdate = vi.fn()
     render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={onCommitNodeUpdate} />)
 
-    const conditionsGroup = screen.getByRole('group', { name: 'conditions' })
-    const firstConditionGroup = within(conditionsGroup).getByRole('group', { name: 'conditions #1' })
-    const referenceField = within(firstConditionGroup).getByLabelText('reference', { exact: false })
-    expect(referenceField).toHaveValue('queries.list.state')
+    const shapeSelector = screen.getByRole('radiogroup', { name: 'Visibilidad — Forma' })
+    expect(within(shapeSelector).getByRole('radio', { name: 'Grupo (y/o)' })).toHaveAttribute('aria-checked', 'true')
 
-    fireEvent.change(referenceField, { target: { value: 'queries.list.otherState' } })
+    const firstRow = screen.getByRole('group', { name: 'Visibilidad — Condición 1' })
+    const secondRow = screen.getByRole('group', { name: 'Visibilidad — Condición 2' })
+    expect(within(firstRow).getByLabelText('Visibilidad — Condición 1 — Referencia')).toHaveValue('queries.list.state')
+    expect(within(secondRow).getByLabelText('Visibilidad — Condición 2 — Referencia')).toHaveValue('queries.list.other')
+
+    fireEvent.change(within(firstRow).getByLabelText('Visibilidad — Condición 1 — Referencia'), {
+      target: { value: 'queries.list.otherState' },
+    })
 
     expect(onCommitNodeUpdate).toHaveBeenCalledTimes(1)
     const [, updater] = onCommitNodeUpdate.mock.calls[0]
     const result = updater(node) as Extract<LayoutNode, { type: 'container' }>
     expect(result.visibility).toEqual({
       operator: 'and',
-      conditions: [{ reference: 'queries.list.otherState', operator: 'equals', value: 'ready' }],
+      conditions: [
+        { reference: 'queries.list.otherState', operator: 'equals', value: 'ready' },
+        { reference: 'queries.list.other', operator: 'notEquals', value: 'pending' },
+      ],
+    })
+  })
+
+  // Regression (spec, casos límite): a node with no `visibility` declared at all still renders the
+  // subsection, with the widget starting in its minimal default state (simple condition, empty
+  // reference) — the widget must not require pre-existing data to mount.
+  it('renders the widget in its default minimal state when the node has no visibility declared', () => {
+    const node: LayoutNode = { type: 'container', props: { direction: 'row' } } as LayoutNode
+    render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={() => {}} />)
+
+    const shapeSelector = screen.getByRole('radiogroup', { name: 'Visibilidad — Forma' })
+    expect(within(shapeSelector).getByRole('radio', { name: 'Condición simple' })).toHaveAttribute('aria-checked', 'true')
+    expect(screen.getByLabelText('Visibilidad — Referencia')).toHaveValue('')
+  })
+})
+
+describe('LayoutCanvasPropertiesPanel condition-group widget for executeOperations.operations[].when in Props (T3, 0132)', () => {
+  function buttonNode(action: Record<string, unknown>): LayoutNode {
+    return { type: 'button', props: { label: 'Enviar', action } } as LayoutNode
+  }
+
+  it('renders the widget for operations[0].when inside the Props subsection, leaving operationName editable with the generic control', () => {
+    const node = buttonNode({
+      type: 'executeOperations',
+      operations: [{ operationName: 'save', when: { reference: 'forms.f1.urgent', operator: 'equals', value: 'yes' } }],
+    })
+    const onCommitNodeUpdate = vi.fn()
+    render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={onCommitNodeUpdate} />)
+
+    const operationsGroup = screen.getByRole('group', { name: 'operations' })
+    const entryGroup = within(operationsGroup).getByRole('group', { name: 'operations #1' })
+
+    // operationName keeps using the generic text control, unaffected by the widget swap.
+    expect(within(entryGroup).getByLabelText('operationName', { exact: false })).toHaveValue('save')
+
+    const whenReferenceField = within(entryGroup).getByLabelText('when — Referencia')
+    expect(whenReferenceField).toHaveValue('forms.f1.urgent')
+
+    fireEvent.change(whenReferenceField, { target: { value: 'forms.f1.otherField' } })
+
+    expect(onCommitNodeUpdate).toHaveBeenCalledTimes(1)
+    const [, updater] = onCommitNodeUpdate.mock.calls[0]
+    const result = updater(node) as Extract<LayoutNode, { type: 'button' }>
+    expect(result.props.action).toEqual({
+      type: 'executeOperations',
+      operations: [{ operationName: 'save', when: { reference: 'forms.f1.otherField', operator: 'equals', value: 'yes' } }],
     })
   })
 })
@@ -821,7 +888,10 @@ describe('LayoutCanvasPropertiesPanel form submitAction selector (T5)', () => {
     render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={onCommitNodeUpdate} />)
 
     const entryGroup = screen.getByRole('group', { name: 'onSuccess #1' })
-    const whenReferenceField = within(entryGroup).getByLabelText('reference', { exact: false })
+    // T3 (0132): `when` now mounts `ConditionGroupPropertyField` (`x-widget: 'condition-group'`),
+    // whose reference row is labelled `${label} — Referencia` — here label="when" (the technical
+    // field name, same as every other nested dispatcher field).
+    const whenReferenceField = within(entryGroup).getByLabelText('when — Referencia')
     fireEvent.change(whenReferenceField, { target: { value: 'forms.f1.otherField' } })
 
     expect(onCommitNodeUpdate).toHaveBeenCalledTimes(1)
@@ -846,7 +916,9 @@ describe('LayoutCanvasPropertiesPanel form submitAction selector (T5)', () => {
 
     const operationsGroup = screen.getByRole('group', { name: 'operations' })
     const entryGroup = within(operationsGroup).getByRole('group', { name: 'operations #1' })
-    const whenReferenceField = within(entryGroup).getByLabelText('reference', { exact: false })
+    // T3 (0132): same `condition-group` widget swap as above, applied here to `submitAction`'s
+    // `executeOperations.operations[].when`.
+    const whenReferenceField = within(entryGroup).getByLabelText('when — Referencia')
     fireEvent.change(whenReferenceField, { target: { value: 'forms.f1.otherField' } })
 
     expect(onCommitNodeUpdate).toHaveBeenCalledTimes(1)
