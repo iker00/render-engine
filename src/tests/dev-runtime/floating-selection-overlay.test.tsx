@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import type { LayoutNode } from '../../config/runtime-config'
 import { FloatingSelectionOverlay } from '../../dev-runtime/floating-toolbar/floating-selection-overlay'
@@ -146,5 +146,33 @@ describe('FloatingSelectionOverlay', () => {
 
     expect(onSelectNode).toHaveBeenCalledTimes(1)
     expect(onSelectNode).toHaveBeenCalledWith(null)
+  })
+
+  // T3 (0133), criterion 11: the overlay no longer renders its own "Selección" header — the
+  // panel's own header (title + delete/close icon buttons) is the only header rendered, and the
+  // close button reached above is that panel's button, not a separate overlay-owned one.
+  it('renders no separate "Selección" header of its own — the close button belongs to the properties panel header', () => {
+    renderOverlay({ selectedPath: HEADING_PATH })
+
+    expect(screen.queryByText('Selección')).not.toBeInTheDocument()
+    const panel = screen.getByTestId('layout-canvas-properties-panel')
+    expect(panel.contains(screen.getByTestId('dev-editor-selection-overlay-close'))).toBe(true)
+    expect(panel.contains(screen.getByTestId('layout-canvas-breadcrumb'))).toBe(true)
+  })
+
+  // T4 (0133): the panel's own tab bar (Props/Diseño/Visibilidad/Queries, T1/T2) renders inside
+  // the overlay, scoped to the properties panel. `HEADING_PATH` has no `container` ancestor with
+  // `columns` (see `buildLayout` above), so Diseño is absent — Props, Visibilidad and Queries
+  // remain.
+  it('renders the node panel tab bar inside the properties panel, with Props active and Diseño absent for this fixture', () => {
+    renderOverlay({ selectedPath: HEADING_PATH })
+
+    const panel = screen.getByTestId('layout-canvas-properties-panel')
+    const tablist = within(panel).getByRole('tablist')
+    const tabNames = within(tablist)
+      .getAllByRole('tab')
+      .map((tab) => tab.textContent)
+    expect(tabNames).toEqual(['Props', 'Visibilidad', 'Queries'])
+    expect(within(panel).getByRole('tab', { name: 'Props' })).toHaveAttribute('aria-selected', 'true')
   })
 })

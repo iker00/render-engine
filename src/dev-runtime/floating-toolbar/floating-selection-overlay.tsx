@@ -1,6 +1,5 @@
 import type { LayoutNode } from '../../config/runtime-config'
 import { getNodeAtPath, type LayoutNodePath } from '../../runtime/layout-node-path'
-import { LayoutCanvasBreadcrumb } from '../layout-canvas/layout-canvas-breadcrumb'
 import { LayoutCanvasPropertiesPanel } from '../layout-canvas/layout-canvas-properties-panel'
 
 export interface FloatingSelectionOverlayProps {
@@ -29,11 +28,15 @@ const PANEL_CLASSES = [
 const CONTENT_CLASSES = 'min-h-0 flex-1 overflow-y-auto'
 
 /**
- * FR9 / Decisión 6 (0103), rediseñado en 0104: panel lateral derecho fijo que combina el
- * breadcrumb y el panel de propiedades reutilizados sin cambios desde 0102. A diferencia del
- * diseño anclado original, no depende de `data-node-path` ni mide ningún elemento del DOM: se
- * acopla al borde derecho del viewport (misma familia visual que FloatingMonacoPanel) con scroll
- * interno propio cuando su contenido excede la altura disponible.
+ * FR9 / Decisión 6 (0103), rediseñado en 0104: panel lateral derecho fijo que aloja el panel de
+ * propiedades. A diferencia del diseño anclado original, no depende de `data-node-path` ni mide
+ * ningún elemento del DOM: se acopla al borde derecho del viewport (misma familia visual que
+ * FloatingMonacoPanel) con scroll interno propio cuando su contenido excede la altura disponible.
+ *
+ * T3 (0133): es un contenedor puramente posicional. La cabecera propia (breadcrumb, titular,
+ * botones de borrar/cerrar) y la fila de identidad viven dentro de `LayoutCanvasPropertiesPanel`
+ * — este componente solo le delega `pageLayout`, `onClose` (que limpia la selección) y
+ * `onSelectAncestor` (que navega el breadcrumb).
  */
 export function FloatingSelectionOverlay({
   pageLayout,
@@ -50,31 +53,15 @@ export function FloatingSelectionOverlay({
 
   return (
     <div data-testid="dev-editor-selection-overlay" className={PANEL_CLASSES}>
-      <div className="flex items-center justify-between border-b px-4 py-3">
-        <span className="text-sm font-semibold">Selección</span>
-        <button
-          type="button"
-          data-testid="dev-editor-selection-overlay-close"
-          onClick={() => onSelectNode(null)}
-          className="rounded p-1 hover:bg-gray-100"
-          aria-label="Cerrar panel de selección"
-        >
-          ✕
-        </button>
-      </div>
-
       <div className={CONTENT_CLASSES}>
-        <LayoutCanvasBreadcrumb
-          pageLayout={pageLayout}
-          selectedPath={selectedPath}
-          onSelectNode={onSelectNode}
-        />
         <LayoutCanvasPropertiesPanel
           node={selectedNode}
           path={selectedPath}
           pageLayout={pageLayout}
           onCommitNodeUpdate={onCommitNodeUpdate}
           onDeleteNode={onDeleteNode}
+          onClose={() => onSelectNode(null)}
+          onSelectAncestor={onSelectNode}
         />
       </div>
     </div>

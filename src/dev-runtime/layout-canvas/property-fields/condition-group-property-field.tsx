@@ -115,6 +115,15 @@ export interface ConditionGroupPropertyFieldProps {
   label: string
   value: unknown
   onChange: (value: unknown) => void
+  // T4 (0133), FR6: when this widget is mounted as the root of a properties-panel tab (the
+  // `Visibilidad` tab, whose tab button already shows the section name), the tab label would
+  // otherwise repeat as this fieldset's own visible `legend`. `hideRootLegend` keeps the legend in
+  // the DOM (so the fieldset keeps an accessible name) but visually hides it via `sr-only`. Every
+  // nested accessible name derived from `label` (e.g. `"Visibilidad — Forma"`) is untouched — only
+  // this component's own root `legend` reacts to the flag. Defaults to `false` so every other
+  // caller (the `visibility`/`when` mounts inside `Props`, and this file's own isolated tests) keeps
+  // today's visible legend.
+  hideRootLegend?: boolean
 }
 
 /**
@@ -122,10 +131,8 @@ export interface ConditionGroupPropertyFieldProps {
  * `0132`, T2). Purely presentational: it has no visibility into the real JSON Schema fragment
  * behind the `x-widget: 'condition-group'` sentinel (design.md D3) — shape detection and every
  * reconstruction rule below work exclusively off the runtime shape of `value` itself.
- *
- * Not wired into `WIDGET_REGISTRY` yet (T3/T4 do that); this file only exports the component.
  */
-export function ConditionGroupPropertyField({ label, value, onChange }: ConditionGroupPropertyFieldProps) {
+export function ConditionGroupPropertyField({ label, value, onChange, hideRootLegend = false }: ConditionGroupPropertyFieldProps) {
   const isGroup = isGroupShape(value)
   const shape = isGroup ? 'group' : 'condition'
 
@@ -145,7 +152,7 @@ export function ConditionGroupPropertyField({ label, value, onChange }: Conditio
 
   return (
     <fieldset className="flex flex-col gap-2 rounded border border-dashed border-gray-300 p-2">
-      <legend className="px-1 text-xs font-medium text-gray-700">{label}</legend>
+      <legend className={hideRootLegend ? 'sr-only' : 'px-1 text-xs font-medium text-gray-700'}>{label}</legend>
       <SegmentedTogglePropertyField label={`${label} — Forma`} segments={SHAPE_SEGMENTS} activeValue={shape} onSelect={handleShapeChange} />
       {isGroup ? (
         <GroupEditor label={label} value={value} onChange={onChange} />

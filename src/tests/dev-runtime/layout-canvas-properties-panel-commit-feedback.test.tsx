@@ -137,6 +137,26 @@ describe('LayoutCanvasPropertiesPanel commit feedback (T9)', () => {
     const banner = screen.getByRole('alert')
     expect(banner).toHaveAttribute('data-testid', 'layout-canvas-properties-panel-props-error')
   })
+
+  // T4 (0133), FR7: same tab-switch-preserves-rejection guarantee as Visibilidad, but for a
+  // rejection on Props — switching to Visibilidad and back to Props keeps both the attempted
+  // value and the banner.
+  it('keeps a Props rejection banner and value after switching to Visibilidad and back (FR7)', () => {
+    const node = buttonNode({ type: 'navigateTo', pageId: 'home' })
+    const onCommitNodeUpdate = vi.fn().mockReturnValue(rejectedResult)
+    render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={onCommitNodeUpdate} />)
+
+    fireEvent.change(screen.getByLabelText('action'), { target: { value: 'executeOperation' } })
+    expect(screen.getByRole('alert')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Visibilidad' }))
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Props' }))
+    expect((screen.getByLabelText('action') as HTMLSelectElement).value).toBe('executeOperation')
+    const banner = screen.getByRole('alert')
+    expect(banner).toHaveAttribute('data-testid', 'layout-canvas-properties-panel-props-error')
+  })
 })
 
 // T4 (0127): end-to-end coverage of the `layout.span` widget through the real `DevRuntimeReady`
@@ -232,14 +252,14 @@ describe('LayoutCanvasPropertiesPanel layout.span widget — end-to-end real pip
 
     const panel = screen.getByTestId('layout-canvas-properties-panel')
     expect(within(panel).queryByTestId('layout-span-widget')).not.toBeInTheDocument()
-    // Scoped to the properties panel: the floating toolbar has its own unrelated "Layout"
-    // domain-selector button (`dev-editor-toolbar-domain-layout`) with the same visible text.
-    expect(within(panel).queryByText('Layout')).not.toBeInTheDocument()
+    // Scoped to the properties panel: no Diseño tab exists at all for this node.
+    expect(within(panel).queryByRole('tab', { name: 'Diseño' })).not.toBeInTheDocument()
   })
 
   it('renders the layout-span widget with all six rows for a node inside a container ancestor with columns (acceptance 2)', () => {
     const { root } = renderCanvas(spanWidgetConfig(6))
     selectNodeByPath(root, CHILD_A_PATH)
+    fireEvent.click(screen.getByRole('tab', { name: 'Diseño' }))
 
     const widget = screen.getByTestId('layout-span-widget')
     const rowTestIds = within(widget)
@@ -253,6 +273,7 @@ describe('LayoutCanvasPropertiesPanel layout.span widget — end-to-end real pip
   it("resolves each row's denominator from the real mobile-first cascade of the container's responsive columns (acceptance 3)", () => {
     const { root } = renderCanvas(spanWidgetConfig({ base: 2, md: 4, xl: 12 }))
     selectNodeByPath(root, CHILD_A_PATH)
+    fireEvent.click(screen.getByRole('tab', { name: 'Diseño' }))
 
     expect(within(screen.getByTestId('layout-span-widget-row-base')).getByText('/ 2')).toBeInTheDocument()
     expect(within(screen.getByTestId('layout-span-widget-row-sm')).getByText('/ 2')).toBeInTheDocument()
@@ -265,6 +286,7 @@ describe('LayoutCanvasPropertiesPanel layout.span widget — end-to-end real pip
   it('shows an inherited muted value with no "Quitar" until edited, then "Quitar" removes the explicit key through the real commit pipeline (acceptance 4-6)', async () => {
     const { root } = renderCanvas(spanWidgetConfig(6))
     selectNodeByPath(root, CHILD_A_PATH)
+    fireEvent.click(screen.getByRole('tab', { name: 'Diseño' }))
 
     const initialBaseRow = screen.getByTestId('layout-span-widget-row-base')
     expect(within(initialBaseRow).getByLabelText('base')).toHaveValue(1)
@@ -293,6 +315,7 @@ describe('LayoutCanvasPropertiesPanel layout.span widget — end-to-end real pip
   it('converts a plain integer span to a per-breakpoint map when editing a non-base row, preserved through validateRuntimeConfig (acceptance 7)', async () => {
     const { root } = renderCanvas(spanWidgetConfig(6, 3))
     selectNodeByPath(root, CHILD_A_PATH)
+    fireEvent.click(screen.getByRole('tab', { name: 'Diseño' }))
 
     const mdRow = screen.getByTestId('layout-span-widget-row-md')
     expect(within(mdRow).getByLabelText('md')).toHaveValue(3)
@@ -312,6 +335,7 @@ describe('LayoutCanvasPropertiesPanel layout.span widget — end-to-end real pip
   it('rejects an out-of-range value for a breakpoint via validateRuntimeConfig: alert appears scoped to that row, the typed value is kept, and currentConfig does not change (acceptance 8)', async () => {
     const { root } = renderCanvas(spanWidgetConfig(6))
     selectNodeByPath(root, CHILD_A_PATH)
+    fireEvent.click(screen.getByRole('tab', { name: 'Diseño' }))
 
     const baseRow = screen.getByTestId('layout-span-widget-row-base')
     fireEvent.change(within(baseRow).getByLabelText('base'), { target: { value: '13' } })
@@ -330,6 +354,7 @@ describe('LayoutCanvasPropertiesPanel layout.span widget — end-to-end real pip
   it('clears the alert once the same row is edited again with a value inside range, and that follow-up commit is applied (acceptance 8, follow-up)', async () => {
     const { root } = renderCanvas(spanWidgetConfig(6))
     selectNodeByPath(root, CHILD_A_PATH)
+    fireEvent.click(screen.getByRole('tab', { name: 'Diseño' }))
 
     const baseRow = screen.getByTestId('layout-span-widget-row-base')
     fireEvent.change(within(baseRow).getByLabelText('base'), { target: { value: '0' } })
@@ -352,13 +377,17 @@ describe('LayoutCanvasPropertiesPanel layout.span widget — end-to-end real pip
   it('discards a pending layout.span row alert when the selected node changes, the same guard the rest of the panel already applies (edge case)', () => {
     const { root } = renderCanvas(spanWidgetConfig(6))
     selectNodeByPath(root, CHILD_A_PATH)
+    fireEvent.click(screen.getByRole('tab', { name: 'Diseño' }))
 
     fireEvent.change(within(screen.getByTestId('layout-span-widget-row-base')).getByLabelText('base'), {
       target: { value: '13' },
     })
     expect(within(screen.getByTestId('layout-span-widget-row-base')).getByRole('alert')).toBeInTheDocument()
 
+    // T4 (0133), FR3: switching node also resets the active tab to Props (the new node's first
+    // tab), so Diseño has to be reselected to inspect the row's reset state.
     selectNodeByPath(root, CHILD_B_PATH)
+    fireEvent.click(screen.getByRole('tab', { name: 'Diseño' }))
 
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
     const baseRowB = screen.getByTestId('layout-span-widget-row-base')
@@ -370,7 +399,10 @@ describe('LayoutCanvasPropertiesPanel layout.span widget — end-to-end real pip
     const { root } = renderCanvas(spanWidgetConfig(6))
     selectNodeByPath(root, CHILD_A_PATH)
 
-    expect(screen.getByTestId('layout-span-widget')).toBeInTheDocument()
+    // T4 (0133): Props stays the default active tab even though this node also exposes a Diseño
+    // tab for its layout.span widget — the two are mutually exclusive tabpanels now (only one
+    // mounts at a time), but neither breaks the other.
+    expect(screen.getByRole('tab', { name: 'Diseño' })).toBeInTheDocument()
     fireEvent.change(screen.getByLabelText('text', { exact: false }), { target: { value: 'Edited child A' } })
 
     const parsed = await getMonacoJson()
@@ -384,6 +416,7 @@ describe('LayoutCanvasPropertiesPanel layout.span widget — end-to-end real pip
     await waitFor(() => expect(screen.getByTestId('monaco-editor-mock')).toBeInTheDocument())
 
     selectNodeByPath(root, CHILD_A_PATH)
+    fireEvent.click(screen.getByRole('tab', { name: 'Diseño' }))
 
     expect(screen.queryByTestId('monaco-editor-mock')).not.toBeInTheDocument()
     expect(screen.getByTestId('layout-span-widget')).toBeInTheDocument()
@@ -772,6 +805,121 @@ describe('LayoutCanvasPropertiesPanel container columns mode widget — end-to-e
     expect(screen.queryByTestId('monaco-editor-mock')).not.toBeInTheDocument()
     expect(screen.getByRole('radiogroup', { name: 'Modo' })).toBeInTheDocument()
   })
+
+  // T5 (0133), regression: the "Modo" widget's rejection now renders inside the `Props` tabpanel
+  // (rather than straddling the tab bar) — switching to another tab and back must not lose it,
+  // same FR7 tab-switch guarantee the generic subsections already have (T4).
+  it('keeps the "Modo" rejection banner and chosen value after switching to Visibilidad and back to Props (regression, T5)', () => {
+    const { root } = renderCanvas(containerModeWidgetConfig())
+    selectNodeByPath(root, CONTAINER_PATH)
+
+    vi.mocked(validateRuntimeConfig).mockReturnValueOnce(forcedRejection)
+    fireEvent.click(within(screen.getByRole('radiogroup', { name: 'Modo' })).getByRole('radio', { name: /Columnas/ }))
+    expect(screen.getByRole('alert')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Visibilidad' }))
+    expect(screen.queryByRole('radiogroup', { name: 'Modo' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Props' }))
+    expect(
+      within(screen.getByRole('radiogroup', { name: 'Modo' })).getByRole('radio', { name: /Columnas/, checked: true }),
+    ).toBeInTheDocument()
+    const banner = screen.getByRole('alert')
+    expect(banner).toHaveAttribute('data-testid', 'layout-canvas-properties-panel-containerColumnsMode-error')
+  })
+})
+
+// T5 (0133): the form "Acción de envío" block moved from standalone (straddling the tab bar) to
+// the top of the `Props` tabpanel. `formNodeSchema` declares no `props` key of its own, so its
+// `Props` tab exists purely to host this block (`resolveNodePanelTabs`'s `submitAction` fallback);
+// the operation `save` must exist in `api` for `executeOperation` to validate.
+function formSubmitActionWidgetConfig() {
+  return {
+    api: { save: { method: 'POST', endpoint: '/save' } },
+    initialPage: 'home',
+    pages: [
+      {
+        id: 'home',
+        layout: [
+          { type: 'heading', props: { text: 'Título', level: 1 } },
+          {
+            type: 'form',
+            id: 'f1',
+            submitAction: { type: 'executeOperation', operationName: 'save' },
+            children: [],
+          },
+        ],
+      },
+    ],
+  }
+}
+
+const FORM_HEADING_PATH = 'children.0'
+const FORM_PATH = 'children.1'
+
+function readFormFromMonacoJson(parsed: Record<string, unknown>): Record<string, unknown> {
+  const pages = parsed.pages as Array<{ layout: Array<Record<string, unknown>> }>
+  return pages[0].layout[1]
+}
+
+describe('LayoutCanvasPropertiesPanel form submitAction widget — end-to-end real pipeline (T5, 0133)', () => {
+  it('shows the "Acción de envío" selector inside the Props tabpanel, preselecting the current variant', () => {
+    const { root } = renderCanvas(formSubmitActionWidgetConfig())
+    selectNodeByPath(root, FORM_PATH)
+
+    expect(screen.getByRole('tab', { name: 'Props' })).toHaveAttribute('aria-selected', 'true')
+    const tabpanel = screen.getByRole('tabpanel')
+    const select = within(tabpanel).getByLabelText('Acción de envío') as HTMLSelectElement
+    expect(select.value).toBe('executeOperation')
+  })
+
+  it('rejects a submitAction change forced by a mocked validateRuntimeConfig failure: alert appears inside Props, the chosen variant stays visible, and the Monaco buffer is untouched (regression)', async () => {
+    const { root } = renderCanvas(formSubmitActionWidgetConfig())
+    selectNodeByPath(root, FORM_PATH)
+
+    vi.mocked(validateRuntimeConfig).mockReturnValueOnce(forcedRejection)
+    fireEvent.change(screen.getByLabelText('Acción de envío'), { target: { value: 'executeOperations' } })
+
+    const banner = screen.getByRole('alert')
+    expect(banner).toHaveAttribute('data-testid', 'layout-canvas-properties-panel-submitAction-error')
+    expect((screen.getByLabelText('Acción de envío') as HTMLSelectElement).value).toBe('executeOperations')
+
+    const parsed = await getMonacoJson()
+    const form = readFormFromMonacoJson(parsed)
+    expect(form.submitAction).toEqual({ type: 'executeOperation', operationName: 'save' })
+  })
+
+  it('keeps the "Acción de envío" rejection banner and chosen variant after switching to Visibilidad and back to Props (regression)', () => {
+    const { root } = renderCanvas(formSubmitActionWidgetConfig())
+    selectNodeByPath(root, FORM_PATH)
+
+    vi.mocked(validateRuntimeConfig).mockReturnValueOnce(forcedRejection)
+    fireEvent.change(screen.getByLabelText('Acción de envío'), { target: { value: 'executeOperations' } })
+    expect(screen.getByRole('alert')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Visibilidad' }))
+    expect(screen.queryByLabelText('Acción de envío')).not.toBeInTheDocument()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Props' }))
+    expect((screen.getByLabelText('Acción de envío') as HTMLSelectElement).value).toBe('executeOperations')
+    const banner = screen.getByRole('alert')
+    expect(banner).toHaveAttribute('data-testid', 'layout-canvas-properties-panel-submitAction-error')
+  })
+
+  it('discards a pending "Acción de envío" rejection when the selected node changes (edge case)', () => {
+    const { root } = renderCanvas(formSubmitActionWidgetConfig())
+    selectNodeByPath(root, FORM_PATH)
+
+    vi.mocked(validateRuntimeConfig).mockReturnValueOnce(forcedRejection)
+    fireEvent.change(screen.getByLabelText('Acción de envío'), { target: { value: 'executeOperations' } })
+    expect(screen.getByRole('alert')).toBeInTheDocument()
+
+    selectNodeByPath(root, FORM_HEADING_PATH)
+
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
 })
 
 // T2 (0129): fixture with a top-level `heading` (no icon widget, used by the edge-case test below
@@ -1018,6 +1166,7 @@ describe('LayoutCanvasPropertiesPanel condition-group widget — end-to-end real
   it('changing visibility from a simple condition to a group commits through the real pipeline (criterion 12, Layout)', async () => {
     const { root } = renderCanvas(conditionGroupWidgetConfig())
     selectNodeByPath(root, VISIBILITY_BUTTON_PATH)
+    fireEvent.click(screen.getByRole('tab', { name: 'Visibilidad' }))
 
     const shapeSelector = screen.getByRole('radiogroup', { name: 'Visibilidad — Forma' })
     expect(within(shapeSelector).getByRole('radio', { name: 'Condición simple', checked: true })).toBeInTheDocument()
@@ -1098,6 +1247,7 @@ describe('LayoutCanvasPropertiesPanel condition-group widget — end-to-end real
   it('rejects a visibility change forced by a mocked validateRuntimeConfig failure: alert appears under Visibilidad, the attempted condition stays visible, and the Monaco buffer is untouched (criterion 13)', async () => {
     const { root } = renderCanvas(conditionGroupWidgetConfig())
     selectNodeByPath(root, VISIBILITY_BUTTON_PATH)
+    fireEvent.click(screen.getByRole('tab', { name: 'Visibilidad' }))
 
     vi.mocked(validateRuntimeConfig).mockReturnValueOnce(forcedRejection)
     fireEvent.change(screen.getByLabelText('Visibilidad — Operador'), { target: { value: 'greaterThan' } })
@@ -1118,6 +1268,7 @@ describe('LayoutCanvasPropertiesPanel condition-group widget — end-to-end real
   it('clears the visibility alert once a valid follow-up commit succeeds (criterion 13, follow-up)', async () => {
     const { root } = renderCanvas(conditionGroupWidgetConfig())
     selectNodeByPath(root, VISIBILITY_BUTTON_PATH)
+    fireEvent.click(screen.getByRole('tab', { name: 'Visibilidad' }))
 
     vi.mocked(validateRuntimeConfig).mockReturnValueOnce(forcedRejection)
     fireEvent.change(screen.getByLabelText('Visibilidad — Operador'), { target: { value: 'greaterThan' } })
@@ -1131,9 +1282,31 @@ describe('LayoutCanvasPropertiesPanel condition-group widget — end-to-end real
     expect(button.visibility).toEqual({ reference: 'queries.list.status', operator: 'greaterThan', value: 5 })
   })
 
+  // T4 (0133), FR7: switching tabs — not just staying on the rejected one — does not discard a
+  // pending rejection; the attempted value and the banner both survive a round trip to another
+  // tab and back, on the very same node.
+  it('keeps the attempted visibility value and its alert after switching to Props and back (FR7)', () => {
+    const { root } = renderCanvas(conditionGroupWidgetConfig())
+    selectNodeByPath(root, VISIBILITY_BUTTON_PATH)
+    fireEvent.click(screen.getByRole('tab', { name: 'Visibilidad' }))
+
+    vi.mocked(validateRuntimeConfig).mockReturnValueOnce(forcedRejection)
+    fireEvent.change(screen.getByLabelText('Visibilidad — Operador'), { target: { value: 'greaterThan' } })
+    expect(screen.getByRole('alert')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Props' }))
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Visibilidad' }))
+    expect((screen.getByLabelText('Visibilidad — Operador') as HTMLSelectElement).value).toBe('greaterThan')
+    const banner = screen.getByRole('alert')
+    expect(banner).toHaveAttribute('data-testid', 'layout-canvas-properties-panel-visibility-error')
+  })
+
   it('discards a pending visibility rejection when the selected node changes (criterion 13, follow-up)', () => {
     const { root } = renderCanvas(conditionGroupWidgetConfig())
     selectNodeByPath(root, VISIBILITY_BUTTON_PATH)
+    fireEvent.click(screen.getByRole('tab', { name: 'Visibilidad' }))
 
     vi.mocked(validateRuntimeConfig).mockReturnValueOnce(forcedRejection)
     fireEvent.change(screen.getByLabelText('Visibilidad — Operador'), { target: { value: 'greaterThan' } })

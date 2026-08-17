@@ -1,4 +1,5 @@
 import { useId, type ChangeEvent } from 'react'
+import { PropertyFieldRow } from './property-field-row'
 
 interface EnumPropertyFieldProps {
   label: string
@@ -22,20 +23,12 @@ export function EnumPropertyField({ label, value, options, optionLabels, onChang
   }
 
   return (
-    <div className="flex flex-col gap-1">
-      <label htmlFor={selectId} className="text-xs font-medium text-gray-700">
-        {label}
-        {required && (
-          <span aria-hidden="true" className="ml-0.5 text-red-500">
-            *
-          </span>
-        )}
-      </label>
+    <PropertyFieldRow htmlFor={selectId} label={label} required={required}>
       <select
         id={selectId}
         value={String(value)}
         onChange={handleChange}
-        className="rounded border border-gray-300 bg-white px-2 py-1 text-sm text-gray-900 focus:border-gray-500 focus:outline-none"
+        className="w-full rounded-md border border-gray-300 bg-white px-2 py-1 text-sm text-gray-900 focus:border-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-400"
       >
         {options.map((option) => (
           <option key={String(option)} value={String(option)}>
@@ -43,6 +36,6 @@ export function EnumPropertyField({ label, value, options, optionLabels, onChang
           </option>
         ))}
       </select>
-    </div>
+    </PropertyFieldRow>
   )
 }
