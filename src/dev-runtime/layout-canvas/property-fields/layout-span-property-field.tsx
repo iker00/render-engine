@@ -1,7 +1,8 @@
-import { useId } from 'react'
+import { useId, useState } from 'react'
 import type { RuntimeResponsiveBoundedValue, RuntimeResponsiveBreakpoint, RuntimeResponsiveLayoutValue } from '../../../config/runtime-config'
 import { normalizeResponsiveLayoutValue, responsiveBreakpoints } from '../../../runtime/runtime-node-styling-base'
 import { CommitRejectionBanner } from '../../commit-rejection-banner'
+import { LayoutSpanOccupancyPreview } from './layout-span-occupancy-preview'
 import { useLayoutSpanWidgetContext } from './layout-span-widget-context'
 
 // `spanValue` is either the responsive map itself, a plain integer (no explicit per-breakpoint
@@ -60,6 +61,13 @@ function computeNextSpanOnRemove(
 export function LayoutSpanPropertyField() {
   const { parentColumns, spanValue, commitSpan, rowRejections, onRowCommitResult } = useLayoutSpanWidgetContext()
   const inputIdPrefix = useId()
+  // T5 (0134), FR7: which row's occupancy the preview bar reflects. Purely local visual state —
+  // never committed, never lifted to the panel — defaulting to `base` and following whichever row
+  // currently has focus. Blur always resets to `base`; native DOM event order (blur of the
+  // outgoing element before focus of the incoming one) plus React's batching means moving focus
+  // between two rows of this same widget lands on the entering row without a persistent flash of
+  // `base` in between — see the task's Restricciones for why no `relatedTarget` inspection is needed.
+  const [previewedBreakpoint, setPreviewedBreakpoint] = useState<RuntimeResponsiveBreakpoint>('base')
 
   const denominators = normalizeResponsiveLayoutValue(parentColumns, 1)
   const effectiveSpans = normalizeResponsiveLayoutValue(spanValue ?? {}, 1)
@@ -77,7 +85,10 @@ export function LayoutSpanPropertyField() {
   }
 
   return (
-    <fieldset data-testid="layout-span-widget" className="flex flex-col gap-2 rounded border border-gray-200 p-2">
+    <fieldset
+      data-testid="layout-span-widget"
+      className="flex flex-col gap-3 rounded-lg border border-gray-200 bg-white p-3"
+    >
       <legend className="px-1 text-xs font-medium text-gray-700">Columnas</legend>
       {responsiveBreakpoints.map((breakpoint) => {
         const explicit = breakpoint in explicitKeys
@@ -92,10 +103,10 @@ export function LayoutSpanPropertyField() {
             data-explicit={explicit}
             className="flex flex-col gap-1"
           >
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2.5">
               <label
                 htmlFor={inputId}
-                className={explicit ? 'w-9 shrink-0 text-xs font-medium text-gray-900' : 'w-9 shrink-0 text-xs text-gray-400'}
+                className={explicit ? 'w-9 shrink-0 text-xs font-medium text-gray-700' : 'w-9 shrink-0 text-xs text-gray-400'}
               >
                 {breakpoint}
               </label>
@@ -104,10 +115,12 @@ export function LayoutSpanPropertyField() {
                 type="number"
                 value={displayedValue}
                 onChange={(event) => handleRowChange(breakpoint, event.target.value)}
+                onFocus={() => setPreviewedBreakpoint(breakpoint)}
+                onBlur={() => setPreviewedBreakpoint('base')}
                 className={
                   explicit
-                    ? 'w-16 rounded border border-gray-300 px-2 py-1 text-sm text-gray-900 focus:border-gray-500 focus:outline-none'
-                    : 'w-16 rounded border border-gray-300 px-2 py-1 text-sm text-gray-400 focus:border-gray-500 focus:outline-none'
+                    ? 'w-16 rounded-md border border-gray-300 px-2 py-1 text-sm text-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-400'
+                    : 'w-16 rounded-md border border-gray-300 px-2 py-1 text-sm text-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-400'
                 }
               />
               <span className="text-xs text-gray-500">/ {denominators[breakpoint]}</span>
@@ -116,7 +129,7 @@ export function LayoutSpanPropertyField() {
                   type="button"
                   onClick={() => handleRowRemove(breakpoint)}
                   aria-label={`Quitar ${breakpoint}`}
-                  className="rounded border border-gray-300 px-2 py-1 text-xs text-gray-600 hover:bg-gray-100"
+                  className="rounded-md border border-gray-300 bg-white px-2 py-1 text-xs font-medium text-gray-600 hover:bg-gray-100 focus:outline-none focus:ring-1 focus:ring-gray-400"
                 >
                   Quitar
                 </button>
@@ -128,6 +141,11 @@ export function LayoutSpanPropertyField() {
           </div>
         )
       })}
+      <LayoutSpanOccupancyPreview
+        breakpoint={previewedBreakpoint}
+        span={effectiveSpans[previewedBreakpoint]}
+        denominator={denominators[previewedBreakpoint]}
+      />
     </fieldset>
   )
 }

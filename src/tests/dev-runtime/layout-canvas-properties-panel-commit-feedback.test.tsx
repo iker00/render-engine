@@ -830,6 +830,228 @@ describe('LayoutCanvasPropertiesPanel container columns mode widget — end-to-e
   })
 })
 
+// T1 (0134), FR1/FR2: the generic dispatcher's own `enum` branch renders a segmented radiogroup
+// instead of a `<select>` for a bounded 2-5 option enum — no dedicated `x-widget`, unlike the
+// "Modo"/"Nivel"/"Orientación" widgets above. `stat.props.variant` (3 options: accent/tinted/
+// plain) is the concrete field this task singles out; `container.props.justify` (6 options) is
+// the sibling regression proving the field stays a plain `<select>` past the segmented range.
+function segmentedEnumWidgetConfig(variant?: 'accent' | 'tinted' | 'plain', justify?: string) {
+  return {
+    api: {},
+    initialPage: 'home',
+    pages: [
+      {
+        id: 'home',
+        layout: [
+          { type: 'stat', props: { label: 'Total', value: '10', ...(variant !== undefined ? { variant } : {}) } },
+          { type: 'container', props: { ...(justify !== undefined ? { justify } : {}) }, children: [] },
+        ],
+      },
+    ],
+  }
+}
+
+const STAT_PATH = 'children.0'
+const JUSTIFY_CONTAINER_PATH = 'children.1'
+
+describe('LayoutCanvasPropertiesPanel generic segmented enum widget — end-to-end real pipeline (T1, 0134)', () => {
+  it('renders props.variant as a segmented radiogroup within Props, not the generic <select>, with the current value active', () => {
+    const { root } = renderCanvas(segmentedEnumWidgetConfig('tinted'))
+    selectNodeByPath(root, STAT_PATH)
+
+    const radiogroup = screen.getByRole('radiogroup', { name: 'variant' })
+    expect(within(radiogroup).getByRole('radio', { name: 'tinted', checked: true })).toBeInTheDocument()
+    expect(screen.queryByRole('combobox', { name: 'variant' })).not.toBeInTheDocument()
+  })
+
+  it('clicking "plain" on a stat with variant "accent" commits props.variant through the real pipeline, preserving label/value', async () => {
+    const { root } = renderCanvas(segmentedEnumWidgetConfig('accent'))
+    selectNodeByPath(root, STAT_PATH)
+
+    fireEvent.click(within(screen.getByRole('radiogroup', { name: 'variant' })).getByRole('radio', { name: 'plain' }))
+
+    expect(
+      within(screen.getByRole('radiogroup', { name: 'variant' })).getByRole('radio', { name: 'plain', checked: true }),
+    ).toBeInTheDocument()
+
+    const parsed = await getMonacoJson()
+    const stat = readTopLevelNodeFromMonacoJson(parsed, 0)
+    expect((stat.props as Record<string, unknown>).variant).toBe('plain')
+    expect((stat.props as Record<string, unknown>).label).toBe('Total')
+    expect((stat.props as Record<string, unknown>).value).toBe('10')
+  })
+
+  it('rejects a variant change forced by a mocked validateRuntimeConfig failure: alert appears, the chosen segment stays visible, and the Monaco buffer is untouched', async () => {
+    const { root } = renderCanvas(segmentedEnumWidgetConfig('accent'))
+    selectNodeByPath(root, STAT_PATH)
+
+    vi.mocked(validateRuntimeConfig).mockReturnValueOnce(forcedRejection)
+    fireEvent.click(within(screen.getByRole('radiogroup', { name: 'variant' })).getByRole('radio', { name: 'plain' }))
+
+    const banner = screen.getByRole('alert')
+    expect(banner).toHaveAttribute('data-testid', 'layout-canvas-properties-panel-props-error')
+    expect(banner.textContent).toContain('invalid-layout')
+    expect(banner.textContent).toContain('Cambio no permitido')
+    expect(
+      within(screen.getByRole('radiogroup', { name: 'variant' })).getByRole('radio', { name: 'plain', checked: true }),
+    ).toBeInTheDocument()
+
+    const parsed = await getMonacoJson()
+    const stat = readTopLevelNodeFromMonacoJson(parsed, 0)
+    expect((stat.props as Record<string, unknown>).variant).toBe('accent')
+  })
+
+  it('clears the alert once a follow-up commit succeeds, applying the new variant', async () => {
+    const { root } = renderCanvas(segmentedEnumWidgetConfig('accent'))
+    selectNodeByPath(root, STAT_PATH)
+
+    vi.mocked(validateRuntimeConfig).mockReturnValueOnce(forcedRejection)
+    fireEvent.click(within(screen.getByRole('radiogroup', { name: 'variant' })).getByRole('radio', { name: 'plain' }))
+    expect(screen.getByRole('alert')).toBeInTheDocument()
+
+    fireEvent.click(within(screen.getByRole('radiogroup', { name: 'variant' })).getByRole('radio', { name: 'tinted' }))
+
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    const parsed = await getMonacoJson()
+    const stat = readTopLevelNodeFromMonacoJson(parsed, 0)
+    expect((stat.props as Record<string, unknown>).variant).toBe('tinted')
+  })
+
+  it('regression: container.props.justify (6 options) still renders the plain <select>, unaffected by the 2-5 segmented rule', () => {
+    const { root } = renderCanvas(segmentedEnumWidgetConfig(undefined, 'center'))
+    selectNodeByPath(root, JUSTIFY_CONTAINER_PATH)
+
+    const select = screen.getByLabelText('justify', { exact: false }) as HTMLSelectElement
+    expect(select.tagName).toBe('SELECT')
+    expect(select.value).toBe('center')
+    expect(screen.queryByRole('radiogroup', { name: 'justify' })).not.toBeInTheDocument()
+  })
+})
+
+// T2 (0134): fixture with a top-level `stat` (the color-swatch widget's representative node, same
+// six-name catalog `segmentedEnumWidgetConfig` above uses for `variant`) plus a sibling `heading`
+// used by the "rest of panel stays editable"/edge-case tests to switch selection and to prove
+// `props.label` stays independently editable alongside the swatch widget.
+function colorSwatchWidgetConfig(color?: 'neutral' | 'primary' | 'success' | 'warning' | 'danger' | 'info') {
+  return {
+    api: {},
+    initialPage: 'home',
+    pages: [
+      {
+        id: 'home',
+        layout: [
+          { type: 'stat', props: { label: 'Total', value: '10', ...(color !== undefined ? { color } : {}) } },
+          { type: 'heading', props: { text: 'Título', level: 1 } },
+        ],
+      },
+    ],
+  }
+}
+
+const STAT_COLOR_PATH = 'children.0'
+const STAT_COLOR_HEADING_PATH = 'children.1'
+
+describe('LayoutCanvasPropertiesPanel color swatch widget — end-to-end real pipeline (T2, 0134)', () => {
+  it('renders props.color as a row of six swatches within Props, not the generic <select>, with the current value active (acceptance 3)', () => {
+    const { root } = renderCanvas(colorSwatchWidgetConfig('success'))
+    selectNodeByPath(root, STAT_COLOR_PATH)
+
+    const radiogroup = screen.getByRole('radiogroup', { name: 'color' })
+    expect(within(radiogroup).getAllByRole('radio')).toHaveLength(6)
+    expect(within(radiogroup).getByRole('radio', { name: 'success', checked: true })).toBeInTheDocument()
+    expect(screen.queryByRole('combobox', { name: 'color' })).not.toBeInTheDocument()
+  })
+
+  it('clicking a different swatch commits props.color through the real pipeline, preserving label/value, and updates the active swatch and the name text (acceptance 8)', async () => {
+    const { root } = renderCanvas(colorSwatchWidgetConfig('primary'))
+    selectNodeByPath(root, STAT_COLOR_PATH)
+
+    fireEvent.click(within(screen.getByRole('radiogroup', { name: 'color' })).getByRole('radio', { name: 'danger' }))
+
+    expect(
+      within(screen.getByRole('radiogroup', { name: 'color' })).getByRole('radio', { name: 'danger', checked: true }),
+    ).toBeInTheDocument()
+    expect(screen.getByText('danger')).toBeInTheDocument()
+
+    const parsed = await getMonacoJson()
+    const stat = readTopLevelNodeFromMonacoJson(parsed, 0)
+    expect((stat.props as Record<string, unknown>).color).toBe('danger')
+    expect((stat.props as Record<string, unknown>).label).toBe('Total')
+    expect((stat.props as Record<string, unknown>).value).toBe('10')
+  })
+
+  it('rejects a color change forced by a mocked validateRuntimeConfig failure: alert appears, the chosen swatch stays active, and the Monaco buffer is untouched (acceptance 9)', async () => {
+    const { root } = renderCanvas(colorSwatchWidgetConfig('primary'))
+    selectNodeByPath(root, STAT_COLOR_PATH)
+
+    vi.mocked(validateRuntimeConfig).mockReturnValueOnce(forcedRejection)
+    fireEvent.click(within(screen.getByRole('radiogroup', { name: 'color' })).getByRole('radio', { name: 'danger' }))
+
+    const banner = screen.getByRole('alert')
+    expect(banner).toHaveAttribute('data-testid', 'layout-canvas-properties-panel-props-error')
+    expect(banner.textContent).toContain('invalid-layout')
+    expect(banner.textContent).toContain('Cambio no permitido')
+    expect(
+      within(screen.getByRole('radiogroup', { name: 'color' })).getByRole('radio', { name: 'danger', checked: true }),
+    ).toBeInTheDocument()
+
+    const parsed = await getMonacoJson()
+    const stat = readTopLevelNodeFromMonacoJson(parsed, 0)
+    expect((stat.props as Record<string, unknown>).color).toBe('primary')
+  })
+
+  it('clears the alert once a follow-up commit succeeds, applying the new color (acceptance 9, follow-up)', async () => {
+    const { root } = renderCanvas(colorSwatchWidgetConfig('primary'))
+    selectNodeByPath(root, STAT_COLOR_PATH)
+
+    vi.mocked(validateRuntimeConfig).mockReturnValueOnce(forcedRejection)
+    fireEvent.click(within(screen.getByRole('radiogroup', { name: 'color' })).getByRole('radio', { name: 'danger' }))
+    expect(screen.getByRole('alert')).toBeInTheDocument()
+
+    fireEvent.click(within(screen.getByRole('radiogroup', { name: 'color' })).getByRole('radio', { name: 'warning' }))
+
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    const parsed = await getMonacoJson()
+    const stat = readTopLevelNodeFromMonacoJson(parsed, 0)
+    expect((stat.props as Record<string, unknown>).color).toBe('warning')
+  })
+
+  it('discards a pending rejection on the color swatch widget when the selected node changes, the same guard the rest of the panel already applies (edge case)', () => {
+    const { root } = renderCanvas(colorSwatchWidgetConfig('primary'))
+    selectNodeByPath(root, STAT_COLOR_PATH)
+
+    vi.mocked(validateRuntimeConfig).mockReturnValueOnce(forcedRejection)
+    fireEvent.click(within(screen.getByRole('radiogroup', { name: 'color' })).getByRole('radio', { name: 'danger' }))
+    expect(screen.getByRole('alert')).toBeInTheDocument()
+
+    selectNodeByPath(root, STAT_COLOR_HEADING_PATH)
+
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('leaves the rest of the panel (props.label) editable and synced to Monaco alongside the color swatch widget (acceptance 9)', async () => {
+    const { root } = renderCanvas(colorSwatchWidgetConfig('primary'))
+    selectNodeByPath(root, STAT_COLOR_PATH)
+
+    fireEvent.change(screen.getByLabelText('label', { exact: false }), { target: { value: 'Nuevo total' } })
+
+    const parsed = await getMonacoJson()
+    const stat = readTopLevelNodeFromMonacoJson(parsed, 0)
+    expect((stat.props as Record<string, unknown>).label).toBe('Nuevo total')
+  })
+
+  it('keeps mutual exclusion with the Monaco panel intact when the selected node renders the color swatch widget (acceptance 9)', async () => {
+    const { root } = renderCanvas(colorSwatchWidgetConfig('primary'))
+    fireEvent.click(screen.getByTestId('dev-editor-toolbar-monaco-toggle'))
+    await waitFor(() => expect(screen.getByTestId('monaco-editor-mock')).toBeInTheDocument())
+
+    selectNodeByPath(root, STAT_COLOR_PATH)
+
+    expect(screen.queryByTestId('monaco-editor-mock')).not.toBeInTheDocument()
+    expect(screen.getByRole('radiogroup', { name: 'color' })).toBeInTheDocument()
+  })
+})
+
 // T5 (0133): the form "Acción de envío" block moved from standalone (straddling the tab bar) to
 // the top of the `Props` tabpanel. `formNodeSchema` declares no `props` key of its own, so its
 // `Props` tab exists purely to host this block (`resolveNodePanelTabs`'s `submitAction` fallback);
@@ -1346,5 +1568,96 @@ describe('LayoutCanvasPropertiesPanel condition-group widget schema sentinel (T3
     // The transform runs once, on the cold cache path: a second call returns the exact same
     // object reference, not a freshly-transformed equal-but-distinct one.
     expect(getNodeTypeJsonSchema('button')).toBe(buttonSchema)
+  })
+})
+
+// T3 (0134), FR5/criterion 9: a generic boolean field (`accordion.props.defaultOpen`, resolved by
+// the plain `boolean` branch of `PropertyFieldDispatcher` — no dedicated widget covers it) now
+// renders as the `role="switch"` interruptor instead of a checkbox. There is no genuinely invalid
+// boolean value to trigger a real `validateRuntimeConfig` rejection (flipping a boolean is always
+// schema-valid), so — same reasoning as the heading-level/tabs-orientation describe above — the
+// mocked module's next `validateRuntimeConfig` call is forced to fail to exercise the rejection
+// path end-to-end.
+function accordionBooleanWidgetConfig() {
+  return {
+    api: {},
+    initialPage: 'home',
+    pages: [
+      {
+        id: 'home',
+        layout: [
+          { type: 'heading', props: { text: 'Título', level: 1 } },
+          { type: 'accordion', props: { label: 'Sección' } },
+        ],
+      },
+    ],
+  }
+}
+
+const ACCORDION_PATH = 'children.1'
+
+function readAccordionFromMonacoJson(parsed: Record<string, unknown>): Record<string, unknown> {
+  const pages = parsed.pages as Array<{ layout: Array<Record<string, unknown>> }>
+  return pages[0].layout[1]
+}
+
+describe('LayoutCanvasPropertiesPanel generic boolean switch — end-to-end real pipeline (T3, 0134)', () => {
+  it('renders a role="switch" with aria-checked reflecting the value and commits the inverted boolean through the real pipeline (criterion 5)', async () => {
+    const { root } = renderCanvas(accordionBooleanWidgetConfig())
+    selectNodeByPath(root, ACCORDION_PATH)
+
+    const toggle = screen.getByLabelText('defaultOpen')
+    expect(toggle).toHaveAttribute('role', 'switch')
+    expect(toggle).toHaveAttribute('aria-checked', 'false')
+
+    fireEvent.click(toggle)
+
+    expect(toggle).toHaveAttribute('aria-checked', 'true')
+    const parsed = await getMonacoJson()
+    const accordion = readAccordionFromMonacoJson(parsed)
+    expect((accordion.props as Record<string, unknown>).defaultOpen).toBe(true)
+  })
+
+  it('keeps the chosen value and shows a role="alert" banner when the commit is rejected by a mocked validateRuntimeConfig failure, leaving the Monaco buffer untouched (criterion 9)', async () => {
+    const { root } = renderCanvas(accordionBooleanWidgetConfig())
+    selectNodeByPath(root, ACCORDION_PATH)
+
+    vi.mocked(validateRuntimeConfig).mockReturnValueOnce(forcedRejection)
+    fireEvent.click(screen.getByLabelText('defaultOpen'))
+
+    const banner = screen.getByRole('alert')
+    expect(banner).toHaveAttribute('data-testid', 'layout-canvas-properties-panel-props-error')
+    expect(screen.getByLabelText('defaultOpen')).toHaveAttribute('aria-checked', 'true')
+
+    const parsed = await getMonacoJson()
+    const accordion = readAccordionFromMonacoJson(parsed)
+    expect((accordion.props as Record<string, unknown>).defaultOpen).toBeUndefined()
+  })
+
+  it('clears the rejection banner after a follow-up commit on the same field succeeds', () => {
+    const { root } = renderCanvas(accordionBooleanWidgetConfig())
+    selectNodeByPath(root, ACCORDION_PATH)
+
+    vi.mocked(validateRuntimeConfig).mockReturnValueOnce(forcedRejection)
+    fireEvent.click(screen.getByLabelText('defaultOpen'))
+    expect(screen.getByRole('alert')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByLabelText('defaultOpen'))
+
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    expect(screen.getByLabelText('defaultOpen')).toHaveAttribute('aria-checked', 'false')
+  })
+
+  it('discards a pending rejection when the selected node changes, same guard as the rest of the panel', () => {
+    const { root } = renderCanvas(accordionBooleanWidgetConfig())
+    selectNodeByPath(root, ACCORDION_PATH)
+
+    vi.mocked(validateRuntimeConfig).mockReturnValueOnce(forcedRejection)
+    fireEvent.click(screen.getByLabelText('defaultOpen'))
+    expect(screen.getByRole('alert')).toBeInTheDocument()
+
+    selectNodeByPath(root, 'children.0')
+
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 })

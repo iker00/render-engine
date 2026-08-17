@@ -187,7 +187,7 @@ describe('ConditionGroupPropertyField typed value editor (equals/notEquals/array
     renderField({ reference: 'a', operator: 'equals', value: true })
 
     expect(screen.getByRole('radio', { name: 'Booleano' })).toHaveAttribute('aria-checked', 'true')
-    expect(screen.getByRole('checkbox', { name: `${LABEL} — Valor` })).toBeChecked()
+    expect(screen.getByRole('switch', { name: `${LABEL} — Valor` })).toBeChecked()
   })
 
   it('shows Null active with no additional control for null', () => {
@@ -196,7 +196,7 @@ describe('ConditionGroupPropertyField typed value editor (equals/notEquals/array
     expect(screen.getByRole('radio', { name: 'Null' })).toHaveAttribute('aria-checked', 'true')
     expect(screen.queryByRole('textbox', { name: `${LABEL} — Valor` })).not.toBeInTheDocument()
     expect(screen.queryByRole('spinbutton', { name: `${LABEL} — Valor` })).not.toBeInTheDocument()
-    expect(screen.queryByRole('checkbox', { name: `${LABEL} — Valor` })).not.toBeInTheDocument()
+    expect(screen.queryByRole('switch', { name: `${LABEL} — Valor` })).not.toBeInTheDocument()
   })
 
   it('switches Texto -> Número emitting value: 0', () => {

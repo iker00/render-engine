@@ -1452,6 +1452,123 @@ describe('LayoutCanvasPropertiesPanel heading-level / tabs-orientation widgets r
   )
 })
 
+// T1 (0134), FR1/FR2: the generic dispatcher's own `enum` branch (not a dedicated `x-widget`)
+// renders a segmented radiogroup instead of a `<select>` for a bounded 2-5 option enum.
+// `stat.props.variant` (3 options: accent/tinted/plain) is the concrete field this task singles
+// out for coverage; `container.props.justify` (6 options) is the sibling regression proving the
+// upper boundary stays a `<select>`.
+describe('LayoutCanvasPropertiesPanel generic segmented enum widget (T1, 0134)', () => {
+  function statNode(variant?: 'accent' | 'tinted' | 'plain'): LayoutNode {
+    return { type: 'stat', props: { label: 'Total', value: '10', ...(variant !== undefined ? { variant } : {}) } } as LayoutNode
+  }
+
+  it('renders props.variant as a segmented radiogroup, in a label-left/control-right row, inside the Props tabpanel', () => {
+    render(<LayoutCanvasPropertiesPanel node={statNode('tinted')} path={somePath} onCommitNodeUpdate={() => {}} />)
+
+    const propsTabpanel = screen.getByRole('tabpanel')
+    const radiogroup = within(propsTabpanel).getByRole('radiogroup', { name: 'variant' })
+    expect(within(radiogroup).getByRole('radio', { name: 'tinted', checked: true })).toBeInTheDocument()
+    expect(screen.queryByRole('combobox', { name: 'variant' })).not.toBeInTheDocument()
+
+    // Same label-left/control-right row `EnumPropertyField` already used for this field.
+    const row = radiogroup.parentElement!.parentElement!
+    expect(within(row).getByText('variant')).toBeInTheDocument()
+  })
+
+  it('clicking a different segment invokes onCommitNodeUpdate with a patch preserving label/value', () => {
+    const node = statNode('accent')
+    const onCommitNodeUpdate = vi.fn()
+    render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={onCommitNodeUpdate} />)
+
+    fireEvent.click(within(screen.getByRole('radiogroup', { name: 'variant' })).getByRole('radio', { name: 'plain' }))
+
+    expect(onCommitNodeUpdate).toHaveBeenCalledTimes(1)
+    const [calledPath, updater] = onCommitNodeUpdate.mock.calls[0]
+    expect(calledPath).toBe(somePath)
+    const result = updater(node) as Extract<LayoutNode, { type: 'stat' }>
+    expect(result.props.variant).toBe('plain')
+    expect(result.props.label).toBe('Total')
+    expect(result.props.value).toBe('10')
+  })
+
+  it('regression: container.props.justify (6 options) still renders the plain <select>, unaffected by the 2-5 segmented rule', () => {
+    const node: LayoutNode = { type: 'container', props: { justify: 'center' } } as LayoutNode
+    render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={() => {}} />)
+
+    const select = screen.getByLabelText('justify', { exact: false }) as HTMLSelectElement
+    expect(select.tagName).toBe('SELECT')
+    expect(select.value).toBe('center')
+    expect(screen.queryByRole('radiogroup', { name: 'justify' })).not.toBeInTheDocument()
+  })
+})
+
+// T2 (0134), FR3/FR4: any `props.color` field declaring an `enum` renders as a fixed row of six
+// color swatches (`ColorSwatchPropertyField`), taking priority over both the generic `<select>`
+// (FR1's out-of-range fallback) and T1's segmented control — regardless of option count.
+// `stat.props.color` and `badge.props.color` share the same six-name catalog as
+// `stat.props.variant` (T1) but are singled out here to prove the name-convention exclusion.
+describe('LayoutCanvasPropertiesPanel color swatch widget (T2, 0134)', () => {
+  function statNode(color?: 'neutral' | 'primary' | 'success' | 'warning' | 'danger' | 'info'): LayoutNode {
+    return { type: 'stat', props: { label: 'Total', value: '10', ...(color !== undefined ? { color } : {}) } } as LayoutNode
+  }
+
+  function badgeNode(color?: 'neutral' | 'primary' | 'success' | 'warning' | 'danger' | 'info'): LayoutNode {
+    return { type: 'badge', props: { label: 'Nuevo', ...(color !== undefined ? { color } : {}) } } as LayoutNode
+  }
+
+  it.each([
+    ['stat', statNode] as const,
+    ['badge', badgeNode] as const,
+  ])(
+    'renders %s.props.color as a row of six swatches, not a <select> or the generic segmented control, with the current value active (acceptance 3)',
+    (_type, buildNode) => {
+      render(<LayoutCanvasPropertiesPanel node={buildNode('success')} path={somePath} onCommitNodeUpdate={() => {}} />)
+
+      const radiogroup = screen.getByRole('radiogroup', { name: 'color' })
+      expect(within(radiogroup).getAllByRole('radio')).toHaveLength(6)
+      expect(within(radiogroup).getByRole('radio', { name: 'success' })).toHaveAttribute('aria-checked', 'true')
+      expect(screen.queryByRole('combobox', { name: 'color' })).not.toBeInTheDocument()
+    },
+  )
+
+  it('clicking a different swatch invokes onCommitNodeUpdate with a patch preserving label/value', () => {
+    const node = statNode('primary')
+    const onCommitNodeUpdate = vi.fn()
+    render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={onCommitNodeUpdate} />)
+
+    fireEvent.click(within(screen.getByRole('radiogroup', { name: 'color' })).getByRole('radio', { name: 'danger' }))
+
+    expect(onCommitNodeUpdate).toHaveBeenCalledTimes(1)
+    const [calledPath, updater] = onCommitNodeUpdate.mock.calls[0]
+    expect(calledPath).toBe(somePath)
+    const result = updater(node) as Extract<LayoutNode, { type: 'stat' }>
+    expect(result.props.color).toBe('danger')
+    expect(result.props.label).toBe('Total')
+    expect(result.props.value).toBe('10')
+  })
+
+  it('regression: alert.props.type (same six-name catalog, field name "type") still renders a plain <select>', () => {
+    const node: LayoutNode = { type: 'alert', props: { message: 'Aviso', type: 'success' } } as LayoutNode
+    render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={() => {}} />)
+
+    const select = screen.getByLabelText('type', { exact: false }) as HTMLSelectElement
+    expect(select.tagName).toBe('SELECT')
+    expect(select.value).toBe('success')
+    expect(screen.queryByRole('radiogroup', { name: 'type' })).not.toBeInTheDocument()
+  })
+
+  it('a color value outside the catalog does not block the rest of the Props tab: swatches render with none active and label stays editable', () => {
+    const node = { type: 'stat', props: { label: 'Total', value: '10', color: 'morado' } } as unknown as LayoutNode
+    render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={() => {}} />)
+
+    const radiogroup = screen.getByRole('radiogroup', { name: 'color' })
+    within(radiogroup)
+      .getAllByRole('radio')
+      .forEach((radio) => expect(radio).toHaveAttribute('aria-checked', 'false'))
+    expect(screen.getByLabelText('label', { exact: false })).toHaveValue('Total')
+  })
+})
+
 describe('LayoutCanvasPropertiesPanel container columns mode widget (T5, 0128)', () => {
   function containerNode(overrides: Partial<NonNullable<Extract<LayoutNode, { type: 'container' }>['props']>> = {}): LayoutNode {
     return { type: 'container', props: { ...overrides } } as LayoutNode
