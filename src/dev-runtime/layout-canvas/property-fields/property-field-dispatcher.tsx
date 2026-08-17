@@ -1,6 +1,8 @@
 import type { ComponentType } from 'react'
+import { useId } from 'react'
 import { BooleanPropertyField } from './boolean-property-field'
 import { ChoiceItemsPropertyField } from './choice-items-property-field'
+import { ColorSwatchPropertyField } from './color-swatch-property-field'
 import { ConditionGroupPropertyField } from './condition-group-property-field'
 import { DiscriminatedUnionPropertyField } from './discriminated-union-property-field'
 import { EnumPropertyField } from './enum-property-field'
@@ -9,7 +11,10 @@ import { IconPickerPropertyField } from './icon-picker-property-field'
 import { KeyValuePropertyField } from './key-value-property-field'
 import { LayoutSpanPropertyField } from './layout-span-property-field'
 import { NumberPropertyField } from './number-property-field'
+import { PropertyFieldRow } from './property-field-row'
 import { RawJsonPropertyField } from './raw-json-property-field'
+import type { SegmentedToggleOption } from './segmented-toggle-property-field'
+import { SegmentedTogglePropertyField } from './segmented-toggle-property-field'
 import { TabsOrientationPropertyField } from './tabs-orientation-property-field'
 import { TextPropertyField } from './text-property-field'
 import {
@@ -19,6 +24,13 @@ import {
   resolvePrimarySchemaType,
   resolveUnionBranch,
 } from './property-field-schema-resolution'
+
+// Bounded enum cardinality (FR1/FR2, T1 0134) that switches the generic `enum` branch from
+// `EnumPropertyField` (`<select>`) to the shared segmented-toggle control. Below this range (a
+// single option) a `<select>` is still the simplest control; above it (6+) a pill row would wrap
+// or overflow, so `<select>` stays the fallback on both ends.
+const SEGMENTED_ENUM_MIN_OPTIONS = 2
+const SEGMENTED_ENUM_MAX_OPTIONS = 5
 
 interface WidgetComponentProps {
   label: string
@@ -43,6 +55,7 @@ const WIDGET_REGISTRY: Record<string, ComponentType<WidgetComponentProps>> = {
   'tabs-orientation': TabsOrientationPropertyField,
   icon: IconPickerPropertyField,
   'condition-group': ConditionGroupPropertyField,
+  'color-swatch': ColorSwatchPropertyField,
 }
 
 export interface PropertyFieldDispatcherProps {
@@ -128,6 +141,12 @@ export function PropertyFieldDispatcher({
   const enumOptions = Array.isArray(schema.enum) ? (schema.enum as (string | number)[]) : undefined
   if (enumOptions && enumOptions.length > 0) {
     const enumValue = typeof value === 'string' || typeof value === 'number' ? value : enumOptions[0]
+    // FR1/FR2 (T1, 0134): a bounded enum (2-5 options, not otherwise resolved by `x-widget` above)
+    // renders as a segmented control instead of a `<select>` — same label-left/control-right row,
+    // just a different control on the right. 1 option or 6+ keeps the existing `<select>`.
+    if (enumOptions.length >= SEGMENTED_ENUM_MIN_OPTIONS && enumOptions.length <= SEGMENTED_ENUM_MAX_OPTIONS) {
+      return <SegmentedEnumPropertyField label={label} value={enumValue} options={enumOptions} onChange={onChange} required={required} />
+    }
     return (
       <EnumPropertyField
         label={label}
@@ -218,6 +237,35 @@ export function PropertyFieldDispatcher({
   return <RawJsonPropertyField label={label} value={value} onChange={onChange} />
 }
 
+interface SegmentedEnumPropertyFieldProps {
+  label: string
+  value: string | number
+  options: readonly (string | number)[]
+  onChange: (value: string | number) => void
+  required?: boolean
+}
+
+// Generic segmented enum (FR1/FR2, T1 0134): same label-left/control-right row `EnumPropertyField`
+// already uses, but the control is the shared `SegmentedTogglePropertyField` radiogroup instead of
+// a `<select>`. Segment labels are always `String(option)` — no translation layer, unlike the
+// discriminated-union selector's `optionLabels`.
+//
+// `SegmentedTogglePropertyField` exposes no single focusable element with an `id` of its own to
+// give `PropertyFieldRow`'s required `htmlFor` — its accessibility is already covered by its own
+// `radiogroup` `aria-label`. The `useId()` value below only satisfies that prop signature; the
+// row's visible `<label>` has no functional focus association here. Accepted limitation, not a bug
+// to fix in this task.
+function SegmentedEnumPropertyField({ label, value, options, onChange, required = false }: SegmentedEnumPropertyFieldProps) {
+  const rowId = useId()
+  const segments: SegmentedToggleOption[] = options.map((option) => ({ value: option, label: String(option) }))
+
+  return (
+    <PropertyFieldRow htmlFor={rowId} label={label} required={required}>
+      <SegmentedTogglePropertyField label={label} segments={segments} activeValue={value} onSelect={onChange} />
+    </PropertyFieldRow>
+  )
+}
+
 interface ArrayPropertyFieldProps {
   label: string
   value: unknown[]
@@ -248,8 +296,8 @@ function ArrayPropertyField({ label, value, itemsSchema, minItems, onChange }: A
   }
 
   return (
-    <fieldset className="flex flex-col gap-2 rounded-md border border-gray-200 bg-white p-2">
-      <legend className="px-1 text-[11px] font-medium uppercase tracking-wide text-gray-500">{label}</legend>
+    <fieldset className="flex flex-col gap-2">
+      <legend className="pt-4 pb-2 text-[11px] font-medium uppercase tracking-wide text-gray-500">{label}</legend>
       {value.map((itemValue, index) => {
         const resolvedItemSchema = resolveUnionBranch(itemsSchema, itemValue)
         // An existing array slot always has a value — presence is controlled by Añadir/Quitar,
@@ -315,8 +363,8 @@ function ObjectPropertyField({ label, value, propertiesSchema, requiredFields, o
   }
 
   return (
-    <fieldset className="flex flex-col gap-2 rounded-md border border-gray-200 bg-white p-2">
-      <legend className={hideRootLegend ? 'sr-only' : 'px-1 text-[11px] font-medium uppercase tracking-wide text-gray-500'}>
+    <fieldset className="flex flex-col gap-2 mb-4">
+      <legend className={hideRootLegend ? 'sr-only' : 'pt-4 pb-2 text-[11px] font-medium uppercase tracking-wide text-gray-500'}>
         {label}
       </legend>
       {propertyEntries.map(([key, propertySchema]) => (

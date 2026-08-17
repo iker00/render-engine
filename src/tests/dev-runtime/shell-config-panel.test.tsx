@@ -129,15 +129,15 @@ function openSidebarTab() {
 describe('ShellConfigPanel / header toggle', () => {
   it('starts with the header toggle unchecked and no header rendered when shell is absent', () => {
     renderHarness()
-    expect(screen.getByRole('checkbox', { name: 'Header activo' })).not.toBeChecked()
+    expect(screen.getByRole('switch', { name: 'Header activo' })).not.toBeChecked()
     expect(screen.queryByTestId('app-shell-header')).not.toBeInTheDocument()
   })
 
   it('activating the toggle sets shell.header = {} and mounts the header', () => {
     renderHarness()
-    fireEvent.click(screen.getByRole('checkbox', { name: 'Header activo' }))
+    fireEvent.click(screen.getByRole('switch', { name: 'Header activo' }))
 
-    expect(screen.getByRole('checkbox', { name: 'Header activo' })).toBeChecked()
+    expect(screen.getByRole('switch', { name: 'Header activo' })).toBeChecked()
     expect(rawConfig().shell).toEqual({ header: {} })
     // An empty header renders nothing visible, but the element itself only mounts once
     // `header` is defined and non-empty per AppShellHeader's own `isShellHeaderEmpty` guard —
@@ -149,9 +149,9 @@ describe('ShellConfigPanel / header toggle', () => {
     renderHarness(buildBaseConfig({ shell: { header: { title: 'Hello' } } }))
     expect(screen.getByTestId('app-shell-header')).toBeInTheDocument()
 
-    fireEvent.click(screen.getByRole('checkbox', { name: 'Header activo' }))
+    fireEvent.click(screen.getByRole('switch', { name: 'Header activo' }))
 
-    expect(screen.getByRole('checkbox', { name: 'Header activo' })).not.toBeChecked()
+    expect(screen.getByRole('switch', { name: 'Header activo' })).not.toBeChecked()
     expect('shell' in rawConfig()).toBe(false)
     expect(screen.queryByTestId('app-shell-header')).not.toBeInTheDocument()
   })
@@ -159,7 +159,7 @@ describe('ShellConfigPanel / header toggle', () => {
   it('does not touch api/pages/initialPage/tokens when toggling the header', () => {
     const base = buildBaseConfig()
     renderHarness(base)
-    fireEvent.click(screen.getByRole('checkbox', { name: 'Header activo' }))
+    fireEvent.click(screen.getByRole('switch', { name: 'Header activo' }))
 
     const parsed = rawConfig()
     expect(parsed.api).toEqual(base.api)
@@ -173,22 +173,22 @@ describe('ShellConfigPanel / sidebar toggle', () => {
   it('starts with the sidebar toggle unchecked when shell is absent', () => {
     renderHarness()
     openSidebarTab()
-    expect(screen.getByRole('checkbox', { name: 'Sidebar activo' })).not.toBeChecked()
+    expect(screen.getByRole('switch', { name: 'Sidebar activo' })).not.toBeChecked()
   })
 
   it('activating the sidebar toggle from no shell produces shell: { sidebar: { items: [] } }', () => {
     renderHarness()
     openSidebarTab()
-    fireEvent.click(screen.getByRole('checkbox', { name: 'Sidebar activo' }))
+    fireEvent.click(screen.getByRole('switch', { name: 'Sidebar activo' }))
 
-    expect(screen.getByRole('checkbox', { name: 'Sidebar activo' })).toBeChecked()
+    expect(screen.getByRole('switch', { name: 'Sidebar activo' })).toBeChecked()
     expect(rawConfig().shell).toEqual({ sidebar: { items: [] } })
   })
 
   it('activating the sidebar toggle with header already active preserves the existing header', () => {
     renderHarness(buildBaseConfig({ shell: { header: { title: 'Hello' } } }))
     openSidebarTab()
-    fireEvent.click(screen.getByRole('checkbox', { name: 'Sidebar activo' }))
+    fireEvent.click(screen.getByRole('switch', { name: 'Sidebar activo' }))
 
     expect(rawConfig().shell).toEqual({ header: { title: 'Hello' }, sidebar: { items: [] } })
   })
@@ -196,16 +196,16 @@ describe('ShellConfigPanel / sidebar toggle', () => {
   it('deactivating the sidebar toggle with only sidebar active removes the shell key entirely', () => {
     renderHarness(buildBaseConfig({ shell: { sidebar: { items: [] } } }))
     openSidebarTab()
-    fireEvent.click(screen.getByRole('checkbox', { name: 'Sidebar activo' }))
+    fireEvent.click(screen.getByRole('switch', { name: 'Sidebar activo' }))
 
-    expect(screen.getByRole('checkbox', { name: 'Sidebar activo' })).not.toBeChecked()
+    expect(screen.getByRole('switch', { name: 'Sidebar activo' })).not.toBeChecked()
     expect('shell' in rawConfig()).toBe(false)
   })
 
   it('deactivating the sidebar toggle with header also active preserves shell.header and only drops sidebar', () => {
     renderHarness(buildBaseConfig({ shell: { header: { title: 'Hello' }, sidebar: { items: [] } } }))
     openSidebarTab()
-    fireEvent.click(screen.getByRole('checkbox', { name: 'Sidebar activo' }))
+    fireEvent.click(screen.getByRole('switch', { name: 'Sidebar activo' }))
 
     expect(rawConfig().shell).toEqual({ header: { title: 'Hello' } })
   })
@@ -220,15 +220,15 @@ describe('ShellConfigPanel / sidebar toggle', () => {
       }),
     )
 
-    fireEvent.click(screen.getByRole('checkbox', { name: 'Header activo' }))
+    fireEvent.click(screen.getByRole('switch', { name: 'Header activo' }))
 
-    expect(screen.getByRole('checkbox', { name: 'Header activo' })).not.toBeChecked()
+    expect(screen.getByRole('switch', { name: 'Header activo' })).not.toBeChecked()
     expect(rawConfig().shell).toEqual({ sidebar: { items: [{ label: 'Home', href: '/home' }] } })
   })
 
   it('deactivating the header toggle with sidebar not active reproduces the pre-existing behavior (shell: undefined)', () => {
     renderHarness(buildBaseConfig({ shell: { header: { title: 'Hello' } } }))
-    fireEvent.click(screen.getByRole('checkbox', { name: 'Header activo' }))
+    fireEvent.click(screen.getByRole('switch', { name: 'Header activo' }))
 
     expect('shell' in rawConfig()).toBe(false)
   })
@@ -238,7 +238,7 @@ describe('ShellConfigPanel / sidebar toggle', () => {
 
     fireEvent.change(screen.getByRole('textbox', { name: 'Title' }), { target: { value: 'My App' } })
     openSidebarTab()
-    fireEvent.click(screen.getByRole('checkbox', { name: 'Sidebar activo' }))
+    fireEvent.click(screen.getByRole('switch', { name: 'Sidebar activo' }))
 
     expect(rawConfig().shell).toEqual({ header: { title: 'My App' }, sidebar: { items: [] } })
     // The Header sub-view is hidden now (Sidebar is active) but never unmounted — the Title
@@ -790,7 +790,7 @@ describe('ShellConfigPanel / commit scope', () => {
     } as Partial<RuntimeConfig>)
     renderHarness(base)
 
-    fireEvent.click(screen.getByRole('checkbox', { name: 'Header activo' }))
+    fireEvent.click(screen.getByRole('switch', { name: 'Header activo' }))
     fireEvent.change(screen.getByRole('textbox', { name: 'Title' }), { target: { value: 'Hello' } })
 
     const parsed = rawConfig()
@@ -815,7 +815,7 @@ describe('ShellConfigPanel / Header-Sidebar sub-navigation (0125-T8, closes acce
     expect(sidebarPanel).toHaveClass('hidden')
     // Same assertion as the "header toggle" describe above (starts checked when `header` is
     // configured), now reached without switching tabs since Header is the default sub-view.
-    expect(screen.getByRole('checkbox', { name: 'Header activo' })).toBeChecked()
+    expect(screen.getByRole('switch', { name: 'Header activo' })).toBeChecked()
   })
 
   it('clicking the Sidebar tab activates it and hides Header, without unmounting either sub-view', () => {
@@ -841,7 +841,7 @@ describe('ShellConfigPanel / Header-Sidebar sub-navigation (0125-T8, closes acce
     expect(screen.getByTestId('shell-config-panel-tabpanel-sidebar')).not.toHaveClass('hidden')
     // Same assertion as the "sidebar toggle" describe above, now reached through the tab instead
     // of being visible by default.
-    expect(screen.getByRole('checkbox', { name: 'Sidebar activo' })).toBeChecked()
+    expect(screen.getByRole('switch', { name: 'Sidebar activo' })).toBeChecked()
 
     fireEvent.click(screen.getByRole('tab', { name: 'Header' }))
 
@@ -882,10 +882,10 @@ describe('ShellConfigPanel / Header-Sidebar sub-navigation (0125-T8, closes acce
     renderHarness(buildBaseConfig({ shell: { sidebar: { items: [] } } }))
     openSidebarTab()
 
-    expect(screen.getByRole('checkbox', { name: 'Modo rail por defecto' })).not.toBeChecked()
-    fireEvent.click(screen.getByRole('checkbox', { name: 'Modo rail por defecto' }))
+    expect(screen.getByRole('switch', { name: 'Modo rail por defecto' })).not.toBeChecked()
+    fireEvent.click(screen.getByRole('switch', { name: 'Modo rail por defecto' }))
 
-    expect(screen.getByRole('checkbox', { name: 'Modo rail por defecto' })).toBeChecked()
+    expect(screen.getByRole('switch', { name: 'Modo rail por defecto' })).toBeChecked()
     expect(rawConfig().shell).toEqual({ sidebar: { items: [], defaultCollapsed: true } })
   })
 })

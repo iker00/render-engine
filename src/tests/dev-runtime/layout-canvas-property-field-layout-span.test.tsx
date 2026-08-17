@@ -271,6 +271,71 @@ describe('LayoutSpanPropertyField commit rejection feedback', () => {
   })
 })
 
+describe('LayoutSpanPropertyField occupancy preview (T5, focus-driven)', () => {
+  function getPreview() {
+    return screen.getByTestId('layout-span-occupancy-preview')
+  }
+
+  it('shows the preview for base by default on mount, for a node with three explicit keys', () => {
+    render(<ControlledLayoutSpanWidget parentColumns={12} initialSpanValue={{ base: 2, md: 4, xl: 8 }} />)
+
+    expect(within(getPreview()).getByText('Vista previa en base: ocupa 2 de 12.')).toBeInTheDocument()
+  })
+
+  it('giving focus to the md row input switches the preview to md', () => {
+    render(<ControlledLayoutSpanWidget parentColumns={12} initialSpanValue={{ base: 2, md: 4, xl: 8 }} />)
+
+    fireEvent.focus(within(getRow('md')).getByLabelText('md'))
+
+    expect(within(getPreview()).getByText('Vista previa en md: ocupa 4 de 12.')).toBeInTheDocument()
+  })
+
+  it('losing focus of the md row without another row capturing it returns the preview to base', () => {
+    render(<ControlledLayoutSpanWidget parentColumns={12} initialSpanValue={{ base: 2, md: 4, xl: 8 }} />)
+
+    const mdInput = within(getRow('md')).getByLabelText('md')
+    fireEvent.focus(mdInput)
+    fireEvent.blur(mdInput)
+
+    expect(within(getPreview()).getByText('Vista previa en base: ocupa 2 de 12.')).toBeInTheDocument()
+  })
+
+  it('moving focus directly from the md row to the lg row leaves the preview on lg', () => {
+    render(<ControlledLayoutSpanWidget parentColumns={12} initialSpanValue={{ base: 2, md: 4, xl: 8 }} />)
+
+    const mdInput = within(getRow('md')).getByLabelText('md')
+    const lgInput = within(getRow('lg')).getByLabelText('lg')
+    fireEvent.focus(mdInput)
+    // Native DOM focus movement blurs the outgoing element before focusing the incoming one —
+    // reproduced here explicitly since fireEvent.focus/blur dispatch discrete events rather than
+    // calling the real .focus() imperative API (see the widget's Restricciones note).
+    fireEvent.blur(mdInput)
+    fireEvent.focus(lgInput)
+
+    expect(within(getPreview()).getByText('Vista previa en lg: ocupa 4 de 12.')).toBeInTheDocument()
+  })
+
+  it('shows the preview for base with the uniform inherited value when layout.span is a plain integer', () => {
+    render(<ControlledLayoutSpanWidget parentColumns={12} initialSpanValue={4} />)
+
+    expect(within(getPreview()).getByText('Vista previa en base: ocupa 4 de 12.')).toBeInTheDocument()
+  })
+
+  it('changing which row is focused never triggers an extra commit — the preview is purely visual state', () => {
+    const onCommitSpy = vi.fn()
+    render(<ControlledLayoutSpanWidget parentColumns={12} initialSpanValue={{ base: 2, md: 4, xl: 8 }} onCommitSpy={onCommitSpy} />)
+
+    const mdInput = within(getRow('md')).getByLabelText('md')
+    const lgInput = within(getRow('lg')).getByLabelText('lg')
+    fireEvent.focus(mdInput)
+    fireEvent.blur(mdInput)
+    fireEvent.focus(lgInput)
+    fireEvent.blur(lgInput)
+
+    expect(onCommitSpy).not.toHaveBeenCalled()
+  })
+})
+
 describe('LayoutSpanPropertyField context requirement', () => {
   it('throws when mounted outside LayoutSpanWidgetContext.Provider', () => {
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})

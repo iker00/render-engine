@@ -68,20 +68,44 @@ describe('PropertyFieldDispatcher primitives', () => {
     expect(typeof onChangeSpy.mock.calls[0][0]).toBe('number')
   })
 
-  it('renders a checkbox for a boolean schema and invokes onChange with the inverted boolean', () => {
+  it('renders a switch for a boolean schema and invokes onChange with the inverted boolean', () => {
     const onChangeSpy = vi.fn()
     render(
       <ControlledDispatcher schema={{ type: 'boolean' }} initialValue={false} label="Activo" onChangeSpy={onChangeSpy} />,
     )
 
-    const checkbox = screen.getByLabelText('Activo')
-    expect(checkbox).toHaveAttribute('type', 'checkbox')
+    const toggle = screen.getByLabelText('Activo')
+    expect(toggle).toHaveAttribute('role', 'switch')
+    expect(toggle).toHaveAttribute('aria-checked', 'false')
 
-    fireEvent.click(checkbox)
+    fireEvent.click(toggle)
     expect(onChangeSpy).toHaveBeenCalledWith(true)
   })
 
-  it('renders a select with the enum options for a string enum schema and invokes onChange with the selected value', () => {
+  // T1 (0134): a 6+ option enum stays outside the segmented range (2-5), so it's the case that
+  // keeps demonstrating the plain `<select>` fallback.
+  it('renders a select with the enum options for a string enum schema with 6+ options and invokes onChange with the selected value', () => {
+    const onChangeSpy = vi.fn()
+    render(
+      <ControlledDispatcher
+        schema={{ type: 'string', enum: ['a', 'b', 'c', 'd', 'e', 'f'] }}
+        initialValue="a"
+        label="Variante"
+        onChangeSpy={onChangeSpy}
+      />,
+    )
+
+    const select = screen.getByLabelText('Variante') as HTMLSelectElement
+    const optionValues = Array.from(select.options).map((option) => option.value)
+    expect(optionValues).toEqual(['a', 'b', 'c', 'd', 'e', 'f'])
+
+    fireEvent.change(select, { target: { value: 'b' } })
+    expect(onChangeSpy).toHaveBeenCalledWith('b')
+  })
+
+  // T1 (0134), FR1/FR2: a bounded enum (2-5 options) renders the shared segmented-toggle
+  // radiogroup instead of a `<select>`.
+  it('renders a segmented radiogroup (not a select) for a string enum schema with 3 options, and invokes onChange with the selected value', () => {
     const onChangeSpy = vi.fn()
     render(
       <ControlledDispatcher
@@ -92,12 +116,61 @@ describe('PropertyFieldDispatcher primitives', () => {
       />,
     )
 
-    const select = screen.getByLabelText('Variante') as HTMLSelectElement
-    const optionValues = Array.from(select.options).map((option) => option.value)
-    expect(optionValues).toEqual(['a', 'b', 'c'])
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument()
+    const radiogroup = screen.getByRole('radiogroup', { name: 'Variante' })
+    const radios = within(radiogroup).getAllByRole('radio')
+    expect(radios.map((radio) => radio.textContent)).toEqual(['a', 'b', 'c'])
+    expect(within(radiogroup).getByRole('radio', { name: 'a', checked: true })).toBeInTheDocument()
 
-    fireEvent.change(select, { target: { value: 'b' } })
-    expect(onChangeSpy).toHaveBeenCalledWith('b')
+    fireEvent.click(within(radiogroup).getByRole('radio', { name: 'c' }))
+    expect(onChangeSpy).toHaveBeenCalledWith('c')
+  })
+
+  it('renders a segmented radiogroup for a string enum schema with exactly 2 options', () => {
+    const onChangeSpy = vi.fn()
+    render(
+      <ControlledDispatcher
+        schema={{ type: 'string', enum: ['on', 'off'] }}
+        initialValue="on"
+        label="Estado"
+        onChangeSpy={onChangeSpy}
+      />,
+    )
+
+    const radiogroup = screen.getByRole('radiogroup', { name: 'Estado' })
+    expect(within(radiogroup).getAllByRole('radio')).toHaveLength(2)
+    expect(within(radiogroup).getByRole('radio', { name: 'on', checked: true })).toBeInTheDocument()
+  })
+
+  it('renders a segmented radiogroup for a string enum schema with exactly 5 options', () => {
+    const onChangeSpy = vi.fn()
+    render(
+      <ControlledDispatcher
+        schema={{ type: 'string', enum: ['a', 'b', 'c', 'd', 'e'] }}
+        initialValue="a"
+        label="Variante"
+        onChangeSpy={onChangeSpy}
+      />,
+    )
+
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument()
+    const radiogroup = screen.getByRole('radiogroup', { name: 'Variante' })
+    expect(within(radiogroup).getAllByRole('radio')).toHaveLength(5)
+  })
+
+  it('renders a select (not a segmented radiogroup) for a string enum schema with exactly 1 option', () => {
+    const onChangeSpy = vi.fn()
+    render(
+      <ControlledDispatcher
+        schema={{ type: 'string', enum: ['only'] }}
+        initialValue="only"
+        label="Único"
+        onChangeSpy={onChangeSpy}
+      />,
+    )
+
+    expect(screen.getByLabelText('Único')).toHaveProperty('tagName', 'SELECT')
+    expect(screen.queryByRole('radiogroup')).not.toBeInTheDocument()
   })
 })
 
@@ -541,10 +614,11 @@ describe('PropertyFieldDispatcher x-widget hook (T4, 0108)', () => {
       <ControlledDispatcher schema={{ type: 'boolean' }} initialValue={false} label="Activo" onChangeSpy={onChangeSpy} />,
     )
 
-    const checkbox = screen.getByLabelText('Activo')
-    expect(checkbox).toHaveAttribute('type', 'checkbox')
+    const toggle = screen.getByLabelText('Activo')
+    expect(toggle).toHaveAttribute('role', 'switch')
+    expect(toggle).toHaveAttribute('aria-checked', 'false')
 
-    fireEvent.click(checkbox)
+    fireEvent.click(toggle)
     expect(onChangeSpy).toHaveBeenCalledWith(true)
   })
 
@@ -659,6 +733,61 @@ describe('PropertyFieldDispatcher x-widget hook: condition-group (T3, 0132)', ()
   })
 })
 
+describe('PropertyFieldDispatcher x-widget hook: color-swatch (T2, 0134)', () => {
+  it('delegates to ColorSwatchPropertyField for a schema declaring x-widget: "color-swatch", instead of any generic enum/select branch', () => {
+    const onChangeSpy = vi.fn()
+    render(
+      <ControlledDispatcher
+        schema={{ 'x-widget': 'color-swatch' }}
+        initialValue="primary"
+        label="color"
+        onChangeSpy={onChangeSpy}
+      />,
+    )
+
+    const radiogroup = screen.getByRole('radiogroup', { name: 'color' })
+    expect(within(radiogroup).getAllByRole('radio')).toHaveLength(6)
+    expect(within(radiogroup).getByRole('radio', { name: 'primary' })).toHaveAttribute('aria-checked', 'true')
+    expect(screen.queryByRole('combobox', { name: 'color' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('textbox', { name: 'color' })).not.toBeInTheDocument()
+
+    fireEvent.click(within(radiogroup).getByRole('radio', { name: 'danger' }))
+    expect(onChangeSpy).toHaveBeenCalledWith('danger')
+  })
+
+  // The `color-swatch` sentinel itself carries no `enum` — the dispatcher's `x-widget` check runs
+  // before it would ever inspect one. This proves the field-name convention (encoded by
+  // `resolveColorSwatchPropsSchema` in the properties panel, which produces exactly this sentinel
+  // shape for any `color` field declaring an `enum`) wins over cardinality even for a synthetic
+  // 3-option field that would otherwise fall in T1's 2-5 segmented range: a sibling `size` property
+  // with 3 raw enum options renders as the generic segmented control, while `color` — regardless of
+  // how many options its original `enum` had before being swapped for the sentinel — always renders
+  // as the fixed six-swatch row.
+  it('within an object schema, a "color" property carrying the sentinel renders as six swatches while a sibling 3-option enum property renders as the generic segmented control', () => {
+    const onChangeSpy = vi.fn()
+    render(
+      <ControlledDispatcher
+        schema={{
+          type: 'object',
+          properties: {
+            color: { 'x-widget': 'color-swatch' },
+            size: { type: 'string', enum: ['sm', 'md', 'lg'] },
+          },
+        }}
+        initialValue={{ color: 'primary', size: 'md' }}
+        label="props"
+        onChangeSpy={onChangeSpy}
+      />,
+    )
+
+    const colorGroup = screen.getByRole('radiogroup', { name: 'color' })
+    expect(within(colorGroup).getAllByRole('radio')).toHaveLength(6)
+
+    const sizeGroup = screen.getByRole('radiogroup', { name: 'size' })
+    expect(within(sizeGroup).getAllByRole('radio')).toHaveLength(3)
+  })
+})
+
 describe('PropertyFieldDispatcher escape hatch', () => {
   it('falls back to a disabled raw JSON textarea without throwing when the schema has no recognizable type', () => {
     const onChangeSpy = vi.fn()
@@ -731,11 +860,33 @@ describe('PropertyFieldDispatcher row layout (T7)', () => {
     expect(controlWrapper.className).toContain('min-w-0')
   })
 
-  it('renders the enum select control in a label-left/control-right row', () => {
+  // T1 (0134): a 2-option enum now renders the segmented radiogroup instead of a `<select>`
+  // inside this same row — the row structure itself (label-left/control-right) is unaffected.
+  it('renders the segmented enum control in a label-left/control-right row', () => {
     const onChangeSpy = vi.fn()
     render(
       <ControlledDispatcher
         schema={{ type: 'string', enum: ['a', 'b'] }}
+        initialValue="a"
+        label="Variante"
+        onChangeSpy={onChangeSpy}
+      />,
+    )
+
+    const { controlWrapper, label } = getRowParts(screen.getByRole('radiogroup', { name: 'Variante' }))
+    expect(label.className).toContain('w-1/3')
+    expect(label.className).toContain('min-w-24')
+    expect(controlWrapper.className).toContain('flex-1')
+    expect(controlWrapper.className).toContain('min-w-0')
+  })
+
+  // Sibling case for the fallback range (6+ options): confirms the row wrapping the plain
+  // `<select>` is unchanged by this task.
+  it('renders the enum select control in a label-left/control-right row for a 6+ option enum', () => {
+    const onChangeSpy = vi.fn()
+    render(
+      <ControlledDispatcher
+        schema={{ type: 'string', enum: ['a', 'b', 'c', 'd', 'e', 'f'] }}
         initialValue="a"
         label="Variante"
         onChangeSpy={onChangeSpy}
@@ -749,17 +900,18 @@ describe('PropertyFieldDispatcher row layout (T7)', () => {
     expect(controlWrapper.className).toContain('min-w-0')
   })
 
-  it('renders the boolean checkbox to the right of a label-left row without inverting the htmlFor binding', () => {
+  it('renders the boolean switch to the right of a label-left row without inverting the htmlFor binding', () => {
     const onChangeSpy = vi.fn()
     render(<ControlledDispatcher schema={{ type: 'boolean' }} initialValue={false} label="Activo" onChangeSpy={onChangeSpy} />)
 
-    const checkbox = screen.getByLabelText('Activo')
-    const { controlWrapper, label } = getRowParts(checkbox)
-    expect(label.getAttribute('for')).toBe(checkbox.id)
+    const toggle = screen.getByLabelText('Activo')
+    expect(toggle).toHaveAttribute('role', 'switch')
+    const { controlWrapper, label } = getRowParts(toggle)
+    expect(label.getAttribute('for')).toBe(toggle.id)
     expect(label.className).toContain('w-1/3')
     expect(controlWrapper.className).toContain('flex-1')
 
-    fireEvent.click(checkbox)
+    fireEvent.click(toggle)
     expect(onChangeSpy).toHaveBeenCalledWith(true)
   })
 

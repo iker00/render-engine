@@ -91,8 +91,8 @@ export function DiscriminatedUnionPropertyField({ variants, value, onChange, lab
   const hasVisibleFields = isPlainObject(activeFieldsSchema?.properties) && Object.keys(activeFieldsSchema.properties).length > 0
 
   return (
-    <fieldset className="flex flex-col gap-2 rounded border border-gray-200 p-2">
-      <legend className="px-1 text-xs font-medium text-gray-700">{label}</legend>
+    <fieldset className="flex flex-col gap-2">
+      <legend className="pt-4 pb-2 text-[11px] font-medium uppercase tracking-wide text-gray-500">{label}</legend>
       <EnumPropertyField label={label} value={selectValue} options={options} optionLabels={optionLabels} onChange={handleTypeChange} required={required} />
       {activeVariant && hasVisibleFields && (
         <PropertyFieldDispatcher schema={activeFieldsSchema} value={value} onChange={onChange} label={variantLabel(activeVariant.typeValue)} />

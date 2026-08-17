@@ -170,7 +170,7 @@ La barra se muestra igual con una única pestaña disponible (por ejemplo un nod
 
 Los bloques que escriben el nodo completo en vez de una única subsección — el [selector de modo de contenido de `link`](#selector-de-modo-de-contenido-de-link-texto--elementos-anidados), el [selector "Modo" de `container`](#widget-de-alternancia-por-segmentos-pill-toggle) y el [selector "Acción de envío" de `form`](#selector-de-variante-para-uniones-discriminadas-por-type-acciones) — se muestran siempre al principio de la pestaña `Props`, antes de los campos generados por el dispatcher para esa pestaña, y solo mientras `Props` está activa.
 
-Dentro de una pestaña, cada campo simple (input de texto, input numérico, select, textarea, checkbox) se presenta como una fila con la etiqueta a la izquierda (ancho aproximado de un tercio, con un mínimo en píxeles) y el control a la derecha ocupando el resto, sin scroll horizontal en ningún ancho de panel. Los widgets dedicados (`layout-span`, `choice-items`, icon picker, segmented, condición/grupo, clave-valor) conservan su presentación propia dentro de su pestaña.
+Dentro de una pestaña, cada campo simple (input de texto, input numérico, select, textarea, interruptor booleano, segmented, swatches de color) se presenta como una fila con la etiqueta a la izquierda (ancho aproximado de un tercio, con un mínimo en píxeles) y el control a la derecha ocupando el resto, sin scroll horizontal en ningún ancho de panel. Un campo booleano genérico se edita con un interruptor on/off (`role="switch"`, `aria-checked`) en vez de un checkbox nativo; el pipeline de commit y el criterio de aviso ante un commit rechazado no cambian por este control (ver [[#Feedback cuando un cambio del panel de propiedades no se puede guardar]]). Los widgets dedicados (`layout-span`, `choice-items`, icon picker, segmented, swatches de color, condición/grupo, clave-valor) conservan su presentación propia dentro de su pestaña — ver [[#Widget de alternancia por segmentos (pill toggle)]] y [[#Swatches de color por convención de nombre]] para cuándo un enum genérico pasa a uno de esos dos controles en vez de `<select>`.
 
 ### Panel de propiedades (modo Editor)
 Los campos de cada pestaña se generan dinámicamente a partir del mismo JSON Schema derivado (`toJSONSchema` de Zod v4) que ya alimenta el autocompletado de Monaco — no existe un segundo contrato de UI hardcodeado por tipo de nodo. Editar cualquier campo actualiza el estado en memoria de inmediato y se refleja tanto en el contenido renderizado como en el buffer de Monaco, sin necesidad de pulsar ningún botón "Aplicar" adicional. Un campo `layout.span` declarado como mapa responsive por breakpoint se edita con merge superficial sobre el objeto existente: cambiar un breakpoint no borra los demás ya declarados que no sean visibles en el viewport actual.
@@ -178,6 +178,8 @@ Los campos de cada pestaña se generan dinámicamente a partir del mismo JSON Sc
 Un array editable declarado con `minItems` en su schema (por ejemplo `tabs.props.items`, con mínimo de una pestaña, o `submitAction.operations` cuando la variante es `executeOperations`, con el mismo mínimo) bloquea el botón "Quitar" de cada entrada mientras la longitud actual del array sea igual a ese mínimo, para no dejar el nodo en un estado estructuralmente inválido. Al pulsar "Añadir" sobre un array de objetos, el nuevo elemento se rellena con un valor por cada propiedad `required` de su sub-schema (usando el `default` declarado en el sub-schema cuando existe, o `''`/`0`/`false` según el tipo en caso contrario) en vez de un objeto vacío. Para el nodo `tabs` en particular, cada entrada de `props.items` en este panel expone únicamente `label` y `visibility`: `children` (el subárbol de contenido de la pestaña) queda excluido del editor genérico porque no es representable como campo de formulario — ese contenido solo se edita arrastrando nodos sobre la pestaña en el canvas o directamente desde Monaco — y una pestaña nueva creada con "Añadir" recibe la etiqueta por defecto "Nueva pestaña".
 
 Cuando la pestaña `Diseño` existe, el campo `layout.span` se edita siempre mediante su widget dedicado (ver [[#Widget dedicado para layout.span (columnas por breakpoint)]]), no como un campo numérico o de mapa genérico.
+
+El contenido raíz de cada pestaña y cualquier grupo anidado que el editor genérico de objetos o de arrays produce (por ejemplo un campo de tipo mapa por breakpoint, o una lista de objetos como `tabs.props.items`) se muestran en lista plana, sin caja con borde ni fondo alrededor. Un grupo que ya tiene un título propio lo conserva como texto de cabecera simple (mayúsculas pequeñas, gris, sin fondo); el contenido raíz de una pestaña, cuyo título va oculto porque la pestaña activa ya cumple ese rol, no gana ningún título nuevo. Los widgets dedicados con presentación propia (`layout-span`, `choice-items`, icon picker, condición/grupo, clave-valor) no se ven afectados por esto en su propia estructura.
 
 Editar cualquier campo actualiza el estado en memoria de inmediato y se refleja tanto en el contenido renderizado como en el buffer de Monaco — con la excepción de un commit rechazado por validación, ver [[#Feedback cuando un cambio del panel de propiedades no se puede guardar]].
 
@@ -190,6 +192,8 @@ Cuando el sub-schema de un campo es una unión discriminada por la propiedad lit
 Debajo del selector se muestran únicamente los campos propios de la variante activa. Elegir una variante distinta reconstruye el valor desde cero con los valores por defecto de esa variante (ningún campo de la variante anterior sobrevive al cambio) y elegir "Sin acción" deja la propiedad completamente sin definir. Una condición `when` declarada en una entrada de `executeOperations.operations` o de `onSuccess`/`onError` se edita reutilizando el mismo [widget de condición/grupo](#widget-de-condicióngrupo-visibilitywhen) que `visibility`, sin un editor duplicado.
 
 `form.submitAction` ("Acción de envío") es el único de los tres campos anteriores que no vive dentro del schema `props` del nodo: el panel lo muestra igualmente al principio de la subsección `Props`, antes de cualquier campo generado por el dispatcher para esa subsección — como `form` no declara ningún `props` propio, esa subsección existe únicamente para alojar este selector.
+
+Tanto el bloque del selector ("Acción"/"Acción de envío") como, dentro de él, el sub-grupo de campos propios de la variante activa se muestran sin caja con borde ni fondo; el título del bloque se conserva como texto de cabecera simple, con el mismo estilo tipográfico que cualquier otra cabecera de grupo del panel (mayúsculas pequeñas, gris, sin fondo).
 
 ### Selector de modo de contenido de `link`: Texto / Elementos anidados
 El panel de propiedades de un nodo `link` (tanto en la pestaña `Layout` como al reutilizarse dentro de la lista de
@@ -237,6 +241,17 @@ El dispatcher se apoya para esto en un hook `x-widget`: si el fragmento de schem
 - **Conversión entero → mapa**: si `layout.span` es un entero plano al montar el widget, la primera edición de cualquier fila lo convierte a mapa responsive sembrando `{ base: <entero previo> }` antes de aplicar el cambio del usuario sobre esa base.
 - **Validación por fila**: cada valor se valida con el mismo pipeline (`validateRuntimeConfig`) que el resto del panel antes de aplicarse. Un commit rechazado (por ejemplo, fuera de rango `1..N` para ese breakpoint) conserva el valor tecleado en esa fila y muestra un aviso `role="alert"` con el código y mensaje del error, con el mismo criterio de limpieza que el resto del panel (ver [[#Feedback cuando un cambio del panel de propiedades no se puede guardar]]): desaparece al guardar correctamente esa misma fila o al cambiar de nodo seleccionado. El aviso es independiente por fila.
 - **Fuera de alcance**: el widget nunca ofrece un control para "simplificar" un `layout.span` ya convertido a mapa de vuelta a un único entero; un `layout.span` que siga siendo entero plano solo puede editarse como tal desde Monaco.
+- **Barra de vista previa de ocupación**: bajo las seis filas, una barra horizontal dividida en `N` segmentos (el
+  denominador resuelto del `container` ancestro en el breakpoint previsualizado) muestra resaltados los primeros
+  `span` segmentos, junto a una leyenda de texto ("Vista previa en {breakpoint}: ocupa {span} de {N}."). El
+  breakpoint previsualizado es `base` por defecto; dar foco al input de una fila cambia la vista previa al
+  breakpoint de esa fila mientras el foco permanezca ahí, y perderlo (sin que otra fila del mismo widget lo capture)
+  la devuelve a `base`. Es estado puramente visual del widget: cambiar de pestaña, de nodo seleccionado o de
+  breakpoint previsualizado no dispara ningún commit adicional. Un span resuelto mayor que `N` (posible si el
+  `container` reduce sus columnas en un breakpoint superior sin que `layout.span` se haya ajustado) no desborda la
+  barra: el recuento de segmentos resaltados se recorta a `N`, pero la leyenda sigue mostrando el `span` real sin
+  recortar. Un `layout.span` como entero plano (sin mapa por breakpoint) sigue mostrando la vista previa para
+  `base`, coherente con el valor uniforme heredado en las seis filas.
 
 ### Widget de alternancia por segmentos (pill toggle)
 Un control reutilizable (`SegmentedTogglePropertyField`) cubre cualquier prop con catálogo cerrado y estable de 2 a 5
@@ -250,7 +265,21 @@ a partir de la forma del nodo o del valor de la prop. Cada selección sigue el m
 el mismo criterio de aviso `role="alert"` que el resto del panel (ver
 [[#Feedback cuando un cambio del panel de propiedades no se puede guardar]]).
 
-Tres usos concretos en el panel de propiedades comparten este componente sin duplicar su lógica:
+Además de los tres usos fijos descritos abajo, el dispatcher genérico de propiedades usa el mismo componente para
+cualquier campo de tipo `enum` cuyo catálogo declare entre 2 y 5 valores (ambos inclusive), en cualquier pestaña
+(`Props`/`Diseño`) y cualquier tipo de nodo, siempre que ese campo no resuelva ya a un widget dedicado del
+`WIDGET_REGISTRY` (`layout-span`, `choice-items`, `icon`, `heading-level`, `tabs-orientation`, `condition-group`) ni
+a la convención de nombre de las [swatches de color](#swatches-de-color-por-convención-de-nombre) — esas rutas de
+resolución son mutuamente excluyentes con esta y tienen prioridad. Un enum de 1 o de 6+ valores no se ve afectado y
+sigue como `<select>`. A diferencia de los tres usos fijos siguientes (que no van en fila y no muestran ningún label
+visible, por ser bloques especiales fuera de la iteración genérica de campos), este uso genérico se presenta dentro
+de la misma fila label-izquierda/control-derecha que cualquier otro campo simple del dispatcher, con el segmento
+etiquetado tal cual el valor literal del enum (sin traducción). Ejemplos existentes cubiertos por esta regla:
+`container.props.align`/`wrap`/`variant`, `modal.props.size`, `button.props.variant`, `badge.props.variant`,
+`stat.props.variant`, `divider.props.variant`, `skeleton.props.variant`, `toggle.props.labelPosition`.
+
+Tres usos concretos en el panel de propiedades comparten además este componente de forma fija, sin pasar por la
+regla genérica anterior (bloques especiales, sin fila ni label visible):
 - **`container` — "Modo" (Grid / Columnas)**: se muestra al principio de la subsección `Props`, antes de sus campos
   generados por el dispatcher y solo visible mientras esa subsección está activa — mismo lugar y mismo alcance de
   escritura de nodo completo que el
@@ -272,6 +301,36 @@ Tres usos concretos en el panel de propiedades comparten este componente sin dup
   declara `orientation` (default `"horizontal"` del runtime, ver [[../nodes/tabs.md]]), el widget muestra
   "Horizontal" activo sin que eso implique que la clave se escribe explícitamente al reseleccionar ese mismo
   segmento.
+
+### Swatches de color por convención de nombre
+Cualquier propiedad dentro de `props` cuyo nombre de campo sea literalmente `color` y cuyo schema declare un `enum`
+se edita con una fila de muestras de color (`ColorSwatchPropertyField`) en vez de `<select>` o segmented, con
+independencia del número de opciones de ese enum — a diferencia de la regla genérica de segmented de arriba, esta
+convención de nombre tiene prioridad y no está sujeta al rango 2-5. Cubre hoy `stat.props.color` y
+`badge.props.color`; un campo `type` con el mismo catálogo de valores pero otro nombre (por ejemplo
+`alert.props.type`) no la cumple y sigue las reglas genéricas normales (`<select>` o segmented según su cardinalidad).
+
+- **Enganche**: mismo hook `x-widget` del dispatcher (clave `'color-swatch'` en `WIDGET_REGISTRY`), inyectado por
+  convención de nombre de campo (`resolveColorSwatchPropsSchema`) igual que el widget de icono — sin lista explícita
+  de tipos de nodo que mantener. Solo aplica si el campo `color` declara un `enum`; un `color` con otra forma queda
+  fuera de esta regla.
+- **Paleta fija**: seis muestras siempre en el mismo orden — `neutral`, `primary`, `success`, `warning`, `danger`,
+  `info` — con independencia del orden o el número de opciones del `enum` real del campo. Es una paleta propia del
+  editor, declarada de forma independiente de la resolución de estilos del runtime de producción (aunque
+  visualmente coherente con el catálogo semántico que ya comparten `stat.props.color`/`badge.props.color`/
+  `button.props.color`); si la paleta semántica de producción cambia en el futuro, esta paleta del editor no se
+  actualiza automáticamente.
+- **Selección**: click, o `Enter`/flecha izquierda-derecha con foco en una muestra, aplica ese nombre con el mismo
+  pipeline de commit/validación que el resto del panel. La muestra activa se distingue con un anillo; junto a la
+  fila se muestra como texto el nombre semántico actualmente seleccionado (por ejemplo "primary").
+- **Accesibilidad**: `role="radiogroup"`/`role="radio"` con `aria-checked` por muestra y `aria-label` igual al
+  nombre semántico (no solo el color visual), con roving tabindex (la muestra activa, o la primera si ninguna lo
+  está, es la única parada de `Tab`) y navegación circular con flecha izquierda/derecha — misma semántica que
+  `SegmentedTogglePropertyField`, aunque el componente no lo reutiliza directamente (pinta un color sólido por
+  muestra en vez de un icono+texto).
+- **Valor fuera de catálogo**: un valor de `color` presente en el config pero fuera de las seis muestras fijas (por
+  ejemplo editado a mano en Monaco) no bloquea el panel: ninguna muestra se marca activa y no se muestra ningún
+  texto de nombre semántico junto a la fila.
 
 ### Widget de búsqueda y selección de iconos Lucide
 Un componente compartido (`IconPickerPropertyField`) sustituye el input de texto libre en todo campo `icon` del

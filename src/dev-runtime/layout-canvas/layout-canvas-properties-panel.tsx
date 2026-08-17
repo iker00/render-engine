@@ -216,6 +216,32 @@ function resolveIconPropsSchema(propsSchema: Record<string, unknown>): Record<st
 }
 
 /**
+ * Replaces the generated sub-schema of `props.color` with the `{ 'x-widget': 'color-swatch' }`
+ * sentinel (T2, 0134, FR3/FR4) the dispatcher's `x-widget` hook resolves to
+ * `ColorSwatchPropertyField` — takes priority over the generic segmented (2-5 options)/`<select>`
+ * enum branches, by construction of the dispatcher's `x-widget` check running before either.
+ * Keyed by field-name convention (`color`) the same way `resolveIconPropsSchema` above is keyed by
+ * `icon` — no explicit list of node types — but additionally requires the field to declare an
+ * `enum`: a `color` property of any other shape (not expected on any node type today, but not
+ * guaranteed to stay that way) is left untouched and falls through to whatever generic branch the
+ * dispatcher would otherwise resolve for it.
+ */
+function resolveColorSwatchPropsSchema(propsSchema: Record<string, unknown>): Record<string, unknown> {
+  const properties = propsSchema.properties
+  if (!isPlainObject(properties) || !('color' in properties)) return propsSchema
+  const colorSchema = properties.color
+  if (!isPlainObject(colorSchema) || !Array.isArray(colorSchema.enum)) return propsSchema
+
+  return {
+    ...propsSchema,
+    properties: {
+      ...properties,
+      color: { 'x-widget': 'color-swatch' },
+    },
+  }
+}
+
+/**
  * Omits `properties.columns` from `container.props`'s generated schema when the node's current
  * `props.columns` is `undefined` (T5, 0128): `ObjectPropertyField` renders every declared schema
  * property unconditionally, regardless of whether the node's own value has that key — unlike the
@@ -541,6 +567,9 @@ export function LayoutCanvasPropertiesPanel({
     }
     if (key === 'props' && effectiveSchema) {
       effectiveSchema = resolveIconPropsSchema(effectiveSchema)
+    }
+    if (key === 'props' && effectiveSchema) {
+      effectiveSchema = resolveColorSwatchPropsSchema(effectiveSchema)
     }
 
     // T2 (0127): `Layout` only exists when a `container` ancestor with `columns` is resolvable —
