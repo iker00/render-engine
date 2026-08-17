@@ -1,10 +1,13 @@
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import { useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
-import type { RuntimeConfigError, RuntimeResponsiveLayoutValue } from '../../config/runtime-config'
+import type { RuntimeConfigError, RuntimeResponsiveBreakpoint, RuntimeResponsiveLayoutValue } from '../../config/runtime-config'
 import type { CommitCanvasMutationResult } from '../../dev-runtime/layout-canvas/layout-canvas-commit'
 import { LayoutSpanPropertyField } from '../../dev-runtime/layout-canvas/property-fields/layout-span-property-field'
-import { LayoutSpanWidgetContext } from '../../dev-runtime/layout-canvas/property-fields/layout-span-widget-context'
+import {
+  LayoutSpanWidgetContext,
+  type LayoutSpanRowRejection,
+} from '../../dev-runtime/layout-canvas/property-fields/layout-span-widget-context'
 
 const BREAKPOINTS_IN_ORDER = ['base', 'sm', 'md', 'lg', 'xl', '2xl'] as const
 
@@ -25,8 +28,15 @@ interface ControlledLayoutSpanWidgetProps {
 // real panel does after a successful `onCommitNodeUpdate`. Same shape as
 // `ControlledChoiceItemsField` in `layout-canvas-property-field-choice-items.test.tsx`, adapted
 // to a context-driven widget instead of a controlled-prop one.
+//
+// T6 (0133): `rowRejections`/`onRowCommitResult` moved out of the widget itself into
+// `LayoutSpanWidgetContext` — this harness now owns that state too (`rowRejections` below),
+// mirroring exactly what `LayoutCanvasPropertiesPanel` does in production, so the widget's own
+// commit-rejection-feedback tests below still exercise real behavior through the context contract
+// rather than internal widget state.
 function ControlledLayoutSpanWidget({ parentColumns, initialSpanValue, onCommitSpy, commitResultFor }: ControlledLayoutSpanWidgetProps) {
   const [spanValue, setSpanValue] = useState(initialSpanValue)
+  const [rowRejections, setRowRejections] = useState<Partial<Record<RuntimeResponsiveBreakpoint, LayoutSpanRowRejection>>>({})
 
   function commitSpan(nextSpan: RuntimeResponsiveLayoutValue | undefined): CommitCanvasMutationResult | void {
     onCommitSpy?.(nextSpan)
@@ -37,8 +47,21 @@ function ControlledLayoutSpanWidget({ parentColumns, initialSpanValue, onCommitS
     return result
   }
 
+  function onRowCommitResult(breakpoint: RuntimeResponsiveBreakpoint, attemptedValue: number, result: CommitCanvasMutationResult | void) {
+    if (result && result.status === 'rejected') {
+      setRowRejections((prev) => ({ ...prev, [breakpoint]: { value: attemptedValue, error: result.error } }))
+      return
+    }
+    setRowRejections((prev) => {
+      if (!(breakpoint in prev)) return prev
+      const next = { ...prev }
+      delete next[breakpoint]
+      return next
+    })
+  }
+
   return (
-    <LayoutSpanWidgetContext.Provider value={{ parentColumns, spanValue, commitSpan }}>
+    <LayoutSpanWidgetContext.Provider value={{ parentColumns, spanValue, commitSpan, rowRejections, onRowCommitResult }}>
       <LayoutSpanPropertyField />
     </LayoutSpanWidgetContext.Provider>
   )

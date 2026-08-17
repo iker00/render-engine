@@ -24,6 +24,12 @@ interface WidgetComponentProps {
   label: string
   value: unknown
   onChange: (value: unknown) => void
+  // T4 (0133): forwarded from the dispatcher's own `hideRootLegend` (see
+  // `PropertyFieldDispatcherProps` below) only for the widget resolved at the top level of a call —
+  // never for a widget reached through recursion. Every widget except `ConditionGroupPropertyField`
+  // ignores it (their own prop signatures simply don't declare it), which is fine: an extra,
+  // unused optional prop is a no-op for a component that never destructures it.
+  hideRootLegend?: boolean
 }
 
 // Closed registry for the `x-widget` hook (D5, T4 0108): a schema fragment can opt out of every
@@ -45,6 +51,13 @@ export interface PropertyFieldDispatcherProps {
   onChange: (value: unknown) => void
   label: string
   required?: boolean
+  // T4 (0133), FR6: set by the properties panel only on its top-level call for a tab's content —
+  // never propagated into any recursive `PropertyFieldDispatcher` call this component makes itself
+  // (`ObjectPropertyField`'s per-property fields, `ArrayPropertyField`'s per-item fields). Applied
+  // only to the two shapes that render a root `legend` of their own: `ObjectPropertyField` (renders
+  // it `sr-only` instead of hiding the field) and a resolved `x-widget` component (forwarded as-is;
+  // only `ConditionGroupPropertyField` currently consumes it). Defaults to `false`.
+  hideRootLegend?: boolean
 }
 
 // A schema fragment that is nothing but a `$ref` pointer (e.g. `{ "$ref": "#/$defs/__schema0" }`).
@@ -61,7 +74,14 @@ function isBareRefSchema(schema: Record<string, unknown>): boolean {
  * its current value. It knows nothing about `LayoutNode`; callers (T9) feed it sub-schemas such
  * as a node's `properties.props`.
  */
-export function PropertyFieldDispatcher({ schema, value, onChange, label, required = false }: PropertyFieldDispatcherProps) {
+export function PropertyFieldDispatcher({
+  schema,
+  value,
+  onChange,
+  label,
+  required = false,
+  hideRootLegend = false,
+}: PropertyFieldDispatcherProps) {
   if (!schema || typeof schema !== 'object') {
     return <RawJsonPropertyField label={label} value={value} onChange={onChange} />
   }
@@ -72,7 +92,7 @@ export function PropertyFieldDispatcher({ schema, value, onChange, label, requir
   const widgetKey = typeof schema['x-widget'] === 'string' ? (schema['x-widget'] as string) : undefined
   const WidgetComponent = widgetKey ? WIDGET_REGISTRY[widgetKey] : undefined
   if (WidgetComponent) {
-    return <WidgetComponent label={label} value={value} onChange={onChange} />
+    return <WidgetComponent label={label} value={value} onChange={onChange} hideRootLegend={hideRootLegend} />
   }
 
   // `body` (T7): a bare `$ref` schema (see `isBareRefSchema`) has no `type`/`anyOf`/`oneOf` this
@@ -188,6 +208,7 @@ export function PropertyFieldDispatcher({ schema, value, onChange, label, requir
         propertiesSchema={propertiesSchema}
         requiredFields={requiredFields}
         onChange={onChange}
+        hideRootLegend={hideRootLegend}
       />
     )
   }
@@ -227,8 +248,8 @@ function ArrayPropertyField({ label, value, itemsSchema, minItems, onChange }: A
   }
 
   return (
-    <fieldset className="flex flex-col gap-2 rounded border border-gray-200 p-2">
-      <legend className="px-1 text-xs font-medium text-gray-700">{label}</legend>
+    <fieldset className="flex flex-col gap-2 rounded-md border border-gray-200 bg-white p-2">
+      <legend className="px-1 text-[11px] font-medium uppercase tracking-wide text-gray-500">{label}</legend>
       {value.map((itemValue, index) => {
         const resolvedItemSchema = resolveUnionBranch(itemsSchema, itemValue)
         // An existing array slot always has a value — presence is controlled by Añadir/Quitar,
@@ -280,9 +301,13 @@ interface ObjectPropertyFieldProps {
   propertiesSchema: Record<string, Record<string, unknown>> | undefined
   requiredFields: string[]
   onChange: (value: Record<string, unknown>) => void
+  // T4 (0133), FR6: see `PropertyFieldDispatcherProps.hideRootLegend` — applied only to this
+  // fieldset's own `legend`, never forwarded to the recursive `PropertyFieldDispatcher` calls below
+  // (each nested field keeps its normal visible label).
+  hideRootLegend?: boolean
 }
 
-function ObjectPropertyField({ label, value, propertiesSchema, requiredFields, onChange }: ObjectPropertyFieldProps) {
+function ObjectPropertyField({ label, value, propertiesSchema, requiredFields, onChange, hideRootLegend = false }: ObjectPropertyFieldProps) {
   const propertyEntries = propertiesSchema ? Object.entries(propertiesSchema) : []
 
   function handlePropertyChange(key: string, propertyValue: unknown) {
@@ -290,8 +315,10 @@ function ObjectPropertyField({ label, value, propertiesSchema, requiredFields, o
   }
 
   return (
-    <fieldset className="flex flex-col gap-2 rounded border border-gray-200 p-2">
-      <legend className="px-1 text-xs font-medium text-gray-700">{label}</legend>
+    <fieldset className="flex flex-col gap-2 rounded-md border border-gray-200 bg-white p-2">
+      <legend className={hideRootLegend ? 'sr-only' : 'px-1 text-[11px] font-medium uppercase tracking-wide text-gray-500'}>
+        {label}
+      </legend>
       {propertyEntries.map(([key, propertySchema]) => (
         <PropertyFieldDispatcher
           key={key}

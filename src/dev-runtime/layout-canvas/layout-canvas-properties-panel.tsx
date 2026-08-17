@@ -1,12 +1,16 @@
-import { useState } from 'react'
-import type { LayoutNode, RuntimeConfigError, RuntimeResponsiveLayoutValue } from '../../config/runtime-config'
+import { Trash2, X } from 'lucide-react'
+import { useId, useState } from 'react'
+import type { LayoutNode, RuntimeConfigError, RuntimeResponsiveBreakpoint, RuntimeResponsiveLayoutValue } from '../../config/runtime-config'
 import { serializeLayoutNodePath, type LayoutNodePath } from '../../runtime/layout-node-path'
 import { CommitRejectionBanner } from '../commit-rejection-banner'
 import { commitLayoutSpan } from './commit-layout-span'
+import { LayoutCanvasBreadcrumb } from './layout-canvas-breadcrumb'
 import type { CommitCanvasMutationResult } from './layout-canvas-commit'
 import { getNodeTypeJsonSchema } from './layout-canvas-node-schema'
+import { NodePanelTabBar } from './node-panel-tab-bar'
+import { resolveNodePanelTabs, type NodePanelTabKey } from './node-panel-tabs'
 import { ContainerColumnsModePropertyField } from './property-fields/container-columns-mode-property-field'
-import { LayoutSpanWidgetContext } from './property-fields/layout-span-widget-context'
+import { LayoutSpanWidgetContext, type LayoutSpanRowRejection } from './property-fields/layout-span-widget-context'
 import { LinkContentModePropertyField } from './property-fields/link-content-mode-property-field'
 import { PropertyFieldDispatcher } from './property-fields/property-field-dispatcher'
 import { resolveUnionBranch } from './property-fields/property-field-schema-resolution'
@@ -29,17 +33,33 @@ export interface LayoutCanvasPropertiesPanelProps {
   // nearest `container` ancestor's `columns` (`resolveAncestorContainerColumns`, T1) and decide
   // whether the `Layout` subsection renders at all. Optional because some callers render this
   // panel for nodes that never live in a page's `layout` tree (e.g. `ShellActionsListEditor`'s
-  // shell header actions) — for those, the subsection is simply omitted.
+  // shell header actions) — for those, the subsection is simply omitted. T3 (0133): also gates
+  // whether the header's breadcrumb renders at all — same "no page tree, no breadcrumb" rule.
   pageLayout?: readonly LayoutNode[]
+  // T3 (0133): closes the panel (e.g. `FloatingSelectionOverlay` wires this to
+  // `onSelectNode(null)`). Optional so callers with no notion of "closing" the panel (e.g.
+  // `ShellActionsListEditor`'s per-row panel, which never floats/overlays anything) simply don't
+  // render the close button.
+  onClose?: () => void
+  // T3 (0133): navigates the canvas selection to a breadcrumb ancestor segment. Only meaningful
+  // (and only ever invoked) when `pageLayout` is also passed, since the breadcrumb itself doesn't
+  // render otherwise.
+  onSelectAncestor?: (path: LayoutNodePath) => void
 }
 
-type NodeSubsectionKey = 'props' | 'layout' | 'visibility' | 'queryStateFeedback'
+// Stable no-op passed to `LayoutCanvasBreadcrumb`'s required `onSelectNode` when the panel
+// renders a breadcrumb (`pageLayout` given) but its own `onSelectAncestor` prop was left
+// unset — see React Best Practices 4.5 (extract non-primitive defaults to a constant) for why
+// this isn't an inline arrow function.
+const NOOP_SELECT_ANCESTOR = (_path: LayoutNodePath): void => {}
 
-// T9: the key used to track a rejected commit for the `submitAction` block, which lives
-// outside `SUBSECTIONS` (see `buildSubmitActionFieldValue` below). T5 (0128) adds
+// T9: the key used to track a rejected commit for the `submitAction` block, which commits the
+// entire node rather than a single subsection (see `buildSubmitActionFieldValue` below), so it
+// needs its own rejection-tracking key distinct from `props`. T5 (0128) adds
 // `containerColumnsMode` for the same reason: the `container` "Modo" widget also commits the
-// entire node outside `SUBSECTIONS`, so it needs its own rejection-tracking key.
-type PendingRejectionKey = NodeSubsectionKey | 'submitAction' | 'containerColumnsMode'
+// entire node. T5 (0133) moved both blocks (plus the `link` "Contenido" selector) to render at
+// the top of the `Props` tabpanel; the dedicated keys are unaffected by where they render.
+type PendingRejectionKey = NodePanelTabKey | 'submitAction' | 'containerColumnsMode'
 
 // T9 (bug fix): `commitCanvasMutation` validates the *entire* config before applying a panel
 // commit (see dev-runtime.tsx). Switching a discriminated-union variant (T5) or adding a new
@@ -51,23 +71,16 @@ type PendingRejectionKey = NodeSubsectionKey | 'submitAction' | 'containerColumn
 // local re-rendering — it is never written into `currentConfig`.
 type PendingRejections = Partial<Record<PendingRejectionKey, { value: unknown; error: RuntimeConfigError }>>
 
-const SUBSECTIONS: ReadonlyArray<{ key: NodeSubsectionKey; label: string }> = [
-  { key: 'props', label: 'Props' },
-  { key: 'layout', label: 'Layout' },
-  { key: 'visibility', label: 'Visibilidad' },
-  { key: 'queryStateFeedback', label: 'Estado de consulta' },
-]
-
 // `LayoutNode` is a union of ~27 node-type interfaces; not every member declares
 // every subsection (e.g. `hidden` has neither `layout` nor `visibility`/
 // `queryStateFeedback` — see runtime-config-types.ts). Reading/writing a
 // subsection by a dynamic key needs a generic cast, the same pattern
 // `layout-tree-mutations.ts` uses for the `children` field.
-function readSubsection(node: LayoutNode, key: NodeSubsectionKey): unknown {
-  return (node as unknown as Record<NodeSubsectionKey, unknown>)[key]
+function readSubsection(node: LayoutNode, key: NodePanelTabKey): unknown {
+  return (node as unknown as Record<NodePanelTabKey, unknown>)[key]
 }
 
-function withSubsection(node: LayoutNode, key: NodeSubsectionKey, value: unknown): LayoutNode {
+function withSubsection(node: LayoutNode, key: NodePanelTabKey, value: unknown): LayoutNode {
   return { ...(node as unknown as Record<string, unknown>), [key]: value } as unknown as LayoutNode
 }
 
@@ -315,25 +328,31 @@ function resolveTabsPropsSchema(propsSchema: Record<string, unknown>): Record<st
 }
 
 /**
- * Edits `props`, `layout`, `visibility` and `queryStateFeedback` for the
- * selected node, rendering only the subsections the node's own generated JSON
- * Schema (T7) declares. Every editable field comes from that schema — there is
- * no separate hardcoded list of properties per node type.
+ * Edits `props`, `layout`, `visibility` and `queryStateFeedback` for the selected node behind a
+ * tab bar (T4, 0133): `resolveNodePanelTabs` (T1) decides which of the four exist and in what
+ * order, `NodePanelTabBar` (T2) renders them, and only the active tab's content is ever mounted —
+ * every editable field still comes from the node's own generated JSON Schema (T7), there is no
+ * separate hardcoded list of properties per node type.
  *
- * Each subsection is dispatched to a single top-level `PropertyFieldDispatcher`
- * call. The dispatcher itself only resolves plain JSON Schema `type`s, not a
- * union (`anyOf`/`oneOf`) passed as its own top-level `schema` — that's what
- * `resolveUnionBranch` handles here for `visibility`, which is a union at the
- * subsection's own root (single condition | group). `layout.span`, by
- * contrast, is a union nested one level inside the `layout` subsection's
- * `properties`, so it no longer needs a panel-specific resolver: the
- * dispatcher's own `ObjectPropertyField` recursion (T4) resolves it against
- * `layout.span`'s current value before rendering that nested field.
+ * The active tab's content is dispatched to a single top-level `PropertyFieldDispatcher` call. The
+ * dispatcher itself only resolves plain JSON Schema `type`s, not a union (`anyOf`/`oneOf`) passed
+ * as its own top-level `schema` — that's what `resolveUnionBranch` handles here for `visibility`,
+ * which is a union at the subsection's own root (single condition | group). `layout.span`, by
+ * contrast, is a union nested one level inside the `layout` subsection's `properties`, so it no
+ * longer needs a panel-specific resolver: the dispatcher's own `ObjectPropertyField` recursion (T4,
+ * 0108) resolves it against `layout.span`'s current value before rendering that nested field.
  *
  * T9: each subsection also tracks its own `pendingRejections` entry — the last value the user
  * tried to commit through this panel plus the error that rejected it — so a commit rejected by
  * `commitCanvasMutation`'s full-config validation still shows the user's own edit (and why it
- * didn't save) instead of silently reverting to the pre-edit value derived from `node`.
+ * didn't save) instead of silently reverting to the pre-edit value derived from `node`. Switching
+ * tabs does not discard a pending rejection (FR7); only selecting a different node does, via the
+ * same `serializedPath` guard that now also resets the active tab.
+ *
+ * T5 (0133): the three special blocks that commit the entire node rather than a single subsection
+ * (link "Contenido", container "Modo", form "Acción de envío" — see `renderPropsSpecialBlocks`
+ * below) render at the top of the `Props` tabpanel, before the dispatcher-driven `props` fields.
+ * They only exist while `Props` is the active tab and only for their own node type.
  */
 export function LayoutCanvasPropertiesPanel({
   node,
@@ -341,26 +360,54 @@ export function LayoutCanvasPropertiesPanel({
   onCommitNodeUpdate,
   onDeleteNode,
   pageLayout,
+  onClose,
+  onSelectAncestor,
 }: LayoutCanvasPropertiesPanelProps) {
+  // FR4/FR5, criterion 5: `hidden` is the only node type with no `id` field at all (same
+  // detection `layout-canvas-breadcrumb.tsx`'s `buildBreadcrumbLabel` uses); every other node
+  // type declares it, so a plain "in" check reads it safely across the full `LayoutNode` union.
+  const nodeId = 'id' in node ? node.id : undefined
+
   const nodeSchema = getNodeTypeJsonSchema(node.type)
   const schemaProperties = isPlainObject(nodeSchema.properties) ? nodeSchema.properties : {}
   const submitActionSchema =
     node.type === 'form' && isPlainObject(schemaProperties.submitAction) ? (schemaProperties.submitAction as Record<string, unknown>) : undefined
 
+  const idPrefix = useId()
+  const tabs = resolveNodePanelTabs(node, { pageLayout, path })
+
   const [pendingRejections, setPendingRejections] = useState<PendingRejections>({})
+  const [activeTabKey, setActiveTabKey] = useState<NodePanelTabKey | undefined>(tabs[0]?.key)
+  // T6 (0133), FR7: per-row commit-rejection state for the `layout-span` widget, hosted here
+  // instead of inside the widget itself so it survives a tab change within the same node — see
+  // `layout-span-widget-context.ts`'s doc comment for why the widget can no longer keep this in
+  // its own `useState`. Reset by the same `serializedPath` guard as `pendingRejections` below, so
+  // selecting a different node still clears it (FR7's other half).
+  const [layoutSpanRowRejections, setLayoutSpanRowRejections] = useState<
+    Partial<Record<RuntimeResponsiveBreakpoint, LayoutSpanRowRejection>>
+  >({})
 
   // Selecting a different node discards any rejection pending on the previously selected
   // node — it belongs to that node's edit, not this one. A successful commit on this node
   // clears its own entry explicitly below, so this must not also fire on every `node`
   // reference change (e.g. its own successful commit would otherwise race this reset).
   // Adjusted during render (tracking the previous path in state) instead of an effect —
-  // the guard only fires once per actual path change, so it cannot loop.
+  // the guard only fires once per actual path change, so it cannot loop. FR3/criterion 4: the
+  // active tab resets to the new node's first available tab at the same time — switching node
+  // never leaves a stale tab key selected.
   const serializedPath = serializeLayoutNodePath(path)
   const [prevSerializedPath, setPrevSerializedPath] = useState(serializedPath)
   if (serializedPath !== prevSerializedPath) {
     setPrevSerializedPath(serializedPath)
     setPendingRejections({})
+    setLayoutSpanRowRejections({})
+    setActiveTabKey(tabs[0]?.key)
   }
+
+  // Defensive fallback (T4 contract): if the tracked active key doesn't match any of this node's
+  // current tabs (e.g. a stale key from before the guard above ran on this same render), fall back
+  // to the first available tab instead of rendering nothing.
+  const activeTab = tabs.find((tab) => tab.key === activeTabKey) ?? tabs[0]
 
   function recordCommitResult(key: PendingRejectionKey, attemptedValue: unknown, result: CommitCanvasMutationResult | void) {
     if (result && result.status === 'rejected') {
@@ -377,167 +424,256 @@ export function LayoutCanvasPropertiesPanel({
     })
   }
 
+  // T6 (0133): mirrors `recordCommitResult` above, but keyed by breakpoint instead of
+  // `PendingRejectionKey` — passed to `LayoutSpanWidgetContext` as `onRowCommitResult` so the
+  // `layout-span` widget's row edits/removals record here instead of in local widget state.
+  function recordLayoutSpanRowCommitResult(
+    breakpoint: RuntimeResponsiveBreakpoint,
+    attemptedValue: number,
+    result: CommitCanvasMutationResult | void,
+  ) {
+    if (result && result.status === 'rejected') {
+      setLayoutSpanRowRejections((prev) => ({ ...prev, [breakpoint]: { value: attemptedValue, error: result.error } }))
+      return
+    }
+    setLayoutSpanRowRejections((prev) => {
+      if (!(breakpoint in prev)) return prev
+      const next = { ...prev }
+      delete next[breakpoint]
+      return next
+    })
+  }
+
+  // T5 (0133): the three special blocks (link "Contenido", container "Modo", form "Acción de
+  // envío") live at the top of the `Props` tabpanel, before the dispatcher-driven fields —
+  // rendered only while `Props` is the active tab (see the call site below), never standalone and
+  // never under another tab. Each block only exists for its own node type, exactly as before this
+  // task moved them; only their position (inside `Props`, instead of straddling the tab bar)
+  // changed. Same `pendingRejections`/`recordCommitResult` mechanism T9 already established for
+  // the rest of the panel.
+  function renderPropsSpecialBlocks() {
+    return (
+      <>
+        {node.type === 'link' && (
+          <LinkContentModePropertyField
+            label="Contenido"
+            node={node}
+            onChange={(nextNode) => onCommitNodeUpdate(path, () => nextNode)}
+          />
+        )}
+        {node.type === 'container' &&
+          (() => {
+            const pendingRejection = pendingRejections.containerColumnsMode
+            const displayedNode = pendingRejection ? (pendingRejection.value as typeof node) : node
+
+            return (
+              <div className="flex flex-col gap-2">
+                <ContainerColumnsModePropertyField
+                  label="Modo"
+                  node={displayedNode}
+                  onChange={(nextNode) => {
+                    const result = onCommitNodeUpdate(path, () => nextNode)
+                    recordCommitResult('containerColumnsMode', nextNode, result)
+                  }}
+                />
+                {pendingRejection && (
+                  <CommitRejectionBanner
+                    dataTestId="layout-canvas-properties-panel-containerColumnsMode-error"
+                    error={pendingRejection.error}
+                  />
+                )}
+              </div>
+            )
+          })()}
+        {node.type === 'form' &&
+          submitActionSchema &&
+          (() => {
+            const pendingRejection = pendingRejections.submitAction
+            const displayedValue = pendingRejection ? pendingRejection.value : buildSubmitActionFieldValue(node)
+
+            return (
+              <div className="flex flex-col gap-2">
+                <PropertyFieldDispatcher
+                  schema={submitActionSchema}
+                  value={displayedValue}
+                  label="Acción de envío"
+                  onChange={(nextValue) => {
+                    const result = onCommitNodeUpdate(path, (currentNode) =>
+                      currentNode.type === 'form' ? withSubmitActionField(currentNode, nextValue) : currentNode,
+                    )
+                    recordCommitResult('submitAction', nextValue, result)
+                  }}
+                />
+                {pendingRejection && (
+                  <CommitRejectionBanner
+                    dataTestId="layout-canvas-properties-panel-submitAction-error"
+                    error={pendingRejection.error}
+                  />
+                )}
+              </div>
+            )
+          })()}
+      </>
+    )
+  }
+
+  // T4 (0133): content for a single tab, built from exactly the same per-subsection logic the
+  // pre-tabs implementation looped over — only called for the currently active tab (`activeTab`
+  // above), never for the others, so their content never mounts. FR6: the dispatcher's root
+  // `legend` is hidden (`hideRootLegend`) since the tab button itself already shows `label`.
+  function renderTabContent(key: NodePanelTabKey, label: string) {
+    const subsectionSchema = schemaProperties[key]
+    if (!subsectionSchema || typeof subsectionSchema !== 'object') return null
+
+    const currentValue = readSubsection(node, key)
+    let effectiveSchema = resolveUnionBranch(subsectionSchema as Record<string, unknown>, currentValue)
+    if (key === 'props' && node.type === 'tabs' && effectiveSchema) {
+      effectiveSchema = resolveTabsPropsSchema(effectiveSchema)
+    }
+    if (key === 'props' && node.type === 'heading' && effectiveSchema) {
+      effectiveSchema = resolveHeadingPropsSchema(effectiveSchema)
+    }
+    if (key === 'props' && node.type === 'container' && effectiveSchema) {
+      effectiveSchema = resolveContainerPropsSchema(effectiveSchema, currentValue)
+    }
+    if (key === 'props' && CHOICE_LIKE_NODE_TYPES.has(node.type) && effectiveSchema) {
+      effectiveSchema = resolveChoiceLikePropsSchema(effectiveSchema)
+    }
+    if (key === 'props' && effectiveSchema) {
+      effectiveSchema = resolveIconPropsSchema(effectiveSchema)
+    }
+
+    // T2 (0127): `Layout` only exists when a `container` ancestor with `columns` is resolvable —
+    // without one, `span` has nothing to be relative to. `resolveNodePanelTabs` (T1) already
+    // applies the same check to decide whether the `Diseño` tab exists at all, so in practice this
+    // only ever runs for `key === 'layout'` when that tab is present; the `null` branch stays as a
+    // defensive no-op consistent with the panel's own `pageLayout`-optional contract.
+    let parentColumns: RuntimeResponsiveLayoutValue | null = null
+    if (key === 'layout') {
+      parentColumns = pageLayout ? resolveAncestorContainerColumns(pageLayout, path) : null
+      if (parentColumns === null) return null
+      if (effectiveSchema) {
+        effectiveSchema = resolveLayoutSubsectionSchema(effectiveSchema)
+      }
+    }
+
+    const pendingRejection = pendingRejections[key]
+    const displayedValue = pendingRejection ? pendingRejection.value : currentValue
+
+    const subsectionField = (
+      <div className="flex flex-col gap-2">
+        <PropertyFieldDispatcher
+          schema={effectiveSchema}
+          value={displayedValue ?? {}}
+          label={label}
+          hideRootLegend
+          onChange={(nextValue) => {
+            const sanitizedValue = stripUndefined(nextValue)
+            const result = onCommitNodeUpdate(path, (currentNode) => withSubsection(currentNode, key, sanitizedValue))
+            recordCommitResult(key, sanitizedValue, result)
+          }}
+        />
+        {pendingRejection && (
+          <CommitRejectionBanner
+            dataTestId={`layout-canvas-properties-panel-${key}-error`}
+            error={pendingRejection.error}
+          />
+        )}
+      </div>
+    )
+
+    if (key !== 'layout' || parentColumns === null) return subsectionField
+
+    const spanValue = isPlainObject(currentValue) ? (currentValue.span as RuntimeResponsiveLayoutValue | undefined) : undefined
+
+    return (
+      <LayoutSpanWidgetContext.Provider
+        // T4 (0127, bug fix): keyed by `serializedPath` (not just the constant subsection `key`)
+        // so selecting a different node remounts `LayoutSpanPropertyField` instead of reusing the
+        // same instance. T6 (0133) moved per-row commit-rejection state (`layoutSpanRowRejections`
+        // above) out of the widget and into this panel, but the same `serializedPath` guard that
+        // resets it also resets this key — remounting the widget on node change stays harmless
+        // (and keeps its internal DOM/focus state, e.g. the input's own uncontrolled bits, from
+        // leaking across an unrelated node's widget instance).
+        key={`${key}-${serializedPath}`}
+        value={{
+          parentColumns,
+          spanValue,
+          commitSpan: (nextSpan) => commitLayoutSpan(onCommitNodeUpdate, path, nextSpan),
+          rowRejections: layoutSpanRowRejections,
+          onRowCommitResult: recordLayoutSpanRowCommitResult,
+        }}
+      >
+        {subsectionField}
+      </LayoutSpanWidgetContext.Provider>
+    )
+  }
+
   return (
     <div
       data-testid="layout-canvas-properties-panel"
       className="flex shrink-0 flex-col gap-4 overflow-y-auto border-l border-gray-200 bg-white p-3"
     >
-      {onDeleteNode !== undefined && (
-        <div className="flex items-center justify-between gap-2 border-b border-gray-200 pb-3">
-          <span className="text-xs font-medium text-gray-600">{node.type}</span>
-          <button
-            type="button"
-            data-testid="layout-canvas-delete-node-button"
-            onClick={onDeleteNode}
-            className="rounded border border-red-300 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
-          >
-            Eliminar nodo
-          </button>
-        </div>
-      )}
-      {node.type === 'link' && (
-        <LinkContentModePropertyField
-          label="Contenido"
-          node={node}
-          onChange={(nextNode) => onCommitNodeUpdate(path, () => nextNode)}
-        />
-      )}
-      {node.type === 'container' &&
-        (() => {
-          const pendingRejection = pendingRejections.containerColumnsMode
-          const displayedNode = pendingRejection ? (pendingRejection.value as typeof node) : node
-
-          return (
-            <div className="flex flex-col gap-2">
-              <ContainerColumnsModePropertyField
-                label="Modo"
-                node={displayedNode}
-                onChange={(nextNode) => {
-                  const result = onCommitNodeUpdate(path, () => nextNode)
-                  recordCommitResult('containerColumnsMode', nextNode, result)
-                }}
-              />
-              {pendingRejection && (
-                <CommitRejectionBanner
-                  dataTestId="layout-canvas-properties-panel-containerColumnsMode-error"
-                  error={pendingRejection.error}
-                />
-              )}
-            </div>
-          )
-        })()}
-      {SUBSECTIONS.map(({ key, label }) => {
-        const subsectionSchema = schemaProperties[key]
-        if (!subsectionSchema || typeof subsectionSchema !== 'object') return null
-
-        const currentValue = readSubsection(node, key)
-        let effectiveSchema = resolveUnionBranch(subsectionSchema as Record<string, unknown>, currentValue)
-        if (key === 'props' && node.type === 'tabs' && effectiveSchema) {
-          effectiveSchema = resolveTabsPropsSchema(effectiveSchema)
-        }
-        if (key === 'props' && node.type === 'heading' && effectiveSchema) {
-          effectiveSchema = resolveHeadingPropsSchema(effectiveSchema)
-        }
-        if (key === 'props' && node.type === 'container' && effectiveSchema) {
-          effectiveSchema = resolveContainerPropsSchema(effectiveSchema, currentValue)
-        }
-        if (key === 'props' && CHOICE_LIKE_NODE_TYPES.has(node.type) && effectiveSchema) {
-          effectiveSchema = resolveChoiceLikePropsSchema(effectiveSchema)
-        }
-        if (key === 'props' && effectiveSchema) {
-          effectiveSchema = resolveIconPropsSchema(effectiveSchema)
-        }
-
-        // T2 (0127): `Layout` only exists when a `container` ancestor with `columns` is
-        // resolvable — without one, `span` has nothing to be relative to, so the whole
-        // subsection is omitted rather than falling back to a generic editor. `pageLayout` is
-        // optional (see the prop's own doc comment above), so its absence is treated the same as
-        // "no ancestor found".
-        let parentColumns: RuntimeResponsiveLayoutValue | null = null
-        if (key === 'layout') {
-          parentColumns = pageLayout ? resolveAncestorContainerColumns(pageLayout, path) : null
-          if (parentColumns === null) return null
-          if (effectiveSchema) {
-            effectiveSchema = resolveLayoutSubsectionSchema(effectiveSchema)
-          }
-        }
-
-        const pendingRejection = pendingRejections[key]
-        const displayedValue = pendingRejection ? pendingRejection.value : currentValue
-
-        const subsectionField = (
-          <div key={key} className="flex flex-col gap-2">
-            <PropertyFieldDispatcher
-              schema={effectiveSchema}
-              value={displayedValue ?? {}}
-              label={label}
-              onChange={(nextValue) => {
-                const sanitizedValue = stripUndefined(nextValue)
-                const result = onCommitNodeUpdate(path, (currentNode) => withSubsection(currentNode, key, sanitizedValue))
-                recordCommitResult(key, sanitizedValue, result)
-              }}
-            />
-            {pendingRejection && (
-              <CommitRejectionBanner
-                dataTestId={`layout-canvas-properties-panel-${key}-error`}
-                error={pendingRejection.error}
-              />
+      <div className="flex flex-col gap-2 border-b border-gray-200 pb-3">
+        {pageLayout !== undefined && (
+          <LayoutCanvasBreadcrumb
+            pageLayout={pageLayout}
+            selectedPath={path}
+            onSelectNode={onSelectAncestor ?? NOOP_SELECT_ANCESTOR}
+          />
+        )}
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-sm font-semibold text-gray-900">{node.type}</span>
+          <div className="flex items-center gap-1">
+            {onDeleteNode !== undefined && (
+              <button
+                type="button"
+                data-testid="layout-canvas-delete-node-button"
+                onClick={onDeleteNode}
+                aria-label="Eliminar nodo"
+                className="rounded p-1 text-red-600 hover:bg-red-50"
+              >
+                <Trash2 className="h-4 w-4" aria-hidden="true" />
+              </button>
+            )}
+            {onClose !== undefined && (
+              <button
+                type="button"
+                data-testid="dev-editor-selection-overlay-close"
+                onClick={onClose}
+                aria-label="Cerrar panel de selección"
+                className="rounded p-1 text-gray-500 hover:bg-gray-100"
+              >
+                <X className="h-4 w-4" aria-hidden="true" />
+              </button>
             )}
           </div>
-        )
-
-        if (key !== 'layout' || parentColumns === null) return subsectionField
-
-        const spanValue = isPlainObject(currentValue) ? (currentValue.span as RuntimeResponsiveLayoutValue | undefined) : undefined
-
-        return (
-          <LayoutSpanWidgetContext.Provider
-            // T4 (0127, bug fix): keyed by `serializedPath` (not just the constant subsection
-            // `key`) so selecting a different node remounts `LayoutSpanPropertyField` instead of
-            // reusing the same instance. The widget keeps its own per-row `rejections` state
-            // (commit-rejection feedback, T3) entirely inside that component — unlike the panel's
-            // own `pendingRejections` above, which the `prevSerializedPath` guard already resets
-            // per node — so without a path-scoped key a rejection banner left on a row would keep
-            // showing after switching to an unrelated node's `layout.span` widget.
-            key={`${key}-${serializedPath}`}
-            value={{
-              parentColumns,
-              spanValue,
-              commitSpan: (nextSpan) => commitLayoutSpan(onCommitNodeUpdate, path, nextSpan),
-            }}
+        </div>
+        <div
+          data-testid="layout-canvas-properties-panel-id-row"
+          className="flex items-center justify-between gap-2 rounded bg-gray-100 px-2 py-1.5 text-sm"
+        >
+          <span className="text-gray-500">id</span>
+          {nodeId !== undefined ? (
+            <span className="text-gray-700">{nodeId}</span>
+          ) : (
+            <span className="text-gray-400">Sin id</span>
+          )}
+        </div>
+      </div>
+      {tabs.length > 0 && activeTab && (
+        <>
+          <NodePanelTabBar tabs={tabs} activeKey={activeTab.key} onSelectTab={setActiveTabKey} idPrefix={idPrefix} />
+          <div
+            role="tabpanel"
+            id={`${idPrefix}-panel-${activeTab.key}`}
+            aria-labelledby={`${idPrefix}-tab-${activeTab.key}`}
           >
-            {subsectionField}
-          </LayoutSpanWidgetContext.Provider>
-        )
-      })}
-      {node.type === 'form' &&
-        submitActionSchema &&
-        (() => {
-          const pendingRejection = pendingRejections.submitAction
-          const displayedValue = pendingRejection ? pendingRejection.value : buildSubmitActionFieldValue(node)
-
-          return (
-            <div className="flex flex-col gap-2">
-              <PropertyFieldDispatcher
-                schema={submitActionSchema}
-                value={displayedValue}
-                label="Acción de envío"
-                onChange={(nextValue) => {
-                  const result = onCommitNodeUpdate(path, (currentNode) =>
-                    currentNode.type === 'form' ? withSubmitActionField(currentNode, nextValue) : currentNode,
-                  )
-                  recordCommitResult('submitAction', nextValue, result)
-                }}
-              />
-              {pendingRejection && (
-                <CommitRejectionBanner
-                  dataTestId="layout-canvas-properties-panel-submitAction-error"
-                  error={pendingRejection.error}
-                />
-              )}
-            </div>
-          )
-        })()}
+            {activeTab.key === 'props' && renderPropsSpecialBlocks()}
+            {renderTabContent(activeTab.key, activeTab.label)}
+          </div>
+        </>
+      )}
     </div>
   )
 }

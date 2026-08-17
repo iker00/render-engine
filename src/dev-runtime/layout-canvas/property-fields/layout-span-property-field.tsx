@@ -1,13 +1,8 @@
-import { useId, useState } from 'react'
-import type { RuntimeConfigError, RuntimeResponsiveBoundedValue, RuntimeResponsiveBreakpoint, RuntimeResponsiveLayoutValue } from '../../../config/runtime-config'
+import { useId } from 'react'
+import type { RuntimeResponsiveBoundedValue, RuntimeResponsiveBreakpoint, RuntimeResponsiveLayoutValue } from '../../../config/runtime-config'
 import { normalizeResponsiveLayoutValue, responsiveBreakpoints } from '../../../runtime/runtime-node-styling-base'
 import { CommitRejectionBanner } from '../../commit-rejection-banner'
 import { useLayoutSpanWidgetContext } from './layout-span-widget-context'
-
-interface RowRejection {
-  value: number
-  error: RuntimeConfigError
-}
 
 // `spanValue` is either the responsive map itself, a plain integer (no explicit per-breakpoint
 // key), or `undefined` (no span declared at all). Only the map case has explicit keys — this
@@ -49,49 +44,36 @@ function computeNextSpanOnRemove(
  * Full `layout.span` widget (T3, 0127), replacing T2's wiring-only stub. Six fixed rows — one per
  * `RuntimeResponsiveBreakpoint` — each editable independently, with "Quitar" for rows that carry
  * an explicit value and a muted/inherited display for the rest. Reads everything from
- * `LayoutSpanWidgetContext` (`parentColumns`/`spanValue`/`commitSpan`) rather than the `value`/
- * `onChange` the dispatcher's `x-widget` hook passes down — see the context module's doc comment
- * for why `commitSpan` must stay the widget's only write channel.
+ * `LayoutSpanWidgetContext` (`parentColumns`/`spanValue`/`commitSpan`/`rowRejections`/
+ * `onRowCommitResult`) rather than the `value`/`onChange` the dispatcher's `x-widget` hook passes
+ * down — see the context module's doc comment for why `commitSpan` must stay the widget's only
+ * write channel.
+ *
+ * T6 (0133): per-row commit-rejection feedback (`rowRejections`/`onRowCommitResult`) is hosted by
+ * `LayoutCanvasPropertiesPanel`, not kept in local state here, so it survives a tab change within
+ * the same node (FR7) — see the context module's doc comment for why.
  *
  * The mobile-first cascade itself is never reimplemented here: both the "/ N" denominator (from
  * `parentColumns`) and each row's inherited value (from `spanValue`) go through
  * `normalizeResponsiveLayoutValue`, the same helper the runtime uses to resolve grid spans.
  */
 export function LayoutSpanPropertyField() {
-  const { parentColumns, spanValue, commitSpan } = useLayoutSpanWidgetContext()
-  const [rejections, setRejections] = useState<Partial<Record<RuntimeResponsiveBreakpoint, RowRejection>>>({})
+  const { parentColumns, spanValue, commitSpan, rowRejections, onRowCommitResult } = useLayoutSpanWidgetContext()
   const inputIdPrefix = useId()
 
   const denominators = normalizeResponsiveLayoutValue(parentColumns, 1)
   const effectiveSpans = normalizeResponsiveLayoutValue(spanValue ?? {}, 1)
   const explicitKeys = explicitSpanMap(spanValue)
 
-  function clearRejection(breakpoint: RuntimeResponsiveBreakpoint) {
-    setRejections((prev) => {
-      if (!(breakpoint in prev)) return prev
-      const next = { ...prev }
-      delete next[breakpoint]
-      return next
-    })
-  }
-
-  function applyCommitResult(breakpoint: RuntimeResponsiveBreakpoint, attemptedValue: number, result: ReturnType<typeof commitSpan>) {
-    if (result && result.status === 'rejected') {
-      setRejections((prev) => ({ ...prev, [breakpoint]: { value: attemptedValue, error: result.error } }))
-      return
-    }
-    clearRejection(breakpoint)
-  }
-
   function handleRowChange(breakpoint: RuntimeResponsiveBreakpoint, rawValue: string) {
     const nextValue = Number(rawValue)
     const result = commitSpan(computeNextSpanOnEdit(spanValue, breakpoint, nextValue))
-    applyCommitResult(breakpoint, nextValue, result)
+    onRowCommitResult(breakpoint, nextValue, result)
   }
 
   function handleRowRemove(breakpoint: RuntimeResponsiveBreakpoint) {
     const result = commitSpan(computeNextSpanOnRemove(spanValue, breakpoint))
-    applyCommitResult(breakpoint, effectiveSpans[breakpoint], result)
+    onRowCommitResult(breakpoint, effectiveSpans[breakpoint], result)
   }
 
   return (
@@ -99,7 +81,7 @@ export function LayoutSpanPropertyField() {
       <legend className="px-1 text-xs font-medium text-gray-700">Columnas</legend>
       {responsiveBreakpoints.map((breakpoint) => {
         const explicit = breakpoint in explicitKeys
-        const rejection = rejections[breakpoint]
+        const rejection = rowRejections[breakpoint]
         const displayedValue = rejection ? rejection.value : effectiveSpans[breakpoint]
         const inputId = `${inputIdPrefix}-${breakpoint}`
 

@@ -1,4 +1,5 @@
 import { useId, type ChangeEvent } from 'react'
+import { PropertyFieldRow } from './property-field-row'
 
 export interface RawJsonPropertyFieldProps {
   label: string
@@ -23,24 +24,21 @@ export function RawJsonPropertyField({ label, value, onChange }: RawJsonProperty
   }
 
   return (
-    <div className="flex flex-col gap-1">
-      <label htmlFor={textareaId} className="text-xs font-medium text-gray-700">
-        {label}
-      </label>
+    <PropertyFieldRow htmlFor={textareaId} label={label} align="top">
       <textarea
         id={textareaId}
         value={serialized}
         disabled={!isEditableAsString}
         onChange={handleChange}
         rows={3}
-        className="rounded border border-gray-300 px-2 py-1 font-mono text-xs text-gray-900 focus:border-gray-500 focus:outline-none disabled:bg-gray-100 disabled:text-gray-500"
+        className="w-full rounded-md border border-gray-300 bg-white px-2 py-1 font-mono text-xs text-gray-900 focus:border-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-400 disabled:bg-gray-100 disabled:text-gray-500"
       />
       {!isEditableAsString && (
-        <p className="text-[11px] text-gray-500">
+        <p className="mt-1 text-[11px] text-gray-500">
           Este valor no se puede editar de forma segura desde el formulario. Usa el editor JSON (Monaco) para
           modificarlo.
         </p>
       )}
-    </div>
+    </PropertyFieldRow>
   )
 }

@@ -377,6 +377,76 @@ describe('ShellConfigPanel / actions', () => {
       '/login',
     )
   })
+
+  // T4 (0133), criterion 10: an action row is edited through the same tabbed
+  // `LayoutCanvasPropertiesPanel` the canvas uses, minus Diseño — shell actions never live inside
+  // a page's `layout` tree, so no `pageLayout` is ever passed for them (see
+  // `shell-actions-list-editor.tsx`). Props and visibility both still commit through the real
+  // Shell pipeline (`onCommitShellMutation`/`patchRootKey`).
+  it('shows the action row tab bar without Diseño, and both Props and Visibilidad commit through the Shell pipeline', () => {
+    renderHarness(
+      buildBaseConfig({
+        shell: {
+          header: {
+            actions: [
+              {
+                type: 'link',
+                props: { label: 'Ir', href: '/somewhere' },
+                visibility: { reference: 'queries.loadUsers.status', operator: 'equals', value: 'x' },
+              },
+            ],
+          },
+        },
+      }),
+    )
+
+    // Scoped to the action row's own properties panel: `ShellConfigPanel` also renders its
+    // unrelated Header/Sidebar sub-navigation as a separate `role="tablist"`.
+    const panel = screen.getByTestId('layout-canvas-properties-panel')
+    const tablist = within(panel).getByRole('tablist')
+    const tabNames = within(tablist)
+      .getAllByRole('tab')
+      .map((tab) => tab.textContent)
+    expect(tabNames).toEqual(['Props', 'Visibilidad', 'Queries'])
+
+    fireEvent.change(screen.getByLabelText('href', { exact: false }), { target: { value: '/updated' } })
+    const actionsAfterProps = (rawConfig().shell as { header: { actions: Array<{ props: { href: string } }> } }).header.actions
+    expect(actionsAfterProps[0].props.href).toBe('/updated')
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Visibilidad' }))
+    fireEvent.change(screen.getByLabelText('Visibilidad — Valor'), { target: { value: 'y' } })
+    const actionsAfterVisibility = (
+      rawConfig().shell as { header: { actions: Array<{ visibility: { value: string } }> } }
+    ).header.actions
+    expect(actionsAfterVisibility[0].visibility.value).toBe('y')
+  })
+
+  // T5 (0133), edge case: a `link` action row in the Shell header shows the "Contenido" selector
+  // at the top of its own Props tabpanel, same as a `link` in the canvas — editable through the
+  // real Shell pipeline (`onCommitShellMutation`/`patchRootKey`), even though this panel never
+  // receives `pageLayout` (shell actions never live in a page's `layout` tree).
+  it('shows the "Contenido" selector at the top of the Props tabpanel for a link header action, editable through the Shell pipeline', () => {
+    renderHarness(
+      buildBaseConfig({
+        shell: { header: { actions: [{ type: 'link', props: { label: 'Ir', href: '/somewhere' } }] } },
+      }),
+    )
+
+    const panel = screen.getByTestId('layout-canvas-properties-panel')
+    expect(within(panel).getByRole('tab', { name: 'Props' })).toHaveAttribute('aria-selected', 'true')
+    const tabpanel = within(panel).getByRole('tabpanel')
+    const contentSelect = within(tabpanel).getByLabelText('Contenido') as HTMLSelectElement
+    expect(contentSelect.value).toBe('text')
+
+    const hrefField = within(tabpanel).getByLabelText('href', { exact: false })
+    expect(contentSelect.compareDocumentPosition(hrefField) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+
+    fireEvent.change(contentSelect, { target: { value: 'children' } })
+    const actionsAfterContentSwitch = (
+      rawConfig().shell as { header: { actions: Array<{ children?: unknown[] }> } }
+    ).header.actions
+    expect(actionsAfterContentSwitch[0].children).toEqual([])
+  })
 })
 
 describe('ShellConfigPanel / sidebar items — recursive editor mounted in the panel', () => {

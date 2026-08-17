@@ -693,3 +693,116 @@ describe('PropertyFieldDispatcher escape hatch', () => {
     expect(onChangeSpy).toHaveBeenCalledWith('texto editado')
   })
 })
+
+// T7 (0133): shared label-left / control-right row (`PropertyFieldRow`) applied to the five simple
+// controls, plus the group-header style for a nested `ObjectPropertyField`/`ArrayPropertyField`
+// legend. Assertions stay on the structural row/legend classes named by the task's own criteria
+// (label width + control flex, group-header casing) — not the full decorative class list, per the
+// task's restriction against frágil style assertions.
+describe('PropertyFieldDispatcher row layout (T7)', () => {
+  // A row is <div><label>…</label><div>{control}</div></div>: given the control element, the
+  // control's own wrapper is its parent, and the row is that wrapper's parent.
+  function getRowParts(control: HTMLElement) {
+    const controlWrapper = control.parentElement!
+    const row = controlWrapper.parentElement!
+    const label = row.querySelector('label')!
+    return { row, controlWrapper, label }
+  }
+
+  it('renders the text control in a label-left/control-right row', () => {
+    const onChangeSpy = vi.fn()
+    render(<ControlledDispatcher schema={{ type: 'string' }} initialValue="hola" label="Título" onChangeSpy={onChangeSpy} />)
+
+    const { controlWrapper, label } = getRowParts(screen.getByLabelText('Título'))
+    expect(label.className).toContain('w-1/3')
+    expect(label.className).toContain('min-w-24')
+    expect(controlWrapper.className).toContain('flex-1')
+    expect(controlWrapper.className).toContain('min-w-0')
+  })
+
+  it('renders the number control in a label-left/control-right row', () => {
+    const onChangeSpy = vi.fn()
+    render(<ControlledDispatcher schema={{ type: 'number' }} initialValue={0} label="Cantidad" onChangeSpy={onChangeSpy} />)
+
+    const { controlWrapper, label } = getRowParts(screen.getByLabelText('Cantidad'))
+    expect(label.className).toContain('w-1/3')
+    expect(label.className).toContain('min-w-24')
+    expect(controlWrapper.className).toContain('flex-1')
+    expect(controlWrapper.className).toContain('min-w-0')
+  })
+
+  it('renders the enum select control in a label-left/control-right row', () => {
+    const onChangeSpy = vi.fn()
+    render(
+      <ControlledDispatcher
+        schema={{ type: 'string', enum: ['a', 'b'] }}
+        initialValue="a"
+        label="Variante"
+        onChangeSpy={onChangeSpy}
+      />,
+    )
+
+    const { controlWrapper, label } = getRowParts(screen.getByLabelText('Variante'))
+    expect(label.className).toContain('w-1/3')
+    expect(label.className).toContain('min-w-24')
+    expect(controlWrapper.className).toContain('flex-1')
+    expect(controlWrapper.className).toContain('min-w-0')
+  })
+
+  it('renders the boolean checkbox to the right of a label-left row without inverting the htmlFor binding', () => {
+    const onChangeSpy = vi.fn()
+    render(<ControlledDispatcher schema={{ type: 'boolean' }} initialValue={false} label="Activo" onChangeSpy={onChangeSpy} />)
+
+    const checkbox = screen.getByLabelText('Activo')
+    const { controlWrapper, label } = getRowParts(checkbox)
+    expect(label.getAttribute('for')).toBe(checkbox.id)
+    expect(label.className).toContain('w-1/3')
+    expect(controlWrapper.className).toContain('flex-1')
+
+    fireEvent.click(checkbox)
+    expect(onChangeSpy).toHaveBeenCalledWith(true)
+  })
+
+  it('renders the raw-JSON fallback textarea in a label-left/control-right row', () => {
+    const onChangeSpy = vi.fn()
+    render(
+      <ControlledDispatcher
+        schema={{ anyOf: [{ type: 'string' }, { type: 'number' }] }}
+        initialValue={42}
+        label="Valor libre"
+        onChangeSpy={onChangeSpy}
+      />,
+    )
+
+    const { controlWrapper, label } = getRowParts(screen.getByLabelText('Valor libre'))
+    expect(label.className).toContain('w-1/3')
+    expect(label.className).toContain('min-w-24')
+    expect(controlWrapper.className).toContain('flex-1')
+    expect(controlWrapper.className).toContain('min-w-0')
+  })
+
+  it('styles a nested object legend (e.g. an array-of-objects item group) as an uppercase group header', () => {
+    const onChangeSpy = vi.fn()
+    const schema = {
+      type: 'object',
+      properties: {
+        columns: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: { key: { type: 'string' }, label: { type: 'string' } },
+          },
+        },
+      },
+    }
+    const initialValue = { columns: [{ key: 'name', label: 'Nombre' }] }
+
+    render(<ControlledDispatcher schema={schema} initialValue={initialValue} label="Tabla" onChangeSpy={onChangeSpy} />)
+
+    const nestedGroup = screen.getByRole('group', { name: 'columns #1' })
+    const legend = nestedGroup.querySelector('legend')!
+    expect(legend.className).toContain('uppercase')
+    expect(legend.className).toContain('tracking-wide')
+    expect(legend.className).toContain('text-[11px]')
+  })
+})

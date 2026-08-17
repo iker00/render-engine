@@ -340,3 +340,32 @@ describe('ConditionGroupPropertyField accessible label regression', () => {
     expect(screen.getAllByRole('group', { name: new RegExp(LABEL) }).length).toBeGreaterThan(0)
   })
 })
+
+// T4 (0133), FR6: `hideRootLegend` visually hides the root `legend` (kept in the DOM for the
+// fieldset's accessible name) without touching any nested accessible name derived from `label`.
+describe('ConditionGroupPropertyField hideRootLegend (T4, 0133)', () => {
+  it('regression: without hideRootLegend (the default), the root legend renders visible as today', () => {
+    render(<ConditionGroupPropertyField label={LABEL} value={{ reference: 'a', operator: 'equals', value: 'x' }} onChange={vi.fn()} />)
+
+    const legend = screen.getByText(LABEL, { selector: 'legend' })
+    expect(legend).not.toHaveClass('sr-only')
+  })
+
+  it('hides the root legend visually with hideRootLegend, keeping it in the DOM and leaving nested accessible names unchanged', () => {
+    render(
+      <ConditionGroupPropertyField
+        label={LABEL}
+        value={{ reference: 'a', operator: 'equals', value: 'x' }}
+        onChange={vi.fn()}
+        hideRootLegend
+      />,
+    )
+
+    const legend = screen.getByText(LABEL, { selector: 'legend' })
+    expect(legend).toHaveClass('sr-only')
+    // The fieldset keeps `legend` as its (visually-hidden) accessible name.
+    expect(legend.closest('fieldset')).toHaveAccessibleName(LABEL)
+    // Nested labels derived from `label` (e.g. "Visibilidad — Forma") are untouched.
+    expect(screen.getByRole('radiogroup', { name: `${LABEL} — Forma` })).toBeInTheDocument()
+  })
+})

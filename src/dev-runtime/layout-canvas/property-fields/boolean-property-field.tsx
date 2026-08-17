@@ -1,4 +1,5 @@
 import { useId } from 'react'
+import { PropertyFieldRow } from './property-field-row'
 
 interface BooleanPropertyFieldProps {
   label: string
@@ -10,17 +11,14 @@ export function BooleanPropertyField({ label, value, onChange }: BooleanProperty
   const inputId = useId()
 
   return (
-    <div className="flex items-center gap-2">
+    <PropertyFieldRow htmlFor={inputId} label={label}>
       <input
         id={inputId}
         type="checkbox"
         checked={value}
         onChange={(event) => onChange(event.target.checked)}
-        className="h-4 w-4 rounded border-gray-300 text-gray-800 focus:ring-gray-500"
+        className="h-4 w-4 rounded border-gray-300 text-gray-800 focus:outline-none focus:ring-1 focus:ring-gray-400"
       />
-      <label htmlFor={inputId} className="text-xs font-medium text-gray-700">
-        {label}
-      </label>
-    </div>
+    </PropertyFieldRow>
   )
 }

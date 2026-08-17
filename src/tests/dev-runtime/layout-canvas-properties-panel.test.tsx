@@ -5,6 +5,7 @@ import { validateRuntimeConfig } from '../../config/runtime-config'
 import type { RuntimeConfig } from '../../config/runtime-config'
 import type { LayoutNodePath } from '../../runtime/layout-node-path'
 import { commitLayoutSpan } from '../../dev-runtime/layout-canvas/commit-layout-span'
+import type { CommitCanvasMutationResult } from '../../dev-runtime/layout-canvas/layout-canvas-commit'
 import { LayoutCanvasPropertiesPanel } from '../../dev-runtime/layout-canvas/layout-canvas-properties-panel'
 import { DevRuntimeReady } from '../../dev-runtime/dev-runtime'
 
@@ -47,6 +48,16 @@ function headingNode(overrides: Partial<Extract<LayoutNode, { type: 'heading' }>
   return { type: 'heading', props: { text: 'Hello', level: 2, ...overrides } }
 }
 
+function containerWithVisibilityFixture(): LayoutNode {
+  return {
+    type: 'container',
+    props: { direction: 'row' },
+    visibility: { reference: 'queries.list.state', operator: 'equals', value: 'ready' },
+  } as LayoutNode
+}
+
+const otherPathFixture: LayoutNodePath = [{ field: 'children', index: 1 }]
+
 describe('LayoutCanvasPropertiesPanel props section', () => {
   it('shows an editable field for props.text on a heading node, seeded with its current value', () => {
     const node = headingNode({ text: 'Hello' })
@@ -76,6 +87,238 @@ describe('LayoutCanvasPropertiesPanel props section', () => {
   })
 })
 
+// T3 (0133): the panel now owns its own header — breadcrumb, node-type title, and icon-only
+// delete/close buttons — instead of `FloatingSelectionOverlay` rendering a separate "Selección"
+// bar above the (previously standalone-mounted) breadcrumb. `onDeleteNode`/`onClose`/
+// `onSelectAncestor`/`pageLayout` stay independently optional, same contract as the rest of the
+// panel's optional callbacks.
+describe('LayoutCanvasPropertiesPanel header', () => {
+  it('shows the node type as the highlighted title, regardless of onDeleteNode/onClose', () => {
+    const node = headingNode()
+    render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={() => {}} />)
+
+    expect(screen.getByText('heading')).toBeInTheDocument()
+  })
+
+  it('renders the delete button with an explicit accessible name only when onDeleteNode is passed, invoking it on click', () => {
+    const node = headingNode()
+    const onDeleteNode = vi.fn()
+    const { rerender } = render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={() => {}} />)
+
+    expect(screen.queryByTestId('layout-canvas-delete-node-button')).not.toBeInTheDocument()
+
+    rerender(
+      <LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={() => {}} onDeleteNode={onDeleteNode} />,
+    )
+    const deleteButton = screen.getByTestId('layout-canvas-delete-node-button')
+    expect(deleteButton).toHaveAccessibleName('Eliminar nodo')
+
+    fireEvent.click(deleteButton)
+    expect(onDeleteNode).toHaveBeenCalledTimes(1)
+  })
+
+  it('renders the close button with its own data-testid and accessible name only when onClose is passed, invoking it on click', () => {
+    const node = headingNode()
+    const onClose = vi.fn()
+    const { rerender } = render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={() => {}} />)
+
+    expect(screen.queryByTestId('dev-editor-selection-overlay-close')).not.toBeInTheDocument()
+
+    rerender(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={() => {}} onClose={onClose} />)
+    const closeButton = screen.getByTestId('dev-editor-selection-overlay-close')
+    expect(closeButton).toHaveAccessibleName('Cerrar panel de selección')
+
+    fireEvent.click(closeButton)
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it('renders the breadcrumb only when pageLayout is passed, invoking onSelectAncestor with the ancestor path on click', () => {
+    const node: LayoutNode = { type: 'heading', props: { text: 'Hi', level: 2 } }
+    const pageLayout: LayoutNode[] = [{ type: 'container', props: {}, children: [node] }]
+    const nestedPath: LayoutNodePath = [
+      { field: 'children', index: 0 },
+      { field: 'children', index: 0 },
+    ]
+    const onSelectAncestor = vi.fn()
+
+    const { rerender } = render(<LayoutCanvasPropertiesPanel node={node} path={nestedPath} onCommitNodeUpdate={() => {}} />)
+
+    expect(screen.queryByTestId('layout-canvas-breadcrumb')).not.toBeInTheDocument()
+
+    rerender(
+      <LayoutCanvasPropertiesPanel
+        node={node}
+        path={nestedPath}
+        pageLayout={pageLayout}
+        onCommitNodeUpdate={() => {}}
+        onSelectAncestor={onSelectAncestor}
+      />,
+    )
+    expect(screen.getByTestId('layout-canvas-breadcrumb')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByText('container'))
+
+    expect(onSelectAncestor).toHaveBeenCalledTimes(1)
+    expect(onSelectAncestor).toHaveBeenCalledWith([{ field: 'children', index: 0 }])
+  })
+})
+
+// T3 (0133), FR4/FR5, criterion 5: a read-only identity row under the header showing the node's
+// `id` (or a placeholder when it has none), made of non-focusable elements only.
+describe('LayoutCanvasPropertiesPanel identity row', () => {
+  it('shows the node id when the node declares one', () => {
+    const node: LayoutNode = { type: 'form', id: 'checkout', children: [] }
+    render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={() => {}} />)
+
+    expect(screen.getByText('id')).toBeInTheDocument()
+    expect(screen.getByText('checkout')).toBeInTheDocument()
+  })
+
+  it('shows the "Sin id" placeholder when the node has no id, with no focusable field element in the row', () => {
+    const node = headingNode()
+    render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={() => {}} />)
+
+    const idRow = screen.getByTestId('layout-canvas-properties-panel-id-row')
+    expect(within(idRow).getByText('Sin id')).toBeInTheDocument()
+    expect(within(idRow).queryByRole('textbox')).not.toBeInTheDocument()
+    expect(within(idRow).queryByRole('button')).not.toBeInTheDocument()
+  })
+})
+
+// T4 (0133): the tab bar (T1's `resolveNodePanelTabs` + T2's `NodePanelTabBar`) integrated into
+// the panel, replacing the previous vertical stack of subsections.
+describe('LayoutCanvasPropertiesPanel tabs (T4, 0133)', () => {
+  function containerWithColumns(columns: number, children: LayoutNode[] = []): LayoutNode {
+    return { type: 'container', props: { columns }, children } as LayoutNode
+  }
+
+  function statNode(): LayoutNode {
+    return { type: 'stat', props: { label: 'Total', value: '10' } } as LayoutNode
+  }
+
+  const nestedPath: LayoutNodePath = [
+    { field: 'children', index: 0 },
+    { field: 'children', index: 0 },
+  ]
+
+  // Criterion 1: all four tabs, Props active by default, only its tabpanel content in the DOM.
+  it('renders Props/Diseño/Visibilidad/Queries for a stat node inside a container with columns, Props active with only its content mounted', () => {
+    const node = statNode()
+    const pageLayout: LayoutNode[] = [containerWithColumns(4, [node])]
+    render(<LayoutCanvasPropertiesPanel node={node} path={nestedPath} pageLayout={pageLayout} onCommitNodeUpdate={() => {}} />)
+
+    const tablist = screen.getByRole('tablist')
+    const tabNames = within(tablist)
+      .getAllByRole('tab')
+      .map((tab) => tab.textContent)
+    expect(tabNames).toEqual(['Props', 'Diseño', 'Visibilidad', 'Queries'])
+
+    const propsTab = screen.getByRole('tab', { name: 'Props' })
+    expect(propsTab).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('tab', { name: 'Diseño' })).toHaveAttribute('aria-selected', 'false')
+
+    // Only the active tab's content is in the DOM — not merely hidden.
+    expect(screen.getByLabelText('label', { exact: false })).toBeInTheDocument()
+    expect(screen.queryByLabelText('Visibilidad — Referencia')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('layout-span-widget')).not.toBeInTheDocument()
+  })
+
+  // Criterion 2: same node type, no container ancestor with columns — Diseño is absent, the
+  // other three remain.
+  it('omits the Diseño tab (leaving the other three) for the same node type with no container ancestor with columns', () => {
+    const node = statNode()
+    render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={() => {}} />)
+
+    const tablist = screen.getByRole('tablist')
+    const tabNames = within(tablist)
+      .getAllByRole('tab')
+      .map((tab) => tab.textContent)
+    expect(tabNames).toEqual(['Props', 'Visibilidad', 'Queries'])
+  })
+
+  // Criterion 3: `hidden` has no `layout`/`visibility`/`queryStateFeedback` in its schema — only
+  // Props exists, active.
+  it('renders only the Props tab, active, for a hidden node', () => {
+    const node: LayoutNode = { type: 'hidden', props: { fieldId: 'f1', value: 'x' } } as LayoutNode
+    render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={() => {}} />)
+
+    const tablist = screen.getByRole('tablist')
+    const tabs = within(tablist).getAllByRole('tab')
+    expect(tabs).toHaveLength(1)
+    expect(tabs[0]).toHaveTextContent('Props')
+    expect(tabs[0]).toHaveAttribute('aria-selected', 'true')
+  })
+
+  // Criterion 4 / FR3: switching the selected node resets the active tab to the new node's first
+  // available tab, even if a non-default tab was active for the previous node.
+  it('resets the active tab to the new node\'s first available tab when the selected node changes', () => {
+    const node = containerWithVisibilityFixture()
+    const { rerender } = render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={() => {}} />)
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Visibilidad' }))
+    expect(screen.getByRole('tab', { name: 'Visibilidad' })).toHaveAttribute('aria-selected', 'true')
+
+    const otherNode: LayoutNode = { type: 'heading', props: { text: 'Otro', level: 2 } }
+    rerender(<LayoutCanvasPropertiesPanel node={otherNode} path={otherPathFixture} onCommitNodeUpdate={() => {}} />)
+
+    expect(screen.getByRole('tab', { name: 'Props' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByLabelText('text', { exact: false })).toBeInTheDocument()
+  })
+
+  // FR9: ARIA tablist/tab/tabpanel wiring, plus left/right arrow keys moving the active tab.
+  it('wires role=tablist/tab/tabpanel with aria-selected/aria-labelledby, and ArrowRight/ArrowLeft move the active tab', () => {
+    const node = statNode()
+    const pageLayout: LayoutNode[] = [containerWithColumns(4, [node])]
+    render(<LayoutCanvasPropertiesPanel node={node} path={nestedPath} pageLayout={pageLayout} onCommitNodeUpdate={() => {}} />)
+
+    const propsTab = screen.getByRole('tab', { name: 'Props' })
+    const tabpanel = screen.getByRole('tabpanel')
+    expect(tabpanel).toHaveAttribute('aria-labelledby', propsTab.id)
+    expect(propsTab).toHaveAttribute('aria-controls', tabpanel.id)
+
+    propsTab.focus()
+    fireEvent.keyDown(propsTab, { key: 'ArrowRight' })
+
+    const designTab = screen.getByRole('tab', { name: 'Diseño' })
+    expect(designTab).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('tabpanel')).toHaveAttribute('aria-labelledby', designTab.id)
+  })
+
+  // FR6: the tab's own content doesn't repeat the tab label as a visible heading — the dispatcher's
+  // root `legend` is `sr-only` for Props/Diseño/Queries, and forwarded to the Visibilidad widget.
+  it('hides the repeated subsection legend (sr-only) for every tab, without changing nested accessible names', () => {
+    const node = containerWithVisibilityFixture()
+    render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={() => {}} />)
+
+    const propsLegend = screen.getByText('Props', { selector: 'legend' })
+    expect(propsLegend).toHaveClass('sr-only')
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Visibilidad' }))
+    const visibilityLegend = screen.getByText('Visibilidad', { selector: 'legend' })
+    expect(visibilityLegend).toHaveClass('sr-only')
+    // Nested accessible names derived from `label` are unchanged.
+    expect(screen.getByRole('radiogroup', { name: 'Visibilidad — Forma' })).toBeInTheDocument()
+  })
+
+  // Edge case: deleting the selected node while a non-Props tab is active closes the panel
+  // without errors.
+  it('deletes the node cleanly while a non-Props tab is active', () => {
+    const node = containerWithVisibilityFixture()
+    const onDeleteNode = vi.fn()
+    const { rerender } = render(
+      <LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={() => {}} onDeleteNode={onDeleteNode} />,
+    )
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Visibilidad' }))
+    fireEvent.click(screen.getByTestId('layout-canvas-delete-node-button'))
+    expect(onDeleteNode).toHaveBeenCalledTimes(1)
+
+    // Simulates the parent unmounting the panel after the delete, as `FloatingSelectionOverlay`
+    // does when the selection clears — must not throw.
+    rerender(<></>)
+  })
+})
+
 describe('LayoutCanvasPropertiesPanel visibility section', () => {
   function containerWithVisibility(): LayoutNode {
     return {
@@ -93,6 +336,7 @@ describe('LayoutCanvasPropertiesPanel visibility section', () => {
     const node = containerWithVisibility()
     const onCommitNodeUpdate = vi.fn()
     render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={onCommitNodeUpdate} />)
+    fireEvent.click(screen.getByRole('tab', { name: 'Visibilidad' }))
 
     // Regression: no generic TextPropertyField labelled plainly "reference" renders on its own —
     // the widget's own row exposes it as "Visibilidad — Referencia" instead.
@@ -133,6 +377,7 @@ describe('LayoutCanvasPropertiesPanel visibility section', () => {
     } as LayoutNode
     const onCommitNodeUpdate = vi.fn()
     render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={onCommitNodeUpdate} />)
+    fireEvent.click(screen.getByRole('tab', { name: 'Visibilidad' }))
 
     const shapeSelector = screen.getByRole('radiogroup', { name: 'Visibilidad — Forma' })
     expect(within(shapeSelector).getByRole('radio', { name: 'Grupo (y/o)' })).toHaveAttribute('aria-checked', 'true')
@@ -164,6 +409,7 @@ describe('LayoutCanvasPropertiesPanel visibility section', () => {
   it('renders the widget in its default minimal state when the node has no visibility declared', () => {
     const node: LayoutNode = { type: 'container', props: { direction: 'row' } } as LayoutNode
     render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={() => {}} />)
+    fireEvent.click(screen.getByRole('tab', { name: 'Visibilidad' }))
 
     const shapeSelector = screen.getByRole('radiogroup', { name: 'Visibilidad — Forma' })
     expect(within(shapeSelector).getByRole('radio', { name: 'Condición simple' })).toHaveAttribute('aria-checked', 'true')
@@ -241,6 +487,7 @@ describe('LayoutCanvasPropertiesPanel layout subsection visibility', () => {
         onCommitNodeUpdate={() => {}}
       />,
     )
+    fireEvent.click(screen.getByRole('tab', { name: 'Diseño' }))
 
     expect(screen.getByTestId('layout-span-widget')).toBeInTheDocument()
     expect(screen.queryByLabelText('span', { exact: false })).not.toBeInTheDocument()
@@ -253,7 +500,7 @@ describe('LayoutCanvasPropertiesPanel layout subsection visibility', () => {
 
     expect(screen.queryByTestId('layout-span-widget')).not.toBeInTheDocument()
     expect(screen.queryByLabelText('span', { exact: false })).not.toBeInTheDocument()
-    expect(screen.queryByText('Layout')).not.toBeInTheDocument()
+    expect(screen.queryByRole('tab', { name: 'Diseño' })).not.toBeInTheDocument()
   })
 
   it('does not render the Layout subsection at all when pageLayout has no container ancestor with columns declared', () => {
@@ -271,7 +518,7 @@ describe('LayoutCanvasPropertiesPanel layout subsection visibility', () => {
 
     expect(screen.queryByTestId('layout-span-widget')).not.toBeInTheDocument()
     expect(screen.queryByLabelText('span', { exact: false })).not.toBeInTheDocument()
-    expect(screen.queryByText('Layout')).not.toBeInTheDocument()
+    expect(screen.queryByRole('tab', { name: 'Diseño' })).not.toBeInTheDocument()
   })
 
   it('gives the widget the columns of the nearest container ancestor, not the outermost one, when nested', () => {
@@ -291,6 +538,7 @@ describe('LayoutCanvasPropertiesPanel layout subsection visibility', () => {
         onCommitNodeUpdate={() => {}}
       />,
     )
+    fireEvent.click(screen.getByRole('tab', { name: 'Diseño' }))
 
     // T3 (0127): the real widget resolves the denominator ("/ N") of every row from
     // `parentColumns` via `normalizeResponsiveLayoutValue` — an integer `6` cascades to `/ 6` on
@@ -312,6 +560,7 @@ describe('LayoutCanvasPropertiesPanel layout subsection visibility', () => {
         onCommitNodeUpdate={() => {}}
       />,
     )
+    fireEvent.click(screen.getByRole('tab', { name: 'Diseño' }))
 
     // T3 (0127): with `spanValue = { base: 2 }`, the `base` row is explicit at `2` (and shows
     // "Quitar"); the rest cascade from it as inherited `2`s. Checking the `base` row's own value
@@ -320,6 +569,94 @@ describe('LayoutCanvasPropertiesPanel layout subsection visibility', () => {
     const baseRow = screen.getByTestId('layout-span-widget-row-base')
     expect(within(baseRow).getByLabelText('base')).toHaveValue(2)
     expect(baseRow).toHaveAttribute('data-explicit', 'true')
+  })
+})
+
+// T6 (0133), FR7: the panel now hosts the `layout-span` widget's per-row commit-rejection state
+// (`layoutSpanRowRejections` in `LayoutCanvasPropertiesPanel`) instead of the widget keeping it in
+// local `useState` — a rejected row and its typed value must survive switching to another tab and
+// back, and still clear when the selected node changes (same guard as `pendingRejections`).
+describe('LayoutCanvasPropertiesPanel layout.span row rejection persistence across tabs (T6, 0133)', () => {
+  function containerWithColumns(columns: number, children: LayoutNode[] = []): LayoutNode {
+    return { type: 'container', props: { columns }, children } as LayoutNode
+  }
+
+  const nestedPath: LayoutNodePath = [
+    { field: 'children', index: 0 },
+    { field: 'children', index: 0 },
+  ]
+
+  const rejectedSpanResult: CommitCanvasMutationResult = {
+    status: 'rejected',
+    error: { code: 'invalid-layout', message: 'span fuera de rango', displayMode: 'always' },
+  }
+
+  it('keeps the row alert and typed value on the base row after switching to Props and back to Diseño', () => {
+    const node: LayoutNode = { type: 'heading', props: { text: 'Hi', level: 2 } } as LayoutNode
+    const pageLayout: LayoutNode[] = [containerWithColumns(6, [node])]
+    const onCommitNodeUpdate = vi.fn().mockReturnValue(rejectedSpanResult)
+
+    render(
+      <LayoutCanvasPropertiesPanel
+        node={node}
+        path={nestedPath}
+        pageLayout={pageLayout}
+        onCommitNodeUpdate={onCommitNodeUpdate}
+      />,
+    )
+    fireEvent.click(screen.getByRole('tab', { name: 'Diseño' }))
+
+    fireEvent.change(within(screen.getByTestId('layout-span-widget-row-base')).getByLabelText('base'), {
+      target: { value: '9' },
+    })
+    expect(within(screen.getByTestId('layout-span-widget-row-base')).getByRole('alert')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Props' }))
+    expect(screen.queryByTestId('layout-span-widget')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Diseño' }))
+    const baseRow = screen.getByTestId('layout-span-widget-row-base')
+    expect(within(baseRow).getByLabelText('base')).toHaveValue(9)
+    expect(within(baseRow).getByRole('alert')).toBeInTheDocument()
+  })
+
+  it('clears the row alert when the selected node changes, the same guard pendingRejections already uses', () => {
+    const node: LayoutNode = { type: 'heading', props: { text: 'Hi', level: 2 } } as LayoutNode
+    const otherNode: LayoutNode = { type: 'heading', props: { text: 'Other', level: 2 } } as LayoutNode
+    const pageLayout: LayoutNode[] = [containerWithColumns(6, [node, otherNode])]
+    const otherNestedPath: LayoutNodePath = [
+      { field: 'children', index: 0 },
+      { field: 'children', index: 1 },
+    ]
+    const onCommitNodeUpdate = vi.fn().mockReturnValue(rejectedSpanResult)
+
+    const { rerender } = render(
+      <LayoutCanvasPropertiesPanel
+        node={node}
+        path={nestedPath}
+        pageLayout={pageLayout}
+        onCommitNodeUpdate={onCommitNodeUpdate}
+      />,
+    )
+    fireEvent.click(screen.getByRole('tab', { name: 'Diseño' }))
+    fireEvent.change(within(screen.getByTestId('layout-span-widget-row-base')).getByLabelText('base'), {
+      target: { value: '9' },
+    })
+    expect(within(screen.getByTestId('layout-span-widget-row-base')).getByRole('alert')).toBeInTheDocument()
+
+    rerender(
+      <LayoutCanvasPropertiesPanel
+        node={otherNode}
+        path={otherNestedPath}
+        pageLayout={pageLayout}
+        onCommitNodeUpdate={onCommitNodeUpdate}
+      />,
+    )
+    fireEvent.click(screen.getByRole('tab', { name: 'Diseño' }))
+
+    const baseRow = screen.getByTestId('layout-span-widget-row-base')
+    expect(within(baseRow).queryByRole('alert')).not.toBeInTheDocument()
+    expect(within(baseRow).getByLabelText('base')).toHaveValue(1)
   })
 })
 
@@ -1192,6 +1529,67 @@ describe('LayoutCanvasPropertiesPanel container columns mode widget (T5, 0128)',
     render(<LayoutCanvasPropertiesPanel node={containerNode({ direction: 'row' })} path={somePath} onCommitNodeUpdate={() => {}} />)
 
     expect(screen.queryByLabelText('columns', { exact: false })).not.toBeInTheDocument()
+  })
+})
+
+// T5 (0133): the three special blocks (link "Contenido", container "Modo", form "Acción de envío")
+// used to render between the identity row and the tab bar, visible with any tab active. They now
+// live at the top of the `Props` tabpanel, only while `Props` is active — closes criterion 6.
+describe('LayoutCanvasPropertiesPanel special Props blocks scoped to the tabpanel (T5, 0133)', () => {
+  function linkFixture(): LayoutNode {
+    return { type: 'link', props: { label: 'Ir', href: '/x' } } as LayoutNode
+  }
+  function containerFixture(): LayoutNode {
+    return { type: 'container', props: {} } as LayoutNode
+  }
+  function formFixture(): LayoutNode {
+    return {
+      type: 'form',
+      id: 'f1',
+      submitAction: { type: 'executeOperation', operationName: 'save' },
+    } as LayoutNode
+  }
+
+  it('renders the link "Contenido" selector inside the Props tabpanel, and it disappears under Visibilidad', () => {
+    render(<LayoutCanvasPropertiesPanel node={linkFixture()} path={somePath} onCommitNodeUpdate={() => {}} />)
+
+    const tabpanel = screen.getByRole('tabpanel')
+    expect(within(tabpanel).getByLabelText('Contenido')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Visibilidad' }))
+    expect(screen.queryByLabelText('Contenido')).not.toBeInTheDocument()
+  })
+
+  it('renders the container "Modo" widget inside the Props tabpanel, and it disappears under Visibilidad', () => {
+    render(<LayoutCanvasPropertiesPanel node={containerFixture()} path={somePath} onCommitNodeUpdate={() => {}} />)
+
+    const tabpanel = screen.getByRole('tabpanel')
+    expect(within(tabpanel).getByRole('radiogroup', { name: 'Modo' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Visibilidad' }))
+    expect(screen.queryByRole('radiogroup', { name: 'Modo' })).not.toBeInTheDocument()
+  })
+
+  // A `form` node's schema declares no `props` key of its own (only `submitAction`), so its
+  // `Props` tab exists purely to host this special block — the dispatcher renders nothing else
+  // underneath it. Regression coverage for `resolveNodePanelTabs`' `submitAction` fallback.
+  it('renders a Props tab and the form "Acción de envío" selector inside its tabpanel, and it disappears under Visibilidad', () => {
+    render(<LayoutCanvasPropertiesPanel node={formFixture()} path={somePath} onCommitNodeUpdate={() => {}} />)
+
+    expect(screen.getByRole('tab', { name: 'Props' })).toHaveAttribute('aria-selected', 'true')
+    const tabpanel = screen.getByRole('tabpanel')
+    expect(within(tabpanel).getByLabelText('Acción de envío')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Visibilidad' }))
+    expect(screen.queryByLabelText('Acción de envío')).not.toBeInTheDocument()
+  })
+
+  it('positions the "Contenido" selector before the dispatcher-driven props fields inside the tabpanel', () => {
+    render(<LayoutCanvasPropertiesPanel node={linkFixture()} path={somePath} onCommitNodeUpdate={() => {}} />)
+
+    const contentSelect = screen.getByLabelText('Contenido')
+    const labelField = screen.getByLabelText('label', { exact: false })
+    expect(contentSelect.compareDocumentPosition(labelField) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 })
 

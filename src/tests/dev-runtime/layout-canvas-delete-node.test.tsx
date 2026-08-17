@@ -134,4 +134,19 @@ describe('LayoutCanvas: eliminar nodo seleccionado (FR9)', () => {
     expect(text).not.toBe(initialConfigText)
     expect(JSON.parse(text).pages[0].layout).toHaveLength(0)
   })
+
+  // T4 (0133): the node-panel tab bar (T1/T2) is active alongside delete — deleting the node
+  // while a non-Props tab is selected must close the panel cleanly, with no leftover errors.
+  it('elimina el nodo seleccionado sin errores mientras una pestaña distinta de Props está activa', () => {
+    const { root } = renderCanvas(twoChildContainerConfig())
+
+    selectRootContainer(root)
+    fireEvent.click(screen.getByRole('tab', { name: 'Visibilidad' }))
+    expect(screen.getByRole('tab', { name: 'Visibilidad' })).toHaveAttribute('aria-selected', 'true')
+
+    fireEvent.click(screen.getByTestId('layout-canvas-delete-node-button'))
+
+    expect(screen.queryByTestId('layout-canvas-properties-panel')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('layout-canvas-breadcrumb')).not.toBeInTheDocument()
+  })
 })
