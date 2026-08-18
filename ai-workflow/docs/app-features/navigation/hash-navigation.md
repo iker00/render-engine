@@ -21,6 +21,7 @@
 ## Atrás y adelante
 - `goBack` ya delega en el historial real del navegador cuando la sesión actual conoce una entrada previa utilizable.
 - En una entrada directa por URL sin historial observado previo, `goBack` actúa como no-op visible.
+- Mientras el runtime está montado, `window.history.scrollRestoration` queda fijado en `'manual'` (y se restaura a su valor previo al desmontar) para que el runtime gobierne por completo la posición de scroll de `window` en cada pop, sin que el mecanismo nativo del navegador compita con la restauración propia (ver [[navigate-actions.md]]).
 
 ## Degradación
 - Si se intenta navegar con `navigateTo` a una página inexistente, el runtime conserva la página anterior y guarda un error recuperable `page-not-found`.
