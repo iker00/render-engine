@@ -7,6 +7,7 @@ import type {
   ResolvedEndpointOperation,
 } from '../endpoints-config/resolve-endpoint-operation'
 import type { CommitCanvasMutationResult } from '../layout-canvas/layout-canvas-commit'
+import { PropertyFieldRow } from '../layout-canvas/property-fields/property-field-row'
 import type {
   TranslationsProvider,
   TranslationsProviderError,
@@ -453,14 +454,11 @@ export function TranslationsConfigPanel({
           event.preventDefault()
           handleAddEntry()
         }}
-        className="flex flex-col gap-2 rounded border border-gray-200 p-2"
+        className="flex flex-col gap-2"
       >
         <fieldset className="flex flex-col gap-2">
           <legend className="px-1 text-xs font-medium text-gray-700">Añadir entrada</legend>
-          <div className="flex flex-col gap-1">
-            <label htmlFor="translations-add-key" className="text-xs text-gray-600">
-              Clave
-            </label>
+          <PropertyFieldRow htmlFor="translations-add-key" label="Clave">
             <input
               id="translations-add-key"
               type="text"
@@ -468,12 +466,9 @@ export function TranslationsConfigPanel({
               onChange={(event) => handleNewKeyChange(event.target.value)}
               className="w-full rounded border border-gray-300 px-1 py-0.5 text-sm"
             />
-          </div>
+          </PropertyFieldRow>
           {columns.map((lang) => (
-            <div key={lang} className="flex flex-col gap-1">
-              <label htmlFor={`translations-add-lang-${lang}`} className="text-xs text-gray-600">
-                {lang}
-              </label>
+            <PropertyFieldRow key={lang} htmlFor={`translations-add-lang-${lang}`} label={lang}>
               <input
                 id={`translations-add-lang-${lang}`}
                 type="text"
@@ -481,7 +476,7 @@ export function TranslationsConfigPanel({
                 onChange={(event) => handleNewEntryValueChange(lang, event.target.value)}
                 className="w-full rounded border border-gray-300 px-1 py-0.5 text-sm"
               />
-            </div>
+            </PropertyFieldRow>
           ))}
           {addPending && <CommitRejectionBanner dataTestId="translations-config-panel-add-error" error={addPending.error} />}
           <button
@@ -498,14 +493,11 @@ export function TranslationsConfigPanel({
           event.preventDefault()
           handleAddLanguage()
         }}
-        className="flex flex-col gap-2 rounded border border-gray-200 p-2"
+        className="flex flex-col gap-2"
       >
         <fieldset className="flex flex-col gap-2">
           <legend className="px-1 text-xs font-medium text-gray-700">Añadir idioma</legend>
-          <div className="flex flex-col gap-1">
-            <label htmlFor="translations-add-language-code" className="text-xs text-gray-600">
-              Código de idioma
-            </label>
+          <PropertyFieldRow htmlFor="translations-add-language-code" label="Código de idioma">
             <input
               id="translations-add-language-code"
               type="text"
@@ -513,7 +505,7 @@ export function TranslationsConfigPanel({
               onChange={(event) => handleNewLanguageCodeChange(event.target.value)}
               className="w-full rounded border border-gray-300 px-1 py-0.5 text-sm"
             />
-          </div>
+          </PropertyFieldRow>
           {addLanguagePending && (
             <CommitRejectionBanner dataTestId="translations-config-panel-add-language-error" error={addLanguagePending.error} />
           )}
@@ -526,7 +518,8 @@ export function TranslationsConfigPanel({
         </fieldset>
       </form>
 
-      <div className="flex flex-col gap-2 rounded border border-gray-200 p-2">
+      <div className="flex flex-col gap-2">
+        <p className="text-xs font-medium text-gray-700">Buscar y añadir</p>
         <form
           onSubmit={(event) => {
             event.preventDefault()
@@ -534,10 +527,7 @@ export function TranslationsConfigPanel({
           }}
           className="flex flex-col gap-2"
         >
-          <div className="flex flex-col gap-1">
-            <label htmlFor="translations-search-text" className="text-xs text-gray-600">
-              Buscar texto
-            </label>
+          <PropertyFieldRow htmlFor="translations-search-text" label="Buscar texto">
             <div className="flex gap-2">
               <input
                 id="translations-search-text"
@@ -554,7 +544,7 @@ export function TranslationsConfigPanel({
                 Buscar
               </button>
             </div>
-          </div>
+          </PropertyFieldRow>
           {searchResolution.status === 'unavailable' && (
             <p className="text-xs text-gray-500">{SEARCH_UNAVAILABLE_MESSAGES[searchResolution.reason]}</p>
           )}
@@ -574,6 +564,57 @@ export function TranslationsConfigPanel({
           )}
         </form>
 
+        {searchResults !== null && (
+          <>
+            {searchResults.length === 0 ? (
+              <p className="text-sm text-gray-500">Sin resultados</p>
+            ) : (
+              <>
+                <ul className="flex flex-col gap-1">
+                  {searchResults.map((result) => {
+                    const alreadyExists = resultAlreadyExists(result.idTexto)
+                    const checkboxId = `translations-search-result-${result.idTexto}`
+                    return (
+                      <li key={result.idTexto} className="flex items-center gap-2 text-sm">
+                        <input
+                          id={checkboxId}
+                          type="checkbox"
+                          aria-label={`Seleccionar resultado ${result.idTexto}`}
+                          checked={selectedResultIds.has(result.idTexto)}
+                          disabled={alreadyExists}
+                          onChange={() => handleToggleResult(result.idTexto)}
+                        />
+                        <label htmlFor={checkboxId} className="flex flex-1 items-center gap-2">
+                          <span className="text-gray-500">{String(result.idTexto)}</span>
+                          <span>{result.texto}</span>
+                        </label>
+                        {alreadyExists && <span className="text-xs text-gray-500">Ya existe</span>}
+                      </li>
+                    )
+                  })}
+                </ul>
+                <button
+                  type="button"
+                  onClick={handleAddSelectedResults}
+                  disabled={selectedResultIds.size === 0}
+                  className="self-start rounded border border-gray-300 px-2 py-1 text-xs text-gray-600 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Añadir seleccionados
+                </button>
+                {searchAddPending && (
+                  <CommitRejectionBanner
+                    dataTestId="translations-config-panel-search-add-error"
+                    error={searchAddPending.error}
+                  />
+                )}
+              </>
+            )}
+          </>
+        )}
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <p className="text-xs font-medium text-gray-700">Refrescar todo</p>
         <div className="flex items-center gap-2">
           <button
             type="button"
@@ -609,54 +650,6 @@ export function TranslationsConfigPanel({
           />
         )}
       </div>
-
-      {searchResults !== null && (
-        <div className="flex flex-col gap-2 rounded border border-gray-200 p-2">
-          {searchResults.length === 0 ? (
-            <p className="text-sm text-gray-500">Sin resultados</p>
-          ) : (
-            <>
-              <ul className="flex flex-col gap-1">
-                {searchResults.map((result) => {
-                  const alreadyExists = resultAlreadyExists(result.idTexto)
-                  const checkboxId = `translations-search-result-${result.idTexto}`
-                  return (
-                    <li key={result.idTexto} className="flex items-center gap-2 text-sm">
-                      <input
-                        id={checkboxId}
-                        type="checkbox"
-                        aria-label={`Seleccionar resultado ${result.idTexto}`}
-                        checked={selectedResultIds.has(result.idTexto)}
-                        disabled={alreadyExists}
-                        onChange={() => handleToggleResult(result.idTexto)}
-                      />
-                      <label htmlFor={checkboxId} className="flex flex-1 items-center gap-2">
-                        <span className="text-gray-500">{String(result.idTexto)}</span>
-                        <span>{result.texto}</span>
-                      </label>
-                      {alreadyExists && <span className="text-xs text-gray-500">Ya existe</span>}
-                    </li>
-                  )
-                })}
-              </ul>
-              <button
-                type="button"
-                onClick={handleAddSelectedResults}
-                disabled={selectedResultIds.size === 0}
-                className="self-start rounded border border-gray-300 px-2 py-1 text-xs text-gray-600 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Añadir seleccionados
-              </button>
-              {searchAddPending && (
-                <CommitRejectionBanner
-                  dataTestId="translations-config-panel-search-add-error"
-                  error={searchAddPending.error}
-                />
-              )}
-            </>
-          )}
-        </div>
-      )}
     </div>
   )
 }

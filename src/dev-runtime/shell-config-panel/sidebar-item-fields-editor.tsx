@@ -72,19 +72,20 @@ export function SidebarItemFieldsEditor({ item, onChange, labelText, onEnterChil
 
   return (
     <div className="flex flex-col gap-2">
+      <span className="text-xs font-medium text-gray-700">{labelText}</span>
       <TextPropertyField
-        label={`${labelText} — Etiqueta`}
+        label="Etiqueta"
         value={item.label}
         onChange={(value) => onChange({ ...item, label: value })}
         required
       />
       <IconPickerPropertyField
-        label={`${labelText} — Icono`}
+        label="Icono"
         value={item.icon}
         onChange={(value) => onChange({ ...item, icon: typeof value === 'string' && value.length > 0 ? value : undefined })}
       />
       <EnumPropertyField
-        label={`${labelText} — Modo`}
+        label="Modo"
         value={mode}
         options={modeOptions}
         optionLabels={MODE_LABELS}
@@ -93,7 +94,7 @@ export function SidebarItemFieldsEditor({ item, onChange, labelText, onEnterChil
       />
       {mode === 'href' && (
         <TextPropertyField
-          label={`${labelText} — Href`}
+          label="Href"
           value={item.href ?? ''}
           onChange={(value) => onChange({ ...item, href: value })}
           required
@@ -104,7 +105,7 @@ export function SidebarItemFieldsEditor({ item, onChange, labelText, onEnterChil
           variants={actionVariants}
           value={item.action}
           onChange={(nextAction) => onChange({ ...item, action: nextAction as NavigateToRuntimeUiAction | GoBackRuntimeUiAction | undefined })}
-          label={`${labelText} — Acción`}
+          label="Acción"
           required
         />
       )}
@@ -112,7 +113,7 @@ export function SidebarItemFieldsEditor({ item, onChange, labelText, onEnterChil
         schema={resolveUnionBranch(visibilitySchema, item.visibility)}
         value={item.visibility ?? {}}
         onChange={(nextVisibility) => onChange({ ...item, visibility: nextVisibility as RuntimeVisibilityConfig })}
-        label={`${labelText} — Visibilidad`}
+        label="Visibilidad"
       />
     </div>
   )

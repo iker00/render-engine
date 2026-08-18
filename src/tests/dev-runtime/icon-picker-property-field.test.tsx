@@ -400,6 +400,41 @@ describe('IconPickerPropertyField catalog dedup regression', () => {
   })
 })
 
+describe('IconPickerPropertyField row layout (T3, 0136)', () => {
+  it('renders label as a <label> associated with the search input via htmlFor/id, without changing its aria-label', () => {
+    render(<IconPickerPropertyField label="Icono" value={undefined} onChange={vi.fn()} />)
+
+    const input = screen.getByRole('textbox', { name: 'Buscar icono' })
+    const label = screen.getByText('Icono')
+
+    expect(label.tagName).toBe('LABEL')
+    expect(label).toHaveAttribute('for', input.id)
+    // `getByLabelText` resolves purely via the <label htmlFor>/id association, independent of
+    // the input's own `aria-label` — confirming both mechanisms point at the same input.
+    expect(screen.getByLabelText('Icono')).toBe(input)
+  })
+
+  it('places the label before the search input in the standard row, and keeps the open grid outside that row (full-width placement)', () => {
+    render(<IconPickerPropertyField label="Icono" value={undefined} onChange={vi.fn()} />)
+
+    const input = screen.getByRole('textbox', { name: 'Buscar icono' })
+    const label = screen.getByText('Icono')
+
+    // Label-left / control-right: the label node precedes the search input in DOM order.
+    expect(label.compareDocumentPosition(input) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+
+    const row = label.parentElement!
+    expect(row.contains(input)).toBe(true)
+
+    fireEvent.focus(input)
+    const grid = screen.getByRole('grid')
+
+    // The grid is not nested inside the label/input row — it spans the widget's full width as a
+    // sibling below the row, not constrained to the row's right-hand column.
+    expect(row.contains(grid)).toBe(false)
+  })
+})
+
 describe('IconPickerPropertyField pagination', () => {
   // Programmatically generated, not real Lucide names: exactly two full pages plus a partial
   // third, so the tests below can assert page boundaries without depending on any real icon name

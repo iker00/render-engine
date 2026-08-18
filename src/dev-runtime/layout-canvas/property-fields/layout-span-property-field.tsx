@@ -54,9 +54,11 @@ function computeNextSpanOnRemove(
  * `LayoutCanvasPropertiesPanel`, not kept in local state here, so it survives a tab change within
  * the same node (FR7) — see the context module's doc comment for why.
  *
- * The mobile-first cascade itself is never reimplemented here: both the "/ N" denominator (from
- * `parentColumns`) and each row's inherited value (from `spanValue`) go through
- * `normalizeResponsiveLayoutValue`, the same helper the runtime uses to resolve grid spans.
+ * The mobile-first cascade itself is never reimplemented here: both the occupancy preview's
+ * denominator (from `parentColumns`) and each row's inherited value (from `spanValue`) go through
+ * `normalizeResponsiveLayoutValue`, the same helper the runtime uses to resolve grid spans. The
+ * denominator is not shown per input (visual normalization, feature 0136, FR1/FR2) — only in the
+ * occupancy preview's legend below.
  */
 export function LayoutSpanPropertyField() {
   const { parentColumns, spanValue, commitSpan, rowRejections, onRowCommitResult } = useLayoutSpanWidgetContext()
@@ -85,31 +87,22 @@ export function LayoutSpanPropertyField() {
   }
 
   return (
-    <fieldset
-      data-testid="layout-span-widget"
-      className="flex flex-col gap-3 rounded-lg border border-gray-200 bg-white p-3"
-    >
-      <legend className="px-1 text-xs font-medium text-gray-700">Columnas</legend>
-      {responsiveBreakpoints.map((breakpoint) => {
-        const explicit = breakpoint in explicitKeys
-        const rejection = rowRejections[breakpoint]
-        const displayedValue = rejection ? rejection.value : effectiveSpans[breakpoint]
-        const inputId = `${inputIdPrefix}-${breakpoint}`
+    <fieldset data-testid="layout-span-widget" className="flex flex-col gap-3">
+      <legend className="px-1 mb-2 text-xs font-medium text-gray-700">Columnas</legend>
+      <div className="flex flex-row gap-3">
+        {responsiveBreakpoints.map((breakpoint) => {
+          const explicit = breakpoint in explicitKeys
+          const rejection = rowRejections[breakpoint]
+          const displayedValue = rejection ? rejection.value : effectiveSpans[breakpoint]
+          const inputId = `${inputIdPrefix}-${breakpoint}`
 
-        return (
-          <div
-            key={breakpoint}
-            data-testid={`layout-span-widget-row-${breakpoint}`}
-            data-explicit={explicit}
-            className="flex flex-col gap-1"
-          >
-            <div className="flex items-center gap-2.5">
-              <label
-                htmlFor={inputId}
-                className={explicit ? 'w-9 shrink-0 text-xs font-medium text-gray-700' : 'w-9 shrink-0 text-xs text-gray-400'}
-              >
-                {breakpoint}
-              </label>
+          return (
+            <div
+              key={breakpoint}
+              data-testid={`layout-span-widget-row-${breakpoint}`}
+              data-explicit={explicit}
+              className="relative flex flex-col items-center gap-1"
+            >
               <input
                 id={inputId}
                 type="number"
@@ -119,28 +112,33 @@ export function LayoutSpanPropertyField() {
                 onBlur={() => setPreviewedBreakpoint('base')}
                 className={
                   explicit
-                    ? 'w-16 rounded-md border border-gray-300 px-2 py-1 text-sm text-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-400'
-                    : 'w-16 rounded-md border border-gray-300 px-2 py-1 text-sm text-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-400'
+                    ? 'w-full rounded-md border border-gray-300 px-2 py-1 text-center text-sm text-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-400'
+                    : 'w-full rounded-md border border-gray-300 px-2 py-1 text-center text-sm text-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-400'
                 }
               />
-              <span className="text-xs text-gray-500">/ {denominators[breakpoint]}</span>
+              <label
+                htmlFor={inputId}
+                className={explicit ? 'text-xs font-medium text-gray-700' : 'text-xs text-gray-400'}
+              >
+                {breakpoint}
+              </label>
               {explicit && (
                 <button
                   type="button"
                   onClick={() => handleRowRemove(breakpoint)}
                   aria-label={`Quitar ${breakpoint}`}
-                  className="rounded-md border border-gray-300 bg-white px-2 py-1 text-xs font-medium text-gray-600 hover:bg-gray-100 focus:outline-none focus:ring-1 focus:ring-gray-400"
+                  className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full border border-gray-300 bg-white text-[10px] leading-none text-gray-600 hover:bg-gray-100 focus:outline-none focus:ring-1 focus:ring-gray-400"
                 >
-                  Quitar
+                  ×
                 </button>
               )}
+              {rejection && (
+                <CommitRejectionBanner dataTestId={`layout-span-widget-${breakpoint}-error`} error={rejection.error} />
+              )}
             </div>
-            {rejection && (
-              <CommitRejectionBanner dataTestId={`layout-span-widget-${breakpoint}-error`} error={rejection.error} />
-            )}
-          </div>
-        )
-      })}
+          )
+        })}
+      </div>
       <LayoutSpanOccupancyPreview
         breakpoint={previewedBreakpoint}
         span={effectiveSpans[previewedBreakpoint]}

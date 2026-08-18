@@ -62,13 +62,14 @@ export function ShellActionsListEditor({ actions, onCommitActions }: ShellAction
   }
 
   return (
-    <fieldset className="flex flex-col gap-2 rounded border border-gray-200 p-2">
+    <fieldset className="flex flex-col gap-2">
       <legend className="px-1 text-xs font-medium text-gray-700">Acciones</legend>
       {actions.map((action, index) => (
-        <div key={index} className="flex flex-col gap-2 rounded border border-gray-200 p-2">
+        <div key={index} className="flex flex-col gap-2">
+          <span className="text-xs font-medium text-gray-700">{`Acción ${index + 1}`}</span>
           <div className="flex items-center justify-between gap-2">
             <EnumPropertyField
-              label={`Acción ${index + 1} — Tipo`}
+              label="Tipo"
               value={action.type}
               options={['link', 'button']}
               optionLabels={ACTION_TYPE_LABELS}

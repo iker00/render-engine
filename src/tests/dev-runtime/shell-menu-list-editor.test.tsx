@@ -139,10 +139,10 @@ describe('ShellMenuListEditor / menu — add root item with href', () => {
     renderHarness()
 
     fireEvent.click(screen.getByRole('button', { name: 'Añadir elemento de menú' }))
-    fireEvent.change(screen.getByRole('textbox', { name: 'Elemento de menú 1 — Etiqueta' }), {
+    fireEvent.change(screen.getByRole('textbox', { name: 'Etiqueta' }), {
       target: { value: 'Home' },
     })
-    fireEvent.change(screen.getByRole('textbox', { name: 'Elemento de menú 1 — Href' }), {
+    fireEvent.change(screen.getByRole('textbox', { name: 'Href' }), {
       target: { value: '/home' },
     })
 
@@ -154,14 +154,14 @@ describe('ShellMenuListEditor / menu — action variant selector', () => {
   it('choosing "Acción" then "Navegar a página" reveals pageId and commits a navigateTo action', () => {
     renderHarness()
     fireEvent.click(screen.getByRole('button', { name: 'Añadir elemento de menú' }))
-    fireEvent.change(screen.getByRole('textbox', { name: 'Elemento de menú 1 — Etiqueta' }), {
+    fireEvent.change(screen.getByRole('textbox', { name: 'Etiqueta' }), {
       target: { value: 'About' },
     })
 
-    fireEvent.change(screen.getByRole('combobox', { name: 'Elemento de menú 1 — Modo' }), {
+    fireEvent.change(screen.getByRole('combobox', { name: 'Modo' }), {
       target: { value: 'action' },
     })
-    fireEvent.change(screen.getByRole('combobox', { name: 'Elemento de menú 1 — Acción' }), {
+    fireEvent.change(screen.getByRole('combobox', { name: 'Acción' }), {
       target: { value: 'navigateTo' },
     })
     expect(screen.getByRole('textbox', { name: 'pageId' })).toBeInTheDocument()
@@ -176,7 +176,7 @@ describe('ShellMenuListEditor / menu — children mode', () => {
   function renderWithOneRootItem() {
     renderHarness()
     fireEvent.click(screen.getByRole('button', { name: 'Añadir elemento de menú' }))
-    fireEvent.change(screen.getByRole('textbox', { name: 'Elemento de menú 1 — Etiqueta' }), {
+    fireEvent.change(screen.getByRole('textbox', { name: 'Etiqueta' }), {
       target: { value: 'Products' },
     })
   }
@@ -184,7 +184,7 @@ describe('ShellMenuListEditor / menu — children mode', () => {
   it('switching to "Con desplegable" replaces href/action with a children list (mutually exclusive per schema)', () => {
     renderWithOneRootItem()
 
-    fireEvent.change(screen.getByRole('combobox', { name: 'Elemento de menú 1 — Modo' }), {
+    fireEvent.change(screen.getByRole('combobox', { name: 'Modo' }), {
       target: { value: 'children' },
     })
 
@@ -196,11 +196,14 @@ describe('ShellMenuListEditor / menu — children mode', () => {
 
   it('renders the "children" sublist and lets the user edit its own label', () => {
     renderWithOneRootItem()
-    fireEvent.change(screen.getByRole('combobox', { name: 'Elemento de menú 1 — Modo' }), {
+    fireEvent.change(screen.getByRole('combobox', { name: 'Modo' }), {
       target: { value: 'children' },
     })
 
-    fireEvent.change(screen.getByRole('textbox', { name: 'Elemento de desplegable 1 — Etiqueta' }), {
+    // Both the root row (already expanded) and the freshly created child row (auto-expanded by
+    // `onEnterChildrenMode`) are visible at once, each with its own bare "Etiqueta" field (T5,
+    // 0136) — scoped to the child's own row (`0.0`) to target its field unambiguously.
+    fireEvent.change(within(screen.getByTestId('shell-tree-row-0.0')).getByRole('textbox', { name: 'Etiqueta' }), {
       target: { value: 'Shoes' },
     })
 
@@ -210,7 +213,7 @@ describe('ShellMenuListEditor / menu — children mode', () => {
 
   it('disables "Quitar" on the last remaining child (schema requires at least one)', () => {
     renderWithOneRootItem()
-    fireEvent.change(screen.getByRole('combobox', { name: 'Elemento de menú 1 — Modo' }), {
+    fireEvent.change(screen.getByRole('combobox', { name: 'Modo' }), {
       target: { value: 'children' },
     })
 
@@ -219,11 +222,13 @@ describe('ShellMenuListEditor / menu — children mode', () => {
 
   it('a menuItemChild row never offers "Con desplegable" as a mode option', () => {
     renderWithOneRootItem()
-    fireEvent.change(screen.getByRole('combobox', { name: 'Elemento de menú 1 — Modo' }), {
+    fireEvent.change(screen.getByRole('combobox', { name: 'Modo' }), {
       target: { value: 'children' },
     })
 
-    const childModeSelect = screen.getByRole('combobox', { name: 'Elemento de desplegable 1 — Modo' }) as HTMLSelectElement
+    const childModeSelect = within(screen.getByTestId('shell-tree-row-0.0')).getByRole('combobox', {
+      name: 'Modo',
+    }) as HTMLSelectElement
     const options = Array.from(childModeSelect.options).map((option) => option.value)
     expect(options).not.toContain('children')
   })
@@ -432,13 +437,13 @@ describe('ShellMenuListEditor / icon field (T3, 0129)', () => {
     // The grid is hidden until the search input is focused (T5, 0129).
     fireEvent.focus(screen.getByRole('textbox', { name: 'Buscar icono' }))
 
-    const grid = screen.getByRole('grid', { name: 'Elemento de menú 1 — Icono' })
+    const grid = screen.getByRole('grid', { name: 'Icono' })
     const selected = within(grid)
       .getAllByRole('gridcell')
       .filter((cell) => cell.getAttribute('aria-selected') === 'true')
     expect(selected).toHaveLength(1)
     expect(selected[0]).toHaveTextContent('Home')
-    expect(screen.queryByRole('textbox', { name: /Elemento de menú 1 — Icono/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('textbox', { name: 'Icono' })).not.toBeInTheDocument()
   })
 
   it('a menuItemChild row (inside "Con desplegable") shows the icon widget with its own icon highlighted', () => {
@@ -446,7 +451,7 @@ describe('ShellMenuListEditor / icon field (T3, 0129)', () => {
     fireEvent.click(screen.getByTestId('menu-item-collapse-toggle-0.0'))
     fireEvent.focus(screen.getByRole('textbox', { name: 'Buscar icono' }))
 
-    const grid = screen.getByRole('grid', { name: 'Elemento de desplegable 1 — Icono' })
+    const grid = screen.getByRole('grid', { name: 'Icono' })
     const selected = within(grid)
       .getAllByRole('gridcell')
       .filter((cell) => cell.getAttribute('aria-selected') === 'true')
@@ -481,12 +486,12 @@ describe('ShellMenuListEditor / visibility widget (T4, 0132)', () => {
     ])
     fireEvent.click(screen.getByTestId('menu-item-collapse-toggle-0'))
 
-    const shape = screen.getByRole('radiogroup', { name: 'Elemento de menú 1 — Visibilidad — Forma' })
+    const shape = screen.getByRole('radiogroup', { name: 'Forma' })
     expect(within(shape).getByRole('radio', { name: 'Condición simple' })).toHaveAttribute('aria-checked', 'true')
-    expect(screen.getByRole('textbox', { name: 'Elemento de menú 1 — Visibilidad — Referencia' })).toHaveValue(
+    expect(screen.getByRole('textbox', { name: 'Referencia' })).toHaveValue(
       'params.userId',
     )
-    expect(screen.getByRole('combobox', { name: 'Elemento de menú 1 — Visibilidad — Operador' })).toHaveValue('equals')
+    expect(screen.getByRole('combobox', { name: 'Operador' })).toHaveValue('equals')
     // Regression: the previous generic object editor exposed a raw `reference` textbox with no
     // row-specific prefix — the widget now consumes the whole `visibility` subsection instead.
     expect(screen.queryByRole('textbox', { name: 'reference' })).not.toBeInTheDocument()
@@ -513,19 +518,19 @@ describe('ShellMenuListEditor / visibility widget (T4, 0132)', () => {
     ])
     fireEvent.click(screen.getByTestId('menu-item-collapse-toggle-0.0'))
 
-    const shape = screen.getByRole('radiogroup', { name: 'Elemento de desplegable 1 — Visibilidad — Forma' })
+    const shape = screen.getByRole('radiogroup', { name: 'Forma' })
     expect(within(shape).getByRole('radio', { name: 'Grupo (y/o)' })).toHaveAttribute('aria-checked', 'true')
-    const groupOperator = screen.getByRole('radiogroup', { name: 'Elemento de desplegable 1 — Visibilidad — Operador del grupo' })
+    const groupOperator = screen.getByRole('radiogroup', { name: 'Operador del grupo' })
     expect(within(groupOperator).getByRole('radio', { name: 'or' })).toHaveAttribute('aria-checked', 'true')
-    expect(screen.getByRole('group', { name: 'Elemento de desplegable 1 — Visibilidad — Condición 1' })).toBeInTheDocument()
-    expect(screen.getByRole('group', { name: 'Elemento de desplegable 1 — Visibilidad — Condición 2' })).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: 'Condición 1' })).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: 'Condición 2' })).toBeInTheDocument()
   })
 
   it('choosing "Grupo (y/o)" from the widget wraps the previous simple condition without touching other fields', () => {
     renderHarness([{ label: 'Home', href: '/home', visibility: { reference: 'x', operator: 'equals', value: 'y' } }])
     fireEvent.click(screen.getByTestId('menu-item-collapse-toggle-0'))
 
-    const shape = screen.getByRole('radiogroup', { name: 'Elemento de menú 1 — Visibilidad — Forma' })
+    const shape = screen.getByRole('radiogroup', { name: 'Forma' })
     fireEvent.click(within(shape).getByRole('radio', { name: 'Grupo (y/o)' }))
 
     expect(currentMenu()).toEqual([
@@ -543,7 +548,7 @@ describe('ShellMenuListEditor / collapse control', () => {
     renderHarness([{ label: 'Home', href: '/home' }])
 
     expect(screen.getByTestId('menu-item-collapse-toggle-0')).toHaveAttribute('aria-expanded', 'false')
-    expect(screen.queryByRole('textbox', { name: 'Elemento de menú 1 — Etiqueta' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('textbox', { name: 'Etiqueta' })).not.toBeInTheDocument()
   })
 
   it('expanding a collapsed root item reveals its fields; its label/icon stay visible on the toggle button either way', () => {
@@ -556,7 +561,7 @@ describe('ShellMenuListEditor / collapse control', () => {
 
     fireEvent.click(toggle)
 
-    expect(screen.getByRole('textbox', { name: 'Elemento de menú 1 — Etiqueta' })).toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: 'Etiqueta' })).toBeInTheDocument()
     expect(toggle).toHaveAttribute('aria-expanded', 'true')
     expect(toggle).toHaveTextContent('Home')
     expect(toggle).toHaveTextContent('home')
@@ -570,7 +575,7 @@ describe('ShellMenuListEditor / collapse control', () => {
 
     expect(screen.getByTestId('menu-item-collapse-toggle-0')).toHaveTextContent('Products')
     expect(screen.getByTestId('menu-item-collapse-toggle-0')).toHaveAttribute('aria-expanded', 'false')
-    expect(screen.getByRole('textbox', { name: 'Elemento de desplegable 1 — Etiqueta' })).toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: 'Etiqueta' })).toBeInTheDocument()
   })
 
   it('shows the branch indicator only for a root item in "Con desplegable" mode, both collapsed and expanded', () => {
@@ -590,7 +595,7 @@ describe('ShellMenuListEditor / collapse control', () => {
     renderHarness([{ label: 'Home', href: '/home' }])
 
     fireEvent.click(screen.getByTestId('menu-item-collapse-toggle-0'))
-    fireEvent.change(screen.getByRole('textbox', { name: 'Elemento de menú 1 — Etiqueta' }), {
+    fireEvent.change(screen.getByRole('textbox', { name: 'Etiqueta' }), {
       target: { value: 'REJECT' },
     })
     expect(screen.getByRole('alert')).toBeInTheDocument()
@@ -631,7 +636,10 @@ describe('ShellMenuListEditor / collapse control', () => {
 
     expect(screen.getByTestId('menu-item-collapse-toggle-0')).toHaveAttribute('aria-expanded', 'true')
     expect(screen.getByTestId('menu-item-collapse-toggle-1')).toHaveAttribute('aria-expanded', 'false')
-    expect(screen.queryByRole('textbox', { name: 'Elemento de menú 2 — Etiqueta' })).not.toBeInTheDocument()
+    // Scoped to the still-collapsed second row: its own bare "Etiqueta" field isn't rendered at
+    // all (a global query would spuriously find the *first* row's "Etiqueta" field instead, since
+    // both rows now use the same bare accessible name — T5, 0136).
+    expect(within(screen.getByTestId('shell-tree-row-1')).queryByRole('textbox', { name: 'Etiqueta' })).not.toBeInTheDocument()
   })
 
   it('places the row name directly after the drag handle, both in the same row', () => {
@@ -656,5 +664,64 @@ describe('ShellMenuListEditor / collapse control', () => {
 
     fireEvent.click(within(toggle).getByText('Home'))
     expect(toggle).toHaveAttribute('aria-expanded', 'false')
+  })
+})
+
+describe('ShellMenuListEditor / root box removal (T4, 0136)', () => {
+  it('drops the box styling (border/rounded/background) from the root fieldset, keeping "Menú" as a plain-text legend', () => {
+    renderHarness()
+
+    const fieldset = screen.getByRole('group', { name: 'Menú' })
+    expect(fieldset.tagName).toBe('FIELDSET')
+    expect(fieldset.className).not.toMatch(/\bborder\b/)
+    expect(fieldset.className).not.toMatch(/rounded/)
+    expect(fieldset.className).not.toMatch(/\bbg-/)
+
+    const legend = screen.getByText('Menú')
+    expect(legend.tagName).toBe('LEGEND')
+    expect(legend.className).toBe('px-1 text-xs font-medium text-gray-700')
+  })
+})
+
+describe('ShellMenuListEditor / row field label simplification (T5, 0136)', () => {
+  it('shows a plain-text "Elemento de menú 1" header above a root item\'s fields, each field using its own bare accessible name', () => {
+    renderHarness([{ label: 'Home', href: '/home' }])
+    fireEvent.click(screen.getByTestId('menu-item-collapse-toggle-0'))
+
+    const row = screen.getByTestId('shell-tree-row-0')
+    const header = within(row).getByText('Elemento de menú 1')
+    expect(header.tagName).toBe('SPAN')
+    expect(header.className).toBe('text-xs font-medium text-gray-700')
+
+    expect(within(row).getByRole('textbox', { name: 'Etiqueta' })).toBeInTheDocument()
+    expect(within(row).getByRole('combobox', { name: 'Modo' })).toBeInTheDocument()
+    expect(within(row).getByRole('textbox', { name: 'Href' })).toBeInTheDocument()
+    expect(within(row).getByText('Visibilidad')).toBeInTheDocument()
+
+    // No compound "Elemento de menú 1 — ..." label survives on any field (acceptance criteria 6/10/11).
+    expect(within(row).queryByRole('textbox', { name: /Elemento de menú 1 —/ })).not.toBeInTheDocument()
+    expect(within(row).queryByRole('combobox', { name: /Elemento de menú 1 —/ })).not.toBeInTheDocument()
+    expect(within(row).queryByText(/Elemento de menú 1 — Visibilidad/)).not.toBeInTheDocument()
+  })
+
+  it('shows the "Acción" field with a bare accessible name (no compound label) once mode is "Acción"', () => {
+    renderHarness([{ label: 'About', action: { type: 'navigateTo', pageId: 'home' } }])
+    fireEvent.click(screen.getByTestId('menu-item-collapse-toggle-0'))
+
+    expect(screen.getByRole('combobox', { name: 'Acción' })).toBeInTheDocument()
+    expect(screen.queryByRole('combobox', { name: /Elemento de menú 1 —/ })).not.toBeInTheDocument()
+  })
+
+  it('shows a plain-text "Elemento de desplegable 1" header above a menuItemChild row\'s own fields', () => {
+    renderHarness([{ label: 'Products', children: [{ label: 'Shoes', href: '/shoes' }] }])
+    fireEvent.click(screen.getByTestId('menu-item-collapse-toggle-0.0'))
+
+    const childRow = screen.getByTestId('shell-tree-row-0.0')
+    const header = within(childRow).getByText('Elemento de desplegable 1')
+    expect(header.tagName).toBe('SPAN')
+    expect(header.className).toBe('text-xs font-medium text-gray-700')
+
+    expect(within(childRow).getByRole('textbox', { name: 'Etiqueta' })).toBeInTheDocument()
+    expect(within(childRow).queryByRole('textbox', { name: /Elemento de desplegable 1 —/ })).not.toBeInTheDocument()
   })
 })

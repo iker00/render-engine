@@ -823,6 +823,215 @@ describe('TranslationsConfigPanel refresh all', () => {
   })
 })
 
+// 0136-T6 (FR9/FR10): the four form blocks ("Añadir entrada", "Añadir idioma", "Buscar y añadir",
+// "Refrescar todo") lose their box styling and gain a plain-text header, and their simple fields
+// move to the shared label-left/control-right row (`PropertyFieldRow`). The main edit table is
+// untouched (criterion 13).
+describe('TranslationsConfigPanel field layout (0136-T6)', () => {
+  const BOX_CLASS_PATTERN = /\b(border|rounded|bg-)/
+
+  it('renders each of the four blocks without container box classes, each under its own plain text header', () => {
+    renderPanel({ hola: { es: 'Hola', eu: 'Kaixo' } })
+
+    const addEntryLegend = screen.getByText('Añadir entrada', { selector: 'legend' })
+    const addEntryForm = addEntryLegend.closest('form')
+    expect(addEntryForm).not.toBeNull()
+    expect(addEntryForm!.className).not.toMatch(BOX_CLASS_PATTERN)
+
+    const addLanguageLegend = screen.getByText('Añadir idioma', { selector: 'legend' })
+    const addLanguageForm = addLanguageLegend.closest('form')
+    expect(addLanguageForm).not.toBeNull()
+    expect(addLanguageForm!.className).not.toMatch(BOX_CLASS_PATTERN)
+
+    const searchHeader = screen.getByText('Buscar y añadir', { selector: 'p' })
+    expect(searchHeader.className).toBe('text-xs font-medium text-gray-700')
+    const searchContainer = searchHeader.parentElement as HTMLElement
+    expect(searchContainer.className).not.toMatch(BOX_CLASS_PATTERN)
+
+    const refreshHeader = screen.getByText('Refrescar todo', { selector: 'p' })
+    expect(refreshHeader.className).toBe('text-xs font-medium text-gray-700')
+    const refreshContainer = refreshHeader.parentElement as HTMLElement
+    expect(refreshContainer.className).not.toMatch(BOX_CLASS_PATTERN)
+
+    // "Buscar y añadir" and "Refrescar todo" are two separate blocks, not one shared container.
+    expect(searchContainer).not.toBe(refreshContainer)
+  })
+
+  it('renders "Clave" and each language row in "Añadir entrada" as label-left/control-right rows', () => {
+    renderPanel({ hola: { es: 'Hola', eu: 'Kaixo' } })
+
+    const claveLabel = screen.getByText('Clave', { selector: 'label' })
+    expect(claveLabel).toHaveAttribute('for', 'translations-add-key')
+    const claveRow = claveLabel.parentElement as HTMLElement
+    expect(claveRow.className).toContain('items-center')
+    expect(claveRow.contains(document.getElementById('translations-add-key')!)).toBe(true)
+
+    for (const lang of ['es', 'eu']) {
+      const label = screen.getByText(lang, { selector: 'label' })
+      expect(label).toHaveAttribute('for', `translations-add-lang-${lang}`)
+      const row = label.parentElement as HTMLElement
+      expect(row.className).toContain('items-center')
+      expect(row.contains(document.getElementById(`translations-add-lang-${lang}`)!)).toBe(true)
+    }
+  })
+
+  it('keeps "Añadir entrada" box-free with only the Clave row when there is no language column yet', () => {
+    renderPanel(undefined)
+
+    const legend = screen.getByText('Añadir entrada', { selector: 'legend' })
+    const form = legend.closest('form') as HTMLElement
+    expect(form.className).not.toMatch(BOX_CLASS_PATTERN)
+    expect(screen.getByText('Clave', { selector: 'label' })).toBeInTheDocument()
+    expect(screen.queryByLabelText('es')).not.toBeInTheDocument()
+  })
+
+  it('renders "Código de idioma" as a label-left/control-right row in "Añadir idioma"', () => {
+    renderPanel({ hola: { es: 'Hola' } })
+
+    const label = screen.getByText('Código de idioma', { selector: 'label' })
+    expect(label).toHaveAttribute('for', 'translations-add-language-code')
+    const row = label.parentElement as HTMLElement
+    expect(row.className).toContain('items-center')
+    expect(row.contains(document.getElementById('translations-add-language-code')!)).toBe(true)
+  })
+
+  it('renders "Buscar texto" as a label-left/control-right row with the "Buscar" button next to the input', () => {
+    renderPanel({ hola: { es: 'Hola' } })
+
+    const label = screen.getByText('Buscar texto', { selector: 'label' })
+    expect(label).toHaveAttribute('for', 'translations-search-text')
+    const row = label.parentElement as HTMLElement
+    expect(row.className).toContain('items-center')
+    expect(row.contains(document.getElementById('translations-search-text')!)).toBe(true)
+    expect(row.contains(screen.getByRole('button', { name: 'Buscar' }))).toBe(true)
+  })
+
+  it('groups search results and "Añadir seleccionados" under the "Buscar y añadir" header, without a separate box', async () => {
+    const searchTexts = vi.fn().mockResolvedValue({ status: 'ok', data: [{ idTexto: 42, texto: 'Hola' }] })
+    const provider = createProviderMock({ searchTexts })
+    renderPanel({}, noopCommitTranslationsMutation, provider)
+
+    fireEvent.change(screen.getByLabelText('Buscar texto'), { target: { value: 'ho' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Buscar' }))
+    await screen.findByText('Hola')
+
+    const header = screen.getByText('Buscar y añadir', { selector: 'p' })
+    const container = header.parentElement as HTMLElement
+    expect(container.contains(screen.getByRole('list'))).toBe(true)
+    expect(container.contains(screen.getByRole('button', { name: 'Añadir seleccionados' }))).toBe(true)
+    expect(container.className).not.toMatch(BOX_CLASS_PATTERN)
+  })
+
+  it('groups "Sin resultados" under the "Buscar y añadir" header, without a separate box', async () => {
+    const searchTexts = vi.fn().mockResolvedValue({ status: 'ok', data: [] })
+    const provider = createProviderMock({ searchTexts })
+    renderPanel({}, noopCommitTranslationsMutation, provider)
+
+    fireEvent.change(screen.getByLabelText('Buscar texto'), { target: { value: 'zzz' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Buscar' }))
+    const noResults = await screen.findByText('Sin resultados')
+
+    const header = screen.getByText('Buscar y añadir', { selector: 'p' })
+    const container = header.parentElement as HTMLElement
+    expect(container.contains(noResults)).toBe(true)
+    expect(container.className).not.toMatch(BOX_CLASS_PATTERN)
+  })
+
+  it('keeps the "Refrescar todo" button and its loading state grouped under its own header, separate from "Buscar y añadir"', async () => {
+    let resolveBatch!: (value: { status: 'ok'; data: never[] }) => void
+    const pending = new Promise<{ status: 'ok'; data: never[] }>((resolve) => {
+      resolveBatch = resolve
+    })
+    const getTranslationsBatch = vi.fn().mockReturnValue(pending)
+    const provider = createProviderMock({ getTranslationsBatch })
+    renderPanel({ '42': { es: 'Hola' } }, noopCommitTranslationsMutation, provider)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Refrescar todo' }))
+
+    const header = screen.getByText('Refrescar todo', { selector: 'p' })
+    const container = header.parentElement as HTMLElement
+    expect(container.contains(screen.getByRole('status'))).toBe(true)
+    expect(container.contains(screen.getByRole('button', { name: 'Refrescar todo' }))).toBe(true)
+
+    const searchHeader = screen.getByText('Buscar y añadir', { selector: 'p' })
+    expect(searchHeader.parentElement).not.toBe(container)
+
+    resolveBatch({ status: 'ok', data: [] })
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Refrescar todo' })).not.toBeDisabled())
+  })
+
+  it('shows the "Refrescar todo" unavailability message grouped under its own header', () => {
+    renderPanel(
+      { hola: { es: 'Hola' } },
+      noopCommitTranslationsMutation,
+      createProviderMock(),
+      READY_RESOLUTION,
+      UNAVAILABLE_NOT_DECLARED,
+    )
+
+    const header = screen.getByText('Refrescar todo', { selector: 'p' })
+    const container = header.parentElement as HTMLElement
+    expect(container.textContent).toMatch(/no está declarada/i)
+  })
+
+  it('shows "Sin claves refrescables" grouped under the "Refrescar todo" header', () => {
+    renderPanel({ hola: { es: 'Hola' } }, noopCommitTranslationsMutation, createProviderMock())
+
+    fireEvent.click(screen.getByRole('button', { name: 'Refrescar todo' }))
+
+    const header = screen.getByText('Refrescar todo', { selector: 'p' })
+    const container = header.parentElement as HTMLElement
+    expect(container.contains(screen.getByText('Sin claves refrescables'))).toBe(true)
+  })
+
+  it('groups the "Refrescar todo" network error alert under its own header, separate from "Buscar y añadir"', async () => {
+    const getTranslationsBatch = vi.fn().mockResolvedValue({ status: 'error', error: { kind: 'integration', message: 'falló refresco' } })
+    const provider = createProviderMock({ getTranslationsBatch })
+    renderPanel({ '42': { es: 'Hola' } }, noopCommitTranslationsMutation, provider)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Refrescar todo' }))
+    const alert = await screen.findByRole('alert')
+
+    const header = screen.getByText('Refrescar todo', { selector: 'p' })
+    const container = header.parentElement as HTMLElement
+    expect(container.contains(alert)).toBe(true)
+
+    const searchHeader = screen.getByText('Buscar y añadir', { selector: 'p' })
+    expect(searchHeader.parentElement).not.toBe(container)
+  })
+
+  it('groups the "Refrescar todo" CommitRejectionBanner under its own header', async () => {
+    const getTranslationsBatch = vi.fn().mockResolvedValue({
+      status: 'ok',
+      data: [{ idTexto: 42, traducciones: [{ idioma: 1, texto: 'Hola!' }] }],
+    })
+    const provider = createProviderMock({ getTranslationsBatch })
+    const rejected: CommitCanvasMutationResult = {
+      status: 'rejected',
+      error: { code: 'invalid-layout', displayMode: 'development-only', message: 'Valor no válido' },
+    }
+    const onCommitTranslationsMutation = vi.fn(() => rejected)
+    renderPanel({ '42': { es: 'Hola' } }, onCommitTranslationsMutation, provider)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Refrescar todo' }))
+    const alert = await screen.findByRole('alert')
+
+    const header = screen.getByText('Refrescar todo', { selector: 'p' })
+    const container = header.parentElement as HTMLElement
+    expect(container.contains(alert)).toBe(true)
+  })
+
+  it('does not change the main edit table (header row + one data row, cells stay editable inputs)', () => {
+    renderPanel({ hola: { es: 'Hola', eu: 'Kaixo' } })
+
+    const table = screen.getByRole('table')
+    const rows = within(table).getAllByRole('row')
+    expect(rows).toHaveLength(2)
+    expect(screen.getByRole('textbox', { name: 'Traducción de hola en es' })).toHaveValue('Hola')
+    expect(screen.getByRole('textbox', { name: 'Traducción de hola en eu' })).toHaveValue('Kaixo')
+  })
+})
+
 describe('isNumericTranslationKey', () => {
   it.each(['0', '1', '42'])('returns true for "%s"', (key) => {
     expect(isNumericTranslationKey(key)).toBe(true)

@@ -151,9 +151,9 @@ export function ConditionGroupPropertyField({ label, value, onChange, hideRootLe
   }
 
   return (
-    <fieldset className="flex flex-col gap-2 rounded border border-dashed border-gray-300 p-2">
+    <fieldset className="flex flex-col gap-2">
       <legend className={hideRootLegend ? 'sr-only' : 'px-1 text-xs font-medium text-gray-700'}>{label}</legend>
-      <SegmentedTogglePropertyField label={`${label} — Forma`} segments={SHAPE_SEGMENTS} activeValue={shape} onSelect={handleShapeChange} />
+      <SegmentedTogglePropertyField label="Forma" segments={SHAPE_SEGMENTS} activeValue={shape} onSelect={handleShapeChange} />
       {isGroup ? (
         <GroupEditor label={label} value={value} onChange={onChange} />
       ) : (
@@ -197,7 +197,7 @@ function GroupEditor({ label, value, onChange }: GroupEditorProps) {
   return (
     <div className="flex flex-col gap-2">
       <SegmentedTogglePropertyField
-        label={`${label} — Operador del grupo`}
+        label="Operador del grupo"
         segments={GROUP_OPERATOR_SEGMENTS}
         activeValue={operator}
         onSelect={handleOperatorChange}
@@ -207,7 +207,8 @@ function GroupEditor({ label, value, onChange }: GroupEditorProps) {
         // only ordering key available, consistent with the rest of the panel's array widgets.
         <ConditionRowEditor
           key={index}
-          label={`${label} — Condición ${index + 1}`}
+          label={label}
+          headingText={`Condición ${index + 1}`}
           value={condition}
           onChange={(nextCondition) => handleRowChange(index, nextCondition)}
           canRemove={canRemoveRows}
@@ -228,6 +229,11 @@ function GroupEditor({ label, value, onChange }: GroupEditorProps) {
 
 interface ConditionRowEditorProps {
   label: string
+  // T2 (0136), FR4/FR5: set only by `GroupEditor` (one per row, e.g. "Condición 1"). Rendered as a
+  // plain-text heading before the row's fields and used as the row's `role="group"` accessible
+  // name. Absent in "Condición simple" mode, where the row falls back to `label` (the widget's own
+  // top-level label) as its accessible name instead, with no visible heading.
+  headingText?: string
   value: unknown
   onChange: (next: unknown) => void
   canRemove: boolean
@@ -237,7 +243,7 @@ interface ConditionRowEditorProps {
 // Sub-component shared by "Condición simple" mode and every row of "Grupo (y/o)". `onRemove` is
 // only ever passed by `GroupEditor`; the "Quitar condición" button renders exclusively when it is
 // present, and is disabled (not hidden, spec criterio 5) while `canRemove` is `false`.
-function ConditionRowEditor({ label, value, onChange, canRemove, onRemove }: ConditionRowEditorProps) {
+function ConditionRowEditor({ label, headingText, value, onChange, canRemove, onRemove }: ConditionRowEditorProps) {
   const row = isPlainObject(value) ? value : {}
   const operator = readOperator(row)
 
@@ -271,19 +277,16 @@ function ConditionRowEditor({ label, value, onChange, canRemove, onRemove }: Con
   }
 
   return (
-    <div role="group" aria-label={label} className="flex flex-col gap-2 rounded border border-gray-200 p-2">
-      <TextPropertyField label={`${label} — Referencia`} value={readReference(row)} onChange={handleReferenceChange} />
-      <EnumPropertyField label={`${label} — Operador`} value={operator} options={OPERATORS} onChange={handleOperatorChange} />
-      {showItemField && (
-        <TextPropertyField label={`${label} — itemField`} value={readItemField(row)} onChange={handleItemFieldChange} />
-      )}
-      {showValue && useTypedValueEditor && (
-        <ConditionValueTypedEditor label={`${label} — Valor`} value={row.value} onChange={handleValueChange} />
-      )}
+    <div role="group" aria-label={headingText ?? label} className="flex flex-col gap-2">
+      {headingText && <span className="text-xs font-medium text-gray-700">{headingText}</span>}
+      <TextPropertyField label="Referencia" value={readReference(row)} onChange={handleReferenceChange} />
+      <EnumPropertyField label="Operador" value={operator} options={OPERATORS} onChange={handleOperatorChange} />
+      {showItemField && <TextPropertyField label="itemField" value={readItemField(row)} onChange={handleItemFieldChange} />}
+      {showValue && useTypedValueEditor && <ConditionValueTypedEditor label="Valor" value={row.value} onChange={handleValueChange} />}
       {showValue && useNumericValueEditor && (
-        <NumberPropertyField label={`${label} — Valor`} value={typeof row.value === 'number' ? row.value : 0} onChange={handleValueChange} />
+        <NumberPropertyField label="Valor" value={typeof row.value === 'number' ? row.value : 0} onChange={handleValueChange} />
       )}
-      <BooleanPropertyField label={`${label} — Negar`} value={readNegate(row)} onChange={handleNegateChange} />
+      <BooleanPropertyField label="Negar" value={readNegate(row)} onChange={handleNegateChange} />
       {onRemove && (
         <button
           type="button"

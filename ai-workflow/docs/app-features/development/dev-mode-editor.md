@@ -179,7 +179,7 @@ Un array editable declarado con `minItems` en su schema (por ejemplo `tabs.props
 
 Cuando la pestaña `Diseño` existe, el campo `layout.span` se edita siempre mediante su widget dedicado (ver [[#Widget dedicado para layout.span (columnas por breakpoint)]]), no como un campo numérico o de mapa genérico.
 
-El contenido raíz de cada pestaña y cualquier grupo anidado que el editor genérico de objetos o de arrays produce (por ejemplo un campo de tipo mapa por breakpoint, o una lista de objetos como `tabs.props.items`) se muestran en lista plana, sin caja con borde ni fondo alrededor. Un grupo que ya tiene un título propio lo conserva como texto de cabecera simple (mayúsculas pequeñas, gris, sin fondo); el contenido raíz de una pestaña, cuyo título va oculto porque la pestaña activa ya cumple ese rol, no gana ningún título nuevo. Los widgets dedicados con presentación propia (`layout-span`, `choice-items`, icon picker, condición/grupo, clave-valor, acordeón de `queryStateFeedback`) no se ven afectados por esto en su propia estructura.
+El contenido raíz de cada pestaña y cualquier grupo anidado que el editor genérico de objetos o de arrays produce (por ejemplo un campo de tipo mapa por breakpoint, o una lista de objetos como `tabs.props.items`) se muestran en lista plana, sin caja con borde ni fondo alrededor. Un grupo que ya tiene un título propio lo conserva como texto de cabecera simple (mayúsculas pequeñas, gris, sin fondo); el contenido raíz de una pestaña, cuyo título va oculto porque la pestaña activa ya cumple ese rol, no gana ningún título nuevo. Los widgets dedicados con presentación propia (`layout-span`, `choice-items`, icon picker, condición/grupo, clave-valor, acordeón de `queryStateFeedback`) conservan su propia estructura de presentación; `layout-span` y condición/grupo, además, han perdido su propia caja envolvente ([[#Widget dedicado para layout.span (columnas por breakpoint)]] y [[#Widget de condición/grupo (visibility/when)]]), coherente con la ausencia general de caja del resto del panel.
 
 Editar cualquier campo actualiza el estado en memoria de inmediato y se refleja tanto en el contenido renderizado como en el buffer de Monaco — con la excepción de un commit rechazado por validación, ver [[#Feedback cuando un cambio del panel de propiedades no se puede guardar]].
 
@@ -236,22 +236,23 @@ El dispatcher se apoya para esto en un hook `x-widget`: si el fragmento de schem
 `layout.span` (entero plano o mapa responsive por breakpoint) se edita en la subsección `Layout` con un widget dedicado (`LayoutSpanPropertyField`, registrado en el mismo `WIDGET_REGISTRY` del dispatcher bajo `'layout-span'`) en vez del campo numérico/mapa genérico, reutilizando el mismo hook `x-widget` que `choice-items`.
 
 - **Visibilidad**: la subsección `Layout` completa (no solo `span`) solo se muestra cuando el nodo seleccionado tiene al menos un `container` ancestro, a cualquier profundidad, con `props.columns` declarado (fijo o responsive). Sin ese ancestro no hay ningún campo de respaldo para `layout.span` — ni el widget ni el editor genérico —, la subsección desaparece por completo del panel. El contenedor de referencia es siempre el `container` ancestro más cercano en el árbol, no el primero encontrado subiendo niveles.
-- **Filas fijas por breakpoint**: siempre las seis filas `base`, `sm`, `md`, `lg`, `xl`, `2xl` en ese orden, tenga o no cada una valor explícito. Cada fila muestra un input numérico editable y un indicador `/ N`, donde `N` es el número de columnas efectivo del `container` ancestro en ese mismo breakpoint, resuelto con la misma cascada mobile-first que ya usa el runtime para `container.props.columns` responsive (ver [[../nodes/container.md#reglas-de-render]]) — sin una segunda implementación de esa cascada.
-- **Valor heredado vs. explícito**: una fila sin clave propia en el mapa de `layout.span` muestra en estilo atenuado el valor resultante de aplicar al propio `layout.span` esa misma cascada mobile-first (heredado del breakpoint declarado anterior más cercano, o `1` si ninguno lo está) y no muestra botón "Quitar". Editar el input de una fila fija su valor como clave explícita (merge superficial `{ ...value, [breakpoint]: n }`) y hace aparecer el botón "Quitar" en esa fila; pulsarlo borra la clave y la fila vuelve a mostrar su valor heredado en gris. Quitar la única clave explícita restante commitea `layout.span` como `undefined` en vez de dejar un mapa vacío `{}`.
+- **Seis inputs en una sola fila**: las seis claves `base`, `sm`, `md`, `lg`, `xl`, `2xl`, en ese orden, se muestran como seis inputs numéricos horizontales, con el nombre del breakpoint como label debajo de cada uno, tenga o no valor explícito. Sin cabecera `fieldset` con caja: el título "Columnas" es texto de cabecera simple. No hay indicador `/ N` por input — el denominador de columnas efectivo del `container` ancestro solo aparece en la leyenda de la barra de vista previa de ocupación (ver más abajo), resuelto con la misma cascada mobile-first que ya usa el runtime para `container.props.columns` responsive (ver [[../nodes/container.md#reglas-de-render]]) — sin una segunda implementación de esa cascada.
+- **Valor heredado vs. explícito**: un input sin clave propia en el mapa de `layout.span` muestra en estilo atenuado el valor resultante de aplicar al propio `layout.span` esa misma cascada mobile-first (heredado del breakpoint declarado anterior más cercano, o `1` si ninguno lo está) y no muestra el control "×". Editar un input fija su valor como clave explícita (merge superficial `{ ...value, [breakpoint]: n }`) y hace aparecer un control "×" superpuesto en su esquina; pulsarlo borra la clave y el input vuelve a mostrar su valor heredado en gris. Quitar la única clave explícita restante commitea `layout.span` como `undefined` en vez de dejar un mapa vacío `{}`.
 - **Conversión entero → mapa**: si `layout.span` es un entero plano al montar el widget, la primera edición de cualquier fila lo convierte a mapa responsive sembrando `{ base: <entero previo> }` antes de aplicar el cambio del usuario sobre esa base.
 - **Validación por fila**: cada valor se valida con el mismo pipeline (`validateRuntimeConfig`) que el resto del panel antes de aplicarse. Un commit rechazado (por ejemplo, fuera de rango `1..N` para ese breakpoint) conserva el valor tecleado en esa fila y muestra un aviso `role="alert"` con el código y mensaje del error, con el mismo criterio de limpieza que el resto del panel (ver [[#Feedback cuando un cambio del panel de propiedades no se puede guardar]]): desaparece al guardar correctamente esa misma fila o al cambiar de nodo seleccionado. El aviso es independiente por fila.
 - **Fuera de alcance**: el widget nunca ofrece un control para "simplificar" un `layout.span` ya convertido a mapa de vuelta a un único entero; un `layout.span` que siga siendo entero plano solo puede editarse como tal desde Monaco.
-- **Barra de vista previa de ocupación**: bajo las seis filas, una barra horizontal dividida en `N` segmentos (el
-  denominador resuelto del `container` ancestro en el breakpoint previsualizado) muestra resaltados los primeros
-  `span` segmentos, junto a una leyenda de texto ("Vista previa en {breakpoint}: ocupa {span} de {N}."). El
-  breakpoint previsualizado es `base` por defecto; dar foco al input de una fila cambia la vista previa al
-  breakpoint de esa fila mientras el foco permanezca ahí, y perderlo (sin que otra fila del mismo widget lo capture)
-  la devuelve a `base`. Es estado puramente visual del widget: cambiar de pestaña, de nodo seleccionado o de
-  breakpoint previsualizado no dispara ningún commit adicional. Un span resuelto mayor que `N` (posible si el
-  `container` reduce sus columnas en un breakpoint superior sin que `layout.span` se haya ajustado) no desborda la
-  barra: el recuento de segmentos resaltados se recorta a `N`, pero la leyenda sigue mostrando el `span` real sin
-  recortar. Un `layout.span` como entero plano (sin mapa por breakpoint) sigue mostrando la vista previa para
-  `base`, coherente con el valor uniforme heredado en las seis filas.
+- **Barra de vista previa de ocupación**: bajo la fila de seis inputs, una barra horizontal dividida en `N` segmentos
+  (el denominador resuelto del `container` ancestro en el breakpoint previsualizado) muestra resaltados los primeros
+  `span` segmentos, junto a una leyenda de texto ("Vista previa en {breakpoint}: ocupa {span} de {N}.") — único lugar
+  donde se ve el denominador `N`, ya que los inputs no lo muestran individualmente. El breakpoint previsualizado es
+  `base` por defecto; dar foco a uno de los seis inputs cambia la vista previa a su breakpoint mientras el foco
+  permanezca ahí, y perderlo (sin que otro input del mismo widget lo capture) la devuelve a `base`. Es estado
+  puramente visual del widget: cambiar de pestaña, de nodo seleccionado o de breakpoint previsualizado no dispara
+  ningún commit adicional. Un span resuelto mayor que `N` (posible si el `container` reduce sus columnas en un
+  breakpoint superior sin que `layout.span` se haya ajustado) no desborda la barra: el recuento de segmentos
+  resaltados se recorta a `N`, pero la leyenda sigue mostrando el `span` real sin recortar. Un `layout.span` como
+  entero plano (sin mapa por breakpoint) sigue mostrando la vista previa para `base`, coherente con el valor uniforme
+  heredado en los seis inputs, y sin ningún "×" visible.
 
 ### Widget de alternancia por segmentos (pill toggle)
 Un control reutilizable (`SegmentedTogglePropertyField`) cubre cualquier prop con catálogo cerrado y estable de 2 a 5
@@ -338,7 +339,10 @@ panel: input de búsqueda más una cuadrícula de resultados con el icono ya ren
 tener que conocer o adivinar el nombre exacto en PascalCase. Es puramente presentacional (`{ label, value,
 onChange }`, sin conocimiento propio de `x-widget` ni de los schemas de `Shell`) y se monta desde dos vías
 distintas sin duplicar su lógica de filtrado, preview o commit (ver [[#Integración en `Layout`]] y
-[[#Integración en `Shell`]] más abajo).
+[[#Integración en `Shell`]] más abajo). El buscador se monta dentro de la misma fila label-izquierda/control-derecha
+(`PropertyFieldRow`) que usan los campos genéricos de texto/número/enum/booleano: el `label` recibido queda a la
+izquierda, con el buscador y el chip de previsualización a la derecha; la cuadrícula, al abrirse, se sigue
+desplegando debajo a todo el ancho de la fila.
 
 - **Catálogo**: derivado una sola vez al cargar el módulo desde el registro canónico `icons` de `lucide-react`
   (no su namespace completo, que además expone un alias `Icon`-suffixed por cada icono — p. ej. `Home` y
@@ -404,6 +408,12 @@ entre ellas (ver [[../references/visibility.md]] para el contrato funcional comp
   `getSidebarItemJsonSchema` para `Shell`), recorriendo `properties`/`items`/`oneOf`/`anyOf`/`$defs` — incluida la
   rama recursiva de `sidebarItem.children` a cualquier profundidad. El schema que consume Monaco no se toca: sigue
   mostrando el `oneOf` real completo, mismo criterio que el resto de widgets de este registro.
+- **Sin caja, labels sin prefijo de contexto**: el widget no se envuelve en ningún `fieldset` con borde/fondo, ni a
+  nivel raíz ni por condición individual dentro de un grupo — solo cabeceras de texto simple y espaciado vertical.
+  El selector de forma se muestra como "Forma" sueltamente (nunca `"${label} — Forma"`); en modo "Grupo (y/o)", el
+  selector de operador del grupo se muestra como "Operador del grupo". Ninguno de los campos internos del widget
+  lleva el prefijo `"${label} — Campo"` que tenía antes, con independencia del punto de montaje (pestaña
+  Visibilidad, `when` de operaciones, `visibility` de `menuItem`/`sidebarItem` en `Shell`).
 - **Selector de forma**: dos opciones explícitas ("Condición simple", "Grupo (y/o)"), visibles siempre que se edita
   un valor de esta forma. La opción activa se detecta a partir de la forma del propio `value` al montar (un objeto
   con `conditions` y `operator` en `and`/`or` → grupo; cualquier otro caso, incluido valor ausente → condición
@@ -411,13 +421,18 @@ entre ellas (ver [[../references/visibility.md]] para el contrato funcional comp
   `and` con la condición actual como única fila; cambiar de "Grupo (y/o)" a "Condición simple" aplica la primera
   condición del grupo como nuevo valor, descartando el resto de filas si había más de una.
 - **Grupo (y/o)**: control de dos segmentos (`SegmentedTogglePropertyField`) para el `operator` del grupo
-  (`and`/`or`), y una fila por condición de `conditions`. Botón "Añadir" al final que agrega una condición con
-  valores mínimos válidos; botón "Quitar" por fila, deshabilitado mientras `conditions` tenga longitud 1 (un grupo
-  no puede quedar vacío). Sin límite superior de filas.
-- **Fila de condición** (compartida entre "Condición simple" y cada fila de grupo): `reference` (texto) y `negate`
-  (booleano) siempre visibles; selector de `operator` con el catálogo completo (`equals`, `notEquals`, `isTruthy`,
-  `isFalsy`, `greaterThan`, `lessThan`, `arrayContains`); `itemField` (texto) visible únicamente con
-  `operator: 'arrayContains'`; `value` visible con cualquier `operator` salvo `isTruthy`/`isFalsy`.
+  (`and`/`or`), y una fila por condición de `conditions`. Cada fila muestra una cabecera de texto simple "Condición
+  N" (N = posición 1-indexada) en vez de repetir el prefijo en cada campo interno, sin borde individual alrededor de
+  la fila — la separación entre condiciones la da la cabecera más el espaciado vertical. Botón "Añadir" al final que
+  agrega una condición con valores mínimos válidos; botón "Quitar" por fila, deshabilitado mientras `conditions`
+  tenga longitud 1 (un grupo no puede quedar vacío; sigue mostrando "Condición 1" aunque el botón esté deshabilitado).
+  Sin límite superior de filas.
+- **Fila de condición** (compartida entre "Condición simple" y cada fila de grupo): en modo "Condición simple" los
+  campos internos quedan sueltos, sin cabecera "Condición N" (esa cabecera solo aparece por fila dentro de un
+  grupo). `reference` (texto) y `negate` (booleano) siempre visibles; selector de `operator` con el catálogo
+  completo (`equals`, `notEquals`, `isTruthy`, `isFalsy`, `greaterThan`, `lessThan`, `arrayContains`); `itemField`
+  (texto) visible únicamente con `operator: 'arrayContains'`; `value` visible con cualquier `operator` salvo
+  `isTruthy`/`isFalsy`.
 - **Editor de `value`**: con `operator` en `equals`/`notEquals`/`arrayContains`, un selector de cuatro tipos
   (Texto/Número/Booleano/Null, mismo `SegmentedTogglePropertyField`) detectado por el tipo JS del valor actual
   (string/number/boolean/null; ausente o no reconocible degrada a Texto vacío sin convertir el valor previo) con el
@@ -559,6 +574,16 @@ rechazado (`role="alert"`) pendiente en uno de sus campos, ni ningún otro estad
 nunca llegó a desmontarse.
 
 ### Contenido del panel
+Sin caja con borde ni fondo en ninguno de los tres niveles raíz del panel ("Menú", "Elementos del sidebar",
+"Acciones"): cada título es texto de cabecera simple, mismo lenguaje visual que el resto del editor de propiedades
+(ver [[#Widget dedicado para layout.span (columnas por breakpoint)]] y línea 182 más arriba). Los niveles ya
+anidados que usan indentación con guía vertical en vez de una caja completa (el desplegable de `menuItem`, "Hijos
+del elemento de sidebar N") no cambian — nunca tuvieron una caja que quitar. Cada `menuItem`/`sidebarItem`
+expandido muestra una cabecera de texto simple con su `labelText` vigente ("Elemento de menú N" / "Elemento de
+sidebar N") y sus campos (Etiqueta, Icono, Modo, Href o Acción, Visibilidad) sueltos debajo, sin el prefijo
+`"${labelText} — Campo"` que llevaba cada campo antes. Cada acción de `shell.header.actions` muestra igual una
+cabecera "Acción N" con el campo "Tipo" suelto debajo, sin caja individual alrededor de la acción.
+
 El `tabpanel` "Header" agrupa:
 - **Toggle "Header activo"**: activarlo crea `shell.header: {}` (header vacío, sin renderizar nada visible hasta
   añadir campos); desactivarlo quita únicamente la clave `shell.header`, conservando `shell.sidebar` intacto si
@@ -716,6 +741,12 @@ cadena vacía. Un commit rechazado por validación deja el valor tecleado en la 
 muestra debajo un aviso (`role="alert"`, `CommitRejectionBanner`) independiente por celda.
 
 ### Alta, borrado y columnas de idioma
+Los bloques "Añadir entrada", "Añadir idioma" y "Buscar y añadir" (búsqueda + resultados) no tienen caja con borde ni
+fondo — cada título es texto de cabecera simple, mismo lenguaje visual que el resto del editor. Sus campos (Clave,
+una fila por idioma en "Añadir entrada"; Código de idioma en "Añadir idioma"; Buscar texto en la búsqueda) usan la
+misma fila label-izquierda/control-derecha (`PropertyFieldRow`) que los campos genéricos del panel de propiedades de
+`Layout`, en vez de label encima del input. La tabla principal de edición de claves/idiomas no se ve afectada por
+este cambio.
 - **Alta manual**: formulario "Añadir entrada" con un campo de clave y un campo de texto por cada columna de idioma
   conocida en ese momento (todos opcionales). Una clave vacía o ya existente en `translations` se rechaza con un
   aviso local (mismo componente `CommitRejectionBanner`) antes de intentar ningún commit — no llega a invocar
@@ -757,6 +788,7 @@ limpia; un fallo de red o HTTP (incluido 401/403, mapeado a un mensaje de error 
 `role="alert"` sin modificar `translations`.
 
 ### Acción "Refrescar todo"
+Bloque "Refrescar todo" sin caja con borde ni fondo, con el mismo título de cabecera simple que el resto del panel.
 Botón deshabilitado sin la operación resuelta o mientras un refresco ya está en curso (evita disparar dos refrescos
 simultáneos con doble clic). Al pulsarlo:
 1. Recopila las claves de `translations` que son literalmente un entero válido (`isNumericTranslationKey`, regex

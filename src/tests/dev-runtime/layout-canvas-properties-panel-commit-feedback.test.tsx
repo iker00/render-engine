@@ -270,17 +270,22 @@ describe('LayoutCanvasPropertiesPanel layout.span widget — end-to-end real pip
     )
   })
 
-  it("resolves each row's denominator from the real mobile-first cascade of the container's responsive columns (acceptance 3)", () => {
+  it("resolves each row's denominator from the real mobile-first cascade of the container's responsive columns, surfaced through the occupancy preview legend (acceptance 3)", () => {
+    // (0136, FR1/FR2) The per-row "/ N" denominator was removed from the widget; the same cascade
+    // is now only observable through the occupancy preview's legend for the focused row.
     const { root } = renderCanvas(spanWidgetConfig({ base: 2, md: 4, xl: 12 }))
     selectNodeByPath(root, CHILD_A_PATH)
     fireEvent.click(screen.getByRole('tab', { name: 'Diseño' }))
 
-    expect(within(screen.getByTestId('layout-span-widget-row-base')).getByText('/ 2')).toBeInTheDocument()
-    expect(within(screen.getByTestId('layout-span-widget-row-sm')).getByText('/ 2')).toBeInTheDocument()
-    expect(within(screen.getByTestId('layout-span-widget-row-md')).getByText('/ 4')).toBeInTheDocument()
-    expect(within(screen.getByTestId('layout-span-widget-row-lg')).getByText('/ 4')).toBeInTheDocument()
-    expect(within(screen.getByTestId('layout-span-widget-row-xl')).getByText('/ 12')).toBeInTheDocument()
-    expect(within(screen.getByTestId('layout-span-widget-row-2xl')).getByText('/ 12')).toBeInTheDocument()
+    const preview = () => screen.getByTestId('layout-span-occupancy-preview')
+
+    expect(within(preview()).getByText('Vista previa en base: ocupa 1 de 2.')).toBeInTheDocument()
+
+    fireEvent.focus(within(screen.getByTestId('layout-span-widget-row-md')).getByLabelText('md'))
+    expect(within(preview()).getByText('Vista previa en md: ocupa 1 de 4.')).toBeInTheDocument()
+
+    fireEvent.focus(within(screen.getByTestId('layout-span-widget-row-xl')).getByLabelText('xl'))
+    expect(within(preview()).getByText('Vista previa en xl: ocupa 1 de 12.')).toBeInTheDocument()
   })
 
   it('shows an inherited muted value with no "Quitar" until edited, then "Quitar" removes the explicit key through the real commit pipeline (acceptance 4-6)', async () => {
@@ -1390,13 +1395,13 @@ describe('LayoutCanvasPropertiesPanel condition-group widget — end-to-end real
     selectNodeByPath(root, VISIBILITY_BUTTON_PATH)
     fireEvent.click(screen.getByRole('tab', { name: 'Visibilidad' }))
 
-    const shapeSelector = screen.getByRole('radiogroup', { name: 'Visibilidad — Forma' })
+    const shapeSelector = screen.getByRole('radiogroup', { name: 'Forma' })
     expect(within(shapeSelector).getByRole('radio', { name: 'Condición simple', checked: true })).toBeInTheDocument()
 
     fireEvent.click(within(shapeSelector).getByRole('radio', { name: 'Grupo (y/o)' }))
 
     expect(
-      within(screen.getByRole('radiogroup', { name: 'Visibilidad — Forma' })).getByRole('radio', {
+      within(screen.getByRole('radiogroup', { name: 'Forma' })).getByRole('radio', {
         name: 'Grupo (y/o)',
         checked: true,
       }),
@@ -1416,11 +1421,11 @@ describe('LayoutCanvasPropertiesPanel condition-group widget — end-to-end real
     const { root } = renderCanvas(conditionGroupWidgetConfig())
     selectNodeByPath(root, WHEN_BUTTON_PATH)
 
-    const shapeSelector = screen.getByRole('radiogroup', { name: 'when — Forma' })
+    const shapeSelector = screen.getByRole('radiogroup', { name: 'Forma' })
     fireEvent.click(within(shapeSelector).getByRole('radio', { name: 'Grupo (y/o)' }))
 
     expect(
-      within(screen.getByRole('radiogroup', { name: 'when — Forma' })).getByRole('radio', {
+      within(screen.getByRole('radiogroup', { name: 'Forma' })).getByRole('radio', {
         name: 'Grupo (y/o)',
         checked: true,
       }),
@@ -1451,8 +1456,8 @@ describe('LayoutCanvasPropertiesPanel condition-group widget — end-to-end real
     const { root } = renderCanvas(config)
     selectNodeByPath(root, WHEN_BUTTON_PATH)
 
-    fireEvent.change(screen.getByLabelText('when — Operador'), { target: { value: 'notEquals' } })
-    fireEvent.click(within(screen.getByRole('radiogroup', { name: 'when — Valor — Tipo' })).getByRole('radio', { name: 'Número' }))
+    fireEvent.change(screen.getByLabelText('Operador'), { target: { value: 'notEquals' } })
+    fireEvent.click(within(screen.getByRole('radiogroup', { name: 'Valor — Tipo' })).getByRole('radio', { name: 'Número' }))
 
     const parsed = await getMonacoJson()
     const button = readTopLevelNodeFromMonacoJson(parsed, 1)
@@ -1472,15 +1477,15 @@ describe('LayoutCanvasPropertiesPanel condition-group widget — end-to-end real
     fireEvent.click(screen.getByRole('tab', { name: 'Visibilidad' }))
 
     vi.mocked(validateRuntimeConfig).mockReturnValueOnce(forcedRejection)
-    fireEvent.change(screen.getByLabelText('Visibilidad — Operador'), { target: { value: 'greaterThan' } })
+    fireEvent.change(screen.getByLabelText('Operador'), { target: { value: 'greaterThan' } })
 
     const banner = screen.getByRole('alert')
     expect(banner).toHaveAttribute('data-testid', 'layout-canvas-properties-panel-visibility-error')
     expect(banner.textContent).toContain('invalid-layout')
     expect(banner.textContent).toContain('Cambio no permitido')
 
-    expect((screen.getByLabelText('Visibilidad — Operador') as HTMLSelectElement).value).toBe('greaterThan')
-    expect(screen.getByLabelText('Visibilidad — Valor')).toHaveValue(0)
+    expect((screen.getByLabelText('Operador') as HTMLSelectElement).value).toBe('greaterThan')
+    expect(screen.getByLabelText('Valor')).toHaveValue(0)
 
     const parsed = await getMonacoJson()
     const button = readTopLevelNodeFromMonacoJson(parsed, 0)
@@ -1493,10 +1498,10 @@ describe('LayoutCanvasPropertiesPanel condition-group widget — end-to-end real
     fireEvent.click(screen.getByRole('tab', { name: 'Visibilidad' }))
 
     vi.mocked(validateRuntimeConfig).mockReturnValueOnce(forcedRejection)
-    fireEvent.change(screen.getByLabelText('Visibilidad — Operador'), { target: { value: 'greaterThan' } })
+    fireEvent.change(screen.getByLabelText('Operador'), { target: { value: 'greaterThan' } })
     expect(screen.getByRole('alert')).toBeInTheDocument()
 
-    fireEvent.change(screen.getByLabelText('Visibilidad — Valor'), { target: { value: '5' } })
+    fireEvent.change(screen.getByLabelText('Valor'), { target: { value: '5' } })
 
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
     const parsed = await getMonacoJson()
@@ -1513,14 +1518,14 @@ describe('LayoutCanvasPropertiesPanel condition-group widget — end-to-end real
     fireEvent.click(screen.getByRole('tab', { name: 'Visibilidad' }))
 
     vi.mocked(validateRuntimeConfig).mockReturnValueOnce(forcedRejection)
-    fireEvent.change(screen.getByLabelText('Visibilidad — Operador'), { target: { value: 'greaterThan' } })
+    fireEvent.change(screen.getByLabelText('Operador'), { target: { value: 'greaterThan' } })
     expect(screen.getByRole('alert')).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('tab', { name: 'Props' }))
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('tab', { name: 'Visibilidad' }))
-    expect((screen.getByLabelText('Visibilidad — Operador') as HTMLSelectElement).value).toBe('greaterThan')
+    expect((screen.getByLabelText('Operador') as HTMLSelectElement).value).toBe('greaterThan')
     const banner = screen.getByRole('alert')
     expect(banner).toHaveAttribute('data-testid', 'layout-canvas-properties-panel-visibility-error')
   })
@@ -1531,7 +1536,7 @@ describe('LayoutCanvasPropertiesPanel condition-group widget — end-to-end real
     fireEvent.click(screen.getByRole('tab', { name: 'Visibilidad' }))
 
     vi.mocked(validateRuntimeConfig).mockReturnValueOnce(forcedRejection)
-    fireEvent.change(screen.getByLabelText('Visibilidad — Operador'), { target: { value: 'greaterThan' } })
+    fireEvent.change(screen.getByLabelText('Operador'), { target: { value: 'greaterThan' } })
     expect(screen.getByRole('alert')).toBeInTheDocument()
 
     selectNodeByPath(root, WHEN_BUTTON_PATH)
