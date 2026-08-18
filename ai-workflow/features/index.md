@@ -23,6 +23,27 @@ La política completa está definida en el documento de workflow del proyecto.
 
 ## Completadas
 
+- `0135-dev-editor-query-feedback-accordion`: tercera y última entrega del rediseño del panel de propiedades del
+  editor visual (F-C, sucesora de `0133`/F-A y `0134`/F-B); sustituye, dentro de la pestaña `Queries`, el editor
+  genérico de objeto de `queryStateFeedback.states` por un acordeón dedicado (`QueryStateFeedbackAccordionPropertyField`,
+  nueva entrada `'query-state-feedback-accordion'` en el mismo `WIDGET_REGISTRY` del dispatcher que ya usan
+  `layout-span`/`choice-items`). Una fila por cada clave de `states` ya presente, siempre en el orden fijo
+  `idle → loading → error → empty → success`; un selector "Añadir estado…" ofrece de alta las claves ausentes con el
+  modo por defecto que reproduce el comportamiento implícito ya vigente (`success` → `Mostrar`, resto → `Ocultar`,
+  sin cambio de comportamiento visible), y "Quitar" por fila borra la clave (o la subsección `states` entera si era
+  la última). Cada fila expandible/colapsable (`aria-expanded`) muestra un selector de tres modos
+  `Mostrar`/`Ocultar`/`Fallback` (reutiliza `SegmentedTogglePropertyField`); el modo `Fallback` produce un commit
+  válido (`{ mode: 'fallback', fallback: [...] }`) pero se mantiene inerte en esta entrega — sin ningún control de
+  inserción/edición/borrado de nodos, solo una nota remitiendo a Monaco — y conserva el mismo array `fallback` al
+  hacer ida y vuelta entre modos dentro de la misma sesión de edición del nodo, gracias a una caché por estado
+  (`fallbackCacheByState`) que vive en `LayoutCanvasPropertiesPanel`, no en el widget (se desmonta en cada cambio de
+  pestaña), junto con el conjunto de filas expandidas; ambos expuestos al widget vía un contexto propio
+  (`QueryStateFeedbackAccordionWidgetContext`) y reiniciados solo al cambiar de nodo seleccionado. Un `mode` fuera de
+  catálogo (introducido a mano en Monaco) no rompe el widget: la fila queda sin ningún segmento activo hasta que el
+  usuario elige uno. Mismo pipeline de commit/validación (`validateRuntimeConfig`) y mismo aviso `role="alert"` ante
+  rechazo que el resto del panel. El campo `query` no cambia: sigue como fila de texto simple. Sin cambios en el
+  contrato JSON de `queryStateFeedback`, su validación, ni en su semántica de producción. Edición del contenido de
+  `fallback` queda explícitamente diferida a una entrega futura.
 - `0131-dev-editor-external-config-save`: primera vía real de persistencia del config JSON del editor de
   desarrollo hacia un backend externo (hasta ahora, "Aplicar" solo actualizaba `currentConfig` en memoria de
   sesión). Añade un nuevo bloque de config de endpoints externos declarado en runtime (`data-endpoints-config` /

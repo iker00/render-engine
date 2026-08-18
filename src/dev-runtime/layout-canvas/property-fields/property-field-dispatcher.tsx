@@ -12,6 +12,7 @@ import { KeyValuePropertyField } from './key-value-property-field'
 import { LayoutSpanPropertyField } from './layout-span-property-field'
 import { NumberPropertyField } from './number-property-field'
 import { PropertyFieldRow } from './property-field-row'
+import { QueryStateFeedbackAccordionPropertyField } from './query-state-feedback-accordion-property-field'
 import { RawJsonPropertyField } from './raw-json-property-field'
 import type { SegmentedToggleOption } from './segmented-toggle-property-field'
 import { SegmentedTogglePropertyField } from './segmented-toggle-property-field'
@@ -56,6 +57,7 @@ const WIDGET_REGISTRY: Record<string, ComponentType<WidgetComponentProps>> = {
   icon: IconPickerPropertyField,
   'condition-group': ConditionGroupPropertyField,
   'color-swatch': ColorSwatchPropertyField,
+  'query-state-feedback-accordion': QueryStateFeedbackAccordionPropertyField,
 }
 
 export interface PropertyFieldDispatcherProps {
@@ -297,7 +299,7 @@ function ArrayPropertyField({ label, value, itemsSchema, minItems, onChange }: A
 
   return (
     <fieldset className="flex flex-col gap-2">
-      <legend className="pt-4 pb-2 text-[11px] font-medium uppercase tracking-wide text-gray-500">{label}</legend>
+      <legend className="pt-2 text-[11px] font-medium uppercase tracking-wide text-gray-500">{label}</legend>
       {value.map((itemValue, index) => {
         const resolvedItemSchema = resolveUnionBranch(itemsSchema, itemValue)
         // An existing array slot always has a value — presence is controlled by Añadir/Quitar,
@@ -364,7 +366,7 @@ function ObjectPropertyField({ label, value, propertiesSchema, requiredFields, o
 
   return (
     <fieldset className="flex flex-col gap-2 mb-4">
-      <legend className={hideRootLegend ? 'sr-only' : 'pt-4 pb-2 text-[11px] font-medium uppercase tracking-wide text-gray-500'}>
+      <legend className={hideRootLegend ? 'sr-only' : 'pt-2 text-[11px] font-medium uppercase tracking-wide text-gray-500'}>
         {label}
       </legend>
       {propertyEntries.map(([key, propertySchema]) => (

@@ -1661,3 +1661,68 @@ describe('LayoutCanvasPropertiesPanel generic boolean switch — end-to-end real
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 })
+
+// T3 (0135, criterion 8): unlike the "end-to-end real pipeline" describes above (which mount the
+// full `DevRuntimeReady` editor and force a rejection via a `validateRuntimeConfig` mock), this one
+// mirrors the top-of-file `LayoutCanvasPropertiesPanel commit feedback (T9)` describe: an isolated
+// `LayoutCanvasPropertiesPanel` render with a test-double `onCommitNodeUpdate` that returns a
+// rejected result directly — the same `pendingRejections`/`CommitRejectionBanner` mechanism every
+// other subsection already uses, applied to `queryStateFeedback`.
+describe('LayoutCanvasPropertiesPanel query-state-feedback-accordion widget commit feedback (T3, 0135, criterion 8)', () => {
+  function headingWithQueryStateFeedback(states?: Record<string, unknown>): LayoutNode {
+    return {
+      type: 'heading',
+      props: { text: 'Hi', level: 2 },
+      queryStateFeedback: { query: 'list', ...(states !== undefined ? { states } : {}) },
+    } as LayoutNode
+  }
+
+  it('keeps the user-chosen mode visible in the accordion and shows the queryStateFeedback error banner when the commit is rejected', () => {
+    const node = headingWithQueryStateFeedback({ error: { mode: 'hide' } })
+    const onCommitNodeUpdate = vi.fn().mockReturnValue(rejectedResult)
+    render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={onCommitNodeUpdate} />)
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Queries' }))
+    const row = screen.getByTestId('query-state-feedback-accordion-row-error')
+    fireEvent.click(within(row).getByRole('radio', { name: 'Mostrar' }))
+
+    expect(within(row).getByRole('radio', { name: 'Mostrar' })).toHaveAttribute('aria-checked', 'true')
+    const banner = screen.getByRole('alert')
+    expect(banner).toHaveAttribute('data-testid', 'layout-canvas-properties-panel-queryStateFeedback-error')
+  })
+
+  it('clears the banner and reverts to the node-derived value once a follow-up commit on the same subsection succeeds', () => {
+    const node = headingWithQueryStateFeedback({ error: { mode: 'hide' } })
+    const onCommitNodeUpdate = vi.fn()
+    onCommitNodeUpdate.mockReturnValueOnce(rejectedResult)
+    onCommitNodeUpdate.mockReturnValueOnce({ status: 'applied' })
+    render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={onCommitNodeUpdate} />)
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Queries' }))
+    const row = screen.getByTestId('query-state-feedback-accordion-row-error')
+    fireEvent.click(within(row).getByRole('radio', { name: 'Mostrar' }))
+    expect(screen.getByRole('alert')).toBeInTheDocument()
+
+    fireEvent.click(within(row).getByRole('radio', { name: 'Ocultar' }))
+
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    expect(within(row).getByRole('radio', { name: 'Ocultar' })).toHaveAttribute('aria-checked', 'true')
+  })
+
+  it('discards the rejection banner when the selected node (path) changes', () => {
+    const node = headingWithQueryStateFeedback({ error: { mode: 'hide' } })
+    const onCommitNodeUpdate = vi.fn().mockReturnValue(rejectedResult)
+    const { rerender } = render(
+      <LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={onCommitNodeUpdate} />,
+    )
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Queries' }))
+    const row = screen.getByTestId('query-state-feedback-accordion-row-error')
+    fireEvent.click(within(row).getByRole('radio', { name: 'Mostrar' }))
+    expect(screen.getByRole('alert')).toBeInTheDocument()
+
+    rerender(<LayoutCanvasPropertiesPanel node={node} path={otherPath} onCommitNodeUpdate={onCommitNodeUpdate} />)
+
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+})

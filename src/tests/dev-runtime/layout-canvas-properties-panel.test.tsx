@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import type { LayoutNode } from '../../config/runtime-config'
 import { validateRuntimeConfig } from '../../config/runtime-config'
@@ -7,6 +8,7 @@ import type { LayoutNodePath } from '../../runtime/layout-node-path'
 import { commitLayoutSpan } from '../../dev-runtime/layout-canvas/commit-layout-span'
 import type { CommitCanvasMutationResult } from '../../dev-runtime/layout-canvas/layout-canvas-commit'
 import { LayoutCanvasPropertiesPanel } from '../../dev-runtime/layout-canvas/layout-canvas-properties-panel'
+import { replaceNodeAt } from '../../dev-runtime/layout-tree-mutations'
 import { DevRuntimeReady } from '../../dev-runtime/dev-runtime'
 
 // The `icon` widget (T2, 0129) mounts the real `IconPickerPropertyField` for every node type whose
@@ -1794,6 +1796,288 @@ describe('LayoutCanvasPropertiesPanel icon widget (T2, 0129)', () => {
 
     expect(screen.getByLabelText('direction', { exact: false })).toBeInTheDocument()
     expect(screen.queryByRole('grid', { name: 'icon' })).not.toBeInTheDocument()
+  })
+})
+
+// T3 (0135): end-to-end coverage of the `query-state-feedback-accordion` widget against the real
+// commit pipeline (`validateRuntimeConfig`, exactly like `commitCanvasMutation` in
+// `dev-runtime.tsx`), closing acceptance criteria 1-7/9 plus the two integration-only cases
+// (cross-tab persistence, cross-node isolation). Criterion 8 (rejection feedback) lives in
+// `layout-canvas-properties-panel-commit-feedback.test.tsx` with a mocked `onCommitNodeUpdate`.
+//
+// Deliberately NOT the full `DevRuntimeReady` canvas + Monaco harness the rest of this file's
+// `DevEditorLayer + commitCanvasMutation` describe uses further down: a `heading` node declaring
+// `queryStateFeedback` with no matching live query resolves to the *default* `idle` rule, which is
+// `hide` (`getDefaultQueryStateFeedbackRule`, `runtime-query-state-feedback.ts`) — the runtime's
+// visibility gate (`resolveLayoutNodeVisibility`, applied unconditionally, edit mode included)
+// then renders `null` for that node, so it can never be clicked to select it on a real canvas. That
+// runtime behavior is explicitly out of this task's scope to touch. `QsfPipelineHarness` below
+// exercises the exact same two production functions the task calls for — `validateRuntimeConfig`
+// (imported for real, unmocked at the top of this file) and an `onCommitNodeUpdate` built the same
+// way `commitCanvasMutation` is (mutate the node at `path` via the real `replaceNodeAt`, validate
+// the candidate, apply on success) — without depending on canvas visibility at all.
+describe('LayoutCanvasPropertiesPanel query-state-feedback-accordion widget — end-to-end real pipeline (T3, 0135)', () => {
+  // Two sibling `heading` nodes. `queryStateFeedback.query` is a free-form string with no
+  // cross-check against `api`, so a plain non-empty literal is enough.
+  function qsfConfig(nodeAQueryStateFeedback?: Record<string, unknown>, nodeBQueryStateFeedback?: Record<string, unknown>) {
+    return {
+      api: {},
+      initialPage: 'home',
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'heading',
+              props: { text: 'Node A', level: 2 },
+              ...(nodeAQueryStateFeedback !== undefined ? { queryStateFeedback: nodeAQueryStateFeedback } : {}),
+            },
+            {
+              type: 'heading',
+              props: { text: 'Node B', level: 2 },
+              ...(nodeBQueryStateFeedback !== undefined ? { queryStateFeedback: nodeBQueryStateFeedback } : {}),
+            },
+          ],
+        },
+      ],
+    }
+  }
+
+  // Owns the config, selects which sibling is the panel's `node`/`path`, and implements
+  // `onCommitNodeUpdate` for real: `replaceNodeAt` (the same tree-mutation helper
+  // `dev-runtime.tsx`'s `commitCanvasMutation` uses) plus the real, unmocked `validateRuntimeConfig`
+  // — a rejected commit is a genuine validation rejection, not a canned return value, and a
+  // successful one is only ever visible via a fresh `config` state, exactly like the real panel
+  // only ever shows a committed value once `currentConfig` actually changes. The committed config is
+  // also serialized into a `<pre>` the tests can parse — playing the same role the Monaco buffer
+  // plays in the full `DevRuntimeReady` pipeline (an independent, text-serialized view of the same
+  // validated config, not just the React `node` prop this component happens to hold).
+  function QsfPipelineHarness({ initialConfig }: { initialConfig: RuntimeConfig }) {
+    const [config, setConfig] = useState(initialConfig)
+    const [selectedIndex, setSelectedIndex] = useState(0)
+    const path: LayoutNodePath = [{ field: 'children', index: selectedIndex }]
+    const node = config.pages[0].layout[selectedIndex]
+
+    function onCommitNodeUpdate(
+      nodePath: LayoutNodePath,
+      updater: (node: LayoutNode) => LayoutNode,
+    ): CommitCanvasMutationResult {
+      const activePageId = config.initialPage
+      const candidateConfig: RuntimeConfig = {
+        ...config,
+        pages: config.pages.map((page) =>
+          page.id === activePageId ? { ...page, layout: replaceNodeAt(page.layout, nodePath, updater) } : page,
+        ),
+      }
+      const validation = validateRuntimeConfig(candidateConfig)
+      if (validation.status === 'error') {
+        return { status: 'rejected', error: validation.error }
+      }
+      setConfig(validation.config)
+      return { status: 'applied' }
+    }
+
+    return (
+      <>
+        <div role="group" aria-label="Test node selector">
+          <button type="button" onClick={() => setSelectedIndex(0)}>
+            Select Node A
+          </button>
+          <button type="button" onClick={() => setSelectedIndex(1)}>
+            Select Node B
+          </button>
+        </div>
+        <pre data-testid="qsf-harness-config">{JSON.stringify(config)}</pre>
+        <LayoutCanvasPropertiesPanel node={node} path={path} onCommitNodeUpdate={onCommitNodeUpdate} />
+      </>
+    )
+  }
+
+  function renderQsfHarness(rawConfig: unknown) {
+    const { initialConfig } = buildReadyProps(rawConfig)
+    render(<QsfPipelineHarness initialConfig={initialConfig} />)
+  }
+
+  function selectNodeAndOpenQueries(label: 'Select Node A' | 'Select Node B') {
+    fireEvent.click(screen.getByRole('button', { name: label }))
+    fireEvent.click(screen.getByRole('tab', { name: 'Queries' }))
+  }
+
+  function getHarnessConfig(): { pages: Array<{ layout: Array<Record<string, unknown>> }> } {
+    return JSON.parse(screen.getByTestId('qsf-harness-config').textContent as string)
+  }
+
+  function getNodeAQueryStateFeedback(): Record<string, unknown> {
+    return getHarnessConfig().pages[0].layout[0].queryStateFeedback as Record<string, unknown>
+  }
+
+  it('criterion 1: states absent or {} shows the accordion with zero rows, not the previous generic object editor', () => {
+    renderQsfHarness(qsfConfig({ query: 'list' }, { query: 'list', states: {} }))
+
+    selectNodeAndOpenQueries('Select Node A')
+    expect(screen.getByTestId('query-state-feedback-accordion-add')).toBeEnabled()
+    expect(screen.queryAllByTestId(/^query-state-feedback-accordion-row-/)).toHaveLength(0)
+
+    selectNodeAndOpenQueries('Select Node B')
+    expect(screen.getByTestId('query-state-feedback-accordion-add')).toBeEnabled()
+    expect(screen.queryAllByTestId(/^query-state-feedback-accordion-row-/)).toHaveLength(0)
+  })
+
+  it('criterion 2: states.success = { mode: "show" } shows the success row with Mostrar active', () => {
+    renderQsfHarness(qsfConfig({ query: 'list', states: { success: { mode: 'show' } } }))
+    selectNodeAndOpenQueries('Select Node A')
+
+    const row = screen.getByTestId('query-state-feedback-accordion-row-success')
+    expect(within(row).getByRole('radio', { name: 'Mostrar' })).toHaveAttribute('aria-checked', 'true')
+  })
+
+  it('criterion 3: adding "error" via "Añadir estado" reflects states.error = { mode: "hide" } in the re-rendered node and the committed config buffer', () => {
+    renderQsfHarness(qsfConfig({ query: 'list', states: { success: { mode: 'show' } } }))
+    selectNodeAndOpenQueries('Select Node A')
+
+    fireEvent.change(screen.getByTestId('query-state-feedback-accordion-add'), { target: { value: 'error' } })
+
+    const row = screen.getByTestId('query-state-feedback-accordion-row-error')
+    expect(within(row).getByRole('radio', { name: 'Ocultar' })).toHaveAttribute('aria-checked', 'true')
+
+    expect((getNodeAQueryStateFeedback().states as Record<string, unknown>).error).toEqual({ mode: 'hide' })
+  })
+
+  it('criterion 4: switching error from Ocultar to Mostrar commits states.error = { mode: "show" } through the real pipeline', () => {
+    renderQsfHarness(qsfConfig({ query: 'list', states: { error: { mode: 'hide' } } }))
+    selectNodeAndOpenQueries('Select Node A')
+
+    const row = screen.getByTestId('query-state-feedback-accordion-row-error')
+    fireEvent.click(within(row).getByRole('radio', { name: 'Mostrar' }))
+    expect(within(row).getByRole('radio', { name: 'Mostrar' })).toHaveAttribute('aria-checked', 'true')
+
+    expect((getNodeAQueryStateFeedback().states as Record<string, unknown>).error).toEqual({ mode: 'show' })
+  })
+
+  it('criterion 5: switching error to Fallback with no previous fallback commits { mode: "fallback", fallback: [] } and shows the not-yet-editable note with no node-editing control', () => {
+    renderQsfHarness(qsfConfig({ query: 'list', states: { error: { mode: 'show' } } }))
+    selectNodeAndOpenQueries('Select Node A')
+
+    const row = screen.getByTestId('query-state-feedback-accordion-row-error')
+    fireEvent.click(within(row).getByRole('radio', { name: 'Fallback' }))
+
+    expect(within(row).getByTestId('query-state-feedback-accordion-row-error-fallback-note')).toBeInTheDocument()
+    expect(within(row).queryAllByRole('button', { name: /nodo|node/i })).toHaveLength(0)
+
+    expect((getNodeAQueryStateFeedback().states as Record<string, unknown>).error).toEqual({ mode: 'fallback', fallback: [] })
+  })
+
+  it('criterion 6: a fallback array on states.empty survives a Hide -> Fallback round trip through the real commit pipeline (no simulated cache)', () => {
+    const fallbackNodes = [{ type: 'paragraph', props: { text: 'Sin datos' } }]
+    renderQsfHarness(qsfConfig({ query: 'list', states: { empty: { mode: 'fallback', fallback: fallbackNodes } } }))
+    selectNodeAndOpenQueries('Select Node A')
+
+    const row = screen.getByTestId('query-state-feedback-accordion-row-empty')
+    expect(within(row).getByRole('radio', { name: 'Fallback' })).toHaveAttribute('aria-checked', 'true')
+    expect(within(row).getByTestId('query-state-feedback-accordion-row-empty-fallback-note')).toBeInTheDocument()
+
+    fireEvent.click(within(row).getByRole('radio', { name: 'Ocultar' }))
+    expect((getNodeAQueryStateFeedback().states as Record<string, unknown>).empty).toEqual({ mode: 'hide' })
+
+    fireEvent.click(within(row).getByRole('radio', { name: 'Fallback' }))
+    expect((getNodeAQueryStateFeedback().states as Record<string, unknown>).empty).toEqual({ mode: 'fallback', fallback: fallbackNodes })
+  })
+
+  it('criterion 7: removing the last present row drops the "states" key entirely, leaving queryStateFeedback = { query }', () => {
+    renderQsfHarness(qsfConfig({ query: 'list', states: { success: { mode: 'show' } } }))
+    selectNodeAndOpenQueries('Select Node A')
+
+    const row = screen.getByTestId('query-state-feedback-accordion-row-success')
+    fireEvent.click(within(row).getByRole('button', { name: 'Quitar estado success' }))
+
+    expect(getNodeAQueryStateFeedback()).toEqual({ query: 'list' })
+  })
+
+  it('criterion 9 (regression): query stays editable as a plain text field', () => {
+    renderQsfHarness(qsfConfig({ query: 'list' }))
+    selectNodeAndOpenQueries('Select Node A')
+
+    const queryField = screen.getByLabelText('query', { exact: false })
+    expect(queryField).toHaveValue('list')
+
+    fireEvent.change(queryField, { target: { value: 'otherQuery' } })
+
+    expect(getNodeAQueryStateFeedback().query).toBe('otherQuery')
+  })
+
+  // FR6, expansion-persistence gap flagged in the plan review: switching tabs must not touch the
+  // fallback cache or the manual expand/collapse state — only selecting a different node may.
+  it('persists the exact fallback array across a Props round trip mid-detour (FR6, real pipeline, not a simulated cache)', () => {
+    const fallbackNodes = [{ type: 'paragraph', props: { text: 'Sin datos' } }]
+    renderQsfHarness(qsfConfig({ query: 'list', states: { empty: { mode: 'fallback', fallback: fallbackNodes } } }))
+    selectNodeAndOpenQueries('Select Node A')
+
+    const row = screen.getByTestId('query-state-feedback-accordion-row-empty')
+    fireEvent.click(within(row).getByRole('radio', { name: 'Ocultar' }))
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Props' }))
+    fireEvent.click(screen.getByRole('tab', { name: 'Queries' }))
+
+    const rowAfterTabRoundTrip = screen.getByTestId('query-state-feedback-accordion-row-empty')
+    fireEvent.click(within(rowAfterTabRoundTrip).getByRole('radio', { name: 'Fallback' }))
+
+    expect((getNodeAQueryStateFeedback().states as Record<string, unknown>).empty).toEqual({ mode: 'fallback', fallback: fallbackNodes })
+  })
+
+  it('keeps a manually collapsed row collapsed after switching to Props and back to Queries', () => {
+    renderQsfHarness(qsfConfig({ query: 'list', states: { success: { mode: 'show' } } }))
+    selectNodeAndOpenQueries('Select Node A')
+
+    const row = screen.getByTestId('query-state-feedback-accordion-row-success')
+    expect(within(row).getByRole('button', { name: 'success' })).toHaveAttribute('aria-expanded', 'true')
+    fireEvent.click(within(row).getByRole('button', { name: 'success' }))
+    expect(within(row).getByRole('button', { name: 'success' })).toHaveAttribute('aria-expanded', 'false')
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Props' }))
+    fireEvent.click(screen.getByRole('tab', { name: 'Queries' }))
+
+    const rowAfterTabRoundTrip = screen.getByTestId('query-state-feedback-accordion-row-success')
+    expect(within(rowAfterTabRoundTrip).getByRole('button', { name: 'success' })).toHaveAttribute('aria-expanded', 'false')
+  })
+
+  it('node isolation: a manually collapsed row and an orphaned fallback-cache entry from a previous visit do not survive reselecting the node', () => {
+    const fallbackNodes = [{ type: 'paragraph', props: { text: 'Sin datos' } }]
+    renderQsfHarness(
+      qsfConfig(
+        { query: 'list', states: { success: { mode: 'show' }, empty: { mode: 'fallback', fallback: fallbackNodes } } },
+        { query: 'list', states: { success: { mode: 'show' } } },
+      ),
+    )
+    selectNodeAndOpenQueries('Select Node A')
+
+    // 1) manually collapse the "success" row.
+    const successRow = screen.getByTestId('query-state-feedback-accordion-row-success')
+    fireEvent.click(within(successRow).getByRole('button', { name: 'success' }))
+    expect(within(successRow).getByRole('button', { name: 'success' })).toHaveAttribute('aria-expanded', 'false')
+
+    // 2) detour "empty" away from Fallback — the previous fallback array is now only alive in the
+    // panel's session cache, orphaned from the committed node (which now reads `{ mode: 'hide' }`).
+    const emptyRow = screen.getByTestId('query-state-feedback-accordion-row-empty')
+    fireEvent.click(within(emptyRow).getByRole('radio', { name: 'Ocultar' }))
+    expect((getNodeAQueryStateFeedback().states as Record<string, unknown>).empty).toEqual({ mode: 'hide' })
+
+    // 3) select Node B, then reselect Node A.
+    selectNodeAndOpenQueries('Select Node B')
+    selectNodeAndOpenQueries('Select Node A')
+
+    // The manual collapse from step 1 did not survive — present rows expand by default again.
+    const successRowAgain = screen.getByTestId('query-state-feedback-accordion-row-success')
+    expect(within(successRowAgain).getByRole('button', { name: 'success' })).toHaveAttribute('aria-expanded', 'true')
+
+    // "empty" is still present (committed as `hide` from step 2), also expanded by default.
+    const emptyRowAgain = screen.getByTestId('query-state-feedback-accordion-row-empty')
+    expect(within(emptyRowAgain).getByRole('button', { name: 'empty' })).toHaveAttribute('aria-expanded', 'true')
+    expect(within(emptyRowAgain).getByRole('radio', { name: 'Ocultar' })).toHaveAttribute('aria-checked', 'true')
+
+    // Switching back to Fallback must not resurrect the orphaned cached array from the previous
+    // node-selection session — it commits a fresh empty array, same as never having cached one.
+    fireEvent.click(within(emptyRowAgain).getByRole('radio', { name: 'Fallback' }))
+    expect((getNodeAQueryStateFeedback().states as Record<string, unknown>).empty).toEqual({ mode: 'fallback', fallback: [] })
   })
 })
 
