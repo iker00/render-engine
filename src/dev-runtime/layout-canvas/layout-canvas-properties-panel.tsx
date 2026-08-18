@@ -1,6 +1,13 @@
 import { Trash2, X } from 'lucide-react'
 import { useId, useState } from 'react'
-import type { LayoutNode, RuntimeConfigError, RuntimeResponsiveBreakpoint, RuntimeResponsiveLayoutValue } from '../../config/runtime-config'
+import type {
+  LayoutNode,
+  QueryStateFeedbackConfig,
+  QueryStateFeedbackVisibleState,
+  RuntimeConfigError,
+  RuntimeResponsiveBreakpoint,
+  RuntimeResponsiveLayoutValue,
+} from '../../config/runtime-config'
 import { serializeLayoutNodePath, type LayoutNodePath } from '../../runtime/layout-node-path'
 import { CommitRejectionBanner } from '../commit-rejection-banner'
 import { commitLayoutSpan } from './commit-layout-span'
@@ -14,6 +21,11 @@ import { LayoutSpanWidgetContext, type LayoutSpanRowRejection } from './property
 import { LinkContentModePropertyField } from './property-fields/link-content-mode-property-field'
 import { PropertyFieldDispatcher } from './property-fields/property-field-dispatcher'
 import { resolveUnionBranch } from './property-fields/property-field-schema-resolution'
+import {
+  buildInitialQueryStateFeedbackFallbackCache,
+  getPresentQueryStateFeedbackStates,
+} from './property-fields/query-state-feedback-accordion-state'
+import { QueryStateFeedbackAccordionWidgetContext } from './property-fields/query-state-feedback-accordion-widget-context'
 import { resolveAncestorContainerColumns } from './resolve-ancestor-container-columns'
 
 export interface LayoutCanvasPropertiesPanelProps {
@@ -86,6 +98,13 @@ function withSubsection(node: LayoutNode, key: NodePanelTabKey, value: unknown):
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value)
+}
+
+// T3 (0135): shared by the lazy initializers and the node-change reset guard below — both need the
+// same extraction of `queryStateFeedback.states` off a given node.
+function extractQueryStateFeedbackStates(node: LayoutNode): QueryStateFeedbackConfig['states'] {
+  const queryStateFeedback = readSubsection(node, 'queryStateFeedback')
+  return (isPlainObject(queryStateFeedback) ? queryStateFeedback.states : undefined) as QueryStateFeedbackConfig['states']
 }
 
 // T8: choosing "Sin acción" in the discriminated-union action selector (T5) resolves to
@@ -282,6 +301,27 @@ function resolveLayoutSubsectionSchema(layoutSchema: Record<string, unknown>): R
   }
 }
 
+/**
+ * Replaces the generated sub-schema of `queryStateFeedback.states` (Zod's `queryStateFeedbackStatesSchema`,
+ * a `.strict()` object with the five optional per-state rules) with the
+ * `{ 'x-widget': 'query-state-feedback-accordion' }` sentinel the dispatcher's `x-widget` hook
+ * resolves to `QueryStateFeedbackAccordionPropertyField` (T2/T3, 0135). Same swap-only-that-key
+ * pattern as `resolveLayoutSubsectionSchema` above for `layout.span`: only `properties.states` is
+ * swapped out, `query` (a plain required string) keeps rendering with the generic text input.
+ */
+function resolveQueryStateFeedbackSubsectionSchema(subsectionSchema: Record<string, unknown>): Record<string, unknown> {
+  const properties = subsectionSchema.properties
+  if (!isPlainObject(properties) || !('states' in properties)) return subsectionSchema
+
+  return {
+    ...subsectionSchema,
+    properties: {
+      ...properties,
+      states: { 'x-widget': 'query-state-feedback-accordion' },
+    },
+  }
+}
+
 // RF2 (0105): label seeded onto a brand-new `tabs.props.items` entry via `handleAdd`'s generic
 // default-object builder (property-field-dispatcher.tsx). Named so a future copy change stays a
 // one-line edit.
@@ -412,6 +452,20 @@ export function LayoutCanvasPropertiesPanel({
   const [layoutSpanRowRejections, setLayoutSpanRowRejections] = useState<
     Partial<Record<RuntimeResponsiveBreakpoint, LayoutSpanRowRejection>>
   >({})
+  // T3 (0135): ephemeral UI state the `query-state-feedback-accordion` widget needs to survive a
+  // tab change within the same node (FR6) — see `query-state-feedback-accordion-widget-context.ts`
+  // for why this can't live in the widget's own `useState`. `queryStateFeedbackFallbackCache`
+  // remembers each row's last-known `fallback` array across a Mostrar/Ocultar detour;
+  // `queryStateFeedbackExpandedStates` remembers which rows are expanded (present rows start
+  // expanded, same default the widget's own isolated tests use). Lazily seeded from the initial
+  // `node` (not just on a later node change) so the very first mount already reflects it, then
+  // reset only when the selected node changes, never on a tab switch.
+  const [queryStateFeedbackFallbackCache, setQueryStateFeedbackFallbackCache] = useState<
+    Partial<Record<QueryStateFeedbackVisibleState, unknown[]>>
+  >(() => buildInitialQueryStateFeedbackFallbackCache(extractQueryStateFeedbackStates(node)))
+  const [queryStateFeedbackExpandedStates, setQueryStateFeedbackExpandedStates] = useState<
+    ReadonlySet<QueryStateFeedbackVisibleState>
+  >(() => new Set(getPresentQueryStateFeedbackStates(extractQueryStateFeedbackStates(node))))
 
   // Selecting a different node discards any rejection pending on the previously selected
   // node — it belongs to that node's edit, not this one. A successful commit on this node
@@ -428,6 +482,12 @@ export function LayoutCanvasPropertiesPanel({
     setPendingRejections({})
     setLayoutSpanRowRejections({})
     setActiveTabKey(tabs[0]?.key)
+    // T3 (0135): re-seeded from the *new* node's own `queryStateFeedback.states` — a manually
+    // collapsed row and a cached `fallback` array belong to the previously selected node's editing
+    // session, not this one (unlike a tab switch, which must not touch either).
+    const nextStates = extractQueryStateFeedbackStates(node)
+    setQueryStateFeedbackFallbackCache(buildInitialQueryStateFeedbackFallbackCache(nextStates))
+    setQueryStateFeedbackExpandedStates(new Set(getPresentQueryStateFeedbackStates(nextStates)))
   }
 
   // Defensive fallback (T4 contract): if the tracked active key doesn't match any of this node's
@@ -571,6 +631,9 @@ export function LayoutCanvasPropertiesPanel({
     if (key === 'props' && effectiveSchema) {
       effectiveSchema = resolveColorSwatchPropsSchema(effectiveSchema)
     }
+    if (key === 'queryStateFeedback' && effectiveSchema) {
+      effectiveSchema = resolveQueryStateFeedbackSubsectionSchema(effectiveSchema)
+    }
 
     // T2 (0127): `Layout` only exists when a `container` ancestor with `columns` is resolvable —
     // without one, `span` has nothing to be relative to. `resolveNodePanelTabs` (T1) already
@@ -610,6 +673,36 @@ export function LayoutCanvasPropertiesPanel({
         )}
       </div>
     )
+
+    // T3 (0135): the `query-state-feedback-accordion` widget's ephemeral UI state (expansion,
+    // fallback cache) lives here in the panel, not inside the widget — unlike `layout-span`, no
+    // `key` is needed to force a remount on node change: there is no local widget state left to
+    // leak across nodes, since the two `useState`s that back this context are already reset by the
+    // `serializedPath` guard above.
+    if (key === 'queryStateFeedback') {
+      return (
+        <QueryStateFeedbackAccordionWidgetContext.Provider
+          value={{
+            fallbackCacheByState: queryStateFeedbackFallbackCache,
+            onFallbackCacheCommit: (state, fallback) =>
+              setQueryStateFeedbackFallbackCache((prev) => ({ ...prev, [state]: fallback })),
+            expandedStates: queryStateFeedbackExpandedStates,
+            onSetExpanded: (state, expanded) =>
+              setQueryStateFeedbackExpandedStates((prev) => {
+                const next = new Set(prev)
+                if (expanded) {
+                  next.add(state)
+                } else {
+                  next.delete(state)
+                }
+                return next
+              }),
+          }}
+        >
+          {subsectionField}
+        </QueryStateFeedbackAccordionWidgetContext.Provider>
+      )
+    }
 
     if (key !== 'layout' || parentColumns === null) return subsectionField
 

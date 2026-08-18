@@ -2,6 +2,7 @@ import { fireEvent, render, screen, within } from '@testing-library/react'
 import { useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import { PropertyFieldDispatcher } from '../../dev-runtime/layout-canvas/property-fields/property-field-dispatcher'
+import { QueryStateFeedbackAccordionWidgetContext } from '../../dev-runtime/layout-canvas/property-fields/query-state-feedback-accordion-widget-context'
 
 // The `icon` widget (T2, 0129) mounts the real `IconPickerPropertyField`, which enumerates the
 // full `lucide-react` namespace to build its catalog. Same mock as T1's own suite, required here
@@ -785,6 +786,57 @@ describe('PropertyFieldDispatcher x-widget hook: color-swatch (T2, 0134)', () =>
 
     const sizeGroup = screen.getByRole('radiogroup', { name: 'size' })
     expect(within(sizeGroup).getAllByRole('radio')).toHaveLength(3)
+  })
+})
+
+describe('PropertyFieldDispatcher x-widget hook: query-state-feedback-accordion (T3, 0135)', () => {
+  it('delegates to QueryStateFeedbackAccordionPropertyField for a schema declaring x-widget: "query-state-feedback-accordion", instead of any generic branch', () => {
+    const onChangeSpy = vi.fn()
+    render(
+      <QueryStateFeedbackAccordionWidgetContext.Provider
+        value={{
+          fallbackCacheByState: {},
+          onFallbackCacheCommit: vi.fn(),
+          expandedStates: new Set(['success']),
+          onSetExpanded: vi.fn(),
+        }}
+      >
+        <ControlledDispatcher
+          schema={{ 'x-widget': 'query-state-feedback-accordion' }}
+          initialValue={{ success: { mode: 'show' } }}
+          label="Feedback por estado"
+          onChangeSpy={onChangeSpy}
+        />
+      </QueryStateFeedbackAccordionWidgetContext.Provider>,
+    )
+
+    // The widget's own accordion fieldset — absent from every generic branch (object/raw-JSON)
+    // the dispatcher could otherwise have picked for this schema.
+    expect(screen.getByTestId('query-state-feedback-accordion')).toBeInTheDocument()
+    expect(screen.queryByRole('textbox', { name: 'Feedback por estado' })).not.toBeInTheDocument()
+
+    const row = screen.getByTestId('query-state-feedback-accordion-row-success')
+    expect(within(row).getByRole('radio', { name: 'Mostrar' })).toHaveAttribute('aria-checked', 'true')
+
+    fireEvent.click(within(row).getByRole('radio', { name: 'Ocultar' }))
+    expect(onChangeSpy).toHaveBeenCalledWith({ success: { mode: 'hide' } })
+  })
+
+  it('throws when mounted without a QueryStateFeedbackAccordionWidgetContext.Provider around the dispatcher (the dispatcher itself provides none)', () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    expect(() =>
+      render(
+        <ControlledDispatcher
+          schema={{ 'x-widget': 'query-state-feedback-accordion' }}
+          initialValue={undefined}
+          label="Feedback por estado"
+          onChangeSpy={vi.fn()}
+        />,
+      ),
+    ).toThrow('useQueryStateFeedbackAccordionWidgetContext must be used within')
+
+    consoleErrorSpy.mockRestore()
   })
 })
 

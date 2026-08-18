@@ -56,7 +56,7 @@ export function SegmentedTogglePropertyField({ label, segments, activeValue, onS
   const tabbableIndex = activeIndex === -1 ? 0 : activeIndex
 
   return (
-    <div role="radiogroup" aria-label={label} className="inline-flex items-center gap-0.5 rounded-full border border-gray-300 bg-white p-0.5">
+    <div role="radiogroup" aria-label={label} className="w-full inline-flex items-center gap-0.5 rounded-full border border-gray-300 bg-white p-0.5">
       {segments.map((segment, index) => {
         const isActive = segment.value === activeValue
         const Icon = segment.icon
@@ -75,8 +75,8 @@ export function SegmentedTogglePropertyField({ label, segments, activeValue, onS
             onKeyDown={(event) => handleKeyDown(event, index)}
             className={
               isActive
-                ? 'flex items-center gap-1 rounded-full bg-gray-800 px-3 py-1 text-xs font-medium text-white'
-                : 'flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium text-gray-600 hover:bg-gray-100'
+                ? 'flex-1 flex justify-center items-center gap-1 rounded-full bg-gray-800 px-3 py-1 text-xs font-medium text-white'
+                : 'flex-1 flex justify-center items-center gap-1 rounded-full px-3 py-1 text-xs font-medium text-gray-600 hover:bg-gray-100'
             }
           >
             {Icon && <Icon aria-hidden="true" className="h-3.5 w-3.5" />}
