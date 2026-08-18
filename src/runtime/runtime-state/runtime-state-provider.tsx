@@ -13,6 +13,7 @@ import type { PlannedPreloadBatch } from '../runtime-global-preloads'
 import type { RuntimeConfig } from '../../config/runtime-config'
 import { parseBrowserHashNavigationHash, replaceBrowserHash } from '../runtime-navigation/browser-hash-navigation'
 import { RuntimeDocumentTitleEffect } from '../runtime-document-title'
+import { RuntimeScrollRestorationEffect } from '../runtime-scroll-restoration'
 import { RuntimeStateContext } from './runtime-state-context'
 import { createRuntimeState, runtimeStateReducer } from './runtime-state-reducer'
 import { executeQueryOperationWithSnapshot } from './runtime-state-query-execution'
@@ -321,6 +322,7 @@ export function RuntimeStateProvider({ config, dataValues, activeLanguage, child
   return (
     <RuntimeStateContext.Provider value={contextValue}>
       <RuntimeDocumentTitleEffect />
+      <RuntimeScrollRestorationEffect />
       {children}
     </RuntimeStateContext.Provider>
   )

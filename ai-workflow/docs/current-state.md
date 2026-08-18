@@ -15,7 +15,7 @@ No es histórico acumulado ni sustituto de las fichas funcionales. El detalle es
 | Catálogo de nodos | estable | [nodes/](./app-features/nodes/index.md) | `0108` |
 | Formularios y validación | estable | [forms/](./app-features/forms/index.md) | `0095` |
 | Queries, preloads y feedback | estable | [queries/](./app-features/queries/index.md) | `0110` |
-| Navegación y páginas | estable | [navigation/](./app-features/navigation/index.md) | `0046` |
+| Navegación y páginas | estable | [navigation/](./app-features/navigation/index.md) | `0137` |
 | Shell de aplicación (cabecera y sidebar) | estable | [shell/](./app-features/shell/index.md) | `0124` |
 | Accesibilidad | estable | [nodes/](./app-features/nodes/index.md), [queries/](./app-features/queries/index.md), [navigation/](./app-features/navigation/index.md) | `0046` |
 | Desarrollo local | estable | [development/](./app-features/development/index.md) | `0131` |
