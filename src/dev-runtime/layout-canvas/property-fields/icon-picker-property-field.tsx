@@ -1,7 +1,8 @@
 import * as LucideIcons from 'lucide-react'
 import type { ChangeEvent, KeyboardEvent } from 'react'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { IconNode } from '../../../runtime/nodes/icon-node'
+import { PropertyFieldRow } from './property-field-row'
 
 const GRID_COLUMNS = 4
 
@@ -32,6 +33,7 @@ interface IconPickerPropertyFieldProps {
  * Shell schemas.
  */
 export function IconPickerPropertyField({ label, value, onChange }: IconPickerPropertyFieldProps) {
+  const searchInputId = useId()
   const [query, setQuery] = useState('')
   const [page, setPage] = useState(0)
   // Disclosure state (T5, 0129): the grid is unmounted by default and only rendered while `open`
@@ -203,39 +205,42 @@ export function IconPickerPropertyField({ label, value, onChange }: IconPickerPr
           Valor actual: <span className="font-medium text-gray-700">{currentValue}</span>
         </p>
       )}
-      <div className="flex items-center gap-2">
-        <input
-          ref={searchInputRef}
-          type="text"
-          aria-label="Buscar icono"
-          aria-haspopup="grid"
-          aria-expanded={open}
-          placeholder="Buscar icono"
-          value={query}
-          onChange={handleQueryChange}
-          onFocus={handleSearchFocus}
-          onKeyDown={handleSearchKeyDown}
-          className="flex-1 rounded border border-gray-300 px-2 py-1 text-sm text-gray-900 focus:border-gray-500 focus:outline-none"
-        />
-        {isRecognizedValue && (
-          // Preview chip (T5, decision 7): with the grid hidden by default, this is the only
-          // signal of the currently recognized value — visible independent of `open`, so it
-          // survives closing the grid after a selection.
-          <span className="flex shrink-0 items-center gap-1 text-xs text-gray-600">
-            <IconNode name={currentValue} className="h-4 w-4" />
-            {currentValue}
-          </span>
-        )}
-        {currentValue !== undefined && currentValue !== '' && (
-          <button
-            type="button"
-            onClick={() => onChange(undefined)}
-            className="shrink-0 rounded border border-gray-300 px-2 py-1 text-xs text-gray-600 hover:bg-gray-100"
-          >
-            Quitar icono
-          </button>
-        )}
-      </div>
+      <PropertyFieldRow htmlFor={searchInputId} label={label}>
+        <div className="flex items-center gap-2">
+          <input
+            ref={searchInputRef}
+            id={searchInputId}
+            type="text"
+            aria-label="Buscar icono"
+            aria-haspopup="grid"
+            aria-expanded={open}
+            placeholder="Buscar icono"
+            value={query}
+            onChange={handleQueryChange}
+            onFocus={handleSearchFocus}
+            onKeyDown={handleSearchKeyDown}
+            className="flex-1 rounded border border-gray-300 px-2 py-1 text-sm text-gray-900 focus:border-gray-500 focus:outline-none"
+          />
+          {isRecognizedValue && (
+            // Preview chip (T5, decision 7): with the grid hidden by default, this is the only
+            // signal of the currently recognized value — visible independent of `open`, so it
+            // survives closing the grid after a selection.
+            <span className="flex shrink-0 items-center gap-1 text-xs text-gray-600">
+              <IconNode name={currentValue} className="h-4 w-4" />
+              {currentValue}
+            </span>
+          )}
+          {currentValue !== undefined && currentValue !== '' && (
+            <button
+              type="button"
+              onClick={() => onChange(undefined)}
+              className="shrink-0 rounded border border-gray-300 px-2 py-1 text-xs text-gray-600 hover:bg-gray-100"
+            >
+              Quitar icono
+            </button>
+          )}
+        </div>
+      </PropertyFieldRow>
       {open && (
         <>
           <div

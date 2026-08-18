@@ -305,7 +305,7 @@ export function ShellMenuListEditor({ menu, onCommitMenu, collapse, onMoveItem, 
   })
 
   return (
-    <fieldset className="flex flex-col gap-2 rounded border border-gray-200 p-2">
+    <fieldset className="flex flex-col gap-2">
       <legend className="px-1 text-xs font-medium text-gray-700">Menú</legend>
       <ShellTreeDndContext treeId="shell-menu" onMoveAttempt={onMoveItem} isValidDestination={isValidDestination}>
         <div data-testid="shell-dnd-list-shell-menu-root" className="flex flex-col gap-2">

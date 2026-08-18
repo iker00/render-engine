@@ -152,7 +152,7 @@ describe('SidebarItemListEditor / editing a root item', () => {
 
   it('editing label updates the item', () => {
     renderWithOneRootItem()
-    fireEvent.change(screen.getByRole('textbox', { name: 'Elemento de sidebar 1 — Etiqueta' }), {
+    fireEvent.change(screen.getByRole('textbox', { name: 'Etiqueta' }), {
       target: { value: 'Dashboard' },
     })
     expect(currentItems()[0].label).toBe('Dashboard')
@@ -170,10 +170,10 @@ describe('SidebarItemListEditor / editing a root item', () => {
 
   it('switching mode to "Acción" then "Navegar a página" commits a navigateTo action', () => {
     renderWithOneRootItem()
-    fireEvent.change(screen.getByRole('combobox', { name: 'Elemento de sidebar 1 — Modo' }), {
+    fireEvent.change(screen.getByRole('combobox', { name: 'Modo' }), {
       target: { value: 'action' },
     })
-    fireEvent.change(screen.getByRole('combobox', { name: 'Elemento de sidebar 1 — Acción' }), {
+    fireEvent.change(screen.getByRole('combobox', { name: 'Acción' }), {
       target: { value: 'navigateTo' },
     })
     fireEvent.change(screen.getByRole('textbox', { name: 'pageId' }), { target: { value: 'about' } })
@@ -183,7 +183,7 @@ describe('SidebarItemListEditor / editing a root item', () => {
 
   it('switching mode to "Sin acción" clears href, leaving only label/icon/visibility', () => {
     renderWithOneRootItem()
-    fireEvent.change(screen.getByRole('combobox', { name: 'Elemento de sidebar 1 — Modo' }), {
+    fireEvent.change(screen.getByRole('combobox', { name: 'Modo' }), {
       target: { value: 'none' },
     })
 
@@ -192,10 +192,10 @@ describe('SidebarItemListEditor / editing a root item', () => {
 
   it('switching mode from "action" back to "href" reseeds an empty href', () => {
     renderWithOneRootItem()
-    fireEvent.change(screen.getByRole('combobox', { name: 'Elemento de sidebar 1 — Modo' }), {
+    fireEvent.change(screen.getByRole('combobox', { name: 'Modo' }), {
       target: { value: 'action' },
     })
-    fireEvent.change(screen.getByRole('combobox', { name: 'Elemento de sidebar 1 — Modo' }), {
+    fireEvent.change(screen.getByRole('combobox', { name: 'Modo' }), {
       target: { value: 'href' },
     })
 
@@ -205,13 +205,13 @@ describe('SidebarItemListEditor / editing a root item', () => {
   it('editing visibility sets a simple condition on the item', () => {
     renderWithOneRootItem()
     // T4 (0132): `visibility` now goes through `ConditionGroupPropertyField` (the shared
-    // condition/group widget), not the generic `ObjectPropertyField` — its fields are prefixed by
-    // the row's own label (`<labelText> — Visibilidad — <field>`), unlike the raw property-key
-    // labels the old generic editor exposed for `src`/`alt`/`pageId` elsewhere in this panel.
-    fireEvent.change(screen.getByRole('textbox', { name: 'Elemento de sidebar 1 — Visibilidad — Referencia' }), {
+    // condition/group widget), not the generic `ObjectPropertyField` — its fields use bare literal
+    // names (`Referencia`/`Operador`/…, T2 0136), unlike the raw property-key labels the old
+    // generic editor exposed for `src`/`alt`/`pageId` elsewhere in this panel.
+    fireEvent.change(screen.getByRole('textbox', { name: 'Referencia' }), {
       target: { value: 'params.role' },
     })
-    fireEvent.change(screen.getByRole('combobox', { name: 'Elemento de sidebar 1 — Visibilidad — Operador' }), {
+    fireEvent.change(screen.getByRole('combobox', { name: 'Operador' }), {
       target: { value: 'isTruthy' },
     })
 
@@ -230,11 +230,11 @@ describe('SidebarItemListEditor / visibility widget (T4, 0132)', () => {
     ])
     fireEvent.click(screen.getByTestId('sidebar-item-collapse-toggle-0'))
 
-    const shape = screen.getByRole('radiogroup', { name: 'Elemento de sidebar 1 — Visibilidad — Forma' })
+    const shape = screen.getByRole('radiogroup', { name: 'Forma' })
     expect(within(shape).getByRole('radio', { name: 'Grupo (y/o)' })).toHaveAttribute('aria-checked', 'true')
-    const groupOperator = screen.getByRole('radiogroup', { name: 'Elemento de sidebar 1 — Visibilidad — Operador del grupo' })
+    const groupOperator = screen.getByRole('radiogroup', { name: 'Operador del grupo' })
     expect(within(groupOperator).getByRole('radio', { name: 'and' })).toHaveAttribute('aria-checked', 'true')
-    expect(screen.getByRole('group', { name: 'Elemento de sidebar 1 — Visibilidad — Condición 1' })).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: 'Condición 1' })).toBeInTheDocument()
   })
 
   // Risk flagged in design.md: `sidebarItem` recursion is genuinely unbounded, and the widget must
@@ -260,9 +260,9 @@ describe('SidebarItemListEditor / visibility widget (T4, 0132)', () => {
     ])
     fireEvent.click(screen.getByTestId('sidebar-item-collapse-toggle-0.0.0'))
 
-    const shape = screen.getByRole('radiogroup', { name: 'Elemento de sidebar 1.1.1 — Visibilidad — Forma' })
+    const shape = screen.getByRole('radiogroup', { name: 'Forma' })
     expect(within(shape).getByRole('radio', { name: 'Condición simple' })).toHaveAttribute('aria-checked', 'true')
-    expect(screen.getByRole('textbox', { name: 'Elemento de sidebar 1.1.1 — Visibilidad — Referencia' })).toHaveValue(
+    expect(screen.getByRole('textbox', { name: 'Referencia' })).toHaveValue(
       'params.role',
     )
   })
@@ -288,7 +288,7 @@ describe('SidebarItemListEditor / visibility widget (T4, 0132)', () => {
     ])
     fireEvent.click(screen.getByTestId('sidebar-item-collapse-toggle-0.0.0'))
 
-    fireEvent.change(screen.getByRole('combobox', { name: 'Elemento de sidebar 1.1.1 — Visibilidad — Operador' }), {
+    fireEvent.change(screen.getByRole('combobox', { name: 'Operador' }), {
       target: { value: 'isTruthy' },
     })
 
@@ -306,13 +306,13 @@ describe('SidebarItemListEditor / icon field (T3, 0129)', () => {
     // The grid is hidden until the search input is focused (T5, 0129).
     fireEvent.focus(screen.getByRole('textbox', { name: 'Buscar icono' }))
 
-    const grid = screen.getByRole('grid', { name: 'Elemento de sidebar 1 — Icono' })
+    const grid = screen.getByRole('grid', { name: 'Icono' })
     const selected = within(grid)
       .getAllByRole('gridcell')
       .filter((cell) => cell.getAttribute('aria-selected') === 'true')
     expect(selected).toHaveLength(1)
     expect(selected[0]).toHaveTextContent('LayoutDashboard')
-    expect(screen.queryByRole('textbox', { name: /Elemento de sidebar 1 — Icono/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('textbox', { name: 'Icono' })).not.toBeInTheDocument()
   })
 
   it('a sidebarItem nested at depth >= 2 (children -> children) shows the icon widget with its own icon highlighted', () => {
@@ -325,7 +325,7 @@ describe('SidebarItemListEditor / icon field (T3, 0129)', () => {
     fireEvent.click(screen.getByTestId('sidebar-item-collapse-toggle-0.0.0'))
     fireEvent.focus(screen.getByRole('textbox', { name: 'Buscar icono' }))
 
-    const grid = screen.getByRole('grid', { name: 'Elemento de sidebar 1.1.1 — Icono' })
+    const grid = screen.getByRole('grid', { name: 'Icono' })
     const selected = within(grid)
       .getAllByRole('gridcell')
       .filter((cell) => cell.getAttribute('aria-selected') === 'true')
@@ -349,14 +349,15 @@ describe('SidebarItemListEditor / switching to "Con hijos"', () => {
     renderHarness([{ label: 'Products', href: '/products' }])
     fireEvent.click(screen.getByTestId('sidebar-item-collapse-toggle-0'))
 
-    fireEvent.change(screen.getByRole('combobox', { name: 'Elemento de sidebar 1 — Modo' }), {
+    fireEvent.change(screen.getByRole('combobox', { name: 'Modo' }), {
       target: { value: 'children' },
     })
 
     expect(currentItems()[0]).not.toHaveProperty('href')
     expect(currentItems()[0].children).toEqual([{ label: 'Nuevo elemento', href: '' }])
-    // The nested sublist is mounted incondicionalmente, no toggle needed.
-    expect(screen.getByRole('textbox', { name: 'Elemento de sidebar 1.1 — Etiqueta' })).toBeInTheDocument()
+    // The nested sublist is mounted incondicionalmente, no toggle needed. Scoped to the child's own
+    // row (`0.0`): the root row (still expanded) also carries a bare "Etiqueta" field (T5, 0136).
+    expect(within(screen.getByTestId('shell-tree-row-0.0')).getByRole('textbox', { name: 'Etiqueta' })).toBeInTheDocument()
   })
 })
 
@@ -367,22 +368,26 @@ describe('SidebarItemListEditor / recursion to arbitrary depth', () => {
     // switch below and auto-expands, so no further explicit expand clicks are needed after this.
     fireEvent.click(screen.getByTestId('sidebar-item-collapse-toggle-0'))
 
-    fireEvent.change(screen.getByRole('combobox', { name: 'Elemento de sidebar 1 — Modo' }), {
+    // Every ancestor level stays expanded once a level below it is created, so by the last step
+    // rows 0, 0.0, 0.0.0 and 0.0.0.0 are all simultaneously visible, each with its own bare
+    // "Etiqueta"/"Modo" field (T5, 0136) — every query below is scoped to the exact row being
+    // edited to stay unambiguous.
+    fireEvent.change(within(screen.getByTestId('shell-tree-row-0')).getByRole('combobox', { name: 'Modo' }), {
       target: { value: 'children' },
     })
-    fireEvent.change(screen.getByRole('textbox', { name: 'Elemento de sidebar 1.1 — Etiqueta' }), {
+    fireEvent.change(within(screen.getByTestId('shell-tree-row-0.0')).getByRole('textbox', { name: 'Etiqueta' }), {
       target: { value: 'Level 2' },
     })
-    fireEvent.change(screen.getByRole('combobox', { name: 'Elemento de sidebar 1.1 — Modo' }), {
+    fireEvent.change(within(screen.getByTestId('shell-tree-row-0.0')).getByRole('combobox', { name: 'Modo' }), {
       target: { value: 'children' },
     })
-    fireEvent.change(screen.getByRole('textbox', { name: 'Elemento de sidebar 1.1.1 — Etiqueta' }), {
+    fireEvent.change(within(screen.getByTestId('shell-tree-row-0.0.0')).getByRole('textbox', { name: 'Etiqueta' }), {
       target: { value: 'Level 3' },
     })
-    fireEvent.change(screen.getByRole('combobox', { name: 'Elemento de sidebar 1.1.1 — Modo' }), {
+    fireEvent.change(within(screen.getByTestId('shell-tree-row-0.0.0')).getByRole('combobox', { name: 'Modo' }), {
       target: { value: 'children' },
     })
-    fireEvent.change(screen.getByRole('textbox', { name: 'Elemento de sidebar 1.1.1.1 — Etiqueta' }), {
+    fireEvent.change(within(screen.getByTestId('shell-tree-row-0.0.0.0')).getByRole('textbox', { name: 'Etiqueta' }), {
       target: { value: 'Level 4' },
     })
 
@@ -641,12 +646,12 @@ describe('SidebarItemListEditor / rejected commit feedback', () => {
     renderHarness([{ label: 'Home', href: '/home' }])
     fireEvent.click(screen.getByTestId('sidebar-item-collapse-toggle-0'))
 
-    fireEvent.change(screen.getByRole('textbox', { name: 'Elemento de sidebar 1 — Etiqueta' }), {
+    fireEvent.change(screen.getByRole('textbox', { name: 'Etiqueta' }), {
       target: { value: 'REJECT' },
     })
 
     expect(screen.getByRole('alert')).toHaveTextContent('invalid-layout')
-    expect(screen.getByRole('textbox', { name: 'Elemento de sidebar 1 — Etiqueta' })).toHaveValue('REJECT')
+    expect(screen.getByRole('textbox', { name: 'Etiqueta' })).toHaveValue('REJECT')
     // The underlying committed state was never mutated by the rejected commit.
     expect(currentItems()[0].label).toBe('Home')
   })
@@ -655,12 +660,12 @@ describe('SidebarItemListEditor / rejected commit feedback', () => {
     renderHarness([{ label: 'Home', href: '/home' }])
     fireEvent.click(screen.getByTestId('sidebar-item-collapse-toggle-0'))
 
-    fireEvent.change(screen.getByRole('textbox', { name: 'Elemento de sidebar 1 — Etiqueta' }), {
+    fireEvent.change(screen.getByRole('textbox', { name: 'Etiqueta' }), {
       target: { value: 'REJECT' },
     })
     expect(screen.getByRole('alert')).toBeInTheDocument()
 
-    fireEvent.change(screen.getByRole('textbox', { name: 'Elemento de sidebar 1 — Etiqueta' }), {
+    fireEvent.change(screen.getByRole('textbox', { name: 'Etiqueta' }), {
       target: { value: 'Dashboard' },
     })
 
@@ -697,7 +702,7 @@ describe('SidebarItemListEditor / collapse control', () => {
     expect(screen.getByTestId('sidebar-item-collapse-toggle-0')).toHaveAttribute('aria-expanded', 'false')
     expect(screen.getByTestId('sidebar-item-collapse-toggle-0.0')).toHaveAttribute('aria-expanded', 'false')
     expect(screen.getByTestId('sidebar-item-collapse-toggle-0.0.1')).toHaveAttribute('aria-expanded', 'false')
-    expect(screen.queryByRole('textbox', { name: 'Elemento de sidebar 1.1.2 — Etiqueta' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('textbox', { name: 'Etiqueta' })).not.toBeInTheDocument()
   })
 
   it('expanding the root item reveals its fields; its label/icon stay visible on the toggle button either way', () => {
@@ -710,7 +715,7 @@ describe('SidebarItemListEditor / collapse control', () => {
 
     fireEvent.click(toggle)
 
-    expect(screen.getByRole('textbox', { name: 'Elemento de sidebar 1 — Etiqueta' })).toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: 'Etiqueta' })).toBeInTheDocument()
     expect(toggle).toHaveAttribute('aria-expanded', 'true')
     expect(toggle).toHaveTextContent('Root item')
     expect(toggle).toHaveTextContent('home')
@@ -723,11 +728,13 @@ describe('SidebarItemListEditor / collapse control', () => {
 
     fireEvent.click(screen.getByTestId('sidebar-item-collapse-toggle-0.0.1'))
 
-    expect(screen.getByRole('textbox', { name: 'Elemento de sidebar 1.1.2 — Etiqueta' })).toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: 'Etiqueta' })).toBeInTheDocument()
     expect(screen.getByTestId('sidebar-item-collapse-toggle-0.0.1')).toHaveTextContent('Grandchild 1')
     // Its sibling grandchild, at the same depth, is unaffected (stays collapsed, the default).
+    // Scoped to the sibling's own row: a global bare "Etiqueta" query would spuriously match the
+    // expanded grandchild's own field instead (T5, 0136).
     expect(screen.getByTestId('sidebar-item-collapse-toggle-0.0.0')).toHaveAttribute('aria-expanded', 'false')
-    expect(screen.queryByRole('textbox', { name: 'Elemento de sidebar 1.1.1 — Etiqueta' })).not.toBeInTheDocument()
+    expect(within(screen.getByTestId('shell-tree-row-0.0.0')).queryByRole('textbox', { name: 'Etiqueta' })).not.toBeInTheDocument()
   })
 
   it('shows the branch indicator only for an item with children, at any depth, both collapsed and expanded', () => {
@@ -746,7 +753,7 @@ describe('SidebarItemListEditor / collapse control', () => {
     renderHarness([{ label: 'Home', href: '/home' }])
     fireEvent.click(screen.getByTestId('sidebar-item-collapse-toggle-0'))
 
-    fireEvent.change(screen.getByRole('textbox', { name: 'Elemento de sidebar 1 — Etiqueta' }), {
+    fireEvent.change(screen.getByRole('textbox', { name: 'Etiqueta' }), {
       target: { value: 'REJECT' },
     })
     expect(screen.getByRole('alert')).toBeInTheDocument()
@@ -787,7 +794,9 @@ describe('SidebarItemListEditor / collapse control', () => {
 
     expect(screen.getByTestId('sidebar-item-collapse-toggle-0')).toHaveAttribute('aria-expanded', 'true')
     expect(screen.getByTestId('sidebar-item-collapse-toggle-1')).toHaveAttribute('aria-expanded', 'false')
-    expect(screen.queryByRole('textbox', { name: 'Elemento de sidebar 2 — Etiqueta' })).not.toBeInTheDocument()
+    // Scoped to the still-collapsed second row: a global bare "Etiqueta" query would spuriously
+    // match the first row's own expanded field instead (T5, 0136).
+    expect(within(screen.getByTestId('shell-tree-row-1')).queryByRole('textbox', { name: 'Etiqueta' })).not.toBeInTheDocument()
   })
 
   it('the root path convention is "" (not "root"): a root item collapse toggle lives at path "0", not "root.0"', () => {
@@ -820,5 +829,82 @@ describe('SidebarItemListEditor / collapse control', () => {
 
     fireEvent.click(within(toggle).getByText('Home'))
     expect(toggle).toHaveAttribute('aria-expanded', 'false')
+  })
+})
+
+describe('SidebarItemListEditor / root box removal (T4, 0136)', () => {
+  it('drops the box styling (border/rounded/background) from the root fieldset, keeping "Elementos del sidebar" as a plain-text legend', () => {
+    renderHarness()
+
+    const fieldset = screen.getByRole('group', { name: 'Elementos del sidebar' })
+    expect(fieldset.tagName).toBe('FIELDSET')
+    expect(fieldset.className).not.toMatch(/\bborder\b/)
+    expect(fieldset.className).not.toMatch(/rounded/)
+    expect(fieldset.className).not.toMatch(/\bbg-/)
+
+    const legend = screen.getByText('Elementos del sidebar')
+    expect(legend.tagName).toBe('LEGEND')
+    expect(legend.className).toBe('px-1 text-xs font-medium text-gray-700')
+  })
+
+  it('regression: a nested level (path !== \'\') keeps its indentation guide unchanged by this task', () => {
+    renderHarness([{ label: 'Products', href: '/products' }])
+    fireEvent.click(screen.getByTestId('sidebar-item-collapse-toggle-0'))
+    fireEvent.change(screen.getByRole('combobox', { name: 'Modo' }), {
+      target: { value: 'children' },
+    })
+
+    const nestedFieldset = screen.getByRole('group', { name: 'Hijos del elemento de sidebar 1' })
+    expect(nestedFieldset.className).toBe('ml-2 flex flex-col gap-2 border-l border-gray-200 pl-4')
+  })
+})
+
+describe('SidebarItemListEditor / row field label simplification (T5, 0136)', () => {
+  it('shows a plain-text "Elemento de sidebar 1" header above a root item\'s fields, each field using its own bare accessible name', () => {
+    renderHarness([{ label: 'Home', href: '/home' }])
+    fireEvent.click(screen.getByTestId('sidebar-item-collapse-toggle-0'))
+
+    const row = screen.getByTestId('shell-tree-row-0')
+    const header = within(row).getByText('Elemento de sidebar 1')
+    expect(header.tagName).toBe('SPAN')
+    expect(header.className).toBe('text-xs font-medium text-gray-700')
+
+    expect(within(row).getByRole('textbox', { name: 'Etiqueta' })).toBeInTheDocument()
+    expect(within(row).getByRole('combobox', { name: 'Modo' })).toBeInTheDocument()
+    expect(within(row).getByRole('textbox', { name: 'Href' })).toBeInTheDocument()
+    expect(within(row).getByText('Visibilidad')).toBeInTheDocument()
+
+    // No compound "Elemento de sidebar 1 — ..." label survives on any field (acceptance criteria 6/10/11).
+    expect(within(row).queryByRole('textbox', { name: /Elemento de sidebar 1 —/ })).not.toBeInTheDocument()
+    expect(within(row).queryByRole('combobox', { name: /Elemento de sidebar 1 —/ })).not.toBeInTheDocument()
+    expect(within(row).queryByText(/Elemento de sidebar 1 — Visibilidad/)).not.toBeInTheDocument()
+  })
+
+  it('shows the "Acción" field with a bare accessible name (no compound label) once mode is "Acción"', () => {
+    renderHarness([{ label: 'About', action: { type: 'navigateTo', pageId: 'home' } }])
+    fireEvent.click(screen.getByTestId('sidebar-item-collapse-toggle-0'))
+
+    expect(screen.getByRole('combobox', { name: 'Acción' })).toBeInTheDocument()
+    expect(screen.queryByRole('combobox', { name: /Elemento de sidebar 1 —/ })).not.toBeInTheDocument()
+  })
+
+  it('shows the depth-aware header "Elemento de sidebar 1.2" for a nested item, with its own bare fields', () => {
+    renderHarness([
+      {
+        label: 'Parent',
+        children: [
+          { label: 'Child A', href: '/a' },
+          { label: 'Child B', href: '/b' },
+        ],
+      },
+    ])
+    fireEvent.click(screen.getByTestId('sidebar-item-collapse-toggle-0.1'))
+
+    const row = screen.getByTestId('shell-tree-row-0.1')
+    const header = within(row).getByText('Elemento de sidebar 1.2')
+    expect(header.tagName).toBe('SPAN')
+    expect(header.className).toBe('text-xs font-medium text-gray-700')
+    expect(within(row).getByRole('textbox', { name: 'Etiqueta' })).toBeInTheDocument()
+    expect(within(row).queryByRole('textbox', { name: /Elemento de sidebar 1\.2 —/ })).not.toBeInTheDocument()
   })
 })

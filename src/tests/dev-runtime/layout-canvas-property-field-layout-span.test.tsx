@@ -72,7 +72,7 @@ function getRow(breakpoint: string) {
 }
 
 describe('LayoutSpanPropertyField row rendering (integer parentColumns)', () => {
-  it('renders six rows in base/sm/md/lg/xl/2xl order, each with denominator "/ 6" and inherited value 1, no "Quitar" anywhere', () => {
+  it('renders six rows in base/sm/md/lg/xl/2xl order, each with inherited value 1, no "Quitar" anywhere', () => {
     render(<ControlledLayoutSpanWidget parentColumns={6} initialSpanValue={undefined} />)
 
     const widget = screen.getByTestId('layout-span-widget')
@@ -84,23 +84,92 @@ describe('LayoutSpanPropertyField row rendering (integer parentColumns)', () => 
     for (const breakpoint of BREAKPOINTS_IN_ORDER) {
       const row = getRow(breakpoint)
       expect(within(row).getByLabelText(breakpoint)).toHaveValue(1)
-      expect(within(row).getByText('/ 6')).toBeInTheDocument()
       expect(row).toHaveAttribute('data-explicit', 'false')
       expect(within(row).queryByRole('button', { name: `Quitar ${breakpoint}` })).not.toBeInTheDocument()
     }
   })
 })
 
-describe('LayoutSpanPropertyField row rendering (responsive parentColumns)', () => {
-  it('resolves each row denominator from parentColumns via the mobile-first cascade of normalizeResponsiveLayoutValue', () => {
+// FR2/FR1 (0136): the per-row "/ N" denominator is removed from the widget entirely — the
+// mobile-first cascade of `parentColumns` is still resolved through `normalizeResponsiveLayoutValue`,
+// but the only place it's now observable is the occupancy preview's legend, which reflects
+// whichever row currently has focus.
+describe('LayoutSpanPropertyField occupancy preview denominator (responsive parentColumns)', () => {
+  it('resolves each row denominator from parentColumns via the mobile-first cascade of normalizeResponsiveLayoutValue, surfaced only through the preview legend', () => {
     render(<ControlledLayoutSpanWidget parentColumns={{ base: 2, md: 4, xl: 12 }} initialSpanValue={undefined} />)
 
-    expect(within(getRow('base')).getByText('/ 2')).toBeInTheDocument()
-    expect(within(getRow('sm')).getByText('/ 2')).toBeInTheDocument()
-    expect(within(getRow('md')).getByText('/ 4')).toBeInTheDocument()
-    expect(within(getRow('lg')).getByText('/ 4')).toBeInTheDocument()
-    expect(within(getRow('xl')).getByText('/ 12')).toBeInTheDocument()
-    expect(within(getRow('2xl')).getByText('/ 12')).toBeInTheDocument()
+    const preview = () => screen.getByTestId('layout-span-occupancy-preview')
+
+    expect(within(preview()).getByText('Vista previa en base: ocupa 1 de 2.')).toBeInTheDocument()
+
+    fireEvent.focus(within(getRow('sm')).getByLabelText('sm'))
+    expect(within(preview()).getByText('Vista previa en sm: ocupa 1 de 2.')).toBeInTheDocument()
+
+    fireEvent.focus(within(getRow('md')).getByLabelText('md'))
+    expect(within(preview()).getByText('Vista previa en md: ocupa 1 de 4.')).toBeInTheDocument()
+
+    fireEvent.focus(within(getRow('lg')).getByLabelText('lg'))
+    expect(within(preview()).getByText('Vista previa en lg: ocupa 1 de 4.')).toBeInTheDocument()
+
+    fireEvent.focus(within(getRow('xl')).getByLabelText('xl'))
+    expect(within(preview()).getByText('Vista previa en xl: ocupa 1 de 12.')).toBeInTheDocument()
+
+    fireEvent.focus(within(getRow('2xl')).getByLabelText('2xl'))
+    expect(within(preview()).getByText('Vista previa en 2xl: ocupa 1 de 12.')).toBeInTheDocument()
+  })
+})
+
+// T1 (0136), FR1/FR2/FR3: horizontal single-row layout, "×" overlay control replacing the text
+// "Quitar" button, and removal of the box around the whole widget.
+describe('LayoutSpanPropertyField horizontal layout and box removal (visual normalization)', () => {
+  it('renders the six rows inside a single shared horizontal row container instead of stacked vertical rows', () => {
+    render(<ControlledLayoutSpanWidget parentColumns={12} initialSpanValue={{ base: 2, md: 4, xl: 8 }} />)
+
+    const widget = screen.getByTestId('layout-span-widget')
+    const rows = BREAKPOINTS_IN_ORDER.map((breakpoint) => getRow(breakpoint))
+    const rowContainer = rows[0].parentElement
+
+    expect(rowContainer).not.toBeNull()
+    expect(rowContainer).not.toBe(widget)
+    for (const row of rows) {
+      expect(row.parentElement).toBe(rowContainer)
+    }
+    expect(rowContainer?.className).toMatch(/\bflex\b/)
+    expect(rowContainer?.className).not.toMatch(/\bflex-col\b/)
+  })
+
+  it('never renders a "/ N" denominator indicator anywhere in the widget, only in the occupancy preview legend', () => {
+    render(<ControlledLayoutSpanWidget parentColumns={12} initialSpanValue={{ base: 2, md: 4, xl: 8 }} />)
+
+    const widget = screen.getByTestId('layout-span-widget')
+    expect(within(widget).queryByText(/\/\s*\d+/)).not.toBeInTheDocument()
+  })
+
+  it('positions "Quitar" as an absolute "×" overlay on the relatively-positioned input column, only for explicit rows', () => {
+    render(<ControlledLayoutSpanWidget parentColumns={12} initialSpanValue={{ base: 2, md: 4, xl: 8 }} />)
+
+    const explicitRow = getRow('base')
+    expect(explicitRow.className).toMatch(/\brelative\b/)
+    const removeButton = within(explicitRow).getByRole('button', { name: 'Quitar base' })
+    expect(removeButton.className).toMatch(/\babsolute\b/)
+    expect(removeButton).toHaveTextContent('×')
+
+    const inheritedRow = getRow('sm')
+    expect(within(inheritedRow).queryByRole('button', { name: 'Quitar sm' })).not.toBeInTheDocument()
+  })
+
+  it('drops the box styling (border/rounded/background) from the root fieldset, keeping "Columnas" as a plain-text legend', () => {
+    render(<ControlledLayoutSpanWidget parentColumns={12} initialSpanValue={undefined} />)
+
+    const widget = screen.getByTestId('layout-span-widget')
+    expect(widget.tagName).toBe('FIELDSET')
+    expect(widget.className).not.toMatch(/\bborder\b/)
+    expect(widget.className).not.toMatch(/rounded/)
+    expect(widget.className).not.toMatch(/\bbg-/)
+
+    const legend = screen.getByText('Columnas')
+    expect(legend.tagName).toBe('LEGEND')
+    expect(legend.className).toBe('px-1 mb-2 text-xs font-medium text-gray-700')
   })
 })
 

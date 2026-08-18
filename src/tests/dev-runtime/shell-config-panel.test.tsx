@@ -295,7 +295,7 @@ describe('ShellConfigPanel / menu — list editor mounted in the panel', () => {
 
     // Every row starts collapsed by default; expand it to reach its fields.
     fireEvent.click(screen.getByTestId('menu-item-collapse-toggle-0'))
-    expect(screen.getByRole('textbox', { name: 'Elemento de menú 1 — Etiqueta' })).toHaveValue('Home')
+    expect(screen.getByRole('textbox', { name: 'Etiqueta' })).toHaveValue('Home')
   })
 
   it('adding a root item via the mounted editor reflects in raw-text through the real commit pipeline', () => {
@@ -322,7 +322,7 @@ describe('ShellConfigPanel / actions', () => {
   it('switching an action\'s type from link to button reconstructs the shape with the new type\'s defaults', () => {
     renderHarness(buildBaseConfig({ shell: { header: { actions: [{ type: 'link', props: { label: 'Enlace', href: '#' } }] } } }))
 
-    fireEvent.change(screen.getByRole('combobox', { name: 'Acción 1 — Tipo' }), { target: { value: 'button' } })
+    fireEvent.change(screen.getByRole('combobox', { name: 'Tipo' }), { target: { value: 'button' } })
 
     const actions = (rawConfig().shell as { header: { actions: Array<Record<string, unknown>> } }).header.actions
     expect(actions[0].type).toBe('button')
@@ -414,7 +414,7 @@ describe('ShellConfigPanel / actions', () => {
     expect(actionsAfterProps[0].props.href).toBe('/updated')
 
     fireEvent.click(screen.getByRole('tab', { name: 'Visibilidad' }))
-    fireEvent.change(screen.getByLabelText('Visibilidad — Valor'), { target: { value: 'y' } })
+    fireEvent.change(screen.getByLabelText('Valor'), { target: { value: 'y' } })
     const actionsAfterVisibility = (
       rawConfig().shell as { header: { actions: Array<{ visibility: { value: string } }> } }
     ).header.actions
@@ -447,6 +447,39 @@ describe('ShellConfigPanel / actions', () => {
     ).header.actions
     expect(actionsAfterContentSwitch[0].children).toEqual([])
   })
+
+  // T4 (0136), FR7: the root "Acciones" fieldset drops its box styling. T5 (0136), FR8: the
+  // per-action box is also dropped, replaced by a plain-text "Acción N" header (no fieldset/legend
+  // pair existed here to reuse, so it's a new `span` matching the convention's visual class).
+  it('drops the box styling from both the root "Acciones" fieldset and the per-action row, showing an "Acción 1" header instead', () => {
+    renderHarness(
+      buildBaseConfig({
+        shell: { header: { actions: [{ type: 'link', props: { label: 'Ir', href: '/somewhere' } }] } },
+      }),
+    )
+
+    const fieldset = screen.getByRole('group', { name: 'Acciones' })
+    expect(fieldset.tagName).toBe('FIELDSET')
+    expect(fieldset.className).not.toMatch(/\bborder\b/)
+    expect(fieldset.className).not.toMatch(/rounded/)
+    expect(fieldset.className).not.toMatch(/\bbg-/)
+
+    const legend = screen.getByText('Acciones')
+    expect(legend.tagName).toBe('LEGEND')
+    expect(legend.className).toBe('px-1 text-xs font-medium text-gray-700')
+
+    const actionBox = fieldset.querySelector(':scope > div')!
+    expect(actionBox.className).toBe('flex flex-col gap-2')
+    expect(actionBox.className).not.toMatch(/\bborder\b/)
+    expect(actionBox.className).not.toMatch(/rounded/)
+    expect(actionBox.className).not.toMatch(/\bbg-/)
+
+    const header = within(actionBox as HTMLElement).getByText('Acción 1')
+    expect(header.tagName).toBe('SPAN')
+    expect(header.className).toBe('text-xs font-medium text-gray-700')
+    expect(screen.getByRole('combobox', { name: 'Tipo' })).toBeInTheDocument()
+    expect(screen.queryByRole('combobox', { name: /Acción 1 —/ })).not.toBeInTheDocument()
+  })
 })
 
 describe('ShellConfigPanel / sidebar items — recursive editor mounted in the panel', () => {
@@ -455,13 +488,13 @@ describe('ShellConfigPanel / sidebar items — recursive editor mounted in the p
     openSidebarTab()
 
     fireEvent.click(screen.getByRole('button', { name: 'Añadir elemento de sidebar' }))
-    fireEvent.change(screen.getByRole('textbox', { name: 'Elemento de sidebar 1 — Etiqueta' }), {
+    fireEvent.change(screen.getByRole('textbox', { name: 'Etiqueta' }), {
       target: { value: 'About' },
     })
-    fireEvent.change(screen.getByRole('combobox', { name: 'Elemento de sidebar 1 — Modo' }), {
+    fireEvent.change(screen.getByRole('combobox', { name: 'Modo' }), {
       target: { value: 'action' },
     })
-    fireEvent.change(screen.getByRole('combobox', { name: 'Elemento de sidebar 1 — Acción' }), {
+    fireEvent.change(screen.getByRole('combobox', { name: 'Acción' }), {
       target: { value: 'navigateTo' },
     })
     fireEvent.change(screen.getByRole('textbox', { name: 'pageId' }), { target: { value: 'about' } })
@@ -476,10 +509,10 @@ describe('ShellConfigPanel / sidebar items — recursive editor mounted in the p
     openSidebarTab()
 
     fireEvent.click(screen.getByRole('button', { name: 'Añadir elemento de sidebar' }))
-    fireEvent.change(screen.getByRole('textbox', { name: 'Elemento de sidebar 1 — Etiqueta' }), {
+    fireEvent.change(screen.getByRole('textbox', { name: 'Etiqueta' }), {
       target: { value: 'Home' },
     })
-    fireEvent.change(screen.getByRole('textbox', { name: 'Elemento de sidebar 1 — Href' }), {
+    fireEvent.change(screen.getByRole('textbox', { name: 'Href' }), {
       target: { value: '/home' },
     })
 
@@ -494,11 +527,13 @@ describe('ShellConfigPanel / sidebar items — recursive editor mounted in the p
     openSidebarTab()
     fireEvent.click(screen.getByTestId('sidebar-item-collapse-toggle-0'))
 
-    fireEvent.change(screen.getByRole('combobox', { name: 'Elemento de sidebar 1 — Modo' }), {
+    fireEvent.change(screen.getByRole('combobox', { name: 'Modo' }), {
       target: { value: 'children' },
     })
 
-    expect(screen.getByRole('textbox', { name: 'Elemento de sidebar 1.1 — Etiqueta' })).toBeInTheDocument()
+    // Scoped to the child's own row (`0.0`): the root row (still expanded) also carries a bare
+    // "Etiqueta" field (T5, 0136).
+    expect(within(screen.getByTestId('shell-tree-row-0.0')).getByRole('textbox', { name: 'Etiqueta' })).toBeInTheDocument()
     const shell = rawConfig().shell as { header: { title: string }; sidebar: { items: Array<{ children: unknown[] }> } }
     expect(shell.header).toEqual({ title: 'Hello' })
     expect(shell.sidebar.items[0].children).toEqual([{ label: 'Nuevo elemento', href: '' }])
@@ -516,10 +551,10 @@ describe('ShellConfigPanel / sidebar items — recursive editor mounted in the p
     openSidebarTab()
 
     fireEvent.click(screen.getByRole('button', { name: 'Añadir elemento de sidebar' }))
-    fireEvent.change(screen.getByRole('textbox', { name: 'Elemento de sidebar 1 — Etiqueta' }), {
+    fireEvent.change(screen.getByRole('textbox', { name: 'Etiqueta' }), {
       target: { value: 'About' },
     })
-    fireEvent.change(screen.getByRole('textbox', { name: 'Elemento de sidebar 1 — Href' }), {
+    fireEvent.change(screen.getByRole('textbox', { name: 'Href' }), {
       target: { value: '/about' },
     })
 
@@ -580,14 +615,14 @@ describe('ShellConfigPanel / icon field (T3, 0129)', () => {
     fireEvent.click(screen.getByTestId('menu-item-collapse-toggle-0'))
     fireEvent.focus(screen.getByRole('textbox', { name: 'Buscar icono' }))
 
-    const grid = screen.getByRole('grid', { name: 'Elemento de menú 1 — Icono' })
+    const grid = screen.getByRole('grid', { name: 'Icono' })
     expect(within(grid).getAllByRole('gridcell').some((cell) => cell.getAttribute('aria-selected') === 'true')).toBe(false)
     // Two independent renders of the raw string are expected: the row toggle's own icon-name span
     // (pre-existing, unrelated to the widget) and the widget's "Valor actual" note — both prove
     // the unrecognized value stays visible rather than being silently dropped.
     expect(screen.getAllByText('NombreQueNoExiste').length).toBeGreaterThan(0)
 
-    fireEvent.change(screen.getByRole('textbox', { name: 'Elemento de menú 1 — Etiqueta' }), {
+    fireEvent.change(screen.getByRole('textbox', { name: 'Etiqueta' }), {
       target: { value: 'Homepage' },
     })
     const menu = (rawConfig().shell as { header: { menu: Array<{ label: string; icon?: string }> } }).header.menu
@@ -626,7 +661,7 @@ describe('ShellConfigPanel / visibility widget (T4, 0132)', () => {
     renderHarness(base)
     fireEvent.click(screen.getByTestId('menu-item-collapse-toggle-0'))
 
-    const shape = screen.getByRole('radiogroup', { name: 'Elemento de menú 1 — Visibilidad — Forma' })
+    const shape = screen.getByRole('radiogroup', { name: 'Forma' })
     fireEvent.click(within(shape).getByRole('radio', { name: 'Grupo (y/o)' }))
 
     const parsed = rawConfig()
@@ -669,7 +704,7 @@ describe('ShellConfigPanel / visibility widget (T4, 0132)', () => {
     openSidebarTab()
     fireEvent.click(screen.getByTestId('sidebar-item-collapse-toggle-0.0'))
 
-    fireEvent.change(screen.getByRole('combobox', { name: 'Elemento de sidebar 1.1 — Visibilidad — Operador' }), {
+    fireEvent.change(screen.getByRole('combobox', { name: 'Operador' }), {
       target: { value: 'isTruthy' },
     })
 
@@ -848,7 +883,7 @@ describe('ShellConfigPanel / Header-Sidebar sub-navigation (0125-T8, closes acce
     // The expand from before the switch survived — proof neither sub-view was ever unmounted,
     // not just that the config value round-tripped.
     expect(screen.getByTestId('menu-item-collapse-toggle-0')).toHaveAttribute('aria-expanded', 'true')
-    expect(screen.getByRole('textbox', { name: 'Elemento de menú 1 — Etiqueta' })).toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: 'Etiqueta' })).toBeInTheDocument()
   })
 
   it('keeps a pending rejected-commit alert in the DOM while its sub-view is hidden, visible again on return', () => {

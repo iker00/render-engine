@@ -240,13 +240,11 @@ export function SidebarItemListEditor({ items, path, onCommitItems, collapse, on
     </div>
   )
 
-  // Only the root list gets the single outer box framing the whole editor domain (matching
-  // `ShellMenuListEditor`'s own "Menú" fieldset); every nested `children` level — same recursive
-  // component, one level deeper each time — gets indentation plus a vertical guide line instead
-  // of its own bordered box, so a deep tree reads as indentation, not boxes nested inside boxes.
-  const fieldsetClassName = isRoot
-    ? 'flex flex-col gap-2 rounded border border-gray-200 p-2'
-    : 'ml-2 flex flex-col gap-2 border-l border-gray-200 pl-4'
+  // The root list uses a plain-text legend with no box (FR7, 0136-T4, matching `ShellMenuListEditor`'s
+  // own "Menú" fieldset); every nested `children` level — same recursive component, one level
+  // deeper each time — keeps its indentation plus a vertical guide line instead, so a deep tree
+  // reads as indentation, not boxes nested inside boxes.
+  const fieldsetClassName = isRoot ? 'flex flex-col gap-2' : 'ml-2 flex flex-col gap-2 border-l border-gray-200 pl-4'
 
   return (
     <fieldset className={fieldsetClassName}>

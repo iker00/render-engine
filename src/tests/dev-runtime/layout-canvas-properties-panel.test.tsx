@@ -221,7 +221,7 @@ describe('LayoutCanvasPropertiesPanel tabs (T4, 0133)', () => {
 
     // Only the active tab's content is in the DOM — not merely hidden.
     expect(screen.getByLabelText('label', { exact: false })).toBeInTheDocument()
-    expect(screen.queryByLabelText('Visibilidad — Referencia')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Referencia')).not.toBeInTheDocument()
     expect(screen.queryByTestId('layout-span-widget')).not.toBeInTheDocument()
   })
 
@@ -299,7 +299,7 @@ describe('LayoutCanvasPropertiesPanel tabs (T4, 0133)', () => {
     const visibilityLegend = screen.getByText('Visibilidad', { selector: 'legend' })
     expect(visibilityLegend).toHaveClass('sr-only')
     // Nested accessible names derived from `label` are unchanged.
-    expect(screen.getByRole('radiogroup', { name: 'Visibilidad — Forma' })).toBeInTheDocument()
+    expect(screen.getByRole('radiogroup', { name: 'Forma' })).toBeInTheDocument()
   })
 
   // Edge case: deleting the selected node while a non-Props tab is active closes the panel
@@ -341,10 +341,10 @@ describe('LayoutCanvasPropertiesPanel visibility section', () => {
     fireEvent.click(screen.getByRole('tab', { name: 'Visibilidad' }))
 
     // Regression: no generic TextPropertyField labelled plainly "reference" renders on its own —
-    // the widget's own row exposes it as "Visibilidad — Referencia" instead.
+    // the widget's own row exposes it as bare "Referencia" instead (T2, 0136: no label prefix).
     expect(screen.queryByLabelText('reference', { exact: true })).not.toBeInTheDocument()
 
-    const referenceField = screen.getByLabelText('Visibilidad — Referencia')
+    const referenceField = screen.getByLabelText('Referencia')
     fireEvent.change(referenceField, { target: { value: 'queries.list.otherState' } })
 
     expect(onCommitNodeUpdate).toHaveBeenCalledTimes(1)
@@ -381,15 +381,15 @@ describe('LayoutCanvasPropertiesPanel visibility section', () => {
     render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={onCommitNodeUpdate} />)
     fireEvent.click(screen.getByRole('tab', { name: 'Visibilidad' }))
 
-    const shapeSelector = screen.getByRole('radiogroup', { name: 'Visibilidad — Forma' })
+    const shapeSelector = screen.getByRole('radiogroup', { name: 'Forma' })
     expect(within(shapeSelector).getByRole('radio', { name: 'Grupo (y/o)' })).toHaveAttribute('aria-checked', 'true')
 
-    const firstRow = screen.getByRole('group', { name: 'Visibilidad — Condición 1' })
-    const secondRow = screen.getByRole('group', { name: 'Visibilidad — Condición 2' })
-    expect(within(firstRow).getByLabelText('Visibilidad — Condición 1 — Referencia')).toHaveValue('queries.list.state')
-    expect(within(secondRow).getByLabelText('Visibilidad — Condición 2 — Referencia')).toHaveValue('queries.list.other')
+    const firstRow = screen.getByRole('group', { name: 'Condición 1' })
+    const secondRow = screen.getByRole('group', { name: 'Condición 2' })
+    expect(within(firstRow).getByLabelText('Referencia')).toHaveValue('queries.list.state')
+    expect(within(secondRow).getByLabelText('Referencia')).toHaveValue('queries.list.other')
 
-    fireEvent.change(within(firstRow).getByLabelText('Visibilidad — Condición 1 — Referencia'), {
+    fireEvent.change(within(firstRow).getByLabelText('Referencia'), {
       target: { value: 'queries.list.otherState' },
     })
 
@@ -413,9 +413,9 @@ describe('LayoutCanvasPropertiesPanel visibility section', () => {
     render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={() => {}} />)
     fireEvent.click(screen.getByRole('tab', { name: 'Visibilidad' }))
 
-    const shapeSelector = screen.getByRole('radiogroup', { name: 'Visibilidad — Forma' })
+    const shapeSelector = screen.getByRole('radiogroup', { name: 'Forma' })
     expect(within(shapeSelector).getByRole('radio', { name: 'Condición simple' })).toHaveAttribute('aria-checked', 'true')
-    expect(screen.getByLabelText('Visibilidad — Referencia')).toHaveValue('')
+    expect(screen.getByLabelText('Referencia')).toHaveValue('')
   })
 })
 
@@ -438,7 +438,7 @@ describe('LayoutCanvasPropertiesPanel condition-group widget for executeOperatio
     // operationName keeps using the generic text control, unaffected by the widget swap.
     expect(within(entryGroup).getByLabelText('operationName', { exact: false })).toHaveValue('save')
 
-    const whenReferenceField = within(entryGroup).getByLabelText('when — Referencia')
+    const whenReferenceField = within(entryGroup).getByLabelText('Referencia')
     expect(whenReferenceField).toHaveValue('forms.f1.urgent')
 
     fireEvent.change(whenReferenceField, { target: { value: 'forms.f1.otherField' } })
@@ -542,12 +542,12 @@ describe('LayoutCanvasPropertiesPanel layout subsection visibility', () => {
     )
     fireEvent.click(screen.getByRole('tab', { name: 'Diseño' }))
 
-    // T3 (0127): the real widget resolves the denominator ("/ N") of every row from
-    // `parentColumns` via `normalizeResponsiveLayoutValue` — an integer `6` cascades to `/ 6` on
-    // every breakpoint, so checking the `base` row's denominator is equivalent to (and more
-    // behavior-focused than) the removed stub's raw `data-parent-columns` attribute.
-    const baseRow = screen.getByTestId('layout-span-widget-row-base')
-    expect(within(baseRow).getByText('/ 6')).toBeInTheDocument()
+    // T3 (0127): the real widget resolves the denominator of every row from `parentColumns` via
+    // `normalizeResponsiveLayoutValue` — an integer `6` cascades to a denominator of `6` on every
+    // breakpoint. (0136, FR1/FR2) The per-row "/ N" text was removed; the same resolved value is
+    // now only observable through the occupancy preview's legend, which defaults to `base`.
+    expect(screen.getByTestId('layout-span-widget-row-base')).toBeInTheDocument()
+    expect(within(screen.getByTestId('layout-span-occupancy-preview')).getByText('Vista previa en base: ocupa 1 de 6.')).toBeInTheDocument()
   })
 
   it('exposes spanValue equal to node.layout?.span in the current render via the widget', () => {
@@ -1228,9 +1228,9 @@ describe('LayoutCanvasPropertiesPanel form submitAction selector (T5)', () => {
 
     const entryGroup = screen.getByRole('group', { name: 'onSuccess #1' })
     // T3 (0132): `when` now mounts `ConditionGroupPropertyField` (`x-widget: 'condition-group'`),
-    // whose reference row is labelled `${label} — Referencia` — here label="when" (the technical
-    // field name, same as every other nested dispatcher field).
-    const whenReferenceField = within(entryGroup).getByLabelText('when — Referencia')
+    // whose reference row is labelled bare "Referencia" (T2, 0136: no label prefix, regardless of
+    // the widget's own `label="when"`).
+    const whenReferenceField = within(entryGroup).getByLabelText('Referencia')
     fireEvent.change(whenReferenceField, { target: { value: 'forms.f1.otherField' } })
 
     expect(onCommitNodeUpdate).toHaveBeenCalledTimes(1)
@@ -1257,7 +1257,7 @@ describe('LayoutCanvasPropertiesPanel form submitAction selector (T5)', () => {
     const entryGroup = within(operationsGroup).getByRole('group', { name: 'operations #1' })
     // T3 (0132): same `condition-group` widget swap as above, applied here to `submitAction`'s
     // `executeOperations.operations[].when`.
-    const whenReferenceField = within(entryGroup).getByLabelText('when — Referencia')
+    const whenReferenceField = within(entryGroup).getByLabelText('Referencia')
     fireEvent.change(whenReferenceField, { target: { value: 'forms.f1.otherField' } })
 
     expect(onCommitNodeUpdate).toHaveBeenCalledTimes(1)

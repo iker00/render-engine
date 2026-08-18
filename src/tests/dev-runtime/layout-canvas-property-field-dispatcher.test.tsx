@@ -716,14 +716,14 @@ describe('PropertyFieldDispatcher x-widget hook: condition-group (T3, 0132)', ()
 
     // ConditionGroupPropertyField's own shape selector (T2) — absent from every generic branch
     // (enum/primitive/object) the dispatcher could otherwise have picked for this schema.
-    const shapeSelector = screen.getByRole('radiogroup', { name: 'visibility — Forma' })
+    const shapeSelector = screen.getByRole('radiogroup', { name: 'Forma' })
     expect(within(shapeSelector).getByRole('radio', { name: 'Condición simple' })).toHaveAttribute('aria-checked', 'true')
 
     // None of the generic branches render: no plain text input labelled exactly "visibility"
     // (the generic string branch) and no raw-JSON escape-hatch textarea (disabled `textbox`).
     expect(screen.queryByRole('textbox', { name: 'visibility' })).not.toBeInTheDocument()
 
-    const referenceField = screen.getByLabelText('visibility — Referencia') as HTMLInputElement
+    const referenceField = screen.getByLabelText('Referencia') as HTMLInputElement
     expect(referenceField.value).toBe('queries.list.state')
 
     fireEvent.click(within(shapeSelector).getByRole('radio', { name: 'Grupo (y/o)' }))
