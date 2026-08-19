@@ -835,6 +835,136 @@ describe('LayoutCanvasPropertiesPanel container columns mode widget — end-to-e
   })
 })
 
+// T9 (0138, D4): the `table` rows/columns/cells widget (T8), wired into the real commit pipeline.
+// `TABLE_PATH` selects the `table` node itself (its own `Props` special block); the sibling
+// `heading` at `children.0` is the "commits touch only the table node" witness, same role
+// `spanWidgetConfig`'s `Child B` plays above.
+function tableWidgetConfig() {
+  return {
+    api: {},
+    initialPage: 'home',
+    pages: [
+      {
+        id: 'home',
+        layout: [
+          { type: 'heading', props: { text: 'Root heading', level: 1 } },
+          { type: 'table', props: { headers: ['Nombre'], rows: [['Ana']] } },
+        ],
+      },
+    ],
+  }
+}
+
+const TABLE_PATH = 'children.1'
+
+describe('LayoutCanvasPropertiesPanel table rows/columns widget — end-to-end real pipeline (T9, 0138)', () => {
+  it('shows the widget with the real config values (header and cell) for a table node', () => {
+    const { root } = renderCanvas(tableWidgetConfig())
+    selectNodeByPath(root, TABLE_PATH)
+
+    const widget = screen.getByRole('group', { name: 'Filas y columnas' })
+    expect(within(widget).getByLabelText('Cabecera 1')).toHaveValue('Nombre')
+  })
+
+  it('clicking "Añadir columna" commits a new header/cell through the real pipeline, reflected in Monaco, touching only the table node', async () => {
+    const { root } = renderCanvas(tableWidgetConfig())
+    selectNodeByPath(root, TABLE_PATH)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Añadir columna' }))
+
+    const parsed = await getMonacoJson()
+    const table = readTopLevelNodeFromMonacoJson(parsed, 1)
+    expect((table.props as Record<string, unknown>).headers).toEqual(['Nombre', 'Columna 2'])
+    expect((table.props as Record<string, unknown>).rows).toEqual([['Ana', '']])
+    const heading = readTopLevelNodeFromMonacoJson(parsed, 0)
+    expect((heading.props as Record<string, unknown>).text).toBe('Root heading')
+  })
+
+  it('rejects a commit forced by a mocked validateRuntimeConfig failure: alert appears below the widget, the attempted value stays visible, and the Monaco buffer is untouched', async () => {
+    const { root } = renderCanvas(tableWidgetConfig())
+    selectNodeByPath(root, TABLE_PATH)
+
+    vi.mocked(validateRuntimeConfig).mockReturnValueOnce(forcedRejection)
+    fireEvent.click(screen.getByRole('button', { name: 'Añadir columna' }))
+
+    const banner = screen.getByRole('alert')
+    expect(banner).toHaveAttribute('data-testid', 'layout-canvas-properties-panel-tableRows-error')
+    expect(banner.textContent).toContain('Cambio no permitido')
+    const widget = screen.getByRole('group', { name: 'Filas y columnas' })
+    expect(within(widget).getByLabelText('Cabecera 2')).toBeInTheDocument()
+
+    const parsed = await getMonacoJson()
+    const table = readTopLevelNodeFromMonacoJson(parsed, 1)
+    expect((table.props as Record<string, unknown>).headers).toEqual(['Nombre'])
+  })
+
+  it('clears the alert once a follow-up commit succeeds, applying the change', async () => {
+    const { root } = renderCanvas(tableWidgetConfig())
+    selectNodeByPath(root, TABLE_PATH)
+
+    vi.mocked(validateRuntimeConfig).mockReturnValueOnce(forcedRejection)
+    fireEvent.click(screen.getByRole('button', { name: 'Añadir columna' }))
+    expect(screen.getByRole('alert')).toBeInTheDocument()
+
+    // Follow-up: adding another column is a genuine change relative to the widget's currently
+    // displayed (rejected-attempt) state, so it fires a fresh, unmocked commit that succeeds.
+    fireEvent.click(screen.getByRole('button', { name: 'Añadir columna' }))
+
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    const parsed = await getMonacoJson()
+    const table = readTopLevelNodeFromMonacoJson(parsed, 1)
+    expect((table.props as Record<string, unknown>).headers).toEqual(['Nombre', 'Columna 2', 'Columna 3'])
+  })
+
+  it('discards a pending rejection on the widget when the selected node changes', () => {
+    const { root } = renderCanvas(tableWidgetConfig())
+    selectNodeByPath(root, TABLE_PATH)
+
+    vi.mocked(validateRuntimeConfig).mockReturnValueOnce(forcedRejection)
+    fireEvent.click(screen.getByRole('button', { name: 'Añadir columna' }))
+    expect(screen.getByRole('alert')).toBeInTheDocument()
+
+    selectNodeByPath(root, 'children.0')
+
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+})
+
+// T9 (0138), criteria 12-13 of the spec: end-to-end of a `link` table cell, bridging the
+// cell-type selector (T7/T8) with canvas selection of the resulting cell node (T3) and this
+// task's own generic panel wiring for `link` nodes (already established by
+// `LinkContentModePropertyField`, T3 0126) — confirms the whole chain, not just this task's own
+// wiring in isolation.
+describe('LayoutCanvasPropertiesPanel table cell converted to link — end-to-end (T9, 0138, criteria 12-13)', () => {
+  it('choosing "Enlace" for a cell, then selecting it on the canvas and editing href/label, commits through the real pipeline', async () => {
+    const { root } = renderCanvas(tableWidgetConfig())
+    selectNodeByPath(root, TABLE_PATH)
+
+    const widget = screen.getByRole('group', { name: 'Filas y columnas' })
+    fireEvent.click(within(widget).getByRole('button', { name: 'Expandir fila 1' }))
+    const cellTypeSelect = within(widget).getByRole('combobox')
+    fireEvent.change(cellTypeSelect, { target: { value: 'link' } })
+
+    let parsed = await getMonacoJson()
+    let table = readTopLevelNodeFromMonacoJson(parsed, 1)
+    expect((table.props as Record<string, unknown>).rows).toEqual([[{ type: 'link', props: { label: 'Enlace', href: '#' } }]])
+
+    // The cell is now a real, selectable `link` node in the canvas at `row.0.0` under the table.
+    selectNodeByPath(root, `${TABLE_PATH}.row.0.0`)
+    expect(screen.getByLabelText('Contenido')).toBeInTheDocument()
+
+    fireEvent.change(screen.getByLabelText('href', { exact: false }), { target: { value: '/nueva-ruta' } })
+    fireEvent.change(screen.getByLabelText('label', { exact: false }), { target: { value: 'Ver más' } })
+
+    parsed = await getMonacoJson()
+    table = readTopLevelNodeFromMonacoJson(parsed, 1)
+    const rows = (table.props as Record<string, unknown>).rows as unknown[][]
+    expect(rows[0][0]).toEqual({ type: 'link', props: { label: 'Ver más', href: '/nueva-ruta' } })
+    const heading = readTopLevelNodeFromMonacoJson(parsed, 0)
+    expect((heading.props as Record<string, unknown>).text).toBe('Root heading')
+  })
+})
+
 // T1 (0134), FR1/FR2: the generic dispatcher's own `enum` branch renders a segmented radiogroup
 // instead of a `<select>` for a bounded 2-5 option enum — no dedicated `x-widget`, unlike the
 // "Modo"/"Nivel"/"Orientación" widgets above. `stat.props.variant` (3 options: accent/tinted/

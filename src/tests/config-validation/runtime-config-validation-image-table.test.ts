@@ -705,6 +705,85 @@ describe('validateRuntimeConfig', () => {
         expect(result).toMatchObject({ status: 'ready' })
       })
 
+      it('accepts a manual row with a valid link NodeObject using props.href and props.label', () => {
+        const result = validateRuntimeConfig(
+          createConfigWithLayout([
+            {
+              type: 'table',
+              props: {
+                headers: ['Name', 'Profile'],
+                rows: [
+                  [
+                    'Ada',
+                    { type: 'link', props: { label: 'View profile', href: 'https://example.com/ada' } },
+                  ],
+                ],
+              },
+            },
+          ]),
+        )
+
+        expect(result).toMatchObject({ status: 'ready' })
+      })
+
+      it('rejects a manual cell link NodeObject with both props.label and children (same diagnostic as link outside table)', () => {
+        expect(
+          validateRuntimeConfig(
+            createConfigWithLayout([
+              {
+                type: 'table',
+                props: {
+                  headers: ['Cell'],
+                  rows: [
+                    [
+                      {
+                        type: 'link',
+                        props: { label: 'Go', href: 'https://example.com' },
+                        children: [{ type: 'paragraph', props: { text: 'Click' } }],
+                      },
+                    ],
+                  ],
+                },
+              },
+            ]),
+          ),
+        ).toEqual({
+          status: 'error',
+          error: {
+            code: 'invalid-layout',
+            displayMode: 'development-only',
+            message: 'Page "home" has an invalid layout at "layout[0].props.rows[0][0]": link nodes cannot have both props.label and children.',
+          },
+        })
+      })
+
+      it('rejects a manual cell link NodeObject with neither props.label nor children (same diagnostic as link outside table)', () => {
+        expect(
+          validateRuntimeConfig(
+            createConfigWithLayout([
+              {
+                type: 'table',
+                props: {
+                  headers: ['Cell'],
+                  rows: [
+                    [
+                      { type: 'link', props: { href: 'https://example.com' } },
+                    ],
+                  ],
+                },
+              },
+            ]),
+          ),
+        ).toEqual({
+          status: 'error',
+          error: {
+            code: 'invalid-layout',
+            displayMode: 'development-only',
+            message: 'Page "home" has an invalid layout at "layout[0].props.rows[0][0]": link nodes must have either props.label or children.',
+          },
+        })
+      })
+
       it('accepts a manual row with a container NodeObject whose children are in the allowed subset (including nested container)', () => {
         const result = validateRuntimeConfig(
           createConfigWithLayout([
@@ -726,6 +805,32 @@ describe('validateRuntimeConfig', () => {
                             { type: 'paragraph', props: { text: 'nested' } },
                           ],
                         },
+                      ],
+                    },
+                  ],
+                ],
+              },
+            },
+          ]),
+        )
+
+        expect(result).toMatchObject({ status: 'ready' })
+      })
+
+      it('accepts a manual cell with a link NodeObject nested inside a container cell (allowed subset recursion)', () => {
+        const result = validateRuntimeConfig(
+          createConfigWithLayout([
+            {
+              type: 'table',
+              props: {
+                headers: ['Content'],
+                rows: [
+                  [
+                    {
+                      type: 'container',
+                      props: {},
+                      children: [
+                        { type: 'link', props: { label: 'Details', href: 'https://example.com' } },
                       ],
                     },
                   ],
@@ -1103,6 +1208,28 @@ describe('validateRuntimeConfig', () => {
               },
             },
             { type: 'heading', props: { text: 'Detail', level: 1 } },
+          ]),
+        )
+
+        expect(result).toMatchObject({ status: 'ready' })
+      })
+
+      it('accepts dynamic cells with a NodeObject link whose props.href is item.profileUrl and props.label is item.name', () => {
+        const result = validateRuntimeConfig(
+          createConfigWithLayout([
+            {
+              type: 'table',
+              props: {
+                headers: ['Name', 'Profile'],
+                rows: {
+                  source: 'queries.users.data.items',
+                  cells: [
+                    'item.name',
+                    { type: 'link', props: { label: 'item.name', href: 'item.profileUrl' } },
+                  ],
+                },
+              },
+            },
           ]),
         )
 

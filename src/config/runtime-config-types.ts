@@ -243,6 +243,7 @@ export type TableCellNode =
   | ContainerLayoutNode
   | HeadingLayoutNode
   | ParagraphLayoutNode
+  | LinkLayoutNode
 export type TableCellValue = TableCellPrimitive | TableCellNode
 export type TableManualRows = TableCellValue[][]
 

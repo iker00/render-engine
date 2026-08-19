@@ -7,6 +7,16 @@ export function RuntimeScrollRestorationEffect() {
   const entryId = selectCurrentNavigationEntry(state)?.entryId ?? null
   const pageEntry = selectPageEntryState(state)
   const scrollPositionsByEntryIdRef = useRef<Map<number, number>>(new Map())
+  // The last entryId this effect actually restored (or attempted to restore) a position for.
+  // Distinguishes "this entryId just became active" (worth restoring for) from "pageEntry.status
+  // merely changed again while entryId stayed the same" — the latter legitimately happens whenever
+  // something re-triggers this same page's preloads without a real navigation (e.g. the dev-mode
+  // editor migrating runtime state across a config edit always rebuilds pageEntry from scratch,
+  // cycling status back through "idle"/"loading" to "success" for the page already on screen).
+  // Without this guard, every such re-trigger re-runs the restore below and yanks the scroll
+  // position back to whatever was captured the first time this entryId was left — even if the user
+  // has scrolled since and never actually navigated away.
+  const restoredForEntryIdRef = useRef<number | null>(null)
 
   useLayoutEffect(() => {
     if (entryId === null) {
@@ -34,6 +44,11 @@ export function RuntimeScrollRestorationEffect() {
     if (entryId === null || pageEntry.entryId !== entryId || pageEntry.status === 'loading') {
       return
     }
+
+    if (restoredForEntryIdRef.current === entryId) {
+      return
+    }
+    restoredForEntryIdRef.current = entryId
 
     const savedScrollPosition = scrollPositionsByEntryIdRef.current.get(entryId)
 

@@ -2,12 +2,21 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import type { LayoutNode, LayoutNodeType, RuntimeConfigError } from '../../config/runtime-config'
 import type { RuntimeTranslationsConfig, ShellConfig } from '../../config/runtime-config-types'
 import { LayoutEditModeProvider } from '../../runtime/layout-edit-mode-context'
-import { getNodeAtPath, serializeLayoutNodePath, type LayoutNodePath } from '../../runtime/layout-node-path'
+import {
+  getNodeAtPath,
+  pathEndsAtTableCell,
+  serializeLayoutNodePath,
+  type LayoutNodePath,
+} from '../../runtime/layout-node-path'
 import { useRuntimeConfig, useRuntimeCurrentPage, useRuntimeStateActions } from '../../runtime/runtime-state/use-runtime-state'
-import { findNodePath, insertNodeAt, movePathTo, removeNodeAt } from '../layout-tree-mutations'
+import { findNodePath, insertNodeAt, movePathTo, removeNodeAt, replaceNodeAt } from '../layout-tree-mutations'
 import { LayoutCanvasDndContext, type LayoutCanvasDropAttempt } from '../layout-canvas/layout-canvas-dnd-context'
 import { isValidDropTarget } from '../layout-canvas/layout-drop-validity'
-import { buildDefaultNodeInstance } from '../layout-canvas/layout-canvas-node-palette-defaults'
+import {
+  buildDefaultNodeInstance,
+  EMPTY_DYNAMIC_TABLE_CELL_TEXT_VALUE,
+  EMPTY_TABLE_CELL_TEXT_VALUE,
+} from '../layout-canvas/layout-canvas-node-palette-defaults'
 import type { CommitCanvasMutationResult } from '../layout-canvas/layout-canvas-commit'
 import type { ResolvedEndpointOperation } from '../endpoints-config/resolve-endpoint-operation'
 import type { RuntimeEndpointsConfig } from '../endpoints-config/runtime-endpoints-config-schema'
@@ -262,11 +271,29 @@ export function DevEditorLayer({
     if (newSelectedPath !== null) setSelectedPath(newSelectedPath)
   }
 
-  // Same delete logic LayoutCanvas.handleDeleteSelectedNode used (0102 T16), reused as-is.
+  // Same delete logic LayoutCanvas.handleDeleteSelectedNode used (0102 T16), except when the
+  // selection is a table cell-node (T5, 0138, D6): removing it from `props.rows`/
+  // `props.rows.cells` would shift every remaining cell out of alignment with `headers` and its
+  // sibling cells, so a cell-node is instead reverted in place to its empty-text literal — `''`
+  // for manual mode (`row` step) or `'—'` for dynamic mode (`cells` step), since
+  // `validateTableDynamicRows` rejects `''` for a dynamic-mode cell (see
+  // layout-canvas-node-palette-defaults.ts).
   function handleDeleteSelectedNode() {
     if (selectedPath === null) return
 
-    const result = onCommitCanvasMutation((pageLayout) => removeNodeAt(pageLayout, selectedPath))
+    const result = pathEndsAtTableCell(selectedPath)
+      ? onCommitCanvasMutation((pageLayout) => {
+          const lastStep = selectedPath[selectedPath.length - 1]
+          return replaceNodeAt(
+            pageLayout,
+            selectedPath,
+            () =>
+              (lastStep.field === 'row'
+                ? EMPTY_TABLE_CELL_TEXT_VALUE
+                : EMPTY_DYNAMIC_TABLE_CELL_TEXT_VALUE) as unknown as LayoutNode,
+          )
+        })
+      : onCommitCanvasMutation((pageLayout) => removeNodeAt(pageLayout, selectedPath))
     if (result.status !== 'applied') return
 
     setSelectedPath(null)

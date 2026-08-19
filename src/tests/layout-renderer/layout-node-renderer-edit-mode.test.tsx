@@ -6,7 +6,9 @@ import { LayoutRenderer } from '../../runtime/layout-renderer'
 import { LayoutEditModeProvider } from '../../runtime/layout-edit-mode-context'
 import type { LayoutEditModeContextValue } from '../../runtime/layout-edit-mode-context-value'
 import {
+  deserializeLayoutNodePath,
   getNodeAtPath,
+  pathEndsAtTableCell,
   serializeLayoutNodePath,
   type LayoutNodePath,
 } from '../../runtime/layout-node-path'
@@ -166,6 +168,167 @@ describe('getNodeAtPath', () => {
 
     expect(getNodeAtPath(tabsTree, path)).toBeNull()
   })
+
+  const manualTableTree: LayoutNode[] = [
+    {
+      type: 'table',
+      props: {
+        headers: ['Name', 'Status'],
+        rows: [
+          [
+            'Alice',
+            {
+              type: 'container',
+              props: {},
+              children: [{ type: 'heading', props: { text: 'Active', level: 3 } }],
+            },
+          ],
+          ['Bob', 'Inactive'],
+        ],
+      },
+    },
+  ]
+
+  const dynamicTableTree: LayoutNode[] = [
+    {
+      type: 'table',
+      props: {
+        headers: ['Name', 'Status'],
+        rows: {
+          source: 'queries.items',
+          cells: [
+            'item.name',
+            {
+              type: 'container',
+              props: {},
+              children: [{ type: 'paragraph', props: { text: 'Status cell' } }],
+            },
+          ],
+        },
+      },
+    },
+  ]
+
+  it('resolves a cell-node at a row step in manual mode', () => {
+    const path: LayoutNodePath = [
+      { field: 'children', index: 0 },
+      { field: 'row', rowIndex: 0, index: 1 },
+    ]
+
+    expect(getNodeAtPath(manualTableTree, path)?.type).toBe('container')
+  })
+
+  it('resolves a node nested inside a manual-mode cell-container via a subsequent children step', () => {
+    const path: LayoutNodePath = [
+      { field: 'children', index: 0 },
+      { field: 'row', rowIndex: 0, index: 1 },
+      { field: 'children', index: 0 },
+    ]
+
+    const node = getNodeAtPath(manualTableTree, path)
+    expect(node?.type).toBe('heading')
+  })
+
+  it('resolves a cell-node at a cells step in dynamic mode', () => {
+    const path: LayoutNodePath = [
+      { field: 'children', index: 0 },
+      { field: 'cells', index: 1 },
+    ]
+
+    expect(getNodeAtPath(dynamicTableTree, path)?.type).toBe('container')
+  })
+
+  it('resolves a node nested inside a dynamic-mode cell-container via a subsequent children step', () => {
+    const path: LayoutNodePath = [
+      { field: 'children', index: 0 },
+      { field: 'cells', index: 1 },
+      { field: 'children', index: 0 },
+    ]
+
+    const node = getNodeAtPath(dynamicTableTree, path)
+    expect(node?.type).toBe('paragraph')
+  })
+
+  it('returns null when rowIndex is out of range', () => {
+    const path: LayoutNodePath = [
+      { field: 'children', index: 0 },
+      { field: 'row', rowIndex: 5, index: 0 },
+    ]
+
+    expect(getNodeAtPath(manualTableTree, path)).toBeNull()
+  })
+
+  it('returns null when the row cell index is out of range', () => {
+    const path: LayoutNodePath = [
+      { field: 'children', index: 0 },
+      { field: 'row', rowIndex: 0, index: 5 },
+    ]
+
+    expect(getNodeAtPath(manualTableTree, path)).toBeNull()
+  })
+
+  it('returns null when the cells index is out of range', () => {
+    const path: LayoutNodePath = [
+      { field: 'children', index: 0 },
+      { field: 'cells', index: 5 },
+    ]
+
+    expect(getNodeAtPath(dynamicTableTree, path)).toBeNull()
+  })
+
+  it('returns null for a row step against a dynamic-mode table', () => {
+    const path: LayoutNodePath = [
+      { field: 'children', index: 0 },
+      { field: 'row', rowIndex: 0, index: 0 },
+    ]
+
+    expect(getNodeAtPath(dynamicTableTree, path)).toBeNull()
+  })
+
+  it('returns null for a cells step against a manual-mode table', () => {
+    const path: LayoutNodePath = [
+      { field: 'children', index: 0 },
+      { field: 'cells', index: 0 },
+    ]
+
+    expect(getNodeAtPath(manualTableTree, path)).toBeNull()
+  })
+
+  it('returns null for a row step against a node that is not a table', () => {
+    const path: LayoutNodePath = [
+      { field: 'children', index: 0 },
+      { field: 'row', rowIndex: 0, index: 0 },
+    ]
+
+    expect(getNodeAtPath(tree, path)).toBeNull()
+  })
+
+  it('returns null for a cells step against a node that is not a table', () => {
+    const path: LayoutNodePath = [
+      { field: 'children', index: 0 },
+      { field: 'cells', index: 0 },
+    ]
+
+    expect(getNodeAtPath(tree, path)).toBeNull()
+  })
+
+  it('returns null when a row step resolves to a primitive (text) cell', () => {
+    const path: LayoutNodePath = [
+      { field: 'children', index: 0 },
+      { field: 'row', rowIndex: 1, index: 0 },
+    ]
+
+    expect(getNodeAtPath(manualTableTree, path)).toBeNull()
+  })
+
+  it('returns null when a cells step resolves to a primitive (text) cell', () => {
+    const path: LayoutNodePath = [
+      { field: 'children', index: 0 },
+      { field: 'cells', index: 0 },
+    ]
+
+    expect(getNodeAtPath(dynamicTableTree, path)).toBeNull()
+  })
 })
 
 describe('serializeLayoutNodePath', () => {
@@ -179,13 +342,151 @@ describe('serializeLayoutNodePath', () => {
       { field: 'children', index: 0 },
       { field: 'tabItem', itemIndex: 1, index: 0 },
     ])
+    const withRow = serializeLayoutNodePath([
+      { field: 'children', index: 0 },
+      { field: 'row', rowIndex: 2, index: 1 },
+    ])
+    const withCells = serializeLayoutNodePath([
+      { field: 'children', index: 0 },
+      { field: 'cells', index: 1 },
+    ])
 
     expect(empty).toBe('')
     expect(withTemplate).toBe('children.0.template.1')
     expect(withTabItem).toBe('children.0.tabItem.1.0')
+    expect(withRow).toBe('children.0.row.2.1')
+    expect(withCells).toBe('children.0.cells.1')
 
-    const values = new Set([empty, withTemplate, withTabItem])
-    expect(values.size).toBe(3)
+    const values = new Set([empty, withTemplate, withTabItem, withRow, withCells])
+    expect(values.size).toBe(5)
+  })
+})
+
+describe('serializeLayoutNodePath / deserializeLayoutNodePath round-trip for table cell paths', () => {
+  it('round-trips a path ending in a row step', () => {
+    const path: LayoutNodePath = [
+      { field: 'children', index: 0 },
+      { field: 'row', rowIndex: 2, index: 1 },
+    ]
+
+    expect(deserializeLayoutNodePath(serializeLayoutNodePath(path))).toEqual(path)
+  })
+
+  it('round-trips a path ending in a cells step', () => {
+    const path: LayoutNodePath = [
+      { field: 'children', index: 0 },
+      { field: 'cells', index: 1 },
+    ]
+
+    expect(deserializeLayoutNodePath(serializeLayoutNodePath(path))).toEqual(path)
+  })
+
+  it('round-trips a row step followed by a children step (cell-container with children)', () => {
+    const path: LayoutNodePath = [
+      { field: 'children', index: 0 },
+      { field: 'row', rowIndex: 0, index: 1 },
+      { field: 'children', index: 0 },
+    ]
+
+    expect(deserializeLayoutNodePath(serializeLayoutNodePath(path))).toEqual(path)
+  })
+
+  it('round-trips a cells step followed by a children step (cell-container with children)', () => {
+    const path: LayoutNodePath = [
+      { field: 'children', index: 0 },
+      { field: 'cells', index: 1 },
+      { field: 'children', index: 0 },
+    ]
+
+    expect(deserializeLayoutNodePath(serializeLayoutNodePath(path))).toEqual(path)
+  })
+})
+
+describe('deserializeLayoutNodePath — malformed row/cells tokens', () => {
+  it('returns null when the row rowIndex token is not an integer', () => {
+    expect(deserializeLayoutNodePath('children.0.row.abc.0')).toBeNull()
+  })
+
+  it('returns null when the row index token is not an integer', () => {
+    expect(deserializeLayoutNodePath('children.0.row.0.abc')).toBeNull()
+  })
+
+  it('returns null when the row rowIndex is negative', () => {
+    expect(deserializeLayoutNodePath('children.0.row.-1.0')).toBeNull()
+  })
+
+  it('returns null when the row index is negative', () => {
+    expect(deserializeLayoutNodePath('children.0.row.0.-1')).toBeNull()
+  })
+
+  it('returns null when the row index token is absent', () => {
+    expect(deserializeLayoutNodePath('children.0.row.0')).toBeNull()
+  })
+
+  it('returns null when both row tokens are absent', () => {
+    expect(deserializeLayoutNodePath('children.0.row')).toBeNull()
+  })
+
+  it('returns null when the cells index token is not an integer', () => {
+    expect(deserializeLayoutNodePath('children.0.cells.abc')).toBeNull()
+  })
+
+  it('returns null when the cells index is negative', () => {
+    expect(deserializeLayoutNodePath('children.0.cells.-1')).toBeNull()
+  })
+
+  it('returns null when the cells index token is absent', () => {
+    expect(deserializeLayoutNodePath('children.0.cells')).toBeNull()
+  })
+})
+
+describe('pathEndsAtTableCell', () => {
+  it('returns false for the empty path', () => {
+    expect(pathEndsAtTableCell([])).toBe(false)
+  })
+
+  it('returns true when the last step is a row step', () => {
+    expect(
+      pathEndsAtTableCell([{ field: 'children', index: 0 }, { field: 'row', rowIndex: 0, index: 1 }]),
+    ).toBe(true)
+  })
+
+  it('returns true when the last step is a cells step', () => {
+    expect(pathEndsAtTableCell([{ field: 'children', index: 0 }, { field: 'cells', index: 1 }])).toBe(
+      true,
+    )
+  })
+
+  it('returns false when the last step is children, even right after a row step', () => {
+    expect(
+      pathEndsAtTableCell([
+        { field: 'children', index: 0 },
+        { field: 'row', rowIndex: 0, index: 1 },
+        { field: 'children', index: 0 },
+      ]),
+    ).toBe(false)
+  })
+
+  it('returns false when the last step is children, even right after a cells step', () => {
+    expect(
+      pathEndsAtTableCell([
+        { field: 'children', index: 0 },
+        { field: 'cells', index: 1 },
+        { field: 'children', index: 0 },
+      ]),
+    ).toBe(false)
+  })
+
+  it('returns false for a path ending in a plain children step', () => {
+    expect(pathEndsAtTableCell([{ field: 'children', index: 0 }])).toBe(false)
+  })
+
+  it('returns false for a path ending in a template step', () => {
+    expect(pathEndsAtTableCell([{ field: 'template', index: 0 }])).toBe(false)
+  })
+
+  it('returns false for a path ending in a tabItem step', () => {
+    expect(pathEndsAtTableCell([{ field: 'tabItem', itemIndex: 0, index: 0 }])).toBe(false)
   })
 })
 
