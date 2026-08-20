@@ -241,6 +241,7 @@ Ficheros de apoyo, no son tests: `config-validation/helpers.ts`, `dev-runtime/lu
 - `layout-canvas-property-field-layout-span.test.tsx` — widget aislado del span responsive con seis filas y focus-driven preview
 - `layout-canvas-property-field-link-content-mode.test.tsx` — widget del modo de contenido del enlace entre texto y elementos anidados
 - `layout-canvas-property-field-table-cell-type.test.tsx` — widget aislado del tipo de celda de tabla con reconstrucción por tipo elegido
+- `layout-canvas-property-field-table-column-flags.test.tsx` — widget aislado de "Ordenable"/"Filtrable"/placeholder de una columna de tabla y su lógica pura de alta/actualización/baja en `columns[]`
 - `layout-canvas-property-field-table-rows.test.tsx` — widget aislado de filas y columnas de tabla en modo manual y dinámico
 - `layout-canvas-property-field-tabs-orientation.test.tsx` — widget aislado de la orientación de tabs como radiogroup horizontal/vertical
 - `layout-canvas-reorder-reinsert.test.tsx` — reordenar y reanidar nodos por arrastre end-to-end con seguimiento de selección

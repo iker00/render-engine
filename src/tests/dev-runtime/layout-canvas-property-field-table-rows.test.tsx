@@ -1,6 +1,6 @@
-import { act, render, screen, fireEvent } from '@testing-library/react'
+import { act, render, screen, fireEvent, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import type { TableCellNode, TableDynamicRows, TableLayoutNode, TableManualRows } from '../../config/runtime-config'
+import type { TableCellNode, TableColumnConfig, TableDynamicRows, TableLayoutNode, TableManualRows } from '../../config/runtime-config'
 import { EMPTY_DYNAMIC_TABLE_CELL_TEXT_VALUE, EMPTY_TABLE_CELL_TEXT_VALUE, buildDefaultNodeInstance } from '../../dev-runtime/layout-canvas/layout-canvas-node-palette-defaults'
 import { TableRowsPropertyField } from '../../dev-runtime/layout-canvas/property-fields/table-rows-property-field'
 
@@ -238,6 +238,147 @@ describe('TableRowsPropertyField remove column', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     const nextNode = onChange.mock.calls[0][0] as TableLayoutNode
     expect(nextNode.props.rows).toEqual([['Ana'], ['Bea']])
+  })
+})
+
+describe('TableRowsPropertyField manual mode column flags (Ordenable/Filtrable)', () => {
+  function columnEntryContainer(labelText: string): HTMLElement {
+    const input = screen.getByLabelText(labelText) as HTMLInputElement
+    const container = input.closest('.flex.flex-col.gap-2')
+    if (!container) throw new Error(`no column entry container found for ${labelText}`)
+    return container as HTMLElement
+  }
+
+  it('shows "Ordenable"/"Filtrable" switches next to each column entry, distinguishing entries by index', () => {
+    const node = manualTableNode({ headers: ['Nombre', 'Edad'] })
+    render(<TableRowsPropertyField label="Filas y columnas" node={node} onChange={vi.fn()} />)
+
+    const firstEntry = columnEntryContainer('Cabecera 1')
+    const secondEntry = columnEntryContainer('Cabecera 2')
+
+    expect(within(firstEntry).getByRole('switch', { name: 'Ordenable' })).toBeInTheDocument()
+    expect(within(firstEntry).getByRole('switch', { name: 'Filtrable' })).toBeInTheDocument()
+    expect(within(secondEntry).getByRole('switch', { name: 'Ordenable' })).toBeInTheDocument()
+    expect(within(secondEntry).getByRole('switch', { name: 'Filtrable' })).toBeInTheDocument()
+  })
+
+  it('marking "Ordenable" on a column with no columns[] entry commits a fresh sortable entry, rest of node intact', () => {
+    const onChange = vi.fn()
+    const node = manualTableNode({ headers: ['Nombre', 'Edad'] })
+    render(<TableRowsPropertyField label="Filas y columnas" node={node} onChange={onChange} />)
+
+    const entry = columnEntryContainer('Cabecera 1')
+    fireEvent.click(within(entry).getByRole('switch', { name: 'Ordenable' }))
+
+    expect(onChange).toHaveBeenCalledTimes(1)
+    const nextNode = onChange.mock.calls[0][0] as TableLayoutNode
+    expect(nextNode.props.columns).toEqual([{ id: 'Nombre', sortable: true }])
+    expect(nextNode.props.headers).toEqual(['Nombre', 'Edad'])
+    expect(nextNode.props.rows).toEqual(node.props.rows)
+  })
+
+  it('marking "Ordenable" on a column already filterable keeps that entry and adds sortable', () => {
+    const onChange = vi.fn()
+    const columns: TableColumnConfig[] = [{ id: 'Edad', filterable: true }]
+    const node = manualTableNode({ headers: ['Nombre', 'Edad'], columns })
+    render(<TableRowsPropertyField label="Filas y columnas" node={node} onChange={onChange} />)
+
+    const entry = columnEntryContainer('Cabecera 2')
+    fireEvent.click(within(entry).getByRole('switch', { name: 'Ordenable' }))
+
+    const nextNode = onChange.mock.calls[0][0] as TableLayoutNode
+    expect(nextNode.props.columns).toEqual([{ id: 'Edad', filterable: true, sortable: true }])
+  })
+
+  it('unmarking "Ordenable" when the entry has no filterable:true drops it from props.columns', () => {
+    const onChange = vi.fn()
+    const columns: TableColumnConfig[] = [{ id: 'Nombre', sortable: true }]
+    const node = manualTableNode({ headers: ['Nombre', 'Edad'], columns })
+    render(<TableRowsPropertyField label="Filas y columnas" node={node} onChange={onChange} />)
+
+    const entry = columnEntryContainer('Cabecera 1')
+    fireEvent.click(within(entry).getByRole('switch', { name: 'Ordenable' }))
+
+    const nextNode = onChange.mock.calls[0][0] as TableLayoutNode
+    expect(nextNode.props.columns).toEqual([])
+  })
+
+  it('marking "Filtrable" reveals an empty "Placeholder del filtro" field in that same entry, and typing sets filterPlaceholder', () => {
+    let node = manualTableNode({ headers: ['Nombre', 'Edad'] })
+    const onChange = vi.fn((next: TableLayoutNode) => {
+      node = next
+    })
+    const { rerender } = render(<TableRowsPropertyField label="Filas y columnas" node={node} onChange={onChange} />)
+
+    let entry = columnEntryContainer('Cabecera 1')
+    fireEvent.click(within(entry).getByRole('switch', { name: 'Filtrable' }))
+    rerender(<TableRowsPropertyField label="Filas y columnas" node={node} onChange={onChange} />)
+
+    entry = columnEntryContainer('Cabecera 1')
+    expect(within(entry).getByLabelText('Placeholder del filtro')).toHaveValue('')
+
+    fireEvent.change(within(entry).getByLabelText('Placeholder del filtro'), { target: { value: 'Buscar…' } })
+
+    expect(onChange).toHaveBeenCalledTimes(2)
+    const nextNode = onChange.mock.calls[1][0] as TableLayoutNode
+    expect(nextNode.props.columns).toEqual([{ id: 'Nombre', filterable: true, filterPlaceholder: 'Buscar…' }])
+  })
+
+  it('unmarking "Filtrable" hides "Placeholder del filtro" and drops filterable/filterPlaceholder while keeping sortable', () => {
+    let node = manualTableNode({
+      headers: ['Nombre', 'Edad'],
+      columns: [{ id: 'Nombre', sortable: true, filterable: true, filterPlaceholder: 'texto' }],
+    })
+    const onChange = vi.fn((next: TableLayoutNode) => {
+      node = next
+    })
+    const { rerender } = render(<TableRowsPropertyField label="Filas y columnas" node={node} onChange={onChange} />)
+
+    let entry = columnEntryContainer('Cabecera 1')
+    fireEvent.click(within(entry).getByRole('switch', { name: 'Filtrable' }))
+
+    const nextNode = onChange.mock.calls[0][0] as TableLayoutNode
+    expect(nextNode.props.columns).toEqual([{ id: 'Nombre', sortable: true }])
+
+    rerender(<TableRowsPropertyField label="Filas y columnas" node={node} onChange={onChange} />)
+    entry = columnEntryContainer('Cabecera 1')
+    expect(within(entry).queryByLabelText('Placeholder del filtro')).not.toBeInTheDocument()
+  })
+
+  it('renaming a header keeps sortable/filterable/filterPlaceholder of its columns[] entry, only syncing the id (regression)', () => {
+    const onChange = vi.fn()
+    const columns: TableColumnConfig[] = [{ id: 'Nombre', sortable: true, filterable: true, filterPlaceholder: 'texto' }]
+    const node = manualTableNode({ headers: ['Nombre', 'Edad'], columns })
+    render(<TableRowsPropertyField label="Filas y columnas" node={node} onChange={onChange} />)
+
+    const headerInput = screen.getByLabelText('Cabecera 1') as HTMLInputElement
+    fireEvent.change(headerInput, { target: { value: 'Nombre completo' } })
+    fireEvent.blur(headerInput)
+
+    const nextNode = onChange.mock.calls[0][0] as TableLayoutNode
+    expect(nextNode.props.columns).toEqual([{ id: 'Nombre completo', sortable: true, filterable: true, filterPlaceholder: 'texto' }])
+  })
+
+  it('removing a column drops its full columns[] entry, including sortable/filterable/filterPlaceholder (regression)', () => {
+    const onChange = vi.fn()
+    const columns: TableColumnConfig[] = [{ id: 'Nombre', sortable: true, filterable: true, filterPlaceholder: 'texto' }]
+    const node = manualTableNode({ headers: ['Nombre', 'Edad'], columns })
+    render(<TableRowsPropertyField label="Filas y columnas" node={node} onChange={onChange} />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Quitar columna Nombre' }))
+
+    const nextNode = onChange.mock.calls[0][0] as TableLayoutNode
+    expect(nextNode.props.columns).toEqual([])
+  })
+
+  it('does not introduce a bordered or background box around the column entry', () => {
+    const columns: TableColumnConfig[] = [{ id: 'Nombre', filterable: true }]
+    const node = manualTableNode({ headers: ['Nombre', 'Edad'], columns })
+    render(<TableRowsPropertyField label="Filas y columnas" node={node} onChange={vi.fn()} />)
+
+    const entry = columnEntryContainer('Cabecera 1')
+    expect(entry.className).not.toMatch(/\bborder\b/)
+    expect(entry.className).not.toMatch(/\bbg-/)
   })
 })
 
@@ -484,6 +625,147 @@ describe('TableRowsPropertyField dynamic mode accordion columns (D5 revisión 2 
     const nextNode = onChange.mock.calls[0][0] as TableLayoutNode
     expect(nextNode.props.headers).toEqual(['Nombre completo', 'Edad'])
     expect(nextNode.props.columns).toEqual([{ id: 'Nombre completo' }])
+  })
+})
+
+describe('TableRowsPropertyField dynamic mode column flags (Ordenable/Filtrable)', () => {
+  function columnEntryBody(labelText: string): HTMLElement {
+    const input = screen.getByLabelText(labelText) as HTMLInputElement
+    const container = input.closest('.flex.flex-col.gap-2.pl-6')
+    if (!container) throw new Error(`no expanded column entry body found for ${labelText}`)
+    return container as HTMLElement
+  }
+
+  function expandedColumnEntryContainer(expandButtonName: string, labelText: string): HTMLElement {
+    fireEvent.click(screen.getByRole('button', { name: expandButtonName }))
+    return columnEntryBody(labelText)
+  }
+
+  it('shows "Ordenable"/"Filtrable" switches next to the header input of each expanded column-template entry', () => {
+    const node = dynamicTableNode({ headers: ['Nombre', 'Edad'] })
+    render(<TableRowsPropertyField label="Filas y columnas" node={node} onChange={vi.fn()} />)
+
+    const firstEntry = expandedColumnEntryContainer('Expandir columna 1', 'Cabecera de columna 1')
+    expect(within(firstEntry).getByRole('switch', { name: 'Ordenable' })).toBeInTheDocument()
+    expect(within(firstEntry).getByRole('switch', { name: 'Filtrable' })).toBeInTheDocument()
+
+    const secondEntry = expandedColumnEntryContainer('Expandir columna 2', 'Cabecera de columna 2')
+    expect(within(secondEntry).getByRole('switch', { name: 'Ordenable' })).toBeInTheDocument()
+    expect(within(secondEntry).getByRole('switch', { name: 'Filtrable' })).toBeInTheDocument()
+  })
+
+  it('marking "Ordenable" on a column-template with no columns[] entry commits [{ id: header, sortable: true }], leaving headers/rows intact', () => {
+    const onChange = vi.fn()
+    const node = dynamicTableNode({ headers: ['Nombre', 'Edad'] })
+    render(<TableRowsPropertyField label="Filas y columnas" node={node} onChange={onChange} />)
+
+    const entry = expandedColumnEntryContainer('Expandir columna 1', 'Cabecera de columna 1')
+    fireEvent.click(within(entry).getByRole('switch', { name: 'Ordenable' }))
+
+    expect(onChange).toHaveBeenCalledTimes(1)
+    const nextNode = onChange.mock.calls[0][0] as TableLayoutNode
+    expect(nextNode.props.columns).toEqual([{ id: 'Nombre', sortable: true }])
+    expect(nextNode.props.headers).toEqual(['Nombre', 'Edad'])
+    expect(nextNode.props.rows).toEqual(node.props.rows)
+  })
+
+  it('marking "Filtrable" reveals an empty "Placeholder del filtro" field in that entry, and typing sets filterPlaceholder', () => {
+    let node = dynamicTableNode({ headers: ['Nombre', 'Edad'] })
+    const onChange = vi.fn((next: TableLayoutNode) => {
+      node = next
+    })
+    const { rerender } = render(<TableRowsPropertyField label="Filas y columnas" node={node} onChange={onChange} />)
+
+    let entry = expandedColumnEntryContainer('Expandir columna 1', 'Cabecera de columna 1')
+    fireEvent.click(within(entry).getByRole('switch', { name: 'Filtrable' }))
+    rerender(<TableRowsPropertyField label="Filas y columnas" node={node} onChange={onChange} />)
+
+    entry = columnEntryBody('Cabecera de columna 1')
+    expect(within(entry).getByLabelText('Placeholder del filtro')).toHaveValue('')
+
+    fireEvent.change(within(entry).getByLabelText('Placeholder del filtro'), { target: { value: 'Buscar…' } })
+
+    expect(onChange).toHaveBeenCalledTimes(2)
+    const nextNode = onChange.mock.calls[1][0] as TableLayoutNode
+    expect(nextNode.props.columns).toEqual([{ id: 'Nombre', filterable: true, filterPlaceholder: 'Buscar…' }])
+  })
+
+  it('unmarking "Filtrable" on an entry with sortable:true keeps sortable and drops filterable/filterPlaceholder', () => {
+    let node = dynamicTableNode({
+      headers: ['Nombre', 'Edad'],
+      columns: [{ id: 'Nombre', sortable: true, filterable: true, filterPlaceholder: 'texto' }],
+    })
+    const onChange = vi.fn((next: TableLayoutNode) => {
+      node = next
+    })
+    const { rerender } = render(<TableRowsPropertyField label="Filas y columnas" node={node} onChange={onChange} />)
+
+    let entry = expandedColumnEntryContainer('Expandir columna 1', 'Cabecera de columna 1')
+    fireEvent.click(within(entry).getByRole('switch', { name: 'Filtrable' }))
+
+    expect(onChange).toHaveBeenCalledTimes(1)
+    const nextNode = onChange.mock.calls[0][0] as TableLayoutNode
+    expect(nextNode.props.columns).toEqual([{ id: 'Nombre', sortable: true }])
+
+    rerender(<TableRowsPropertyField label="Filas y columnas" node={node} onChange={onChange} />)
+    entry = columnEntryBody('Cabecera de columna 1')
+    expect(within(entry).queryByLabelText('Placeholder del filtro')).not.toBeInTheDocument()
+  })
+
+  it('unmarking "Filtrable" on an entry without sortable:true removes the entry entirely from columns[]', () => {
+    const onChange = vi.fn()
+    const node = dynamicTableNode({
+      headers: ['Nombre', 'Edad'],
+      columns: [{ id: 'Nombre', filterable: true, filterPlaceholder: 'texto' }],
+    })
+    render(<TableRowsPropertyField label="Filas y columnas" node={node} onChange={onChange} />)
+
+    const entry = expandedColumnEntryContainer('Expandir columna 1', 'Cabecera de columna 1')
+    fireEvent.click(within(entry).getByRole('switch', { name: 'Filtrable' }))
+
+    expect(onChange).toHaveBeenCalledTimes(1)
+    const nextNode = onChange.mock.calls[0][0] as TableLayoutNode
+    expect(nextNode.props.columns).toEqual([])
+  })
+
+  it('renaming a column-template header keeps sortable/filterable/filterPlaceholder of its columns[] entry, only syncing the id (regression)', () => {
+    const onChange = vi.fn()
+    const columns: TableColumnConfig[] = [{ id: 'Nombre', sortable: true, filterable: true, filterPlaceholder: 'texto' }]
+    const node = dynamicTableNode({ headers: ['Nombre', 'Edad'], columns })
+    render(<TableRowsPropertyField label="Filas y columnas" node={node} onChange={onChange} />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Expandir columna 1' }))
+    const input = screen.getByLabelText('Cabecera de columna 1') as HTMLInputElement
+    fireEvent.change(input, { target: { value: 'Nombre completo' } })
+    fireEvent.blur(input)
+
+    const nextNode = onChange.mock.calls[0][0] as TableLayoutNode
+    expect(nextNode.props.columns).toEqual([{ id: 'Nombre completo', sortable: true, filterable: true, filterPlaceholder: 'texto' }])
+  })
+
+  it('removing a column-template drops its full columns[] entry, including sortable/filterable/filterPlaceholder (regression)', () => {
+    const onChange = vi.fn()
+    const columns: TableColumnConfig[] = [{ id: 'Nombre', sortable: true, filterable: true, filterPlaceholder: 'texto' }]
+    const node = dynamicTableNode({ headers: ['Nombre', 'Edad'], columns })
+    render(<TableRowsPropertyField label="Filas y columnas" node={node} onChange={onChange} />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Quitar columna 1' }))
+
+    const nextNode = onChange.mock.calls[0][0] as TableLayoutNode
+    expect(nextNode.props.columns).toEqual([])
+  })
+
+  it('does not introduce a bordered or background box for the flags around the column-template header input', () => {
+    const columns: TableColumnConfig[] = [{ id: 'Nombre', filterable: true }]
+    const node = dynamicTableNode({ headers: ['Nombre', 'Edad'], columns })
+    render(<TableRowsPropertyField label="Filas y columnas" node={node} onChange={vi.fn()} />)
+
+    const entry = expandedColumnEntryContainer('Expandir columna 1', 'Cabecera de columna 1')
+    expect(entry.className).not.toMatch(/\bbg-/)
+    // The accordion item's own outer wrapper legitimately has border/rounded classes; only the
+    // flags/body region itself must stay bare, so this asserts on the pl-6 body container found
+    // by expandedColumnEntryContainer, not the item's outer <div>.
+    expect(entry.className).not.toMatch(/\bborder\b/)
   })
 })
 

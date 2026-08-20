@@ -22,6 +22,7 @@ import type { SegmentedToggleOption } from './segmented-toggle-property-field'
 import { SegmentedTogglePropertyField } from './segmented-toggle-property-field'
 import { CELL_TYPE_LABELS } from './table-cell-type-labels'
 import { TableCellTypePropertyField, type TableCellType } from './table-cell-type-property-field'
+import { TableColumnFlagsField } from './table-column-flags-field'
 import { TextPropertyField } from './text-property-field'
 
 // The two mutually exclusive shapes `table.props.rows` can take (spec section 3, design.md D5):
@@ -226,6 +227,10 @@ export function TableRowsPropertyField({ label, node, onChange }: TableRowsPrope
     onChange({ ...node, props: { ...node.props, rows: { ...dynamicRows, source: nextSource } } })
   }
 
+  function commitColumnsChange(nextColumns: TableColumnConfig[] | undefined) {
+    onChange({ ...node, props: { ...node.props, columns: nextColumns } })
+  }
+
   function commitMove(fromIndex: number, toIndex: number) {
     if (isManualTableMode) {
       onChange({ ...node, props: { ...node.props, rows: moveArrayItem(node.props.rows as TableManualRows, fromIndex, toIndex) } })
@@ -252,11 +257,13 @@ export function TableRowsPropertyField({ label, node, onChange }: TableRowsPrope
         <div className="flex flex-col gap-2">
           <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500">Columnas</p>
           {node.props.headers.map((header, index) => (
-            <div key={`${index}-${header}`} className="flex items-end gap-2">
+            <div key={`${index}-${header}`} className="flex flex-col gap-2">
               <HeaderCell
                 index={index}
                 header={header}
                 canRemove={node.props.headers.length > 1}
+                columns={node.props.columns}
+                onColumnsChange={commitColumnsChange}
                 onRename={(nextHeader) => commitHeaderRename(index, nextHeader)}
                 onRemove={() => commitRemoveColumn(index)}
               />
@@ -327,6 +334,8 @@ export function TableRowsPropertyField({ label, node, onChange }: TableRowsPrope
                       length={node.props.headers.length}
                       canRemove={node.props.headers.length > 1}
                       collapsed={!expandedIndexes.has(index)}
+                      columns={node.props.columns}
+                      onColumnsChange={commitColumnsChange}
                       onToggle={() => toggleExpanded(index)}
                       onMoveUp={() => commitMove(index, index - 1)}
                       onMoveDown={() => commitMove(index, index + 1)}
@@ -392,26 +401,34 @@ interface HeaderCellProps {
   index: number
   header: string
   canRemove: boolean
+  columns: TableColumnConfig[] | undefined
+  onColumnsChange: (nextColumns: TableColumnConfig[] | undefined) => void
   onRename: (nextHeader: string) => void
   onRemove: () => void
 }
 
 // Columns section row: no reordering (D5 excludes it explicitly — reordering a manual column would
 // move the same position in `headers` **and** every row simultaneously, a larger-surface mutation
-// not motivated by any described use case).
-function HeaderCell({ index, header, canRemove, onRename, onRemove }: HeaderCellProps) {
+// not motivated by any described use case). Below the rename/remove row, `TableColumnFlagsField`
+// exposes "Ordenable"/"Filtrable"/"Placeholder del filtro" for the same column, identified by the
+// committed `header` value (not whatever the user is mid-typing in the rename input, which only
+// commits on blur).
+function HeaderCell({ index, header, canRemove, columns, onColumnsChange, onRename, onRemove }: HeaderCellProps) {
   return (
     <>
-      <HeaderTextInput labelText={`Cabecera ${index + 1}`} header={header} onRename={onRename} />
-      <button
-        type="button"
-        onClick={onRemove}
-        disabled={!canRemove}
-        aria-label={`Quitar columna ${header}`}
-        className="rounded border border-gray-300 px-2 py-1 text-xs text-gray-600 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        Quitar columna
-      </button>
+      <div className="flex items-end gap-2">
+        <HeaderTextInput labelText={`Cabecera ${index + 1}`} header={header} onRename={onRename} />
+        <button
+          type="button"
+          onClick={onRemove}
+          disabled={!canRemove}
+          aria-label={`Quitar columna ${header}`}
+          className="rounded border border-gray-300 px-2 py-1 text-xs text-gray-600 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          Quitar columna
+        </button>
+      </div>
+      <TableColumnFlagsField id={header} columns={columns} onColumnsChange={onColumnsChange} />
     </>
   )
 }
@@ -532,6 +549,8 @@ interface DynamicColumnAccordionItemProps {
   length: number
   canRemove: boolean
   collapsed: boolean
+  columns: TableColumnConfig[] | undefined
+  onColumnsChange: (nextColumns: TableColumnConfig[] | undefined) => void
   onToggle: () => void
   onMoveUp: () => void
   onMoveDown: () => void
@@ -544,11 +563,13 @@ interface DynamicColumnAccordionItemProps {
  * One column of Dinámico mode's reorderable accordion list — the only column-management surface
  * in this mode (design.md D5 revisión 2: the top "Columnas" header list, which used to duplicate
  * this item's rename control, is dropped in dynamic mode). Expanding it shows a header rename
- * input alongside the cell-type editor for its template cell; collapsed, it also exposes "Quitar
- * columna" (same `commitRemoveColumn` the top section used to own) next to "Añadir columna" at the
- * end of the list (rendered by the parent).
+ * input, the same `TableColumnFlagsField` "Ordenable"/"Filtrable"/placeholder trio Manual mode's
+ * `HeaderCell` exposes (T3, identified by the same `header` value), and the cell-type editor for
+ * its template cell; collapsed, it also exposes "Quitar columna" (same `commitRemoveColumn` the
+ * top section used to own) next to "Añadir columna" at the end of the list (rendered by the
+ * parent).
  */
-function DynamicColumnAccordionItem({ index, header, cell, length, canRemove, collapsed, onToggle, onMoveUp, onMoveDown, onHeaderRename, onCellChange, onRemove }: DynamicColumnAccordionItemProps) {
+function DynamicColumnAccordionItem({ index, header, cell, length, canRemove, collapsed, columns, onColumnsChange, onToggle, onMoveUp, onMoveDown, onHeaderRename, onCellChange, onRemove }: DynamicColumnAccordionItemProps) {
   const { setNodeRef, setActivatorNodeRef, attributes, listeners } = useDraggable({ id: `item-${index}` })
   const cellType = detectCellType(cell)
 
@@ -594,6 +615,7 @@ function DynamicColumnAccordionItem({ index, header, cell, length, canRemove, co
             header={header}
             onRename={onHeaderRename}
           />
+          <TableColumnFlagsField id={header} columns={columns} onColumnsChange={onColumnsChange} />
           <TableCellTypePropertyField
             label={`${header} — plantilla`}
             value={cell}
