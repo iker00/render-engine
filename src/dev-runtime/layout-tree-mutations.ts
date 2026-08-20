@@ -1,4 +1,4 @@
-import type { LayoutNode } from '../config/runtime-config'
+import type { LayoutNode, TableCellNode, TableCellValue } from '../config/runtime-config'
 import type { TabsItem } from '../config/runtime-config-types'
 import { getNodeAtPath, type LayoutNodePath, type LayoutPathStep } from '../runtime/layout-node-path'
 
@@ -21,6 +21,16 @@ interface ResolvedPathFrame {
 function getChildNodesCollection(node: LayoutNode): readonly LayoutNode[] {
   const children = (node as { children?: unknown }).children
   return Array.isArray(children) ? (children as LayoutNode[]) : []
+}
+
+/**
+ * A table cell resolved by a `row`/`cells` path step is either a `TableCellNode` (a nested
+ * layout node) or a plain primitive. Paths are only ever built to point at the former, so a
+ * primitive here is a defensive type guard, not a case that occurs in the normal flow — same
+ * predicate shape as `layout-node-path.ts`'s `isTableCellNodeValue` (T1).
+ */
+function isTableCellNodeValue(value: TableCellValue): value is TableCellNode {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
 function replaceAtIndex(collection: readonly LayoutNode[], index: number, value: LayoutNode): LayoutNode[] {
@@ -73,9 +83,38 @@ function withTabItemChildren(node: LayoutNode, itemIndex: number, children: Layo
   return { ...node, props: { ...node.props, items: newItems } }
 }
 
+function withTableRow(node: LayoutNode, rowIndex: number, row: TableCellValue[]): LayoutNode {
+  if (node.type !== 'table') {
+    throw new Error(`layout-tree-mutations: node type "${node.type}" does not have a props.rows collection`)
+  }
+  if (!Array.isArray(node.props.rows)) {
+    throw new Error('layout-tree-mutations: table node is in dynamic mode, cannot set a "row" collection')
+  }
+  const newRows = node.props.rows.map((existingRow, i) => (i === rowIndex ? row : existingRow))
+  return { ...node, props: { ...node.props, rows: newRows } }
+}
+
+function withTableDynamicCells(node: LayoutNode, cells: TableCellValue[]): LayoutNode {
+  if (node.type !== 'table') {
+    throw new Error(`layout-tree-mutations: node type "${node.type}" does not have a props.rows collection`)
+  }
+  if (Array.isArray(node.props.rows)) {
+    throw new Error('layout-tree-mutations: table node is in manual mode, cannot set a "cells" collection')
+  }
+  return {
+    ...node,
+    props: {
+      ...node.props,
+      rows: { source: node.props.rows.source, cells: cells as (string | TableCellNode)[] },
+    },
+  }
+}
+
 function setNodeCollection(node: LayoutNode, step: LayoutPathStep, collection: LayoutNode[]): LayoutNode {
   if (step.field === 'children') return withChildren(node, collection)
   if (step.field === 'template') return withTemplate(node, collection)
+  if (step.field === 'row') return withTableRow(node, step.rowIndex, collection as unknown as TableCellValue[])
+  if (step.field === 'cells') return withTableDynamicCells(node, collection as unknown as TableCellValue[])
   return withTabItemChildren(node, step.itemIndex, collection)
 }
 
@@ -117,6 +156,41 @@ function resolvePathFrames(
       const candidate: LayoutNode | undefined = template[step.index]
       if (!candidate) {
         throw new Error(`layout-tree-mutations: path does not resolve, no node at template[${step.index}]`)
+      }
+      currentNode = candidate
+      currentNodes = getChildNodesCollection(candidate)
+      continue
+    }
+
+    if (step.field === 'row') {
+      if (currentNode === null || currentNode.type !== 'table' || !Array.isArray(currentNode.props.rows)) {
+        throw new Error('layout-tree-mutations: path does not resolve, "row" step requires a table node in manual mode')
+      }
+      const row: TableCellValue[] | undefined = currentNode.props.rows[step.rowIndex]
+      if (!row) {
+        throw new Error(`layout-tree-mutations: path does not resolve, no row at rows[${step.rowIndex}]`)
+      }
+      frames.push({ step, collection: row as unknown as LayoutNode[], parentNode: currentNode })
+      const candidate: TableCellValue | undefined = row[step.index]
+      if (candidate === undefined || !isTableCellNodeValue(candidate)) {
+        throw new Error(
+          `layout-tree-mutations: path does not resolve, no table cell node at row[${step.rowIndex}][${step.index}]`
+        )
+      }
+      currentNode = candidate
+      currentNodes = getChildNodesCollection(candidate)
+      continue
+    }
+
+    if (step.field === 'cells') {
+      if (currentNode === null || currentNode.type !== 'table' || Array.isArray(currentNode.props.rows)) {
+        throw new Error('layout-tree-mutations: path does not resolve, "cells" step requires a table node in dynamic mode')
+      }
+      const cells: (string | TableCellNode)[] = currentNode.props.rows.cells
+      frames.push({ step, collection: cells as unknown as LayoutNode[], parentNode: currentNode })
+      const candidate: string | TableCellNode | undefined = cells[step.index]
+      if (candidate === undefined || !isTableCellNodeValue(candidate)) {
+        throw new Error(`layout-tree-mutations: path does not resolve, no table cell node at cells[${step.index}]`)
       }
       currentNode = candidate
       currentNodes = getChildNodesCollection(candidate)
@@ -254,6 +328,7 @@ export function insertNodeAt(
 function stepsEqual(a: LayoutPathStep, b: LayoutPathStep): boolean {
   if (a.field !== b.field || a.index !== b.index) return false
   if (a.field === 'tabItem' && b.field === 'tabItem') return a.itemIndex === b.itemIndex
+  if (a.field === 'row' && b.field === 'row') return a.rowIndex === b.rowIndex
   return true
 }
 
@@ -302,6 +377,7 @@ function adjustIndexForSiblingMove(
 function stepsReferenceSameCollection(a: LayoutPathStep, b: LayoutPathStep): boolean {
   if (a.field !== b.field) return false
   if (a.field === 'tabItem' && b.field === 'tabItem') return a.itemIndex === b.itemIndex
+  if (a.field === 'row' && b.field === 'row') return a.rowIndex === b.rowIndex
   return true
 }
 
@@ -385,6 +461,25 @@ function findPathWithinNode(node: LayoutNode, target: LayoutNode): LayoutNodePat
       if (found !== null) return found
     }
     return null
+  }
+
+  if (node.type === 'table') {
+    const rows = node.props.rows
+    if (Array.isArray(rows)) {
+      for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
+        const found = findPathWithinChildren(rows[rowIndex] as unknown as LayoutNode[], target, (index) => ({
+          field: 'row',
+          rowIndex,
+          index,
+        }))
+        if (found !== null) return found
+      }
+      return null
+    }
+    return findPathWithinChildren(rows.cells as unknown as LayoutNode[], target, (index) => ({
+      field: 'cells',
+      index,
+    }))
   }
 
   return findPathWithinChildren(getChildNodesCollection(node), target, (index) => ({ field: 'children', index }))

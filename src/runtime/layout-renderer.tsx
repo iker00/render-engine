@@ -1,6 +1,6 @@
 import type { MouseEvent, ReactNode } from 'react'
 import { useDroppable } from '@dnd-kit/core'
-import type { LayoutNode, LayoutNodeCollection } from '../config/runtime-config'
+import type { LayoutNode } from '../config/runtime-config'
 import type { RuntimeIterationContext } from './runtime-references/runtime-reference-resolver'
 import type { LayoutNodePath } from './layout-node-path'
 import { LayoutNodeRenderer } from './layout-node-renderer'
@@ -9,6 +9,7 @@ import type { LayoutEditModeContextValue } from './layout-edit-mode-context-valu
 import { useRuntimeLayoutContext } from './use-runtime-layout-context'
 import { serializeDropZoneId, serializeLayoutNodePath } from './layout-node-path'
 import { LayoutCanvasGridDropZonesOverlay } from './layout-canvas-grid-drop-zones'
+import { hasChildren, isEmptyPlaceholderCandidate, type EmptyPlaceholderNodeType } from './layout-node-children'
 
 export interface LayoutRendererProps {
   nodes: readonly LayoutNode[]
@@ -134,23 +135,13 @@ function LayoutCanvasDropZoneGap({ parentPath, index, tabItemIndex }: LayoutCanv
   return <div ref={setNodeRef} data-drop-zone={dropZoneId} aria-hidden="true" className="h-1 min-w-1" />
 }
 
-type EmptyPlaceholderNodeType = 'container' | 'form' | 'link'
-
 const EMPTY_PLACEHOLDER_LABEL: Record<EmptyPlaceholderNodeType, string> = {
   container: 'Contenedor vacío',
   form: 'Formulario vacío',
   link: 'Enlace vacío',
 }
 
-function isEmptyPlaceholderCandidate(
-  node: Extract<LayoutNode, { children?: LayoutNodeCollection }>,
-): node is Extract<LayoutNode, { type: EmptyPlaceholderNodeType }> {
-  return (
-    (node.type === 'container' || node.type === 'form' || node.type === 'link') && (node.children ?? []).length === 0
-  )
-}
-
-interface EmptyContainerPlaceholderProps {
+export interface EmptyContainerPlaceholderProps {
   nodeType: EmptyPlaceholderNodeType
   path: LayoutNodePath
   editModeContext: Extract<LayoutEditModeContextValue, { active: true }>
@@ -163,7 +154,7 @@ interface EmptyContainerPlaceholderProps {
 // {parentPath: <container's own path>, index: 0} — the same formula
 // `LayoutCanvasDropZoneGap` uses for the "before the first sibling" position, just realized
 // here as the already-existing placeholder element instead of a separate gap.
-function EmptyContainerPlaceholder({ nodeType, path, editModeContext }: EmptyContainerPlaceholderProps) {
+export function EmptyContainerPlaceholder({ nodeType, path, editModeContext }: EmptyContainerPlaceholderProps) {
   const placeholderPath: LayoutNodePath = [...path, { field: 'children', index: 0 }]
   const serializedPath = serializeLayoutNodePath(placeholderPath)
   const { setNodeRef: setDropZoneRef } = useDroppable({ id: serializeDropZoneId({ parentPath: path, index: 0 }) })
@@ -210,10 +201,6 @@ function EmptyContainerPlaceholder({ nodeType, path, editModeContext }: EmptyCon
       {EMPTY_PLACEHOLDER_LABEL[nodeType]}
     </div>
   )
-}
-
-function hasChildren(node: LayoutNode): node is Extract<LayoutNode, { children?: LayoutNodeCollection }> {
-  return node.type === 'container' || node.type === 'form' || node.type === 'modal' || node.type === 'link'
 }
 
 function getLayoutNodeKey(node: LayoutNode, index: number) {

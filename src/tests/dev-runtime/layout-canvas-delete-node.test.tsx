@@ -1,8 +1,21 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { validateRuntimeConfig } from '../../config/runtime-config'
 import type { LayoutNode, RuntimeConfig } from '../../config/runtime-config'
 import { DevRuntimeReady } from '../../dev-runtime/dev-runtime'
+
+// Dynamic-mode table cell fixtures below (T5, 0138) need at least one resolved row to render a
+// selectable cell — same `preloads` + stubbed `fetch` pattern as layout-canvas-commit.test.tsx's
+// `configWithPreloads` suite, the established way to seed `queries.*` state through the real
+// DevRuntimeReady pipeline without a separate `dataValues` prop (which DevRuntimeReady does not
+// expose).
+function createJsonResponse(body: unknown) {
+  return new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' } })
+}
+
+afterEach(() => {
+  vi.unstubAllGlobals()
+})
 
 // Mock @monaco-editor/react with a controllable textarea, matching the pattern already
 // established in layout-canvas-commit.test.tsx / layout-canvas-palette-insert.test.tsx: the
@@ -148,5 +161,217 @@ describe('LayoutCanvas: eliminar nodo seleccionado (FR9)', () => {
 
     expect(screen.queryByTestId('layout-canvas-properties-panel')).not.toBeInTheDocument()
     expect(screen.queryByTestId('layout-canvas-breadcrumb')).not.toBeInTheDocument()
+  })
+})
+
+// T5 (0138): "Eliminar nodo" over a table cell-node is special-cased — it reverts the cell to its
+// empty-text literal (in place, same position, same row/cells length) instead of removing it,
+// because removing an entry from `props.rows`/`props.rows.cells` would misalign the row against
+// `headers`/the other cells. Manual mode (`row` step) and dynamic mode (`cells` step) use
+// different literals — see `EMPTY_TABLE_CELL_TEXT_VALUE`/`EMPTY_DYNAMIC_TABLE_CELL_TEXT_VALUE` in
+// layout-canvas-node-palette-defaults.ts — because `validateTableDynamicRows` rejects `''` for a
+// dynamic-mode cell (regression pinned in runtime-config-validation-image-table.test.ts).
+describe('LayoutCanvas: "Eliminar nodo" sobre una celda de tabla (T5, 0138)', () => {
+  function manualCellTableConfig() {
+    return {
+      api: {},
+      initialPage: 'home',
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'table',
+              props: {
+                headers: ['Nombre', 'Info'],
+                rows: [['Ada', { type: 'heading', props: { text: 'Cell Heading', level: 2 } }]],
+              },
+            },
+          ],
+        },
+      ],
+    }
+  }
+
+  function manualCellWithSubtreeConfig() {
+    return {
+      api: {},
+      initialPage: 'home',
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'table',
+              props: {
+                headers: ['Nombre', 'Info'],
+                rows: [
+                  [
+                    'Ada',
+                    {
+                      type: 'container',
+                      props: {},
+                      children: [
+                        { type: 'heading', props: { text: 'Title', level: 2 } },
+                        { type: 'paragraph', props: { text: 'Body' } },
+                      ],
+                    },
+                  ],
+                ],
+              },
+            },
+          ],
+        },
+      ],
+    }
+  }
+
+  // Dynamic mode needs at least one resolved collection item to render a selectable cell, so the
+  // fixture wires a real `preloads` entry against `api.users` (seeded via stubbed `fetch`, see
+  // module-level `createJsonResponse`/`afterEach` above) instead of a static literal `values`
+  // shape — `validateTableDynamicRows` rejects a `values` key on `props.rows` (see
+  // `validate-table-node.ts`).
+  function dynamicCellTableConfig() {
+    return {
+      api: { users: { method: 'GET', endpoint: '/users' } },
+      initialPage: 'home',
+      pages: [
+        {
+          id: 'home',
+          preloads: [{ users: {} }],
+          layout: [
+            {
+              type: 'table',
+              props: {
+                headers: ['Nombre', 'Info'],
+                rows: {
+                  source: 'queries.users.data',
+                  cells: ['item.name', { type: 'heading', props: { text: 'Cell Heading', level: 2 } }],
+                },
+              },
+            },
+          ],
+        },
+      ],
+    }
+  }
+
+  function dynamicCellWithSubtreeConfig() {
+    return {
+      api: { users: { method: 'GET', endpoint: '/users' } },
+      initialPage: 'home',
+      pages: [
+        {
+          id: 'home',
+          preloads: [{ users: {} }],
+          layout: [
+            {
+              type: 'table',
+              props: {
+                headers: ['Nombre', 'Info'],
+                rows: {
+                  source: 'queries.users.data',
+                  cells: [
+                    'item.name',
+                    {
+                      type: 'container',
+                      props: {},
+                      children: [
+                        { type: 'heading', props: { text: 'Title', level: 2 } },
+                        { type: 'paragraph', props: { text: 'Body' } },
+                      ],
+                    },
+                  ],
+                },
+              },
+            },
+          ],
+        },
+      ],
+    }
+  }
+
+  function selectCell(root: HTMLElement, dataNodePath: string) {
+    const wrapper = root.querySelector(`[data-node-path="${dataNodePath}"]`)
+    expect(wrapper).not.toBeNull()
+    fireEvent.click(wrapper as Element)
+  }
+
+  async function selectCellAfterPreload(root: HTMLElement, dataNodePath: string) {
+    await waitFor(() => expect(root.querySelector(`[data-node-path="${dataNodePath}"]`)).not.toBeNull())
+    selectCell(root, dataNodePath)
+  }
+
+  it('en modo manual revierte la celda-nodo seleccionada a \'\' en la misma posición, sin cambiar la longitud de la fila ni la de headers/rows, y limpia la selección', async () => {
+    const { root } = renderCanvas(manualCellTableConfig())
+
+    selectCell(root, 'children.0.row.0.1')
+    expect(screen.getByTestId('layout-canvas-delete-node-button')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByTestId('layout-canvas-delete-node-button'))
+
+    const { parsed } = await getMonacoJson()
+    const table = (parsed.pages as Array<{ layout: Array<{ props: { headers: string[]; rows: unknown[][] } }> }>)[0]
+      .layout[0]
+
+    expect(table.props.rows).toHaveLength(1)
+    expect(table.props.rows[0]).toHaveLength(2)
+    expect(table.props.rows[0][1]).toBe('')
+    expect(table.props.headers).toHaveLength(2)
+    expect(validateRuntimeConfig(parsed).status).toBe('ready')
+
+    expect(screen.queryByTestId('layout-canvas-properties-panel')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('layout-canvas-breadcrumb')).not.toBeInTheDocument()
+  })
+
+  it('en modo dinámico revierte la celda-nodo seleccionada a \'—\' en la misma posición de cells, sin cambiar su longitud, y el commit pasa validateRuntimeConfig', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(createJsonResponse([{ name: 'Ada' }])))
+    const { root } = renderCanvas(dynamicCellTableConfig())
+
+    await selectCellAfterPreload(root, 'children.0.cells.1')
+    fireEvent.click(screen.getByTestId('layout-canvas-delete-node-button'))
+
+    const { parsed } = await getMonacoJson()
+    const table = (
+      parsed.pages as Array<{ layout: Array<{ props: { headers: string[]; rows: { cells: unknown[] } } }> }>
+    )[0].layout[0]
+
+    expect(table.props.rows.cells).toHaveLength(2)
+    expect(table.props.rows.cells[1]).toBe('—')
+    expect(table.props.rows.cells[0]).toBe('item.name')
+    // Regression check for the blocker this task closes: before this fix, reverting a dynamic
+    // cell to '' produced a commit rejected by validateTableDynamicRows.
+    expect(validateRuntimeConfig(parsed).status).toBe('ready')
+
+    expect(screen.queryByTestId('layout-canvas-properties-panel')).not.toBeInTheDocument()
+  })
+
+  it('en modo manual, una celda-container con subárbol se revierte de una sola vez a \'\' sin aviso de confirmación adicional', async () => {
+    const { root } = renderCanvas(manualCellWithSubtreeConfig())
+
+    selectCell(root, 'children.0.row.0.1')
+    fireEvent.click(screen.getByTestId('layout-canvas-delete-node-button'))
+
+    const { parsed } = await getMonacoJson()
+    const table = (parsed.pages as Array<{ layout: Array<{ props: { rows: unknown[][] } }> }>)[0].layout[0]
+
+    expect(table.props.rows[0]).toHaveLength(2)
+    expect(table.props.rows[0][1]).toBe('')
+    expect(validateRuntimeConfig(parsed).status).toBe('ready')
+  })
+
+  it('en modo dinámico, una celda-container con subárbol se revierte de una sola vez a \'—\' sin aviso de confirmación adicional', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(createJsonResponse([{ name: 'Ada' }])))
+    const { root } = renderCanvas(dynamicCellWithSubtreeConfig())
+
+    await selectCellAfterPreload(root, 'children.0.cells.1')
+    fireEvent.click(screen.getByTestId('layout-canvas-delete-node-button'))
+
+    const { parsed } = await getMonacoJson()
+    const table = (parsed.pages as Array<{ layout: Array<{ props: { rows: { cells: unknown[] } } }> }>)[0].layout[0]
+
+    expect(table.props.rows.cells).toHaveLength(2)
+    expect(table.props.rows.cells[1]).toBe('—')
+    expect(validateRuntimeConfig(parsed).status).toBe('ready')
   })
 })

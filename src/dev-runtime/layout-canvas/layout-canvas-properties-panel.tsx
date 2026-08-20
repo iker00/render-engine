@@ -26,6 +26,7 @@ import {
   getPresentQueryStateFeedbackStates,
 } from './property-fields/query-state-feedback-accordion-state'
 import { QueryStateFeedbackAccordionWidgetContext } from './property-fields/query-state-feedback-accordion-widget-context'
+import { TableRowsPropertyField } from './property-fields/table-rows-property-field'
 import { resolveAncestorContainerColumns } from './resolve-ancestor-container-columns'
 
 export interface LayoutCanvasPropertiesPanelProps {
@@ -70,8 +71,10 @@ const NOOP_SELECT_ANCESTOR = (_path: LayoutNodePath): void => {}
 // needs its own rejection-tracking key distinct from `props`. T5 (0128) adds
 // `containerColumnsMode` for the same reason: the `container` "Modo" widget also commits the
 // entire node. T5 (0133) moved both blocks (plus the `link` "Contenido" selector) to render at
-// the top of the `Props` tabpanel; the dedicated keys are unaffected by where they render.
-type PendingRejectionKey = NodePanelTabKey | 'submitAction' | 'containerColumnsMode'
+// the top of the `Props` tabpanel; the dedicated keys are unaffected by where they render. T9
+// (0138) adds `tableRows`: the `table` rows/columns/cells widget (T8) commits the entire node too
+// (D4), for the same reason — `headers`/`rows`/`columns` must commit as one coordinated mutation.
+type PendingRejectionKey = NodePanelTabKey | 'submitAction' | 'containerColumnsMode' | 'tableRows'
 
 // T9 (bug fix): `commitCanvasMutation` validates the *entire* config before applying a panel
 // commit (see dev-runtime.tsx). Switching a discriminated-union variant (T5) or adding a new
@@ -276,6 +279,24 @@ function resolveContainerPropsSchema(propsSchema: Record<string, unknown>, props
   if (isPlainObject(propsValue) && propsValue.columns !== undefined) return propsSchema
 
   const { columns: _columns, ...restProperties } = properties
+  return { ...propsSchema, properties: restProperties }
+}
+
+/**
+ * Omits `headers`, `rows` and `columns` from `table.props`'s generated schema unconditionally
+ * (T9, 0138, D4): the dedicated `TableRowsPropertyField` widget above is these three keys' only
+ * editing surface, since they must commit together as one coordinated mutation — declaring them
+ * again in the generic dispatcher would either duplicate editing (a raw-JSON escape hatch for
+ * `rows`, whose schema is `z.unknown()`) or let `columns` drift out of sync with `headers`. Same
+ * "generic dispatcher stops iterating these keys for this node type" precedent as
+ * `tabs.props.items[].children` (`resolveTabsPropsSchema`). Any other `table.props` key (e.g.
+ * `pagination`) passes through unchanged and keeps rendering with the generic dispatcher.
+ */
+function resolveTablePropsSchema(propsSchema: Record<string, unknown>): Record<string, unknown> {
+  const properties = propsSchema.properties
+  if (!isPlainObject(properties)) return propsSchema
+
+  const { headers: _headers, rows: _rows, columns: _columns, ...restProperties } = properties
   return { ...propsSchema, properties: restProperties }
 }
 
@@ -599,6 +620,30 @@ export function LayoutCanvasPropertiesPanel({
               </div>
             )
           })()}
+        {node.type === 'table' &&
+          (() => {
+            const pendingRejection = pendingRejections.tableRows
+            const displayedNode = pendingRejection ? (pendingRejection.value as typeof node) : node
+
+            return (
+              <div className="flex flex-col gap-2">
+                <TableRowsPropertyField
+                  label="Filas y columnas"
+                  node={displayedNode}
+                  onChange={(nextNode) => {
+                    const result = onCommitNodeUpdate(path, () => nextNode)
+                    recordCommitResult('tableRows', nextNode, result)
+                  }}
+                />
+                {pendingRejection && (
+                  <CommitRejectionBanner
+                    dataTestId="layout-canvas-properties-panel-tableRows-error"
+                    error={pendingRejection.error}
+                  />
+                )}
+              </div>
+            )
+          })()}
       </>
     )
   }
@@ -621,6 +666,9 @@ export function LayoutCanvasPropertiesPanel({
     }
     if (key === 'props' && node.type === 'container' && effectiveSchema) {
       effectiveSchema = resolveContainerPropsSchema(effectiveSchema, currentValue)
+    }
+    if (key === 'props' && node.type === 'table' && effectiveSchema) {
+      effectiveSchema = resolveTablePropsSchema(effectiveSchema)
     }
     if (key === 'props' && CHOICE_LIKE_NODE_TYPES.has(node.type) && effectiveSchema) {
       effectiveSchema = resolveChoiceLikePropsSchema(effectiveSchema)

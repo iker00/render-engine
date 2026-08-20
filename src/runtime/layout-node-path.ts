@@ -1,15 +1,28 @@
-import type { LayoutNode } from '../config/runtime-config'
+import type { LayoutNode, TableCellNode, TableCellValue, TableRows } from '../config/runtime-config'
 
 export type LayoutPathStep =
   | { field: 'children'; index: number }
   | { field: 'template'; index: number }
   | { field: 'tabItem'; itemIndex: number; index: number }
+  | { field: 'row'; rowIndex: number; index: number }
+  | { field: 'cells'; index: number }
 
 export type LayoutNodePath = LayoutPathStep[]
 
 function getChildNodesCollection(node: LayoutNode): readonly LayoutNode[] {
   const children = (node as { children?: unknown }).children
   return Array.isArray(children) ? (children as LayoutNode[]) : []
+}
+
+/**
+ * A table cell resolved by a `row`/`cells` path step is either a `TableCellNode` (a nested
+ * layout node, which can be selected/edited) or a `TableCellPrimitive` (plain text, which
+ * `table-layout-node.tsx` never wraps with selection — see T3). Paths are only ever built to
+ * point at the former, so a primitive here is a defensive type guard, not a case that occurs
+ * in the normal flow.
+ */
+function isTableCellNodeValue(value: TableCellValue): value is TableCellNode {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
 export function getNodeAtPath(rootNodes: readonly LayoutNode[], path: LayoutNodePath): LayoutNode | null {
@@ -35,6 +48,30 @@ export function getNodeAtPath(rootNodes: readonly LayoutNode[], path: LayoutNode
       continue
     }
 
+    if (step.field === 'row') {
+      if (currentNode === null || currentNode.type !== 'table') return null
+      const rows: TableRows = currentNode.props.rows
+      if (!Array.isArray(rows)) return null
+      const row: TableCellValue[] | undefined = rows[step.rowIndex]
+      if (!row) return null
+      const cell: TableCellValue | undefined = row[step.index]
+      if (cell === undefined || !isTableCellNodeValue(cell)) return null
+      currentNode = cell
+      currentNodes = getChildNodesCollection(cell)
+      continue
+    }
+
+    if (step.field === 'cells') {
+      if (currentNode === null || currentNode.type !== 'table') return null
+      const rows: TableRows = currentNode.props.rows
+      if (Array.isArray(rows)) return null
+      const cell: string | TableCellNode | undefined = rows.cells[step.index]
+      if (cell === undefined || !isTableCellNodeValue(cell)) return null
+      currentNode = cell
+      currentNodes = getChildNodesCollection(cell)
+      continue
+    }
+
     if (currentNode === null || currentNode.type !== 'tabs') return null
     const items = currentNode.props.items
     const item = items[step.itemIndex]
@@ -54,6 +91,8 @@ export function serializeLayoutNodePath(path: LayoutNodePath): string {
     .map((step) => {
       if (step.field === 'children') return `children.${step.index}`
       if (step.field === 'template') return `template.${step.index}`
+      if (step.field === 'row') return `row.${step.rowIndex}.${step.index}`
+      if (step.field === 'cells') return `cells.${step.index}`
       return `tabItem.${step.itemIndex}.${step.index}`
     })
     .join('.')
@@ -84,6 +123,32 @@ export function deserializeLayoutNodePath(serialized: string): LayoutNodePath | 
       continue
     }
 
+    if (field === 'row') {
+      const rowIndex = Number(tokens[cursor + 1])
+      const index = Number(tokens[cursor + 2])
+      if (
+        tokens[cursor + 1] === undefined ||
+        tokens[cursor + 2] === undefined ||
+        !Number.isInteger(rowIndex) ||
+        rowIndex < 0 ||
+        !Number.isInteger(index) ||
+        index < 0
+      ) {
+        return null
+      }
+      path.push({ field: 'row', rowIndex, index })
+      cursor += 3
+      continue
+    }
+
+    if (field === 'cells') {
+      const index = Number(tokens[cursor + 1])
+      if (tokens[cursor + 1] === undefined || !Number.isInteger(index) || index < 0) return null
+      path.push({ field: 'cells', index })
+      cursor += 2
+      continue
+    }
+
     if (field === 'tabItem') {
       const itemIndex = Number(tokens[cursor + 1])
       const index = Number(tokens[cursor + 2])
@@ -106,6 +171,18 @@ export function deserializeLayoutNodePath(serialized: string): LayoutNodePath | 
   }
 
   return path
+}
+
+/**
+ * `true` when `path` targets a table cell directly — i.e. it is non-empty and its last step is
+ * `row` (manual mode) or `cells` (dynamic mode template). A path that continues past the cell
+ * into its contents (e.g. a `children` step for a cell-container's own children) does not end
+ * at the cell itself, so this returns `false` for it.
+ */
+export function pathEndsAtTableCell(path: LayoutNodePath): boolean {
+  if (path.length === 0) return false
+  const lastStep = path[path.length - 1]
+  return lastStep.field === 'row' || lastStep.field === 'cells'
 }
 
 /**

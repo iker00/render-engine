@@ -754,39 +754,15 @@ describe('LayoutCanvasPropertiesPanel tabs node props.items (RF2, 0105)', () => 
   })
 })
 
-describe('LayoutCanvasPropertiesPanel regression: array without minItems on a non-tabs node', () => {
-  function tableNode(headers: string[]): LayoutNode {
-    return { type: 'table', props: { headers, rows: [] } } as LayoutNode
-  }
-
-  it('keeps "Quitar" available even down to a single remaining header (no minItems restriction)', () => {
-    const node = tableNode(['Nombre'])
-    const onCommitNodeUpdate = vi.fn()
-    render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={onCommitNodeUpdate} />)
-
-    const removeButton = screen.getByRole('button', { name: 'Quitar headers #1' })
-    expect(removeButton).not.toBeDisabled()
-
-    fireEvent.click(removeButton)
-    expect(onCommitNodeUpdate).toHaveBeenCalledTimes(1)
-    const [, updater] = onCommitNodeUpdate.mock.calls[0]
-    const result = updater(node) as Extract<LayoutNode, { type: 'table' }>
-    expect(result.props.headers).toEqual([])
-  })
-
-  it('"Añadir" still appends an empty-string default for a plain string array', () => {
-    const node = tableNode(['Nombre'])
-    const onCommitNodeUpdate = vi.fn()
-    render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={onCommitNodeUpdate} />)
-
-    fireEvent.click(screen.getByRole('button', { name: 'Añadir headers' }))
-
-    expect(onCommitNodeUpdate).toHaveBeenCalledTimes(1)
-    const [, updater] = onCommitNodeUpdate.mock.calls[0]
-    const result = updater(node) as Extract<LayoutNode, { type: 'table' }>
-    expect(result.props.headers).toEqual(['Nombre', ''])
-  })
-})
+// T9 (0138): the panel-level "regression: array without minItems on a non-tabs node" describe
+// block that used to live here exercised the dispatcher's generic "array without minItems"
+// behavior through `table.props.headers` as its only real-node vehicle. `headers` (along with
+// `rows`/`columns`) is now excluded from the generic dispatcher for `table` nodes — see the
+// dedicated widget describe block below, which covers that exclusion directly. The dispatcher's
+// own generic "array without minItems" behavior is still covered against a synthetic schema,
+// independent of any real node, in `layout-canvas-property-field-dispatcher.test.tsx` (`'without
+// minItems in the schema, "Quitar" stays enabled down to a single item (no regression)'`), so no
+// coverage is lost by removing the panel-level duplicate here.
 
 describe('LayoutCanvasPropertiesPanel choice-items widget for select/radioGroup/checkboxGroup (T5, 0108)', () => {
   function selectNode(items: unknown = [{ label: 'Uno', value: 'uno' }]): LayoutNode {
@@ -1709,6 +1685,78 @@ describe('LayoutCanvasPropertiesPanel special Props blocks scoped to the tabpane
     const contentSelect = screen.getByLabelText('Contenido')
     const labelField = screen.getByLabelText('label', { exact: false })
     expect(contentSelect.compareDocumentPosition(labelField) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+})
+
+// T9 (0138, D4): dedicated widget for `table.props.headers`/`rows`/`columns`, committing the
+// entire node like `containerColumnsMode`/`link` "Contenido"/`form` "Acción de envío" above.
+// Isolated panel-level coverage only (widget presence in `Props`, tab visibility, generic-field
+// exclusion, node-commit shape). The widget's own internal behavior (mode toggle, cell-type
+// selector, add/remove row/column) is covered in isolation by
+// `layout-canvas-property-field-table-rows.test.tsx` (T8); real-pipeline commit/rejection
+// coverage, plus the end-to-end link-cell flow (criteria 12-13), lives in
+// `layout-canvas-properties-panel-commit-feedback.test.tsx`.
+describe('LayoutCanvasPropertiesPanel table rows/columns widget (T9, 0138)', () => {
+  function tableNode(overrides: Partial<Extract<LayoutNode, { type: 'table' }>['props']> = {}): LayoutNode {
+    return { type: 'table', props: { headers: ['Nombre'], rows: [['Ana']], ...overrides } } as LayoutNode
+  }
+
+  it('renders the widget inside the Props tabpanel, and it disappears under Visibilidad', () => {
+    render(<LayoutCanvasPropertiesPanel node={tableNode()} path={somePath} onCommitNodeUpdate={() => {}} />)
+
+    const tabpanel = screen.getByRole('tabpanel')
+    expect(within(tabpanel).getByRole('group', { name: 'Filas y columnas' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Visibilidad' }))
+    expect(screen.queryByRole('group', { name: 'Filas y columnas' })).not.toBeInTheDocument()
+  })
+
+  it('positions the widget before the dispatcher-driven props fields inside the tabpanel', () => {
+    const node = tableNode({ pagination: { enabled: true, pageSize: 5 } })
+    render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={() => {}} />)
+
+    const widget = screen.getByRole('group', { name: 'Filas y columnas' })
+    const paginationLegend = screen.getByText('pagination')
+    expect(widget.compareDocumentPosition(paginationLegend) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  it('does not render headers, rows or columns as generic dispatcher fields for a table node (regression)', () => {
+    const node = tableNode({ columns: [{ id: 'Nombre' }] })
+    render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={() => {}} />)
+
+    expect(screen.queryByRole('button', { name: 'Añadir headers' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Quitar headers #1' })).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('rows', { exact: false })).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('columns', { exact: false })).not.toBeInTheDocument()
+  })
+
+  it('clicking "Añadir columna" invokes onCommitNodeUpdate with the correct path and a patch adding a header/cell', () => {
+    const node = tableNode()
+    const onCommitNodeUpdate = vi.fn()
+    render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={onCommitNodeUpdate} />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Añadir columna' }))
+
+    expect(onCommitNodeUpdate).toHaveBeenCalledTimes(1)
+    const [calledPath, updater] = onCommitNodeUpdate.mock.calls[0]
+    expect(calledPath).toBe(somePath)
+    const result = updater(node) as Extract<LayoutNode, { type: 'table' }>
+    expect(result.props.headers).toEqual(['Nombre', 'Columna 2'])
+    expect(result.props.rows).toEqual([['Ana', '']])
+  })
+
+  it('does not render the widget for a non-table node', () => {
+    render(<LayoutCanvasPropertiesPanel node={headingNode()} path={somePath} onCommitNodeUpdate={() => {}} />)
+
+    expect(screen.queryByRole('group', { name: 'Filas y columnas' })).not.toBeInTheDocument()
+  })
+
+  it('does not render the link/container/form special blocks for a table node (regression)', () => {
+    render(<LayoutCanvasPropertiesPanel node={tableNode()} path={somePath} onCommitNodeUpdate={() => {}} />)
+
+    expect(screen.queryByLabelText('Contenido')).not.toBeInTheDocument()
+    expect(screen.queryByRole('radiogroup', { name: 'Modo' })).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Acción de envío')).not.toBeInTheDocument()
   })
 })
 

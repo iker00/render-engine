@@ -1,8 +1,11 @@
+import { useContext } from 'react'
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { RuntimeConfig } from '../../config/runtime-config'
 import { RuntimePage } from '../../runtime/runtime-page'
+import { RuntimeStateContext } from '../../runtime/runtime-state/runtime-state-context'
 import { RuntimeStateProvider } from '../../runtime/runtime-state/runtime-state-provider'
+import type { RuntimeStateAction } from '../../runtime/runtime-state/runtime-state-types'
 import { useRuntimeState, useRuntimeStateActions } from '../../runtime/runtime-state/use-runtime-state'
 
 const runtimeConfig: RuntimeConfig = {
@@ -87,6 +90,18 @@ function PageEntryStatusProbe() {
   const state = useRuntimeState()
 
   return <div data-testid="page-entry-status">{state.pageEntry.status}</div>
+}
+
+// Exposes the raw `dispatch` from RuntimeStateContext so a test can replay the exact action
+// sequence the dev-mode editor's commit pipeline produces (`page-entry/set-idle` then
+// `page-entry/set-settled-entry`, rebuilding pageEntry from scratch for the *same* entryId already
+// on screen) without needing DevRuntime's full config-validation/migration machinery.
+function RawDispatchProbe({ onReady }: { onReady: (dispatch: (action: RuntimeStateAction) => void) => void }) {
+  const context = useContext(RuntimeStateContext)
+  if (context !== null) {
+    onReady(context.dispatch)
+  }
+  return null
 }
 
 beforeEach(() => {
@@ -395,5 +410,60 @@ describe('RuntimeScrollRestorationEffect — pop restoration (T2)', () => {
 
     expect(window.scrollTo).toHaveBeenCalledTimes(callsBeforeGoBack + 1)
     expect(window.scrollTo).toHaveBeenLastCalledWith(0, 400)
+  })
+})
+
+describe('RuntimeScrollRestorationEffect — pageEntry rebuilt for the same entryId without navigating', () => {
+  it('does not re-apply a stale saved position when something rebuilds pageEntry from scratch for the entryId already on screen after a pop restoration', async () => {
+    let dispatch: ((action: RuntimeStateAction) => void) | null = null
+
+    render(
+      <RuntimeStateProvider config={runtimeConfig}>
+        <RawDispatchProbe onReady={(d) => { dispatch = d }} />
+        <NavigationControls />
+        <RuntimePage />
+      </RuntimeStateProvider>,
+    )
+
+    // Scroll down on "home" (entryId 0) before leaving it, so its abandoned position (500) gets
+    // captured — same setup as the "pop restoration" tests above.
+    Object.defineProperty(window, 'scrollY', { value: 500, configurable: true })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Navigate to details' }))
+    await waitFor(() =>
+      expect(screen.getByTestId('runtime-page')).toHaveAttribute('data-runtime-page-id', 'details'),
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Go back' }))
+    await waitFor(() => expect(screen.getByTestId('runtime-page')).toHaveAttribute('data-runtime-page-id', 'home'))
+
+    // The pop restored (0, 500) for entryId 0 — this is the last real scrollTo call so far.
+    const callsAfterPopRestore = vi.mocked(window.scrollTo).mock.calls.length
+    expect(window.scrollTo).toHaveBeenLastCalledWith(0, 500)
+
+    // The user keeps browsing "home" (still entryId 0) and scrolls further, to 700.
+    Object.defineProperty(window, 'scrollY', { value: 700, configurable: true })
+
+    // Something rebuilds pageEntry from scratch for this *same* entryId/pageId without any real
+    // navigation — exactly what the dev-mode editor's commit pipeline does on every config edit
+    // (migrateRuntimeStateAcrossConfig always rebuilds pageEntry with status "idle", then it
+    // settles back to a terminal status). Before the fix, this re-ran the restore logic and
+    // yanked the page back to the stale (0, 500) snapshot from the pop above, discarding the
+    // user's scroll to 700 they never asked to lose.
+    act(() => {
+      dispatch!({
+        type: 'page-entry/set-idle',
+        payload: { entryId: 0, pageId: 'home', params: {}, preloadNames: [] },
+      })
+    })
+    act(() => {
+      dispatch!({
+        type: 'page-entry/set-settled-entry',
+        payload: { entryId: 0, pageId: 'home', params: {}, preloadNames: [], status: 'success' },
+      })
+    })
+
+    expect(window.scrollTo).toHaveBeenCalledTimes(callsAfterPopRestore)
+    expect(window.scrollY).toBe(700)
   })
 })

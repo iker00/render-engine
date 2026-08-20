@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
+  findNodePath,
   insertNodeAt,
+  isSameOrDescendantPath,
   movePathTo,
   removeNodeAt,
   replaceNodeAt,
@@ -33,6 +35,14 @@ function repeater(template: LayoutNode[] = []): LayoutNode {
 
 function tabsNode(items: { label: string; children?: LayoutNode[] }[]): LayoutNode {
   return { type: 'tabs', props: { items } }
+}
+
+function tableManual(rows: unknown[][], headers: string[] = ['A', 'B']): LayoutNode {
+  return { type: 'table', props: { headers, rows } } as LayoutNode
+}
+
+function tableDynamic(cells: unknown[], source = 'queries.list'): LayoutNode {
+  return { type: 'table', props: { headers: ['A'], rows: { source, cells } } } as LayoutNode
 }
 
 describe('replaceNodeAt', () => {
@@ -135,6 +145,65 @@ describe('replaceNodeAt', () => {
     ]
     expect(() => replaceNodeAt(original, path, (node) => node)).toThrow()
   })
+
+  it('replaces exactly the cell addressed by a path terminated in a "row" step, preserving the rest of the row and other rows', () => {
+    const original = [
+      tableManual([
+        [heading('R0C0'), 'plain0'],
+        [heading('R1C0'), 'plain1'],
+      ]),
+    ]
+    const snapshot = JSON.parse(JSON.stringify(original))
+
+    const path: LayoutNodePath = [
+      { field: 'children', index: 0 },
+      { field: 'row', rowIndex: 1, index: 0 },
+    ]
+
+    const result = replaceNodeAt(original, path, () => heading('R1C0-updated'))
+
+    expect(original).toEqual(snapshot)
+    const rows = (result[0] as { props: { rows: unknown[][] } }).props.rows
+    expect((rows[0][0] as { props: { text: string } }).props.text).toBe('R0C0')
+    expect(rows[0][1]).toBe('plain0')
+    expect((rows[1][0] as { props: { text: string } }).props.text).toBe('R1C0-updated')
+    expect(rows[1][1]).toBe('plain1')
+  })
+
+  it('replaces exactly the cell addressed by a path terminated in a "cells" step, preserving props.rows.source', () => {
+    const original = [tableDynamic(['plain', heading('DynCell')])]
+    const snapshot = JSON.parse(JSON.stringify(original))
+
+    const path: LayoutNodePath = [
+      { field: 'children', index: 0 },
+      { field: 'cells', index: 1 },
+    ]
+
+    const result = replaceNodeAt(original, path, () => heading('DynCell-updated'))
+
+    expect(original).toEqual(snapshot)
+    const tableProps = (result[0] as { props: { rows: { source: string; cells: unknown[] } } }).props
+    expect(tableProps.rows.source).toBe('queries.list')
+    expect(tableProps.rows.cells[0]).toBe('plain')
+    expect((tableProps.rows.cells[1] as { props: { text: string } }).props.text).toBe('DynCell-updated')
+  })
+
+  it('replaces a node nested through an intermediate "row" step, reconstructing the whole chain up to the root', () => {
+    const original = [tableManual([[container([heading('Inner')])]])]
+    const snapshot = JSON.parse(JSON.stringify(original))
+
+    const path: LayoutNodePath = [
+      { field: 'children', index: 0 },
+      { field: 'row', rowIndex: 0, index: 0 },
+      { field: 'children', index: 0 },
+    ]
+
+    const result = replaceNodeAt(original, path, () => heading('Inner-updated'))
+
+    expect(original).toEqual(snapshot)
+    const cell = (result[0] as { props: { rows: LayoutNode[][] } }).props.rows[0][0] as { children: LayoutNode[] }
+    expect((cell.children[0] as { props: { text: string } }).props.text).toBe('Inner-updated')
+  })
 })
 
 describe('insertNodeAt', () => {
@@ -222,6 +291,33 @@ describe('insertNodeAt', () => {
       insertNodeAt(original, [{ field: 'children', index: 0 }], 0, heading('New'))
     ).toThrow()
   })
+
+  it('inserts into the children of a table cell-container when parentPath terminates in a "row" step', () => {
+    const original = [tableManual([[container([heading('Existing')])]])]
+
+    const parentPath: LayoutNodePath = [
+      { field: 'children', index: 0 },
+      { field: 'row', rowIndex: 0, index: 0 },
+    ]
+
+    const result = insertNodeAt(original, parentPath, 1, heading('New'))
+
+    const cell = (result[0] as { props: { rows: LayoutNode[][] } }).props.rows[0][0] as { children: LayoutNode[] }
+    expect(cell.children).toHaveLength(2)
+    expect((cell.children[0] as { props: { text: string } }).props.text).toBe('Existing')
+    expect((cell.children[1] as { props: { text: string } }).props.text).toBe('New')
+  })
+
+  it('throws the generic "does not accept children" error when parentPath resolves directly to a non-container table cell', () => {
+    const original = [tableManual([[heading('Leaf')]])]
+
+    const parentPath: LayoutNodePath = [
+      { field: 'children', index: 0 },
+      { field: 'row', rowIndex: 0, index: 0 },
+    ]
+
+    expect(() => insertNodeAt(original, parentPath, 0, heading('New'))).toThrow()
+  })
 })
 
 describe('removeNodeAt', () => {
@@ -255,6 +351,22 @@ describe('removeNodeAt', () => {
     const template = (result[0] as { props: { template: LayoutNode[] } }).props.template
     expect(template).toHaveLength(1)
     expect((template[0] as { props: { text: string } }).props.text).toBe('Keep')
+  })
+
+  it('removes only the descendant addressed by a "children" step nested inside a table cell-container, leaving the cell in place', () => {
+    const original = [tableManual([[container([heading('Keep'), heading('Remove')])]])]
+
+    const path: LayoutNodePath = [
+      { field: 'children', index: 0 },
+      { field: 'row', rowIndex: 0, index: 0 },
+      { field: 'children', index: 1 },
+    ]
+
+    const result = removeNodeAt(original, path)
+
+    const cell = (result[0] as { props: { rows: LayoutNode[][] } }).props.rows[0][0] as { children: LayoutNode[] }
+    expect(cell.children).toHaveLength(1)
+    expect((cell.children[0] as { props: { text: string } }).props.text).toBe('Keep')
   })
 })
 
@@ -477,6 +589,141 @@ describe('movePathTo', () => {
         'Moved',
       ])
     })
+  })
+
+  describe('table cell-container nesting ("row"/"cells" steps)', () => {
+    it('renests a node within the children of the same table cell-container, and findNodePath re-resolves its new path with the row prefix intact', () => {
+      const cellA = heading('A')
+      const original = [tableManual([[container([cellA, heading('B')])]])]
+
+      const fromPath: LayoutNodePath = [
+        { field: 'children', index: 0 },
+        { field: 'row', rowIndex: 0, index: 0 },
+        { field: 'children', index: 0 },
+      ]
+      const toParentPath: LayoutNodePath = [
+        { field: 'children', index: 0 },
+        { field: 'row', rowIndex: 0, index: 0 },
+      ]
+
+      const result = movePathTo(original, fromPath, toParentPath, 2)
+
+      const cell = (result[0] as { props: { rows: LayoutNode[][] } }).props.rows[0][0] as { children: LayoutNode[] }
+      expect(cell.children.map((n) => (n as { props: { text: string } }).props.text)).toEqual(['B', 'A'])
+
+      const newPath = findNodePath(result, cellA)
+      expect(newPath).toEqual([
+        { field: 'children', index: 0 },
+        { field: 'row', rowIndex: 0, index: 0 },
+        { field: 'children', index: 1 },
+      ])
+    })
+
+    it('decrements a toParentPath "row" step index when it targets a later cell in the same row a whole-cell removal shifted', () => {
+      const original = [
+        tableManual([[heading('Keep0'), heading('Moved'), container([heading('Inner')])]]),
+      ]
+
+      const fromPath: LayoutNodePath = [
+        { field: 'children', index: 0 },
+        { field: 'row', rowIndex: 0, index: 1 },
+      ]
+      const toParentPath: LayoutNodePath = [
+        { field: 'children', index: 0 },
+        { field: 'row', rowIndex: 0, index: 2 },
+      ]
+
+      const result = movePathTo(original, fromPath, toParentPath, 0)
+
+      const row = (result[0] as { props: { rows: LayoutNode[][] } }).props.rows[0]
+      expect(row).toHaveLength(2)
+      expect((row[0] as { props: { text: string } }).props.text).toBe('Keep0')
+      const targetCell = row[1] as { children: LayoutNode[] }
+      expect(targetCell.children.map((n) => (n as { props: { text: string } }).props.text)).toEqual([
+        'Moved',
+        'Inner',
+      ])
+    })
+
+    it('does not decrement a toParentPath "row" step targeting a different row, even when its index numerically follows the removed cell', () => {
+      const original = [
+        tableManual([
+          [heading('Keep0'), heading('Moved')],
+          [heading('X'), heading('NotAContainer'), container([heading('Inner')])],
+        ]),
+      ]
+
+      const fromPath: LayoutNodePath = [
+        { field: 'children', index: 0 },
+        { field: 'row', rowIndex: 0, index: 1 },
+      ]
+      const toParentPath: LayoutNodePath = [
+        { field: 'children', index: 0 },
+        { field: 'row', rowIndex: 1, index: 2 },
+      ]
+
+      const result = movePathTo(original, fromPath, toParentPath, 0)
+
+      const row1 = (result[0] as { props: { rows: LayoutNode[][] } }).props.rows[1]
+      expect(row1).toHaveLength(3)
+      const targetCell = row1[2] as { children: LayoutNode[] }
+      expect(targetCell.children.map((n) => (n as { props: { text: string } }).props.text)).toEqual([
+        'Moved',
+        'Inner',
+      ])
+    })
+
+    it('decrements a toParentPath "cells" step index after removing an earlier cell from the same dynamic cells collection', () => {
+      const original = [tableDynamic([heading('Moved'), container([heading('Inner')])])]
+
+      const fromPath: LayoutNodePath = [
+        { field: 'children', index: 0 },
+        { field: 'cells', index: 0 },
+      ]
+      const toParentPath: LayoutNodePath = [
+        { field: 'children', index: 0 },
+        { field: 'cells', index: 1 },
+      ]
+
+      const result = movePathTo(original, fromPath, toParentPath, 0)
+
+      const cells = (result[0] as { props: { rows: { cells: LayoutNode[] } } }).props.rows.cells
+      expect(cells).toHaveLength(1)
+      const targetCell = cells[0] as { children: LayoutNode[] }
+      expect(targetCell.children.map((n) => (n as { props: { text: string } }).props.text)).toEqual([
+        'Moved',
+        'Inner',
+      ])
+    })
+  })
+})
+
+describe('isSameOrDescendantPath with "row"/"cells" steps', () => {
+  it('treats two "row" steps with different rowIndex as unrelated, even when index matches', () => {
+    const ancestorPath: LayoutNodePath = [{ field: 'row', rowIndex: 0, index: 0 }]
+    const candidatePath: LayoutNodePath = [
+      { field: 'row', rowIndex: 1, index: 0 },
+      { field: 'children', index: 0 },
+    ]
+    expect(isSameOrDescendantPath(ancestorPath, candidatePath)).toBe(false)
+  })
+
+  it('treats two "row" steps with the same rowIndex and index as ancestor/descendant', () => {
+    const ancestorPath: LayoutNodePath = [{ field: 'row', rowIndex: 0, index: 0 }]
+    const candidatePath: LayoutNodePath = [
+      { field: 'row', rowIndex: 0, index: 0 },
+      { field: 'children', index: 0 },
+    ]
+    expect(isSameOrDescendantPath(ancestorPath, candidatePath)).toBe(true)
+  })
+
+  it('treats two "cells" steps with the same index as ancestor/descendant', () => {
+    const ancestorPath: LayoutNodePath = [{ field: 'cells', index: 0 }]
+    const candidatePath: LayoutNodePath = [
+      { field: 'cells', index: 0 },
+      { field: 'children', index: 0 },
+    ]
+    expect(isSameOrDescendantPath(ancestorPath, candidatePath)).toBe(true)
   })
 })
 
