@@ -46,10 +46,17 @@ No implementar código.
 - tareas demasiado grandes o mezcladas
 - dependencias mal ordenadas
 - impacto en archivos poco claro
+- sub-bloque `Interfaces` ausente o con firmas que no coinciden literalmente entre tareas
 - sub-bloque `tests` ausente, incompleto o no literal en alguna tarea
 - impacto documental no explicitado
 - necesidad real de `design.md`
 - gates de implementación en `status.yaml`
+
+### Verificaciones específicas del sub-bloque `Interfaces` por tarea
+- Cada tarea de `tasks.md` incluye su sub-bloque `Interfaces` con las subsecciones `Consume` y `Produce` (`ninguno` en cualquiera de las dos si no aplica).
+- Cada firma listada en `Consume` por una tarea aparece literalmente idéntica (mismo nombre, misma firma de parámetros y tipo de retorno) en el `Produce` de la tarea de la que depende. Un nombre parecido pero no idéntico, o una firma con parámetros distintos, es un desajuste real, no una diferencia de estilo.
+- Cada firma listada en `Produce` por una tarea que otra tarea declara usar en su `Consume` referencia el ID correcto de la tarea productora.
+- Si una tarea posterior necesita claramente un artefacto de código que crea una tarea previa (según su `Impacto esperado en archivos` u objetivo) pero no aparece como `Consume`/`Produce` en ninguna de las dos, es un hueco de planificación: el subagente de esa tarea tendría que inventar o adivinar el contrato.
 
 ### Verificaciones específicas del sub-bloque `tests` por tarea
 - Cada tarea de `tasks.md` incluye su sub-bloque `tests` con las cuatro subsecciones estables: `Ficheros de test`, `Comportamiento cubierto`, `Comandos durante la implementación`, `Restricciones` (esta última puede estar vacía).
@@ -63,6 +70,7 @@ No implementar código.
 - Priorizar detectar riesgos y ambigüedad antes que "aprobar" el plan rápido.
 - Si una tarea admite dos interpretaciones funcionalmente distintas, pedir refino.
 - Si una tarea es demasiado grande para un cambio seguro, dividirla.
+- Si el sub-bloque `Interfaces` de una tarea tiene una firma en `Consume` que no coincide literalmente con ningún `Produce` de una tarea previa (o coincide con una firma distinta), marcar refinamiento y devolver el control a `generate-implementation-plan`. No reescribir el sub-bloque desde esta skill.
 - Si el sub-bloque `tests` de una tarea falta o no es lo bastante literal para que un subagente con contexto limpio pueda implementarlo sin reinterpretar, marcar refinamiento y devolver el control a `generate-implementation-plan`. No reescribir el sub-bloque desde esta skill.
 - Si el riesgo o la complejidad justifican `design.md` y no existe, marcar `requires_design: true` y `artifacts.design: missing` en `status.yaml`, dejar `implementation.ready: false` y redirigir a `generate-feature-design`. No escribir `design.md` desde esta skill.
 - Si el plan ya es suficientemente bueno, dejarlo explícito y marcar en `status.yaml` que la implementación está habilitada.
@@ -83,5 +91,6 @@ Cuando esta skill se invoca desde `generate-implementation-plan` como sub-agente
 ## Terminado cuando
 - queda claro si la feature está lista o no para implementación
 - `tasks.md` queda refinado si hacía falta, incluyendo el sub-bloque `tests` de cada tarea afectada
+- cada sub-bloque `Interfaces` es coherente: todo `Consume` tiene su `Produce` literal-idéntico en la tarea correspondiente
 - `design.md` queda exigida o descartada con criterio explícito
 - `status.yaml` refleja el resultado real de la revisión
