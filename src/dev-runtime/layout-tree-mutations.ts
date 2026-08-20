@@ -186,7 +186,7 @@ function resolvePathFrames(
       if (currentNode === null || currentNode.type !== 'table' || Array.isArray(currentNode.props.rows)) {
         throw new Error('layout-tree-mutations: path does not resolve, "cells" step requires a table node in dynamic mode')
       }
-      const cells = currentNode.props.rows.cells
+      const cells: (string | TableCellNode)[] = currentNode.props.rows.cells
       frames.push({ step, collection: cells as unknown as LayoutNode[], parentNode: currentNode })
       const candidate: string | TableCellNode | undefined = cells[step.index]
       if (candidate === undefined || !isTableCellNodeValue(candidate)) {

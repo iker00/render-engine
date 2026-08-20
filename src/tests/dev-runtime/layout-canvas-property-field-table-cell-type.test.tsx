@@ -9,16 +9,6 @@ import {
 } from '../../dev-runtime/layout-canvas/layout-canvas-node-palette-defaults'
 import { TableCellTypePropertyField } from '../../dev-runtime/layout-canvas/property-fields/table-cell-type-property-field'
 
-const NODE_TYPE_LABELS: Record<(typeof tableCellAllowedNodeTypes)[number], string> = {
-  image: 'Imagen',
-  list: 'Lista',
-  button: 'Botón',
-  container: 'Contenedor',
-  heading: 'Título',
-  paragraph: 'Párrafo',
-  link: 'Enlace',
-}
-
 function renderField(value: TableCellValue, onChange = vi.fn(), emptyTextValue = EMPTY_TABLE_CELL_TEXT_VALUE) {
   render(<TableCellTypePropertyField label="Tipo de celda" value={value} emptyTextValue={emptyTextValue} onChange={onChange} />)
   return screen.getByLabelText('Tipo de celda') as HTMLSelectElement

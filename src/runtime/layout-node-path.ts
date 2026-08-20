@@ -1,4 +1,4 @@
-import type { LayoutNode, TableCellNode, TableCellValue } from '../config/runtime-config'
+import type { LayoutNode, TableCellNode, TableCellValue, TableRows } from '../config/runtime-config'
 
 export type LayoutPathStep =
   | { field: 'children'; index: number }
@@ -50,7 +50,7 @@ export function getNodeAtPath(rootNodes: readonly LayoutNode[], path: LayoutNode
 
     if (step.field === 'row') {
       if (currentNode === null || currentNode.type !== 'table') return null
-      const rows = currentNode.props.rows
+      const rows: TableRows = currentNode.props.rows
       if (!Array.isArray(rows)) return null
       const row: TableCellValue[] | undefined = rows[step.rowIndex]
       if (!row) return null
@@ -63,7 +63,7 @@ export function getNodeAtPath(rootNodes: readonly LayoutNode[], path: LayoutNode
 
     if (step.field === 'cells') {
       if (currentNode === null || currentNode.type !== 'table') return null
-      const rows = currentNode.props.rows
+      const rows: TableRows = currentNode.props.rows
       if (Array.isArray(rows)) return null
       const cell: string | TableCellNode | undefined = rows.cells[step.index]
       if (cell === undefined || !isTableCellNodeValue(cell)) return null

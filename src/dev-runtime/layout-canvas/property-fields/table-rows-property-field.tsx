@@ -20,7 +20,8 @@ import type {
 import { EMPTY_DYNAMIC_TABLE_CELL_TEXT_VALUE, EMPTY_TABLE_CELL_TEXT_VALUE } from '../layout-canvas-node-palette-defaults'
 import type { SegmentedToggleOption } from './segmented-toggle-property-field'
 import { SegmentedTogglePropertyField } from './segmented-toggle-property-field'
-import { CELL_TYPE_LABELS, TableCellTypePropertyField, type TableCellType } from './table-cell-type-property-field'
+import { CELL_TYPE_LABELS } from './table-cell-type-labels'
+import { TableCellTypePropertyField, type TableCellType } from './table-cell-type-property-field'
 import { TextPropertyField } from './text-property-field'
 
 // The two mutually exclusive shapes `table.props.rows` can take (spec section 3, design.md D5):
@@ -69,8 +70,8 @@ function removeColumnsEntry(columns: TableColumnConfig[] | undefined, removedHea
 }
 
 // A primitive cell is always "Texto" — mirrors `detectCellType` in `table-cell-type-property-field.tsx`
-// without importing it: only `CELL_TYPE_LABELS`/`TableCellType` are exported from there (Paso 0),
-// and this detection itself is a two-line check, not worth promoting to a shared export.
+// without importing it: that detection itself is a two-line check, not worth promoting to a shared
+// export.
 function detectCellType(value: TableCellValue): TableCellType {
   if (typeof value !== 'object') return 'text'
   return value.type

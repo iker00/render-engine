@@ -1,6 +1,7 @@
-import type { TableCellValue } from '../../../config/runtime-config'
+import type { TableCellNode, TableCellValue } from '../../../config/runtime-config'
 import { tableCellAllowedNodeTypes } from '../../../config/runtime-config-zod'
 import { buildDefaultNodeInstance } from '../layout-canvas-node-palette-defaults'
+import { CELL_TYPE_LABELS } from './table-cell-type-labels'
 import { EnumPropertyField } from './enum-property-field'
 import { TextPropertyField } from './text-property-field'
 
@@ -9,24 +10,9 @@ import { TextPropertyField } from './text-property-field'
 // literal `'text'` sentinel for a primitive cell.
 export type TableCellType = 'text' | (typeof tableCellAllowedNodeTypes)[number]
 
-const TEXT_TYPE: TableCellType = 'text'
+const TEXT_TYPE = 'text' as const
 
 const CELL_TYPE_OPTIONS: TableCellType[] = [TEXT_TYPE, ...tableCellAllowedNodeTypes]
-
-// Spanish labels per type (spec sub-block above), same lookup-table pattern as `VARIANT_LABELS` in
-// `discriminated-union-property-field.tsx`. Exported (T8, 0138) so the rows/columns widget can
-// render the same badge label for a collapsed dynamic column-template item without duplicating
-// this catalog.
-export const CELL_TYPE_LABELS: Record<TableCellType, string> = {
-  text: 'Texto',
-  image: 'Imagen',
-  list: 'Lista',
-  button: 'Botón',
-  container: 'Contenedor',
-  heading: 'Título',
-  paragraph: 'Párrafo',
-  link: 'Enlace',
-}
 
 // A primitive cell (`string`/`number`/`boolean`) is always "Texto"; a node cell uses its own
 // `type`.
@@ -70,7 +56,10 @@ export function TableCellTypePropertyField({ label, value, emptyTextValue, onCha
       onChange(emptyTextValue)
       return
     }
-    onChange(buildDefaultNodeInstance(nextType))
+    // `nextType` here is constrained to `tableCellAllowedNodeTypes`, whose literals are exactly
+    // `TableCellNode`'s variants — narrower than `buildDefaultNodeInstance`'s generic `LayoutNode`
+    // return type, so the cast is safe by construction.
+    onChange(buildDefaultNodeInstance(nextType) as TableCellNode)
   }
 
   function handleTextChange(nextText: string) {

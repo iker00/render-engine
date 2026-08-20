@@ -27,12 +27,14 @@ export function RuntimeScrollRestorationEffect() {
     // whether its page was visited before under a different entryId (navigateTo always creates a
     // fresh entryId unless it's a no-op). Pop restoration for an entryId already in the map is
     // handled separately.
-    if (!scrollPositionsByEntryIdRef.current.has(entryId)) {
+    const scrollPositionsByEntryId = scrollPositionsByEntryIdRef.current
+
+    if (!scrollPositionsByEntryId.has(entryId)) {
       window.scrollTo(0, 0)
     }
 
     return () => {
-      scrollPositionsByEntryIdRef.current.set(entryId, window.scrollY)
+      scrollPositionsByEntryId.set(entryId, window.scrollY)
     }
   }, [entryId])
 

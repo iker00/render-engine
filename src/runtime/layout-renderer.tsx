@@ -1,6 +1,6 @@
 import type { MouseEvent, ReactNode } from 'react'
 import { useDroppable } from '@dnd-kit/core'
-import type { LayoutNode, LayoutNodeCollection } from '../config/runtime-config'
+import type { LayoutNode } from '../config/runtime-config'
 import type { RuntimeIterationContext } from './runtime-references/runtime-reference-resolver'
 import type { LayoutNodePath } from './layout-node-path'
 import { LayoutNodeRenderer } from './layout-node-renderer'
@@ -9,6 +9,7 @@ import type { LayoutEditModeContextValue } from './layout-edit-mode-context-valu
 import { useRuntimeLayoutContext } from './use-runtime-layout-context'
 import { serializeDropZoneId, serializeLayoutNodePath } from './layout-node-path'
 import { LayoutCanvasGridDropZonesOverlay } from './layout-canvas-grid-drop-zones'
+import { hasChildren, isEmptyPlaceholderCandidate, type EmptyPlaceholderNodeType } from './layout-node-children'
 
 export interface LayoutRendererProps {
   nodes: readonly LayoutNode[]
@@ -134,20 +135,10 @@ function LayoutCanvasDropZoneGap({ parentPath, index, tabItemIndex }: LayoutCanv
   return <div ref={setNodeRef} data-drop-zone={dropZoneId} aria-hidden="true" className="h-1 min-w-1" />
 }
 
-type EmptyPlaceholderNodeType = 'container' | 'form' | 'link'
-
 const EMPTY_PLACEHOLDER_LABEL: Record<EmptyPlaceholderNodeType, string> = {
   container: 'Contenedor vacío',
   form: 'Formulario vacío',
   link: 'Enlace vacío',
-}
-
-export function isEmptyPlaceholderCandidate(
-  node: Extract<LayoutNode, { children?: LayoutNodeCollection }>,
-): node is Extract<LayoutNode, { type: EmptyPlaceholderNodeType }> {
-  return (
-    (node.type === 'container' || node.type === 'form' || node.type === 'link') && (node.children ?? []).length === 0
-  )
 }
 
 export interface EmptyContainerPlaceholderProps {
@@ -210,10 +201,6 @@ export function EmptyContainerPlaceholder({ nodeType, path, editModeContext }: E
       {EMPTY_PLACEHOLDER_LABEL[nodeType]}
     </div>
   )
-}
-
-export function hasChildren(node: LayoutNode): node is Extract<LayoutNode, { children?: LayoutNodeCollection }> {
-  return node.type === 'container' || node.type === 'form' || node.type === 'modal' || node.type === 'link'
 }
 
 function getLayoutNodeKey(node: LayoutNode, index: number) {

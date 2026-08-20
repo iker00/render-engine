@@ -43,7 +43,8 @@ import {
 } from '../runtime-node-styling'
 import { useRuntimeState } from '../runtime-state/use-runtime-state'
 import { LayoutNodeRenderer } from '../layout-node-renderer'
-import { LayoutRenderer, EmptyContainerPlaceholder, hasChildren, isEmptyPlaceholderCandidate } from '../layout-renderer'
+import { LayoutRenderer, EmptyContainerPlaceholder } from '../layout-renderer'
+import { hasChildren, isEmptyPlaceholderCandidate } from '../layout-node-children'
 import { useLayoutEditModeContext } from '../use-layout-edit-mode-context'
 import type { LayoutNodePath } from '../layout-node-path'
 
