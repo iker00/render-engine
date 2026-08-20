@@ -1,5 +1,30 @@
 {
   "worktree": {
     "bgIsolation": "none"
+  },
+  "hooks": {
+    "SubagentStart": [
+      {
+        "matcher": "implement-task",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/ai-workflow/skills/implement-task-test-first/hooks/load-context.sh"
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "matcher": "implement-task",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/ai-workflow/skills/implement-task-test-first/hooks/validate.sh",
+            "timeout": 600
+          }
+        ]
+      }
+    ]
   }
 }
