@@ -18,13 +18,12 @@ No sustituye a los artefactos obligatorios de cada fase ni a los indices especia
 ## Indices especializados
 - `app-features/index.md`: puerta de entrada al comportamiento funcional estable del runtime. Usar para seleccionar solo las fichas funcionales relevantes.
   No leerlo si la tarea no afecta comportamiento de producto, contrato JSON, runtime visible, formularios, queries, navegacion o modo de desarrollo local.
-- `test-index.md`: mapa de todos los ficheros de test en `src/tests/` organizados por carpeta temática. Leer siempre que se planifiquen, escriban o muevan tests, para saber en qué carpeta colocar nuevos ficheros y qué cobertura existe en cada área.
+- `test-index.md`: índice de una línea por fichero de test de `src/tests/`, agrupado por carpeta. Sirve para situar un fichero nuevo en su carpeta y ver qué área cubre cada uno; no describe casos concretos. Leer al planificar o mover tests. Para saber si un comportamiento ya está cubierto, buscar en `src/tests/` directamente: el índice dice qué hay, no agota lo que hay.
 
 ## Estandares
 Los documentos de `ai-workflow/standards/` se seleccionan segun el tipo de trabajo:
 - `testing-rules.md`: siempre que se planifiquen, escriban o validen tests.
 - `coding-style.md`: cuando se planifique o edite codigo.
-- `react-best-practices.md`: cuando el cambio afecte componentes, hooks, renderer o estado React.
 - `error-handling.md`: cuando el cambio afecte validacion, degradacion, errores remotos o diagnosticos.
 - `security-basics.md`: cuando el cambio afecte datos externos, requests, configuracion no confiable o superficies de entrada.
 
