@@ -22,7 +22,7 @@ Una vez leído, **no vuelvas a abrir esos ficheros por separado**: ya los tienes
 El orquestador te entrega en el prompt, bajo `## Tu tarea`:
 
 - el `task_id` de la tarea que debes implementar
-- la ruta de la carpeta de la feature (`feature_path`, formato `ai-workflow/features/NNNN-feature-name`)
+- la ruta de la carpeta de la feature (`feature_path`, formato `ai-workflow/features/YYYY-MM-DD-HH-MM-feature-name`)
 - el bloque literal de tu tarea, extraído tal cual de `tasks.md`
 
 Tu alcance:

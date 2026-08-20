@@ -19,10 +19,10 @@ En ambos casos el contrato de la revisión es el mismo. La única diferencia es 
 
 ## Leer siempre
 - `ai-workflow/docs/workflow.md`
-- `ai-workflow/features/NNNN-feature-name/spec.md`
-- `ai-workflow/features/NNNN-feature-name/tasks.md`
-- `ai-workflow/features/NNNN-feature-name/status.yaml`
-- `ai-workflow/features/NNNN-feature-name/design.md` si existe o si `status.yaml` marca `requires_design: true`
+- `ai-workflow/features/YYYY-MM-DD-HH-MM-feature-name/spec.md`
+- `ai-workflow/features/YYYY-MM-DD-HH-MM-feature-name/tasks.md`
+- `ai-workflow/features/YYYY-MM-DD-HH-MM-feature-name/status.yaml`
+- `ai-workflow/features/YYYY-MM-DD-HH-MM-feature-name/design.md` si existe o si `status.yaml` marca `requires_design: true`
 - `ai-workflow/docs/context.md`
 - `ai-workflow/docs/architecture.md`
 - `ai-workflow/docs/conventions.md`
@@ -35,9 +35,9 @@ En ambos casos el contrato de la revisión es el mismo. La única diferencia es 
 
 ## Objetivo
 Revisar si el plan está realmente listo para implementación y, si hace falta, refinar:
-- `ai-workflow/features/NNNN-feature-name/tasks.md` (incluye el sub-bloque `tests` de cada tarea)
-- `ai-workflow/features/NNNN-feature-name/design.md`
-- `ai-workflow/features/NNNN-feature-name/status.yaml`
+- `ai-workflow/features/YYYY-MM-DD-HH-MM-feature-name/tasks.md` (incluye el sub-bloque `tests` de cada tarea)
+- `ai-workflow/features/YYYY-MM-DD-HH-MM-feature-name/design.md`
+- `ai-workflow/features/YYYY-MM-DD-HH-MM-feature-name/status.yaml`
 
 No implementar código.
 

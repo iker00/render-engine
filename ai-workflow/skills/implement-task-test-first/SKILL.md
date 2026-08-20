@@ -14,8 +14,8 @@ El orquestador no implementa código por sí mismo. El contrato del subagente vi
 ## Leer siempre (orquestador)
 Lo mínimo para decidir qué tarea toca y mantener el estado:
 - `ai-workflow/docs/workflow.md`
-- `ai-workflow/features/NNNN-feature-name/tasks.md`
-- `ai-workflow/features/NNNN-feature-name/status.yaml`
+- `ai-workflow/features/YYYY-MM-DD-HH-MM-feature-name/tasks.md`
+- `ai-workflow/features/YYYY-MM-DD-HH-MM-feature-name/status.yaml`
 
 El contrato de implementación llega al subagente en su system prompt y los standards y docs estables vía el hook de contexto, sin que el orquestador intervenga. Lo específico de la tarea (código y tests del área, `notes.md` si existe, ficha de `app-features/` si la tarea la referencia) lo lee el propio subagente. El orquestador no acumula ninguno de esos contextos entre tareas.
 

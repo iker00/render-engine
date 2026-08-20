@@ -4,7 +4,7 @@
 Definir el flujo operativo estándar para trabajar una feature con IA en este repositorio, minimizando reinterpretaciones entre fases y permitiendo que varios agentes o sesiones distintas compartan el mismo estado de trabajo.
 
 ## Artefactos por feature
-Cada feature vive en `ai-workflow/features/NNNN-feature-name/`.
+Cada feature vive en `ai-workflow/features/YYYY-MM-DD-HH-MM-feature-name/`.
 
 Artefactos posibles:
 - `spec.md`: contrato funcional de producto y comportamiento.

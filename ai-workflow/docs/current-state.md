@@ -34,4 +34,4 @@ No es histórico acumulado ni sustituto de las fichas funcionales. El detalle es
 - Actualizar este snapshot solo cuando cambie el estado de un área o cuando un límite vigente cambie.
 - No añadir histórico de features cerradas; eso vive en `../features/index.md`.
 - No duplicar aquí el detalle de las fichas funcionales; este documento solo es un mapa de estado.
-- La columna `Última feature relevante` apunta al `NNNN` cuyo cambio fija el estado actual del área; cuando una feature nueva consolide otro estado, sustituirla en vez de añadir.
+- La columna `Última feature relevante` apunta al ID de la feature cuyo cambio fija el estado actual del área (`NNNN` en features históricas, `YYYY-MM-DD-HH-MM` en features nuevas); cuando una feature nueva consolide otro estado, sustituirla en vez de añadir.

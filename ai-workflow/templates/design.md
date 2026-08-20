@@ -1,4 +1,4 @@
-# Design: Feature NNNN - feature-name
+# Design: Feature YYYY-MM-DD-HH-MM - feature-name
 
 ## Contexto
 <!-- Estado actual, restricciones y marco técnico relevante -->

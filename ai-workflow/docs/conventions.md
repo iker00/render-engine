@@ -13,9 +13,10 @@ Definir reglas de implementación para que el código y la documentación manten
 ### Archivos y carpetas
 - Usar `kebab-case` para nombres de archivos y carpetas.
 - Agrupar por feature o por módulo de dominio, no por tipo técnico global cuando eso dificulte seguir un caso de uso.
-- Las carpetas de feature dentro de `ai-workflow/features/` deben seguir el formato `NNNN-feature-name`.
-- `NNNN` debe ser incremental y de cuatro dígitos, por ejemplo `0001-user-onboarding`.
+- Las carpetas de feature dentro de `ai-workflow/features/` deben seguir el formato `YYYY-MM-DD-HH-MM-feature-name`.
+- El prefijo temporal se genera con `date +%Y-%m-%d-%H-%M` en el momento de crear la carpeta (fase `generate-feature-spec`) y evita colisiones entre features desarrolladas en paralelo (por ejemplo en distintos worktrees).
 - El sufijo debe usar `kebab-case` ASCII para evitar problemas de rutas y tooling.
+- Features históricas conservan el formato antiguo `NNNN-feature-name` sin migración retroactiva. Al referenciar features entre sí, usar el slug legible (`navigation-scroll-position`) en lugar del ID completo cuando el prefijo temporal no aporte contexto.
 
 ### Código
 - Usar `camelCase` para variables, funciones y propiedades.

@@ -1,6 +1,6 @@
 ---
 name: generate-feature-design
-description: Genera el design técnico de una feature de este proyecto cuando la spec ya está cerrada pero todavía hace falta decidir trade-offs técnicos, arquitectura o estrategia de cambio antes de planificar. Úsala para escribir `features/NNNN-feature-name/design.md` y dejar la feature lista para `generate-implementation-plan`.
+description: Genera el design técnico de una feature de este proyecto cuando la spec ya está cerrada pero todavía hace falta decidir trade-offs técnicos, arquitectura o estrategia de cambio antes de planificar. Úsala para escribir `features/YYYY-MM-DD-HH-MM-feature-name/design.md` y dejar la feature lista para `generate-implementation-plan`.
 model: sonnet
 allowed-tools: Read, Write, Edit
 ---
@@ -23,9 +23,9 @@ Si `requires_design` es `false` o `artifacts.design` ya es `ready`, esta skill n
 
 ## Leer siempre
 - `ai-workflow/docs/workflow.md`
-- `ai-workflow/features/NNNN-feature-name/spec.md`
-- `ai-workflow/features/NNNN-feature-name/status.yaml`
-- `ai-workflow/features/NNNN-feature-name/design.md` si ya existe
+- `ai-workflow/features/YYYY-MM-DD-HH-MM-feature-name/spec.md`
+- `ai-workflow/features/YYYY-MM-DD-HH-MM-feature-name/status.yaml`
+- `ai-workflow/features/YYYY-MM-DD-HH-MM-feature-name/design.md` si ya existe
 - `ai-workflow/docs/context.md`
 - `ai-workflow/docs/architecture.md`
 - `ai-workflow/docs/conventions.md`
@@ -40,7 +40,7 @@ Si `requires_design` es `false` o `artifacts.design` ya es `ready`, esta skill n
 - Código o tests actuales sólo si la spec o un `design.md` previo referencian explícitamente un símbolo o módulo concreto cuyo comportamiento actual no está descrito en `architecture.md` ni en `context.md`. Máximo 1 fichero por decisión técnica; justificar la lectura antes de abrirla.
 
 ## Objetivo
-Escribir o refinar `features/NNNN-feature-name/design.md` usando `ai-workflow/templates/design.md` como punto de partida.
+Escribir o refinar `features/YYYY-MM-DD-HH-MM-feature-name/design.md` usando `ai-workflow/templates/design.md` como punto de partida.
 
 No trocear todavía la feature en tareas; ver "Restricciones" para el resto de límites de esta fase.
 

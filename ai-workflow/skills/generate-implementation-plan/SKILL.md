@@ -15,10 +15,10 @@ La calidad del plan debe ser suficientemente alta como para que dos agentes comp
 
 ## Leer siempre
 - `ai-workflow/docs/workflow.md`
-- `ai-workflow/features/NNNN-feature-name/spec.md`
-- `ai-workflow/features/NNNN-feature-name/status.yaml`
-- `ai-workflow/features/NNNN-feature-name/design.md` si existe o si `status.yaml` marca `requires_design: true`
-- `ai-workflow/features/NNNN-feature-name/tasks.md` si existe
+- `ai-workflow/features/YYYY-MM-DD-HH-MM-feature-name/spec.md`
+- `ai-workflow/features/YYYY-MM-DD-HH-MM-feature-name/status.yaml`
+- `ai-workflow/features/YYYY-MM-DD-HH-MM-feature-name/design.md` si existe o si `status.yaml` marca `requires_design: true`
+- `ai-workflow/features/YYYY-MM-DD-HH-MM-feature-name/tasks.md` si existe
 - `ai-workflow/docs/context.md`
 - `ai-workflow/docs/architecture.md`
 - `ai-workflow/docs/conventions.md`
@@ -33,7 +33,7 @@ La calidad del plan debe ser suficientemente alta como para que dos agentes comp
 
 ## Objetivo
 Escribir o refinar:
-- `features/NNNN-feature-name/tasks.md` (incluye el contrato de tests por tarea como sub-bloque)
+- `features/YYYY-MM-DD-HH-MM-feature-name/tasks.md` (incluye el contrato de tests por tarea como sub-bloque)
 
 No implementar código en este paso. Si `status.yaml` marca `requires_design: true` y `artifacts.design` aún no es `ready`, detenerse y redirigir al usuario a `generate-feature-design`; ver "Restricciones" para el resto de límites sobre `design.md`.
 
