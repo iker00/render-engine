@@ -119,6 +119,29 @@ describe('getNodeTypeJsonSchema', () => {
     }
   })
 
+  // T3 (0141): the navigateTo action variant's `params` is swapped for the `navigate-params`
+  // widget sentinel (T1) on both `button` and `link`, chained after the pre-existing
+  // `condition-group` sentinel (T3, 0132) — regression check that the two transforms coexist
+  // without one clobbering the other's substitution.
+  it('replaces props.action navigateTo.params with the navigate-params widget sentinel for button and link, while visibility keeps the condition-group sentinel', () => {
+    for (const type of ['button', 'link'] as const) {
+      const schema = getNodeTypeJsonSchema(type)
+      const properties = schema.properties as Record<string, unknown>
+      const propsSchema = properties['props'] as { properties?: Record<string, unknown> }
+      const propProperties = propsSchema.properties ?? {}
+      const actionSchema = propProperties['action'] as {
+        oneOf?: Array<{ properties?: { type?: { const?: string }; params?: unknown } }>
+      }
+
+      const navigateToBranch = (actionSchema.oneOf ?? []).find(
+        (branch) => branch.properties?.type?.const === 'navigateTo',
+      )
+      expect(navigateToBranch?.properties?.params).toEqual({ 'x-widget': 'navigate-params' })
+
+      expect(properties['visibility']).toEqual({ 'x-widget': 'condition-group' })
+    }
+  })
+
   it('returns the same reference on a second call for the same type (cache)', () => {
     const first = getNodeTypeJsonSchema('container')
     const second = getNodeTypeJsonSchema('container')

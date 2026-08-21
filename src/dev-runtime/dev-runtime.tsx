@@ -11,6 +11,8 @@ import { readRuntimeEndpointsConfig } from '../app/bootstrap/read-runtime-endpoi
 import { validateRuntimeConfig } from '../config/runtime-config'
 import type { LayoutNode } from '../config/runtime-config'
 import type {
+  RuntimeApiConfig,
+  RuntimePreloadConfig,
   RuntimeTranslationsConfig,
   ShellConfig,
   ShellHeaderActionNode,
@@ -37,7 +39,9 @@ import type { RuntimeConfigError } from '../config/runtime-config'
 import {
   buildCommitCandidateConfig,
   denormalizeFormNodesForSerialization,
+  denormalizePreloadsForSerialization,
   patchRawConfigTextWithLayout,
+  patchRawConfigTextWithPagePreloads,
   patchRootKey,
   type CommitCanvasMutationResult,
 } from './layout-canvas/layout-canvas-commit'
@@ -575,6 +579,133 @@ export function DevRuntimeReady({
     return { status: 'applied' }
   }
 
+  // Same pipeline as `commitShellMutation`/`commitTranslationsMutation`, generalized for the
+  // `api` root key (0132-T5): mutate the in-memory value, patch only that key onto the
+  // last-known-valid raw text via `patchRootKey`, validate the patched text, and apply it.
+  // `shell.header.actions` is the only root key with the raw/normalized layout-node divergence
+  // `denormalizeFormNodesForSerialization` guards against (0122-T5's comment on
+  // `commitShellMutation`) — an `api` operation never contains a `layout` node, so no
+  // denormalization pass is needed here either, same as `commitTranslationsMutation`.
+  function commitApiMutation(mutate: (api: RuntimeApiConfig) => RuntimeApiConfig): CommitCanvasMutationResult {
+    const mutatedApi = mutate(currentConfig.api)
+
+    const nextText = patchRootKey(lastValidConfigText, 'api', mutatedApi)
+
+    const parsed: unknown = JSON.parse(nextText)
+    const validation = validateRuntimeConfig(parsed)
+    if (validation.status === 'error') {
+      return { status: 'rejected', error: validation.error }
+    }
+
+    const prevState = bridgeRef.current?.getLatestState()
+    const nextState = prevState
+      ? migrateRuntimeStateAcrossConfig(prevState, currentConfig, validation.config, { dataValues })
+      : undefined
+
+    if (nextState && bridgeRef.current) {
+      bridgeRef.current.dispatchAndSyncState({ type: 'runtime/reset', payload: { state: nextState } })
+    }
+
+    flushSync(() => {
+      setCurrentConfig(validation.config)
+      setEditorBuffer(nextText)
+      setLastValidConfigText(nextText)
+      setHasPendingChanges(false)
+      setHasAppliedChanges(true)
+      setParseError(null)
+      setValidationError(null)
+    })
+
+    return { status: 'applied' }
+  }
+
+  // Same pipeline as `commitApiMutation`, generalized for the root `preloads` key (0132-T7).
+  // `preloads` is an array, not an object like `shell` — the "no empty residual block" criterion
+  // `commitShellSectionToggle` applies via `Object.keys(next).length === 0 ? undefined : next`
+  // for an object applies here via "empty/absent array -> undefined" instead, so an emptied
+  // preloads list is dropped from the document rather than landing as `"preloads": []`.
+  function commitGlobalPreloadsMutation(
+    mutate: (preloads: RuntimePreloadConfig[] | undefined) => RuntimePreloadConfig[] | undefined,
+  ): CommitCanvasMutationResult {
+    const mutatedPreloads = mutate(currentConfig.preloads)
+    const nextValue =
+      mutatedPreloads && mutatedPreloads.length > 0
+        ? denormalizePreloadsForSerialization(mutatedPreloads)
+        : undefined
+
+    const nextText = patchRootKey(lastValidConfigText, 'preloads', nextValue)
+
+    const parsed: unknown = JSON.parse(nextText)
+    const validation = validateRuntimeConfig(parsed)
+    if (validation.status === 'error') {
+      return { status: 'rejected', error: validation.error }
+    }
+
+    const prevState = bridgeRef.current?.getLatestState()
+    const nextState = prevState
+      ? migrateRuntimeStateAcrossConfig(prevState, currentConfig, validation.config, { dataValues })
+      : undefined
+
+    if (nextState && bridgeRef.current) {
+      bridgeRef.current.dispatchAndSyncState({ type: 'runtime/reset', payload: { state: nextState } })
+    }
+
+    flushSync(() => {
+      setCurrentConfig(validation.config)
+      setEditorBuffer(nextText)
+      setLastValidConfigText(nextText)
+      setHasPendingChanges(false)
+      setHasAppliedChanges(true)
+      setParseError(null)
+      setValidationError(null)
+    })
+
+    return { status: 'applied' }
+  }
+
+  // Same pipeline as `commitCanvasMutation`, generalized for a page's `preloads` key instead of
+  // its `layout` (0132-T7): resolve the really-navigated page the same way (bridge state first,
+  // `currentConfig.initialPage` as fallback), mutate the in-memory value, and patch only
+  // `preloads` of that page onto the last-known-valid raw text via
+  // `patchRawConfigTextWithPagePreloads` — which already applies the "omit an empty/absent
+  // preloads block" criterion for that single page, so no extra normalization is needed here.
+  function commitPagePreloadsMutation(
+    mutate: (preloads: RuntimePreloadConfig[] | undefined) => RuntimePreloadConfig[] | undefined,
+  ): CommitCanvasMutationResult {
+    const activePageId = bridgeRef.current?.getLatestState().navigation.currentPageId ?? currentConfig.initialPage
+    const activePage = currentConfig.pages.find((page) => page.id === activePageId)
+    const mutatedPreloads = mutate(activePage?.preloads)
+
+    const nextText = patchRawConfigTextWithPagePreloads(lastValidConfigText, activePageId, mutatedPreloads)
+
+    const parsed: unknown = JSON.parse(nextText)
+    const validation = validateRuntimeConfig(parsed)
+    if (validation.status === 'error') {
+      return { status: 'rejected', error: validation.error }
+    }
+
+    const prevState = bridgeRef.current?.getLatestState()
+    const nextState = prevState
+      ? migrateRuntimeStateAcrossConfig(prevState, currentConfig, validation.config, { dataValues })
+      : undefined
+
+    if (nextState && bridgeRef.current) {
+      bridgeRef.current.dispatchAndSyncState({ type: 'runtime/reset', payload: { state: nextState } })
+    }
+
+    flushSync(() => {
+      setCurrentConfig(validation.config)
+      setEditorBuffer(nextText)
+      setLastValidConfigText(nextText)
+      setHasPendingChanges(false)
+      setHasAppliedChanges(true)
+      setParseError(null)
+      setValidationError(null)
+    })
+
+    return { status: 'applied' }
+  }
+
   useImperativeHandle(ref, () => ({ commitCanvasMutation }))
 
   // LayoutCanvasPropertiesPanel edits a single node by path; replaceNodeAt (T3)
@@ -656,6 +787,9 @@ export function DevRuntimeReady({
       onCommitNodeUpdate={handleCanvasNodeUpdate}
       onCommitShellMutation={commitShellMutation}
       onCommitTranslationsMutation={commitTranslationsMutation}
+      onCommitApiMutation={commitApiMutation}
+      onCommitGlobalPreloadsMutation={commitGlobalPreloadsMutation}
+      onCommitPagePreloadsMutation={commitPagePreloadsMutation}
       endpointsConfig={endpointsConfig}
       saveResolution={endpointResolutions.save}
       searchResolution={endpointResolutions.search}

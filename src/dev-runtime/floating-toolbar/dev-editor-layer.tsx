@@ -1,6 +1,11 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import type { LayoutNode, LayoutNodeType, RuntimeConfigError } from '../../config/runtime-config'
-import type { RuntimeTranslationsConfig, ShellConfig } from '../../config/runtime-config-types'
+import type {
+  RuntimeApiConfig,
+  RuntimePreloadConfig,
+  RuntimeTranslationsConfig,
+  ShellConfig,
+} from '../../config/runtime-config-types'
 import { LayoutEditModeProvider } from '../../runtime/layout-edit-mode-context'
 import {
   getNodeAtPath,
@@ -20,6 +25,7 @@ import {
 import type { CommitCanvasMutationResult } from '../layout-canvas/layout-canvas-commit'
 import type { ResolvedEndpointOperation } from '../endpoints-config/resolve-endpoint-operation'
 import type { RuntimeEndpointsConfig } from '../endpoints-config/runtime-endpoints-config-schema'
+import { ApiConfigPanel } from '../api-config-panel/api-config-panel'
 import { ShellConfigPanel } from '../shell-config-panel/shell-config-panel'
 import { TranslationsConfigPanel } from '../translations-panel/translations-config-panel'
 import { createPlatagesTranslationsProvider } from '../translations-panel/translations-provider'
@@ -66,6 +72,13 @@ interface DevEditorLayerProps {
   onCommitTranslationsMutation: (
     mutate: (prev: RuntimeTranslationsConfig | undefined) => RuntimeTranslationsConfig | undefined,
   ) => CommitCanvasMutationResult
+  onCommitApiMutation: (mutate: (api: RuntimeApiConfig) => RuntimeApiConfig) => CommitCanvasMutationResult
+  onCommitGlobalPreloadsMutation: (
+    mutate: (preloads: RuntimePreloadConfig[] | undefined) => RuntimePreloadConfig[] | undefined,
+  ) => CommitCanvasMutationResult
+  onCommitPagePreloadsMutation: (
+    mutate: (preloads: RuntimePreloadConfig[] | undefined) => RuntimePreloadConfig[] | undefined,
+  ) => CommitCanvasMutationResult
   // T6 (0131): all computed once by DevRuntimeReady (T5/D7) and threaded through here unchanged —
   // this component never recalculates a resolution nor tracks its own save state.
   endpointsConfig: RuntimeEndpointsConfig | undefined
@@ -103,6 +116,9 @@ export function DevEditorLayer({
   onCommitNodeUpdate,
   onCommitShellMutation,
   onCommitTranslationsMutation,
+  onCommitApiMutation,
+  onCommitGlobalPreloadsMutation,
+  onCommitPagePreloadsMutation,
   endpointsConfig,
   saveResolution,
   searchResolution,
@@ -214,16 +230,17 @@ export function DevEditorLayer({
     onMonacoOpenChange(true)
   }
 
-  // Entering "shell" or "translations" clears the canvas selection (same policy already
-  // documented for api/pages/tokens): neither panel uses the "selected canvas node" model at
-  // all, so a selection carried over from Layout would just be stale state pointing at a hidden
-  // tree. Leaving either domain back to "layout" has nothing else to reconcile — each panel's own
-  // local state lives inside itself and fully unmounts whenever `activeDomain` moves away from it,
-  // so there is no residue to clear explicitly.
+  // Entering "shell", "translations" or "api" clears the canvas selection (same policy already
+  // documented for pages/tokens once they become selectable too): neither panel uses the
+  // "selected canvas node" model at all, so a selection carried over from Layout would just be
+  // stale state pointing at a hidden tree. Leaving any of these domains back to "layout" has
+  // nothing else to reconcile — each panel's own local state lives inside itself and fully
+  // unmounts whenever `activeDomain` moves away from it, so there is no residue to clear
+  // explicitly.
   function handleDomainSelected(domain: ToolbarDomain) {
     if (domain === activeDomain) return
     setActiveDomain(domain)
-    if (domain === 'shell' || domain === 'translations') {
+    if (domain === 'shell' || domain === 'translations' || domain === 'api') {
       setSelectedPath(null)
       setHoveredPath(null)
     }
@@ -334,6 +351,16 @@ export function DevEditorLayer({
         </>
       ) : activeDomain === 'shell' ? (
         <ShellConfigPanel shell={config.shell} onCommitShellMutation={onCommitShellMutation} />
+      ) : activeDomain === 'api' ? (
+        <ApiConfigPanel
+          api={config.api}
+          onCommitApiMutation={onCommitApiMutation}
+          globalPreloads={config.preloads}
+          activePageId={activePageId}
+          pagePreloads={activePage?.preloads}
+          onCommitGlobalPreloadsMutation={onCommitGlobalPreloadsMutation}
+          onCommitPagePreloadsMutation={onCommitPagePreloadsMutation}
+        />
       ) : (
         <TranslationsConfigPanel
           translations={config.translations}

@@ -1,4 +1,4 @@
-import type { LayoutNode, RuntimeConfig, RuntimeConfigError } from '../../config/runtime-config'
+import type { LayoutNode, RuntimeConfig, RuntimeConfigError, RuntimePreloadConfig } from '../../config/runtime-config'
 
 /**
  * Result of `commitCanvasMutation` (T4, `dev-runtime.tsx`). Declared here — not in
@@ -163,6 +163,62 @@ export function patchRawConfigTextWithLayout(
       return { ...rawPage, layout: denormalizeFormNodesForSerialization(mutatedLayout) }
     }
     return rawPage
+  })
+
+  return patchRootKey(rawConfigText, 'pages', nextPages)
+}
+
+/**
+ * Converts the normalized `RuntimePreloadConfig[]` shape (`{ operationName, requestParams,
+ * when? }`, the shape `validateRuntimeConfig` produces and `ApiConfigPanel`/`PreloadsListEditor`
+ * edit in memory) back into the raw shape `validatePreloadEntries`
+ * (`src/config/validate-preloads.ts`) actually accepts on input: one object per entry whose only
+ * key (besides an optional sibling `when`) *is* the operation name, with `requestParams` as that
+ * key's value — e.g. `{ "loadUsers": { "query": { "page": "2" } } }`. Serializing the normalized
+ * shape as-is (`{ "operationName": "loadUsers", "requestParams": {...} }`) is a 2-key object
+ * without `when`, which `validatePreloadEntries` rejects as "must be an object with exactly one
+ * non-empty operationName key" — this is the raw/normalized divergence `preloads` has of its own,
+ * on top of (not replacing) the `layout`-specific one `denormalizeFormNodesForSerialization`
+ * already guards against.
+ */
+export function denormalizePreloadsForSerialization(
+  preloads: readonly RuntimePreloadConfig[],
+): unknown[] {
+  return preloads.map((preload) => {
+    const entry: Record<string, unknown> = { [preload.operationName]: preload.requestParams }
+    if (preload.when !== undefined) {
+      entry.when = preload.when
+    }
+    return entry
+  })
+}
+
+/**
+ * Patches only the `preloads` key of the page `activePageId` inside `rawConfigText` — sibling
+ * function to `patchRawConfigTextWithLayout` (same technique: parse, replace only the targeted
+ * page's key inside the raw `pages` array, delegate to `patchRootKey` for `pages`), but for
+ * `preloads` instead of `layout`. An `undefined` or empty `mutatedPreloads` drops the `preloads`
+ * key from that page's object entirely, rather than leaving a stray `"preloads": []` behind —
+ * same "no empty residual block" criterion `commitShellSectionToggle` (`ShellConfigPanel`)
+ * already applies when deactivating a shell section. A non-empty `mutatedPreloads` is written
+ * through `denormalizePreloadsForSerialization`, not as-is, to round-trip correctly through
+ * `validateRuntimeConfig`.
+ */
+export function patchRawConfigTextWithPagePreloads(
+  rawConfigText: string,
+  activePageId: string,
+  mutatedPreloads: readonly RuntimePreloadConfig[] | undefined,
+): string {
+  const rawConfigObject = JSON.parse(rawConfigText) as Record<string, unknown>
+  const rawPages = Array.isArray(rawConfigObject.pages) ? rawConfigObject.pages : []
+
+  const nextPages = rawPages.map((rawPage) => {
+    if (!isRecord(rawPage) || rawPage.id !== activePageId) return rawPage
+    if (mutatedPreloads === undefined || mutatedPreloads.length === 0) {
+      const { preloads: _removed, ...rest } = rawPage
+      return rest
+    }
+    return { ...rawPage, preloads: denormalizePreloadsForSerialization(mutatedPreloads) }
   })
 
   return patchRootKey(rawConfigText, 'pages', nextPages)

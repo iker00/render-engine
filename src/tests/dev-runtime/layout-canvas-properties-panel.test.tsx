@@ -966,6 +966,98 @@ describe('LayoutCanvasPropertiesPanel discriminated union action selector (T5)',
   })
 })
 
+// T3 (0141): `navigateTo.params` now mounts `NavigateParamsPropertyField` (via the `x-widget:
+// 'navigate-params'` sentinel `injectNavigateParamsWidgetSentinel` injects onto the node schema,
+// T1/T3) as a key-value editor with per-row degradation to read-only for any non-string value
+// (FR3). Widget-internal behavior (row degradation criteria, normalization of a non-object
+// current value) is already covered in isolation by `navigate-params-property-field.test.tsx`;
+// these tests only cover the wiring into the properties panel for both `button` and `link`.
+describe('LayoutCanvasPropertiesPanel navigateTo.params editor (T3, 0141)', () => {
+  function buttonNode(action: Record<string, unknown>): LayoutNode {
+    return { type: 'button', props: { label: 'Ir', action } } as LayoutNode
+  }
+
+  it('renders params as an editable key-value row and commits an edit scoped to that key', () => {
+    const node = buttonNode({ type: 'navigateTo', pageId: 'home', params: { id: 'params.userId' } })
+    const onCommitNodeUpdate = vi.fn()
+    render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={onCommitNodeUpdate} />)
+
+    const paramsGroup = screen.getByRole('group', { name: 'params' })
+    const valueField = within(paramsGroup).getByLabelText('params valor #1') as HTMLInputElement
+    expect(valueField.value).toBe('params.userId')
+
+    fireEvent.change(valueField, { target: { value: 'params.otherId' } })
+
+    expect(onCommitNodeUpdate).toHaveBeenCalledTimes(1)
+    const [calledPath, updater] = onCommitNodeUpdate.mock.calls[0]
+    expect(calledPath).toBe(somePath)
+    const result = updater(node) as Extract<LayoutNode, { type: 'button' }>
+    expect(result.props.action).toEqual({ type: 'navigateTo', pageId: 'home', params: { id: 'params.otherId' } })
+  })
+
+  it('degrades a non-string param row to read-only without blocking the string row in the same params object', () => {
+    const node = buttonNode({ type: 'navigateTo', pageId: 'home', params: { id: 'x', active: true } })
+    render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={() => {}} />)
+
+    const paramsGroup = screen.getByRole('group', { name: 'params' })
+    const idField = within(paramsGroup).getByLabelText('params valor #1') as HTMLInputElement
+    expect(idField.tagName).toBe('INPUT')
+    expect(idField.value).toBe('x')
+
+    const activeField = within(paramsGroup).getByLabelText('params valor #2')
+    expect(activeField.tagName).toBe('TEXTAREA')
+    expect(activeField).toBeDisabled()
+  })
+
+  it('adding a row from "Añadir" and switching the action variant away and back to navigateTo reconstructs params from scratch (regression)', () => {
+    const node = buttonNode({ type: 'navigateTo', pageId: 'home', params: { id: 'x' } })
+    const onCommitNodeUpdate = vi.fn()
+    const { rerender } = render(
+      <LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={onCommitNodeUpdate} />,
+    )
+
+    const paramsGroup = screen.getByRole('group', { name: 'params' })
+    fireEvent.click(within(paramsGroup).getByRole('button', { name: 'Añadir params' }))
+
+    expect(onCommitNodeUpdate).toHaveBeenCalledTimes(1)
+    const [, addUpdater] = onCommitNodeUpdate.mock.calls[0]
+    const afterAdd = addUpdater(node) as Extract<LayoutNode, { type: 'button' }>
+    expect(afterAdd.props.action).toEqual({ type: 'navigateTo', pageId: 'home', params: { id: 'x', '': '' } })
+
+    onCommitNodeUpdate.mockClear()
+    rerender(<LayoutCanvasPropertiesPanel node={afterAdd} path={somePath} onCommitNodeUpdate={onCommitNodeUpdate} />)
+
+    const noActionOption = screen.getByRole('option', { name: 'Sin acción' }) as HTMLOptionElement
+    fireEvent.change(screen.getByLabelText('action'), { target: { value: noActionOption.value } })
+
+    expect(onCommitNodeUpdate).toHaveBeenCalledTimes(1)
+    const [, removeUpdater] = onCommitNodeUpdate.mock.calls[0]
+    const afterRemove = removeUpdater(afterAdd) as Extract<LayoutNode, { type: 'button' }>
+    expect(afterRemove.props).not.toHaveProperty('action')
+
+    onCommitNodeUpdate.mockClear()
+    rerender(<LayoutCanvasPropertiesPanel node={afterRemove} path={somePath} onCommitNodeUpdate={onCommitNodeUpdate} />)
+
+    fireEvent.change(screen.getByLabelText('action'), { target: { value: 'navigateTo' } })
+
+    expect(onCommitNodeUpdate).toHaveBeenCalledTimes(1)
+    const [, reAddUpdater] = onCommitNodeUpdate.mock.calls[0]
+    const result = reAddUpdater(afterRemove) as Extract<LayoutNode, { type: 'button' }>
+    expect(result.props.action).toEqual({ type: 'navigateTo', pageId: '' })
+  })
+
+  it('shows the same params editor for a link node with a navigateTo action', () => {
+    const node: LayoutNode = {
+      type: 'link',
+      props: { text: 'Ir', action: { type: 'navigateTo', pageId: 'home', params: { id: 'params.userId' } } },
+    } as LayoutNode
+    render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={() => {}} />)
+
+    const paramsGroup = screen.getByRole('group', { name: 'params' })
+    expect((within(paramsGroup).getByLabelText('params valor #1') as HTMLInputElement).value).toBe('params.userId')
+  })
+})
+
 // T8: `stripUndefined` sanitizes each subsection commit recursively. These cases exercise it
 // directly against `props` (rather than re-deriving the "Sin acción" case above) with `undefined`
 // planted at a nested depth the union selector itself never reaches, and confirm valid falsy
@@ -2208,5 +2300,40 @@ describe('LayoutCanvasPropertiesPanel integration with DevEditorLayer + commitCa
     const editorText = await getMonacoValue()
 
     expect(JSON.parse(editorText).pages[0].layout[0].children[0].props.items).toEqual({ values: [] })
+  })
+
+  it('editing navigateTo.params via the navigate-params widget on a button node propagates to editorBuffer/Monaco (T3, 0141)', async () => {
+    const config = {
+      api: {},
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'button',
+              props: {
+                label: 'Ir',
+                action: { type: 'navigateTo', pageId: 'home', params: { id: 'params.userId' } },
+              },
+            },
+          ],
+        },
+      ],
+      initialPage: 'home',
+    }
+    const { initialConfig, initialConfigText } = buildReadyProps(config)
+    render(<DevRuntimeReady initialConfig={initialConfig} initialConfigText={initialConfigText} />)
+
+    fireEvent.click(screen.getByTestId('dev-editor-toolbar-mode-editor'))
+    fireEvent.click(screen.getByText('Ir'))
+
+    const paramsGroup = screen.getByRole('group', { name: 'params' })
+    fireEvent.change(within(paramsGroup).getByLabelText('params valor #1'), {
+      target: { value: 'params.otherId' },
+    })
+
+    const editorText = await getMonacoValue()
+
+    expect(JSON.parse(editorText).pages[0].layout[0].props.action.params).toEqual({ id: 'params.otherId' })
   })
 })

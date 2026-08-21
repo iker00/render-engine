@@ -1,11 +1,11 @@
-> Cuándo leer: si la tarea toca el editor de configuración en vivo, el drawer lateral, el editor visual del `layout` (canvas de arrastrar y soltar), la sección `Shell`, la sección `Traducciones` (gestión manual y sincronización con el proveedor externo PlataGes), el botón "Guardar" y el atajo Ctrl+S/Cmd+S hacia un backend externo, la preservación de estado al aplicar cambios, el autocompletado JSON Schema o el comportamiento de recarga por HMR en desarrollo.
+> Cuándo leer: si la tarea toca el editor de configuración en vivo, el drawer lateral, el editor visual del `layout` (canvas de arrastrar y soltar), la sección `Shell`, la sección `Api` (CRUD de operaciones y de `preloads` globales/de página), la sección `Traducciones` (gestión manual y sincronización con el proveedor externo PlataGes), el botón "Guardar" y el atajo Ctrl+S/Cmd+S hacia un backend externo, la preservación de estado al aplicar cambios, el autocompletado JSON Schema o el comportamiento de recarga por HMR en desarrollo.
 > Tamaño: grande.
-> Relacionados: [[local-config.md]], [[../config/validation.md]], [[../config/structure.md]], [[../nodes/index.md]], [[../nodes/table.md]], [[../shell/header.md]], [[../shell/sidebar.md]], [[../auth/tokens.md]], [[../references/visibility.md]].
+> Relacionados: [[local-config.md]], [[../config/validation.md]], [[../config/structure.md]], [[../nodes/index.md]], [[../nodes/table.md]], [[../shell/header.md]], [[../shell/sidebar.md]], [[../auth/tokens.md]], [[../references/visibility.md]], [[../queries/execution.md]], [[../queries/preloads.md]], [[../navigation/navigate-actions.md]].
 
 # Editor de configuración en vivo (dev mode)
 
 ## Objetivo
-Permitir editar el JSON de configuración directamente en el navegador durante el desarrollo, validarlo con el mismo validador del runtime y aplicarlo para ver el resultado al instante, sin recargar la página ni depender de backend. Junto al editor de texto Monaco, una **barra de herramientas flotante** persistente ofrece también un editor visual del árbol `layout` de la página activa mediante manipulación directa sobre el propio preview real renderizado — no un árbol duplicado, sino el mismo contenido que ve el usuario — con controles para cambiar de página, seleccionar modo Visual/Editor, abrir la paleta de nodos y acceder a Monaco (ver [[#Barra flotante]] y [[#Editor visual del layout]]). La barra incluye también un botón "Guardar" (con atajo Ctrl+S/Cmd+S) que persiste el config activo hacia un backend externo (ver [[#Botón Guardar]]), y dos secciones de dominio con panel de formulario dedicado en vez de canvas: `Shell` (ver [[#Sección Shell (dominio de configuración)]]) y `Traducciones` (ver [[#Sección Traducciones (dominio de configuración)]]), esta última con gestión manual del bloque `translations` y sincronización de solo lectura con un proveedor externo de gestión de textos.
+Permitir editar el JSON de configuración directamente en el navegador durante el desarrollo, validarlo con el mismo validador del runtime y aplicarlo para ver el resultado al instante, sin recargar la página ni depender de backend. Junto al editor de texto Monaco, una **barra de herramientas flotante** persistente ofrece también un editor visual del árbol `layout` de la página activa mediante manipulación directa sobre el propio preview real renderizado — no un árbol duplicado, sino el mismo contenido que ve el usuario — con controles para cambiar de página, seleccionar modo Visual/Editor, abrir la paleta de nodos y acceder a Monaco (ver [[#Barra flotante]] y [[#Editor visual del layout]]). La barra incluye también un botón "Guardar" (con atajo Ctrl+S/Cmd+S) que persiste el config activo hacia un backend externo (ver [[#Botón Guardar]]), y tres secciones de dominio con panel de formulario dedicado en vez de canvas: `Shell` (ver [[#Sección Shell (dominio de configuración)]]), `Api` (ver [[#Sección Api (dominio de configuración)]]) con CRUD de operaciones del bloque `api` y de entradas de `preloads` globales/de página, y `Traducciones` (ver [[#Sección Traducciones (dominio de configuración)]]), esta última con gestión manual del bloque `translations` y sincronización de solo lectura con un proveedor externo de gestión de textos.
 
 ## Activación
 El editor solo existe si el host monta `<DevRuntime />` desde `src/dev-runtime/dev-runtime.tsx`. La decisión se toma en el bootstrap (`main.tsx`) y responde a dos condiciones:
@@ -24,7 +24,7 @@ En producción sin el atributo, `main.tsx` monta `<App />` directamente y Monaco
 Una barra de herramientas persistente permanece siempre visible en la base central de la pantalla mientras `DevRuntime` esté montado, independientemente de la página activa del runtime y del modo vigente. Contiene (de izquierda a derecha):
 
 1. **Selector de página**: dropdown que lista todas las páginas disponibles en `config.pages`. Cambiar la selección navega el runtime a esa página (con el mismo mecanismo que una navegación interna por hash), en cualquiera de los dos modos. Al navegar, se limpia cualquier nodo seleccionado en modo Editor.
-2. **Selector de pestaña de dominio**: seis botones, en este orden: `Layout`, `Api`, `Páginas`, `Tokens`, `Traducciones`, `Shell`. `Layout`, `Traducciones` y `Shell` son funcionales; `Api`, `Páginas` y `Tokens` siguen renderizándose deshabilitadas con `aria-disabled` y el título "Próximamente", sin acción al interactuar. Ver [Sección Shell (dominio de configuración)](#sección-shell-dominio-de-configuración) y [Sección Traducciones (dominio de configuración)](#sección-traducciones-dominio-de-configuración) para el comportamiento de cada una.
+2. **Selector de pestaña de dominio**: seis botones, en este orden: `Layout`, `Api`, `Páginas`, `Tokens`, `Traducciones`, `Shell`. `Layout`, `Api`, `Traducciones` y `Shell` son funcionales; `Páginas` y `Tokens` siguen renderizándose deshabilitadas con `aria-disabled` y el título "Próximamente", sin acción al interactuar. Ver [Sección Shell (dominio de configuración)](#sección-shell-dominio-de-configuración), [Sección Api (dominio de configuración)](#sección-api-dominio-de-configuración) y [Sección Traducciones (dominio de configuración)](#sección-traducciones-dominio-de-configuración) para el comportamiento de cada una.
 3. **Botón "Añadir elemento"**: abre la paleta flotante de nodos (ver sección [[#Paleta flotante de nodos]]), desde la que se puede arrastrar un nodo hasta el contenido para insertarlo. Su estado (abierto/cerrado) se refleja visualmente en la barra.
 4. **Botón de acceso a Monaco** (icono `{}`): abre el panel flotante de Monaco (ver sección [[#Panel flotante de Monaco]]). Su estado se refleja visualmente en la barra.
 5. **Toggle Visual/Editor**: dos botones (`Visual`, `Editor`) que controlan el modo. Al arrancar, el modo por defecto es `Visual`. Solo pueden estar activos alternativamente. El toggle modifica el comportamiento del árbol renderizado sin necesidad de recarga (ver [[#Modo Visual]] y [[#Modo Editor]]).
@@ -64,7 +64,7 @@ Cuando se activa "Añadir elemento" desde la barra, aparece una paleta flotante 
 ### Botón Guardar
 Persiste hacia un backend externo el config activo ya aplicado y válido (`currentConfig`, el mismo que gestiona
 la guardia de cambios aplicados) — nunca el buffer de Monaco sin aplicar. Disponible desde cualquier dominio de
-la barra (`Layout`, `Shell`, `Traducciones`) y en cualquiera de los dos modos (Visual/Editor).
+la barra (`Layout`, `Shell`, `Api`, `Traducciones`) y en cualquiera de los dos modos (Visual/Editor).
 
 - **Habilitación**: el botón está habilitado solo cuando la operación de guardado está declarada en la config de
   endpoints externos (ver [[local-config.md#Config de endpoints externos]]) con un `tokenId` que resuelve a un
@@ -89,7 +89,7 @@ la barra (`Layout`, `Shell`, `Traducciones`) y en cualquiera de los dos modos (V
 ### Estado del editor entre modos
 - **Alternar Visual ⇄ Editor sin cambiar de página**: la selección y el overlay se conservan (al volver a Editor, se ve el mismo nodo seleccionado que en la última vez que se estuvo en Editor).
 - **Cambiar de página**: se limpia toda selección previa, independientemente del modo.
-- **Cambiar de pestaña de dominio fuera de `Layout`**: se limpia la selección, ya que esas pestañas no contienen `layout` que editar en esta feature. Al entrar en `Shell` o en `Traducciones`, el canvas, el overlay de selección y la paleta de nodos de `Layout` desaparecen del área central y se sustituyen por el panel correspondiente (ver [Sección Shell (dominio de configuración)](#sección-shell-dominio-de-configuración) y [Sección Traducciones (dominio de configuración)](#sección-traducciones-dominio-de-configuración)) hasta volver a `Layout`.
+- **Cambiar de pestaña de dominio fuera de `Layout`**: se limpia la selección, ya que esas pestañas no contienen `layout` que editar en esta feature. Al entrar en `Shell`, `Api` o `Traducciones`, el canvas, el overlay de selección y la paleta de nodos de `Layout` desaparecen del área central y se sustituyen por el panel correspondiente (ver [Sección Shell (dominio de configuración)](#sección-shell-dominio-de-configuración), [Sección Api (dominio de configuración)](#sección-api-dominio-de-configuración) y [Sección Traducciones (dominio de configuración)](#sección-traducciones-dominio-de-configuración)) hasta volver a `Layout`.
 
 Los cambios en el editor (canvas y Monaco) persisten en memoria entre cierres y aperturas de paneles en la misma sesión. Recargar la página descarta cambios sin aplicar.
 
@@ -454,9 +454,11 @@ entre ellas (ver [[../references/visibility.md]] para el contrato funcional comp
   libre, sin picker contextual.
 
 ### Editor clave-valor (`params`, `query`, `headers`, `body`)
-Los campos de tipo mapa abierto `string → string` (`navigateTo.params`, `executeOperation`/`executeOperations`'s `query` y `headers`) se editan con un formulario de filas clave-valor: cada fila tiene un input de clave y un input de valor, con un botón "Quitar" por fila y un botón "Añadir" al final que crea una fila con clave y valor vacíos. Renombrar la clave de una fila conserva su valor; todos los valores se tratan como texto plano (sin coerción a número o booleano), lo que ya cubre literales, interpolación `{{...}}` y referencias dinámicas.
+Los campos de tipo mapa abierto `string → string` (`navigateTo.params`, y `query`/`headers` de `executeOperation`/`executeOperations`, de cada operación del panel `Api` y de cada entrada de `preloads`) se editan con un formulario de filas clave-valor: cada fila tiene un input de clave y un input de valor, con un botón "Quitar" por fila y un botón "Añadir" al final que crea una fila con clave y valor vacíos. Renombrar la clave de una fila conserva su valor; todos los valores se tratan como texto plano (sin coerción a número o booleano), lo que ya cubre literales, interpolación `{{...}}` y referencias dinámicas.
 
-`body` usa el mismo editor con una excepción por clave: si el valor actual de una clave concreta ya es un array o un objeto anidado, esa fila muestra el mismo textarea de solo lectura que el editor usa como último recurso para cualquier valor no representable como campo de formulario, sin afectar al resto de claves de ese mismo `body` ni al selector de variante. Añadir una clave nueva siempre la crea como texto vacío.
+`body` (de `executeOperation`/`executeOperations`, de una operación del panel `Api` o de una entrada de `preloads`) usa el mismo editor con una excepción por clave: si el valor actual de una clave concreta ya es un array o un objeto anidado, esa fila muestra el mismo textarea de solo lectura que el editor usa como último recurso para cualquier valor no representable como campo de formulario, sin afectar al resto de claves de ese mismo `body` ni al selector de variante. Añadir una clave nueva siempre la crea como texto vacío.
+
+El criterio de qué fila es editable como texto plano frente a solo lectura es configurable por punto de montaje del widget compartido (`KeyValuePropertyField`): por defecto (`query`, `headers`, `body`) solo un valor anidado (objeto o array) degrada a solo lectura, igual que se describe arriba. `navigateTo.params` (`NavigateParamsPropertyField`) usa un criterio más estricto: cualquier valor que no sea ya un string (number, boolean, null, además de objeto/array) degrada esa fila concreta a solo lectura, sin afectar a la edición del resto de filas del mismo `params` — un `navigateTo.params` con algún valor no-string (por ejemplo, editado a mano en Monaco) no rompe el editor.
 
 ### Acordeón dedicado para `queryStateFeedback.states` (pestaña `Queries`)
 La subsección `states` de la pestaña `Queries` (`queryStateFeedback.states`) se edita con un widget dedicado (`QueryStateFeedbackAccordionPropertyField`, registrado en el mismo `WIDGET_REGISTRY` del dispatcher bajo `'query-state-feedback-accordion'`) en vez del editor genérico de objeto, siguiendo el mismo hook `x-widget` que `layout-span`/`choice-items`. El campo `query` (nombre de la query observada) no cambia: sigue siendo la primera fila de la pestaña, como campo de texto simple, ajeno a este widget. Ver [[../references/query-state-feedback.md]] para el contrato funcional completo de `queryStateFeedback` (sin cambios en esta feature).
@@ -734,6 +736,99 @@ intacto el resto del documento (`layout` de cada página, `api`, `initialPage`, 
 patrón que ya usa el commit del canvas de `Layout` sobre la clave `layout`, aplicado aquí a una clave raíz distinta.
 Un commit exitoso desde Shell activa la misma guardia de cambios aplicados (ver [[#Guardia de cambios aplicados]]) que el resto de commits del editor.
 
+## Sección Api (dominio de configuración)
+
+### Objetivo y alcance
+Panel de formulario dedicado (`ApiConfigPanel`), accesible seleccionando `Api` en el selector de pestaña de dominio
+de la barra flotante — mismo tipo de sección que `Shell` y `Traducciones`: sin selección de nodo, breadcrumb ni
+panel de propiedades por nodo, sustituye por completo el área de canvas. Cubre dos superficies distintas del config
+que antes solo se editaban a mano en Monaco: CRUD completo de las operaciones declaradas en el bloque raíz `api`
+(ver [[../queries/execution.md]]), y CRUD de las entradas de `preloads` tanto a nivel `shell`/raíz de la aplicación
+como a nivel de la página activa (ver [[../queries/preloads.md]]). Toda mutación confirmada desde este panel pasa
+por el mismo pipeline commit/validación/patch de clave raíz que ya usan `Layout`, `Shell` y `Traducciones`.
+
+### Sub-vistas Operaciones/Preloads
+El panel se organiza en dos sub-vistas mutuamente excluyentes mediante un `role="tablist"` con dos `role="tab"`
+("Operaciones", "Preloads") controlando `aria-selected`/`aria-controls` hacia sus respectivos `role="tabpanel"`.
+"Operaciones" es la sub-vista activa por defecto al montar el panel. Igual que las sub-vistas Header/Sidebar de
+`Shell` (ver [[#Sub-vistas Header/Sidebar]]), **ambos `tabpanel` permanecen siempre montados en el DOM**: la
+sub-vista no activa se oculta con una clase Tailwind, nunca dejando de renderizarse — cambiar de sub-vista y volver
+no reinicia ningún estado local propio de la que se deja de ver (por ejemplo, un aviso de commit rechazado
+pendiente en un campo).
+
+### Sub-vista "Operaciones"
+- **Listado**: una entrada por clave ya declarada en `api` (FR5), mostrando su clave y un botón "Borrar operación"
+  (FR7, sin confirmación). Con `api` vacío o sin declarar, el panel muestra `"Sin operaciones declaradas."` en vez de
+  lista (FR4).
+- **Campos por operación** (`ApiOperationFieldsEditor`, FR9): método (`SegmentedTogglePropertyField` con las cinco
+  opciones `GET`/`POST`/`PUT`/`PATCH`/`DELETE`), endpoint (texto libre), y los mapas `query`/`headers` con el mismo
+  [editor clave-valor](#editor-clave-valor-params-query-headers-body) que el resto del panel. `body` se oculta por
+  completo mientras el método activo es `GET`, y reaparece al cambiar a un método que lo admite — mismo criterio ya
+  usado por el selector "Modo" de `container` (Grid/Columnas): un campo que dejaría de tener sentido con la
+  selección actual desaparece en vez de quedar visible-pero-inválido. Cuando `body` es visible, sigue la misma
+  degradación por clave que el resto del editor (FR10): un valor plano-objeto se edita con el editor clave-valor, y
+  cualquier otra forma válida (string, número, booleano, null, array) cae a una vista de solo lectura.
+- **Alta de operación** (FR6): formulario "Añadir operación" con Clave, Método (por defecto `GET`) y Endpoint. Una
+  clave vacía o ya existente en `api` se rechaza con un aviso local (mismo componente de aviso que usa
+  "Añadir entrada" en `Traducciones`) antes de intentar ningún commit. La operación se crea solo con `method` y
+  `endpoint`; `query`/`headers`/`body` se añaden después editando la operación ya creada.
+- **Sin renombrado de clave** (FR8): no hay control para cambiar la clave de una operación ya existente; para
+  "renombrarla" hay que borrarla y crear una nueva.
+- **Feedback por campo**: cada campo (método, endpoint, query, headers, body) de cada operación tiene su propio
+  aviso de commit rechazado, aislado por operación y por campo — un rechazo en un campo de una operación no afecta
+  al resto de campos de esa operación ni a otras operaciones.
+
+### Sub-vista "Preloads"
+Dos secciones independientes, cada una una instancia del mismo componente (`PreloadsListEditor`, FR11-FR15) sin
+implementación paralela:
+- **"Precargas globales"**: edita el bloque raíz `preloads` (precargas de aplicación, ver
+  [[../queries/preloads.md#Precargas globales de aplicación (`preloads` raíz)]]).
+- **"Precargas de la página activa"**: edita `preloads` de la página que el selector de página de la barra tiene
+  activa en ese momento. Se remonta por completo (`key` por `pageId`) en cada cambio de página, de forma que un alta
+  a medio rellenar en una página nunca sobrevive al cambiar a otra.
+
+Cada instancia comparte:
+- **Listado**: una entrada por preload ya declarado, con un botón "Borrar precarga" (FR13, sin confirmación). Con la
+  lista vacía o sin declarar, el panel muestra `"Sin precargas configuradas."` (FR11).
+- **Campos por entrada** (`PreloadEntryFieldsEditor`, FR14/FR15): un desplegable `operationName` restringido
+  exclusivamente a `Object.keys(api)` — nunca ofrece una clave que no esté ya declarada en `api` (FR14) — más
+  `requestParams` (`query`/`headers`/`body`) con el mismo editor clave-valor y la misma degradación de `body` por
+  método (oculto solo cuando la operación referenciada existe y su `method` es `GET`) que la sub-vista
+  "Operaciones".
+- **Referencia rota** (`operationName` que ya no tiene operación declarada en `api`, por ejemplo tras borrarla): el
+  desplegable simplemente no tiene ninguna opción para ese valor — no se inyecta una opción de respaldo ni se fuerza
+  otro valor sobre la entrada — mientras el resto de la fila (`requestParams`) sigue editable con normalidad. La
+  validación cruzada ya existente (`validate-preloads.ts`) sigue detectando esa referencia rota exactamente igual
+  que antes de esta feature; el panel no intenta autocorregirla.
+- **Alta de entrada** (FR12): formulario "Añadir precarga" con un desplegable `operationName` (mismo catálogo de
+  `api`) y botón "Añadir precarga". Sin ninguna operación declarada en `api`, el intento de alta se rechaza con un
+  aviso local antes de cualquier commit. La entrada se crea con `requestParams: {}`.
+
+### Pipeline de commit
+Tres pipelines de commit independientes, todos con el mismo criterio de validar antes de aplicar y de no tocar
+ninguna otra clave del documento:
+- **`api`**: parchea únicamente la clave raíz `api` sobre el último texto crudo válido conocido — mismo patrón
+  exacto que el commit de `Shell`/`Traducciones` sobre sus respectivas claves raíz.
+- **Precargas globales**: parchea la clave raíz `preloads` de la misma forma. Una lista de precargas vaciada por
+  completo desde el panel elimina la clave `preloads` del documento en vez de dejar `"preloads": []`.
+- **Precargas de página**: reutiliza el mismo mecanismo de parcheo por página que ya usa el canvas de `Layout` para
+  sustituir solo la clave `preloads` de la página activa dentro de `pages`, dejando intacto el `layout` de esa misma
+  página y el resto del documento. Igual que las precargas globales, una lista vaciada por completo elimina la clave
+  `preloads` de esa página en vez de dejarla como array vacío.
+
+Un commit exitoso desde cualquiera de las tres superficies activa la misma guardia de cambios aplicados (ver
+[[#Guardia de cambios aplicados]]) que el resto de commits del editor.
+
+### Fuera de alcance de la sección Api
+- Sin pickers contextuales conscientes de qué referencias (`queries.*`, `forms.*`, `params.*`, `item.*`) están
+  disponibles en cada punto — el valor de cada fila de `query`/`body`/`headers`/`requestParams` sigue siendo texto
+  libre, igual que en el resto del panel.
+- Sin edición de `when` u otras condiciones de una entrada de `preloads` más allá de `operationName` y
+  `requestParams`.
+- Sin autocorrección de una referencia rota (`operationName` de un preload apuntando a una operación borrada): el
+  comportamiento de validación ante esa referencia se mantiene igual que antes de esta sección.
+- Sin deshacer/rehacer ni confirmación modal en el borrado de una operación o de una entrada de preload.
+
 ## Sección Traducciones (dominio de configuración)
 
 ### Objetivo y alcance
@@ -866,7 +961,7 @@ tercera operación de gestión de configuración, que sí está integrada por es
 - No hay deshacer/rehacer (undo/redo) de las operaciones del canvas; Monaco sigue disponible como red de seguridad manual.
 - No hay selección múltiple de nodos, duplicar/copiar un nodo, ni atajos de teclado dedicados.
 - El panel de propiedades no incluye pickers contextuales para referencias string (`queries.x`, `forms.x`, `params.x`, `{{...}}`); esos campos se editan como texto plano, igual que el resto de propiedades del schema.
-- El canvas de esta sección edita únicamente `layout`; `api`, `pages` (alta/baja/`initialPage`) y `tokens` quedan fuera de esta entrega (son features futuras independientes). `shell` y `translations` ya tienen panel de formulario dedicado propio (ver [Sección Shell](#sección-shell-dominio-de-configuración) y [Sección Traducciones](#sección-traducciones-dominio-de-configuración)), fuera del modelo de canvas/selección de `Layout`.
+- El canvas de esta sección edita únicamente `layout`; `pages` (alta/baja/`initialPage`) y `tokens` quedan fuera de esta entrega (son features futuras independientes). `shell`, `api`/`preloads` y `translations` ya tienen panel de formulario dedicado propio (ver [Sección Shell](#sección-shell-dominio-de-configuración), [Sección Api](#sección-api-dominio-de-configuración) y [Sección Traducciones](#sección-traducciones-dominio-de-configuración)), fuera del modelo de canvas/selección de `Layout`.
 
 ### Persistencia y entorno
 - No persiste cambios entre sesiones del navegador (`localStorage`/`sessionStorage` fuera de alcance). Los cambios aplicados viven solo en memoria de sesión, igual que el buffer de Monaco.

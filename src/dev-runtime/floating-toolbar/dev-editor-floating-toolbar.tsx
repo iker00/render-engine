@@ -5,7 +5,7 @@ import type {
 } from '../endpoints-config/resolve-endpoint-operation'
 
 export type ToolbarMode = 'visual' | 'editor'
-export type ToolbarDomain = 'layout' | 'shell' | 'translations'
+export type ToolbarDomain = 'layout' | 'api' | 'shell' | 'translations'
 
 // T6 (0131): save-config request state, owned by DevRuntimeReady (T5) and received here already
 // computed — this component never tracks its own save state.
@@ -90,6 +90,7 @@ export function DevEditorFloatingToolbar({
   onSave,
 }: DevEditorFloatingToolbarProps) {
   const isLayoutActive = activeDomain === 'layout'
+  const isApiActive = activeDomain === 'api'
   const isShellActive = activeDomain === 'shell'
   const isTranslationsActive = activeDomain === 'translations'
 
@@ -135,10 +136,9 @@ export function DevEditorFloatingToolbar({
         <button
           type="button"
           data-testid="dev-editor-toolbar-domain-api"
-          className={buttonClasses({ disabled: true })}
-          disabled
-          aria-disabled="true"
-          title="Próximamente"
+          className={buttonClasses({ pressed: isApiActive })}
+          aria-pressed={isApiActive}
+          onClick={() => onDomainSelected('api')}
         >
           <Plug size={14} /> Api
         </button>

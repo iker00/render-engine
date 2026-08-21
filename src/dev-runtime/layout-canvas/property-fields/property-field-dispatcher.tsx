@@ -10,6 +10,7 @@ import { HeadingLevelPropertyField } from './heading-level-property-field'
 import { IconPickerPropertyField } from './icon-picker-property-field'
 import { KeyValuePropertyField } from './key-value-property-field'
 import { LayoutSpanPropertyField } from './layout-span-property-field'
+import { NavigateParamsPropertyField } from './navigate-params-property-field'
 import { NumberPropertyField } from './number-property-field'
 import { PropertyFieldRow } from './property-field-row'
 import { QueryStateFeedbackAccordionPropertyField } from './query-state-feedback-accordion-property-field'
@@ -58,6 +59,7 @@ const WIDGET_REGISTRY: Record<string, ComponentType<WidgetComponentProps>> = {
   'condition-group': ConditionGroupPropertyField,
   'color-swatch': ColorSwatchPropertyField,
   'query-state-feedback-accordion': QueryStateFeedbackAccordionPropertyField,
+  'navigate-params': NavigateParamsPropertyField,
 }
 
 export interface PropertyFieldDispatcherProps {

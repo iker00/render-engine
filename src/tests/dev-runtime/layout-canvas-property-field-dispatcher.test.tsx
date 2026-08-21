@@ -840,6 +840,30 @@ describe('PropertyFieldDispatcher x-widget hook: query-state-feedback-accordion 
   })
 })
 
+describe('PropertyFieldDispatcher x-widget hook: navigate-params (T3, 0141)', () => {
+  it('delegates to NavigateParamsPropertyField for a schema declaring x-widget: "navigate-params", instead of the generic object/raw-JSON branch', () => {
+    const onChangeSpy = vi.fn()
+    render(
+      <ControlledDispatcher
+        schema={{ 'x-widget': 'navigate-params' }}
+        initialValue={{ id: 'params.userId' }}
+        label="params"
+        onChangeSpy={onChangeSpy}
+      />,
+    )
+
+    // NavigateParamsPropertyField renders its row as an editable input for a string value — the
+    // generic object branch (no declared `properties`) would instead fall through to the raw-JSON
+    // escape hatch, which never produces a labelled "params valor #1" text input.
+    const valueField = screen.getByLabelText('params valor #1') as HTMLInputElement
+    expect(valueField.tagName).toBe('INPUT')
+    expect(valueField.value).toBe('params.userId')
+
+    fireEvent.change(valueField, { target: { value: 'params.otherId' } })
+    expect(onChangeSpy).toHaveBeenCalledWith({ id: 'params.otherId' })
+  })
+})
+
 describe('PropertyFieldDispatcher escape hatch', () => {
   it('falls back to a disabled raw JSON textarea without throwing when the schema has no recognizable type', () => {
     const onChangeSpy = vi.fn()
