@@ -16,7 +16,7 @@ La política completa está definida en el documento de workflow del proyecto.
 
 ## Planificadas
 
-(Todas las features actuales han sido completadas. Próximas features: `EDITOR-VISUAL-ROADMAP.md` en la raíz del repo define el roadmap de edición visual para `Api`, `Páginas` y `Tokens`.)
+(Todas las features actuales han sido completadas. Próximas features: `EDITOR-VISUAL-ROADMAP.md` en la raíz del repo define el roadmap de edición visual para `Api` y `Tokens`.)
 
 ## Archivadas
 - `0035-image-node-api-source`: archivada. Se descarta por ahora porque el caso de imágenes privadas encaja mejor con URLs protegidas o firmadas desde backend que con una carga remota específica integrada en el nodo `image`.

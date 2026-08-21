@@ -5,7 +5,7 @@
 # Editor de configuración en vivo (dev mode)
 
 ## Objetivo
-Permitir editar el JSON de configuración directamente en el navegador durante el desarrollo, validarlo con el mismo validador del runtime y aplicarlo para ver el resultado al instante, sin recargar la página ni depender de backend. Junto al editor de texto Monaco, una **barra de herramientas flotante** persistente ofrece también un editor visual del árbol `layout` de la página activa mediante manipulación directa sobre el propio preview real renderizado — no un árbol duplicado, sino el mismo contenido que ve el usuario — con controles para cambiar de página, seleccionar modo Visual/Editor, abrir la paleta de nodos y acceder a Monaco (ver [[#Barra flotante]] y [[#Editor visual del layout]]). La barra incluye también un botón "Guardar" (con atajo Ctrl+S/Cmd+S) que persiste el config activo hacia un backend externo (ver [[#Botón Guardar]]), y tres secciones de dominio con panel de formulario dedicado en vez de canvas: `Shell` (ver [[#Sección Shell (dominio de configuración)]]), `Api` (ver [[#Sección Api (dominio de configuración)]]) con CRUD de operaciones del bloque `api` y de entradas de `preloads` globales/de página, y `Traducciones` (ver [[#Sección Traducciones (dominio de configuración)]]), esta última con gestión manual del bloque `translations` y sincronización de solo lectura con un proveedor externo de gestión de textos.
+Permitir editar el JSON de configuración directamente en el navegador durante el desarrollo, validarlo con el mismo validador del runtime y aplicarlo para ver el resultado al instante, sin recargar la página ni depender de backend. Junto al editor de texto Monaco, una **barra de herramientas flotante** persistente ofrece también un editor visual del árbol `layout` de la página activa mediante manipulación directa sobre el propio preview real renderizado — no un árbol duplicado, sino el mismo contenido que ve el usuario — con controles para cambiar de página, seleccionar modo Visual/Editor, abrir la paleta de nodos y acceder a Monaco (ver [[#Barra flotante]] y [[#Editor visual del layout]]). La barra incluye también un botón "Guardar" (con atajo Ctrl+S/Cmd+S) que persiste el config activo hacia un backend externo (ver [[#Botón Guardar]]), y cuatro secciones de dominio con panel de formulario dedicado en vez de canvas: `Shell` (ver [[#Sección Shell (dominio de configuración)]]), `Api` (ver [[#Sección Api (dominio de configuración)]]) con CRUD de operaciones del bloque `api` y de entradas de `preloads` globales/de página, `Traducciones` (ver [[#Sección Traducciones (dominio de configuración)]]), esta última con gestión manual del bloque `translations` y sincronización de solo lectura con un proveedor externo de gestión de textos, y `Páginas` (ver [[#Sección Páginas (dominio de configuración)]]) para alta/baja de páginas, edición de `title` y designación de `initialPage`.
 
 ## Activación
 El editor solo existe si el host monta `<DevRuntime />` desde `src/dev-runtime/dev-runtime.tsx`. La decisión se toma en el bootstrap (`main.tsx`) y responde a dos condiciones:
@@ -24,7 +24,7 @@ En producción sin el atributo, `main.tsx` monta `<App />` directamente y Monaco
 Una barra de herramientas persistente permanece siempre visible en la base central de la pantalla mientras `DevRuntime` esté montado, independientemente de la página activa del runtime y del modo vigente. Contiene (de izquierda a derecha):
 
 1. **Selector de página**: dropdown que lista todas las páginas disponibles en `config.pages`. Cambiar la selección navega el runtime a esa página (con el mismo mecanismo que una navegación interna por hash), en cualquiera de los dos modos. Al navegar, se limpia cualquier nodo seleccionado en modo Editor.
-2. **Selector de pestaña de dominio**: seis botones, en este orden: `Layout`, `Api`, `Páginas`, `Tokens`, `Traducciones`, `Shell`. `Layout`, `Api`, `Traducciones` y `Shell` son funcionales; `Páginas` y `Tokens` siguen renderizándose deshabilitadas con `aria-disabled` y el título "Próximamente", sin acción al interactuar. Ver [Sección Shell (dominio de configuración)](#sección-shell-dominio-de-configuración), [Sección Api (dominio de configuración)](#sección-api-dominio-de-configuración) y [Sección Traducciones (dominio de configuración)](#sección-traducciones-dominio-de-configuración) para el comportamiento de cada una.
+2. **Selector de pestaña de dominio**: seis botones, en este orden: `Layout`, `Api`, `Páginas`, `Tokens`, `Traducciones`, `Shell`. `Layout`, `Api`, `Páginas`, `Traducciones` y `Shell` son funcionales; solo `Tokens` sigue renderizándose deshabilitada con `aria-disabled` y el título "Próximamente", sin acción al interactuar. Ver [Sección Shell (dominio de configuración)](#sección-shell-dominio-de-configuración), [Sección Api (dominio de configuración)](#sección-api-dominio-de-configuración), [Sección Traducciones (dominio de configuración)](#sección-traducciones-dominio-de-configuración) y [Sección Páginas (dominio de configuración)](#sección-páginas-dominio-de-configuración) para el comportamiento de cada una.
 3. **Botón "Añadir elemento"**: abre la paleta flotante de nodos (ver sección [[#Paleta flotante de nodos]]), desde la que se puede arrastrar un nodo hasta el contenido para insertarlo. Su estado (abierto/cerrado) se refleja visualmente en la barra.
 4. **Botón de acceso a Monaco** (icono `{}`): abre el panel flotante de Monaco (ver sección [[#Panel flotante de Monaco]]). Su estado se refleja visualmente en la barra.
 5. **Toggle Visual/Editor**: dos botones (`Visual`, `Editor`) que controlan el modo. Al arrancar, el modo por defecto es `Visual`. Solo pueden estar activos alternativamente. El toggle modifica el comportamiento del árbol renderizado sin necesidad de recarga (ver [[#Modo Visual]] y [[#Modo Editor]]).
@@ -89,7 +89,7 @@ la barra (`Layout`, `Shell`, `Api`, `Traducciones`) y en cualquiera de los dos m
 ### Estado del editor entre modos
 - **Alternar Visual ⇄ Editor sin cambiar de página**: la selección y el overlay se conservan (al volver a Editor, se ve el mismo nodo seleccionado que en la última vez que se estuvo en Editor).
 - **Cambiar de página**: se limpia toda selección previa, independientemente del modo.
-- **Cambiar de pestaña de dominio fuera de `Layout`**: se limpia la selección, ya que esas pestañas no contienen `layout` que editar en esta feature. Al entrar en `Shell`, `Api` o `Traducciones`, el canvas, el overlay de selección y la paleta de nodos de `Layout` desaparecen del área central y se sustituyen por el panel correspondiente (ver [Sección Shell (dominio de configuración)](#sección-shell-dominio-de-configuración), [Sección Api (dominio de configuración)](#sección-api-dominio-de-configuración) y [Sección Traducciones (dominio de configuración)](#sección-traducciones-dominio-de-configuración)) hasta volver a `Layout`.
+- **Cambiar de pestaña de dominio fuera de `Layout`**: se limpia la selección, ya que esas pestañas no contienen `layout` que editar en esta feature. Al entrar en `Shell`, `Api`, `Traducciones` o `Páginas`, el canvas, el overlay de selección y la paleta de nodos de `Layout` desaparecen del área central y se sustituyen por el panel correspondiente (ver [Sección Shell (dominio de configuración)](#sección-shell-dominio-de-configuración), [Sección Api (dominio de configuración)](#sección-api-dominio-de-configuración), [Sección Traducciones (dominio de configuración)](#sección-traducciones-dominio-de-configuración) y [Sección Páginas (dominio de configuración)](#sección-páginas-dominio-de-configuración)) hasta volver a `Layout`.
 
 Los cambios en el editor (canvas y Monaco) persisten en memoria entre cierres y aperturas de paneles en la misma sesión. Recargar la página descarta cambios sin aplicar.
 
@@ -146,7 +146,7 @@ La guardia se activa exactamente en el primer Aplicar exitoso de la sesión. Una
 ## Editor visual del layout
 
 ### Objetivo y alcance
-Capa de edición visual del árbol `layout` mediante manipulación directa sobre el **mismo contenido real renderizado** (no un árbol duplicado, no un panel de árbol tipo "layers"), activable mediante el toggle Visual/Editor de la barra flotante. En modo Editor, el usuario edita e interactúa con el mismo árbol que renderiza el runtime en producción, sin la intermediación de una segunda copia o lienzo separado. Cubre únicamente el `layout` de una página; `api`, `pages` (alta/baja/`initialPage`), `tokens` y `translations` quedan fuera de esta entrega.
+Capa de edición visual del árbol `layout` mediante manipulación directa sobre el **mismo contenido real renderizado** (no un árbol duplicado, no un panel de árbol tipo "layers"), activable mediante el toggle Visual/Editor de la barra flotante. En modo Editor, el usuario edita e interactúa con el mismo árbol que renderiza el runtime en producción, sin la intermediación de una segunda copia o lienzo separado. Cubre únicamente el `layout` de una página; `tokens` queda fuera de esta entrega. `shell`, `api`/`preloads`, `translations` y `pages` (alta/baja/`initialPage`) tienen su propio panel de formulario dedicado, fuera del modelo de canvas/selección de `Layout` (ver [Sección Shell](#sección-shell-dominio-de-configuración), [Sección Api](#sección-api-dominio-de-configuración), [Sección Traducciones](#sección-traducciones-dominio-de-configuración) y [Sección Páginas](#sección-páginas-dominio-de-configuración)).
 
 ### Selector de página en la barra
 El selector de página de la barra flotante cambia la página activa del runtime real (navegación por hash, con los parámetros transportados según el mecanismo estándar). Funciona en ambos modos (Visual y Editor), permitiendo ver y editar cualquier página disponible sin necesidad de cerrar el editor o cambiar de modo. Cambiar de página con un nodo seleccionado en modo Editor limpia la selección.
@@ -955,13 +955,76 @@ tercera operación de gestión de configuración, que sí está integrada por es
 - Sin paginación propia sobre los resultados de "Buscar"; el panel muestra la respuesta del proveedor tal cual.
 - Sin deshacer/rehacer ni confirmación modal en el borrado de una entrada.
 
+## Sección Páginas (dominio de configuración)
+
+### Objetivo y alcance
+Panel de formulario dedicado (`PagesConfigPanel`) para `config.pages`/`config.initialPage`, accesible seleccionando
+`Páginas` en el selector de pestaña de dominio de la barra flotante — mismo tipo de sección que `Shell`/
+`Traducciones`: sin selección de nodo, breadcrumb ni panel de propiedades por nodo, sustituye por completo el área
+de canvas. Permite crear páginas, eliminarlas, editar su `title` y designar cuál es la `initialPage` vigente, sin
+depender de editar el JSON a mano en Monaco. No cubre el `layout` ni los `preloads` de una página (eso sigue siendo
+terreno de `Layout`), ni reordenar `pages` ni renombrar el `id` de una página ya existente.
+
+### Listado y creación de páginas
+Una tabla lista todas las páginas de `config.pages` en su orden actual, con una fila por página y columnas `Id`
+(solo lectura), `Título` (editable), `Inicial` (radio de designación) y una acción "Eliminar". Debajo, un
+formulario "Crear página" con campos `Id` y `Título` (ambos texto libre); el botón "Crear" permanece deshabilitado
+mientras `id` — tras recortar espacios sobrantes al principio/final — esté vacío o coincida exactamente con el `id`
+de una página ya existente (comparación sensible a mayúsculas/minúsculas), mostrando el motivo como texto bajo el
+formulario sin necesidad de pasar por Monaco. Crear una página añade una entrada `{ id, layout: [] }` — con `title`
+solo si se rellenó, recortado — al final de `pages`, sin `preloads` y sin marcarla automáticamente como
+`initialPage`; el formulario se limpia y la pestaña activa no cambia (el usuario permanece en `Páginas`).
+
+### Edición de título
+El campo `Título` de cada fila es un input de texto libre que commitea al perder el foco (`blur`), no en cada
+pulsación: si el valor no cambió respecto al persistido, no dispara ningún commit; dejarlo vacío retira la clave
+`title` de esa página en vez de persistir una cadena vacía. Un commit rechazado por validación conserva el valor
+tecleado (no revierte en silencio) y muestra debajo un aviso (`role="alert"`, `CommitRejectionBanner`)
+independiente por fila.
+
+### Designación de página inicial
+La columna `Inicial` es un grupo de radios (uno por página, mutuamente excluyente) que marca cuál es la
+`initialPage` vigente; la fila de la página activa muestra además una marca visual "Inicial". Seleccionar otra
+página aplica el cambio de inmediato sobre `config.initialPage`, reflejado en Monaco y en el resto del editor sin
+recargar. Un commit rechazado muestra el mismo aviso `role="alert"` junto a la fila afectada, sin cambiar la
+selección visual del radio.
+
+### Borrado de página y confirmación
+El botón "Eliminar" de una fila queda deshabilitado con un motivo explícito (mostrado como `title` del botón) en
+dos casos: si es la única página restante de `pages`, o si es la `initialPage` vigente (hay que reasignar
+`initialPage` a otra página primero). En cualquier otro caso, pulsarlo abre un diálogo de confirmación
+(`role="alertdialog"`, `aria-modal`, foco atrapado dentro del panel con `Tab`/`Shift+Tab`, cierre por `Esc` o click
+fuera del panel, devolviendo el foco al elemento que tenía antes de abrirse) con los botones "Cancelar" y
+"Eliminar". Confirmar retira esa página de `pages` en un único commit; si el runtime tenía esa página activa,
+migra su estado de navegación reutilizando `migrateRuntimeStateAcrossConfig` (degrada a `initialPage` con
+`params: {}`, mismo mecanismo ya documentado en [[#Preservación de estado al aplicar]], sin lógica nueva). Un
+commit rechazado muestra el aviso `role="alert"` junto a la fila de esa página.
+
+Antes de confirmar, si existen referencias `navigateTo` con ese `pageId` en el `layout` de cualquier página, en
+`shell.header` o en `shell.sidebar`, el diálogo añade un aviso listando cuántas hay y en qué fuente (por página,
+"en el menú del header", "en el sidebar"). El escaneo es un recorrido estructural genérico sobre el config —
+cuenta cualquier objeto con la forma exacta `{ type: 'navigateTo', pageId }` sin conocer nombres de campo de acción
+concretos (`props.action`, `submitAction`, `onSuccess`, `onError`, `operations`, etc.) — y el aviso es puramente
+informativo: no bloquea el borrado ni repara las referencias, que quedan huérfanas tras confirmar.
+
+### Pipeline de commit
+Las mutaciones de alta/baja/edición de `title` parchean únicamente la clave raíz `pages` sobre el último texto
+crudo válido conocido (`commitPagesMutation`/`patchRawConfigTextWithPages` en `dev-runtime.tsx`); designar
+`initialPage` parchea la clave raíz `initialPage` (`commitInitialPageMutation`/`patchRootKey`) — mismo patrón que
+`Shell`/`Traducciones` sobre sus respectivas claves. A diferencia de esas dos, `pages[]` puede llevar `preloads` con
+su propia divergencia raw/normalizado (ver [[#Sincronización entre canvas y Monaco]]): el parcheo de `pages`
+preserva el `layout`/`preloads` crudo de cada página ya existente que el panel no tocó — solo aplica el `title`
+mutado por encima —, y escribe tal cual una página nueva (`{ id, layout: [], title? }`, ya compatible con el
+formato crudo). Un commit exitoso desde `Páginas` activa la misma guardia de cambios aplicados (ver
+[[#Guardia de cambios aplicados]]) que el resto de commits del editor.
+
 ## Límites del editor visual
 
 ### Alcance funcional
 - No hay deshacer/rehacer (undo/redo) de las operaciones del canvas; Monaco sigue disponible como red de seguridad manual.
 - No hay selección múltiple de nodos, duplicar/copiar un nodo, ni atajos de teclado dedicados.
 - El panel de propiedades no incluye pickers contextuales para referencias string (`queries.x`, `forms.x`, `params.x`, `{{...}}`); esos campos se editan como texto plano, igual que el resto de propiedades del schema.
-- El canvas de esta sección edita únicamente `layout`; `pages` (alta/baja/`initialPage`) y `tokens` quedan fuera de esta entrega (son features futuras independientes). `shell`, `api`/`preloads` y `translations` ya tienen panel de formulario dedicado propio (ver [Sección Shell](#sección-shell-dominio-de-configuración), [Sección Api](#sección-api-dominio-de-configuración) y [Sección Traducciones](#sección-traducciones-dominio-de-configuración)), fuera del modelo de canvas/selección de `Layout`.
+- El canvas de esta sección edita únicamente `layout`; `tokens` queda fuera de esta entrega (feature futura independiente). `shell`, `api`/`preloads`, `translations` y `pages` (alta/baja/`initialPage`) ya tienen panel de formulario dedicado propio (ver [Sección Shell](#sección-shell-dominio-de-configuración), [Sección Api](#sección-api-dominio-de-configuración), [Sección Traducciones](#sección-traducciones-dominio-de-configuración) y [Sección Páginas](#sección-páginas-dominio-de-configuración)), fuera del modelo de canvas/selección de `Layout`.
 
 ### Persistencia y entorno
 - No persiste cambios entre sesiones del navegador (`localStorage`/`sessionStorage` fuera de alcance). Los cambios aplicados viven solo en memoria de sesión, igual que el buffer de Monaco.

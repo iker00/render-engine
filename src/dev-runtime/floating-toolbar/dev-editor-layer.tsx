@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import type { LayoutNode, LayoutNodeType, RuntimeConfigError } from '../../config/runtime-config'
 import type {
   RuntimeApiConfig,
+  RuntimePageConfig,
   RuntimePreloadConfig,
   RuntimeTranslationsConfig,
   ShellConfig,
@@ -26,6 +27,7 @@ import type { CommitCanvasMutationResult } from '../layout-canvas/layout-canvas-
 import type { ResolvedEndpointOperation } from '../endpoints-config/resolve-endpoint-operation'
 import type { RuntimeEndpointsConfig } from '../endpoints-config/runtime-endpoints-config-schema'
 import { ApiConfigPanel } from '../api-config-panel/api-config-panel'
+import { PagesConfigPanel } from '../pages-config-panel/pages-config-panel'
 import { ShellConfigPanel } from '../shell-config-panel/shell-config-panel'
 import { TranslationsConfigPanel } from '../translations-panel/translations-config-panel'
 import { createPlatagesTranslationsProvider } from '../translations-panel/translations-provider'
@@ -79,6 +81,10 @@ interface DevEditorLayerProps {
   onCommitPagePreloadsMutation: (
     mutate: (preloads: RuntimePreloadConfig[] | undefined) => RuntimePreloadConfig[] | undefined,
   ) => CommitCanvasMutationResult
+  onCommitPagesMutation: (
+    mutate: (pages: RuntimePageConfig[]) => RuntimePageConfig[],
+  ) => CommitCanvasMutationResult
+  onCommitInitialPageMutation: (mutate: (initialPage: string) => string) => CommitCanvasMutationResult
   // T6 (0131): all computed once by DevRuntimeReady (T5/D7) and threaded through here unchanged —
   // this component never recalculates a resolution nor tracks its own save state.
   endpointsConfig: RuntimeEndpointsConfig | undefined
@@ -119,6 +125,8 @@ export function DevEditorLayer({
   onCommitApiMutation,
   onCommitGlobalPreloadsMutation,
   onCommitPagePreloadsMutation,
+  onCommitPagesMutation,
+  onCommitInitialPageMutation,
   endpointsConfig,
   saveResolution,
   searchResolution,
@@ -130,9 +138,9 @@ export function DevEditorLayer({
 }: DevEditorLayerProps) {
   const [selectedPath, setSelectedPath] = useState<LayoutNodePath | null>(null)
   const [hoveredPath, setHoveredPath] = useState<LayoutNodePath | null>(null)
-  // Domain tab (0122-T5): "layout" renders the canvas (default), "shell" swaps the central
-  // content area for `ShellConfigPanel`. `api`/`pages`/`tokens` stay disabled in the toolbar, so
-  // this type only needs to track the two domains that are actually selectable.
+  // Domain tab (0122-T5, extended by 0138-T5): "layout" renders the canvas (default), "shell"/
+  // "translations"/"pages" each swap the central content area for their own config panel. `api`/
+  // `tokens` stay disabled in the toolbar.
   const [activeDomain, setActiveDomain] = useState<ToolbarDomain>('layout')
 
   // Read here, outside LayoutEditModeProvider (mounted further down this same component),
@@ -230,8 +238,8 @@ export function DevEditorLayer({
     onMonacoOpenChange(true)
   }
 
-  // Entering "shell", "translations" or "api" clears the canvas selection (same policy already
-  // documented for pages/tokens once they become selectable too): neither panel uses the
+  // Entering "shell", "translations", "api" or "pages" clears the canvas selection (same policy
+  // already documented for tokens once it becomes selectable too): none of these panels use the
   // "selected canvas node" model at all, so a selection carried over from Layout would just be
   // stale state pointing at a hidden tree. Leaving any of these domains back to "layout" has
   // nothing else to reconcile — each panel's own local state lives inside itself and fully
@@ -240,7 +248,7 @@ export function DevEditorLayer({
   function handleDomainSelected(domain: ToolbarDomain) {
     if (domain === activeDomain) return
     setActiveDomain(domain)
-    if (domain === 'shell' || domain === 'translations' || domain === 'api') {
+    if (domain === 'shell' || domain === 'translations' || domain === 'api' || domain === 'pages') {
       setSelectedPath(null)
       setHoveredPath(null)
     }
@@ -361,13 +369,19 @@ export function DevEditorLayer({
           onCommitGlobalPreloadsMutation={onCommitGlobalPreloadsMutation}
           onCommitPagePreloadsMutation={onCommitPagePreloadsMutation}
         />
-      ) : (
+      ) : activeDomain === 'translations' ? (
         <TranslationsConfigPanel
           translations={config.translations}
           onCommitTranslationsMutation={onCommitTranslationsMutation}
           provider={translationsProvider}
           searchResolution={searchResolution}
           refreshResolution={refreshResolution}
+        />
+      ) : (
+        <PagesConfigPanel
+          config={config}
+          onCommitPagesMutation={onCommitPagesMutation}
+          onCommitInitialPageMutation={onCommitInitialPageMutation}
         />
       )}
 

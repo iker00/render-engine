@@ -251,6 +251,10 @@ Ficheros de apoyo, no son tests: `config-validation/helpers.ts`, `dev-runtime/lu
 - `navigate-params-property-field.test.tsx` — widget aislado de `navigateTo.params` con degradación a solo lectura para valores no-string
 - `node-panel-tab-bar.test.tsx` — barra de pestañas accesible del panel de nodo con roving tabindex y flechas circulares
 - `node-panel-tabs.test.ts` — resolución pura del catálogo de pestañas del panel según el schema y el contexto
+- `pages-config-panel-orphan-scan.test.ts` — escaneo estructural de referencias `navigateTo` huérfanas hacia una página en layouts, header y sidebar
+- `pages-config-panel-rules.test.ts` — reglas puras de alta/borrado de página: normalización de id, unicidad y motivo de bloqueo de borrado
+- `pages-config-panel.test.tsx` — `PagesConfigPanel` aislado: listado, alta, edición de título, designación de página inicial, borrado con confirmación y feedback de commit rechazado
+- `pages-delete-confirm-dialog.test.tsx` — diálogo `alertdialog` de confirmación de borrado de página: aviso de referencias huérfanas, cierre por Esc/clic fuera, botones y gestión de foco al montar/desmontar
 - `platages-http-client.test.ts` — cliente HTTP compartido a Platages: forma de la petición y mapeo de errores
 - `query-state-feedback-accordion-property-field.test.tsx` — acordeón de reglas de feedback por estado de query con preservación de fallback
 - `query-state-feedback-accordion-state.test.ts` — funciones puras del estado del acordeón de feedback de query
