@@ -112,6 +112,36 @@ export function resolveUnionBranch(
   return matchByRequiredKeys ?? branches.find((branch) => branch.type === 'object') ?? branches[0]
 }
 
+// Primitive JSON Schema types accepted as a branch of the union-of-primitives additionalProperties
+// shape detected below (`query`) — matches the three scalar types the dispatcher's own primitive
+// branches (`string`/`number`/`boolean`) already know how to render.
+const PRIMITIVE_VALUE_MAP_TYPES = new Set(['string', 'number', 'boolean'])
+
+/**
+ * Detects the two `additionalProperties` shapes the dispatcher routes to `KeyValuePropertyField`
+ * for an object schema with no declared `properties`:
+ * - a single-type map, `additionalProperties: { type: 'string' }` (T6, e.g. `headers`), or
+ * - a union-of-primitives map, `additionalProperties: { anyOf: [...] }` whose branches are all
+ *   plain objects resolving to `'string' | 'number' | 'boolean'` — the exact shape Zod v4's
+ *   `toJSONSchema` produces for `runtimeApiQuerySchema = z.record(z.string(), z.union([z.string(),
+ *   z.number(), z.boolean()]))` (`query`).
+ *
+ * Returns `false` for any other shape, including a union with a non-primitive branch (`object`,
+ * `array`, `null`) — that case falls through unchanged to the generic object/raw-JSON paths.
+ */
+export function isPrimitiveValueMapAdditionalProperties(additionalProperties: unknown): boolean {
+  if (!isPlainObject(additionalProperties)) return false
+
+  if (resolvePrimarySchemaType(additionalProperties) === 'string') return true
+
+  const branches = additionalProperties.anyOf
+  if (!Array.isArray(branches) || branches.length === 0) return false
+
+  return branches.every(
+    (branch) => isPlainObject(branch) && PRIMITIVE_VALUE_MAP_TYPES.has(resolvePrimarySchemaType(branch) ?? ''),
+  )
+}
+
 export function buildDefaultValueForSchema(schema: Record<string, unknown> | undefined): unknown {
   if (!schema) return ''
 

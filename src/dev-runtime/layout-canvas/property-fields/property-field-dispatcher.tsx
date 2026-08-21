@@ -23,6 +23,7 @@ import {
   buildDefaultValueForSchema,
   getDiscriminatedUnionVariants,
   isPlainObject,
+  isPrimitiveValueMapAdditionalProperties,
   resolvePrimarySchemaType,
   resolveUnionBranch,
 } from './property-field-schema-resolution'
@@ -112,18 +113,21 @@ export function PropertyFieldDispatcher({
     return <WidgetComponent label={label} value={value} onChange={onChange} hideRootLegend={hideRootLegend} />
   }
 
-  // `body` (T7): a bare `$ref` schema (see `isBareRefSchema`) has no `type`/`anyOf`/`oneOf` this
-  // dispatcher can resolve generically — the recursive schema's `$defs` entry isn't threaded down
-  // through the recursive calls that got us here. Rather than plumbing `$defs` through the whole
-  // tree for the one recursive schema in this codebase, resolve the same way `resolveUnionBranch`
-  // resolves any other undiscriminated union: by the current value's shape. A plain object matches
-  // the union's `record(string, body)` branch, so it gets the same KV editor as `headers`/`query`
-  // (T6) — except each row's own value can itself be an object/array, which
-  // `KeyValuePropertyField` (T7) falls back to a disabled raw-JSON slot for, per row. Any other
-  // value shape (string, number, boolean, null, array) keeps falling through to the raw-JSON escape
-  // hatch below, unchanged from before T7.
-  if (isBareRefSchema(schema) && isPlainObject(value)) {
-    return <KeyValuePropertyField label={label} value={value} onChange={onChange} />
+  // `body` (T7, extended by feature dev-editor-execute-operation-query-widget): a bare `$ref`
+  // schema (see `isBareRefSchema`) has no `type`/`anyOf`/`oneOf` this dispatcher can resolve
+  // generically — the recursive schema's `$defs` entry isn't threaded down through the recursive
+  // calls that got us here. Rather than plumbing `$defs` through the whole tree for the one
+  // recursive schema in this codebase, resolve the same way `resolveUnionBranch` resolves any
+  // other undiscriminated union: by the current value's shape. A plain object matches the union's
+  // `record(string, body)` branch, so it gets the same KV editor as `headers`/`query` (T6) —
+  // except each row's own value can itself be an object/array, which `KeyValuePropertyField` (T7)
+  // falls back to a disabled raw-JSON slot for, per row. An absent value (`body` not yet declared
+  // on the action) defaults to that same branch too — otherwise there is no way to start editing
+  // `body` from the panel at all, unlike `query`/`headers`, which route to the KV editor from their
+  // schema alone regardless of value. Any other already-present value shape (string, number,
+  // boolean, null, array) keeps falling through to the raw-JSON escape hatch below, unchanged.
+  if (isBareRefSchema(schema) && (isPlainObject(value) || value === undefined)) {
+    return <KeyValuePropertyField label={label} value={isPlainObject(value) ? value : {}} onChange={onChange} />
   }
 
   // Discriminated union with an explicit selector (T5) takes priority over the generic shape
@@ -211,15 +215,14 @@ export function PropertyFieldDispatcher({
         : undefined
     const objectValue = value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : {}
 
-    // Open string-to-string map (T6, e.g. `httpRequest.headers`): no declared `properties`, plus
-    // `additionalProperties: { type: 'string' }`. Takes priority over the generic `properties`
-    // branch below, which stays for objects with a fixed, declared shape.
+    // Open key-value map (no declared `properties`), covering both an `additionalProperties: {
+    // type: 'string' }` single-type map (T6, e.g. `httpRequest.headers`) and an
+    // `additionalProperties: { anyOf: [...primitives] }` union-of-primitives map (feature
+    // dev-editor-execute-operation-query-widget, e.g. `query`). Takes priority over the generic
+    // `properties` branch below, which stays for objects with a fixed, declared shape.
     const additionalProperties = schema.additionalProperties
-    const isStringKeyValueMap =
-      !propertiesSchema &&
-      isPlainObject(additionalProperties) &&
-      resolvePrimarySchemaType(additionalProperties) === 'string'
-    if (isStringKeyValueMap) {
+    const isPrimitiveValueMap = !propertiesSchema && isPrimitiveValueMapAdditionalProperties(additionalProperties)
+    if (isPrimitiveValueMap) {
       return <KeyValuePropertyField label={label} value={objectValue} onChange={onChange} />
     }
 

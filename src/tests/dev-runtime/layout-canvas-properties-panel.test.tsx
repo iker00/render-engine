@@ -1189,6 +1189,170 @@ describe('LayoutCanvasPropertiesPanel body override for KV editor (T7)', () => {
       ],
     })
   })
+
+  function formNode(overrides: Partial<Extract<LayoutNode, { type: 'form' }>> = {}): LayoutNode {
+    return { type: 'form', id: 'f1', ...overrides } as LayoutNode
+  }
+
+  it('shows "Añadir body" for a button executeOperation action with no body declared yet, and clicking it commits body: { \'\': \'\' }', () => {
+    const node = buttonNode({ type: 'executeOperation', operationName: 'save' })
+    const onCommitNodeUpdate = vi.fn()
+    render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={onCommitNodeUpdate} />)
+
+    const bodyGroup = screen.getByRole('group', { name: 'body' })
+    expect(within(bodyGroup).queryByLabelText('body clave #1')).not.toBeInTheDocument()
+
+    fireEvent.click(within(bodyGroup).getByRole('button', { name: 'Añadir body' }))
+
+    expect(onCommitNodeUpdate).toHaveBeenCalledTimes(1)
+    const [, updater] = onCommitNodeUpdate.mock.calls[0]
+    const result = updater(node) as Extract<LayoutNode, { type: 'button' }>
+    expect(result.props.action).toEqual({ type: 'executeOperation', operationName: 'save', body: { '': '' } })
+  })
+
+  it('shows "Añadir body" for a form submitAction executeOperation action with no body declared yet, and clicking it commits body: { \'\': \'\' }', () => {
+    const node = formNode({
+      submitAction: { type: 'executeOperation', operationName: 'save' },
+    } as Partial<Extract<LayoutNode, { type: 'form' }>>)
+    const onCommitNodeUpdate = vi.fn()
+    render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={onCommitNodeUpdate} />)
+
+    const bodyGroup = screen.getByRole('group', { name: 'body' })
+    fireEvent.click(within(bodyGroup).getByRole('button', { name: 'Añadir body' }))
+
+    expect(onCommitNodeUpdate).toHaveBeenCalledTimes(1)
+    const [, updater] = onCommitNodeUpdate.mock.calls[0]
+    const result = updater(node) as Extract<LayoutNode, { type: 'form' }>
+    expect(result.submitAction).toEqual({ type: 'executeOperation', operationName: 'save', body: { '': '' } })
+  })
+})
+
+describe('LayoutCanvasPropertiesPanel query key-value editor (T1)', () => {
+  // Local redeclaration of the T7 `buttonNode`/`formNode` helpers — this describe is a sibling of
+  // T7's and T5's own describes, so their function-scoped helpers aren't reachable from here.
+  function buttonNode(action: Record<string, unknown>): LayoutNode {
+    return { type: 'button', props: { label: 'Enviar', action } } as LayoutNode
+  }
+
+  function formNode(overrides: Partial<Extract<LayoutNode, { type: 'form' }>> = {}): LayoutNode {
+    return { type: 'form', id: 'f1', ...overrides } as LayoutNode
+  }
+
+  it('renders query as editable rows (including number/boolean values) for a button executeOperation action, and editing a value commits the expected action', () => {
+    const node = buttonNode({ type: 'executeOperation', operationName: 'save', query: { page: '1', limit: 10, active: true } })
+    const onCommitNodeUpdate = vi.fn()
+    render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={onCommitNodeUpdate} />)
+
+    const queryGroup = screen.getByRole('group', { name: 'query' })
+    const pageField = within(queryGroup).getByLabelText('query valor #1') as HTMLInputElement
+    const limitField = within(queryGroup).getByLabelText('query valor #2')
+    const activeField = within(queryGroup).getByLabelText('query valor #3')
+    expect(pageField.value).toBe('1')
+    // Number/boolean row values render as an editable <input>, not the disabled read-only
+    // <textarea> a nested object/array value would fall back to (FR4).
+    expect(limitField.tagName).toBe('INPUT')
+    expect(limitField).not.toBeDisabled()
+    expect(activeField.tagName).toBe('INPUT')
+    expect(activeField).not.toBeDisabled()
+
+    fireEvent.change(pageField, { target: { value: '2' } })
+
+    expect(onCommitNodeUpdate).toHaveBeenCalledTimes(1)
+    const [calledPath, updater] = onCommitNodeUpdate.mock.calls[0]
+    expect(calledPath).toBe(somePath)
+    const result = updater(node) as Extract<LayoutNode, { type: 'button' }>
+    expect(result.props.action).toEqual({
+      type: 'executeOperation',
+      operationName: 'save',
+      query: { page: '2', limit: 10, active: true },
+    })
+  })
+
+  it('shows "Añadir query" for a button executeOperation action with no query declared yet, and clicking it commits query: { \'\': \'\' }', () => {
+    const node = buttonNode({ type: 'executeOperation', operationName: 'save' })
+    const onCommitNodeUpdate = vi.fn()
+    render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={onCommitNodeUpdate} />)
+
+    const queryGroup = screen.getByRole('group', { name: 'query' })
+    expect(within(queryGroup).queryByLabelText('query clave #1')).not.toBeInTheDocument()
+
+    fireEvent.click(within(queryGroup).getByRole('button', { name: 'Añadir query' }))
+
+    expect(onCommitNodeUpdate).toHaveBeenCalledTimes(1)
+    const [, updater] = onCommitNodeUpdate.mock.calls[0]
+    const result = updater(node) as Extract<LayoutNode, { type: 'button' }>
+    expect(result.props.action).toEqual({ type: 'executeOperation', operationName: 'save', query: { '': '' } })
+  })
+
+  it('renders query per-entry inside executeOperations.operations, and adding a query key commits within that entry only (FR2)', () => {
+    const node = buttonNode({
+      type: 'executeOperations',
+      operations: [
+        { operationName: 'first', query: { page: '1' } },
+        { operationName: 'second' },
+      ],
+    })
+    const onCommitNodeUpdate = vi.fn()
+    render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={onCommitNodeUpdate} />)
+
+    const operationsGroup = screen.getByRole('group', { name: 'operations' })
+    const firstEntryGroup = within(operationsGroup).getByRole('group', { name: 'operations #1' })
+    const firstQueryGroup = within(firstEntryGroup).getByRole('group', { name: 'query' })
+    expect((within(firstQueryGroup).getByLabelText('query valor #1') as HTMLInputElement).value).toBe('1')
+
+    fireEvent.click(within(firstQueryGroup).getByRole('button', { name: 'Añadir query' }))
+
+    expect(onCommitNodeUpdate).toHaveBeenCalledTimes(1)
+    const [, updater] = onCommitNodeUpdate.mock.calls[0]
+    const result = updater(node) as Extract<LayoutNode, { type: 'button' }>
+    expect(result.props.action).toEqual({
+      type: 'executeOperations',
+      operations: [
+        { operationName: 'first', query: { page: '1', '': '' } },
+        { operationName: 'second' },
+      ],
+    })
+  })
+
+  it('renders query as editable rows for a form submitAction executeOperation action, and editing a value commits the expected submitAction', () => {
+    const node = formNode({
+      submitAction: { type: 'executeOperation', operationName: 'save', query: { page: '1' } },
+    } as Partial<Extract<LayoutNode, { type: 'form' }>>)
+    const onCommitNodeUpdate = vi.fn()
+    render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={onCommitNodeUpdate} />)
+
+    const queryGroup = screen.getByRole('group', { name: 'query' })
+    fireEvent.change(within(queryGroup).getByLabelText('query valor #1'), { target: { value: '2' } })
+
+    expect(onCommitNodeUpdate).toHaveBeenCalledTimes(1)
+    const [, updater] = onCommitNodeUpdate.mock.calls[0]
+    const result = updater(node) as Extract<LayoutNode, { type: 'form' }>
+    expect(result.submitAction).toEqual({ type: 'executeOperation', operationName: 'save', query: { page: '2' } })
+  })
+
+  it('renders query per-entry inside an onSuccess entry of type executeOperations, and adding a query key commits within that entry only', () => {
+    const node = formNode({
+      submitAction: { type: 'executeOperation', operationName: 'save' },
+      onSuccess: [{ type: 'executeOperations', operations: [{ operationName: 'notify', query: { channel: 'email' } }] }],
+    } as Partial<Extract<LayoutNode, { type: 'form' }>>)
+    const onCommitNodeUpdate = vi.fn()
+    render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={onCommitNodeUpdate} />)
+
+    const entryGroup = screen.getByRole('group', { name: 'onSuccess #1' })
+    const operationsGroup = within(entryGroup).getByRole('group', { name: 'operations' })
+    const firstEntryGroup = within(operationsGroup).getByRole('group', { name: 'operations #1' })
+    const queryGroup = within(firstEntryGroup).getByRole('group', { name: 'query' })
+    expect((within(queryGroup).getByLabelText('query valor #1') as HTMLInputElement).value).toBe('email')
+
+    fireEvent.click(within(queryGroup).getByRole('button', { name: 'Añadir query' }))
+
+    expect(onCommitNodeUpdate).toHaveBeenCalledTimes(1)
+    const [, updater] = onCommitNodeUpdate.mock.calls[0]
+    const result = updater(node) as Extract<LayoutNode, { type: 'form' }>
+    expect(result.onSuccess).toEqual([
+      { type: 'executeOperations', operations: [{ operationName: 'notify', query: { channel: 'email', '': '' } }] },
+    ])
+  })
 })
 
 describe('LayoutCanvasPropertiesPanel form submitAction selector (T5)', () => {
