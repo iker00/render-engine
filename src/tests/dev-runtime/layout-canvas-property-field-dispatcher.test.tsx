@@ -567,6 +567,60 @@ describe('PropertyFieldDispatcher object schema with additionalProperties: strin
   })
 })
 
+describe('PropertyFieldDispatcher object schema with additionalProperties: anyOf primitives (query, T1)', () => {
+  // The exact shape Zod v4's toJSONSchema produces for `runtimeApiQuerySchema = z.record(z.string(),
+  // z.union([z.string(), z.number(), z.boolean()]))`.
+  const querySchema = {
+    type: 'object',
+    additionalProperties: { anyOf: [{ type: 'string' }, { type: 'number' }, { type: 'boolean' }] },
+  }
+
+  it('dispatches to the key-value editor for an object with no declared properties and additionalProperties: anyOf [string, number, boolean]', () => {
+    const onChangeSpy = vi.fn()
+    render(
+      <ControlledDispatcher schema={querySchema} initialValue={{ page: '1' }} label="query" onChangeSpy={onChangeSpy} />,
+    )
+
+    expect(screen.getByLabelText('query clave #1')).toBeInTheDocument()
+    expect(screen.getByLabelText('query valor #1')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Añadir query' }))
+    expect(onChangeSpy).toHaveBeenCalledWith({ page: '1', '': '' })
+  })
+
+  it('renders a number or boolean row value as an editable text input, not a disabled read-only textarea', () => {
+    const onChangeSpy = vi.fn()
+    render(
+      <ControlledDispatcher schema={querySchema} initialValue={{ a: 1, b: true }} label="query" onChangeSpy={onChangeSpy} />,
+    )
+
+    const numberInput = screen.getByLabelText('query valor #1')
+    const booleanInput = screen.getByLabelText('query valor #2')
+    expect(numberInput.tagName).toBe('INPUT')
+    expect(numberInput).not.toBeDisabled()
+    expect(booleanInput.tagName).toBe('INPUT')
+    expect(booleanInput).not.toBeDisabled()
+  })
+
+  it('does not route a union mixing a primitive with a non-primitive branch (e.g. object) to the key-value editor', () => {
+    const onChangeSpy = vi.fn()
+    const mixedSchema = {
+      type: 'object',
+      additionalProperties: { anyOf: [{ type: 'string' }, { type: 'object' }] },
+    }
+    render(
+      <ControlledDispatcher schema={mixedSchema} initialValue={{ a: 'x' }} label="mixto" onChangeSpy={onChangeSpy} />,
+    )
+
+    // Without declared `properties`, ObjectPropertyField renders no per-key fields at all (it only
+    // iterates a declared `propertiesSchema`) — the KV editor's own "<label> clave/valor #n" rows
+    // are the signal the union-of-primitives detection would have produced, so their absence
+    // confirms the mixed union was rejected rather than misrouted.
+    expect(screen.queryByLabelText('mixto clave #1')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('mixto valor #1')).not.toBeInTheDocument()
+  })
+})
+
 describe('PropertyFieldDispatcher x-widget hook (T4, 0108)', () => {
   it('delegates to ChoiceItemsPropertyField for a schema declaring x-widget: "choice-items", instead of the raw-JSON escape hatch', () => {
     const onChangeSpy = vi.fn()
