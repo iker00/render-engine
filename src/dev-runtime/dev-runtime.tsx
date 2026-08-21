@@ -14,6 +14,7 @@ import type {
   RuntimeApiConfig,
   RuntimePreloadConfig,
   RuntimePageConfig,
+  RuntimeTokensConfig,
   RuntimeTranslationsConfig,
   ShellConfig,
   ShellHeaderActionNode,
@@ -621,6 +622,47 @@ export function DevRuntimeReady({
     return { status: 'applied' }
   }
 
+  // Same pipeline as `commitApiMutation`, generalized for the `tokens` root key (0139-T6):
+  // mutate the in-memory value, patch only that key onto the last-known-valid raw text via
+  // `patchRootKey`, validate the patched text, and apply it. `currentConfig.tokens` is optional
+  // (unlike `currentConfig.api`), so `mutate` always receives an object, falling back to `{}`
+  // when no tokens block exists yet — the same fallback `TokensConfigPanel`'s add-token flow
+  // relies on for a document with no `tokens` block at all.
+  function commitTokensMutation(
+    mutate: (tokens: RuntimeTokensConfig) => RuntimeTokensConfig,
+  ): CommitCanvasMutationResult {
+    const mutatedTokens = mutate(currentConfig.tokens ?? {})
+
+    const nextText = patchRootKey(lastValidConfigText, 'tokens', mutatedTokens)
+
+    const parsed: unknown = JSON.parse(nextText)
+    const validation = validateRuntimeConfig(parsed)
+    if (validation.status === 'error') {
+      return { status: 'rejected', error: validation.error }
+    }
+
+    const prevState = bridgeRef.current?.getLatestState()
+    const nextState = prevState
+      ? migrateRuntimeStateAcrossConfig(prevState, currentConfig, validation.config, { dataValues })
+      : undefined
+
+    if (nextState && bridgeRef.current) {
+      bridgeRef.current.dispatchAndSyncState({ type: 'runtime/reset', payload: { state: nextState } })
+    }
+
+    flushSync(() => {
+      setCurrentConfig(validation.config)
+      setEditorBuffer(nextText)
+      setLastValidConfigText(nextText)
+      setHasPendingChanges(false)
+      setHasAppliedChanges(true)
+      setParseError(null)
+      setValidationError(null)
+    })
+
+    return { status: 'applied' }
+  }
+
   // Same pipeline as `commitApiMutation`, generalized for the root `preloads` key (0132-T7).
   // `preloads` is an array, not an object like `shell` — the "no empty residual block" criterion
   // `commitShellSectionToggle` applies via `Object.keys(next).length === 0 ? undefined : next`
@@ -867,6 +909,7 @@ export function DevRuntimeReady({
       onCommitShellMutation={commitShellMutation}
       onCommitTranslationsMutation={commitTranslationsMutation}
       onCommitApiMutation={commitApiMutation}
+      onCommitTokensMutation={commitTokensMutation}
       onCommitGlobalPreloadsMutation={commitGlobalPreloadsMutation}
       onCommitPagePreloadsMutation={commitPagePreloadsMutation}
       onCommitPagesMutation={commitPagesMutation}

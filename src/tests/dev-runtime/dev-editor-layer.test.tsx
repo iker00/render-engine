@@ -3,7 +3,7 @@ import { useEffect, useState, type MutableRefObject } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import { validateRuntimeConfig } from '../../config/runtime-config'
 import type { LayoutNode, RuntimeConfig } from '../../config/runtime-config'
-import type { RuntimePageConfig } from '../../config/runtime-config-types'
+import type { RuntimePageConfig, RuntimeTokensConfig } from '../../config/runtime-config-types'
 import {
   patchRawConfigTextWithPages,
   patchRootKey,
@@ -136,6 +136,7 @@ interface HarnessProps {
   onCommitShellMutation?: (mutate: (shell: never) => never) => CommitCanvasMutationResult
   onCommitTranslationsMutation?: (mutate: (prev: never) => never) => CommitCanvasMutationResult
   onCommitApiMutation?: (mutate: (api: never) => never) => CommitCanvasMutationResult
+  onCommitTokensMutation?: (mutate: (tokens: never) => never) => CommitCanvasMutationResult
   onCommitGlobalPreloadsMutation?: (mutate: (preloads: never) => never) => CommitCanvasMutationResult
   onCommitPagePreloadsMutation?: (mutate: (preloads: never) => never) => CommitCanvasMutationResult
   onCommitPagesMutation?: (mutate: (pages: RuntimePageConfig[]) => RuntimePageConfig[]) => CommitCanvasMutationResult
@@ -159,6 +160,7 @@ function DevEditorLayerHarness({
   onCommitShellMutation = noopCommitCanvasMutation,
   onCommitTranslationsMutation = noopCommitCanvasMutation,
   onCommitApiMutation = noopCommitCanvasMutation,
+  onCommitTokensMutation = noopCommitCanvasMutation,
   onCommitGlobalPreloadsMutation = noopCommitCanvasMutation,
   onCommitPagePreloadsMutation = noopCommitCanvasMutation,
   onCommitPagesMutation = noopCommitCanvasMutation,
@@ -198,6 +200,7 @@ function DevEditorLayerHarness({
         onCommitShellMutation={onCommitShellMutation}
         onCommitTranslationsMutation={onCommitTranslationsMutation}
         onCommitApiMutation={onCommitApiMutation}
+        onCommitTokensMutation={onCommitTokensMutation}
         onCommitGlobalPreloadsMutation={onCommitGlobalPreloadsMutation}
         onCommitPagePreloadsMutation={onCommitPagePreloadsMutation}
         onCommitPagesMutation={onCommitPagesMutation}
@@ -355,6 +358,7 @@ describe('DevEditorLayer / selection degrades safely when the layout changes und
             onCommitShellMutation={noopCommitCanvasMutation}
             onCommitTranslationsMutation={noopCommitCanvasMutation}
             onCommitApiMutation={noopCommitCanvasMutation}
+            onCommitTokensMutation={noopCommitCanvasMutation}
             onCommitGlobalPreloadsMutation={noopCommitCanvasMutation}
             onCommitPagePreloadsMutation={noopCommitCanvasMutation}
             onCommitPagesMutation={noopCommitCanvasMutation}
@@ -576,6 +580,7 @@ describe('DevEditorLayer / Esc closes the selection panel when Monaco is closed 
             onCommitShellMutation={noopCommitCanvasMutation}
             onCommitTranslationsMutation={noopCommitCanvasMutation}
             onCommitApiMutation={noopCommitCanvasMutation}
+            onCommitTokensMutation={noopCommitCanvasMutation}
             onCommitGlobalPreloadsMutation={noopCommitCanvasMutation}
             onCommitPagePreloadsMutation={noopCommitCanvasMutation}
             onCommitPagesMutation={noopCommitCanvasMutation}
@@ -658,6 +663,7 @@ describe('DevEditorLayer / node-local state persists across mode switches (Decis
             onCommitShellMutation={noopCommitCanvasMutation}
             onCommitTranslationsMutation={noopCommitCanvasMutation}
             onCommitApiMutation={noopCommitCanvasMutation}
+            onCommitTokensMutation={noopCommitCanvasMutation}
             onCommitGlobalPreloadsMutation={noopCommitCanvasMutation}
             onCommitPagePreloadsMutation={noopCommitCanvasMutation}
             onCommitPagesMutation={noopCommitCanvasMutation}
@@ -747,6 +753,14 @@ describe('DevEditorLayer / Shell domain (0122-T5)', () => {
     expect((contextJson() as { selectedPath: unknown }).selectedPath).not.toBeNull()
 
     switchToShellDomain()
+    switchToLayoutDomain()
+
+    expect((contextJson() as { selectedPath: unknown }).selectedPath).toBeNull()
+
+    fireEvent.click(screen.getByTestId('probe-node-a'))
+    expect((contextJson() as { selectedPath: unknown }).selectedPath).not.toBeNull()
+
+    switchToTokensDomain()
     switchToLayoutDomain()
 
     expect((contextJson() as { selectedPath: unknown }).selectedPath).toBeNull()
@@ -1071,6 +1085,95 @@ describe('DevEditorLayer / Pages domain (0138-T5)', () => {
   })
 })
 
+function switchToTokensDomain() {
+  fireEvent.click(screen.getByTestId('dev-editor-toolbar-domain-tokens'))
+}
+
+// 0139-T6: activating the "Tokens" domain tab swaps the central content area for
+// `TokensConfigPanel`, in place of the Layout canvas — same pattern the Shell/Translations/Api/
+// Pages domains already established, never alongside the canvas. `TokensConfigPanel` is real here
+// (not mocked, same decision as the rest of this file's domain describes).
+describe('DevEditorLayer / Tokens domain', () => {
+  it('renders TokensConfigPanel and stops rendering the canvas once the Tokens tab is selected', () => {
+    renderHarness()
+    expect(screen.getByTestId('probe-node-a')).toBeInTheDocument()
+    expect(screen.queryByTestId('tokens-config-panel')).not.toBeInTheDocument()
+
+    switchToTokensDomain()
+
+    expect(screen.getByTestId('tokens-config-panel')).toBeInTheDocument()
+    expect(screen.queryByTestId('probe-node-a')).not.toBeInTheDocument()
+  })
+
+  it('restores the canvas view when switching back to Layout', () => {
+    renderHarness()
+    switchToTokensDomain()
+    expect(screen.getByTestId('tokens-config-panel')).toBeInTheDocument()
+
+    switchToLayoutDomain()
+
+    expect(screen.queryByTestId('tokens-config-panel')).not.toBeInTheDocument()
+    expect(screen.getByTestId('probe-node-a')).toBeInTheDocument()
+  })
+
+  it('marks the Tokens tab as pressed and Layout as not pressed once selected', () => {
+    renderHarness()
+    switchToTokensDomain()
+
+    expect(screen.getByTestId('dev-editor-toolbar-domain-tokens')).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByTestId('dev-editor-toolbar-domain-layout')).toHaveAttribute('aria-pressed', 'false')
+  })
+
+  it('clears a canvas node selection when entering Layout from Tokens, with a node selected before switching to Tokens', () => {
+    renderHarness()
+    switchToEditorMode()
+    fireEvent.click(screen.getByTestId('probe-node-a'))
+    expect((contextJson() as { selectedPath: unknown }).selectedPath).not.toBeNull()
+
+    switchToTokensDomain()
+    switchToLayoutDomain()
+
+    expect((contextJson() as { selectedPath: unknown }).selectedPath).toBeNull()
+  })
+
+  it('does not render the FloatingSelectionOverlay while the Tokens domain is active', () => {
+    renderHarness()
+    switchToEditorMode()
+    fireEvent.click(screen.getByTestId('probe-node-a'))
+    expect(screen.getByTestId('dev-editor-selection-overlay')).toBeInTheDocument()
+
+    switchToTokensDomain()
+
+    expect(screen.queryByTestId('dev-editor-selection-overlay')).not.toBeInTheDocument()
+  })
+
+  it('keeps the toolbar visible while the Tokens panel is rendered', () => {
+    renderHarness()
+    switchToTokensDomain()
+    expect(screen.getByTestId('dev-editor-toolbar')).toBeInTheDocument()
+  })
+
+  // Regression: the tokens domain must not participate in the canvas-selection <-> Monaco mutual
+  // exclusion (T2 of 0104) — that exclusion only concerns the selection overlay.
+  it('regression: with Monaco open, clicking Tokens does not affect the Monaco panel state', () => {
+    const onMonacoOpenChangeSpy = vi.fn()
+    const mountCountRef = { current: 0 }
+    render(
+      <DevEditorLayerHarness
+        config={buildConfig()}
+        mountCountRef={mountCountRef}
+        onMonacoOpenChangeSpy={onMonacoOpenChangeSpy}
+        initialMonacoOpen={true}
+      />,
+    )
+
+    switchToTokensDomain()
+
+    expect(screen.getByTestId('tokens-config-panel')).toBeInTheDocument()
+    expect(onMonacoOpenChangeSpy).not.toHaveBeenCalled()
+  })
+})
+
 // 0138-T5: end-to-end reproduction of the real dev-runtime.tsx commit pipeline for `pages`/
 // `initialPage` (`patchRootKey` + `validateRuntimeConfig`), same pattern
 // pages-config-panel.test.tsx uses in isolation, wired here through the real DevEditorLayer domain
@@ -1196,6 +1299,101 @@ describe('DevEditorLayer / Pages domain real commit pipeline (0138-T5)', () => {
       layout: [],
       preloads: [{ getTodos: {} }],
     })
+  })
+})
+
+// 0139-T6: end-to-end reproduction of the real dev-runtime.tsx commit pipeline for `tokens`
+// (`patchRootKey` + `validateRuntimeConfig`), same pattern the "Pages domain real commit pipeline"
+// describe above uses for `pages`, wired here through the real DevEditorLayer domain tab instead
+// of mounting TokensConfigPanel directly.
+describe('DevEditorLayer / Tokens domain real commit pipeline', () => {
+  function TokensDomainCommitHarness({
+    initialConfig,
+    initialRawText,
+  }: { initialConfig?: RuntimeConfig; initialRawText?: string } = {}) {
+    const initial = initialConfig ?? buildConfig()
+    const [config, setConfig] = useState<RuntimeConfig>(initial)
+    const [rawText, setRawText] = useState(() => initialRawText ?? JSON.stringify(initial, null, 2))
+    const [mode, setMode] = useState<'visual' | 'editor'>('visual')
+    const [paletteOpen, setPaletteOpen] = useState(false)
+    const [monacoOpen, setMonacoOpen] = useState(false)
+
+    function applyPatchedText(nextText: string): CommitCanvasMutationResult {
+      const parsed: unknown = JSON.parse(nextText)
+      const validation = validateRuntimeConfig(parsed)
+      if (validation.status === 'error') {
+        return { status: 'rejected', error: validation.error }
+      }
+      setConfig(validation.config)
+      setRawText(nextText)
+      return { status: 'applied' }
+    }
+
+    // Same pipeline dev-runtime.tsx's real `commitTokensMutation` uses: mutate the in-memory
+    // value (falling back to `{}` when no `tokens` block exists yet), patch only the `tokens`
+    // root key onto the raw text via `patchRootKey`, and validate the patched text.
+    function commitTokensMutation(
+      mutate: (tokens: RuntimeTokensConfig) => RuntimeTokensConfig,
+    ): CommitCanvasMutationResult {
+      return applyPatchedText(patchRootKey(rawText, 'tokens', mutate(config.tokens ?? {})))
+    }
+
+    return (
+      <RuntimeStateProvider config={config}>
+        <DevEditorLayer
+          mode={mode}
+          onModeChange={setMode}
+          paletteOpen={paletteOpen}
+          onPaletteOpenChange={setPaletteOpen}
+          monacoOpen={monacoOpen}
+          onMonacoOpenChange={setMonacoOpen}
+          monaco={NOOP_MONACO}
+          onCommitCanvasMutation={noopCommitCanvasMutation}
+          onCommitNodeUpdate={() => {}}
+          onCommitShellMutation={noopCommitCanvasMutation}
+          onCommitTranslationsMutation={noopCommitCanvasMutation}
+          onCommitApiMutation={noopCommitCanvasMutation}
+          onCommitTokensMutation={commitTokensMutation}
+          onCommitGlobalPreloadsMutation={noopCommitCanvasMutation}
+          onCommitPagePreloadsMutation={noopCommitCanvasMutation}
+          onCommitPagesMutation={noopCommitCanvasMutation}
+          onCommitInitialPageMutation={noopCommitCanvasMutation}
+          endpointsConfig={undefined}
+          saveResolution={UNAVAILABLE_RESOLUTION}
+          searchResolution={UNAVAILABLE_RESOLUTION}
+          refreshResolution={UNAVAILABLE_RESOLUTION}
+          saveState="idle"
+          saveError={null}
+          handleSaveConfig={NOOP_SAVE}
+        >
+          <div data-testid="tokens-domain-commit-canvas-marker" />
+        </DevEditorLayer>
+        <pre data-testid="raw-text">{rawText}</pre>
+      </RuntimeStateProvider>
+    )
+  }
+
+  function rawTokensConfig(): { tokens?: RuntimeTokensConfig } {
+    return JSON.parse(screen.getByTestId('raw-text').textContent ?? '{}') as { tokens?: RuntimeTokensConfig }
+  }
+
+  it('adding, editing and deleting a token reflects into the real config through the full commit pipeline', () => {
+    render(<TokensDomainCommitHarness />)
+    switchToTokensDomain()
+
+    fireEvent.change(screen.getByLabelText('Id'), { target: { value: 'apiKey' } })
+    fireEvent.change(screen.getByLabelText('Value'), { target: { value: 'secret-1' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Añadir' }))
+    expect(rawTokensConfig().tokens).toEqual({ apiKey: { value: 'secret-1' } })
+
+    const valueInput = screen.getByLabelText('Value de apiKey')
+    fireEvent.change(valueInput, { target: { value: 'secret-2' } })
+    fireEvent.blur(valueInput)
+    expect(rawTokensConfig().tokens).toEqual({ apiKey: { value: 'secret-2' } })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Eliminar token apiKey' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Eliminar' }))
+    expect(rawTokensConfig().tokens).toEqual({})
   })
 })
 

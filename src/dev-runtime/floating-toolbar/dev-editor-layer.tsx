@@ -4,6 +4,7 @@ import type {
   RuntimeApiConfig,
   RuntimePageConfig,
   RuntimePreloadConfig,
+  RuntimeTokensConfig,
   RuntimeTranslationsConfig,
   ShellConfig,
 } from '../../config/runtime-config-types'
@@ -29,6 +30,7 @@ import type { RuntimeEndpointsConfig } from '../endpoints-config/runtime-endpoin
 import { ApiConfigPanel } from '../api-config-panel/api-config-panel'
 import { PagesConfigPanel } from '../pages-config-panel/pages-config-panel'
 import { ShellConfigPanel } from '../shell-config-panel/shell-config-panel'
+import { TokensConfigPanel } from '../tokens-config-panel/tokens-config-panel'
 import { TranslationsConfigPanel } from '../translations-panel/translations-config-panel'
 import { createPlatagesTranslationsProvider } from '../translations-panel/translations-provider'
 import {
@@ -75,6 +77,9 @@ interface DevEditorLayerProps {
     mutate: (prev: RuntimeTranslationsConfig | undefined) => RuntimeTranslationsConfig | undefined,
   ) => CommitCanvasMutationResult
   onCommitApiMutation: (mutate: (api: RuntimeApiConfig) => RuntimeApiConfig) => CommitCanvasMutationResult
+  onCommitTokensMutation: (
+    mutate: (tokens: RuntimeTokensConfig) => RuntimeTokensConfig,
+  ) => CommitCanvasMutationResult
   onCommitGlobalPreloadsMutation: (
     mutate: (preloads: RuntimePreloadConfig[] | undefined) => RuntimePreloadConfig[] | undefined,
   ) => CommitCanvasMutationResult
@@ -123,6 +128,7 @@ export function DevEditorLayer({
   onCommitShellMutation,
   onCommitTranslationsMutation,
   onCommitApiMutation,
+  onCommitTokensMutation,
   onCommitGlobalPreloadsMutation,
   onCommitPagePreloadsMutation,
   onCommitPagesMutation,
@@ -138,9 +144,9 @@ export function DevEditorLayer({
 }: DevEditorLayerProps) {
   const [selectedPath, setSelectedPath] = useState<LayoutNodePath | null>(null)
   const [hoveredPath, setHoveredPath] = useState<LayoutNodePath | null>(null)
-  // Domain tab (0122-T5, extended by 0138-T5): "layout" renders the canvas (default), "shell"/
-  // "translations"/"pages" each swap the central content area for their own config panel. `api`/
-  // `tokens` stay disabled in the toolbar.
+  // Domain tab (0122-T5, extended by 0138-T5 and 0139-T6): "layout" renders the canvas (default),
+  // "shell"/"translations"/"api"/"pages"/"tokens" each swap the central content area for their own
+  // config panel.
   const [activeDomain, setActiveDomain] = useState<ToolbarDomain>('layout')
 
   // Read here, outside LayoutEditModeProvider (mounted further down this same component),
@@ -238,17 +244,22 @@ export function DevEditorLayer({
     onMonacoOpenChange(true)
   }
 
-  // Entering "shell", "translations", "api" or "pages" clears the canvas selection (same policy
-  // already documented for tokens once it becomes selectable too): none of these panels use the
-  // "selected canvas node" model at all, so a selection carried over from Layout would just be
-  // stale state pointing at a hidden tree. Leaving any of these domains back to "layout" has
-  // nothing else to reconcile — each panel's own local state lives inside itself and fully
-  // unmounts whenever `activeDomain` moves away from it, so there is no residue to clear
-  // explicitly.
+  // Entering "shell", "translations", "api", "pages" or "tokens" clears the canvas selection:
+  // none of these panels use the "selected canvas node" model at all, so a selection carried over
+  // from Layout would just be stale state pointing at a hidden tree. Leaving any of these domains
+  // back to "layout" has nothing else to reconcile — each panel's own local state lives inside
+  // itself and fully unmounts whenever `activeDomain` moves away from it, so there is no residue
+  // to clear explicitly.
   function handleDomainSelected(domain: ToolbarDomain) {
     if (domain === activeDomain) return
     setActiveDomain(domain)
-    if (domain === 'shell' || domain === 'translations' || domain === 'api' || domain === 'pages') {
+    if (
+      domain === 'shell' ||
+      domain === 'translations' ||
+      domain === 'api' ||
+      domain === 'pages' ||
+      domain === 'tokens'
+    ) {
       setSelectedPath(null)
       setHoveredPath(null)
     }
@@ -377,11 +388,18 @@ export function DevEditorLayer({
           searchResolution={searchResolution}
           refreshResolution={refreshResolution}
         />
-      ) : (
+      ) : activeDomain === 'pages' ? (
         <PagesConfigPanel
           config={config}
           onCommitPagesMutation={onCommitPagesMutation}
           onCommitInitialPageMutation={onCommitInitialPageMutation}
+        />
+      ) : (
+        <TokensConfigPanel
+          config={config}
+          tokens={config.tokens}
+          api={config.api}
+          onCommitTokensMutation={onCommitTokensMutation}
         />
       )}
 

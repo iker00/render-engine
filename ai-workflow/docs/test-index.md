@@ -205,6 +205,7 @@ Ficheros de apoyo, no son tests: `config-validation/helpers.ts`, `dev-runtime/lu
 ## dev-runtime/
 
 - `api-config-panel.test.tsx` — panel "Api" end-to-end: CRUD de operaciones, visibilidad de body por método y sub-vista de preloads globales/de página
+- `boolean-property-field.test.tsx` — switch booleano compartido: toggle habilitado y estado `disabled`/`disabledReason`
 - `color-swatch-palette.test.ts` — catálogo puro de nombres semánticos y clases de las muestras de color
 - `condition-group-property-field.test.tsx` — widget aislado de condición/grupo de visibilidad con conmutación de forma y operadores
 - `dev-editor-floating-toolbar.test.tsx` — barra flotante del editor: selector de página, pestañas de dominio y toggles paleta/Monaco
@@ -268,5 +269,9 @@ Ficheros de apoyo, no son tests: `config-validation/helpers.ts`, `dev-runtime/lu
 - `shell-menu-list-editor.test.tsx` — editor de la lista del menú del header con desplegable y arrastre entre niveles
 - `shell-sidebar-list-editor.test.tsx` — editor de la lista del sidebar con anidamiento sin tope y arrastre entre niveles
 - `shell-tree-mutations.test.ts` — funciones puras de mutación del árbol del shell por path posicional
+- `token-delete-confirm-dialog.test.tsx` — diálogo `alertdialog` de confirmación de borrado de token: aviso de referencias huérfanas en cabeceras, cierre por Esc/clic fuera, botones y gestión de foco al montar/desmontar
+- `token-refresh-fields-editor.test.tsx` — sub-formulario aislado del bloque `refresh` de un token: activación, campos condicionales, referencia rota y feedback de commit rechazado por campo
+- `tokens-config-panel-orphan-scan.test.ts` — escaneo estructural de referencias `tokens.{id}.value` huérfanas en `headers` de operaciones, layouts y precargas
+- `tokens-config-panel.test.tsx` — `TokensConfigPanel` aislado: listado, alta, edición de `value`, integración del sub-formulario `refresh` y borrado con confirmación y feedback de commit rechazado
 - `translations-config-panel.test.tsx` — panel aislado de traducciones con edición manual, búsqueda, refresco y feedback
 - `translations-provider.test.ts` — proveedor de traducciones Platages: resolución de baseUrl, peticiones y mapeo de errores

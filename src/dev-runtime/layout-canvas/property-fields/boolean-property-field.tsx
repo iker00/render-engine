@@ -5,9 +5,17 @@ interface BooleanPropertyFieldProps {
   label: string
   value: boolean
   onChange: (value: boolean) => void
+  disabled?: boolean
+  disabledReason?: string
 }
 
-export function BooleanPropertyField({ label, value, onChange }: BooleanPropertyFieldProps) {
+export function BooleanPropertyField({
+  label,
+  value,
+  onChange,
+  disabled = false,
+  disabledReason,
+}: BooleanPropertyFieldProps) {
   const inputId = useId()
 
   return (
@@ -17,6 +25,8 @@ export function BooleanPropertyField({ label, value, onChange }: BooleanProperty
         type="button"
         role="switch"
         aria-checked={value}
+        disabled={disabled}
+        title={disabled ? disabledReason : undefined}
         onClick={() => onChange(!value)}
         className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors focus:outline-none focus:ring-1 focus:ring-gray-400 ${
           value ? 'bg-gray-800' : 'bg-gray-300'
