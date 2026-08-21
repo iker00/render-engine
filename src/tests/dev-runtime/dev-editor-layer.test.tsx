@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import { useEffect, useState, type MutableRefObject } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import type { LayoutNode, RuntimeConfig } from '../../config/runtime-config'
@@ -129,6 +129,9 @@ interface HarnessProps {
   onCommitNodeUpdate?: (path: never, updater: never) => void
   onCommitShellMutation?: (mutate: (shell: never) => never) => CommitCanvasMutationResult
   onCommitTranslationsMutation?: (mutate: (prev: never) => never) => CommitCanvasMutationResult
+  onCommitApiMutation?: (mutate: (api: never) => never) => CommitCanvasMutationResult
+  onCommitGlobalPreloadsMutation?: (mutate: (preloads: never) => never) => CommitCanvasMutationResult
+  onCommitPagePreloadsMutation?: (mutate: (preloads: never) => never) => CommitCanvasMutationResult
   onMonacoOpenChangeSpy?: (open: boolean) => void
   initialMonacoOpen?: boolean
   endpointsConfig?: RuntimeEndpointsConfig
@@ -147,6 +150,9 @@ function DevEditorLayerHarness({
   onCommitNodeUpdate = () => {},
   onCommitShellMutation = noopCommitCanvasMutation,
   onCommitTranslationsMutation = noopCommitCanvasMutation,
+  onCommitApiMutation = noopCommitCanvasMutation,
+  onCommitGlobalPreloadsMutation = noopCommitCanvasMutation,
+  onCommitPagePreloadsMutation = noopCommitCanvasMutation,
   onMonacoOpenChangeSpy,
   initialMonacoOpen = false,
   endpointsConfig,
@@ -181,6 +187,9 @@ function DevEditorLayerHarness({
         onCommitNodeUpdate={onCommitNodeUpdate}
         onCommitShellMutation={onCommitShellMutation}
         onCommitTranslationsMutation={onCommitTranslationsMutation}
+        onCommitApiMutation={onCommitApiMutation}
+        onCommitGlobalPreloadsMutation={onCommitGlobalPreloadsMutation}
+        onCommitPagePreloadsMutation={onCommitPagePreloadsMutation}
         endpointsConfig={endpointsConfig}
         saveResolution={saveResolution}
         searchResolution={searchResolution}
@@ -333,6 +342,9 @@ describe('DevEditorLayer / selection degrades safely when the layout changes und
             onCommitNodeUpdate={() => {}}
             onCommitShellMutation={noopCommitCanvasMutation}
             onCommitTranslationsMutation={noopCommitCanvasMutation}
+            onCommitApiMutation={noopCommitCanvasMutation}
+            onCommitGlobalPreloadsMutation={noopCommitCanvasMutation}
+            onCommitPagePreloadsMutation={noopCommitCanvasMutation}
             endpointsConfig={undefined}
             saveResolution={UNAVAILABLE_RESOLUTION}
             searchResolution={UNAVAILABLE_RESOLUTION}
@@ -549,6 +561,9 @@ describe('DevEditorLayer / Esc closes the selection panel when Monaco is closed 
             onCommitNodeUpdate={() => {}}
             onCommitShellMutation={noopCommitCanvasMutation}
             onCommitTranslationsMutation={noopCommitCanvasMutation}
+            onCommitApiMutation={noopCommitCanvasMutation}
+            onCommitGlobalPreloadsMutation={noopCommitCanvasMutation}
+            onCommitPagePreloadsMutation={noopCommitCanvasMutation}
             endpointsConfig={undefined}
             saveResolution={UNAVAILABLE_RESOLUTION}
             searchResolution={UNAVAILABLE_RESOLUTION}
@@ -626,6 +641,9 @@ describe('DevEditorLayer / node-local state persists across mode switches (Decis
             onCommitNodeUpdate={() => {}}
             onCommitShellMutation={noopCommitCanvasMutation}
             onCommitTranslationsMutation={noopCommitCanvasMutation}
+            onCommitApiMutation={noopCommitCanvasMutation}
+            onCommitGlobalPreloadsMutation={noopCommitCanvasMutation}
+            onCommitPagePreloadsMutation={noopCommitCanvasMutation}
             endpointsConfig={undefined}
             saveResolution={UNAVAILABLE_RESOLUTION}
             searchResolution={UNAVAILABLE_RESOLUTION}
@@ -831,6 +849,139 @@ describe('DevEditorLayer / Translations domain (0130-T2)', () => {
 
     expect(screen.getByTestId('translations-config-panel')).toBeInTheDocument()
     expect(onMonacoOpenChangeSpy).not.toHaveBeenCalled()
+  })
+})
+
+function switchToApiDomain() {
+  fireEvent.click(screen.getByTestId('dev-editor-toolbar-domain-api'))
+}
+
+// 0132-T5: activating the "Api" domain tab swaps the central content area for `ApiConfigPanel`,
+// in place of the Layout canvas — same pattern the Shell/Translations domains already
+// established, never alongside the canvas. `ApiConfigPanel` is real here (not mocked), same
+// decision already applied for `ShellConfigPanel` in this file.
+describe('DevEditorLayer / Api domain (0132-T5)', () => {
+  it('renders ApiConfigPanel and stops rendering the canvas once the Api tab is selected', () => {
+    renderHarness()
+    expect(screen.getByTestId('probe-node-a')).toBeInTheDocument()
+    expect(screen.queryByTestId('api-config-panel')).not.toBeInTheDocument()
+
+    switchToApiDomain()
+
+    expect(screen.getByTestId('api-config-panel')).toBeInTheDocument()
+    expect(screen.queryByTestId('probe-node-a')).not.toBeInTheDocument()
+  })
+
+  it('restores the canvas view when switching back to Layout', () => {
+    renderHarness()
+    switchToApiDomain()
+    expect(screen.getByTestId('api-config-panel')).toBeInTheDocument()
+
+    switchToLayoutDomain()
+
+    expect(screen.queryByTestId('api-config-panel')).not.toBeInTheDocument()
+    expect(screen.getByTestId('probe-node-a')).toBeInTheDocument()
+  })
+
+  it('marks the Api tab as pressed and Layout as not pressed once selected', () => {
+    renderHarness()
+    switchToApiDomain()
+
+    expect(screen.getByTestId('dev-editor-toolbar-domain-api')).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByTestId('dev-editor-toolbar-domain-layout')).toHaveAttribute('aria-pressed', 'false')
+  })
+
+  it('clears a canvas node selection when entering Layout from Api, with a node selected before switching to Api', () => {
+    renderHarness()
+    switchToEditorMode()
+    fireEvent.click(screen.getByTestId('probe-node-a'))
+    expect((contextJson() as { selectedPath: unknown }).selectedPath).not.toBeNull()
+
+    switchToApiDomain()
+    switchToLayoutDomain()
+
+    expect((contextJson() as { selectedPath: unknown }).selectedPath).toBeNull()
+  })
+
+  it('does not render the FloatingSelectionOverlay while the Api domain is active', () => {
+    renderHarness()
+    switchToEditorMode()
+    fireEvent.click(screen.getByTestId('probe-node-a'))
+    expect(screen.getByTestId('dev-editor-selection-overlay')).toBeInTheDocument()
+
+    switchToApiDomain()
+
+    expect(screen.queryByTestId('dev-editor-selection-overlay')).not.toBeInTheDocument()
+  })
+
+  it('keeps the toolbar visible while the Api panel is rendered', () => {
+    renderHarness()
+    switchToApiDomain()
+    expect(screen.getByTestId('dev-editor-toolbar')).toBeInTheDocument()
+  })
+
+  // Regression: the api domain must not participate in the canvas-selection <-> Monaco mutual
+  // exclusion (T2 of 0104) — that exclusion only concerns the selection overlay.
+  it('regression: with Monaco open, clicking Api does not affect the Monaco panel state', () => {
+    const onMonacoOpenChangeSpy = vi.fn()
+    const mountCountRef = { current: 0 }
+    render(
+      <DevEditorLayerHarness
+        config={buildConfig()}
+        mountCountRef={mountCountRef}
+        onMonacoOpenChangeSpy={onMonacoOpenChangeSpy}
+        initialMonacoOpen={true}
+      />,
+    )
+
+    switchToApiDomain()
+
+    expect(screen.getByTestId('api-config-panel')).toBeInTheDocument()
+    expect(onMonacoOpenChangeSpy).not.toHaveBeenCalled()
+  })
+})
+
+function switchToPreloadsSubview() {
+  fireEvent.click(screen.getByRole('tab', { name: 'Preloads' }))
+}
+
+// 0132-T7: `ApiConfigPanel`'s `globalPreloads`/`activePageId`/`pagePreloads` props are exactly
+// `config.preloads`/`activePage.id`/`activePage.preloads`, the same values DevEditorLayer already
+// computes for the canvas (`activePageLayout`/`activePageId` above) — real `ApiConfigPanel` here
+// (not mocked, same decision as the rest of this describe group), observed through its rendered
+// Preloads sub-view instead of a prop spy.
+describe('DevEditorLayer / Api domain preloads props (0132-T7)', () => {
+  it('forwards config.preloads/activePage.id/activePage.preloads to ApiConfigPanel as globalPreloads/activePageId/pagePreloads', () => {
+    const config: RuntimeConfig = {
+      api: { loadUsers: { method: 'GET', endpoint: '/users' } },
+      initialPage: 'home',
+      preloads: [{ operationName: 'loadUsers', requestParams: {} }],
+      pages: [
+        {
+          id: 'home',
+          preloads: [{ operationName: 'loadUsers', requestParams: { query: { a: '1' } } }],
+          layout: [heading('First')],
+        },
+        { id: 'about', layout: [heading('About heading')] },
+      ],
+    } as RuntimeConfig
+
+    renderHarness(config)
+    switchToApiDomain()
+    switchToPreloadsSubview()
+
+    const globalSection = within(screen.getByTestId('api-config-panel-preloads-global'))
+    const pageSection = within(screen.getByTestId('api-config-panel-preloads-page'))
+
+    expect(globalSection.getByLabelText('Operación #1')).toHaveValue('loadUsers')
+    expect(pageSection.getByLabelText('Query valor #1')).toHaveValue('1')
+
+    fireEvent.change(screen.getByTestId('dev-editor-toolbar-page-select'), { target: { value: 'about' } })
+
+    expect(within(screen.getByTestId('api-config-panel-preloads-page')).getByText(/sin precargas/i)).toBeInTheDocument()
+    expect(within(screen.getByTestId('api-config-panel-preloads-global')).getByLabelText('Operación #1')).toHaveValue(
+      'loadUsers',
+    )
   })
 })
 

@@ -25,7 +25,9 @@ vi.mock('@monaco-editor/react', () => ({
 import {
   buildCommitCandidateConfig,
   denormalizeFormNodesForSerialization,
+  denormalizePreloadsForSerialization,
   patchRawConfigTextWithLayout,
+  patchRawConfigTextWithPagePreloads,
   patchRootKey,
 } from '../../dev-runtime/layout-canvas/layout-canvas-commit'
 import {
@@ -229,6 +231,132 @@ describe('patchRawConfigTextWithLayout', () => {
     expect(parsed.api).toEqual(rawConfig.api)
     expect(parsed.tokens).toEqual(rawConfig.tokens)
     expect(parsed.initialPage).toBe(rawConfig.initialPage)
+  })
+})
+
+describe('denormalizePreloadsForSerialization', () => {
+  it('converts a normalized entry to the raw shape validatePreloadEntries accepts: the operation name as the only key, requestParams as its value', () => {
+    const result = denormalizePreloadsForSerialization([
+      { operationName: 'loadUsers', requestParams: { query: { page: '2' } } },
+    ])
+
+    expect(result).toEqual([{ loadUsers: { query: { page: '2' } } }])
+  })
+
+  it('carries `when` as a sibling key when present, and omits it entirely when absent', () => {
+    const withWhen = denormalizePreloadsForSerialization([
+      {
+        operationName: 'loadUsers',
+        requestParams: {},
+        when: { reference: 'params.id', operator: 'equals', value: '1' },
+      },
+    ])
+    expect(withWhen).toEqual([
+      { loadUsers: {}, when: { reference: 'params.id', operator: 'equals', value: '1' } },
+    ])
+
+    const withoutWhen = denormalizePreloadsForSerialization([
+      { operationName: 'loadUsers', requestParams: {} },
+    ])
+    expect(withoutWhen).toEqual([{ loadUsers: {} }])
+    expect('when' in (withoutWhen[0] as object)).toBe(false)
+  })
+
+  it('produces one raw entry per input entry, in the same order, for multiple entries', () => {
+    const result = denormalizePreloadsForSerialization([
+      { operationName: 'a', requestParams: { query: { x: '1' } } },
+      { operationName: 'b', requestParams: { headers: { y: '2' } } },
+    ])
+
+    expect(result).toEqual([{ a: { query: { x: '1' } } }, { b: { headers: { y: '2' } } }])
+  })
+})
+
+describe('patchRawConfigTextWithPagePreloads', () => {
+  const rawConfig = {
+    api: { loadUsers: { method: 'GET', endpoint: '/users' } },
+    pages: [
+      { id: 'home', preloads: [{ loadUsers: {} }], title: 'Home title', layout: [heading('Old')] },
+      { id: 'about', layout: [heading('About')] },
+    ],
+    initialPage: 'home',
+    tokens: { authToken: { value: 'xyz' } },
+  }
+  const rawText = JSON.stringify(rawConfig, null, 2)
+
+  it('replaces only the preloads of the targeted page, leaving that page\'s layout/title and the rest of the document intact', () => {
+    const mutated = [{ operationName: 'loadUsers', requestParams: { query: { page: '2' } } }]
+    const nextText = patchRawConfigTextWithPagePreloads(rawText, 'home', mutated)
+    const parsed = JSON.parse(nextText)
+
+    expect(parsed.pages[0].preloads).toEqual([{ loadUsers: { query: { page: '2' } } }])
+    expect(parsed.pages[0].layout).toEqual(rawConfig.pages[0].layout)
+    expect(parsed.pages[0].title).toBe('Home title')
+    expect(parsed.pages[1]).toEqual(rawConfig.pages[1])
+    expect(parsed.api).toEqual(rawConfig.api)
+    expect(parsed.initialPage).toBe(rawConfig.initialPage)
+    expect(parsed.tokens).toEqual(rawConfig.tokens)
+  })
+
+  it('omits the preloads key entirely (not "preloads": []) when mutatedPreloads is an empty array', () => {
+    const nextText = patchRawConfigTextWithPagePreloads(rawText, 'home', [])
+    const parsed = JSON.parse(nextText)
+
+    expect('preloads' in parsed.pages[0]).toBe(false)
+    expect(parsed.pages[0].layout).toEqual(rawConfig.pages[0].layout)
+  })
+
+  it('omits the preloads key entirely when mutatedPreloads is undefined', () => {
+    const nextText = patchRawConfigTextWithPagePreloads(rawText, 'home', undefined)
+    const parsed = JSON.parse(nextText)
+
+    expect('preloads' in parsed.pages[0]).toBe(false)
+  })
+
+  it('writes a non-empty mutatedPreloads array through denormalizePreloadsForSerialization, not as-is', () => {
+    const mutated = [
+      { operationName: 'loadUsers', requestParams: {}, when: { reference: 'params.id', operator: 'equals' as const, value: '1' } },
+    ]
+    const nextText = patchRawConfigTextWithPagePreloads(rawText, 'home', mutated)
+    const parsed = JSON.parse(nextText)
+
+    expect(parsed.pages[0].preloads).toEqual([
+      { loadUsers: {}, when: { reference: 'params.id', operator: 'equals', value: '1' } },
+    ])
+  })
+
+  it('round-trips through validateRuntimeConfig without error — regression for the raw/normalized preloads divergence', () => {
+    const mutated = [{ operationName: 'loadUsers', requestParams: { query: { page: '2' } } }]
+    const nextText = patchRawConfigTextWithPagePreloads(rawText, 'home', mutated)
+    const validation = validateRuntimeConfig(JSON.parse(nextText))
+
+    expect(validation.status).toBe('ready')
+  })
+})
+
+// Regression coverage for `commitGlobalPreloadsMutation` (dev-runtime.tsx): that function is a
+// private closure of `DevRuntimeReady`, not exported, so it can't be unit-tested directly. It
+// composes exactly `patchRootKey(text, 'preloads', denormalizePreloadsForSerialization(mutated))`
+// — the same composition tested here — so this stands in for it without mounting the full
+// component, the same way the `patchRawConfigTextWithPagePreloads` round-trip test above stands
+// in for `commitPagePreloadsMutation`.
+describe('root preloads commit composition (patchRootKey + denormalizePreloadsForSerialization)', () => {
+  const rawConfig = {
+    api: { loadUsers: { method: 'GET', endpoint: '/users' } },
+    pages: [{ id: 'home', layout: [heading('Old')] }],
+    initialPage: 'home',
+  }
+  const rawText = JSON.stringify(rawConfig, null, 2)
+
+  it('round-trips a new global preload entry through validateRuntimeConfig without error', () => {
+    const mutated = [{ operationName: 'loadUsers', requestParams: { query: { page: '2' } } }]
+    const nextText = patchRootKey(rawText, 'preloads', denormalizePreloadsForSerialization(mutated))
+    const validation = validateRuntimeConfig(JSON.parse(nextText))
+
+    expect(validation.status).toBe('ready')
+    if (validation.status === 'ready') {
+      expect(validation.config.preloads).toEqual(mutated)
+    }
   })
 })
 

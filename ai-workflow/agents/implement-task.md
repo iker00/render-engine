@@ -1,7 +1,7 @@
 ---
 name: implement-task
 description: Implementa una única tarea planificada de una feature con enfoque tests-first y devuelve un JSON estructurado. Lo lanza la skill implement-task-test-first, un subagente por tarea.
-model: sonnet-5
+model: claude-sonnet-5
 tools: Read, Edit, Write, Bash, Grep, Glob
 ---
 

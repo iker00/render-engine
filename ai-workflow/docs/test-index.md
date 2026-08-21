@@ -204,6 +204,7 @@ Ficheros de apoyo, no son tests: `config-validation/helpers.ts`, `dev-runtime/lu
 
 ## dev-runtime/
 
+- `api-config-panel.test.tsx` — panel "Api" end-to-end: CRUD de operaciones, visibilidad de body por método y sub-vista de preloads globales/de página
 - `color-swatch-palette.test.ts` — catálogo puro de nombres semánticos y clases de las muestras de color
 - `condition-group-property-field.test.tsx` — widget aislado de condición/grupo de visibilidad con conmutación de forma y operadores
 - `dev-editor-floating-toolbar.test.tsx` — barra flotante del editor: selector de página, pestañas de dominio y toggles paleta/Monaco
@@ -220,9 +221,10 @@ Ficheros de apoyo, no son tests: `config-validation/helpers.ts`, `dev-runtime/lu
 - `floating-selection-overlay.test.tsx` — overlay flotante con breadcrumb, propiedades y borrado del nodo seleccionado
 - `icon-picker-property-field.test.tsx` — cuadrícula paginada de selección de icono con filtro y teclado
 - `inject-condition-group-widget-sentinel.test.ts` — inyector del sentinel del widget de condición dentro del JSON Schema
+- `inject-navigate-params-widget-sentinel.test.ts` — inyector del sentinel del widget de `navigateTo.params` dentro del JSON Schema
 - `layout-canvas-ancestor-container-columns.test.ts` — resolución de columnas del container ancestro más cercano por path
 - `layout-canvas-breadcrumb.test.tsx` — breadcrumb de ancestros del canvas con navegación de selección por segmento
-- `layout-canvas-commit.test.tsx` — pipeline de commit del canvas: validación, migración y parcheo aislado de layout
+- `layout-canvas-commit.test.tsx` — pipeline de commit del canvas: validación, migración y parcheo aislado de layout y de preloads (globales y por página)
 - `layout-canvas-delete-node.test.tsx` — borrado del nodo seleccionado end-to-end con excepción para celdas de tabla
 - `layout-canvas-dnd-wiring.test.tsx` — cableado de arrastre y soltado del canvas con exclusión de celdas de tabla
 - `layout-canvas-drop-validity.test.ts` — reglas puras de validez de destino de arrastre y ciclos
@@ -236,7 +238,7 @@ Ficheros de apoyo, no son tests: `config-validation/helpers.ts`, `dev-runtime/lu
 - `layout-canvas-property-field-container-columns-mode.test.tsx` — widget del modo del container que alterna Grid/Columnas preservando el resto de props
 - `layout-canvas-property-field-dispatcher.test.tsx` — dispatcher genérico de campos de propiedades y hook de widgets registrados
 - `layout-canvas-property-field-heading-level.test.tsx` — widget aislado del nivel de heading como radiogroup H1..H5
-- `layout-canvas-property-field-key-value.test.tsx` — editor clave-valor para mapas string a string con excepción de body
+- `layout-canvas-property-field-key-value.test.tsx` — editor clave-valor para mapas string a string con excepción de body y predicado de editabilidad por fila configurable
 - `layout-canvas-property-field-layout-span-occupancy-preview.test.tsx` — barra de vista previa de ocupación del span con clamp y leyenda
 - `layout-canvas-property-field-layout-span.test.tsx` — widget aislado del span responsive con seis filas y focus-driven preview
 - `layout-canvas-property-field-link-content-mode.test.tsx` — widget del modo de contenido del enlace entre texto y elementos anidados
@@ -245,6 +247,7 @@ Ficheros de apoyo, no son tests: `config-validation/helpers.ts`, `dev-runtime/lu
 - `layout-canvas-property-field-tabs-orientation.test.tsx` — widget aislado de la orientación de tabs como radiogroup horizontal/vertical
 - `layout-canvas-reorder-reinsert.test.tsx` — reordenar y reanidar nodos por arrastre end-to-end con seguimiento de selección
 - `layout-tree-mutations.test.ts` — funciones puras de mutación del árbol por path, incluyendo tablas y tabs
+- `navigate-params-property-field.test.tsx` — widget aislado de `navigateTo.params` con degradación a solo lectura para valores no-string
 - `node-panel-tab-bar.test.tsx` — barra de pestañas accesible del panel de nodo con roving tabindex y flechas circulares
 - `node-panel-tabs.test.ts` — resolución pura del catálogo de pestañas del panel según el schema y el contexto
 - `platages-http-client.test.ts` — cliente HTTP compartido a Platages: forma de la petición y mapeo de errores

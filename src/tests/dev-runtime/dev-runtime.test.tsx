@@ -371,13 +371,16 @@ describe('DevRuntime floating toolbar surface', () => {
     expect(screen.queryByTestId('dev-editor-floating-monaco')).not.toBeInTheDocument()
   })
 
-  it('clicking the disabled "Api" domain tab produces no content change or navigation', () => {
+  // 0132-T5: "Api" is no longer disabled — clicking it swaps the canvas for `ApiConfigPanel`,
+  // same pattern already established for "Shell"/"Traducciones" (no hash navigation involved).
+  it('clicking the "Api" domain tab swaps the canvas for ApiConfigPanel without navigating', () => {
     render(<DevRuntime rootElement={makeRootElement(minimalConfig)} />)
     const hashBefore = window.location.hash
 
     fireEvent.click(screen.getByTestId('dev-editor-toolbar-domain-api'))
 
-    expect(screen.getByText('Hello World')).toBeInTheDocument()
+    expect(screen.getByTestId('api-config-panel')).toBeInTheDocument()
+    expect(screen.queryByText('Hello World')).not.toBeInTheDocument()
     expect(window.location.hash).toBe(hashBefore)
   })
 })

@@ -738,6 +738,80 @@ describe('ShellConfigPanel / visibility widget (T4, 0132)', () => {
   })
 })
 
+describe('ShellConfigPanel / navigateTo.params widget (T4, 0141)', () => {
+  it('shows the key-value editor for a menuItem action.navigateTo.params and commits an edit through the real pipeline', () => {
+    const base = buildBaseConfig({
+      shell: {
+        header: {
+          menu: [{ label: 'Home', action: { type: 'navigateTo', pageId: 'home', params: { id: 'x' } } }],
+        },
+      },
+    })
+    renderHarness(base)
+    fireEvent.click(screen.getByTestId('menu-item-collapse-toggle-0'))
+
+    const paramsGroup = screen.getByRole('group', { name: 'params' })
+    const idField = within(paramsGroup).getByLabelText('params valor #1') as HTMLInputElement
+    expect(idField.value).toBe('x')
+
+    fireEvent.change(idField, { target: { value: 'y' } })
+
+    const parsed = rawConfig()
+    const menu = (parsed.shell as { header: { menu: Array<{ action: { params: Record<string, unknown> } }> } }).header.menu
+    expect(menu[0].action.params).toEqual({ id: 'y' })
+    // Commit scope: only `shell` is touched.
+    expect(parsed.pages).toEqual(base.pages)
+    expect(parsed.api).toEqual(base.api)
+    expect(parsed.initialPage).toBe(base.initialPage)
+    expect(parsed.tokens).toEqual(base.tokens)
+  })
+
+  it('degrades a non-string param row of a sidebarItem to read-only without blocking the rest of the row', () => {
+    renderHarness(
+      buildBaseConfig({
+        shell: {
+          sidebar: {
+            items: [{ label: 'About', action: { type: 'navigateTo', pageId: 'home', params: { id: 'x', active: true } } }],
+          },
+        },
+      }),
+    )
+    openSidebarTab()
+    fireEvent.click(screen.getByTestId('sidebar-item-collapse-toggle-0'))
+
+    const paramsGroup = screen.getByRole('group', { name: 'params' })
+    const idField = within(paramsGroup).getByLabelText('params valor #1') as HTMLInputElement
+    expect(idField.tagName).toBe('INPUT')
+    expect(idField.value).toBe('x')
+
+    const activeField = within(paramsGroup).getByLabelText('params valor #2')
+    expect(activeField.tagName).toBe('TEXTAREA')
+    expect(activeField).toBeDisabled()
+  })
+
+  it('regression: menuItem/sidebarItem visibility still mounts the condition-group widget alongside the params widget', () => {
+    renderHarness(
+      buildBaseConfig({
+        shell: {
+          header: {
+            menu: [
+              {
+                label: 'Home',
+                action: { type: 'navigateTo', pageId: 'home', params: { id: 'x' } },
+                visibility: { reference: 'params.userId', operator: 'equals', value: 'y' },
+              },
+            ],
+          },
+        },
+      }),
+    )
+    fireEvent.click(screen.getByTestId('menu-item-collapse-toggle-0'))
+
+    expect(screen.getByRole('group', { name: 'params' })).toBeInTheDocument()
+    expect(screen.getByRole('radiogroup', { name: 'Forma' })).toBeInTheDocument()
+  })
+})
+
 describe('ShellConfigPanel / rejected commit feedback', () => {
   // `menuItem.label` has no non-empty constraint in the actual schema (0122-T1: `label:
   // z.string()`), so a blank label alone never gets rejected. `action.navigateTo.pageId`
