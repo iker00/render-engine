@@ -5,7 +5,7 @@ import type {
 } from '../endpoints-config/resolve-endpoint-operation'
 
 export type ToolbarMode = 'visual' | 'editor'
-export type ToolbarDomain = 'layout' | 'api' | 'shell' | 'translations'
+export type ToolbarDomain = 'layout' | 'api' | 'shell' | 'translations' | 'pages'
 
 // T6 (0131): save-config request state, owned by DevRuntimeReady (T5) and received here already
 // computed — this component never tracks its own save state.
@@ -93,6 +93,7 @@ export function DevEditorFloatingToolbar({
   const isApiActive = activeDomain === 'api'
   const isShellActive = activeDomain === 'shell'
   const isTranslationsActive = activeDomain === 'translations'
+  const isPagesActive = activeDomain === 'pages'
 
   const isSaveUnavailable = saveResolution.status === 'unavailable'
   const isSaving = saveState === 'loading'
@@ -145,10 +146,9 @@ export function DevEditorFloatingToolbar({
         <button
           type="button"
           data-testid="dev-editor-toolbar-domain-pages"
-          className={buttonClasses({ disabled: true })}
-          disabled
-          aria-disabled="true"
-          title="Próximamente"
+          className={buttonClasses({ pressed: isPagesActive })}
+          aria-pressed={isPagesActive}
+          onClick={() => onDomainSelected('pages')}
         >
           <StickyNote size={14} /> Páginas
         </button>

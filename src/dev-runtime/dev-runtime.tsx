@@ -13,6 +13,7 @@ import type { LayoutNode } from '../config/runtime-config'
 import type {
   RuntimeApiConfig,
   RuntimePreloadConfig,
+  RuntimePageConfig,
   RuntimeTranslationsConfig,
   ShellConfig,
   ShellHeaderActionNode,
@@ -42,6 +43,7 @@ import {
   denormalizePreloadsForSerialization,
   patchRawConfigTextWithLayout,
   patchRawConfigTextWithPagePreloads,
+  patchRawConfigTextWithPages,
   patchRootKey,
   type CommitCanvasMutationResult,
 } from './layout-canvas/layout-canvas-commit'
@@ -663,6 +665,49 @@ export function DevRuntimeReady({
     return { status: 'applied' }
   }
 
+  // Same pipeline as `commitShellMutation`/`commitTranslationsMutation`, generalized for the
+  // `pages` root key (0138-T5): mutate the in-memory value, patch only that key onto the
+  // last-known-valid raw text, validate the patched text, and apply it. Unlike `shell`/
+  // `translations`, `pages[]` carries `preloads`, which has its own raw/normalized divergence
+  // (see `validate-preloads.ts`) on top of the `layout` one — `patchRawConfigTextWithPages`
+  // reconciles `mutatedPages` against the raw text so every page `pages-config-panel.tsx` didn't
+  // touch keeps its raw `layout`/`preloads` shape, instead of `patchRootKey` reserializing them
+  // straight from the normalized `RuntimeConfig` and breaking re-validation.
+  function commitPagesMutation(
+    mutate: (pages: RuntimePageConfig[]) => RuntimePageConfig[],
+  ): CommitCanvasMutationResult {
+    const mutatedPages = mutate(currentConfig.pages)
+
+    const nextText = patchRawConfigTextWithPages(lastValidConfigText, mutatedPages)
+
+    const parsed: unknown = JSON.parse(nextText)
+    const validation = validateRuntimeConfig(parsed)
+    if (validation.status === 'error') {
+      return { status: 'rejected', error: validation.error }
+    }
+
+    const prevState = bridgeRef.current?.getLatestState()
+    const nextState = prevState
+      ? migrateRuntimeStateAcrossConfig(prevState, currentConfig, validation.config, { dataValues })
+      : undefined
+
+    if (nextState && bridgeRef.current) {
+      bridgeRef.current.dispatchAndSyncState({ type: 'runtime/reset', payload: { state: nextState } })
+    }
+
+    flushSync(() => {
+      setCurrentConfig(validation.config)
+      setEditorBuffer(nextText)
+      setLastValidConfigText(nextText)
+      setHasPendingChanges(false)
+      setHasAppliedChanges(true)
+      setParseError(null)
+      setValidationError(null)
+    })
+
+    return { status: 'applied' }
+  }
+
   // Same pipeline as `commitCanvasMutation`, generalized for a page's `preloads` key instead of
   // its `layout` (0132-T7): resolve the really-navigated page the same way (bridge state first,
   // `currentConfig.initialPage` as fallback), mutate the in-memory value, and patch only
@@ -677,6 +722,40 @@ export function DevRuntimeReady({
     const mutatedPreloads = mutate(activePage?.preloads)
 
     const nextText = patchRawConfigTextWithPagePreloads(lastValidConfigText, activePageId, mutatedPreloads)
+
+    const parsed: unknown = JSON.parse(nextText)
+    const validation = validateRuntimeConfig(parsed)
+    if (validation.status === 'error') {
+      return { status: 'rejected', error: validation.error }
+    }
+
+    const prevState = bridgeRef.current?.getLatestState()
+    const nextState = prevState
+      ? migrateRuntimeStateAcrossConfig(prevState, currentConfig, validation.config, { dataValues })
+      : undefined
+
+    if (nextState && bridgeRef.current) {
+      bridgeRef.current.dispatchAndSyncState({ type: 'runtime/reset', payload: { state: nextState } })
+    }
+
+    flushSync(() => {
+      setCurrentConfig(validation.config)
+      setEditorBuffer(nextText)
+      setLastValidConfigText(nextText)
+      setHasPendingChanges(false)
+      setHasAppliedChanges(true)
+      setParseError(null)
+      setValidationError(null)
+    })
+
+    return { status: 'applied' }
+  }
+
+  // Same pipeline as `commitPagesMutation`, generalized for the `initialPage` root key (0138-T5).
+  function commitInitialPageMutation(mutate: (initialPage: string) => string): CommitCanvasMutationResult {
+    const mutatedInitialPage = mutate(currentConfig.initialPage)
+
+    const nextText = patchRootKey(lastValidConfigText, 'initialPage', mutatedInitialPage)
 
     const parsed: unknown = JSON.parse(nextText)
     const validation = validateRuntimeConfig(parsed)
@@ -790,6 +869,8 @@ export function DevRuntimeReady({
       onCommitApiMutation={commitApiMutation}
       onCommitGlobalPreloadsMutation={commitGlobalPreloadsMutation}
       onCommitPagePreloadsMutation={commitPagePreloadsMutation}
+      onCommitPagesMutation={commitPagesMutation}
+      onCommitInitialPageMutation={commitInitialPageMutation}
       endpointsConfig={endpointsConfig}
       saveResolution={endpointResolutions.save}
       searchResolution={endpointResolutions.search}

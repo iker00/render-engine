@@ -1,8 +1,14 @@
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import { useEffect, useState, type MutableRefObject } from 'react'
 import { describe, expect, it, vi } from 'vitest'
+import { validateRuntimeConfig } from '../../config/runtime-config'
 import type { LayoutNode, RuntimeConfig } from '../../config/runtime-config'
-import type { CommitCanvasMutationResult } from '../../dev-runtime/layout-canvas/layout-canvas-commit'
+import type { RuntimePageConfig } from '../../config/runtime-config-types'
+import {
+  patchRawConfigTextWithPages,
+  patchRootKey,
+  type CommitCanvasMutationResult,
+} from '../../dev-runtime/layout-canvas/layout-canvas-commit'
 import { DevEditorLayer } from '../../dev-runtime/floating-toolbar/dev-editor-layer'
 import type {
   SaveConfigErrorInfo,
@@ -132,6 +138,8 @@ interface HarnessProps {
   onCommitApiMutation?: (mutate: (api: never) => never) => CommitCanvasMutationResult
   onCommitGlobalPreloadsMutation?: (mutate: (preloads: never) => never) => CommitCanvasMutationResult
   onCommitPagePreloadsMutation?: (mutate: (preloads: never) => never) => CommitCanvasMutationResult
+  onCommitPagesMutation?: (mutate: (pages: RuntimePageConfig[]) => RuntimePageConfig[]) => CommitCanvasMutationResult
+  onCommitInitialPageMutation?: (mutate: (initialPage: string) => string) => CommitCanvasMutationResult
   onMonacoOpenChangeSpy?: (open: boolean) => void
   initialMonacoOpen?: boolean
   endpointsConfig?: RuntimeEndpointsConfig
@@ -153,6 +161,8 @@ function DevEditorLayerHarness({
   onCommitApiMutation = noopCommitCanvasMutation,
   onCommitGlobalPreloadsMutation = noopCommitCanvasMutation,
   onCommitPagePreloadsMutation = noopCommitCanvasMutation,
+  onCommitPagesMutation = noopCommitCanvasMutation,
+  onCommitInitialPageMutation = noopCommitCanvasMutation,
   onMonacoOpenChangeSpy,
   initialMonacoOpen = false,
   endpointsConfig,
@@ -190,6 +200,8 @@ function DevEditorLayerHarness({
         onCommitApiMutation={onCommitApiMutation}
         onCommitGlobalPreloadsMutation={onCommitGlobalPreloadsMutation}
         onCommitPagePreloadsMutation={onCommitPagePreloadsMutation}
+        onCommitPagesMutation={onCommitPagesMutation}
+        onCommitInitialPageMutation={onCommitInitialPageMutation}
         endpointsConfig={endpointsConfig}
         saveResolution={saveResolution}
         searchResolution={searchResolution}
@@ -345,6 +357,8 @@ describe('DevEditorLayer / selection degrades safely when the layout changes und
             onCommitApiMutation={noopCommitCanvasMutation}
             onCommitGlobalPreloadsMutation={noopCommitCanvasMutation}
             onCommitPagePreloadsMutation={noopCommitCanvasMutation}
+            onCommitPagesMutation={noopCommitCanvasMutation}
+            onCommitInitialPageMutation={noopCommitCanvasMutation}
             endpointsConfig={undefined}
             saveResolution={UNAVAILABLE_RESOLUTION}
             searchResolution={UNAVAILABLE_RESOLUTION}
@@ -564,6 +578,8 @@ describe('DevEditorLayer / Esc closes the selection panel when Monaco is closed 
             onCommitApiMutation={noopCommitCanvasMutation}
             onCommitGlobalPreloadsMutation={noopCommitCanvasMutation}
             onCommitPagePreloadsMutation={noopCommitCanvasMutation}
+            onCommitPagesMutation={noopCommitCanvasMutation}
+            onCommitInitialPageMutation={noopCommitCanvasMutation}
             endpointsConfig={undefined}
             saveResolution={UNAVAILABLE_RESOLUTION}
             searchResolution={UNAVAILABLE_RESOLUTION}
@@ -644,6 +660,8 @@ describe('DevEditorLayer / node-local state persists across mode switches (Decis
             onCommitApiMutation={noopCommitCanvasMutation}
             onCommitGlobalPreloadsMutation={noopCommitCanvasMutation}
             onCommitPagePreloadsMutation={noopCommitCanvasMutation}
+            onCommitPagesMutation={noopCommitCanvasMutation}
+            onCommitInitialPageMutation={noopCommitCanvasMutation}
             endpointsConfig={undefined}
             saveResolution={UNAVAILABLE_RESOLUTION}
             searchResolution={UNAVAILABLE_RESOLUTION}
@@ -982,6 +1000,202 @@ describe('DevEditorLayer / Api domain preloads props (0132-T7)', () => {
     expect(within(screen.getByTestId('api-config-panel-preloads-global')).getByLabelText('Operación #1')).toHaveValue(
       'loadUsers',
     )
+  })
+})
+
+function switchToPagesDomain() {
+  fireEvent.click(screen.getByTestId('dev-editor-toolbar-domain-pages'))
+}
+
+// 0138-T5: activating the "Páginas" domain tab swaps the central content area for
+// `PagesConfigPanel`, in place of the Layout canvas — same pattern the Shell/Translations domains
+// already established, never alongside the canvas.
+describe('DevEditorLayer / Pages domain (0138-T5)', () => {
+  it('renders PagesConfigPanel and stops rendering the canvas once the Páginas tab is selected', () => {
+    renderHarness()
+    expect(screen.getByTestId('probe-node-a')).toBeInTheDocument()
+    expect(screen.queryByTestId('pages-config-panel')).not.toBeInTheDocument()
+
+    switchToPagesDomain()
+
+    expect(screen.getByTestId('pages-config-panel')).toBeInTheDocument()
+    expect(screen.queryByTestId('probe-node-a')).not.toBeInTheDocument()
+  })
+
+  it('restores the canvas view when switching back to Layout', () => {
+    renderHarness()
+    switchToPagesDomain()
+    expect(screen.getByTestId('pages-config-panel')).toBeInTheDocument()
+
+    switchToLayoutDomain()
+
+    expect(screen.queryByTestId('pages-config-panel')).not.toBeInTheDocument()
+    expect(screen.getByTestId('probe-node-a')).toBeInTheDocument()
+  })
+
+  it('marks the Páginas tab as pressed and Layout as not pressed once selected', () => {
+    renderHarness()
+    switchToPagesDomain()
+
+    expect(screen.getByTestId('dev-editor-toolbar-domain-pages')).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByTestId('dev-editor-toolbar-domain-layout')).toHaveAttribute('aria-pressed', 'false')
+  })
+
+  it('clears a canvas node selection when entering Pages (same policy as shell/translations)', () => {
+    renderHarness()
+    switchToEditorMode()
+    fireEvent.click(screen.getByTestId('probe-node-a'))
+    expect((contextJson() as { selectedPath: unknown }).selectedPath).not.toBeNull()
+
+    switchToPagesDomain()
+    switchToLayoutDomain()
+
+    expect((contextJson() as { selectedPath: unknown }).selectedPath).toBeNull()
+  })
+
+  it('does not render the FloatingSelectionOverlay while the Pages domain is active', () => {
+    renderHarness()
+    switchToEditorMode()
+    fireEvent.click(screen.getByTestId('probe-node-a'))
+    expect(screen.getByTestId('dev-editor-selection-overlay')).toBeInTheDocument()
+
+    switchToPagesDomain()
+
+    expect(screen.queryByTestId('dev-editor-selection-overlay')).not.toBeInTheDocument()
+  })
+
+  it('keeps the toolbar visible while the Pages panel is rendered', () => {
+    renderHarness()
+    switchToPagesDomain()
+    expect(screen.getByTestId('dev-editor-toolbar')).toBeInTheDocument()
+  })
+})
+
+// 0138-T5: end-to-end reproduction of the real dev-runtime.tsx commit pipeline for `pages`/
+// `initialPage` (`patchRootKey` + `validateRuntimeConfig`), same pattern
+// pages-config-panel.test.tsx uses in isolation, wired here through the real DevEditorLayer domain
+// tab instead of mounting PagesConfigPanel directly.
+describe('DevEditorLayer / Pages domain real commit pipeline (0138-T5)', () => {
+  function PagesDomainCommitHarness({ initialConfig, initialRawText }: { initialConfig?: RuntimeConfig; initialRawText?: string } = {}) {
+    const initial = initialConfig ?? buildConfig()
+    const [config, setConfig] = useState<RuntimeConfig>(initial)
+    const [rawText, setRawText] = useState(() => initialRawText ?? JSON.stringify(initial, null, 2))
+    const [mode, setMode] = useState<'visual' | 'editor'>('visual')
+    const [paletteOpen, setPaletteOpen] = useState(false)
+    const [monacoOpen, setMonacoOpen] = useState(false)
+
+    function applyPatchedText(nextText: string): CommitCanvasMutationResult {
+      const parsed: unknown = JSON.parse(nextText)
+      const validation = validateRuntimeConfig(parsed)
+      if (validation.status === 'error') {
+        return { status: 'rejected', error: validation.error }
+      }
+      setConfig(validation.config)
+      setRawText(nextText)
+      return { status: 'applied' }
+    }
+
+    // Uses `patchRawConfigTextWithPages`, not a bare `patchRootKey`, so it preserves the raw
+    // shape of every untouched page's `preloads`/`layout` the same way `dev-runtime.tsx`'s real
+    // `commitPagesMutation` does (see `patchRawConfigTextWithPages`'s docstring).
+    function commitPagesMutation(
+      mutate: (pages: RuntimePageConfig[]) => RuntimePageConfig[],
+    ): CommitCanvasMutationResult {
+      return applyPatchedText(patchRawConfigTextWithPages(rawText, mutate(config.pages)))
+    }
+
+    function commitInitialPageMutation(mutate: (initialPage: string) => string): CommitCanvasMutationResult {
+      return applyPatchedText(patchRootKey(rawText, 'initialPage', mutate(config.initialPage)))
+    }
+
+    return (
+      <RuntimeStateProvider config={config}>
+        <DevEditorLayer
+          mode={mode}
+          onModeChange={setMode}
+          paletteOpen={paletteOpen}
+          onPaletteOpenChange={setPaletteOpen}
+          monacoOpen={monacoOpen}
+          onMonacoOpenChange={setMonacoOpen}
+          monaco={NOOP_MONACO}
+          onCommitCanvasMutation={noopCommitCanvasMutation}
+          onCommitNodeUpdate={() => {}}
+          onCommitShellMutation={noopCommitCanvasMutation}
+          onCommitTranslationsMutation={noopCommitCanvasMutation}
+          onCommitPagesMutation={commitPagesMutation}
+          onCommitInitialPageMutation={commitInitialPageMutation}
+          endpointsConfig={undefined}
+          saveResolution={UNAVAILABLE_RESOLUTION}
+          searchResolution={UNAVAILABLE_RESOLUTION}
+          refreshResolution={UNAVAILABLE_RESOLUTION}
+          saveState="idle"
+          saveError={null}
+          handleSaveConfig={NOOP_SAVE}
+        >
+          <div data-testid="pages-domain-commit-canvas-marker" />
+        </DevEditorLayer>
+        <pre data-testid="raw-text">{rawText}</pre>
+      </RuntimeStateProvider>
+    )
+  }
+
+  function rawPagesConfig(): { pages: RuntimePageConfig[]; initialPage: string } {
+    return JSON.parse(screen.getByTestId('raw-text').textContent ?? '{}') as {
+      pages: RuntimePageConfig[]
+      initialPage: string
+    }
+  }
+
+  it('creating, editing, designating initial and deleting a page reflects into the real config through the full commit pipeline', () => {
+    render(<PagesDomainCommitHarness />)
+    switchToPagesDomain()
+
+    fireEvent.change(screen.getByLabelText('Id'), { target: { value: 'contact' } })
+    fireEvent.change(screen.getByLabelText('Título'), { target: { value: 'Contacto' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Crear' }))
+    expect(rawPagesConfig().pages.map((p) => p.id)).toEqual(['home', 'about', 'contact'])
+
+    const titleInput = screen.getByRole('textbox', { name: 'Título de contact' })
+    fireEvent.change(titleInput, { target: { value: 'Contacto actualizado' } })
+    fireEvent.blur(titleInput)
+    expect(rawPagesConfig().pages.find((p) => p.id === 'contact')?.title).toBe('Contacto actualizado')
+
+    fireEvent.click(screen.getByRole('radio', { name: 'Marcar contact como página inicial' }))
+    expect(rawPagesConfig().initialPage).toBe('contact')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Eliminar página about' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Eliminar' }))
+    expect(rawPagesConfig().pages.map((p) => p.id)).toEqual(['home', 'contact'])
+  })
+
+  it('creating a page through the real DevEditorLayer commit pipeline does not corrupt another page\'s raw preloads shape', () => {
+    const rawText = JSON.stringify(
+      {
+        api: {},
+        initialPage: 'home',
+        pages: [
+          { id: 'home', layout: [], preloads: [{ getTodos: {} }] },
+          { id: 'about', layout: [] },
+        ],
+      },
+      null,
+      2,
+    )
+    const validation = validateRuntimeConfig(JSON.parse(rawText))
+    if (validation.status !== 'ready') throw new Error('setup: base raw config should validate')
+
+    render(<PagesDomainCommitHarness initialConfig={validation.config} initialRawText={rawText} />)
+    switchToPagesDomain()
+
+    fireEvent.change(screen.getByLabelText('Id'), { target: { value: 'contact' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Crear' }))
+
+    expect(rawPagesConfig().pages.map((p) => p.id)).toEqual(['home', 'about', 'contact'])
+    expect((rawPagesConfig().pages[0] as unknown as Record<string, unknown>)).toEqual({
+      id: 'home',
+      layout: [],
+      preloads: [{ getTodos: {} }],
+    })
   })
 })
 

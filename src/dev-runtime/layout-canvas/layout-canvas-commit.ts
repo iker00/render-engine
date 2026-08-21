@@ -1,4 +1,10 @@
-import type { LayoutNode, RuntimeConfig, RuntimeConfigError, RuntimePreloadConfig } from '../../config/runtime-config'
+import type {
+  LayoutNode,
+  RuntimeConfig,
+  RuntimeConfigError,
+  RuntimePageConfig,
+  RuntimePreloadConfig,
+} from '../../config/runtime-config'
 
 /**
  * Result of `commitCanvasMutation` (T4, `dev-runtime.tsx`). Declared here — not in
@@ -219,6 +225,42 @@ export function patchRawConfigTextWithPagePreloads(
       return rest
     }
     return { ...rawPage, preloads: denormalizePreloadsForSerialization(mutatedPreloads) }
+  })
+
+  return patchRootKey(rawConfigText, 'pages', nextPages)
+}
+
+/**
+ * Patches the `pages` root key of `rawConfigText` for whole-page add/remove and `title` edits
+ * (0138, `PagesConfigPanel`), preserving the raw shape of every page that already existed in the
+ * text — critically `preloads`, which stays in its raw crude shape (`{ [operationName]:
+ * requestParams }`, see `validate-preloads.ts`) instead of the normalized
+ * `RuntimePageConfig.preloads` shape (`{ operationName, requestParams }`) that `mutatedPages`
+ * carries. `layout` is likewise carried over raw and unchanged, since `PagesConfigPanel` never
+ * edits an existing page's `layout`. Reserializing straight from `mutatedPages` (as
+ * `patchRootKey(rawConfigText, 'pages', mutatedPages)` would) breaks re-validation of any
+ * existing page that has `preloads`.
+ *
+ * `mutatedPages` is the already-mutated normalized page list `PagesConfigPanel`'s
+ * `onCommitPagesMutation` callback returns. For each entry, an existing raw page is matched by
+ * `id` and only its `title` is applied on top; an entry with no raw match (a brand-new page) is
+ * written as-is — `PagesConfigPanel` only ever adds `{ id, layout: [], title? }`, already
+ * raw-compatible.
+ */
+export function patchRawConfigTextWithPages(
+  rawConfigText: string,
+  mutatedPages: readonly RuntimePageConfig[],
+): string {
+  const rawConfigObject = JSON.parse(rawConfigText) as Record<string, unknown>
+  const rawPages = Array.isArray(rawConfigObject.pages) ? rawConfigObject.pages : []
+  const rawPagesById = new Map(rawPages.filter(isRecord).map((rawPage) => [rawPage.id, rawPage] as const))
+
+  const nextPages = mutatedPages.map((page) => {
+    const rawPage = rawPagesById.get(page.id)
+    if (rawPage === undefined) return page
+
+    const { title: _rawTitle, ...rawPageRest } = rawPage
+    return page.title !== undefined ? { ...rawPageRest, title: page.title } : rawPageRest
   })
 
   return patchRootKey(rawConfigText, 'pages', nextPages)
