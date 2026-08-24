@@ -24,6 +24,26 @@ describe('getNodeTypeJsonSchema', () => {
     expect(propProperties['wrap']).toBeDefined()
   })
 
+  // T5 (2026-08-24-13-02-repeater-grid-mode): repeaterNodeSchema.props was extended in T2 with the
+  // same columns/gap/align/justify fields containerNodeSchema already declares, so the properties
+  // panel's generic schema-driven dispatcher can expose them without any dedicated widget. Same
+  // assertion shape as the sibling container test above.
+  it('reflects repeaterNodeSchema props (columns/gap/align/justify), same as containerNodeSchema', () => {
+    const schema = getNodeTypeJsonSchema('repeater')
+    expect(schema).toBeDefined()
+    expect(typeof schema).toBe('object')
+
+    const properties = schema.properties as Record<string, unknown>
+    const propsSchema = properties['props'] as { properties?: Record<string, unknown> }
+    expect(propsSchema).toBeDefined()
+
+    const propProperties = propsSchema.properties ?? {}
+    expect(propProperties['columns']).toBeDefined()
+    expect(propProperties['gap']).toBeDefined()
+    expect(propProperties['align']).toBeDefined()
+    expect(propProperties['justify']).toBeDefined()
+  })
+
   it('reflects buttonNodeSchema props including the action field', () => {
     const schema = getNodeTypeJsonSchema('button')
     const properties = schema.properties as Record<string, unknown>

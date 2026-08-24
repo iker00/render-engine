@@ -45,3 +45,19 @@ export function mapLayoutNodeIssue(
 
   return null
 }
+
+const gridLayoutPropNames = ['columns', 'gap', 'align', 'justify']
+
+export function mapGridLayoutIssue(
+  pageId: string,
+  path: string,
+  issuePath: PropertyKey[],
+  breadcrumb: BreadcrumbSegment[] = [],
+  rawNode: Record<string, unknown> = {},
+): { status: 'error'; error: RuntimeConfigError } | null {
+  if (issuePath[0] === 'props' && gridLayoutPropNames.includes(issuePath[1] as string)) {
+    return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.${issuePath[1] as string}".`, breadcrumb, rawNode)
+  }
+
+  return null
+}

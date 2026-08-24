@@ -294,7 +294,7 @@ export function LayoutNodeRenderer({ node, renderedChildren, iterationContext, p
   }
 
   const gridChildSpanClassName =
-    node.type === 'repeater' || node.type === 'modal' || node.type === 'hidden'
+    (node.type === 'repeater' && node.props.columns === undefined) || node.type === 'modal' || node.type === 'hidden'
       ? null
       : getGridChildSpanClassName(node.layout?.span, parentGridColumns)
 

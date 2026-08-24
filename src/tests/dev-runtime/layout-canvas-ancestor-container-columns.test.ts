@@ -27,6 +27,13 @@ function repeaterNode(template: LayoutNode[]): LayoutNode {
   return { type: 'repeater', props: { items: { source: 'queries.x.data', key: 'id' }, template } } as LayoutNode
 }
 
+function repeaterNodeWithColumns(columns: number | Record<string, number>, template: LayoutNode[] = []): LayoutNode {
+  return {
+    type: 'repeater',
+    props: { items: { source: 'queries.x.data', key: 'id' }, columns, template },
+  } as LayoutNode
+}
+
 function tabsNode(items: { label: string; children?: LayoutNode[] }[]): LayoutNode {
   return { type: 'tabs', props: { items } } as LayoutNode
 }
@@ -101,6 +108,45 @@ describe('resolveAncestorContainerColumns', () => {
     const path: LayoutNodePath = [{ field: 'children', index: 0 }]
 
     expect(resolveAncestorContainerColumns(pageLayout, path)).toBeNull()
+  })
+
+  // T6 (2026-08-24-13-02-repeater-grid-mode): a `repeater` ancestor with `props.columns` counts as
+  // a grid ancestor, the same as `container` — this covers the integer-columns case.
+  it('returns the integer columns of a repeater ancestor when it declares props.columns', () => {
+    const pageLayout: LayoutNode[] = [repeaterNodeWithColumns(3, [inputNode()])]
+    const path: LayoutNodePath = [
+      { field: 'children', index: 0 },
+      { field: 'template', index: 0 },
+    ]
+
+    expect(resolveAncestorContainerColumns(pageLayout, path)).toBe(3)
+  })
+
+  // Same as above, responsive columns map case.
+  it('returns the responsive columns map of a repeater ancestor when it declares props.columns', () => {
+    const responsiveColumns = { base: 1, md: 3 }
+    const pageLayout: LayoutNode[] = [repeaterNodeWithColumns(responsiveColumns, [inputNode()])]
+    const path: LayoutNodePath = [
+      { field: 'children', index: 0 },
+      { field: 'template', index: 0 },
+    ]
+
+    expect(resolveAncestorContainerColumns(pageLayout, path)).toEqual(responsiveColumns)
+  })
+
+  // When both a `container` and a `repeater` ancestor declare columns, the nearest one to the
+  // queried node wins — same criterion already covered for two nested `container` ancestors above.
+  it('returns the columns of the nearest ancestor, a repeater, over an outer container that also declares columns', () => {
+    const pageLayout: LayoutNode[] = [
+      containerWithColumns(2, [repeaterNodeWithColumns(5, [inputNode()])]),
+    ]
+    const path: LayoutNodePath = [
+      { field: 'children', index: 0 },
+      { field: 'children', index: 0 },
+      { field: 'template', index: 0 },
+    ]
+
+    expect(resolveAncestorContainerColumns(pageLayout, path)).toBe(5)
   })
 
   it('resolves the container through a repeater template prefix', () => {

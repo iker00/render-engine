@@ -8,7 +8,7 @@ import { repeaterNodeSchema } from './runtime-config-zod'
 import type { BreadcrumbSegment } from './validation-breadcrumb'
 import { enrichedInvalidLayout, enrichErrorResult } from './validation-breadcrumb'
 import { validateLayoutCollection, validateQueryStateFeedback } from './validate-layout-nodes-core'
-import { mapLayoutNodeIssue } from './validate-layout-issue-mapping'
+import { mapGridLayoutIssue, mapLayoutNodeIssue } from './validate-layout-issue-mapping'
 import { mapQueryStateFeedbackIssue, mapVisibilityIssue, validateVisibility } from './validate-actions-visibility'
 import { validateCollectionSource } from './validate-collection-source'
 import { isValidCollectionItemPath } from './validate-node-shared-helpers'
@@ -49,6 +49,12 @@ export function validateRepeaterNode(
 
     if (layoutIssue) {
       return layoutIssue
+    }
+
+    const gridLayoutIssue = mapGridLayoutIssue(pageId, path, issuePath, breadcrumb, rawNode)
+
+    if (gridLayoutIssue) {
+      return gridLayoutIssue
     }
 
     if (issuePath[0] === 'props' && issuePath[1] === 'template') {
@@ -131,6 +137,10 @@ export function validateRepeaterNode(
           key: parseResult.data.props.items.key,
         },
         pagination: parseResult.data.props.pagination as RuntimeCollectionPaginationConfig | undefined,
+        columns: parseResult.data.props.columns,
+        gap: parseResult.data.props.gap,
+        align: parseResult.data.props.align,
+        justify: parseResult.data.props.justify,
         template: templateResult.nodes,
       },
     },

@@ -13,7 +13,7 @@ Los conceptos transversales (`visibility`, `queryStateFeedback`, referencias din
 | Nodo | Cuándo leer la ficha |
 |---|---|
 | [container.md](./container.md) | Layouts con `direction`, `gap`, `columns` fijo o responsive, `variant: card`, `align`, `justify`, `wrap`, `layout.span`. |
-| [repeater.md](./repeater.md) | Repetición de subárbol por item de colección, `props.items.source`, `props.items.key`, paginación local con variantes `previousNext`/`numbered`/`scroll`. |
+| [repeater.md](./repeater.md) | Repetición de subárbol por item de colección, `props.items.source`, `props.items.key`, paginación local con variantes `previousNext`/`numbered`/`scroll`, modo grid propio (`props.columns`/`gap`/`align`/`justify`). |
 | [tabs.md](./tabs.md) | Paneles navegables por pestañas, `props.items` (label + children + visibilidad por item), `props.orientation` (`horizontal\|vertical`), `props.defaultTab`, estado local del tab activo, selección automática de primer tab visible. |
 | [accordion.md](./accordion.md) | Sección colapsable con cabecera interactiva, `props.label`, `props.defaultOpen`, `props.groupId` para coordinación de grupos, children libres, accesibilidad ARIA. |
 
