@@ -21,6 +21,7 @@ import {
   inputNodeSchema,
   linkNodeSchema,
   listNodeSchema,
+  mapNodeSchema,
   modalNodeSchema,
   paragraphNodeSchema,
   radioGroupNodeSchema,
@@ -63,6 +64,7 @@ const nodeSchemaByType: Record<LayoutNodeType, z.ZodType> = {
   fileInput: fileInputNodeSchema,
   toggle: toggleNodeSchema,
   hidden: hiddenNodeSchema,
+  map: mapNodeSchema,
 }
 
 const cachedSchemaByType = new Map<LayoutNodeType, Record<string, unknown>>()

@@ -214,6 +214,11 @@ export function LayoutNodeRenderer({ node, renderedChildren, iterationContext, p
       renderedNode = <HiddenNode node={node} iterationContext={iterationContext} />
       break
     }
+    case 'map': {
+      const MapNode = NodeComponents.map
+      renderedNode = <MapNode node={node} iterationContext={iterationContext} />
+      break
+    }
   }
 
   renderedNode = <LazyNode>{renderedNode}</LazyNode>

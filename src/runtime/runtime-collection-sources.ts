@@ -7,6 +7,7 @@ import type {
   SelectLayoutNodeItems,
   SelectManualScalarItemsSource,
 } from '../config/runtime-config'
+import type { MapMarkerSource } from '../config/runtime-config-types'
 import type { RuntimeReferenceSurface } from './runtime-references/runtime-reference-diagnostics'
 import { hasRuntimeTemplateDelimiter } from '../config/runtime-reference-syntax'
 import type { RuntimeIterationContext } from './runtime-references/runtime-reference-resolver'
@@ -69,6 +70,92 @@ export function resolveCollectionSourceItems(
   }
 
   return result.value
+}
+
+export interface ResolvedMapMarkerSourceItem {
+  lat: number
+  lng: number
+  label: string
+}
+
+export function resolveMapMarkerSourceItems(
+  source: MapMarkerSource,
+  state: RuntimeState,
+  options: { iterationContext?: RuntimeIterationContext } = {},
+): ResolvedMapMarkerSourceItem[] {
+  const collectionItems = resolveCollectionSourceItems(source.source, state, options)
+  const markers: ResolvedMapMarkerSourceItem[] = []
+
+  for (let index = 0; index < collectionItems.length; index += 1) {
+    const item = collectionItems[index]
+
+    const lat = resolveMapMarkerCoordinate(item, source.position.lat, 'lat', {
+      itemPath: `${source.source}[${index}]`,
+    })
+
+    if (lat === null) {
+      continue
+    }
+
+    const lng = resolveMapMarkerCoordinate(item, source.position.lng, 'lng', {
+      itemPath: `${source.source}[${index}]`,
+    })
+
+    if (lng === null) {
+      continue
+    }
+
+    const label = resolveMapMarkerLabel(item, source.label, state, index)
+
+    if (label === null) {
+      continue
+    }
+
+    markers.push({ lat, lng, label })
+  }
+
+  return markers
+}
+
+function resolveMapMarkerCoordinate(
+  item: unknown,
+  path: string,
+  axis: 'lat' | 'lng',
+  { itemPath }: { itemPath: string },
+) {
+  const resolvedValue = resolveCollectionItemPath(item, path)
+  const range = axis === 'lat' ? { min: -90, max: 90 } : { min: -180, max: 180 }
+
+  if (
+    !resolvedValue.found ||
+    typeof resolvedValue.value !== 'number' ||
+    !Number.isFinite(resolvedValue.value) ||
+    resolvedValue.value < range.min ||
+    resolvedValue.value > range.max
+  ) {
+    reportCollectionItemDiagnostic({
+      itemPath,
+      surface: 'map.props.markerSources',
+      projectionPath: path,
+    })
+    return null
+  }
+
+  return resolvedValue.value
+}
+
+function resolveMapMarkerLabel(item: unknown, label: string, state: RuntimeState, index: number) {
+  if (hasRuntimeTemplateDelimiter(label)) {
+    return resolveInterpolatedCollectionString(label, state, 'map.props.markerSources.label', {
+      iterationContext: {
+        item,
+        key: String(index),
+        itemIndex: index,
+      },
+    })
+  }
+
+  return normalizeCollectionItemPathText(item, label)
 }
 
 export function resolveListCollectionItemsWithOptions(
@@ -444,7 +531,7 @@ function reportCollectionItemDiagnostic({
   projectionPath,
 }: {
   itemPath: string
-  surface: 'list.props.items' | ChoiceCollectionSurface
+  surface: 'list.props.items' | ChoiceCollectionSurface | 'map.props.markerSources'
   projectionPath: string
 }) {
   if (!import.meta.env.DEV) {

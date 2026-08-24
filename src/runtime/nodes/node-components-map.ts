@@ -15,6 +15,7 @@ import { ImageNode } from './image-layout-node'
 import { InputNode } from './input-layout-node'
 import { LinkNode } from './link-layout-node'
 import { ListNode } from './list-layout-node'
+import { MapNode } from './map-layout-node'
 import { ModalNode } from './modal-layout-node'
 import { ParagraphNode } from './paragraph-layout-node'
 import { RadioGroupNode } from './radio-group-layout-node'
@@ -50,6 +51,7 @@ const eagerMap = {
   input: InputNode as AnyComponent,
   link: LinkNode as AnyComponent,
   list: ListNode as AnyComponent,
+  map: MapNode as AnyComponent,
   modal: ModalNode as AnyComponent,
   paragraph: ParagraphNode as AnyComponent,
   radioGroup: RadioGroupNode as AnyComponent,
@@ -88,6 +90,7 @@ const lazyMap = {
   input: React.lazy(() => import('./input-layout-node').then((m) => ({ default: m.InputNode }))),
   link: React.lazy(() => import('./link-layout-node').then((m) => ({ default: m.LinkNode }))),
   list: React.lazy(() => import('./list-layout-node').then((m) => ({ default: m.ListNode }))),
+  map: React.lazy(() => import('./map-layout-node').then((m) => ({ default: m.MapNode }))),
   modal: React.lazy(() => import('./modal-layout-node').then((m) => ({ default: m.ModalNode }))),
   paragraph: React.lazy(() => import('./paragraph-layout-node').then((m) => ({ default: m.ParagraphNode }))),
   radioGroup: React.lazy(() =>
