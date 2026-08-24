@@ -13,8 +13,8 @@ interface RenderOptions {
   pages?: ReadonlyArray<{ id: string }>
   activePageId?: string
   onActivePageIdChange?: (pageId: string) => void
-  activeDomain?: 'layout' | 'api' | 'shell' | 'translations' | 'pages'
-  onDomainSelected?: (domain: 'layout' | 'api' | 'shell' | 'translations' | 'pages') => void
+  activeDomain?: 'layout' | 'api' | 'shell' | 'translations' | 'pages' | 'tokens'
+  onDomainSelected?: (domain: 'layout' | 'api' | 'shell' | 'translations' | 'pages' | 'tokens') => void
   onOpenMonaco?: () => void
   isMonacoOpen?: boolean
   onOpenPalette?: () => void
@@ -107,31 +107,14 @@ describe('DevEditorFloatingToolbar', () => {
       expect(screen.getByTestId('dev-editor-toolbar-domain-shell')).toHaveAttribute('aria-pressed', 'false')
     })
 
-    it('renders tokens as disabled with aria-disabled and title="Próximamente"', () => {
+    it('the tokens tab exists, is enabled and reads "Tokens"', () => {
       renderToolbar()
-      for (const testId of ['dev-editor-toolbar-domain-tokens']) {
-        const btn = screen.getByTestId(testId)
-        expect(btn).toBeDisabled()
-        expect(btn).toHaveAttribute('aria-disabled', 'true')
-        expect(btn).toHaveAttribute('title', 'Próximamente')
-      }
-    })
-
-    it('clicking a disabled domain tab does not invoke any callback', () => {
-      const onModeChange = vi.fn()
-      const onActivePageIdChange = vi.fn()
-      const onOpenMonaco = vi.fn()
-      const onOpenPalette = vi.fn()
-      const onDomainSelected = vi.fn()
-      renderToolbar({ onModeChange, onActivePageIdChange, onOpenMonaco, onOpenPalette, onDomainSelected })
-      for (const testId of ['dev-editor-toolbar-domain-tokens']) {
-        fireEvent.click(screen.getByTestId(testId))
-      }
-      expect(onModeChange).not.toHaveBeenCalled()
-      expect(onActivePageIdChange).not.toHaveBeenCalled()
-      expect(onOpenMonaco).not.toHaveBeenCalled()
-      expect(onOpenPalette).not.toHaveBeenCalled()
-      expect(onDomainSelected).not.toHaveBeenCalled()
+      const tokensBtn = screen.getByTestId('dev-editor-toolbar-domain-tokens')
+      expect(tokensBtn).toBeInTheDocument()
+      expect(tokensBtn).not.toBeDisabled()
+      expect(tokensBtn).not.toHaveAttribute('aria-disabled')
+      expect(tokensBtn).not.toHaveAttribute('title', 'Próximamente')
+      expect(tokensBtn).toHaveTextContent('Tokens')
     })
 
     it('the shell tab is functional: not disabled, no "Próximamente" title', () => {
@@ -194,16 +177,6 @@ describe('DevEditorFloatingToolbar', () => {
       expect(onDomainSelected).toHaveBeenCalledWith('translations')
     })
 
-    it('regression: tokens remains disabled with aria-disabled and "Próximamente" after adding the translations tab', () => {
-      renderToolbar()
-      for (const testId of ['dev-editor-toolbar-domain-tokens']) {
-        const btn = screen.getByTestId(testId)
-        expect(btn).toBeDisabled()
-        expect(btn).toHaveAttribute('aria-disabled', 'true')
-        expect(btn).toHaveAttribute('title', 'Próximamente')
-      }
-    })
-
     // T5 (0132): "Api" tab, same functional pattern as "Shell"/"Traducciones".
     it('the api tab exists, is enabled and reads "Api"', () => {
       renderToolbar()
@@ -263,14 +236,23 @@ describe('DevEditorFloatingToolbar', () => {
       expect(onDomainSelected).toHaveBeenCalledWith('pages')
     })
 
-    it('regression: tokens remains the only disabled domain tab after enabling the api and pages tabs', () => {
-      renderToolbar()
-      for (const testId of ['dev-editor-toolbar-domain-tokens']) {
-        const btn = screen.getByTestId(testId)
-        expect(btn).toBeDisabled()
-        expect(btn).toHaveAttribute('aria-disabled', 'true')
-        expect(btn).toHaveAttribute('title', 'Próximamente')
-      }
+    it('marks tokens as pressed (and layout as not pressed) when activeDomain is "tokens"', () => {
+      renderToolbar({ activeDomain: 'tokens' })
+      expect(screen.getByTestId('dev-editor-toolbar-domain-tokens')).toHaveAttribute('aria-pressed', 'true')
+      expect(screen.getByTestId('dev-editor-toolbar-domain-layout')).toHaveAttribute('aria-pressed', 'false')
+    })
+
+    it('marks tokens as not pressed when activeDomain is "layout"', () => {
+      renderToolbar({ activeDomain: 'layout' })
+      expect(screen.getByTestId('dev-editor-toolbar-domain-tokens')).toHaveAttribute('aria-pressed', 'false')
+    })
+
+    it('clicking the tokens tab invokes onDomainSelected("tokens")', () => {
+      const onDomainSelected = vi.fn()
+      renderToolbar({ activeDomain: 'layout', onDomainSelected })
+      fireEvent.click(screen.getByTestId('dev-editor-toolbar-domain-tokens'))
+      expect(onDomainSelected).toHaveBeenCalledTimes(1)
+      expect(onDomainSelected).toHaveBeenCalledWith('tokens')
     })
   })
 

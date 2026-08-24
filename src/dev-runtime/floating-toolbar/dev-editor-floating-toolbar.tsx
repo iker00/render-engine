@@ -5,7 +5,7 @@ import type {
 } from '../endpoints-config/resolve-endpoint-operation'
 
 export type ToolbarMode = 'visual' | 'editor'
-export type ToolbarDomain = 'layout' | 'api' | 'shell' | 'translations' | 'pages'
+export type ToolbarDomain = 'layout' | 'api' | 'shell' | 'translations' | 'pages' | 'tokens'
 
 // T6 (0131): save-config request state, owned by DevRuntimeReady (T5) and received here already
 // computed — this component never tracks its own save state.
@@ -94,6 +94,7 @@ export function DevEditorFloatingToolbar({
   const isShellActive = activeDomain === 'shell'
   const isTranslationsActive = activeDomain === 'translations'
   const isPagesActive = activeDomain === 'pages'
+  const isTokensActive = activeDomain === 'tokens'
 
   const isSaveUnavailable = saveResolution.status === 'unavailable'
   const isSaving = saveState === 'loading'
@@ -155,10 +156,9 @@ export function DevEditorFloatingToolbar({
         <button
           type="button"
           data-testid="dev-editor-toolbar-domain-tokens"
-          className={buttonClasses({ disabled: true })}
-          disabled
-          aria-disabled="true"
-          title="Próximamente"
+          className={buttonClasses({ pressed: isTokensActive })}
+          aria-pressed={isTokensActive}
+          onClick={() => onDomainSelected('tokens')}
         >
           <KeyRound size={14} /> Tokens
         </button>
