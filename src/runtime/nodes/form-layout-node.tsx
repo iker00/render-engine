@@ -3,8 +3,6 @@ import type { FormEvent, ReactNode } from 'react'
 import type {
   FileInputLayoutNode,
   FormLayoutNode,
-  FormOnErrorAction,
-  FormOnSuccessAction,
   LayoutNodeCollection,
 } from '../../config/runtime-config'
 import { FormContextProvider } from '../form-context'
@@ -18,7 +16,10 @@ import { normalizeChoiceFieldValue } from '../runtime-collection-sources'
 import { type ResolvedFormFieldDefinition, validateFormFields } from '../runtime-form-validations'
 import { useRuntimeState, useRuntimeStateActions } from '../runtime-state/use-runtime-state'
 import { selectFormFieldState } from '../runtime-state/runtime-state-selectors'
-import { executeRuntimeUiAction, type RuntimeUiActionHandlers } from '../runtime-actions/runtime-ui-action-executor'
+import {
+  runRuntimeUiActionLifecycleList,
+  type RuntimeUiActionHandlers,
+} from '../runtime-actions/runtime-ui-action-executor'
 import type {
   RuntimeApiEmptySubmitValues,
   RuntimeApiFileInputSources,
@@ -158,52 +159,6 @@ export function FormNode({ node, children, iterationContext }: FormNodeProps) {
     }
   }
 
-  function runOnSuccessActions(actions: FormOnSuccessAction[] | undefined) {
-    if (!actions || actions.length === 0) {
-      return
-    }
-
-    const handlers = buildHandlers()
-
-    for (const action of actions) {
-      const snapshot = readRuntimeState()
-
-      if (!matchesVisibilityRule(action.when, snapshot, iterationContext)) {
-        continue
-      }
-
-      // Strip 'when' before passing to executor since RuntimeUiAction doesn't have 'when'
-      const { when: _when, ...baseAction } = action as FormOnSuccessAction & { when?: unknown }
-      executeRuntimeUiAction(baseAction as Parameters<typeof executeRuntimeUiAction>[0], handlers, {
-        state: snapshot,
-        iterationContext,
-      })
-    }
-  }
-
-  function runOnErrorActions(actions: FormOnErrorAction[] | undefined) {
-    if (!actions || actions.length === 0) {
-      return
-    }
-
-    const handlers = buildHandlers()
-
-    for (const action of actions) {
-      const snapshot = readRuntimeState()
-
-      if (!matchesVisibilityRule(action.when, snapshot, iterationContext)) {
-        continue
-      }
-
-      // Strip 'when' before passing to executor since RuntimeUiAction doesn't have 'when'
-      const { when: _when, ...baseAction } = action as FormOnErrorAction & { when?: unknown }
-      executeRuntimeUiAction(baseAction as Parameters<typeof executeRuntimeUiAction>[0], handlers, {
-        state: snapshot,
-        iterationContext,
-      })
-    }
-  }
-
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
@@ -295,13 +250,13 @@ export function FormNode({ node, children, iterationContext }: FormNodeProps) {
       const anyError = results.some((r) => r.status === 'error')
 
       if (allSuccess) {
-        runOnSuccessActions(node.onSuccess)
+        runRuntimeUiActionLifecycleList(node.onSuccess, buildHandlers(), readRuntimeState, iterationContext)
 
         if (node.resetOnSuccess) {
           resetForm(node.id)
         }
       } else if (anyError) {
-        runOnErrorActions(node.onError)
+        runRuntimeUiActionLifecycleList(node.onError, buildHandlers(), readRuntimeState, iterationContext)
       }
 
       return
@@ -322,13 +277,13 @@ export function FormNode({ node, children, iterationContext }: FormNodeProps) {
     })
 
     if (result.status === 'success') {
-      runOnSuccessActions(node.onSuccess)
+      runRuntimeUiActionLifecycleList(node.onSuccess, buildHandlers(), readRuntimeState, iterationContext)
 
       if (node.resetOnSuccess) {
         resetForm(node.id)
       }
     } else if (result.status === 'error') {
-      runOnErrorActions(node.onError)
+      runRuntimeUiActionLifecycleList(node.onError, buildHandlers(), readRuntimeState, iterationContext)
     }
   }
 

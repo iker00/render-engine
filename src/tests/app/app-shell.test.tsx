@@ -1,10 +1,19 @@
 import { render, screen } from '@testing-library/react'
-import { vi } from 'vitest'
+import { afterEach, vi } from 'vitest'
 import { App } from '../../app/App'
 import defaultDevConfigJson from '../../dev/config.json'
 import type { RuntimeConfig } from '../../app/bootstrap/read-runtime-config'
 
 const defaultDevConfig = defaultDevConfigJson as RuntimeConfig
+
+// `defaultDevConfig` declares a root `preloads` block (`fetchPosts`), which fires a real network
+// request on every mount unless `fetch` is stubbed. Without this, the request can settle after the
+// test (or the whole Vitest jsdom environment) tears down, crashing with "window is not defined"
+// from inside React's dispatch path. `minimalDevConfig` below has no `preloads`, so this stub is a
+// no-op for it — kept file-wide since new tests here default to `defaultDevConfig`.
+afterEach(() => {
+  vi.unstubAllGlobals()
+})
 
 const minimalDevConfig: RuntimeConfig = {
   api: {},
@@ -100,6 +109,7 @@ describe('App shell', () => {
 
   it('renders the runtime at full width/height of the mount container, without card or global background', () => {
     const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify([]), { status: 200 })))
 
     renderDevelopmentApp(defaultDevConfig)
 
