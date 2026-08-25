@@ -69,6 +69,7 @@ Ficheros de apoyo, no son tests: `config-validation/helpers.ts`, `dev-runtime/lu
 - `runtime-config-validation-hidden.test.ts` — validación del nodo `hidden`: fieldId y value, props/rasgos prohibidos y unicidad en formulario
 - `runtime-config-validation-image-fetch.test.ts` — validación de nodo `image` con bloque `fetch`: url/alt/method/headers/body y coexistencia con contrato clásico src+alt
 - `runtime-config-validation-image-table.test.ts` — validación de nodos image y table (incluye subconjunto `link` permitido en celdas)
+- `runtime-config-validation-map.test.ts` — validación del nodo `map`: center/zoom/height, markers estáticos, markerSources dinámicos (source/position/label/color), precedencia de markerSources sobre markers, children y transversales
 - `runtime-config-validation-modal.test.ts` — validación de nodo modal: shape, children permitidos, unicidad de id y referencias a modalId
 - `runtime-config-validation-navigate-params.test.ts` — validaciones de `navigateTo.params` y colecciones antes de render
 - `runtime-config-validation-page-title.test.ts` — campo `title` opcional por página: aceptación, propagación al RuntimePageConfig y rechazo de tipos inválidos
@@ -110,6 +111,7 @@ Ficheros de apoyo, no son tests: `config-validation/helpers.ts`, `dev-runtime/lu
 - `layout-renderer-grid-spans.test.tsx` — layout.span, columnas responsive, clamping y fallbacks móvil
 - `layout-renderer-hidden.test.tsx` — nodo hidden: sin DOM, value literal/dinámico, inicialización no lazy, inclusión en payload y uso en repeater
 - `layout-renderer-image-fetch.test.tsx` — nodo image con fetch: ciclo del blob, errores, revocación al desmontar, aislamiento e integración con repeater
+- `layout-renderer-map.test.tsx` — nodo map: centro/zoom/height por defecto y explícitos, marcadores estáticos y dinámicos (una y varias fuentes), color por ciclo vs explícito, degradación de coordenadas inválidas, popup sin acciones, transversales (layout.span/visibility/queryStateFeedback)
 - `layout-renderer-image-table.test.tsx` — nodos image y tablas manual/dynamic/filterable/sortable
 - `layout-renderer-modal-edit-mode.test.tsx` — modal en modo edición con panel siempre presente y regresión de cierre en producción
 - `layout-renderer-modal-repeater.test.tsx` — modal dentro de repeater.props.template, identidad por iteración, item.* y cierre global uno a la vez
@@ -186,7 +188,9 @@ Ficheros de apoyo, no son tests: `config-validation/helpers.ts`, `dev-runtime/lu
 - `runtime-layout-visibility.test.ts` — reglas de visibilidad por condición: operadores, referencias y semántica de ausencia
 - `runtime-lazy-node.test.tsx` — wrapper LazyNode con Suspense + error boundary y contención por instancia
 - `runtime-link-action-href.test.ts` — resolutor puro de `href` para acciones `navigateTo`/`goBack` sobre el hash del navegador
+- `runtime-map-marker-sources.test.ts` — `resolveMapMarkerSourceItems`: resolución de colección dinámica a marcadores, degradación silenciosa ante posición inválida, label por interpolación o ruta relativa
 - `runtime-node-components-map.test.tsx` — mapa central de componentes de nodo: cobertura de claves y rama eager en tests
+- `runtime-node-styling-map.test.ts` — helpers puros de estilo del nodo map: clase Tailwind de altura por variante y `divIcon` de marcador por color semántico
 - `runtime-node-styling.test.ts` — utilidades de estilo y clases Tailwind de nodos
 - `runtime-page-document-title.test.tsx` — efecto de `document.title` por página: inicial, navegación, formato y renders adicionales
 - `runtime-page-entry-preloads.test.tsx` — precarga de operaciones al entrar en página

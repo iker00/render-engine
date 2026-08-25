@@ -18,6 +18,8 @@ const FORBIDDEN_NODE_MARKERS = [
   'Ver fichero',
   // file-input node marker
   'Límite de ficheros alcanzado',
+  // map node marker: Leaflet's root DOM class, only present if its CSS was bundled
+  'leaflet-container',
 ]
 
 /**

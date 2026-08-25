@@ -29,6 +29,7 @@ export const supportedNodeTypes = [
   'fileInput',
   'toggle',
   'hidden',
+  'map',
 ] as const
 
 export const tableCellAllowedNodeTypes = ['image', 'list', 'button', 'container', 'heading', 'paragraph', 'link'] as const
@@ -898,6 +899,59 @@ export const hiddenNodeSchema = z
         value: z.union([z.string(), z.number(), z.boolean()]),
       })
       .strip(),
+  })
+  .strip()
+
+export const supportedMapHeights = ['sm', 'md', 'lg', 'xl'] as const
+export const supportedMapMarkerColors = ['neutral', 'primary', 'success', 'warning', 'danger', 'info'] as const
+
+const mapCenterSchema = z
+  .object({
+    lat: z.number().finite().min(-90).max(90),
+    lng: z.number().finite().min(-180).max(180),
+  })
+  .strip()
+
+const mapStaticMarkerSchema = z
+  .object({
+    lat: z.number().finite().min(-90).max(90),
+    lng: z.number().finite().min(-180).max(180),
+    label: z.string(),
+  })
+  .strip()
+
+const mapMarkerSourceSchema = z
+  .object({
+    source: nonEmptyStringSchema,
+    position: z
+      .object({
+        lat: nonEmptyStringSchema,
+        lng: nonEmptyStringSchema,
+      })
+      .strip(),
+    label: nonEmptyStringSchema,
+    color: z.enum(supportedMapMarkerColors).optional(),
+  })
+  .strip()
+
+export const mapNodeSchema = z
+  .object({
+    type: z.literal('map'),
+    id: nodeIdSchema.optional(),
+    queryStateFeedback: queryStateFeedbackSchema.optional(),
+    visibility: visibilitySchema.optional(),
+    layout: layoutNodeLayoutSchema.optional(),
+    props: z
+      .object({
+        center: mapCenterSchema.optional(),
+        zoom: z.number().int().finite().min(0).max(19).optional(),
+        height: z.enum(supportedMapHeights).optional(),
+        markers: z.array(mapStaticMarkerSchema).optional(),
+        markerSources: z.array(mapMarkerSourceSchema).optional(),
+      })
+      .strip()
+      .optional(),
+    children: z.never().optional(),
   })
   .strip()
 

@@ -147,6 +147,9 @@ export function buildDefaultNodeInstance(type: LayoutNodeType): LayoutNode {
     case 'hidden':
       return { type: 'hidden', props: { fieldId: generateUniqueId('field'), value: 'valor' } }
 
+    case 'map':
+      return { type: 'map' }
+
     default: {
       const exhaustiveCheck: never = type
       throw new Error(`buildDefaultNodeInstance: unsupported node type "${String(exhaustiveCheck)}"`)

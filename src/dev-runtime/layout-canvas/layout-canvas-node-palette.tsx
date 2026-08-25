@@ -34,6 +34,7 @@ const NODE_TYPE_LABELS: Record<LayoutNodeType, string> = {
   fileInput: 'Campo de archivo',
   toggle: 'Interruptor',
   hidden: 'Campo oculto',
+  map: 'Mapa',
 }
 
 interface LayoutCanvasNodePaletteEntryProps {

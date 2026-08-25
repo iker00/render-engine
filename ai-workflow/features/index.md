@@ -23,6 +23,25 @@ La política completa está definida en el documento de workflow del proyecto.
 
 ## Completadas
 
+- `2026-08-24-12-58-map-node`: nuevo nodo hoja `map` en el catálogo, mapa interactivo `Leaflet`/`react-leaflet` sobre
+  tiles de OpenStreetMap, sin API key. `props.center`/`props.zoom`/`props.height` opcionales (defaults Pamplona,
+  zoom 13, altura `md`, resueltos en el componente de render, no en validación). Dos orígenes de marcadores:
+  `props.markers` estático (lista literal `{lat, lng, label}`) o `props.markerSources` dinámico (una o varias
+  fuentes simultáneas sobre `queries.*`, mismo contrato de `source` que `repeater.items.source` más `position.lat`/
+  `position.lng`/`label` como ruta relativa o interpolación, análogo a `select` dinámico). Si se declaran ambos,
+  `markerSources` prevalece y `markers` se descarta en la normalización, sin rechazar el config (decisión revisada
+  tras la implementación inicial, que sí rechazaba la combinación). Cada fuente dinámica se resuelve con
+  `resolveMapMarkerSourceItems` (nueva función pura en `runtime-collection-sources.ts`, reutiliza
+  `resolveCollectionSourceItems`); un item sin coordenadas válidas se omite en silencio sin romper el resto del mapa.
+  Diferenciación visual por fuente con la paleta semántica cerrada de seis colores ya usada por `badge`/`alert`/
+  `stat`, asignada por ciclo cuando no se declara `color` explícito. Marcador con icono `divIcon` de SVG inline
+  (evita el problema conocido de `L.Icon.Default` con bundlers) y popup con la etiqueta al pulsar, sin ninguna
+  acción del catálogo. `leaflet`/`react-leaflet` se cargan con code-splitting propio (`React.lazy`, CSS como
+  side-effect del módulo diferido) para que solo las páginas con `map` paguen su peso de bundle; `vite.config.ts`
+  marca `leaflet` como libre de efectos secundarios para tree-shaking porque su build CJS sin `sideEffects: false`
+  lo mantendría alcanzable desde el entrypoint pese al lazy-loading. Gate de bundle (`runtime-nodes-bundle.test.ts`)
+  ampliado para verificar que la clase raíz `leaflet-container` no aparece en el chunk inicial. Sin soporte en
+  `dev-editor` (fuera de alcance), sin clustering/rutas/geolocalización.
 - `0135-dev-editor-query-feedback-accordion`: tercera y última entrega del rediseño del panel de propiedades del
   editor visual (F-C, sucesora de `0133`/F-A y `0134`/F-B); sustituye, dentro de la pestaña `Queries`, el editor
   genérico de objeto de `queryStateFeedback.states` por un acordeón dedicado (`QueryStateFeedbackAccordionPropertyField`,

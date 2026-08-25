@@ -26,6 +26,7 @@ export type LayoutNodeType =
   | 'fileInput'
   | 'toggle'
   | 'hidden'
+  | 'map'
 export type RuntimeApiMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
 export type RuntimeApiQueryValue = string | number | boolean
 export type RuntimeApiQuery = Record<string, RuntimeApiQueryValue>
@@ -577,6 +578,34 @@ export interface SkeletonLayoutNode extends LayoutNodeFeedbackFields, LayoutNode
   children?: never
 }
 
+export interface MapStaticMarker {
+  lat: number
+  lng: number
+  label: string
+}
+
+export interface MapMarkerSource {
+  source: string
+  position: { lat: string; lng: string }
+  label: string
+  color?: ButtonColor
+}
+
+export type MapHeight = 'sm' | 'md' | 'lg' | 'xl'
+
+export interface MapLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayoutFields {
+  type: 'map'
+  id?: string
+  props?: {
+    center?: { lat: number; lng: number }
+    zoom?: number
+    height?: MapHeight
+    markers?: MapStaticMarker[]
+    markerSources?: MapMarkerSource[]
+  }
+  children?: never
+}
+
 export interface NavigateToRuntimeUiAction {
   type: 'navigateTo'
   pageId: string
@@ -787,6 +816,7 @@ export type LayoutNode =
   | ToggleLayoutNode
   | HiddenLayoutNode
   | FileManagerLayoutNode
+  | MapLayoutNode
 
 export type LayoutNodeCollection = LayoutNode[]
 

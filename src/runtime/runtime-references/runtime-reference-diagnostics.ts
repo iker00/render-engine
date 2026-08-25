@@ -49,6 +49,7 @@ export type RuntimeReferenceSurface =
   | 'shell.header.menu.item.href'
   | 'shell.sidebar.item.label'
   | 'shell.sidebar.item.href'
+  | 'map.props.markerSources.label'
 
 export function reportRuntimeReferenceDiagnostic(
   result: RuntimeReferenceResolutionResult,
