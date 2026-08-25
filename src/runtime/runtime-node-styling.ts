@@ -2,6 +2,7 @@ export {
   type EffectiveResponsiveLayoutValue,
   normalizeResponsiveLayoutValue,
   getGridChildSpanClassName,
+  getGridLayoutClassNames,
 } from './runtime-node-styling-base'
 export {
   getAppShellClassName,
@@ -102,6 +103,7 @@ export {
   getRepeaterPaginationButtonClassName,
   getRepeaterPaginationCurrentButtonClassName,
 } from './runtime-node-styling-repeater-pagination'
+export { getRepeaterGridClassName } from './runtime-node-styling-repeater-grid'
 export {
   getAppShellHeaderClassName,
   getAppShellHeaderInnerClassName,

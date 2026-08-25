@@ -8,7 +8,7 @@ import { containerNodeSchema } from './runtime-config-zod'
 import type { BreadcrumbSegment } from './validation-breadcrumb'
 import { enrichedInvalidLayout, enrichErrorResult } from './validation-breadcrumb'
 import { validateLayoutCollection, validateQueryStateFeedback } from './validate-layout-nodes-core'
-import { mapLayoutNodeIssue } from './validate-layout-issue-mapping'
+import { mapGridLayoutIssue, mapLayoutNodeIssue } from './validate-layout-issue-mapping'
 import { mapQueryStateFeedbackIssue, mapVisibilityIssue, validateVisibility } from './validate-actions-visibility'
 
 export function validateContainerNode(
@@ -35,24 +35,14 @@ export function validateContainerNode(
       return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.direction".`, breadcrumb, rawNode)
     }
 
-    if (issuePath === 'props' && issue.path[1] === 'gap') {
-      return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.gap".`, breadcrumb, rawNode)
-    }
+    const gridLayoutIssue = mapGridLayoutIssue(pageId, path, issue.path, breadcrumb, rawNode)
 
-    if (issuePath === 'props' && issue.path[1] === 'columns') {
-      return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.columns".`, breadcrumb, rawNode)
+    if (gridLayoutIssue) {
+      return gridLayoutIssue
     }
 
     if (issuePath === 'props' && issue.path[1] === 'variant') {
       return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.variant".`, breadcrumb, rawNode)
-    }
-
-    if (issuePath === 'props' && issue.path[1] === 'align') {
-      return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.align".`, breadcrumb, rawNode)
-    }
-
-    if (issuePath === 'props' && issue.path[1] === 'justify') {
-      return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.justify".`, breadcrumb, rawNode)
     }
 
     if (issuePath === 'props' && issue.path[1] === 'wrap') {

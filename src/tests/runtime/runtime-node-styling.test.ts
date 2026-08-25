@@ -47,11 +47,13 @@ import {
   getGridChildSpanClassName,
   getLinkNodeClassName,
   getPrimaryButtonNodeClassName,
+  getRepeaterGridClassName,
   getRepeaterPaginationButtonClassName,
   getRepeaterPaginationControlsClassName,
   getRepeaterPaginationCurrentButtonClassName,
   getRuntimePageClassName,
   getContainerNodeStyling,
+  getGridLayoutClassNames,
   getHeadingNodeClassName,
   getHeadingTag,
   getImageNodeClassName,
@@ -286,6 +288,68 @@ describe('runtime node styling', () => {
     })
   })
 
+  describe('getGridLayoutClassNames', () => {
+    it('returns grid, w-full and grid-cols-{n} for a fixed columns value between 1 and 12', () => {
+      expect(getGridLayoutClassNames({ columns: 1 }).classNames).toEqual(
+        expect.arrayContaining(['grid', 'w-full', 'grid-cols-1']),
+      )
+      expect(getGridLayoutClassNames({ columns: 12 }).classNames).toEqual(
+        expect.arrayContaining(['grid', 'w-full', 'grid-cols-12']),
+      )
+    })
+
+    it('returns per-breakpoint classes for a responsive columns map, with base as the mobile fallback when missing', () => {
+      expect(
+        getGridLayoutClassNames({
+          columns: { base: 1, md: 2, lg: 4 },
+        }).classNames,
+      ).toEqual(['grid', 'w-full', 'grid-cols-1', 'md:grid-cols-2', 'lg:grid-cols-4', 'gap-5'])
+
+      expect(
+        getGridLayoutClassNames({
+          columns: { md: 2, lg: 4 },
+        }).classNames,
+      ).toEqual(['grid', 'w-full', 'grid-cols-1', 'md:grid-cols-2', 'lg:grid-cols-4', 'gap-5'])
+    })
+
+    it('uses md as the effective gap default when none is declared', () => {
+      expect(getGridLayoutClassNames({ columns: 2 })).toEqual({
+        classNames: ['grid', 'w-full', 'grid-cols-2', 'gap-5'],
+      })
+    })
+
+    it('returns the stable class for a supported gap alias without style', () => {
+      expect(getGridLayoutClassNames({ columns: 2, gap: 'sm' })).toEqual({
+        classNames: ['grid', 'w-full', 'grid-cols-2', 'gap-3'],
+      })
+      expect(getGridLayoutClassNames({ columns: 2, gap: 'lg' }).style).toBeUndefined()
+    })
+
+    it('returns the CSS variable class and style for an arbitrary gap value', () => {
+      expect(getGridLayoutClassNames({ columns: 2, gap: '18px' })).toEqual({
+        classNames: ['grid', 'w-full', 'grid-cols-2', 'gap-[var(--runtime-container-gap)]'],
+        style: {
+          '--runtime-container-gap': '18px',
+        },
+      })
+    })
+
+    it('adds items-*/justify-* classes when align/justify are declared, and neither when omitted', () => {
+      expect(getGridLayoutClassNames({ columns: 2, align: 'center', justify: 'between' }).classNames).toEqual([
+        'grid',
+        'w-full',
+        'grid-cols-2',
+        'items-center',
+        'justify-between',
+        'gap-5',
+      ])
+      expect(getGridLayoutClassNames({ columns: 2 }).classNames).not.toEqual(
+        expect.arrayContaining(['items-center', 'items-start', 'items-end', 'items-stretch']),
+      )
+      expect(getGridLayoutClassNames({ columns: 2 }).classNames.join(' ')).not.toContain('justify-')
+    })
+  })
+
   it('maps grid span wrappers only inside grid parents and clamps to parent columns', () => {
     expect(getGridChildSpanClassName()).toBeNull()
     expect(getGridChildSpanClassName(2)).toBeNull()
@@ -397,6 +461,48 @@ describe('runtime node styling', () => {
 
   it('getRepeaterPaginationCurrentButtonClassName includes cursor-pointer (inherited from base)', () => {
     expect(getRepeaterPaginationCurrentButtonClassName()).toContain('cursor-pointer')
+  })
+
+  describe('getRepeaterGridClassName', () => {
+    it('returns a single className string including grid-cols-{n} for a fixed columns value', () => {
+      const result = getRepeaterGridClassName({ columns: 3 })
+
+      expect(result.className).toContain('grid-cols-3')
+      expect(result.className).toBe('grid w-full grid-cols-3 gap-5')
+    })
+
+    it('returns per-breakpoint classes for a responsive columns map, with base as the mobile fallback', () => {
+      expect(getRepeaterGridClassName({ columns: { md: 2, lg: 4 } }).className).toBe(
+        'grid w-full grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5',
+      )
+    })
+
+    it('uses md as the effective gap default when none is declared', () => {
+      expect(getRepeaterGridClassName({ columns: 2 })).toEqual({
+        className: 'grid w-full grid-cols-2 gap-5',
+      })
+    })
+
+    it('returns the stable class for a supported gap alias without style', () => {
+      expect(getRepeaterGridClassName({ columns: 2, gap: 'sm' })).toEqual({
+        className: 'grid w-full grid-cols-2 gap-3',
+      })
+    })
+
+    it('returns the CSS variable class and style for an arbitrary gap value', () => {
+      expect(getRepeaterGridClassName({ columns: 2, gap: '18px' })).toEqual({
+        className: 'grid w-full grid-cols-2 gap-[var(--runtime-container-gap)]',
+        style: {
+          '--runtime-container-gap': '18px',
+        },
+      })
+    })
+
+    it('adds items-*/justify-* classes when align/justify are declared', () => {
+      expect(getRepeaterGridClassName({ columns: 2, align: 'center', justify: 'between' }).className).toBe(
+        'grid w-full grid-cols-2 items-center justify-between gap-5',
+      )
+    })
   })
 
   it('returns compact stable classes for table controls', () => {

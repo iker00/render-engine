@@ -74,7 +74,7 @@ const NOOP_SELECT_ANCESTOR = (_path: LayoutNodePath): void => {}
 // the top of the `Props` tabpanel; the dedicated keys are unaffected by where they render. T9
 // (0138) adds `tableRows`: the `table` rows/columns/cells widget (T8) commits the entire node too
 // (D4), for the same reason — `headers`/`rows`/`columns` must commit as one coordinated mutation.
-type PendingRejectionKey = NodePanelTabKey | 'submitAction' | 'containerColumnsMode' | 'tableRows'
+type PendingRejectionKey = NodePanelTabKey | 'submitAction' | 'containerColumnsMode' | 'tableRows' | 'repeaterGrid'
 
 // T9 (bug fix): `commitCanvasMutation` validates the *entire* config before applying a panel
 // commit (see dev-runtime.tsx). Switching a discriminated-union variant (T5) or adding a new
@@ -279,6 +279,31 @@ function resolveContainerPropsSchema(propsSchema: Record<string, unknown>, props
   if (isPlainObject(propsValue) && propsValue.columns !== undefined) return propsSchema
 
   const { columns: _columns, ...restProperties } = properties
+  return { ...propsSchema, properties: restProperties }
+}
+
+// The four flat scalar props repeater's own grid-mode contract added (T2/T3, repeater-grid-mode):
+// unlike `items`/`pagination`/`template`, none of these is a nested object/array in the Zod schema,
+// so `ObjectPropertyField` would render each as a bare row with no group header at all (the same
+// "orphaned" gap `container.props.columns`/`gap`/`align`/`justify` already has, left as-is per D5 —
+// this stays repeater-only). `renderPropsSpecialBlocks`'s dedicated "Grid" fieldset below is their
+// only editing surface; `resolveRepeaterPropsSchema` keeps the generic dispatcher from rendering
+// them a second time.
+const REPEATER_GRID_KEYS = ['columns', 'gap', 'align', 'justify'] as const
+
+/**
+ * Omits `columns`, `gap`, `align` and `justify` from `repeater.props`'s generated schema
+ * unconditionally: the dedicated "Grid" fieldset in `renderPropsSpecialBlocks` is these four keys'
+ * only editing surface (see `REPEATER_GRID_KEYS` above), the same "generic dispatcher stops
+ * iterating these keys for this node type" precedent `resolveTablePropsSchema` below already
+ * establishes for `table`. Any other `repeater.props` key (`items`, `pagination`, `template`)
+ * passes through unchanged and keeps rendering with the generic dispatcher.
+ */
+function resolveRepeaterPropsSchema(propsSchema: Record<string, unknown>): Record<string, unknown> {
+  const properties = propsSchema.properties
+  if (!isPlainObject(properties)) return propsSchema
+
+  const { columns: _columns, gap: _gap, align: _align, justify: _justify, ...restProperties } = properties
   return { ...propsSchema, properties: restProperties }
 }
 
@@ -620,6 +645,51 @@ export function LayoutCanvasPropertiesPanel({
               </div>
             )
           })()}
+        {node.type === 'repeater' &&
+          (() => {
+            const repeaterPropsSchema = schemaProperties.props
+            const gridProperties =
+              isPlainObject(repeaterPropsSchema) && isPlainObject(repeaterPropsSchema.properties)
+                ? repeaterPropsSchema.properties
+                : {}
+            const pendingRejection = pendingRejections.repeaterGrid
+            const displayedProps = pendingRejection ? (pendingRejection.value as typeof node.props) : node.props
+
+            return (
+              <div className="flex flex-col gap-2">
+                <fieldset className="flex flex-col gap-2 mb-4">
+                  <legend className="pt-2 text-[11px] font-medium uppercase tracking-wide text-gray-500">Grid</legend>
+                  {REPEATER_GRID_KEYS.map((key) => {
+                    const fieldSchema = gridProperties[key]
+                    if (!fieldSchema || typeof fieldSchema !== 'object') return null
+                    const fieldValue = (displayedProps as Record<string, unknown> | undefined)?.[key]
+
+                    return (
+                      <PropertyFieldDispatcher
+                        key={key}
+                        schema={resolveUnionBranch(fieldSchema as Record<string, unknown>, fieldValue)}
+                        value={fieldValue}
+                        label={key}
+                        onChange={(nextValue) => {
+                          const nextProps = { ...displayedProps, [key]: nextValue }
+                          const result = onCommitNodeUpdate(path, (currentNode) =>
+                            currentNode.type === 'repeater' ? { ...currentNode, props: nextProps } : currentNode,
+                          )
+                          recordCommitResult('repeaterGrid', nextProps, result)
+                        }}
+                      />
+                    )
+                  })}
+                </fieldset>
+                {pendingRejection && (
+                  <CommitRejectionBanner
+                    dataTestId="layout-canvas-properties-panel-repeaterGrid-error"
+                    error={pendingRejection.error}
+                  />
+                )}
+              </div>
+            )
+          })()}
         {node.type === 'table' &&
           (() => {
             const pendingRejection = pendingRejections.tableRows
@@ -669,6 +739,9 @@ export function LayoutCanvasPropertiesPanel({
     }
     if (key === 'props' && node.type === 'table' && effectiveSchema) {
       effectiveSchema = resolveTablePropsSchema(effectiveSchema)
+    }
+    if (key === 'props' && node.type === 'repeater' && effectiveSchema) {
+      effectiveSchema = resolveRepeaterPropsSchema(effectiveSchema)
     }
     if (key === 'props' && CHOICE_LIKE_NODE_TYPES.has(node.type) && effectiveSchema) {
       effectiveSchema = resolveChoiceLikePropsSchema(effectiveSchema)

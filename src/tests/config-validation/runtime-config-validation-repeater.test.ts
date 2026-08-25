@@ -569,4 +569,310 @@ describe('validateRuntimeConfig', () => {
       })
     })
   })
+
+  describe('repeater grid layout props', () => {
+    it('accepts repeater props.columns as a fixed integer between 1 and 12', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithLayout([
+          createRepeaterNode({
+            props: {
+              items: {
+                source: 'queries.posts.data',
+                key: 'id',
+              },
+              columns: 4,
+              template: [],
+            },
+          }),
+        ]),
+      )
+
+      expect(result).toMatchObject({
+        status: 'ready',
+        page: {
+          layout: [
+            {
+              type: 'repeater',
+              props: {
+                columns: 4,
+              },
+            },
+          ],
+        },
+      })
+    })
+
+    it('accepts repeater props.columns as a responsive map with supported breakpoints', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithLayout([
+          createRepeaterNode({
+            props: {
+              items: {
+                source: 'queries.posts.data',
+                key: 'id',
+              },
+              columns: {
+                base: 1,
+                sm: 2,
+                md: 3,
+                lg: 4,
+                xl: 6,
+                '2xl': 12,
+              },
+              template: [],
+            },
+          }),
+        ]),
+      )
+
+      expect(result).toMatchObject({
+        status: 'ready',
+        page: {
+          layout: [
+            {
+              type: 'repeater',
+              props: {
+                columns: {
+                  base: 1,
+                  sm: 2,
+                  md: 3,
+                  lg: 4,
+                  xl: 6,
+                  '2xl': 12,
+                },
+              },
+            },
+          ],
+        },
+      })
+    })
+
+    it('accepts repeater props.gap on the design scale and as an arbitrary compatibility value', () => {
+      for (const gap of ['md', '18px']) {
+        const result = validateRuntimeConfig(
+          createConfigWithLayout([
+            createRepeaterNode({
+              props: {
+                items: {
+                  source: 'queries.posts.data',
+                  key: 'id',
+                },
+                gap,
+                template: [],
+              },
+            }),
+          ]),
+        )
+
+        expect(result).toMatchObject({
+          status: 'ready',
+          page: {
+            layout: [
+              {
+                type: 'repeater',
+                props: {
+                  gap,
+                },
+              },
+            ],
+          },
+        })
+      }
+    })
+
+    it('accepts repeater props.align in the supported catalog', () => {
+      for (const align of ['start', 'center', 'end', 'stretch']) {
+        const result = validateRuntimeConfig(
+          createConfigWithLayout([
+            createRepeaterNode({
+              props: {
+                items: {
+                  source: 'queries.posts.data',
+                  key: 'id',
+                },
+                align,
+                template: [],
+              },
+            }),
+          ]),
+        )
+
+        expect(result).toMatchObject({
+          status: 'ready',
+          page: {
+            layout: [
+              {
+                type: 'repeater',
+                props: {
+                  align,
+                },
+              },
+            ],
+          },
+        })
+      }
+    })
+
+    it('accepts repeater props.justify in the supported catalog', () => {
+      for (const justify of ['start', 'center', 'end', 'between', 'around', 'evenly']) {
+        const result = validateRuntimeConfig(
+          createConfigWithLayout([
+            createRepeaterNode({
+              props: {
+                items: {
+                  source: 'queries.posts.data',
+                  key: 'id',
+                },
+                justify,
+                template: [],
+              },
+            }),
+          ]),
+        )
+
+        expect(result).toMatchObject({
+          status: 'ready',
+          page: {
+            layout: [
+              {
+                type: 'repeater',
+                props: {
+                  justify,
+                },
+              },
+            ],
+          },
+        })
+      }
+    })
+
+    it('keeps repeater nodes without columns gap align or justify valid as before', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithLayout([
+          createRepeaterNode({
+            props: {
+              items: {
+                source: 'queries.posts.data',
+                key: 'id',
+              },
+              template: [],
+            },
+          }),
+        ]),
+      )
+
+      expect(result).toMatchObject({
+        status: 'ready',
+        page: {
+          layout: [
+            {
+              type: 'repeater',
+              props: {
+                items: {
+                  source: 'queries.posts.data',
+                  key: 'id',
+                },
+              },
+            },
+          ],
+        },
+      })
+
+      if (result.status !== 'ready') {
+        throw new Error('Expected ready result')
+      }
+
+      const repeaterProps = result.page.layout[0].props as Record<string, unknown>
+      expect(repeaterProps.columns).toBeUndefined()
+      expect(repeaterProps.gap).toBeUndefined()
+      expect(repeaterProps.align).toBeUndefined()
+      expect(repeaterProps.justify).toBeUndefined()
+    })
+
+    it('rejects repeater props.columns out of range, non integer, or with unknown breakpoints', () => {
+      const invalidColumns: unknown[] = [0, 13, 1.5, '4', { base: 1, tablet: 2 }]
+
+      for (const columns of invalidColumns) {
+        expect(
+          validateRuntimeConfig(
+            createConfigWithLayout([
+              createRepeaterNode({
+                props: {
+                  items: {
+                    source: 'queries.posts.data',
+                    key: 'id',
+                  },
+                  columns,
+                  template: [],
+                },
+              }),
+            ]),
+          ),
+        ).toEqual({
+          status: 'error',
+          error: {
+            code: 'invalid-layout',
+            displayMode: 'development-only',
+            message: `Page "home" has an invalid layout at "layout[0].props.columns".
+  → repeater[0]
+  Node: {"type":"repeater"}`,
+          },
+        })
+      }
+    })
+
+    it('rejects repeater props.align and props.justify outside the supported catalogs', () => {
+      expect(
+        validateRuntimeConfig(
+          createConfigWithLayout([
+            createRepeaterNode({
+              props: {
+                items: {
+                  source: 'queries.posts.data',
+                  key: 'id',
+                },
+                align: 'baseline',
+                template: [],
+              },
+            }),
+          ]),
+        ),
+      ).toEqual({
+        status: 'error',
+        error: {
+          code: 'invalid-layout',
+          displayMode: 'development-only',
+          message: `Page "home" has an invalid layout at "layout[0].props.align".
+  → repeater[0]
+  Node: {"type":"repeater"}`,
+        },
+      })
+
+      expect(
+        validateRuntimeConfig(
+          createConfigWithLayout([
+            createRepeaterNode({
+              props: {
+                items: {
+                  source: 'queries.posts.data',
+                  key: 'id',
+                },
+                justify: 'space-between',
+                template: [],
+              },
+            }),
+          ]),
+        ),
+      ).toEqual({
+        status: 'error',
+        error: {
+          code: 'invalid-layout',
+          displayMode: 'development-only',
+          message: `Page "home" has an invalid layout at "layout[0].props.justify".
+  → repeater[0]
+  Node: {"type":"repeater"}`,
+        },
+      })
+    })
+  })
 })

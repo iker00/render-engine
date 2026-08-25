@@ -574,6 +574,42 @@ describe('LayoutCanvasPropertiesPanel layout subsection visibility', () => {
   })
 })
 
+// T6 (2026-08-24-13-02-repeater-grid-mode): `resolveAncestorContainerColumns` now also recognizes a
+// `repeater` ancestor with `props.columns` as a grid ancestor, the same as `container` — the panel
+// must offer the `layout-span` widget (Diseño tab) for the root node of `props.template` when its
+// immediate ancestor is a `repeater` in grid mode, exactly as it already does through `container`.
+describe('LayoutCanvasPropertiesPanel layout subsection visibility via a repeater grid-mode ancestor (T6, repeater-grid-mode)', () => {
+  function repeaterWithColumns(columns: number, template: LayoutNode[] = []): LayoutNode {
+    return {
+      type: 'repeater',
+      props: { items: { source: 'queries.list.items', key: '$index' }, columns, template },
+    } as LayoutNode
+  }
+
+  const templateRootPath: LayoutNodePath = [
+    { field: 'children', index: 0 },
+    { field: 'template', index: 0 },
+  ]
+
+  it('renders the layout-span widget for the template root node when its immediate ancestor is a repeater in grid mode', () => {
+    const node: LayoutNode = { type: 'heading', props: { text: 'Hi', level: 2 }, layout: { span: 2 } } as LayoutNode
+    const pageLayout: LayoutNode[] = [repeaterWithColumns(4, [node])]
+
+    render(
+      <LayoutCanvasPropertiesPanel
+        node={node}
+        path={templateRootPath}
+        pageLayout={pageLayout}
+        onCommitNodeUpdate={() => {}}
+      />,
+    )
+    fireEvent.click(screen.getByRole('tab', { name: 'Diseño' }))
+
+    expect(screen.getByTestId('layout-span-widget')).toBeInTheDocument()
+    expect(screen.queryByLabelText('span', { exact: false })).not.toBeInTheDocument()
+  })
+})
+
 // T6 (0133), FR7: the panel now hosts the `layout-span` widget's per-row commit-rejection state
 // (`layoutSpanRowRejections` in `LayoutCanvasPropertiesPanel`) instead of the widget keeping it in
 // local `useState` — a rejected row and its typed value must survive switching to another tab and
@@ -1880,6 +1916,146 @@ describe('LayoutCanvasPropertiesPanel container columns mode widget (T5, 0128)',
     render(<LayoutCanvasPropertiesPanel node={containerNode({ direction: 'row' })} path={somePath} onCommitNodeUpdate={() => {}} />)
 
     expect(screen.queryByLabelText('columns', { exact: false })).not.toBeInTheDocument()
+  })
+})
+
+// T5 (2026-08-24-13-02-repeater-grid-mode): repeaterNodeSchema.props was extended in T2 with the
+// same columns/gap/align/justify fields containerNodeSchema already declares (T2). Unlike
+// `container`, `repeater` has no `resolveContainerPropsSchema`/`ContainerColumnsModePropertyField`
+// wiring keyed to its type (that stays container-only, out of scope here), so all four fields flow
+// straight to the fully generic, schema-driven `PropertyFieldDispatcher`: `gap` as a plain text
+// field, `align` (4 options) as the generic segmented enum, `justify` (6 options) as the generic
+// `<select>`, and `columns` (the same `responsiveLayoutValueSchema` union `layout.span` and
+// `container.props.columns` already use) resolved by `resolveUnionBranch`'s generic by-shape
+// union resolution — always rendered, since no mode toggle omits it for this node type.
+describe('LayoutCanvasPropertiesPanel repeater grid-mode fields (T5, repeater-grid-mode)', () => {
+  function repeaterNode(overrides: Partial<Extract<LayoutNode, { type: 'repeater' }>['props']> = {}): LayoutNode {
+    return {
+      type: 'repeater',
+      props: {
+        items: { source: 'queries.list.items', key: '$index' },
+        template: [],
+        ...overrides,
+      },
+    } as LayoutNode
+  }
+
+  function pageLayoutWrapping(node: LayoutNode): LayoutNode[] {
+    return [{ type: 'container', props: {}, children: [node] }]
+  }
+
+  const nestedPath: LayoutNodePath = [
+    { field: 'children', index: 0 },
+    { field: 'children', index: 0 },
+  ]
+
+  it('renders props.gap as an editable text field, seeded with its current value, committing a patch that preserves the other props', () => {
+    const node = repeaterNode({ gap: 'md' })
+    const pageLayout = pageLayoutWrapping(node)
+    const onCommitNodeUpdate = vi.fn()
+    render(
+      <LayoutCanvasPropertiesPanel
+        node={node}
+        path={nestedPath}
+        pageLayout={pageLayout}
+        onCommitNodeUpdate={onCommitNodeUpdate}
+      />,
+    )
+
+    const gapField = screen.getByLabelText('gap', { exact: false })
+    expect(gapField).toHaveValue('md')
+
+    fireEvent.change(gapField, { target: { value: 'lg' } })
+
+    expect(onCommitNodeUpdate).toHaveBeenCalledTimes(1)
+    const [calledPath, updater] = onCommitNodeUpdate.mock.calls[0]
+    expect(calledPath).toBe(nestedPath)
+    const result = updater(node) as Extract<LayoutNode, { type: 'repeater' }>
+    expect(result.props.gap).toBe('lg')
+    expect(result.props.items).toEqual(node.props.items)
+    expect(result.props.template).toEqual(node.props.template)
+  })
+
+  it('renders props.align as a segmented radiogroup (4 options), committing the selected value on click', () => {
+    const node = repeaterNode({ align: 'start' })
+    const onCommitNodeUpdate = vi.fn()
+    render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={onCommitNodeUpdate} />)
+
+    const radiogroup = screen.getByRole('radiogroup', { name: 'align' })
+    expect(within(radiogroup).getAllByRole('radio')).toHaveLength(4)
+    expect(within(radiogroup).getByRole('radio', { name: 'start', checked: true })).toBeInTheDocument()
+    expect(screen.queryByRole('combobox', { name: 'align' })).not.toBeInTheDocument()
+
+    fireEvent.click(within(radiogroup).getByRole('radio', { name: 'stretch' }))
+
+    expect(onCommitNodeUpdate).toHaveBeenCalledTimes(1)
+    const [calledPath, updater] = onCommitNodeUpdate.mock.calls[0]
+    expect(calledPath).toBe(somePath)
+    const result = updater(node) as Extract<LayoutNode, { type: 'repeater' }>
+    expect(result.props.align).toBe('stretch')
+  })
+
+  it('renders props.justify as a plain <select> (6 options), committing the selected value on change', () => {
+    const node = repeaterNode({ justify: 'start' })
+    const onCommitNodeUpdate = vi.fn()
+    render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={onCommitNodeUpdate} />)
+
+    const select = screen.getByLabelText('justify', { exact: false }) as HTMLSelectElement
+    expect(select.tagName).toBe('SELECT')
+    expect(select.value).toBe('start')
+    expect(Array.from(select.options).map((option) => option.value)).toEqual([
+      'start',
+      'center',
+      'end',
+      'between',
+      'around',
+      'evenly',
+    ])
+
+    fireEvent.change(select, { target: { value: 'around' } })
+
+    expect(onCommitNodeUpdate).toHaveBeenCalledTimes(1)
+    const [, updater] = onCommitNodeUpdate.mock.calls[0]
+    const result = updater(node) as Extract<LayoutNode, { type: 'repeater' }>
+    expect(result.props.justify).toBe('around')
+  })
+
+  it('renders props.columns as an editable field via the generic union-branch resolution (not the container "Modo" widget), committing the changed value', () => {
+    const node = repeaterNode({ columns: 3 })
+    const onCommitNodeUpdate = vi.fn()
+    render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={onCommitNodeUpdate} />)
+
+    expect(screen.queryByRole('radiogroup', { name: 'Modo' })).not.toBeInTheDocument()
+    const columnsField = screen.getByLabelText('columns', { exact: false })
+    expect(columnsField).toHaveValue(3)
+
+    fireEvent.change(columnsField, { target: { value: '5' } })
+
+    expect(onCommitNodeUpdate).toHaveBeenCalledTimes(1)
+    const [, updater] = onCommitNodeUpdate.mock.calls[0]
+    const result = updater(node) as Extract<LayoutNode, { type: 'repeater' }>
+    expect(result.props.columns).toBe(5)
+  })
+
+  it('renders props.columns as an editable field even when the node declares no columns at all (no mode toggle hides it, unlike container)', () => {
+    const node = repeaterNode()
+    render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={() => {}} />)
+
+    expect(screen.getByLabelText('columns', { exact: false })).toBeInTheDocument()
+  })
+
+  it('groups columns/gap/align/justify under a single "Grid" fieldset, distinct from the items/pagination/template groups', () => {
+    const node = repeaterNode({ columns: 3, gap: 'md', align: 'start', justify: 'start' })
+    render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={() => {}} />)
+
+    const gridGroup = screen.getByRole('group', { name: 'Grid' })
+    expect(within(gridGroup).getByLabelText('columns', { exact: false })).toBeInTheDocument()
+    expect(within(gridGroup).getByLabelText('gap', { exact: false })).toBeInTheDocument()
+    expect(within(gridGroup).getByRole('radiogroup', { name: 'align' })).toBeInTheDocument()
+    expect(within(gridGroup).getByLabelText('justify', { exact: false })).toBeInTheDocument()
+
+    const itemsGroup = screen.getByRole('group', { name: 'items' })
+    expect(within(itemsGroup).queryByLabelText('columns', { exact: false })).not.toBeInTheDocument()
   })
 })
 

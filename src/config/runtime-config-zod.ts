@@ -269,6 +269,10 @@ export const repeaterNodeSchema = z
           })
           .strip(),
         pagination: collectionPaginationSchema.optional(),
+        columns: responsiveLayoutValueSchema.optional(),
+        gap: z.string().optional(),
+        align: z.enum(supportedContainerAlignValues).optional(),
+        justify: z.enum(supportedContainerJustifyValues).optional(),
         template: z.array(z.unknown()),
       })
       .strip(),

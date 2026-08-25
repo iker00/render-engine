@@ -187,6 +187,10 @@ export interface RepeaterLayoutNode extends LayoutNodeFeedbackFields, LayoutNode
       key: string
     }
     pagination?: RuntimeCollectionPaginationConfig
+    columns?: RuntimeResponsiveLayoutValue
+    gap?: string
+    align?: ContainerAlign
+    justify?: ContainerJustify
     template: LayoutNode[]
   }
   children?: never

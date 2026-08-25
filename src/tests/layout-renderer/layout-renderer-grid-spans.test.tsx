@@ -599,4 +599,207 @@ describe('RuntimePage', () => {
     expect(adaCard?.parentElement).toHaveClass('col-span-1', 'md:col-span-2')
     expect(repeaterGrid).not.toHaveClass('col-span-1', 'md:col-span-2')
   })
+
+  it('applies layout.span to a repeater in grid mode, clamped against the ancestor grid columns', () => {
+    const activePage: RuntimePageConfig = {
+      id: 'repeater-grid-mode-self-span',
+      layout: [
+        {
+          type: 'container',
+          props: {
+            columns: 4,
+          },
+          children: [
+            {
+              type: 'repeater',
+              layout: {
+                span: 6,
+              },
+              props: {
+                columns: 2,
+                items: {
+                  source: 'queries.users.data.results',
+                  key: 'id',
+                },
+                template: [
+                  {
+                    type: 'container',
+                    children: [
+                      {
+                        type: 'paragraph',
+                        props: {
+                          text: 'item.name',
+                        },
+                      },
+                    ],
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      ],
+    }
+
+    renderRuntimePageWithState(
+      activePage,
+      createRuntimePageState(activePage, {
+        users: {
+          status: 'success',
+          data: {
+            results: [
+              { id: 'user-1', name: 'Ada' },
+              { id: 'user-2', name: 'Grace' },
+            ],
+          },
+          error: null,
+          requestSignature: null,
+        },
+      }),
+    )
+
+    const adaCard = screen.getByText('Ada').closest('[data-layout-node="container"]')
+    const repeaterGrid = adaCard?.parentElement
+    const repeaterSpanWrapper = repeaterGrid?.parentElement
+
+    expect(repeaterGrid).toHaveClass('grid', 'grid-cols-2')
+    expect(repeaterSpanWrapper).toHaveClass('col-span-4')
+  })
+
+  it('applies responsive layout.span to a repeater in grid mode, clamped per breakpoint against the ancestor grid', () => {
+    const activePage: RuntimePageConfig = {
+      id: 'repeater-grid-mode-self-responsive-span',
+      layout: [
+        {
+          type: 'container',
+          props: {
+            columns: {
+              base: 1,
+              md: 2,
+            },
+          },
+          children: [
+            {
+              type: 'repeater',
+              layout: {
+                span: {
+                  base: 1,
+                  md: 3,
+                },
+              },
+              props: {
+                columns: {
+                  base: 1,
+                  md: 2,
+                },
+                items: {
+                  source: 'queries.users.data.results',
+                  key: 'id',
+                },
+                template: [
+                  {
+                    type: 'container',
+                    children: [
+                      {
+                        type: 'paragraph',
+                        props: {
+                          text: 'item.name',
+                        },
+                      },
+                    ],
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      ],
+    }
+
+    renderRuntimePageWithState(
+      activePage,
+      createRuntimePageState(activePage, {
+        users: {
+          status: 'success',
+          data: {
+            results: [
+              { id: 'user-1', name: 'Responsive Ada' },
+            ],
+          },
+          error: null,
+          requestSignature: null,
+        },
+      }),
+    )
+
+    const adaCard = screen.getByText('Responsive Ada').closest('[data-layout-node="container"]')
+    const repeaterGrid = adaCard?.parentElement
+    const repeaterSpanWrapper = repeaterGrid?.parentElement
+
+    expect(repeaterSpanWrapper).toHaveClass('col-span-1', 'md:col-span-2')
+  })
+
+  it('clamps a template root layout.span against the repeater own grid columns, not the ancestor grid', () => {
+    const activePage: RuntimePageConfig = {
+      id: 'repeater-grid-mode-template-root-span',
+      layout: [
+        {
+          type: 'container',
+          props: {
+            columns: 4,
+          },
+          children: [
+            {
+              type: 'repeater',
+              props: {
+                columns: 2,
+                items: {
+                  source: 'queries.users.data.results',
+                  key: 'id',
+                },
+                template: [
+                  {
+                    type: 'container',
+                    layout: {
+                      span: 6,
+                    },
+                    children: [
+                      {
+                        type: 'paragraph',
+                        props: {
+                          text: 'item.name',
+                        },
+                      },
+                    ],
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      ],
+    }
+
+    renderRuntimePageWithState(
+      activePage,
+      createRuntimePageState(activePage, {
+        users: {
+          status: 'success',
+          data: {
+            results: [
+              { id: 'user-1', name: 'Ada' },
+              { id: 'user-2', name: 'Grace' },
+            ],
+          },
+          error: null,
+          requestSignature: null,
+        },
+      }),
+    )
+
+    const adaCard = screen.getByText('Ada').closest('[data-layout-node="container"]')
+
+    expect(adaCard?.parentElement).toHaveClass('col-span-2')
+    expect(adaCard?.parentElement).not.toHaveClass('col-span-4')
+  })
 })
