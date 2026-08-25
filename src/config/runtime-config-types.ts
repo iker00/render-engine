@@ -285,8 +285,8 @@ export interface FormLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayo
   submitAction?: ExecuteOperationRuntimeUiAction | ExecuteOperationsRuntimeUiAction
   resetOnSuccess?: boolean
   children?: LayoutNode[]
-  onSuccess?: FormOnSuccessAction[]
-  onError?: FormOnErrorAction[]
+  onSuccess?: RuntimeUiActionListEntry[]
+  onError?: RuntimeUiActionListEntry[]
 }
 
 export type RuntimeFormValidationRuleName =
@@ -623,6 +623,8 @@ export interface GoBackRuntimeUiAction {
 export interface ExecuteOperationRuntimeUiAction extends RuntimeApiRequestParams {
   type: 'executeOperation'
   operationName: string
+  onSuccess?: RuntimeUiActionListEntry[]
+  onError?: RuntimeUiActionListEntry[]
 }
 
 export interface ExecuteOperationsRuntimeUiActionEntry {
@@ -636,6 +638,8 @@ export interface ExecuteOperationsRuntimeUiActionEntry {
 export interface ExecuteOperationsRuntimeUiAction {
   type: 'executeOperations'
   operations: ExecuteOperationsRuntimeUiActionEntry[]
+  onSuccess?: RuntimeUiActionListEntry[]
+  onError?: RuntimeUiActionListEntry[]
 }
 
 export interface ResetFormRuntimeUiAction {
@@ -664,9 +668,7 @@ export type RuntimeUiAction =
   | OpenModalRuntimeUiAction
   | CloseModalRuntimeUiAction
 
-export type FormOnSuccessAction = RuntimeUiAction & { when?: RuntimeWhenCondition }
-
-export type FormOnErrorAction = RuntimeUiAction & { when?: RuntimeWhenCondition }
+export type RuntimeUiActionListEntry = RuntimeUiAction & { when?: RuntimeWhenCondition }
 
 export type NavigateToButtonAction = NavigateToRuntimeUiAction
 export type GoBackButtonAction = GoBackRuntimeUiAction

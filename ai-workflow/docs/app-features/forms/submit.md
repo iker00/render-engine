@@ -39,6 +39,7 @@ Un `select` de selección simple puede declarar `props.emptySubmitValue` (litera
 - Contrato completo y ejemplos en [[../nodes/select.md]]; detalle a nivel de resolución de payload en [[../queries/execution.md]].
 
 ## Acciones post-éxito (`onSuccess`)
+- Esta capacidad ya no es exclusiva de `submitAction`: `button.props.action.type: executeOperation`/`executeOperations` acepta la misma pareja `onSuccess`/`onError` con idéntica semántica, ver [[../nodes/button.md#Acciones post-ejecución onSuccess onError]].
 - `submitAction` acepta opcionalmente `onSuccess`: una lista ordenada de acciones a ejecutar tras un submit exitoso.
 - Las acciones de `onSuccess` pueden ser cualquiera del catálogo de botón: `navigateTo`, `goBack`, `executeOperation`, `executeOperations`, `resetForm`, `openModal`, `closeModal`.
 - Cada acción en `onSuccess` puede declarar opcionalmente `when` con el mismo shape que `visibility`: `{ reference, operator, value? }`.

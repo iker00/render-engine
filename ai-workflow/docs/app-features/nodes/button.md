@@ -1,4 +1,4 @@
-> Cuándo leer: nodo `button`, catálogo de acciones (`navigateTo`, `goBack`, `executeOperation`, `executeOperations`, `resetForm`, `openModal`, `closeModal`), submit implícito dentro de `form`.
+> Cuándo leer: nodo `button`, catálogo de acciones (`navigateTo`, `goBack`, `executeOperation`, `executeOperations`, `resetForm`, `openModal`, `closeModal`), submit implícito dentro de `form`, `onSuccess`/`onError` encadenados tras `executeOperation`/`executeOperations` de un botón.
 > Tamaño: medio.
 > Relacionados: [[../navigation/navigate-actions.md]], [[../queries/execution.md]], [[../forms/submit.md]], [[modal.md]].
 
@@ -23,6 +23,7 @@
 - `props.action.query`: objeto plano opcional con valores `string | number | boolean`.
 - `props.action.body`: payload JSON opcional.
 - `props.action.headers`: objeto plano opcional con valores string.
+- `props.action.onSuccess`/`props.action.onError`: opcionales, ver [Acciones post-ejecución](#acciones-post-ejecución-onsuccess-onerror) más abajo.
 
 ### `executeOperations`
 - `props.action.operations`: array no vacío de objetos, cada uno con:
@@ -36,6 +37,17 @@
 - Si la condición `when` de una operación no se cumple, esa operación se omite silenciosamente.
 - Si todas las operaciones son omitidas por sus condiciones `when`, la acción completa sin lanzar ninguna query; esto se trata como éxito.
 - Overrides por operación siguen la misma semántica de merge que `executeOperation` singular.
+- `props.action.onSuccess`/`props.action.onError`: opcionales, a nivel de la acción completa (no por operación individual); ver [Acciones post-ejecución](#acciones-post-ejecución-onsuccess-onerror) más abajo.
+
+## Acciones post-ejecución (`onSuccess`/`onError`)
+- Un botón con `props.action.type: executeOperation` o `executeOperations` puede declarar `onSuccess`/`onError`: listas ordenadas de acciones del mismo catálogo de botón (`navigateTo`, `goBack`, `executeOperation`, `executeOperations`, `resetForm`, `openModal`, `closeModal`), cada una con `when` opcional (mismo shape que `visibility`).
+- La semántica de ejecución es idéntica a `form.submitAction.onSuccess`/`onError` (ver [[../forms/submit.md#Acciones post-éxito onSuccess]]): orden declarado, todas las entradas cuyo `when` se cumple se ejecutan, `onSuccess` solo tras éxito y `onError` solo tras fallo, nunca ambos para la misma ejecución.
+- Con `executeOperation` (singular), éxito/error de esa única operación decide el bloque. Con `executeOperations` (plural), `onSuccess` requiere que **todas** las operaciones de la lista terminen en éxito; `onError` se dispara si **alguna** termina en error.
+- Las referencias `queries.{operationName}.*` usadas por los `when` de `onSuccess`/`onError` ya reflejan el estado y los datos de la ejecución que disparó el bloque.
+- Dentro de un `repeater`, las acciones de `onSuccess`/`onError` (y sus overrides `query`/`body`/`headers`/`params`) resuelven `item.*` contra el item de la iteración que disparó el botón.
+- Un botón auxiliar (`action` explícita) dentro de un `form` puede usar `onSuccess`/`onError` sobre su propia operación, de forma independiente al `submitAction` del formulario que lo contiene.
+- Anidamiento limitado a un solo nivel: una entrada dentro de una lista `onSuccess`/`onError` no admite su propio `onSuccess`/`onError`.
+- Sin `onSuccess`/`onError` declarados, el comportamiento del botón es exactamente el mismo que antes de esta capacidad.
 
 ### `resetForm`
 - `props.action.formId`: string obligatorio y no vacío.
@@ -95,6 +107,9 @@ Idéntica a la establecida en `badge`, `alert` y `stat`:
 - `resetForm` valida shape y `formId` no vacío, pero no intenta cerrar en bootstrap un catálogo semántico adicional de formularios.
 - Si `button.props.action.modalId` en `openModal` o `closeModal` apunta a un `id` inexistente o no corresponde a ningún `modal.id`, el config completo se rechaza antes del render.
 - Si un `button` sin `action` aparece fuera de un subárbol `form`, el config completo se rechaza antes del render.
+- Si una entrada de `props.action.onSuccess`/`onError` referencia un `operationName`, `pageId` o `modalId` inexistente (`executeOperation`, `navigateTo`, `openModal`/`closeModal` respectivamente), el config completo se rechaza antes del render.
+- Si una entrada `executeOperation` de `props.action.onSuccess`/`onError` lleva `body` pero `api[operationName].method === 'GET'`, el config se rechaza antes del render con el error `GET operations do not support body.`
+- Una entrada dentro de `props.action.onSuccess`/`onError` que declare su propio `onSuccess`/`onError` se rechaza en bootstrap (anidamiento no soportado).
 - Si `button.props.color` toma un valor fuera del enum cerrado (`neutral | primary | success | warning | danger | info`), el config completo se rechaza antes del render con código `invalid-layout` y ruta exacta.
 - Si `button.props.variant` toma un valor fuera del enum cerrado (`solid | outline | ghost | link`), el config completo se rechaza antes del render con código `invalid-layout` y ruta exacta.
 - Si `button.props.fullWidth` no es un valor booleano, el config completo se rechaza antes del render con código `invalid-layout` y ruta exacta.

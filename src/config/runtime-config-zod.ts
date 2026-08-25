@@ -421,19 +421,9 @@ export const closeModalRuntimeUiActionSchema = z
   })
   .strip()
 
-export const buttonActionSchema = z.discriminatedUnion('type', [
-  navigateToButtonActionSchema,
-  goBackButtonActionSchema,
-  executeOperationRuntimeUiActionSchema,
-  executeOperationsRuntimeUiActionSchema,
-  resetFormRuntimeUiActionSchema,
-  openModalRuntimeUiActionSchema,
-  closeModalRuntimeUiActionSchema,
-])
-
 // Shape of a single onSuccess/onError entry: the same 7 action variants accepted by
 // buttonActionSchema, each extended with an optional `when` condition.
-export const formLifecycleActionEntrySchema = z.discriminatedUnion('type', [
+export const runtimeUiActionListEntrySchema = z.discriminatedUnion('type', [
   navigateToButtonActionSchema.extend({ when: whenConditionSchema.optional() }),
   goBackButtonActionSchema.extend({ when: whenConditionSchema.optional() }),
   executeOperationRuntimeUiActionSchema.extend({ when: whenConditionSchema.optional() }),
@@ -443,17 +433,31 @@ export const formLifecycleActionEntrySchema = z.discriminatedUnion('type', [
   closeModalRuntimeUiActionSchema.extend({ when: whenConditionSchema.optional() }),
 ])
 
-const formLifecycleActionsSchema = z.array(formLifecycleActionEntrySchema).optional()
+export const runtimeUiActionListSchema = z.array(runtimeUiActionListEntrySchema).optional()
+
+export const executeOperationWithLifecycleSchema = executeOperationRuntimeUiActionSchema.extend({
+  onSuccess: runtimeUiActionListSchema,
+  onError: runtimeUiActionListSchema,
+})
+
+export const executeOperationsWithLifecycleSchema = executeOperationsRuntimeUiActionSchema.extend({
+  onSuccess: runtimeUiActionListSchema,
+  onError: runtimeUiActionListSchema,
+})
+
+export const buttonActionSchema = z.discriminatedUnion('type', [
+  navigateToButtonActionSchema,
+  goBackButtonActionSchema,
+  executeOperationWithLifecycleSchema,
+  executeOperationsWithLifecycleSchema,
+  resetFormRuntimeUiActionSchema,
+  openModalRuntimeUiActionSchema,
+  closeModalRuntimeUiActionSchema,
+])
 
 export const formSubmitActionSchema = z.discriminatedUnion('type', [
-  executeOperationRuntimeUiActionSchema.extend({
-    onSuccess: formLifecycleActionsSchema,
-    onError: formLifecycleActionsSchema,
-  }),
-  executeOperationsRuntimeUiActionSchema.extend({
-    onSuccess: formLifecycleActionsSchema,
-    onError: formLifecycleActionsSchema,
-  }),
+  executeOperationWithLifecycleSchema,
+  executeOperationsWithLifecycleSchema,
 ])
 
 export const supportedButtonVariants = ['solid', 'outline', 'ghost', 'link'] as const

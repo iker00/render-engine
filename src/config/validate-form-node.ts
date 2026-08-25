@@ -2,10 +2,10 @@ import type {
   ExecuteOperationRuntimeUiAction,
   ExecuteOperationsRuntimeUiAction,
   FormLayoutNode,
-  FormOnErrorAction,
   LayoutNodeCollection,
   LayoutNodeFeedbackFields,
   RuntimeConfigError,
+  RuntimeUiActionListEntry,
 } from './runtime-config-types'
 import { formNodeSchema } from './runtime-config-zod'
 import type { BreadcrumbSegment } from './validation-breadcrumb'
@@ -91,8 +91,8 @@ export function validateFormNode(
 
   let children: LayoutNodeCollection | undefined
   let submitAction: ExecuteOperationRuntimeUiAction | ExecuteOperationsRuntimeUiAction | undefined
-  let onSuccess: import('./runtime-config-types').FormOnSuccessAction[] | undefined
-  let onError: FormOnErrorAction[] | undefined
+  let onSuccess: RuntimeUiActionListEntry[] | undefined
+  let onError: RuntimeUiActionListEntry[] | undefined
 
   if (parseResult.data.submitAction !== undefined) {
     const submitActionResult = validateFormSubmitAction(parseResult.data.submitAction, `${path}.submitAction`, pageId)

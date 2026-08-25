@@ -1,4 +1,4 @@
-import type { LayoutNodeCollection, RuntimeConfigError } from './runtime-config-types'
+import type { LayoutNode, LayoutNodeCollection, RuntimeApiConfig, RuntimeConfigError, RuntimeUiActionListEntry } from './runtime-config-types'
 import type { BreadcrumbSegment } from './validation-breadcrumb'
 import { buildBreadcrumbSegmentFromNode, enrichedInvalidLayoutFromNode } from './validation-breadcrumb'
 
@@ -68,54 +68,64 @@ function validateExecutionRequestParamsInCollection(
     }
 
     if (node.type === 'form' && node.onSuccess) {
-      for (let actionIndex = 0; actionIndex < node.onSuccess.length; actionIndex += 1) {
-        const action = node.onSuccess[actionIndex]
-        const actionPath = `${nodePath}.submitAction.onSuccess[${actionIndex}]`
+      const onSuccessError = validateActionListRequestParams(
+        node.onSuccess,
+        `${nodePath}.submitAction.onSuccess`,
+        pageId,
+        api,
+        node,
+        nodeBreadcrumb,
+      )
 
-        if (action.type === 'executeOperation') {
-          const operation = api[action.operationName]
-
-          if (operation?.method === 'GET' && action.body !== undefined) {
-            return enrichedInvalidLayoutFromNode(`Page "${pageId}" has an invalid layout at "${actionPath}.body": GET operations do not support body.`, nodeBreadcrumb, node)
-          }
-        }
-
-        if (action.type === 'executeOperations') {
-          for (let entryIndex = 0; entryIndex < action.operations.length; entryIndex += 1) {
-            const entry = action.operations[entryIndex]
-            const operation = api[entry.operationName]
-
-            if (operation?.method === 'GET' && entry.body !== undefined) {
-              return enrichedInvalidLayoutFromNode(`Page "${pageId}" has an invalid layout at "${actionPath}.operations[${entryIndex}].body": GET operations do not support body.`, nodeBreadcrumb, node)
-            }
-          }
-        }
+      if (onSuccessError) {
+        return onSuccessError
       }
     }
 
     if (node.type === 'form' && node.onError) {
-      for (let actionIndex = 0; actionIndex < node.onError.length; actionIndex += 1) {
-        const action = node.onError[actionIndex]
-        const actionPath = `${nodePath}.submitAction.onError[${actionIndex}]`
+      const onErrorError = validateActionListRequestParams(
+        node.onError,
+        `${nodePath}.submitAction.onError`,
+        pageId,
+        api,
+        node,
+        nodeBreadcrumb,
+      )
 
-        if (action.type === 'executeOperation') {
-          const operation = api[action.operationName]
+      if (onErrorError) {
+        return onErrorError
+      }
+    }
 
-          if (operation?.method === 'GET' && action.body !== undefined) {
-            return enrichedInvalidLayoutFromNode(`Page "${pageId}" has an invalid layout at "${actionPath}.body": GET operations do not support body.`, nodeBreadcrumb, node)
-          }
-        }
+    const buttonAction = node.type === 'button' ? node.props.action : undefined
 
-        if (action.type === 'executeOperations') {
-          for (let entryIndex = 0; entryIndex < action.operations.length; entryIndex += 1) {
-            const entry = action.operations[entryIndex]
-            const operation = api[entry.operationName]
+    if ((buttonAction?.type === 'executeOperation' || buttonAction?.type === 'executeOperations') && buttonAction.onSuccess) {
+      const onSuccessError = validateActionListRequestParams(
+        buttonAction.onSuccess,
+        `${nodePath}.props.action.onSuccess`,
+        pageId,
+        api,
+        node,
+        nodeBreadcrumb,
+      )
 
-            if (operation?.method === 'GET' && entry.body !== undefined) {
-              return enrichedInvalidLayoutFromNode(`Page "${pageId}" has an invalid layout at "${actionPath}.operations[${entryIndex}].body": GET operations do not support body.`, nodeBreadcrumb, node)
-            }
-          }
-        }
+      if (onSuccessError) {
+        return onSuccessError
+      }
+    }
+
+    if ((buttonAction?.type === 'executeOperation' || buttonAction?.type === 'executeOperations') && buttonAction.onError) {
+      const onErrorError = validateActionListRequestParams(
+        buttonAction.onError,
+        `${nodePath}.props.action.onError`,
+        pageId,
+        api,
+        node,
+        nodeBreadcrumb,
+      )
+
+      if (onErrorError) {
+        return onErrorError
       }
     }
 
@@ -151,6 +161,41 @@ function validateExecutionRequestParamsInCollection(
           if (childError) {
             return childError
           }
+        }
+      }
+    }
+  }
+
+  return null
+}
+
+export function validateActionListRequestParams(
+  actions: RuntimeUiActionListEntry[],
+  basePath: string,
+  pageId: string,
+  api: RuntimeApiConfig,
+  node: LayoutNode,
+  nodeBreadcrumb: BreadcrumbSegment[],
+): { status: 'error'; error: RuntimeConfigError } | null {
+  for (let actionIndex = 0; actionIndex < actions.length; actionIndex += 1) {
+    const action = actions[actionIndex]
+    const actionPath = `${basePath}[${actionIndex}]`
+
+    if (action.type === 'executeOperation') {
+      const operation = api[action.operationName]
+
+      if (operation?.method === 'GET' && action.body !== undefined) {
+        return enrichedInvalidLayoutFromNode(`Page "${pageId}" has an invalid layout at "${actionPath}.body": GET operations do not support body.`, nodeBreadcrumb, node)
+      }
+    }
+
+    if (action.type === 'executeOperations') {
+      for (let entryIndex = 0; entryIndex < action.operations.length; entryIndex += 1) {
+        const entry = action.operations[entryIndex]
+        const operation = api[entry.operationName]
+
+        if (operation?.method === 'GET' && entry.body !== undefined) {
+          return enrichedInvalidLayoutFromNode(`Page "${pageId}" has an invalid layout at "${actionPath}.operations[${entryIndex}].body": GET operations do not support body.`, nodeBreadcrumb, node)
         }
       }
     }

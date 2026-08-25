@@ -1002,6 +1002,83 @@ describe('LayoutCanvasPropertiesPanel discriminated union action selector (T5)',
   })
 })
 
+// T6 (button-execute-operation-lifecycle-actions): `buttonActionSchema`'s `executeOperation`/
+// `executeOperations` variants now nest `onSuccess`/`onError` directly on the action object itself
+// (T1 of this feature), unlike `form.submitAction` where the panel needs a dedicated merge/split
+// (see `layout-canvas-properties-panel.tsx`'s `submitAction`-specific plumbing) because
+// `FormLayoutNode` keeps `onSuccess`/`onError` as separate sibling fields next to `submitAction`.
+// For `button`, `props.action` already carries `onSuccess`/`onError` as ordinary properties of the
+// active variant's own JSON Schema, so `DiscriminatedUnionPropertyField` renders them through the
+// same generic recursive `PropertyFieldDispatcher` call it already uses for `operationName`/`body`/
+// `query` — no dedicated code in `src/dev-runtime/` is expected for this task.
+describe('LayoutCanvasPropertiesPanel button props.action onSuccess/onError lifecycle fields (T6)', () => {
+  function buttonNode(action: Record<string, unknown>): LayoutNode {
+    return { type: 'button', props: { label: 'Enviar', action } } as LayoutNode
+  }
+
+  it('shows the onSuccess/onError array fields below the variant\'s own fields for an executeOperation action', () => {
+    const node = buttonNode({ type: 'executeOperation', operationName: 'save' })
+    render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={() => {}} />)
+
+    expect(screen.getByLabelText('operationName', { exact: false })).toHaveValue('save')
+    expect(screen.getByRole('group', { name: 'onSuccess' })).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: 'onError' })).toBeInTheDocument()
+  })
+
+  it('adding an onSuccess entry exposes a 7-variant selector for that entry, and commits props.action.onSuccess with the added entry', () => {
+    const node = buttonNode({ type: 'executeOperation', operationName: 'save' })
+    const onCommitNodeUpdate = vi.fn()
+    const { rerender } = render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={onCommitNodeUpdate} />)
+
+    const onSuccessGroup = screen.getByRole('group', { name: 'onSuccess' })
+    fireEvent.click(within(onSuccessGroup).getByRole('button', { name: 'Añadir onSuccess' }))
+
+    expect(onCommitNodeUpdate).toHaveBeenCalledTimes(1)
+    const [calledPath, updater] = onCommitNodeUpdate.mock.calls[0]
+    expect(calledPath).toBe(somePath)
+    const result = updater(node) as Extract<LayoutNode, { type: 'button' }>
+    expect(result.props.action).toEqual({
+      type: 'executeOperation',
+      operationName: 'save',
+      onSuccess: [{ type: 'navigateTo', pageId: '' }],
+    })
+
+    rerender(<LayoutCanvasPropertiesPanel node={result} path={somePath} onCommitNodeUpdate={onCommitNodeUpdate} />)
+    const entryGroup = screen.getByRole('group', { name: 'onSuccess #1' })
+    const entrySelect = within(entryGroup).getByRole('combobox', { name: 'onSuccess #1' }) as HTMLSelectElement
+    const optionTexts = Array.from(entrySelect.options).map((option) => option.textContent)
+    expect(optionTexts).toEqual([
+      'Navegar a página',
+      'Volver atrás',
+      'Ejecutar operación',
+      'Ejecutar operaciones',
+      'Reiniciar formulario',
+      'Abrir modal',
+      'Cerrar modal',
+    ])
+  })
+
+  it('switching the action variant from executeOperation to navigateTo drops residual onSuccess/onError (no leftover lifecycle fields)', () => {
+    const node = buttonNode({
+      type: 'executeOperation',
+      operationName: 'save',
+      onSuccess: [{ type: 'goBack' }],
+      onError: [{ type: 'goBack' }],
+    })
+    const onCommitNodeUpdate = vi.fn()
+    render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={onCommitNodeUpdate} />)
+
+    fireEvent.change(screen.getByLabelText('action'), { target: { value: 'navigateTo' } })
+
+    expect(onCommitNodeUpdate).toHaveBeenCalledTimes(1)
+    const [, updater] = onCommitNodeUpdate.mock.calls[0]
+    const result = updater(node) as Extract<LayoutNode, { type: 'button' }>
+    expect(result.props.action).toEqual({ type: 'navigateTo', pageId: '' })
+    expect(result.props.action).not.toHaveProperty('onSuccess')
+    expect(result.props.action).not.toHaveProperty('onError')
+  })
+})
+
 // T3 (0141): `navigateTo.params` now mounts `NavigateParamsPropertyField` (via the `x-widget:
 // 'navigate-params'` sentinel `injectNavigateParamsWidgetSentinel` injects onto the node schema,
 // T1/T3) as a key-value editor with per-row degradation to read-only for any non-string value

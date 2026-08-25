@@ -4,7 +4,13 @@ import type { BreadcrumbSegment } from './validation-breadcrumb'
 import { enrichedInvalidLayout, enrichErrorResult } from './validation-breadcrumb'
 import { validateQueryStateFeedback } from './validate-layout-nodes-core'
 import { mapLayoutNodeIssue } from './validate-layout-issue-mapping'
-import { mapQueryStateFeedbackIssue, mapVisibilityIssue, validateRuntimeUiAction, validateVisibility } from './validate-actions-visibility'
+import {
+  mapQueryStateFeedbackIssue,
+  mapVisibilityIssue,
+  validateRuntimeUiAction,
+  validateRuntimeUiActionLifecycleBlocks,
+  validateVisibility,
+} from './validate-actions-visibility'
 import { formatPathSegment } from './validate-node-shared-helpers'
 
 export function validateButtonNode(
@@ -103,7 +109,21 @@ export function validateButtonNode(
       return enrichErrorResult(actionResult, breadcrumb, rawNode)
     }
 
-    action = actionResult.action
+    const lifecycleResult = validateRuntimeUiActionLifecycleBlocks(
+      parseResult.data.props.action as Record<string, unknown>,
+      `${path}.props.action`,
+      pageId,
+    )
+
+    if (lifecycleResult.status === 'error') {
+      return enrichErrorResult(lifecycleResult, breadcrumb, rawNode)
+    }
+
+    action = {
+      ...actionResult.action,
+      ...(lifecycleResult.onSuccess !== undefined ? { onSuccess: lifecycleResult.onSuccess } : {}),
+      ...(lifecycleResult.onError !== undefined ? { onError: lifecycleResult.onError } : {}),
+    } as RuntimeUiAction
   }
 
   const buttonProps: ButtonLayoutNode['props'] = {
