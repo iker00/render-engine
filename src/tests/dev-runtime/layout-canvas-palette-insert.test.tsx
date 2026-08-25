@@ -122,8 +122,10 @@ describe('buildDefaultNodeInstance: every catalog type is validly insertable (FR
     // Form-only leaf types (input/textarea/select/radioGroup/checkboxGroup/fileInput/toggle/
     // hidden) only make sense as descendants of a form — every other catalog type is inserted
     // directly at the page root, matching how the palette drop-validity engine (T13/T15) would
-    // actually allow it to land.
-    const layout: LayoutNode[] = FORM_ONLY_LEAF_NODE_TYPES.has(type)
+    // actually allow it to land. `steps` is a non-leaf exception: unlike `tabs`, it is exclusive
+    // to `form` (see validate-form-semantics.ts), so it needs the same form wrapper as the
+    // form-only leaf types even though it is not one of them.
+    const layout: LayoutNode[] = FORM_ONLY_LEAF_NODE_TYPES.has(type) || type === 'steps'
       ? [{ type: 'form', id: 'hostForm', children: [node] } as LayoutNode]
       : [node]
 

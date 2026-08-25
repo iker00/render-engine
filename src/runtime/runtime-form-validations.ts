@@ -53,6 +53,7 @@ export interface ResolvedFormFieldDefinition {
   multiple: boolean
   defaultValue: unknown
   inputType?: InputLayoutNode['props']['inputType']
+  stepGroup?: { nodeId: string; itemIndex: number }
 }
 
 export function validateFormFields({

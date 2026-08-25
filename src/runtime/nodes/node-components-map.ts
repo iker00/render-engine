@@ -23,6 +23,7 @@ import { RepeaterNode } from './repeater-layout-node'
 import { SelectNode } from './select-layout-node'
 import { SkeletonNode } from './skeleton-layout-node'
 import { StatNode } from './stat-layout-node'
+import { StepsNode } from './steps-layout-node'
 import { TableNode } from './table-layout-node'
 import { TabsNode } from './tabs-layout-node'
 import { TextareaNode } from './textarea-layout-node'
@@ -59,6 +60,7 @@ const eagerMap = {
   select: SelectNode as AnyComponent,
   skeleton: SkeletonNode as AnyComponent,
   stat: StatNode as AnyComponent,
+  steps: StepsNode as AnyComponent,
   table: TableNode as AnyComponent,
   tabs: TabsNode as AnyComponent,
   textarea: TextareaNode as AnyComponent,
@@ -100,6 +102,7 @@ const lazyMap = {
   select: React.lazy(() => import('./select-layout-node').then((m) => ({ default: m.SelectNode }))),
   skeleton: React.lazy(() => import('./skeleton-layout-node').then((m) => ({ default: m.SkeletonNode }))),
   stat: React.lazy(() => import('./stat-layout-node').then((m) => ({ default: m.StatNode }))),
+  steps: React.lazy(() => import('./steps-layout-node').then((m) => ({ default: m.StepsNode }))),
   table: React.lazy(() => import('./table-layout-node').then((m) => ({ default: m.TableNode }))),
   tabs: React.lazy(() => import('./tabs-layout-node').then((m) => ({ default: m.TabsNode }))),
   textarea: React.lazy(() => import('./textarea-layout-node').then((m) => ({ default: m.TextareaNode }))),

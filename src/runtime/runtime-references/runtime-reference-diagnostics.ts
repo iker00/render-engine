@@ -30,6 +30,10 @@ export type RuntimeReferenceSurface =
   | 'stat.props.value'
   | `accordion[${string}].props.label`
   | `tabs[${string}].props.items[${string}].label`
+  | `steps[${string}].props.items[${string}].label`
+  | `steps[${string}].props.backLabel`
+  | `steps[${string}].props.nextLabel`
+  | `steps[${string}].props.submitLabel`
   | 'input.props.placeholder'
   | 'textarea.props.placeholder'
   | 'select.props.placeholder'

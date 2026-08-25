@@ -39,6 +39,7 @@ const EXPECTED_KEYS = [
   'select',
   'skeleton',
   'stat',
+  'steps',
   'table',
   'tabs',
   'textarea',
@@ -46,10 +47,10 @@ const EXPECTED_KEYS = [
 ]
 
 describe('NodeComponents map', () => {
-  it('exports exactly 28 keys — no missing, no extra', () => {
+  it('exports exactly 29 keys — no missing, no extra', () => {
     const keys = Object.keys(NodeComponents).sort()
     expect(keys).toEqual([...EXPECTED_KEYS].sort())
-    expect(keys).toHaveLength(28)
+    expect(keys).toHaveLength(29)
   })
 
   it('each value in the map is truthy (not undefined)', () => {

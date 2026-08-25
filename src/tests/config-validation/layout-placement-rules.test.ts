@@ -77,7 +77,7 @@ describe('FORM_ALLOWED_DESCENDANT_TYPES', () => {
     expect(FORM_ALLOWED_DESCENDANT_TYPES.has('skeleton')).toBe(false)
   })
 
-  it('accepts exactly the 17 types documented as valid form descendants', () => {
+  it('accepts exactly the 18 types documented as valid form descendants', () => {
     const expected = [
       'input',
       'textarea',
@@ -96,9 +96,10 @@ describe('FORM_ALLOWED_DESCENDANT_TYPES', () => {
       'accordion',
       'divider',
       'tabs',
+      'steps',
     ]
 
-    expect(FORM_ALLOWED_DESCENDANT_TYPES.size).toBe(17)
+    expect(FORM_ALLOWED_DESCENDANT_TYPES.size).toBe(18)
 
     for (const type of expected) {
       expect(FORM_ALLOWED_DESCENDANT_TYPES.has(type as never)).toBe(true)

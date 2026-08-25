@@ -44,6 +44,7 @@ Los conceptos transversales (`visibility`, `queryStateFeedback`, referencias din
 | Nodo | Cuándo leer la ficha |
 |---|---|
 | [form.md](./form.md) | `form` como contenedor, `submitAction`, `persistOnUnmount`, `resetOnSuccess`, niños permitidos. |
+| [steps.md](./steps.md) | `steps` — formulario en pasos secuenciales (wizard), exclusivo dentro de `form`, navegación gateada por validación al pulsar "Siguiente", retroceso libre, tres variantes visuales (`horizontal`/`vertical`/`progress`), inicialización lazy por paso, botones de navegación autogenerados. |
 | [input.md](./input.md) | `input` con catálogo de `inputType`, validaciones aplicables, `defaultValue`. |
 | [textarea.md](./textarea.md) | Entrada multilínea. |
 | [select.md](./select.md) | Selección simple o múltiple, shapes de `items` manuales o dinámicos. |
@@ -63,6 +64,7 @@ Los conceptos transversales (`visibility`, `queryStateFeedback`, referencias din
 - `link` acepta `children` como alternativa a `props.label`: ambos campos son mutuamente excluyentes y obligatorio declarar uno.
 - `repeater` rechaza `children` y solo admite repetición a través de `props.template`.
 - `input`, `textarea`, `select`, `radioGroup`, `checkboxGroup`, `toggle` y `hidden` solo son válidos como descendientes de un `form`.
+- `steps` también solo es válido como descendiente de un `form`, a pesar de ser un nodo estructural (con `props.items[i].children`) y no un nodo hoja de campo — a diferencia de `tabs` y `accordion`, que sí son válidos fuera de `form`.
 - `button` sin `action` solo es válido como descendiente de un `form` (actúa como submit implícito).
 - `hidden` no soporta `visibility`, `queryStateFeedback` ni `layout.span`; si declara `visibility` o `queryStateFeedback`, el config se rechaza.
 - Cualquier nodo soportado (excepto `hidden`) puede declarar `node.layout.span`, `node.visibility` y `node.queryStateFeedback` siguiendo las reglas transversales documentadas en [`../references/`](../references/index.md).

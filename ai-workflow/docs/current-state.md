@@ -10,10 +10,10 @@ No es histórico acumulado ni sustituto de las fichas funcionales. El detalle es
 | Área | Estado | Detalle | Última feature relevante |
 |---|---|---|---|
 | Runtime | estable | [runtime/](./app-features/runtime/index.md) | `0081` |
-| Contrato JSON | estable | [config/](./app-features/config/index.md) | `0110` |
+| Contrato JSON | estable | [config/](./app-features/config/index.md) | `2026-08-25-09-27-form-steps` |
 | Referencias y strings dinámicas | estable | [references/](./app-features/references/index.md) | `0101` |
-| Catálogo de nodos | estable | [nodes/](./app-features/nodes/index.md) | `2026-08-24-12-58-map-node` |
-| Formularios y validación | estable | [forms/](./app-features/forms/index.md) | `0095` |
+| Catálogo de nodos | estable | [nodes/](./app-features/nodes/index.md) | `2026-08-25-09-27-form-steps` |
+| Formularios y validación | estable | [forms/](./app-features/forms/index.md) | `2026-08-25-09-27-form-steps` |
 | Queries, preloads y feedback | estable | [queries/](./app-features/queries/index.md) | `0110` |
 | Navegación y páginas | estable | [navigation/](./app-features/navigation/index.md) | `0137` |
 | Shell de aplicación (cabecera y sidebar) | estable | [shell/](./app-features/shell/index.md) | `0124` |

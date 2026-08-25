@@ -24,6 +24,7 @@ const NODE_TYPE_LABELS: Record<LayoutNodeType, string> = {
   checkboxGroup: 'Grupo de checkboxes',
   modal: 'Modal',
   tabs: 'Pestañas',
+  steps: 'Pasos',
   accordion: 'Acordeón',
   badge: 'Insignia',
   alert: 'Alerta',

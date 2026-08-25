@@ -23,6 +23,7 @@ import { validateButtonNode } from './validate-button-node'
 import { validateLinkNode } from './validate-link-node'
 import { validateModalNode } from './validate-modal-node'
 import { validateTabsNode } from './validate-tabs-node'
+import { validateStepsNode } from './validate-steps-node'
 import { validateAccordionNode } from './validate-accordion-node'
 import { validateBadgeNode } from './validate-badge-node'
 import { validateAlertNode } from './validate-alert-node'
@@ -129,6 +130,8 @@ export function validateLayoutNode(
       return validateModalNode(rawNode, path, pageId, breadcrumb)
     case 'tabs':
       return validateTabsNode(rawNode, path, pageId, breadcrumb)
+    case 'steps':
+      return validateStepsNode(rawNode, path, pageId, breadcrumb)
     case 'accordion':
       return validateAccordionNode(rawNode, path, pageId, breadcrumb)
     case 'badge':
