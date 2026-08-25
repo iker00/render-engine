@@ -496,7 +496,7 @@ describe('RuntimePage', () => {
                   headers: ['Member'],
                   rows: {
                     source: 'item.members',
-                    cells: ['item.name'],
+                    cells: ['row.name'],
                   },
                   pagination: {
                     enabled: true,
@@ -561,7 +561,7 @@ describe('RuntimePage', () => {
                   headers: ['Member', 'Role'],
                   rows: {
                     source: 'item.members',
-                    cells: ['item.name', 'item.role'],
+                    cells: ['row.name', 'row.role'],
                   },
                 },
               },
@@ -601,5 +601,83 @@ describe('RuntimePage', () => {
     expect(within(tables[0]).getAllByRole('row').slice(1)).toHaveLength(2)
     expect(within(tables[0]).getAllByRole('cell').map((cell) => cell.textContent)).toEqual(['Ada', 'Lead', 'Grace', 'Reviewer'])
     expect(within(tables[1]).queryAllByRole('row').slice(1)).toHaveLength(0)
+  })
+
+  it('resolves row.$index to the position within the current visible page for previousNext pagination, in both a string cell and a node cell', () => {
+    const activePage: RuntimePageConfig = {
+      id: 'paginated-table-row-index',
+      layout: [
+        {
+          type: 'table',
+          props: {
+            headers: ['Name', 'Position', 'Node position'],
+            rows: [
+              ['Ada', '{{row.$index}}', { type: 'paragraph', props: { text: '{{row.$index}}' } }],
+              ['Grace', '{{row.$index}}', { type: 'paragraph', props: { text: '{{row.$index}}' } }],
+              ['Lin', '{{row.$index}}', { type: 'paragraph', props: { text: '{{row.$index}}' } }],
+            ],
+            pagination: {
+              enabled: true,
+              pageSize: 2,
+            },
+          },
+        },
+      ],
+    }
+
+    renderRuntimePageWithState(activePage, createRuntimePageState(activePage, {}))
+    const table = screen.getByRole('table')
+
+    expect(getTableBodyCellText(table)).toEqual([
+      ['Ada', '1', '1'],
+      ['Grace', '2', '2'],
+    ])
+
+    fireEvent.click(screen.getByRole('button', { name: 'Siguiente' }))
+    expect(getTableBodyCellText(table)).toEqual([['Lin', '1', '1']])
+  })
+
+  it('resolves row.$index to the position within the accumulated scroll window', () => {
+    vi.stubGlobal('IntersectionObserver', undefined)
+    const activePage: RuntimePageConfig = {
+      id: 'scroll-table-row-index',
+      layout: [
+        {
+          type: 'table',
+          props: {
+            headers: ['Name', 'Position'],
+            rows: [
+              ['Ada', '{{row.$index}}'],
+              ['Grace', '{{row.$index}}'],
+              ['Lin', '{{row.$index}}'],
+              ['Katherine', '{{row.$index}}'],
+            ],
+            pagination: {
+              enabled: true,
+              pageSize: 2,
+              controls: {
+                variant: 'scroll',
+              },
+            },
+          },
+        },
+      ],
+    }
+
+    renderRuntimePageWithState(activePage, createRuntimePageState(activePage, {}))
+    const table = screen.getByRole('table')
+
+    expect(getTableBodyCellText(table)).toEqual([
+      ['Ada', '1'],
+      ['Grace', '2'],
+    ])
+
+    fireEvent.click(screen.getByRole('button', { name: 'Mostrar más' }))
+    expect(getTableBodyCellText(table)).toEqual([
+      ['Ada', '1'],
+      ['Grace', '2'],
+      ['Lin', '3'],
+      ['Katherine', '4'],
+    ])
   })
 })
