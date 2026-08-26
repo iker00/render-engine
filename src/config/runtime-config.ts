@@ -2,6 +2,7 @@ export type {
   AccordionLayoutNode,
   AlertLayoutNode,
   AlertType,
+  AutocompleteLayoutNode,
   BadgeLayoutNode,
   BadgeVariant,
   BadgeColor,

@@ -39,10 +39,10 @@ describe('MODAL_ALLOWED_CHILD_TYPES / LINK_ALLOWED_CHILD_TYPES', () => {
 })
 
 describe('FORM_ONLY_LEAF_NODE_TYPES', () => {
-  it('contains exactly the eight form-only leaf node types', () => {
-    const expected = ['input', 'textarea', 'select', 'radioGroup', 'checkboxGroup', 'fileInput', 'toggle', 'hidden']
+  it('contains exactly the nine form-only leaf node types', () => {
+    const expected = ['input', 'textarea', 'select', 'radioGroup', 'checkboxGroup', 'fileInput', 'toggle', 'hidden', 'autocomplete']
 
-    expect(FORM_ONLY_LEAF_NODE_TYPES.size).toBe(8)
+    expect(FORM_ONLY_LEAF_NODE_TYPES.size).toBe(9)
     expect([...FORM_ONLY_LEAF_NODE_TYPES].sort()).toEqual([...expected].sort())
   })
 })
@@ -77,7 +77,7 @@ describe('FORM_ALLOWED_DESCENDANT_TYPES', () => {
     expect(FORM_ALLOWED_DESCENDANT_TYPES.has('skeleton')).toBe(false)
   })
 
-  it('accepts exactly the 17 types documented as valid form descendants', () => {
+  it('accepts exactly the 18 types documented as valid form descendants', () => {
     const expected = [
       'input',
       'textarea',
@@ -96,9 +96,10 @@ describe('FORM_ALLOWED_DESCENDANT_TYPES', () => {
       'accordion',
       'divider',
       'tabs',
+      'autocomplete',
     ]
 
-    expect(FORM_ALLOWED_DESCENDANT_TYPES.size).toBe(17)
+    expect(FORM_ALLOWED_DESCENDANT_TYPES.size).toBe(18)
 
     for (const type of expected) {
       expect(FORM_ALLOWED_DESCENDANT_TYPES.has(type as never)).toBe(true)

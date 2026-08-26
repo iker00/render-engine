@@ -1,4 +1,5 @@
 import type {
+  AutocompleteLayoutNode,
   CheckboxGroupLayoutNode,
   InputLayoutNode,
   LayoutNode,
@@ -39,6 +40,72 @@ export function resolveToggleFieldDefinition(
     multiple: false,
     defaultValue,
   }
+}
+
+// `autocomplete` deliberately resolves its own `defaultValue` outside `resolveResolvedFormFieldDefinition`
+// (design.md, decisión 6): the dynamic shape (`queries.*`/`item.*`) must never clear a stored value that
+// no longer appears among currently resolved suggestions, unlike select/radioGroup/checkboxGroup.
+export function resolveAutocompleteFieldDefinition(
+  node: AutocompleteLayoutNode,
+  state: ReturnType<typeof useRuntimeState>,
+  iterationContext?: RuntimeIterationContext,
+): ResolvedFormFieldDefinition {
+  const isMultiple = node.props.multiple === true
+  const fallbackValue: '' | [] = isMultiple ? [] : ''
+  const resolvedValue = resolveRuntimeValueWithOptions(node.props.defaultValue, state, { iterationContext })
+
+  const defaultValue = (() => {
+    if (resolvedValue.status !== 'resolved') {
+      return fallbackValue
+    }
+
+    if (node.props.allowFreeText === true) {
+      return coerceAutocompleteFieldShape(resolvedValue.value, isMultiple, fallbackValue)
+    }
+
+    const isStaticShape = Array.isArray(node.props.items) || 'values' in node.props.items
+
+    if (isStaticShape) {
+      return normalizeChoiceFieldValue(node.props.items, state, resolvedValue.value, {
+        multiple: isMultiple,
+        surface: 'autocomplete.props.items',
+        iterationContext,
+      })
+    }
+
+    // shape dinámico (queries.* o item.*) sin allowFreeText: nunca se limpia aunque el valor
+    // no esté entre las sugerencias actualmente resueltas (design.md, decisión 6).
+    return coerceAutocompleteFieldShape(resolvedValue.value, isMultiple, fallbackValue)
+  })()
+
+  return {
+    fieldId: node.props.fieldId,
+    type: 'autocomplete',
+    validations: node.props.validations,
+    queryStateFeedback: node.queryStateFeedback,
+    visibility: node.visibility,
+    items: undefined,
+    multiple: isMultiple,
+    defaultValue,
+  }
+}
+
+function coerceAutocompleteFieldShape(value: unknown, isMultiple: boolean, fallbackValue: '' | []) {
+  if (isMultiple) {
+    return Array.isArray(value) && value.every((item) => typeof item === 'string' || typeof item === 'number')
+      ? value.map(String)
+      : fallbackValue
+  }
+
+  if (typeof value === 'string') {
+    return value
+  }
+
+  if (typeof value === 'number') {
+    return String(value)
+  }
+
+  return fallbackValue
 }
 
 export function resolveResolvedFormFieldDefinition(

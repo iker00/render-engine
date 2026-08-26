@@ -26,6 +26,7 @@ import type {
 } from '../../queries/runtime-api-types'
 import {
   getChoiceFieldSurface,
+  resolveAutocompleteFieldDefinition,
   resolveResolvedFormFieldDefinition,
   resolveToggleFieldDefinition,
 } from './resolve-form-field-definition'
@@ -341,7 +342,7 @@ export function FormNode({ node, children, iterationContext }: FormNodeProps) {
   )
 }
 
-function collectResolvedFormFieldDefinitions(
+export function collectResolvedFormFieldDefinitions(
   nodes: LayoutNodeCollection,
   state: ReturnType<typeof useRuntimeState>,
   iterationContext?: RuntimeIterationContext,
@@ -390,6 +391,10 @@ function collectResolvedFormFieldDefinitions(
     if (node.type === 'toggle') {
       fields.push(resolveToggleFieldDefinition(node, state, iterationContext))
     }
+
+    if (node.type === 'autocomplete') {
+      fields.push(resolveAutocompleteFieldDefinition(node, state, iterationContext))
+    }
   }
 
   return fields
@@ -399,7 +404,7 @@ function collectResolvedFormFieldDefinitions(
  * Collects all field IDs in a form tree regardless of node visibility.
  * Used by handleSubmit to compute the set of hidden fieldIds at submit time.
  */
-function collectAllFormFieldIds(nodes: LayoutNodeCollection): string[] {
+export function collectAllFormFieldIds(nodes: LayoutNodeCollection): string[] {
   const fieldIds: string[] = []
 
   for (const node of nodes) {
@@ -428,7 +433,8 @@ function collectAllFormFieldIds(nodes: LayoutNodeCollection): string[] {
       node.type === 'checkboxGroup' ||
       node.type === 'fileInput' ||
       node.type === 'toggle' ||
-      node.type === 'hidden'
+      node.type === 'hidden' ||
+      node.type === 'autocomplete'
     ) {
       fieldIds.push(node.props.fieldId)
     }

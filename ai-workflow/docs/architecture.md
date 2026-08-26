@@ -18,6 +18,7 @@ Este documento resume la arquitectura estable que deben respetar las features nu
 - `runtime-actions/` traduce acciones declarativas a handlers del provider. Los nodos interactivos disparan acciones; no gestionan por su cuenta navegacion, red ni reset de formularios.
 - `runtime-collection-sources` normaliza colecciones para consumidores como `list`, `select`, `radioGroup` y `checkboxGroup`.
 - `runtime-form-validations` concentra la evaluacion de reglas locales de formulario.
+- Un modulo `runtime-*` dedicado puede disparar una operacion `queries.*` como consecuencia directa de la interaccion de un nodo individual (ej. `runtime-search-trigger` para `autocomplete`), en vez de por `preloads`, accion de boton o submit. Vive fuera de `runtime-actions/` porque no traduce una accion declarada en el config; sigue delegando la ejecucion real en la fachada compartida de `src/queries/`.
 - `runtime-query-state-feedback` concentra la derivacion `idle | loading | error | empty | success`.
 - `runtime-node-styling` concentra la gramatica visual estable, utilidades de `Tailwind`, variante `card`, gaps y spans de grid.
 

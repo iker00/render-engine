@@ -150,6 +150,16 @@ export function buildDefaultNodeInstance(type: LayoutNodeType): LayoutNode {
     case 'map':
       return { type: 'map' }
 
+    case 'autocomplete':
+      return {
+        type: 'autocomplete',
+        props: {
+          fieldId: generateUniqueId('field'),
+          label: 'Autocompletar',
+          items: [],
+        },
+      }
+
     default: {
       const exhaustiveCheck: never = type
       throw new Error(`buildDefaultNodeInstance: unsupported node type "${String(exhaustiveCheck)}"`)

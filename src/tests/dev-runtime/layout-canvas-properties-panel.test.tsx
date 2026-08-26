@@ -813,10 +813,15 @@ describe('LayoutCanvasPropertiesPanel choice-items widget for select/radioGroup/
     return { type: 'checkboxGroup', props: { fieldId: 'choice', label: 'Elige', items } } as LayoutNode
   }
 
+  function autocompleteNode(items: unknown = [{ label: 'Uno', value: 'uno' }]): LayoutNode {
+    return { type: 'autocomplete', props: { fieldId: 'choice', label: 'Elige', items } } as LayoutNode
+  }
+
   it.each([
     ['select', selectNode],
     ['radioGroup', radioGroupNode],
     ['checkboxGroup', checkboxGroupNode],
+    ['autocomplete', autocompleteNode],
   ])('renders the widget mode selector for props.items on a %s node, not the read-only raw-JSON escape hatch', (_type, buildNode) => {
     render(<LayoutCanvasPropertiesPanel node={buildNode()} path={somePath} onCommitNodeUpdate={() => {}} />)
 
@@ -825,6 +830,22 @@ describe('LayoutCanvasPropertiesPanel choice-items widget for select/radioGroup/
     expect(Array.from(modeSelect.options).map((option) => option.value)).toEqual(['manualLiteral', 'manualScalar', 'dynamic'])
     // No disabled raw-JSON `<textarea>` fallback anywhere inside the items widget.
     expect(itemsGroup.querySelectorAll('textarea')).toHaveLength(0)
+  })
+
+  it('editing props.items via the choice-items widget on an autocomplete node propagates to the committed node (parity with select/radioGroup/checkboxGroup)', () => {
+    const node = autocompleteNode([{ label: 'Uno', value: 'uno' }])
+    const onCommitNodeUpdate = vi.fn()
+    render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={onCommitNodeUpdate} />)
+
+    const itemsGroup = screen.getByRole('group', { name: 'items' })
+    const itemGroup = within(itemsGroup).getByRole('group', { name: 'items #1' })
+    fireEvent.change(within(itemGroup).getByLabelText('label', { exact: false }), { target: { value: 'Cambiado' } })
+
+    expect(onCommitNodeUpdate).toHaveBeenCalledTimes(1)
+    const [calledPath, updater] = onCommitNodeUpdate.mock.calls[0]
+    expect(calledPath).toBe(somePath)
+    const result = updater(node) as Extract<LayoutNode, { type: 'autocomplete' }>
+    expect(result.props.items).toEqual([{ label: 'Cambiado', value: 'uno' }])
   })
 
   it('editing a manual literal item commits props.items as a flat array of {label, value}', () => {

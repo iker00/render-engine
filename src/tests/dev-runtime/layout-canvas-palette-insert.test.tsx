@@ -181,6 +181,48 @@ describe('items: [] por defecto para select/radioGroup/checkboxGroup (T3, RF10)'
   )
 })
 
+// T2 (2026-08-25-09-15-autocomplete-node): autocomplete (T1) is a form-only leaf node type
+// (FORM_ONLY_LEAF_NODE_TYPES), so it must be insertable from the palette inside a form and
+// rejected outside one — same pattern already covered above for input/select/radioGroup.
+describe('drag insert de autocomplete desde la paleta', () => {
+  it('arrastrar autocomplete desde la paleta hasta dentro de un form existente lo inserta con fieldId no vacío, label "Autocompletar" y props.items estrictamente igual a []', async () => {
+    renderCanvas({
+      api: {},
+      initialPage: 'home',
+      pages: [{ id: 'home', layout: [form('formA', [])] }],
+    })
+
+    paletteDragEnd('autocomplete', { parentPath: [{ field: 'children', index: 0 }], index: 0 })
+
+    const { parsed } = await getMonacoJson()
+    const formNode = (
+      parsed.pages as Array<{
+        layout: Array<{ children: Array<{ type: string; props: { fieldId: string; label: string; items: unknown } }> }>
+      }>
+    )[0].layout[0]
+
+    expect(formNode.children).toHaveLength(1)
+    expect(formNode.children[0].type).toBe('autocomplete')
+    expect(formNode.children[0].props.fieldId).not.toBe('')
+    expect(formNode.children[0].props.label).toBe('Autocompletar')
+    expect(formNode.children[0].props.items).toEqual([])
+    expect(validateRuntimeConfig(parsed).status).toBe('ready')
+  })
+
+  it('arrastrar autocomplete desde la paleta hasta un destino sin form ancestro no inserta nada (destino inválido)', async () => {
+    const { initialConfigText } = renderCanvas({
+      api: {},
+      initialPage: 'home',
+      pages: [{ id: 'home', layout: [container([heading('Plain')])] }],
+    })
+
+    paletteDragEnd('autocomplete', { parentPath: [{ field: 'children', index: 0 }], index: 0 })
+
+    const { text } = await getMonacoJson()
+    expect(text).toBe(initialConfigText)
+  })
+})
+
 describe('LayoutCanvasNodePalette: lists the full catalog (FR8)', () => {
   it('renders a draggable entry for every supported node type, always visible without a selection', () => {
     renderCanvas({

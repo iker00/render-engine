@@ -42,6 +42,7 @@ import {
 } from './validate-form-field-nodes'
 import { validateHiddenNode } from './validate-hidden-node'
 import { validateMapNode } from './validate-map-node'
+import { validateAutocompleteNode } from './validate-autocomplete-node'
 
 export function validateLayoutCollection(
   rawNodes: unknown,
@@ -151,6 +152,8 @@ export function validateLayoutNode(
       return validateHiddenNode(rawNode, path, pageId, breadcrumb)
     case 'map':
       return validateMapNode(rawNode, path, pageId, breadcrumb)
+    case 'autocomplete':
+      return validateAutocompleteNode(rawNode, path, pageId, breadcrumb)
   }
 
   return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}.type".`, breadcrumb, rawNode)

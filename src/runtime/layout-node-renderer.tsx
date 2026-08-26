@@ -28,6 +28,7 @@ const NODE_TYPES_INERT_IN_EDIT_MODE: ReadonlySet<LayoutNode['type']> = new Set([
   'checkboxGroup',
   'toggle',
   'fileInput',
+  'autocomplete',
 ])
 
 export interface LayoutNodeRendererProps {
@@ -217,6 +218,11 @@ export function LayoutNodeRenderer({ node, renderedChildren, iterationContext, p
     case 'map': {
       const MapNode = NodeComponents.map
       renderedNode = <MapNode node={node} iterationContext={iterationContext} />
+      break
+    }
+    case 'autocomplete': {
+      const AutocompleteNode = NodeComponents.autocomplete
+      renderedNode = <AutocompleteNode node={node} iterationContext={iterationContext} />
       break
     }
   }

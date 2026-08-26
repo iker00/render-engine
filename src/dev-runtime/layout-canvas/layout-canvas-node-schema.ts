@@ -7,6 +7,7 @@ import { injectNavigateParamsWidgetSentinel } from './property-fields/inject-nav
 import {
   accordionNodeSchema,
   alertNodeSchema,
+  autocompleteNodeSchema,
   badgeNodeSchema,
   buttonNodeSchema,
   checkboxGroupNodeSchema,
@@ -65,6 +66,7 @@ const nodeSchemaByType: Record<LayoutNodeType, z.ZodType> = {
   toggle: toggleNodeSchema,
   hidden: hiddenNodeSchema,
   map: mapNodeSchema,
+  autocomplete: autocompleteNodeSchema,
 }
 
 const cachedSchemaByType = new Map<LayoutNodeType, Record<string, unknown>>()
