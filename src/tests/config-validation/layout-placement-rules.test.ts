@@ -71,13 +71,9 @@ describe('FORM_ALLOWED_DESCENDANT_TYPES', () => {
     expect(FORM_ALLOWED_DESCENDANT_TYPES.has('list')).toBe(false)
     expect(FORM_ALLOWED_DESCENDANT_TYPES.has('link')).toBe(false)
     expect(FORM_ALLOWED_DESCENDANT_TYPES.has('modal')).toBe(false)
-    expect(FORM_ALLOWED_DESCENDANT_TYPES.has('badge')).toBe(false)
-    expect(FORM_ALLOWED_DESCENDANT_TYPES.has('alert')).toBe(false)
-    expect(FORM_ALLOWED_DESCENDANT_TYPES.has('stat')).toBe(false)
-    expect(FORM_ALLOWED_DESCENDANT_TYPES.has('skeleton')).toBe(false)
   })
 
-  it('accepts exactly the 17 types documented as valid form descendants', () => {
+  it('accepts exactly the 21 types documented as valid form descendants', () => {
     const expected = [
       'input',
       'textarea',
@@ -96,9 +92,13 @@ describe('FORM_ALLOWED_DESCENDANT_TYPES', () => {
       'accordion',
       'divider',
       'tabs',
+      'alert',
+      'badge',
+      'stat',
+      'skeleton',
     ]
 
-    expect(FORM_ALLOWED_DESCENDANT_TYPES.size).toBe(17)
+    expect(FORM_ALLOWED_DESCENDANT_TYPES.size).toBe(21)
 
     for (const type of expected) {
       expect(FORM_ALLOWED_DESCENDANT_TYPES.has(type as never)).toBe(true)

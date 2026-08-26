@@ -395,3 +395,45 @@ describe('SkeletonNode — queryStateFeedback primary use case', () => {
     expect(skeleton!.children).toHaveLength(2)
   })
 })
+
+describe('SkeletonNode — form integration', () => {
+  it('skeleton as child of a form renders [data-layout-node="skeleton"] in the DOM without error', () => {
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [
+        {
+          type: 'form',
+          id: 'test-form',
+          children: [
+            { type: 'skeleton' },
+          ],
+        },
+      ],
+    }
+    const { container } = renderRuntimePage(page)
+    expect(container.querySelector('[data-layout-node="skeleton"]')).toBeInTheDocument()
+  })
+
+  it('skeleton inside form does not produce any field in state.forms[formId]', () => {
+    const formId = 'test-form'
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [
+        {
+          type: 'form',
+          id: formId,
+          children: [
+            { type: 'skeleton' },
+          ],
+        },
+      ],
+    }
+    const config: RuntimeConfig = {
+      api: {},
+      initialPage: page.id,
+      pages: [page],
+    }
+    const state = createRuntimeState(config)
+    expect(Object.keys(state.forms[formId] ?? {})).toHaveLength(0)
+  })
+})

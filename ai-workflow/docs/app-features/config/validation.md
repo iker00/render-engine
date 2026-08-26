@@ -19,7 +19,7 @@
 ## Validación estructural global
 - Si `layout` no es un array válido, el arranque falla con un error explícito sobre la ruta afectada.
 - Si aparece un nodo no soportado en la raíz o dentro de `children`, el runtime lo trata como error de configuración y no lo reinterpreta.
-- Si `form.children` contiene nodos fuera de `input`, `textarea`, `select`, `radioGroup`, `checkboxGroup`, `button`, `heading`, `paragraph`, `image`, `table`, `container`, `accordion`, `tabs` y `divider`, el config completo se rechaza antes del render.
+- Si `form.children` contiene nodos fuera de `input`, `textarea`, `select`, `radioGroup`, `checkboxGroup`, `fileInput`, `toggle`, `hidden`, `button`, `heading`, `paragraph`, `image`, `table`, `container`, `accordion`, `divider`, `tabs`, `alert`, `badge`, `stat` y `skeleton`, el config completo se rechaza antes del render, a cualquier profundidad del subárbol (incluidos los `fallback` de `queryStateFeedback` de nodos dentro de ese subárbol).
 - Si `input`, `textarea`, `select`, `radioGroup` o `checkboxGroup` aparecen fuera de un subárbol `form`, el config completo se rechaza antes del render.
 - Si un `button` sin `action` aparece fuera de un subárbol `form`, el config completo se rechaza antes del render.
 

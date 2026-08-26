@@ -306,3 +306,45 @@ describe('BadgeNode — transversal features (via LayoutNodeRenderer)', () => {
     expect(spanWrapper!.querySelector('[data-layout-node="badge"]')).toBeInTheDocument()
   })
 })
+
+describe('BadgeNode — form integration', () => {
+  it('badge as child of a form renders [data-layout-node="badge"] in the DOM without error', () => {
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [
+        {
+          type: 'form',
+          id: 'test-form',
+          children: [
+            { type: 'badge', props: { label: 'Badge en form' } },
+          ],
+        },
+      ],
+    }
+    const { container } = renderRuntimePage(page)
+    expect(container.querySelector('[data-layout-node="badge"]')).toBeInTheDocument()
+  })
+
+  it('badge inside form does not produce any field in state.forms[formId]', () => {
+    const formId = 'test-form'
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [
+        {
+          type: 'form',
+          id: formId,
+          children: [
+            { type: 'badge', props: { label: 'Badge en form' } },
+          ],
+        },
+      ],
+    }
+    const config: RuntimeConfig = {
+      api: {},
+      initialPage: page.id,
+      pages: [page],
+    }
+    const state = createRuntimeState(config)
+    expect(Object.keys(state.forms[formId] ?? {})).toHaveLength(0)
+  })
+})

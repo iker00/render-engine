@@ -173,19 +173,29 @@ describe('isValidDropTarget: repeater never accepts a direct drop', () => {
 describe('isValidDropTarget: closed catalogue of form descendants', () => {
   const dragIntoFormA = (draggedPath: LayoutNodePath) => isValidDropTarget(PAGE_LAYOUT, draggedPath, FORM_A_PATH, 2)
 
-  it('rejects list, link, modal, badge, alert, stat and skeleton dragged directly into a form', () => {
+  it('rejects list, link and modal dragged directly into a form', () => {
     expect(dragIntoFormA(PALETTE_LIST_PATH)).toBe(false)
     expect(dragIntoFormA(LINK_PATH)).toBe(false)
     expect(dragIntoFormA(PALETTE_MODAL_PATH)).toBe(false)
-    expect(dragIntoFormA(PALETTE_BADGE_PATH)).toBe(false)
-    expect(dragIntoFormA(PALETTE_ALERT_PATH)).toBe(false)
-    expect(dragIntoFormA(PALETTE_STAT_PATH)).toBe(false)
-    expect(dragIntoFormA(PALETTE_SKELETON_PATH)).toBe(false)
+  })
+
+  it('accepts badge, alert, stat and skeleton dragged directly into a form', () => {
+    expect(dragIntoFormA(PALETTE_BADGE_PATH)).toBe(true)
+    expect(dragIntoFormA(PALETTE_ALERT_PATH)).toBe(true)
+    expect(dragIntoFormA(PALETTE_STAT_PATH)).toBe(true)
+    expect(dragIntoFormA(PALETTE_SKELETON_PATH)).toBe(true)
   })
 
   it('rejects the same disallowed types dragged into a container nested inside a form', () => {
     expect(isValidDropTarget(PAGE_LAYOUT, PALETTE_LIST_PATH, CONTAINER_IN_FORM_A_PATH, 0)).toBe(false)
     expect(isValidDropTarget(PAGE_LAYOUT, PALETTE_MODAL_PATH, CONTAINER_IN_FORM_A_PATH, 0)).toBe(false)
+  })
+
+  it('accepts badge, alert, stat and skeleton dragged into a container nested inside a form', () => {
+    expect(isValidDropTarget(PAGE_LAYOUT, PALETTE_BADGE_PATH, CONTAINER_IN_FORM_A_PATH, 0)).toBe(true)
+    expect(isValidDropTarget(PAGE_LAYOUT, PALETTE_ALERT_PATH, CONTAINER_IN_FORM_A_PATH, 0)).toBe(true)
+    expect(isValidDropTarget(PAGE_LAYOUT, PALETTE_STAT_PATH, CONTAINER_IN_FORM_A_PATH, 0)).toBe(true)
+    expect(isValidDropTarget(PAGE_LAYOUT, PALETTE_SKELETON_PATH, CONTAINER_IN_FORM_A_PATH, 0)).toBe(true)
   })
 })
 
