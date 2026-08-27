@@ -27,6 +27,7 @@ export type LayoutNodeType =
   | 'toggle'
   | 'hidden'
   | 'map'
+  | 'gallery'
 export type RuntimeApiMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
 export type RuntimeApiQueryValue = string | number | boolean
 export type RuntimeApiQuery = Record<string, RuntimeApiQueryValue>
@@ -610,6 +611,40 @@ export interface MapLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayou
   children?: never
 }
 
+export interface GalleryStaticImage {
+  src: string
+  alt: string
+}
+
+export type GalleryDynamicSource = { source: string; key: string; alt: string } & (
+  | { mode: 'src'; src: string }
+  | { mode: 'fetch'; fetch: ImageFetchConfig; idField?: string }
+)
+
+export interface GalleryPaginatedDisplay {
+  mode: 'paginated'
+  pagination: {
+    pageSize: number
+    controls?: { variant?: RuntimeCollectionPaginationControlsVariant }
+  }
+}
+
+export interface GalleryCarouselDisplay {
+  mode: 'carousel'
+  visibleCount: number
+  autoplay?: { enabled: true; intervalMs: number }
+  loop?: boolean
+}
+
+export interface GalleryLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayoutFields {
+  type: 'gallery'
+  id?: string
+  props: ({ images: GalleryStaticImage[] } | { source: GalleryDynamicSource }) & {
+    display: GalleryPaginatedDisplay | GalleryCarouselDisplay
+  }
+  children?: never
+}
+
 export interface NavigateToRuntimeUiAction {
   type: 'navigateTo'
   pageId: string
@@ -823,6 +858,7 @@ export type LayoutNode =
   | HiddenLayoutNode
   | FileManagerLayoutNode
   | MapLayoutNode
+  | GalleryLayoutNode
 
 export type LayoutNodeCollection = LayoutNode[]
 

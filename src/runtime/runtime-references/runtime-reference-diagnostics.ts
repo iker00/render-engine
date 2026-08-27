@@ -50,6 +50,8 @@ export type RuntimeReferenceSurface =
   | 'shell.sidebar.item.label'
   | 'shell.sidebar.item.href'
   | 'map.props.markerSources.label'
+  | 'gallery.props.images.src'
+  | 'gallery.props.images.alt'
 
 export function reportRuntimeReferenceDiagnostic(
   result: RuntimeReferenceResolutionResult,

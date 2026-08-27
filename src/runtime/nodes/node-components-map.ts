@@ -9,6 +9,7 @@ import { DividerNode } from './divider-layout-node'
 import { FileInputNode } from './file-input-layout-node'
 import { FileManagerNode } from './file-manager-layout-node'
 import { FormNode } from './form-layout-node'
+import { GalleryNode } from './gallery-layout-node'
 import { HiddenNode } from './hidden-layout-node'
 import { HeadingNode } from './heading-layout-node'
 import { ImageNode } from './image-layout-node'
@@ -45,6 +46,7 @@ const eagerMap = {
   fileInput: FileInputNode as AnyComponent,
   fileManager: FileManagerNode as AnyComponent,
   form: FormNode as AnyComponent,
+  gallery: GalleryNode as AnyComponent,
   heading: HeadingNode as AnyComponent,
   hidden: HiddenNode as AnyComponent,
   image: ImageNode as AnyComponent,
@@ -84,6 +86,7 @@ const lazyMap = {
     import('./file-manager-layout-node').then((m) => ({ default: m.FileManagerNode })),
   ),
   form: React.lazy(() => import('./form-layout-node').then((m) => ({ default: m.FormNode }))),
+  gallery: React.lazy(() => import('./gallery-layout-node').then((m) => ({ default: m.GalleryNode }))),
   heading: React.lazy(() => import('./heading-layout-node').then((m) => ({ default: m.HeadingNode }))),
   hidden: React.lazy(() => import('./hidden-layout-node').then((m) => ({ default: m.HiddenNode }))),
   image: React.lazy(() => import('./image-layout-node').then((m) => ({ default: m.ImageNode }))),
