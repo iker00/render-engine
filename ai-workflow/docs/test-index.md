@@ -53,6 +53,7 @@ Ficheros de apoyo, no son tests: `config-validation/helpers.ts`, `dev-runtime/lu
 - `runtime-config-validation-accordion.test.ts` — validación del nodo `accordion`: props (label, defaultOpen, groupId), children, placement y transversales
 - `runtime-config-validation-alert.test.ts` — validación del nodo `alert`: aceptación con type/message/title/transversales y rechazo de shape inválido
 - `runtime-config-validation-api-operations.test.ts` — operaciones API: métodos, query/body/headers, extra keys, body trees
+- `runtime-config-validation-autocomplete.test.ts` — validación del nodo `autocomplete`: shapes de items, defaultValue por cardinalidad, allowFreeText, minChars, searchParamName, validations de cardinalidad y placement form-only
 - `runtime-config-validation-badge.test.ts` — validación del nodo `badge`: props label/variant/color, transversales y rechazo de shape inválido (leaf)
 - `runtime-config-validation-button-styles.test.ts` — esquema y normalización de `button` en color, variant y fullWidth (constantes y validación cruzada)
 - `runtime-config-validation-buttons.test.ts` — botones y acciones (navigateTo, goBack, executeOperation, resetForm), `onSuccess`/`onError` de `executeOperation`/`executeOperations` con validación de targets, y validación del nodo `link`
@@ -95,6 +96,7 @@ Ficheros de apoyo, no son tests: `config-validation/helpers.ts`, `dev-runtime/lu
 
 - `layout-node-renderer-edit-mode.test.tsx` — modelo de path, threading en LayoutRenderer, wrapper de selección/hover bajo LayoutEditModeContext y steps row/cells de tabla
 - `layout-renderer-accordion-edit-mode.test.tsx` — accordion en modo edición con cuerpo siempre presente, path de hijos y regresión de colapso en producción
+- `layout-renderer-autocomplete.test.tsx` — nodo autocomplete: filtrado por minChars, selección simple y múltiple (chips), navegación por teclado, ARIA, allowFreeText, submit/validación, transversales e integración en repeater
 - `layout-renderer-accordion.test.tsx` — nodo accordion: estado inicial, toggle, ARIA, interpolación de label, coordinación por groupId, transversales e integración en repeater
 - `layout-renderer-alert.test.tsx` — nodo alert: colores por tipo, icono, title/message, interpolación, transversales e integración con repeater y form
 - `layout-renderer-badge.test.tsx` — nodo badge: variantes pill/circle, paleta semántica de colores, interpolación del label y transversales
@@ -159,6 +161,7 @@ Ficheros de apoyo, no son tests: `config-validation/helpers.ts`, `dev-runtime/lu
 
 ## runtime/
 
+- `resolve-autocomplete-field-definition.test.ts` — resolución de `defaultValue` de `autocomplete` (persistencia frente a colección dinámica cambiante, limpieza en shape estático, allowFreeText) y su wiring en la recogida de campos del formulario
 - `runtime-api-empty-submit-value.test.ts` — sustitución de `''` por `emptySubmitValue` en resolvers de payload, headers y body
 - `runtime-api-execution.test.ts` — ejecución de operaciones y ciclo de vida de queries
 - `runtime-api-file-encoding-preflight.test.tsx` — preflight de codificación de ficheros (`fileValueOverrides`) e integración en `executeQueryOperation`
@@ -166,8 +169,10 @@ Ficheros de apoyo, no son tests: `config-validation/helpers.ts`, `dev-runtime/lu
 - `runtime-api-multipart.test.ts` — construcción de FormData multipart en el builder de requests con ficheros y escalares
 - `runtime-api-payload-file-overrides.test.ts` — canal `fileValueOverrides` del resolver de body sustituyendo referencias completas por arrays precomputados
 - `runtime-api-payload-omission.test.ts` — omisión de claves en payload al referenciar campos ocultos del propio form
+- `runtime-api-request-get-body.test.ts` — `buildRuntimeApiRequest` descarta el body de una operación `GET` en vez de dejar que `fetch` lo rechace, sin afectar a `POST`
 - `runtime-api-retry.test.ts` — primitiva pura `runRuntimeApiRequestWithRetries` y política de reintentos acotados
 - `runtime-api-token-refresh-failed.test.ts` — propagación de `token-refresh-failed` desde resolvers hasta el builder cuando un token está en error
+- `runtime-autocomplete-collection.test.ts` — `resolveAutocompleteCollectionItems` (los tres shapes de items, incluido `item.*`) y `filterAutocompleteSuggestions` (gate por minChars, substring case-insensitive)
 - `runtime-browser-hash-navigation.test.ts` — sincronización de navegación con el hash del navegador
 - `runtime-button-lifecycle-actions.test.tsx` — `onSuccess`/`onError` de `button.props.action` tras `executeOperation`/`executeOperations`: encadenado, `when`, error de negocio, `item.*` en repeater y botón auxiliar dentro de form
 - `runtime-button-navigation.test.tsx` — navegación declarativa desde botones
@@ -177,6 +182,7 @@ Ficheros de apoyo, no son tests: `config-validation/helpers.ts`, `dev-runtime/lu
 - `runtime-file-manager-hook.test.tsx` — nodo `fileManager`: subida secuencial, validaciones, paginación, acciones Ver/Descargar/Eliminar y precarga
 - `runtime-file-manager-normalize-name.test.ts` — normalización de nombre de fichero (Windows, reservados, truncado, prefijo)
 - `runtime-file-manager-resolve-label.test.ts` — resolutor de labels del fileManager con interpolación de translations y placeholders locales
+- `runtime-form-submit-autocomplete.test.tsx` — submit end-to-end de `autocomplete` simple y múltiple, incluida la omisión por campo oculto (`visibility`/`queryStateFeedback`)
 - `runtime-form-submit-empty-select-fallback.test.tsx` — submit end-to-end de select vacío con `emptySubmitValue` sin regresión sobre `required` ni `visibility`
 - `runtime-form-submit-file-input.test.tsx` — submit end-to-end de `fileInput` con serialización JSON+base64 y coexistencia con otros campos
 - `runtime-form-submit-hidden-fields.test.tsx` — submit end-to-end de form con campos ocultos omitiendo claves del wire format
@@ -207,6 +213,7 @@ Ficheros de apoyo, no son tests: `config-validation/helpers.ts`, `dev-runtime/lu
 - `runtime-plan-page-preloads.test.ts` — funciones puras de planificación de `pages[].preloads` (agregado, plan, snapshot, firmas)
 - `runtime-reference-resolution.test.tsx` — resolución de referencias declarativas `forms.*`, `queries.*`, `item.*`, `params.*`
 - `runtime-scroll-restoration.test.tsx` — `RuntimeScrollRestorationEffect`: scroll-to-top en push y restauración de posición en pop
+- `runtime-search-trigger.test.tsx` — `useAutocompleteSearchTrigger`: gate por minChars, debounce a 300ms, requestParams/iterationContext, `lastFiredRequestSignature` y cleanup al desmontar
 - `runtime-shell-active-menu.test.ts` — función pura `computeActiveMenuItemIds` para marcar items activos del menú
 - `runtime-shell-active-sidebar.test.ts` — función pura `computeActiveSidebarItemIds` para marcar items activos y ancestros
 - `runtime-table-processing.test.ts` — filtrado, ordenación y procesamiento local de tablas

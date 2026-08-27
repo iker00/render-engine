@@ -13,8 +13,8 @@ No es histórico acumulado ni sustituto de las fichas funcionales. El detalle es
 | Contrato JSON | estable | [config/](./app-features/config/index.md) | `0110` |
 | Catálogo de nodos | estable | [nodes/](./app-features/nodes/index.md) | `2026-08-25-14-49-gallery-node` |
 | Referencias y strings dinámicas | estable | [references/](./app-features/references/index.md) | `2026-08-25-12-01-table-row-references` |
-| Formularios y validación | estable | [forms/](./app-features/forms/index.md) | `0095` |
-| Queries, preloads y feedback | estable | [queries/](./app-features/queries/index.md) | `2026-08-25-12-01-button-execute-operation-lifecycle-actions` |
+| Formularios y validación | estable | [forms/](./app-features/forms/index.md) | `2026-08-25-09-15-autocomplete-node` |
+| Queries, preloads y feedback | estable | [queries/](./app-features/queries/index.md) | `2026-08-25-09-15-autocomplete-node` |
 | Navegación y páginas | estable | [navigation/](./app-features/navigation/index.md) | `0137` |
 | Shell de aplicación (cabecera y sidebar) | estable | [shell/](./app-features/shell/index.md) | `0124` |
 | Accesibilidad | estable | [nodes/](./app-features/nodes/index.md), [queries/](./app-features/queries/index.md), [navigation/](./app-features/navigation/index.md) | `0046` |

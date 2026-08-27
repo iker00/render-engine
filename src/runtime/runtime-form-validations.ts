@@ -44,7 +44,7 @@ export function formatValidationMessage({
 
 export interface ResolvedFormFieldDefinition {
   fieldId: string
-  type: 'input' | 'textarea' | 'select' | 'radioGroup' | 'checkboxGroup' | 'fileInput' | 'toggle'
+  type: 'input' | 'textarea' | 'select' | 'radioGroup' | 'checkboxGroup' | 'fileInput' | 'toggle' | 'autocomplete'
   validations?: RuntimeFormFieldValidations
   fileValidations?: RuntimeFileInputValidations
   queryStateFeedback?: LayoutNode['queryStateFeedback']

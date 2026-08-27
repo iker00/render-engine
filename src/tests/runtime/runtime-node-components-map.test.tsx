@@ -17,6 +17,7 @@ function Wrapper({ children }: { children: React.ReactNode }) {
 const EXPECTED_KEYS = [
   'accordion',
   'alert',
+  'autocomplete',
   'badge',
   'button',
   'checkboxGroup',

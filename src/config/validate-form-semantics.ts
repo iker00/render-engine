@@ -305,7 +305,7 @@ function validateFormChildren(
 
     if (!FORM_ALLOWED_DESCENDANT_TYPES.has(node.type)) {
       return enrichedInvalidLayoutFromNode(
-        `Page "${pageId}" has an invalid layout at "${nodePath}": form nodes only accept input, textarea, select, radioGroup, checkboxGroup, fileInput, toggle, hidden, button, heading, paragraph, image, table, container, accordion, divider and tabs descendants.`,
+        `Page "${pageId}" has an invalid layout at "${nodePath}": form nodes only accept input, textarea, select, radioGroup, checkboxGroup, fileInput, toggle, hidden, button, heading, paragraph, image, table, container, accordion, divider, tabs, alert, badge, stat and skeleton descendants.`,
         nodeBreadcrumb,
         node,
       )

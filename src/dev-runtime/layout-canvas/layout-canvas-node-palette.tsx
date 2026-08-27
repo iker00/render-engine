@@ -36,6 +36,7 @@ const NODE_TYPE_LABELS: Record<LayoutNodeType, string> = {
   hidden: 'Campo oculto',
   map: 'Mapa',
   gallery: 'Galería',
+  autocomplete: 'Autocompletar',
 }
 
 interface LayoutCanvasNodePaletteEntryProps {

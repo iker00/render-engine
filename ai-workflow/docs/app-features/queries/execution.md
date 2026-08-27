@@ -15,6 +15,7 @@
 - `form.submitAction.type: executeOperation` reutiliza la misma fachada compartida desde el submit nativo del formulario.
 - `form.submitAction.type: executeOperations` (plural) lanza en paralelo un array de operaciones con la misma política de overrides que botones, y aplica `resetOnSuccess` de forma colectivo: el formulario solo se resetea si **todas** las operaciones terminan en éxito.
 - Cuando la acción o el submit ocurren dentro de un `repeater`, `query`, `body` y `headers` también pueden resolverse desde `item.*` para la iteración activa.
+- `autocomplete` (con `props.items` de shape dinámico `queries.{queryName}.data`/`.data.*`) dispara la misma fachada por su cuenta mientras el usuario escribe, con debounce fijo de `300ms` y gate por `props.minChars`: cuarta superficie de disparo, junto a `preloads`, botón y submit. El disparo vive en un módulo `runtime-*` dedicado (`runtime-search-trigger`), no en `runtime-actions/`, porque no es una acción declarada en el config sino consecuencia de la interacción del propio nodo. Detalle completo en [[../nodes/autocomplete.md#disparo-de-búsqueda-dinámica]].
 - La UI no construye manualmente URLs, query strings ni payloads JSON.
 
 ## Semántica de errores tipados
@@ -36,6 +37,7 @@
 - si el request efectivo lleva body serializado y no existe ya un `content-type` explícito en ninguna variante de casing, el builder añade `content-type: application/json`
 
 ## Reglas de payload
+- Una operación `GET` nunca lleva body en la petición final, aunque `requestParams.body` reciba un valor (p. ej. desde el disparo de `autocomplete`, que aporta `requestParams.query` y `requestParams.body` a la vez sin conocer el método de la operación): el builder lo descarta antes de construir la petición, en vez de dejar que `fetch` lo rechace de forma silenciosa.
 - `query` admite solo valores finales `string`, `number` y `boolean`
 - `body` admite cualquier árbol JSON serializable
 - `body: null` en la raíz equivale a una petición deliberada sin body serializado

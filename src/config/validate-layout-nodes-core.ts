@@ -43,6 +43,7 @@ import {
 import { validateHiddenNode } from './validate-hidden-node'
 import { validateMapNode } from './validate-map-node'
 import { validateGalleryNode } from './validate-gallery-node'
+import { validateAutocompleteNode } from './validate-autocomplete-node'
 
 export function validateLayoutCollection(
   rawNodes: unknown,
@@ -152,8 +153,13 @@ export function validateLayoutNode(
       return validateHiddenNode(rawNode, path, pageId, breadcrumb)
     case 'map':
       return validateMapNode(rawNode, path, pageId, breadcrumb)
+<<<<<<< src/config/validate-layout-nodes-core.ts
     case 'gallery':
       return validateGalleryNode(rawNode, path, pageId, breadcrumb)
+=======
+    case 'autocomplete':
+      return validateAutocompleteNode(rawNode, path, pageId, breadcrumb)
+>>>>>>> src/config/validate-layout-nodes-core.ts
   }
 
   return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}.type".`, breadcrumb, rawNode)

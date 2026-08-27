@@ -171,13 +171,13 @@ function withSubmitActionField(node: FormNode, nextValue: unknown): FormNode {
   }
 }
 
-// D6 (0108): the three node types whose `props.items` is the closed choice-items contract (T1) —
+// D6 (0108): the node types whose `props.items` is the closed choice-items contract (T1) —
 // manual literal, manual scalar, or dynamic with a mandatory `itemType` discriminator. None of
 // these shapes share a common literal discriminant the dispatcher's generic union detectors could
 // key off, so the panel routes them through the dedicated `ChoiceItemsPropertyField` widget (T4)
 // instead, the same way `resolveTabsPropsSchema` routes `tabs.props.items` through a panel-specific
 // adapter below.
-const CHOICE_LIKE_NODE_TYPES: ReadonlySet<LayoutNode['type']> = new Set(['select', 'radioGroup', 'checkboxGroup'])
+const CHOICE_LIKE_NODE_TYPES: ReadonlySet<LayoutNode['type']> = new Set(['select', 'radioGroup', 'checkboxGroup', 'autocomplete'])
 
 /**
  * Replaces the generated `oneOf` sub-schema of `props.items` (from Zod's `selectItemsSchema`

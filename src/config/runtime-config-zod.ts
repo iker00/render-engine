@@ -31,6 +31,7 @@ export const supportedNodeTypes = [
   'hidden',
   'map',
   'gallery',
+  'autocomplete',
 ] as const
 
 export const tableCellAllowedNodeTypes = ['image', 'list', 'button', 'container', 'heading', 'paragraph', 'link'] as const
@@ -603,6 +604,25 @@ export const checkboxGroupNodeSchema = z
       .extend({
         items: selectItemsSchema,
         optionLayout: z.enum(supportedChoiceGroupOptionLayoutValues).optional(),
+      })
+      .strip(),
+  })
+  .strip()
+
+export const autocompleteNodeSchema = z
+  .object({
+    type: z.literal('autocomplete'),
+    queryStateFeedback: queryStateFeedbackSchema.optional(),
+    visibility: visibilitySchema.optional(),
+    layout: layoutNodeLayoutSchema.optional(),
+    props: formFieldNodePropsSchema
+      .extend({
+        items: selectItemsSchema,
+        multiple: z.boolean().optional(),
+        placeholder: z.string().optional(),
+        allowFreeText: z.boolean().optional(),
+        minChars: z.number().int().nonnegative().optional(),
+        searchParamName: z.string().min(1).optional(),
       })
       .strip(),
   })

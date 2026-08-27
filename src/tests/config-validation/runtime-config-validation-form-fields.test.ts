@@ -479,7 +479,7 @@ describe('validateRuntimeConfig', () => {
           code: 'invalid-layout',
           displayMode: 'development-only',
           message:
-            `Page "home" has an invalid layout at "layout[0].children[0]": form nodes only accept input, textarea, select, radioGroup, checkboxGroup, fileInput, toggle, hidden, button, heading, paragraph, image, table, container, accordion, divider and tabs descendants.
+            `Page "home" has an invalid layout at "layout[0].children[0]": form nodes only accept input, textarea, select, radioGroup, checkboxGroup, fileInput, toggle, hidden, button, heading, paragraph, image, table, container, accordion, divider, tabs, alert, badge, stat and skeleton descendants.
   → form("user-form") > list[0]
   Node: {"type":"list"}`,
         },

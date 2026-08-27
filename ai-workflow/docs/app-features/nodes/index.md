@@ -52,6 +52,7 @@ Los conceptos transversales (`visibility`, `queryStateFeedback`, referencias din
 | [toggle.md](./toggle.md) | `toggle` — interruptor booleano on/off con `labelPosition` (`top`/`inline`), `required` exige `true`, valor boolean en store y payload. |
 | [hidden.md](./hidden.md) | `hidden` — campo sin render que aporta un valor fijo o dinámico al payload del submit, inicialización no lazy, no participa en validación ni en `visibility`. |
 | [file-input.md](./file-input.md) | Selector de ficheros dentro de formulario, preview inmediata, validaciones client-side, serialización JSON+base64 en submit como campo referenciable. |
+| [autocomplete.md](./autocomplete.md) | `autocomplete` — campo de texto con sugerencias filtradas (estáticas o dinámicas) para seleccionar uno o varios valores, texto libre opcional, disparo de búsqueda por tecleo con debounce, persistencia de selección frente a resultados de búsqueda cambiantes. |
 
 ## Nodos de gestión de ficheros
 
@@ -63,7 +64,7 @@ Los conceptos transversales (`visibility`, `queryStateFeedback`, referencias din
 - `heading`, `paragraph`, `list`, `image`, `table`, `button`, `badge`, `alert`, `stat` y `divider` son nodos hoja; si reciben `children`, esos datos no pasan al resultado normalizado.
 - `link` acepta `children` como alternativa a `props.label`: ambos campos son mutuamente excluyentes y obligatorio declarar uno.
 - `repeater` rechaza `children` y solo admite repetición a través de `props.template`.
-- `input`, `textarea`, `select`, `radioGroup`, `checkboxGroup`, `toggle` y `hidden` solo son válidos como descendientes de un `form`.
+- `input`, `textarea`, `select`, `radioGroup`, `checkboxGroup`, `toggle`, `hidden` y `autocomplete` solo son válidos como descendientes de un `form`.
 - `button` sin `action` solo es válido como descendiente de un `form` (actúa como submit implícito).
 - `hidden` no soporta `visibility`, `queryStateFeedback` ni `layout.span`; si declara `visibility` o `queryStateFeedback`, el config se rechaza.
 - Cualquier nodo soportado (excepto `hidden`) puede declarar `node.layout.span`, `node.visibility` y `node.queryStateFeedback` siguiendo las reglas transversales documentadas en [`../references/`](../references/index.md).

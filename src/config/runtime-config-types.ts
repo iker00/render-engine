@@ -28,6 +28,7 @@ export type LayoutNodeType =
   | 'hidden'
   | 'map'
   | 'gallery'
+  | 'autocomplete'
 export type RuntimeApiMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
 export type RuntimeApiQueryValue = string | number | boolean
 export type RuntimeApiQuery = Record<string, RuntimeApiQueryValue>
@@ -470,6 +471,20 @@ export interface CheckboxGroupLayoutNode extends LayoutNodeFeedbackFields, Layou
   children?: unknown
 }
 
+export interface AutocompleteLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayoutFields {
+  type: 'autocomplete'
+  id?: string
+  props: FormFieldLayoutNodeProps & {
+    items: SelectLayoutNodeItems
+    multiple?: boolean
+    placeholder?: string
+    allowFreeText?: boolean
+    minChars?: number
+    searchParamName?: string
+  }
+  children?: never
+}
+
 export type ModalSize = 'sm' | 'md' | 'lg'
 
 export interface ModalLayoutNodeProps {
@@ -858,7 +873,11 @@ export type LayoutNode =
   | HiddenLayoutNode
   | FileManagerLayoutNode
   | MapLayoutNode
+<<<<<<< src/config/runtime-config-types.ts
   | GalleryLayoutNode
+=======
+  | AutocompleteLayoutNode
+>>>>>>> src/config/runtime-config-types.ts
 
 export type LayoutNodeCollection = LayoutNode[]
 
