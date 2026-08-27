@@ -116,8 +116,7 @@ export type {
   FileManagerLayoutNode,
   FileInputLayoutNode,
   RuntimeFileInputValidations,
-  FormOnErrorAction,
-  FormOnSuccessAction,
+  RuntimeUiActionListEntry,
   RuntimeTokenRefreshConfig,
   HiddenLayoutNode,
   ToggleLayoutNode

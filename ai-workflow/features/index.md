@@ -23,6 +23,30 @@ La política completa está definida en el documento de workflow del proyecto.
 
 ## Completadas
 
+- `2026-08-25-12-01-table-row-references`: nuevo namespace de referencia `row.*` para el contexto de fila propio de
+  `table`, que deja de usar `item.*` (cambio de comportamiento intencional, sin compatibilidad retroactiva ni alias).
+  `row.*` navega el dato de la fila actual con la misma semántica de segmentos anidados que `item.*`, disponible en
+  celdas-nodo en modo dinámico y en celdas string (manual y dinámico, con forma completa e interpolación parcial
+  `{{row...}}`). Nueva referencia sintética `row.$index`: entero 1-based con la posición de la fila dentro de la
+  vista actualmente visible (tras filtros, ordenación y paginación local), disponible en ambos modos y ambos tipos
+  de celda; en modo manual es el único segmento de `row.*` accesible (no hay dato subyacente que navegar). Resuelve
+  el sombreado que existía hoy cuando una `table` dinámica vive dentro de un `repeater`: el `iterationContext` que
+  construye `table-layout-node.tsx` para resolver celdas pasa de sustituir por completo el contexto ambiental
+  recibido a componerlo por spread (`{ ...iterationContext, row, rowIndex }`), de forma que `item.*` del `repeater`
+  ancestro más cercano sigue resolviendo dentro de las celdas de la `table` anidada sin que `row` lo pise; efecto
+  colateral necesario: en modo manual las celdas-nodo dentro de un `repeater` recuperan acceso a `item.*` del
+  ancestro, que hoy se perdía por completo en ese modo. `RuntimeIterationContext`
+  (`src/runtime/runtime-references/runtime-reference-resolver.ts`) gana los campos hermanos opcionales `row`/
+  `rowIndex` junto a `item`/`key`/`itemKey`/`itemIndex` (estos últimos pasan de obligatorios a opcionales, cambio de
+  tipo compatible hacia atrás). `row` se registra en `src/config/runtime-reference-syntax.ts` como namespace
+  condicional de primera clase (`allowRowReference`, mismo patrón que `allowItemReference`), con `row.$index` como
+  única forma sintética soportada (no existe `row.$key`: `table` no itera un diccionario). Como el pipeline local de
+  `table` (`processTableRows`) filtra/ordena sobre el valor de celda ya resuelto como string antes de conocerse la
+  posición final visible, las celdas string se resuelven dos veces: una vez como clave de filtro/orden (sin
+  `row.$index` correcto) y otra vez, tras aplicar filtro+orden+paginación, con el `rowIndex` final — las
+  celdas-nodo no necesitan doble resolución porque ya se renderizan perezosamente sobre las filas visibles.
+  `table.props.rows.source: 'item.*'` (el item del `repeater` ambiental que provee el array de filas) no cambia: es
+  una familia de referencia distinta del contexto de fila.
 - `2026-08-25-09-15-autocomplete-node`: nuevo nodo de formulario `autocomplete`, campo de texto que filtra/busca entre
   opciones (estáticas o dinámicas) para seleccionar uno o varios valores mostrados como chips en modo múltiple.
   `props.items` reutiliza exactamente los tres shapes cerrados de `select` (manual literal, manual escalar, dinámico

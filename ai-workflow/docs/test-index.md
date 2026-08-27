@@ -56,7 +56,7 @@ Ficheros de apoyo, no son tests: `config-validation/helpers.ts`, `dev-runtime/lu
 - `runtime-config-validation-autocomplete.test.ts` — validación del nodo `autocomplete`: shapes de items, defaultValue por cardinalidad, allowFreeText, minChars, searchParamName, validations de cardinalidad y placement form-only
 - `runtime-config-validation-badge.test.ts` — validación del nodo `badge`: props label/variant/color, transversales y rechazo de shape inválido (leaf)
 - `runtime-config-validation-button-styles.test.ts` — esquema y normalización de `button` en color, variant y fullWidth (constantes y validación cruzada)
-- `runtime-config-validation-buttons.test.ts` — botones y acciones (navigateTo, goBack, executeOperation, resetForm) y validación del nodo `link`
+- `runtime-config-validation-buttons.test.ts` — botones y acciones (navigateTo, goBack, executeOperation, resetForm), `onSuccess`/`onError` de `executeOperation`/`executeOperations` con validación de targets, y validación del nodo `link`
 - `runtime-config-validation-collections.test.ts` — contrato de fuentes de colección multi-valor
 - `runtime-config-validation-containers.test.ts` — contrato de layout de contenedores
 - `runtime-config-validation-divider.test.ts` — validación del nodo `divider`: variantes, transversales, placement y rechazos de shape
@@ -171,6 +171,7 @@ Ficheros de apoyo, no son tests: `config-validation/helpers.ts`, `dev-runtime/lu
 - `runtime-api-token-refresh-failed.test.ts` — propagación de `token-refresh-failed` desde resolvers hasta el builder cuando un token está en error
 - `runtime-autocomplete-collection.test.ts` — `resolveAutocompleteCollectionItems` (los tres shapes de items, incluido `item.*`) y `filterAutocompleteSuggestions` (gate por minChars, substring case-insensitive)
 - `runtime-browser-hash-navigation.test.ts` — sincronización de navegación con el hash del navegador
+- `runtime-button-lifecycle-actions.test.tsx` — `onSuccess`/`onError` de `button.props.action` tras `executeOperation`/`executeOperations`: encadenado, `when`, error de negocio, `item.*` en repeater y botón auxiliar dentro de form
 - `runtime-button-navigation.test.tsx` — navegación declarativa desde botones
 - `runtime-collection-pagination.test.ts` — paginación local de colecciones
 - `runtime-file-base64-encoder.test.ts` — codificador puro de ficheros a base64 con shape `{name,size,mime,data}`

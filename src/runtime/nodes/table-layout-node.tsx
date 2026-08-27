@@ -2,6 +2,7 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import type { ChangeEvent, Dispatch, SetStateAction } from 'react'
 import type {
   TableCellNode,
+  TableCellValue,
   TableDynamicRows,
   TableLayoutNode,
 } from '../../config/runtime-config'
@@ -191,8 +192,11 @@ export function TableNode({ node, iterationContext, path }: TableNodeProps) {
           <tbody>
             {visibleRows.map((row, rowIndex) => {
               const rowItem = rowItemMap.get(row)
-              const rowIterationContext: RuntimeIterationContext | undefined =
-                rowItem !== undefined ? { item: rowItem, key: String(rowIndex), itemIndex: rowIndex } : undefined
+              const rowIterationContext: RuntimeIterationContext = {
+                ...iterationContext,
+                ...(rowItem !== undefined ? { row: rowItem } : {}),
+                rowIndex: rowIndex + 1,
+              }
 
               return (
                 <tr key={`row-${rowIndex}`} className={getTableBodyRowClassName()}>
@@ -229,7 +233,14 @@ export function TableNode({ node, iterationContext, path }: TableNodeProps) {
                             }
                           />
                         ) : (
-                          cell
+                          resolveTableCellDisplayValue(
+                            cell,
+                            isManualTableMode
+                              ? (node.props.rows as TableCellValue[][])[rowOriginalIndexMap.get(row)!][cellIndex]
+                              : (node.props.rows as TableDynamicRows).cells[cellIndex],
+                            state,
+                            rowIterationContext,
+                          )
                         )}
                       </td>
                     )
@@ -465,9 +476,8 @@ function resolveTableRows(
       return normalizeTableCellValue(
         resolveRuntimeVisibleValue(cell, state, 'table.cell', {
           iterationContext: {
-            item,
-            key: String(rowIndex),
-            itemIndex: rowIndex,
+            ...iterationContext,
+            row: item,
           },
         }),
       )
@@ -487,4 +497,25 @@ function normalizeTableCellValue(value: string | number | boolean) {
   }
 
   return String(value)
+}
+
+// The value already resolved in Phase A (`resolveTableRows`) is used as the filter/sort
+// comparison key, but it can't carry the final visible `rowIndex` (unknown until after
+// filter/sort/pagination are applied). Re-resolve string cell templates here, in Phase B, with
+// `rowIterationContext` so that `row.$index` reflects the row's actual visible position.
+// Non-string templates (number/boolean, manual mode only) have no reference to resolve, so the
+// Phase A value is reused as-is.
+function resolveTableCellDisplayValue(
+  cell: string,
+  rawCell: TableCellValue,
+  state: ReturnType<typeof useRuntimeState>,
+  rowIterationContext: RuntimeIterationContext,
+) {
+  if (typeof rawCell !== 'string') {
+    return cell
+  }
+
+  return normalizeTableCellValue(
+    resolveRuntimeVisibleValue(rawCell, state, 'table.cell', { iterationContext: rowIterationContext }),
+  )
 }

@@ -328,7 +328,7 @@ describe('RuntimePage', () => {
             headers: ['Name', 'Role', 'Query status'],
             rows: {
               source: 'queries.searchUsers.data.results',
-              cells: ['item.name', 'item.role', 'queries.searchUsers.status'],
+              cells: ['row.name', 'row.role', 'queries.searchUsers.status'],
             },
           },
         },
@@ -443,7 +443,7 @@ describe('RuntimePage', () => {
             columns: [{ id: 'Display', filterable: true }],
             rows: {
               source: 'queries.searchUsers.data.results',
-              cells: ['{{item.name}} ({{item.status}})'],
+              cells: ['{{row.name}} ({{row.status}})'],
             },
           },
         },
@@ -454,7 +454,7 @@ describe('RuntimePage', () => {
             columns: [{ id: 'Display', filterable: true }],
             rows: {
               source: 'queries.searchUsers.data.results',
-              cells: ['{{item.name}} ({{item.status}})'],
+              cells: ['{{row.name}} ({{row.status}})'],
             },
           },
         },
@@ -608,5 +608,58 @@ describe('RuntimePage', () => {
       ['Grace', 'Editor'],
       ['Ada', 'Admin'],
     ])
+  })
+
+  it('resolves row.$index inside a manual-mode NodeObject cell and degrades a row.* navigation attempt to empty', () => {
+    const activePage: RuntimePageConfig = {
+      id: 'manual-table-row-index-node-cell',
+      layout: [
+        {
+          type: 'table',
+          props: {
+            headers: ['Name', 'Position', 'Missing'],
+            rows: [
+              [
+                'Ada',
+                { type: 'paragraph', props: { text: 'Fila {{row.$index}}' } },
+                { type: 'paragraph', props: { text: '{{row.missing}}' } },
+              ],
+              [
+                'Grace',
+                { type: 'paragraph', props: { text: 'Fila {{row.$index}}' } },
+                { type: 'paragraph', props: { text: '{{row.missing}}' } },
+              ],
+            ],
+          },
+        },
+      ],
+    }
+
+    renderRuntimePageWithState(activePage, createRuntimePageState(activePage, {}))
+
+    const bodyRows = getTableBodyRows(screen.getByRole('table'))
+    expect(within(bodyRows[0]).getByText('Fila 1')).toBeInTheDocument()
+    expect(within(bodyRows[1]).getByText('Fila 2')).toBeInTheDocument()
+    expect(within(bodyRows[0]).getAllByRole('cell')[2]).toHaveTextContent('')
+    expect(within(bodyRows[1]).getAllByRole('cell')[2]).toHaveTextContent('')
+  })
+
+  it('resolves row.$index inside a manual-mode string cell literal without a repeater ancestor', () => {
+    const activePage: RuntimePageConfig = {
+      id: 'manual-table-row-index-string-cell',
+      layout: [
+        {
+          type: 'table',
+          props: {
+            headers: ['Position'],
+            rows: [['Fila {{row.$index}}'], ['Fila {{row.$index}}']],
+          },
+        },
+      ],
+    }
+
+    renderRuntimePageWithState(activePage, createRuntimePageState(activePage, {}))
+
+    expect(getTableBodyCellText(screen.getByRole('table'))).toEqual([['Fila 1'], ['Fila 2']])
   })
 })

@@ -51,6 +51,10 @@ export const FORM_ALLOWED_DESCENDANT_TYPES: ReadonlySet<LayoutNodeType> = new Se
   'divider',
   'tabs',
   'autocomplete',
+  'alert',
+  'badge',
+  'stat',
+  'skeleton',
 ])
 
 /**

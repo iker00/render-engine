@@ -1,4 +1,9 @@
-import type { NavigateToRuntimeUiAction, RuntimeApiRequestParams, RuntimeUiAction } from '../../config/runtime-config'
+import type {
+  NavigateToRuntimeUiAction,
+  RuntimeApiRequestParams,
+  RuntimeUiAction,
+  RuntimeUiActionListEntry,
+} from '../../config/runtime-config'
 import type { RuntimeIterationContext } from '../runtime-references/runtime-reference-resolver'
 import { matchesVisibilityRule } from '../runtime-layout-visibility'
 import type { RuntimeState } from '../runtime-state/runtime-state-types'
@@ -67,5 +72,31 @@ export function executeRuntimeUiAction(
     case 'resetForm':
       handlers.resetForm(action.formId)
       return
+  }
+}
+
+export function runRuntimeUiActionLifecycleList(
+  actions: RuntimeUiActionListEntry[] | undefined,
+  handlers: RuntimeUiActionHandlers,
+  readState: () => RuntimeState,
+  iterationContext?: RuntimeIterationContext,
+) {
+  if (!actions || actions.length === 0) {
+    return
+  }
+
+  for (const action of actions) {
+    const snapshot = readState()
+
+    if (!matchesVisibilityRule(action.when, snapshot, iterationContext)) {
+      continue
+    }
+
+    // Strip 'when' before passing to executor since RuntimeUiAction doesn't have 'when'
+    const { when: _when, ...baseAction } = action as RuntimeUiActionListEntry & { when?: unknown }
+    executeRuntimeUiAction(baseAction as Parameters<typeof executeRuntimeUiAction>[0], handlers, {
+      state: snapshot,
+      iterationContext,
+    })
   }
 }

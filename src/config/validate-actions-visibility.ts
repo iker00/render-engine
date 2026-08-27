@@ -2,8 +2,6 @@ import type {
   CloseModalRuntimeUiAction,
   ExecuteOperationRuntimeUiAction,
   ExecuteOperationsRuntimeUiAction,
-  FormOnErrorAction,
-  FormOnSuccessAction,
   GoBackButtonAction,
   NavigateToButtonAction,
   OpenModalRuntimeUiAction,
@@ -15,6 +13,7 @@ import type {
   RuntimeConfigError,
   RuntimeConfigValue,
   RuntimeUiAction,
+  RuntimeUiActionListEntry,
   RuntimeVisibilityConfig,
   RuntimeVisibilityGroup,
   RuntimeVisibilityOperator,
@@ -195,7 +194,7 @@ export function validateFormSubmitAction(
   rawAction: unknown,
   path: string,
   pageId: string,
-): { status: 'ready'; action: ExecuteOperationRuntimeUiAction | ExecuteOperationsRuntimeUiAction; onSuccess?: FormOnSuccessAction[]; onError?: FormOnErrorAction[] } | { status: 'error'; error: RuntimeConfigError } {
+): { status: 'ready'; action: ExecuteOperationRuntimeUiAction | ExecuteOperationsRuntimeUiAction; onSuccess?: RuntimeUiActionListEntry[]; onError?: RuntimeUiActionListEntry[] } | { status: 'error'; error: RuntimeConfigError } {
   if (!isRecord(rawAction)) {
     return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}".`)
   }
@@ -229,8 +228,27 @@ export function validateFormSubmitAction(
     }
   }
 
-  let onSuccess: FormOnSuccessAction[] | undefined
-  let onError: FormOnErrorAction[] | undefined
+  const lifecycleResult = validateRuntimeUiActionLifecycleBlocks(rawAction, path, pageId)
+
+  if (lifecycleResult.status === 'error') {
+    return lifecycleResult
+  }
+
+  return {
+    status: 'ready',
+    action,
+    ...(lifecycleResult.onSuccess !== undefined ? { onSuccess: lifecycleResult.onSuccess } : {}),
+    ...(lifecycleResult.onError !== undefined ? { onError: lifecycleResult.onError } : {}),
+  }
+}
+
+export function validateRuntimeUiActionLifecycleBlocks(
+  rawAction: Record<string, unknown>,
+  path: string,
+  pageId: string,
+): { status: 'ready'; onSuccess?: RuntimeUiActionListEntry[]; onError?: RuntimeUiActionListEntry[] } | { status: 'error'; error: RuntimeConfigError } {
+  let onSuccess: RuntimeUiActionListEntry[] | undefined
+  let onError: RuntimeUiActionListEntry[] | undefined
 
   // Validate onSuccess if present
   if (rawAction.onSuccess !== undefined) {
@@ -238,7 +256,7 @@ export function validateFormSubmitAction(
       return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.onSuccess".`)
     }
 
-    const onSuccessAccumulator: FormOnSuccessAction[] = []
+    const onSuccessAccumulator: RuntimeUiActionListEntry[] = []
 
     for (let index = 0; index < rawAction.onSuccess.length; index += 1) {
       const rawEntry = rawAction.onSuccess[index]
@@ -274,7 +292,7 @@ export function validateFormSubmitAction(
       return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.onError".`)
     }
 
-    const onErrorAccumulator: FormOnErrorAction[] = []
+    const onErrorAccumulator: RuntimeUiActionListEntry[] = []
 
     for (let index = 0; index < rawAction.onError.length; index += 1) {
       const rawEntry = rawAction.onError[index]
@@ -306,7 +324,6 @@ export function validateFormSubmitAction(
 
   return {
     status: 'ready',
-    action,
     ...(onSuccess !== undefined ? { onSuccess } : {}),
     ...(onError !== undefined ? { onError } : {}),
   }
