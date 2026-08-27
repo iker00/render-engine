@@ -873,11 +873,8 @@ export type LayoutNode =
   | HiddenLayoutNode
   | FileManagerLayoutNode
   | MapLayoutNode
-<<<<<<< src/config/runtime-config-types.ts
   | GalleryLayoutNode
-=======
   | AutocompleteLayoutNode
->>>>>>> src/config/runtime-config-types.ts
 
 export type LayoutNodeCollection = LayoutNode[]
 
