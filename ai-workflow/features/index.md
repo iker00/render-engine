@@ -47,7 +47,36 @@ La política completa está definida en el documento de workflow del proyecto.
   celdas-nodo no necesitan doble resolución porque ya se renderizan perezosamente sobre las filas visibles.
   `table.props.rows.source: 'item.*'` (el item del `repeater` ambiental que provee el array de filas) no cambia: es
   una familia de referencia distinta del contexto de fila.
-
+- `2026-08-25-09-15-autocomplete-node`: nuevo nodo de formulario `autocomplete`, campo de texto que filtra/busca entre
+  opciones (estáticas o dinámicas) para seleccionar uno o varios valores mostrados como chips en modo múltiple.
+  `props.items` reutiliza exactamente los tres shapes cerrados de `select` (manual literal, manual escalar, dinámico
+  unificado); el shape estático y `source: 'item.*'` filtran en cliente por substring case-insensitive del `label`
+  respetando `props.minChars`, mientras que `source: 'queries.{queryName}.data'`/`.data.*` dispara la ejecución de la
+  operación asociada mientras el usuario escribe — cuarta superficie de disparo de `queries.*` del runtime, junto a
+  `preloads`, botón y submit. El disparo vive en un módulo `runtime-*` dedicado (`runtime-search-trigger.ts`, fuera de
+  `runtime-actions/` porque no traduce una acción declarada en el config) con debounce fijo de `300ms` no configurable
+  y gate por `minChars`, delegando la ejecución real en la misma fachada `executeQueryOperation` ya usada por botones y
+  submit. El texto en curso viaja a la operación de dos formas distintas según cardinalidad, sin ampliar ningún
+  contrato declarativo: en selección simple, `forms.{formId}.{fieldId}` refleja el texto tal cual se escribe (con o
+  sin `allowFreeText`) para que la operación lo referencie directamente; en selección múltiple, viaja por
+  `requestParams.query`/`requestParams.body` bajo la clave `props.searchParamName` (opcional, default `'search'`,
+  añadido tras el cierre inicial de `design.md` al detectarse que una clave fija sin configurar reproducía el mismo
+  problema que la decisión original había descartado evitar). Cada instancia rastrea localmente la `requestSignature`
+  de su última búsqueda disparada y solo pinta `queries.{queryName}.data` como sugerencias cuando coincide con la
+  vigente — límite de producto aceptado y documentado: instancias que comparten `queryName` (p. ej. dentro de un
+  `repeater` sin `item.*`) no buscan de forma verdaderamente independiente y simultánea. A diferencia de
+  `select`/`radioGroup`/`checkboxGroup`, el shape dinámico de `autocomplete` invierte la regla de "limpiar valor si
+  desaparece de la colección resuelta": una vez fijado un valor o añadido un chip, persiste aunque una búsqueda
+  posterior no lo incluya, porque `queries.{queryName}.data` representa solo las sugerencias de la búsqueda más
+  reciente, no un catálogo completo; el shape estático manual sí seguía limpiando como siempre. `allowFreeText`
+  (default `false`) reutiliza la semántica de `input` en simple (valor efectivo = texto en vivo, sin confirmación) y
+  añade chip por confirmación explícita (Enter) en múltiple. Patrón ARIA de combobox con sugerencias (`role=combobox`,
+  `aria-expanded`, `aria-controls`, `listbox`/`option`, `aria-activedescendant`) y asociación label↔control vía
+  `htmlFor` explícito (no wrapper implícito, para no interferir con los botones "Quitar" de los chips). Efecto
+  colateral corregido en `runtime-api-request.ts`: una operación `GET` nunca lleva body en la petición final aunque
+  `requestParams.body` reciba un valor, evitando que `fetch` la rechazase de forma silenciosa. Fuera de alcance:
+  `emptySubmitValue`, resaltado del texto coincidente en sugerencias, paginación de resultados y widget dedicado de
+  edición en el panel de propiedades del editor visual.
 - `2026-08-24-12-58-map-node`: nuevo nodo hoja `map` en el catálogo, mapa interactivo `Leaflet`/`react-leaflet` sobre
   tiles de OpenStreetMap, sin API key. `props.center`/`props.zoom`/`props.height` opcionales (defaults Pamplona,
   zoom 13, altura `md`, resueltos en el componente de render, no en validación). Dos orígenes de marcadores:

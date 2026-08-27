@@ -455,7 +455,15 @@ function buildRequestInit(
   headers: RuntimeApiHeaders | undefined,
   body: RuntimeApiBodyValue | null | undefined,
 ): RequestInit {
-  if (body === undefined || body === null) {
+  // Native `fetch` throws synchronously ("Request with GET/HEAD method cannot have body") for a
+  // GET request carrying a body — a caller merging in `requestParams.body` (e.g. autocomplete's
+  // dynamic search, T10) has no way to know the operation's method, so the merge can produce a
+  // body for a GET operation. That throw happens before any network activity and is swallowed by
+  // the executor's error handling, making the whole request silently vanish. GET has no body over
+  // HTTP anyway, so dropping it here is always correct, not just an autocomplete-specific workaround.
+  const effectiveBody = method === 'GET' ? undefined : body
+
+  if (effectiveBody === undefined || effectiveBody === null) {
     if (!headers) {
       return {
         method,

@@ -49,7 +49,7 @@ Cuando un nodo `tabs` es hijo de un nodo `form`:
 ## Encaje en el contrato de páginas
 - El runtime implementa `form` como nodo contenedor real dentro de `pages[].layout`.
 - La raíz de `pages[].layout` sigue siendo una colección ordenada, así que un formulario puede convivir con otros bloques hermanos sin wrapper sintético.
-- `form.children` reutiliza el árbol declarativo existente y admite `input`, `textarea`, `select`, `radioGroup`, `checkboxGroup`, `toggle`, `hidden`, `button`, `heading`, `paragraph`, `image`, `table`, `container`, `accordion`, `tabs` y `divider`.
+- `form.children` reutiliza el árbol declarativo existente y admite `input`, `textarea`, `select`, `radioGroup`, `checkboxGroup`, `toggle`, `hidden`, `autocomplete`, `button`, `heading`, `paragraph`, `image`, `table`, `container`, `accordion`, `tabs` y `divider`.
 - El dominio compartido `forms` del store sigue siendo la única fuente de verdad para valores y errores de formulario.
 
 ## Casos funcionales soportados

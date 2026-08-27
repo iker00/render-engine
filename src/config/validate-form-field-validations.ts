@@ -33,6 +33,7 @@ type FormFieldValidationTarget =
   | { type: 'radioGroup' }
   | { type: 'checkboxGroup' }
   | { type: 'toggle' }
+  | { type: 'autocomplete'; multiple: boolean }
 
 export function validateFormFieldValidations(
   rawProps: unknown,
@@ -418,5 +419,5 @@ function supportsTextLengthAndPatternValidations(target: FormFieldValidationTarg
 }
 
 function supportsSelectionCardinalityValidations(target: FormFieldValidationTarget) {
-  return target.type === 'checkboxGroup' || (target.type === 'select' && target.multiple)
+  return target.type === 'checkboxGroup' || (target.type === 'select' && target.multiple) || (target.type === 'autocomplete' && target.multiple)
 }

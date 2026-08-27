@@ -162,6 +162,29 @@ describe('getNodeTypeJsonSchema', () => {
     }
   })
 
+  // T2 (2026-08-25-09-15-autocomplete-node): autocompleteNodeSchema (T1) is registered in
+  // nodeSchemaByType, so its JSON Schema must derive automatically without any dedicated widget —
+  // same assertion shape as the container/repeater tests above, but for the field-specific props
+  // (items/multiple/placeholder/allowFreeText/minChars) plus the shared field props (fieldId/label).
+  it('reflects autocompleteNodeSchema props (fieldId/label/items/multiple/placeholder/allowFreeText/minChars)', () => {
+    const schema = getNodeTypeJsonSchema('autocomplete')
+    expect(schema).toBeDefined()
+    expect(typeof schema).toBe('object')
+
+    const properties = schema.properties as Record<string, unknown>
+    const propsSchema = properties['props'] as { properties?: Record<string, unknown> }
+    expect(propsSchema).toBeDefined()
+
+    const propProperties = propsSchema.properties ?? {}
+    expect(propProperties['fieldId']).toBeDefined()
+    expect(propProperties['label']).toBeDefined()
+    expect(propProperties['items']).toBeDefined()
+    expect(propProperties['multiple']).toBeDefined()
+    expect(propProperties['placeholder']).toBeDefined()
+    expect(propProperties['allowFreeText']).toBeDefined()
+    expect(propProperties['minChars']).toBeDefined()
+  })
+
   it('returns the same reference on a second call for the same type (cache)', () => {
     const first = getNodeTypeJsonSchema('container')
     const second = getNodeTypeJsonSchema('container')
@@ -180,9 +203,9 @@ describe('getNodeTypeJsonSchema', () => {
 })
 
 describe('getSupportedNodeTypesCatalog', () => {
-  it('returns the full node type catalog (28 types)', () => {
+  it('returns the full node type catalog (29 types)', () => {
     const catalog = getSupportedNodeTypesCatalog()
-    expect(catalog).toHaveLength(28)
+    expect(catalog).toHaveLength(29)
     expect(catalog).toContain('container')
     expect(catalog).toContain('button')
     expect(catalog).toContain('hidden')

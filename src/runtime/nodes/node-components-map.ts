@@ -1,6 +1,7 @@
 import React from 'react'
 import { AccordionNode } from './accordion-layout-node'
 import { AlertNode } from './alert-layout-node'
+import { AutocompleteNode } from './autocomplete-layout-node'
 import { BadgeNode } from './badge-layout-node'
 import { ButtonNode } from './button-layout-node'
 import { CheckboxGroupNode } from './checkbox-group-layout-node'
@@ -37,6 +38,7 @@ type AnyComponent = React.ComponentType<any>
 const eagerMap = {
   accordion: AccordionNode as AnyComponent,
   alert: AlertNode as AnyComponent,
+  autocomplete: AutocompleteNode as AnyComponent,
   badge: BadgeNode as AnyComponent,
   button: ButtonNode as AnyComponent,
   checkboxGroup: CheckboxGroupNode as AnyComponent,
@@ -70,6 +72,9 @@ const eagerMap = {
 const lazyMap = {
   accordion: React.lazy(() => import('./accordion-layout-node').then((m) => ({ default: m.AccordionNode }))),
   alert: React.lazy(() => import('./alert-layout-node').then((m) => ({ default: m.AlertNode }))),
+  autocomplete: React.lazy(() =>
+    import('./autocomplete-layout-node').then((m) => ({ default: m.AutocompleteNode })),
+  ),
   badge: React.lazy(() => import('./badge-layout-node').then((m) => ({ default: m.BadgeNode }))),
   button: React.lazy(() => import('./button-layout-node').then((m) => ({ default: m.ButtonNode }))),
   checkboxGroup: React.lazy(() =>
