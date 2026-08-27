@@ -23,6 +23,37 @@ La política completa está definida en el documento de workflow del proyecto.
 
 ## Completadas
 
+- `2026-08-25-14-49-gallery-node`: nuevo nodo hoja `gallery` en el catálogo, colección de imágenes con dos orígenes
+  mutuamente excluyentes por instancia: `props.images` (lista literal `{src, alt}`, misma semántica que
+  `image.props.src`/`alt`) o `props.source` (colección dinámica resuelta desde `queries.*`/`item.*`, mismo contrato
+  de `source`/`key` que `repeater.props.items`, reutilizando sin modificar `resolveCollectionSourceItems` y
+  `validateCollectionSource`). Dentro de `source`, un submodo de carga por foto también mutuamente excluyente:
+  `mode: 'src'` (ruta relativa/interpolación por item, igual que `image.props.src`) o `mode: 'fetch'` (petición HTTP
+  binaria por foto, mismo contrato `url`/`method`/`headers`/`body` que `image.props.fetch`, resuelta con `item.*`
+  como contexto); en `fetch`, un campo opcional `idField` (añadido en T9, posterior al cierre inicial de T1-T7)
+  declara en qué propiedad del item está el id de control de cada elemento — si un elemento no resuelve un id
+  válido (string no vacío o number), se omite sin disparar la petición, sin exponer ese id como una referencia
+  nueva (la interpolación de `fetch` sigue leyendo solo `item.*`). Dos modos de visualización por instancia,
+  también obligatorios y mutuamente excluyentes: `display.mode: 'paginated'` (reutiliza sin modificar el mismo
+  modelo de paginación local de `repeater`/`table`, `createCollectionPaginationModel`/`CollectionPaginationControls`)
+  o `display.mode: 'carousel'` (1-3 imágenes visibles simultáneamente, autoplay y loop opcionales desactivados por
+  defecto, construido sobre `embla-carousel-react` + `embla-carousel-autoplay`, librería headless MIT elegida
+  porque no impone CSS propio — el markup de slides/flechas es JSX + Tailwind del propio proyecto). Lightbox propio
+  (no una instancia del nodo `modal`, para que cada iteración de `gallery` dentro de un `repeater` tenga su lightbox
+  aislado sin pasar por el registro global `openModal`/`closeModal`) con navegación anterior/siguiente sobre el
+  conjunto completo de fotos (no solo las visibles), cierre por botón/clic fuera/`Esc`; reutiliza la misma unidad de
+  resolución por-item que las tiles visibles (`useImageFetchSource`), de forma que el número de peticiones `fetch`
+  simultáneas queda acotado a "tiles renderizadas + como máximo una foto de lightbox", nunca al tamaño de la
+  colección — sin foco atrapado ni navegación por flechas de teclado dentro del lightbox (fuera de alcance v1
+  explícito). Code-splitting en dos niveles: a nivel de nodo (mismo patrón dual `eagerMap`/`lazyMap` que el resto
+  del catálogo) y, dentro del propio módulo de `gallery`, un `React.lazy` adicional solo para la vista de carrusel
+  (única que importa `embla`), de forma que una instancia en modo `paginated` nunca descarga ese chunk. Caso límite
+  no cubierto por el contrato textual heredado de `repeater`: declarar `source.key: "$key"` en origen dinámico
+  siempre resuelve a ninguna key válida y deja la galería sin fotos sin error, porque el origen dinámico de
+  `gallery` solo resuelve colecciones de forma array (nunca la variante objeto/diccionario que sí soporta
+  `repeater`). Soporte completo en `dev-editor`: selector "Origen" (Estático/Dinámico, mismo patrón de segmentos que
+  el "Modo" de `container`) y, en Dinámico, un widget dedicado para `props.source` con su propio sub-selector
+  `mode` (`src`/`fetch`) que reutiliza el editor genérico ya existente de `image.props.fetch`.
 - `2026-08-25-12-01-table-row-references`: nuevo namespace de referencia `row.*` para el contexto de fila propio de
   `table`, que deja de usar `item.*` (cambio de comportamiento intencional, sin compatibilidad retroactiva ni alias).
   `row.*` navega el dato de la fila actual con la misma semántica de segmentos anidados que `item.*`, disponible en

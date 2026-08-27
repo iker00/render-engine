@@ -203,9 +203,9 @@ describe('getNodeTypeJsonSchema', () => {
 })
 
 describe('getSupportedNodeTypesCatalog', () => {
-  it('returns the full node type catalog (29 types)', () => {
+  it('returns the full node type catalog (30 types)', () => {
     const catalog = getSupportedNodeTypesCatalog()
-    expect(catalog).toHaveLength(29)
+    expect(catalog).toHaveLength(30)
     expect(catalog).toContain('container')
     expect(catalog).toContain('button')
     expect(catalog).toContain('hidden')

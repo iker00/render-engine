@@ -6,6 +6,7 @@ import { ColorSwatchPropertyField } from './color-swatch-property-field'
 import { ConditionGroupPropertyField } from './condition-group-property-field'
 import { DiscriminatedUnionPropertyField } from './discriminated-union-property-field'
 import { EnumPropertyField } from './enum-property-field'
+import { GalleryDynamicSourcePropertyField } from './gallery-dynamic-source-property-field'
 import { HeadingLevelPropertyField } from './heading-level-property-field'
 import { IconPickerPropertyField } from './icon-picker-property-field'
 import { KeyValuePropertyField } from './key-value-property-field'
@@ -53,6 +54,7 @@ interface WidgetComponentProps {
 // widget from outside this module, only this fixed catalog.
 const WIDGET_REGISTRY: Record<string, ComponentType<WidgetComponentProps>> = {
   'choice-items': ChoiceItemsPropertyField,
+  'gallery-dynamic-source': GalleryDynamicSourcePropertyField,
   'layout-span': LayoutSpanPropertyField,
   'heading-level': HeadingLevelPropertyField,
   'tabs-orientation': TabsOrientationPropertyField,

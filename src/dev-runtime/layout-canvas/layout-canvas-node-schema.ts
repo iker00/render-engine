@@ -16,6 +16,7 @@ import {
   fileInputNodeSchema,
   fileManagerNodeSchema,
   formNodeSchema,
+  galleryNodeSchema,
   headingNodeSchema,
   hiddenNodeSchema,
   imageNodeSchema,
@@ -66,6 +67,7 @@ const nodeSchemaByType: Record<LayoutNodeType, z.ZodType> = {
   toggle: toggleNodeSchema,
   hidden: hiddenNodeSchema,
   map: mapNodeSchema,
+  gallery: galleryNodeSchema,
   autocomplete: autocompleteNodeSchema,
 }
 

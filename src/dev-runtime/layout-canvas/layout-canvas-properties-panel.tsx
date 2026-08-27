@@ -17,6 +17,7 @@ import { getNodeTypeJsonSchema } from './layout-canvas-node-schema'
 import { NodePanelTabBar } from './node-panel-tab-bar'
 import { resolveNodePanelTabs, type NodePanelTabKey } from './node-panel-tabs'
 import { ContainerColumnsModePropertyField } from './property-fields/container-columns-mode-property-field'
+import { GalleryOriginModePropertyField } from './property-fields/gallery-origin-mode-property-field'
 import { LayoutSpanWidgetContext, type LayoutSpanRowRejection } from './property-fields/layout-span-widget-context'
 import { LinkContentModePropertyField } from './property-fields/link-content-mode-property-field'
 import { PropertyFieldDispatcher } from './property-fields/property-field-dispatcher'
@@ -74,7 +75,15 @@ const NOOP_SELECT_ANCESTOR = (_path: LayoutNodePath): void => {}
 // the top of the `Props` tabpanel; the dedicated keys are unaffected by where they render. T9
 // (0138) adds `tableRows`: the `table` rows/columns/cells widget (T8) commits the entire node too
 // (D4), for the same reason — `headers`/`rows`/`columns` must commit as one coordinated mutation.
-type PendingRejectionKey = NodePanelTabKey | 'submitAction' | 'containerColumnsMode' | 'tableRows' | 'repeaterGrid'
+// Feature 2026-08-25-14-49-gallery-node adds `galleryOriginMode`: the `gallery` "Origen" widget
+// (Estático/Dinámico) also commits the entire node, for the same reason as `containerColumnsMode`.
+type PendingRejectionKey =
+  | NodePanelTabKey
+  | 'submitAction'
+  | 'containerColumnsMode'
+  | 'tableRows'
+  | 'repeaterGrid'
+  | 'galleryOriginMode'
 
 // T9 (bug fix): `commitCanvasMutation` validates the *entire* config before applying a panel
 // commit (see dev-runtime.tsx). Switching a discriminated-union variant (T5) or adding a new
@@ -323,6 +332,38 @@ function resolveTablePropsSchema(propsSchema: Record<string, unknown>): Record<s
 
   const { headers: _headers, rows: _rows, columns: _columns, ...restProperties } = properties
   return { ...propsSchema, properties: restProperties }
+}
+
+/**
+ * Omits `properties.images`/`properties.source` from `gallery.props`'s generated schema depending
+ * on which origin is currently active (T1, feature 2026-08-25-14-49-gallery-node): the
+ * `GalleryOriginModePropertyField` special block above is the toggle's only editing surface —
+ * declaring both unconditionally would show a manual `images` array editor and a `source` editor
+ * simultaneously, defeating the point of the toggle, the same "generic dispatcher stops iterating
+ * this key for this node type" precedent `resolveContainerPropsSchema` already establishes for
+ * `container.props.columns`. The active origin's own key (`images` when static, `source` when
+ * dynamic) passes through — `images` keeps the generic array-of-`{src,alt}` editor unchanged;
+ * `source` is additionally swapped for the `{ 'x-widget': 'gallery-dynamic-source' }` sentinel,
+ * resolved by the dispatcher's `x-widget` hook to `GalleryDynamicSourcePropertyField` — same
+ * swap-only-that-key pattern as `resolveChoiceLikePropsSchema` for `select.props.items`. `display`
+ * (common to both origins) is untouched either way.
+ */
+function resolveGalleryPropsSchema(propsSchema: Record<string, unknown>, propsValue: unknown): Record<string, unknown> {
+  const properties = propsSchema.properties
+  if (!isPlainObject(properties) || (!('images' in properties) && !('source' in properties))) return propsSchema
+
+  const isStatic = isPlainObject(propsValue) && propsValue.images !== undefined
+  const { images: imagesSchema, source: sourceSchema, ...restProperties } = properties
+
+  const nextProperties: Record<string, unknown> = { ...restProperties }
+  if (isStatic && imagesSchema) {
+    nextProperties.images = imagesSchema
+  }
+  if (!isStatic && sourceSchema) {
+    nextProperties.source = { 'x-widget': 'gallery-dynamic-source' }
+  }
+
+  return { ...propsSchema, properties: nextProperties }
 }
 
 /**
@@ -617,6 +658,30 @@ export function LayoutCanvasPropertiesPanel({
               </div>
             )
           })()}
+        {node.type === 'gallery' &&
+          (() => {
+            const pendingRejection = pendingRejections.galleryOriginMode
+            const displayedNode = pendingRejection ? (pendingRejection.value as typeof node) : node
+
+            return (
+              <div className="flex flex-col gap-2">
+                <GalleryOriginModePropertyField
+                  label="Origen"
+                  node={displayedNode}
+                  onChange={(nextNode) => {
+                    const result = onCommitNodeUpdate(path, () => nextNode)
+                    recordCommitResult('galleryOriginMode', nextNode, result)
+                  }}
+                />
+                {pendingRejection && (
+                  <CommitRejectionBanner
+                    dataTestId="layout-canvas-properties-panel-galleryOriginMode-error"
+                    error={pendingRejection.error}
+                  />
+                )}
+              </div>
+            )
+          })()}
         {node.type === 'form' &&
           submitActionSchema &&
           (() => {
@@ -742,6 +807,9 @@ export function LayoutCanvasPropertiesPanel({
     }
     if (key === 'props' && node.type === 'repeater' && effectiveSchema) {
       effectiveSchema = resolveRepeaterPropsSchema(effectiveSchema)
+    }
+    if (key === 'props' && node.type === 'gallery' && effectiveSchema) {
+      effectiveSchema = resolveGalleryPropsSchema(effectiveSchema, currentValue)
     }
     if (key === 'props' && CHOICE_LIKE_NODE_TYPES.has(node.type) && effectiveSchema) {
       effectiveSchema = resolveChoiceLikePropsSchema(effectiveSchema)

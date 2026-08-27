@@ -32,6 +32,7 @@ Los conceptos transversales (`visibility`, `queryStateFeedback`, referencias din
 | [divider.md](./divider.md) | `divider` — separador visual horizontal con cuatro variantes: `solid` (línea continua), `dashed` (línea discontinua), `dotted` (línea punteada), `invisible` (espaciador sin línea). No acepta `children` ni etiqueta. |
 | [skeleton.md](./skeleton.md) | `skeleton` — placeholder de carga con forma de silueta, tres variantes: `rect` (rectángulo), `text` (líneas apiladas), `circle` (círculo). Soporta animación pulse y uso primario en `queryStateFeedback.states.loading.fallback`. |
 | [map.md](./map.md) | `map` — mapa `Leaflet` con centro/zoom/altura configurables, marcadores estáticos (`props.markers`) o derivados de una colección `queries.*` (`props.markerSources`) con paleta cíclica de color por fuente, popup por marcador. Componente cargado de forma diferida (code-splitting propio). |
+| [gallery.md](./gallery.md) | `gallery` — colección de imágenes con origen manual (`props.images`) o dinámico (`props.source`, `queries.*`/`item.*`, submodo `src`/`fetch` por foto), vista paginada o carrusel (`embla-carousel-react`, code-splitting propio de dos niveles), lightbox de navegación entre todas las fotos. Soporte completo en `dev-editor`. |
 
 ## Nodos modales
 

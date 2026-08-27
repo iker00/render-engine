@@ -150,6 +150,12 @@ export function buildDefaultNodeInstance(type: LayoutNodeType): LayoutNode {
     case 'map':
       return { type: 'map' }
 
+    case 'gallery':
+      return {
+        type: 'gallery',
+        props: { images: [], display: { mode: 'paginated', pagination: { pageSize: 6 } } },
+      }
+
     case 'autocomplete':
       return {
         type: 'autocomplete',

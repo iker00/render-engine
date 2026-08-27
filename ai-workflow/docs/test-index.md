@@ -66,6 +66,7 @@ Ficheros de apoyo, no son tests: `config-validation/helpers.ts`, `dev-runtime/lu
 - `runtime-config-validation-forms-semantics.test.ts` — formularios: restricciones de placement, IDs duplicados, submitAction y persistOnUnmount
 - `runtime-config-validation-forms-tabs.test.ts` — semántica de `tabs` dentro de `form`: fieldId único cross-item, restricciones de placement y submitAction
 - `runtime-config-validation-forms-validations.test.ts` — formularios: aceptación y normalización de reglas de validación
+- `runtime-config-validation-gallery.test.ts` — validación del nodo `gallery`: aceptación (origen manual/dinámico, submodo src/fetch, idField, display paginado/carrusel, transversales) y rechazo (exclusiones mutuas, shapes inválidos)
 - `runtime-config-validation-global-preloads.test.ts` — bloque raíz `preloads`: aceptación, cross-check contra el catálogo `api` y rechazo de shapes inválidos
 - `runtime-config-validation-hidden.test.ts` — validación del nodo `hidden`: fieldId y value, props/rasgos prohibidos y unicidad en formulario
 - `runtime-config-validation-image-fetch.test.ts` — validación de nodo `image` con bloque `fetch`: url/alt/method/headers/body y coexistencia con contrato clásico src+alt
@@ -110,6 +111,8 @@ Ficheros de apoyo, no son tests: `config-validation/helpers.ts`, `dev-runtime/lu
 - `layout-renderer-forms-fields.test.tsx` — tipos de campo expandidos, opciones dinámicas, labels/valores interpolados y defaults lazy
 - `layout-renderer-forms-multi-operation.test.tsx` — submitAction executeOperations: paralelismo, resetOnSuccess, errores por entrada, snapshot compartido e iteración en repeater
 - `layout-renderer-forms.test.tsx` — forms declarativos, orden de campos, labels interpolados y semántica de secciones
+- `layout-renderer-gallery.test.tsx` — nodo gallery: origen estático/dinámico (queries.*/item.* en repeater), exclusión mutua de origen, modo paginado, lightbox, degradación silenciosa por elemento en submodo src y fetch, transversales, colección vacía
+- `layout-renderer-gallery-carousel.test.tsx` — nodo gallery en modo carrusel end-to-end (visibleCount, autoplay, loop, navegación manual)
 - `layout-renderer-grid-spans.test.tsx` — layout.span, columnas responsive, clamping y fallbacks móvil
 - `layout-renderer-hidden.test.tsx` — nodo hidden: sin DOM, value literal/dinámico, inicialización no lazy, inclusión en payload y uso en repeater
 - `layout-renderer-image-fetch.test.tsx` — nodo image con fetch: ciclo del blob, errores, revocación al desmontar, aislamiento e integración con repeater
@@ -188,6 +191,11 @@ Ficheros de apoyo, no son tests: `config-validation/helpers.ts`, `dev-runtime/lu
 - `runtime-form-validations.test.ts` — validaciones locales de formulario en submit
 - `runtime-formatter-parser.test.ts` — parser de placeholders `referencia | formatter[:arg] | ...` y su gramática
 - `runtime-formatter-registry.test.ts` — catálogo cerrado v1 de formatters con locale fijo `es-ES` y cache de instancias `Intl`
+- `runtime-gallery-carousel-view.test.tsx` — `GalleryCarouselView`: loop, autoplay, visibleCount, navegación manual y deshabilitado de flechas en extremos
+- `runtime-gallery-lightbox.test.tsx` — `GalleryLightbox`: navegación anterior/siguiente acotada al conjunto completo, cierre por botón/clic fuera/Esc, reutilización de la unidad de fetch ya montada
+- `runtime-gallery-paginated-view.test.tsx` — `GalleryPaginatedView`: variantes previousNext/numbered/scroll y reset de posición al cambiar la colección
+- `runtime-gallery-photo-tile.test.tsx` — `GalleryPhotoTile`: split modo src/fetch, click de selección y degradación sin `<img>` mientras el fetch no resuelve
+- `runtime-gallery-photos.test.ts` — `resolveGalleryPhotos`: origen estático y dinámico, key ($index/$key/ruta relativa, duplicados), submodo src/fetch, idField (FR7) y degradación silenciosa por elemento
 - `runtime-global-preloads.test.tsx` — bloque raíz `preloads` end-to-end: fetch al montar, dedup, reintentos y regresión
 - `runtime-grid-drop-zone-rects.test.ts` — geometría pura de zonas de inserción overlay en containers grid
 - `runtime-icon-node.test.tsx` — `IconNode`: resolución Pascal/kebab, aplicación de `className` y degradación silenciosa
@@ -197,6 +205,7 @@ Ficheros de apoyo, no son tests: `config-validation/helpers.ts`, `dev-runtime/lu
 - `runtime-link-action-href.test.ts` — resolutor puro de `href` para acciones `navigateTo`/`goBack` sobre el hash del navegador
 - `runtime-map-marker-sources.test.ts` — `resolveMapMarkerSourceItems`: resolución de colección dinámica a marcadores, degradación silenciosa ante posición inválida, label por interpolación o ruta relativa
 - `runtime-node-components-map.test.tsx` — mapa central de componentes de nodo: cobertura de claves y rama eager en tests
+- `runtime-node-styling-gallery.test.ts` — helpers puros de estilo del nodo gallery: clases Tailwind de grid paginado, controles de paginación/carrusel/lightbox y placeholder vacío
 - `runtime-node-styling-map.test.ts` — helpers puros de estilo del nodo map: clase Tailwind de altura por variante y `divIcon` de marcador por color semántico
 - `runtime-node-styling.test.ts` — utilidades de estilo y clases Tailwind de nodos
 - `runtime-page-document-title.test.tsx` — efecto de `document.title` por página: inicial, navegación, formato y renders adicionales
@@ -246,10 +255,13 @@ Ficheros de apoyo, no son tests: `config-validation/helpers.ts`, `dev-runtime/lu
 - `layout-canvas-palette-insert.test.tsx` — paleta e inserción por arrastre respetando reglas de destino
 - `layout-canvas-properties-panel-commit-feedback.test.tsx` — feedback de commit rechazado del panel de propiedades y persistencia del valor introducido
 - `layout-canvas-properties-panel.test.tsx` — panel de propiedades del nodo seleccionado con sus widgets y subsecciones
+- `layout-canvas-properties-panel-gallery.test.tsx` — panel de propiedades end-to-end para `gallery`: selector Origen (Estático/Dinámico) y widget de `props.source` en modo dinámico, con visibilidad condicional de los campos generados por el dispatcher
 - `layout-canvas-property-field-choice-items.test.tsx` — editor de items de elección con modos manual literal, escalar y dinámico
 - `layout-canvas-property-field-color-swatch.test.tsx` — widget aislado de muestras de color con roving tabindex y flechas
 - `layout-canvas-property-field-container-columns-mode.test.tsx` — widget del modo del container que alterna Grid/Columnas preservando el resto de props
 - `layout-canvas-property-field-dispatcher.test.tsx` — dispatcher genérico de campos de propiedades y hook de widgets registrados
+- `layout-canvas-property-field-gallery-dynamic-source.test.tsx` — widget aislado `GalleryDynamicSourcePropertyField`: modos src/fetch, cambio de modo, `idField` (FR7) y degradación ante valor no reconocible
+- `layout-canvas-property-field-gallery-origin-mode.test.tsx` — widget aislado `GalleryOriginModePropertyField`: detección de modo, alternancia Estático/Dinámico (sin restaurar el valor descartado) e idempotencia
 - `layout-canvas-property-field-heading-level.test.tsx` — widget aislado del nivel de heading como radiogroup H1..H5
 - `layout-canvas-property-field-key-value.test.tsx` — editor clave-valor para mapas string a string con excepción de body y predicado de editabilidad por fila configurable
 - `layout-canvas-property-field-layout-span-occupancy-preview.test.tsx` — barra de vista previa de ocupación del span con clamp y leyenda

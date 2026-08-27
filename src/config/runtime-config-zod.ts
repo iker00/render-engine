@@ -30,6 +30,7 @@ export const supportedNodeTypes = [
   'toggle',
   'hidden',
   'map',
+  'gallery',
   'autocomplete',
 ] as const
 
@@ -979,6 +980,84 @@ export const mapNodeSchema = z
       })
       .strip()
       .optional(),
+    children: z.never().optional(),
+  })
+  .strip()
+
+const galleryStaticImageSchema = z
+  .object({
+    src: nonEmptyStringSchema,
+    alt: nonEmptyStringSchema,
+  })
+  .strict()
+
+// Flexible source shape that accepts either the src or fetch branch (plus source/key/alt/mode).
+// Mutual exclusion between mode: 'src'/'fetch' and their matching field is enforced imperatively
+// by validateGalleryNode after parsing, the same way validateImageNode handles src/fetch.
+const galleryDynamicSourceSchema = z
+  .object({
+    source: nonEmptyStringSchema,
+    key: nonEmptyStringSchema,
+    alt: nonEmptyStringSchema,
+    mode: z.enum(['src', 'fetch']),
+    src: nonEmptyStringSchema.optional(),
+    fetch: imageFetchSchema.optional(),
+    idField: nonEmptyStringSchema.optional(),
+  })
+  .strict()
+
+const galleryPaginationControlsSchema = z
+  .object({
+    variant: z.enum(supportedCollectionPaginationControlsVariants).optional(),
+  })
+  .strict()
+
+// Same closed shape as repeater.props.pagination but without `enabled`: gallery pagination is
+// always active once display.mode: 'paginated' is declared.
+const galleryPaginationSchema = z
+  .object({
+    pageSize: z.number().int().finite().min(1),
+    controls: galleryPaginationControlsSchema.optional(),
+  })
+  .strict()
+
+const galleryPaginatedDisplaySchema = z
+  .object({
+    mode: z.literal('paginated'),
+    pagination: galleryPaginationSchema,
+  })
+  .strict()
+
+const galleryAutoplaySchema = z
+  .object({
+    enabled: z.literal(true),
+    intervalMs: z.number().int().positive(),
+  })
+  .strict()
+
+const galleryCarouselDisplaySchema = z
+  .object({
+    mode: z.literal('carousel'),
+    visibleCount: z.number().int().min(1).max(3),
+    autoplay: galleryAutoplaySchema.optional(),
+    loop: z.boolean().optional(),
+  })
+  .strict()
+
+export const galleryNodeSchema = z
+  .object({
+    type: z.literal('gallery'),
+    id: nodeIdSchema.optional(),
+    queryStateFeedback: queryStateFeedbackSchema.optional(),
+    visibility: visibilitySchema.optional(),
+    layout: layoutNodeLayoutSchema.optional(),
+    props: z
+      .object({
+        images: z.array(galleryStaticImageSchema).optional(),
+        source: galleryDynamicSourceSchema.optional(),
+        display: z.discriminatedUnion('mode', [galleryPaginatedDisplaySchema, galleryCarouselDisplaySchema]),
+      })
+      .strict(),
     children: z.never().optional(),
   })
   .strip()

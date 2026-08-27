@@ -220,6 +220,11 @@ export function LayoutNodeRenderer({ node, renderedChildren, iterationContext, p
       renderedNode = <MapNode node={node} iterationContext={iterationContext} />
       break
     }
+    case 'gallery': {
+      const GalleryNode = NodeComponents.gallery
+      renderedNode = <GalleryNode node={node} iterationContext={iterationContext} />
+      break
+    }
     case 'autocomplete': {
       const AutocompleteNode = NodeComponents.autocomplete
       renderedNode = <AutocompleteNode node={node} iterationContext={iterationContext} />

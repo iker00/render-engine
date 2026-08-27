@@ -42,6 +42,7 @@ import {
 } from './validate-form-field-nodes'
 import { validateHiddenNode } from './validate-hidden-node'
 import { validateMapNode } from './validate-map-node'
+import { validateGalleryNode } from './validate-gallery-node'
 import { validateAutocompleteNode } from './validate-autocomplete-node'
 
 export function validateLayoutCollection(
@@ -152,6 +153,8 @@ export function validateLayoutNode(
       return validateHiddenNode(rawNode, path, pageId, breadcrumb)
     case 'map':
       return validateMapNode(rawNode, path, pageId, breadcrumb)
+    case 'gallery':
+      return validateGalleryNode(rawNode, path, pageId, breadcrumb)
     case 'autocomplete':
       return validateAutocompleteNode(rawNode, path, pageId, breadcrumb)
   }
