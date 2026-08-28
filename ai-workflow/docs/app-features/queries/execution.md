@@ -13,6 +13,7 @@
 - `button.props.action.type: executeOperations` (plural) lanza en paralelo un array de operaciones, cada una con overrides opcionales de `query`, `body` y `headers` por operación. Cada operación actualiza `queries.{operationName}` de forma independiente.
 - `form.submitAction.type: executeOperation` reutiliza la misma fachada compartida desde el submit nativo del formulario.
 - `form.submitAction.type: executeOperations` (plural) lanza en paralelo un array de operaciones con la misma política de overrides que botones, y aplica `resetOnSuccess` de forma colectivo: el formulario solo se resetea si **todas** las operaciones terminan en éxito.
+- `steps.props.items[i].onNext` reutiliza esa misma fachada compartida para gatear el avance desde un paso (o el envío del `form` en el último paso): solo tras superar la validación de campos del paso se ejecuta, y un resultado en error bloquea el avance sin disparar `submitAction`.
 - Cuando la acción o el submit ocurren dentro de un `repeater`, `query`, `body` y `headers` también pueden resolverse desde `item.*` para la iteración activa.
 - La UI no construye manualmente URLs, query strings ni payloads JSON.
 

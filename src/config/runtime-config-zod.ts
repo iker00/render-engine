@@ -649,11 +649,21 @@ export const tabsNodeSchema = z
   })
   .strip()
 
+export const stepOnNextActionSchema = z
+  .object({
+    operationName: nonEmptyStringSchema,
+    query: runtimeApiQuerySchema.optional(),
+    body: runtimeApiBodySchema.optional(),
+    headers: runtimeApiHeadersSchema.optional(),
+  })
+  .strip()
+
 export const stepsItemSchema = z
   .object({
     label: z.string(),
     children: z.array(z.unknown()).optional(),
     visibility: visibilitySchema.optional(),
+    onNext: stepOnNextActionSchema.optional(),
   })
   .strip()
 

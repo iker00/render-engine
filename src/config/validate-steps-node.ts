@@ -46,6 +46,12 @@ export function validateStepsNode(
       return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.items[${itemIndex}]${remainingSegments}".`, breadcrumb, rawNode)
     }
 
+    if (issuePath[0] === 'props' && issuePath[1] === 'items' && typeof issuePath[2] === 'number' && issuePath[3] === 'onNext') {
+      const itemIndex = issuePath[2]
+      const remainingSegments = issuePath.slice(3).map(formatPathSegment).join('')
+      return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.items[${itemIndex}]${remainingSegments}".`, breadcrumb, rawNode)
+    }
+
     if (issuePath[0] === 'props' && issuePath[1] === 'items') {
       return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.items".`, breadcrumb, rawNode)
     }
@@ -112,7 +118,12 @@ export function validateStepsNode(
       children = childrenResult.nodes
     }
 
-    normalizedItems.push({ label: rawItem.label, children, visibility: itemVisibilityResult.visibility })
+    normalizedItems.push({
+      label: rawItem.label,
+      children,
+      visibility: itemVisibilityResult.visibility,
+      onNext: parseResult.data.props.items[index]?.onNext,
+    })
   }
 
   return {

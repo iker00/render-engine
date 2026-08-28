@@ -135,6 +135,20 @@ function validateExecutionRequestParamsInCollection(
       }
     }
 
+    if (node.type === 'steps') {
+      for (let itemIndex = 0; itemIndex < node.props.items.length; itemIndex += 1) {
+        const item = node.props.items[itemIndex]
+
+        if (item.onNext) {
+          const operation = api[item.onNext.operationName]
+
+          if (operation?.method === 'GET' && item.onNext.body !== undefined) {
+            return enrichedInvalidLayoutFromNode(`Page "${pageId}" has an invalid layout at "${nodePath}.props.items[${itemIndex}].onNext.body": GET operations do not support body.`, nodeBreadcrumb, node)
+          }
+        }
+      }
+    }
+
     if (node.type === 'tabs') {
       for (let itemIndex = 0; itemIndex < node.props.items.length; itemIndex += 1) {
         const item = node.props.items[itemIndex]

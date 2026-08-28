@@ -221,7 +221,7 @@ export function LayoutNodeRenderer({ node, renderedChildren, iterationContext, p
     }
     case 'steps': {
       const StepsNode = NodeComponents.steps
-      renderedNode = <StepsNode node={node} iterationContext={iterationContext} />
+      renderedNode = <StepsNode node={node} iterationContext={iterationContext} path={path} />
       break
     }
   }

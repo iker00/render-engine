@@ -80,6 +80,7 @@ Ficheros de apoyo, no son tests: `config-validation/helpers.ts`, `dev-runtime/lu
 - `runtime-config-validation-shell.test.ts` — bloque raíz `shell`: header, sidebar, scrollBehavior y validación cruzada de sus campos
 - `runtime-config-validation-skeleton.test.ts` — validación del nodo `skeleton`: variantes, props opcionales, transversales, placement y rechazos de shape
 - `runtime-config-validation-stat.test.ts` — validación del nodo `stat`: props label/value/variant/color/layout.span y rechazo de shape inválido
+- `runtime-config-validation-steps.test.ts` — validación de `steps.props.items[i].onNext`: shape, operationName existente/inexistente y rechazo de body sobre operación GET
 - `runtime-config-validation-tabs.test.ts` — nodo `tabs` fuera de formulario: shape de items, orientation, defaultTab, children y visibility por item
 - `runtime-config-validation-toggle.test.ts` — validación del nodo `toggle`: props, defaultValue, validations aplicables, form-only y unicidad de fieldId
 - `runtime-config-validation-tokens.test.ts` — bloque `tokens`: esquema de token con `value` y `refresh` y validación cruzada contra operaciones API
@@ -92,7 +93,7 @@ Ficheros de apoyo, no son tests: `config-validation/helpers.ts`, `dev-runtime/lu
 
 ## layout-renderer/
 
-- `layout-node-renderer-edit-mode.test.tsx` — modelo de path, threading en LayoutRenderer, wrapper de selección/hover bajo LayoutEditModeContext y steps row/cells de tabla
+- `layout-node-renderer-edit-mode.test.tsx` — modelo de path (incluye tramos tabItem/stepItem, row/cells de tabla), threading en LayoutRenderer y wrapper de selección/hover bajo LayoutEditModeContext
 - `layout-renderer-accordion-edit-mode.test.tsx` — accordion en modo edición con cuerpo siempre presente, path de hijos y regresión de colapso en producción
 - `layout-renderer-accordion.test.tsx` — nodo accordion: estado inicial, toggle, ARIA, interpolación de label, coordinación por groupId, transversales e integración en repeater
 - `layout-renderer-alert.test.tsx` — nodo alert: colores por tipo, icono, title/message, interpolación, transversales e integración con repeater y form
@@ -123,6 +124,8 @@ Ficheros de apoyo, no son tests: `config-validation/helpers.ts`, `dev-runtime/lu
 - `layout-renderer-skeleton.test.tsx` — nodo skeleton: variantes rect/text/circle, animación, transversales y uso como fallback de queryStateFeedback
 - `layout-renderer-stat.test.tsx` — nodo stat: variantes accent/tinted, paleta de colores, interpolación, transversales e integración en repeater y form
 - `layout-renderer-state-feedback.test.tsx` — queryStateFeedback en todos los estados y reglas de visibility
+- `layout-renderer-steps-edit-mode.test.tsx` — steps en modo edición: path con tramo stepItem por paso activo y regresión de navegación en producción
+- `layout-renderer-steps.test.tsx` — nodo steps: navegación entre pasos, validación por paso, gating de `onNext` (paso intermedio y envío del último paso), transversales y modo Editor sin gating de validación
 - `layout-renderer-table-edit-mode.test.tsx` — selección/edición visual de celdas-nodo de tabla en modo Editor con paths propios y aislamiento por celda
 - `layout-renderer-table-pagination.test.tsx` — paginación de tabla: previousNext, numbered, scroll e IntersectionObserver
 - `layout-renderer-table-rich-cells.test.tsx` — celdas ricas de tabla con nodos anidados, item.* dinámico, visibility/qsf y filtros/ordenación
@@ -252,7 +255,7 @@ Ficheros de apoyo, no son tests: `config-validation/helpers.ts`, `dev-runtime/lu
 - `layout-canvas-property-field-table-rows.test.tsx` — widget aislado de filas y columnas de tabla en modo manual y dinámico
 - `layout-canvas-property-field-tabs-orientation.test.tsx` — widget aislado de la orientación de tabs como radiogroup horizontal/vertical
 - `layout-canvas-reorder-reinsert.test.tsx` — reordenar y reanidar nodos por arrastre end-to-end con seguimiento de selección
-- `layout-tree-mutations.test.ts` — funciones puras de mutación del árbol por path, incluyendo tablas y tabs
+- `layout-tree-mutations.test.ts` — funciones puras de mutación del árbol por path, incluyendo tablas, tabs y steps
 - `navigate-params-property-field.test.tsx` — widget aislado de `navigateTo.params` con degradación a solo lectura para valores no-string
 - `node-panel-tab-bar.test.tsx` — barra de pestañas accesible del panel de nodo con roving tabindex y flechas circulares
 - `node-panel-tabs.test.ts` — resolución pura del catálogo de pestañas del panel según el schema y el contexto

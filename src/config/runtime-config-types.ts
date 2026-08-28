@@ -506,10 +506,18 @@ export interface TabsLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayo
 
 export type StepsVariant = 'horizontal' | 'vertical' | 'progress'
 
+export interface StepOnNextAction {
+  operationName: string
+  query?: RuntimeApiQuery
+  body?: RuntimeApiBodyValue
+  headers?: RuntimeApiHeaders
+}
+
 export interface StepsItem {
   label: string
   children?: LayoutNode[]
   visibility?: RuntimeVisibilityConfig
+  onNext?: StepOnNextAction
 }
 
 export interface StepsLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayoutFields {

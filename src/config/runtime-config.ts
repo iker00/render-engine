@@ -107,6 +107,7 @@ export type {
   StepsLayoutNode,
   StepsVariant,
   StepsItem,
+  StepOnNextAction,
   TableLayoutNode,
   TableManualRows,
   TableRows,

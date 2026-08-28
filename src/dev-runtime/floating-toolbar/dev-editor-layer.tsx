@@ -269,10 +269,11 @@ export function DevEditorLayer({
   // onDropAttempt (raw) always fires first, isValidDropTarget gates whether a commit can ever
   // happen, and a successful move of the selected node re-resolves its new path afterwards.
   function handleDropAttempt(attempt: LayoutCanvasDropAttempt) {
-    const { draggedPath, draggedNodeType, targetParentPath, targetIndex, targetTabItemIndex } = attempt
+    const { draggedPath, draggedNodeType, targetParentPath, targetIndex, targetTabItemIndex, targetStepItemIndex } = attempt
 
     const isStructurallyValid = isValidDropTarget(activePageLayout, draggedPath, targetParentPath, targetIndex, {
       targetTabItemIndex,
+      targetStepItemIndex,
       draggedNodeType,
     })
     if (!isStructurallyValid) return
@@ -285,6 +286,7 @@ export function DevEditorLayer({
       onCommitCanvasMutation((pageLayout) =>
         insertNodeAt(pageLayout, targetParentPath, targetIndex, buildDefaultNodeInstance(nodeType), {
           tabItemIndex: targetTabItemIndex,
+          stepItemIndex: targetStepItemIndex,
         }),
       )
       return
@@ -293,6 +295,7 @@ export function DevEditorLayer({
     const applyMove = (pageLayout: LayoutNode[]) =>
       movePathTo(pageLayout, draggedPath, targetParentPath, targetIndex, {
         toTabItemIndex: targetTabItemIndex,
+        toStepItemIndex: targetStepItemIndex,
       })
 
     const result = onCommitCanvasMutation(applyMove)

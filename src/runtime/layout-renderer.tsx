@@ -25,6 +25,12 @@ export interface LayoutRendererProps {
    * they need no equivalent — `parentPath` for their drop zones is just `path`.
    */
   parentTabItemIndex?: number
+  /**
+   * Drop-zone disambiguator, paralleling `parentTabItemIndex` (T4 / design.md D4): set only by
+   * `StepsNode` when rendering the active step's children, since `path` there is the steps
+   * node's own path (shared by every step item), not a per-stepItem path.
+   */
+  parentStepItemIndex?: number
 }
 
 export function LayoutRenderer({
@@ -33,6 +39,7 @@ export function LayoutRenderer({
   path = [],
   buildChildPath,
   parentTabItemIndex,
+  parentStepItemIndex,
 }: LayoutRendererProps) {
   const editModeContext = useLayoutEditModeContext()
   const { parentGridColumns } = useRuntimeLayoutContext()
@@ -67,6 +74,7 @@ export function LayoutRenderer({
         parentPath={path}
         index={0}
         tabItemIndex={parentTabItemIndex}
+        stepItemIndex={parentStepItemIndex}
       />,
     )
   }
@@ -99,6 +107,7 @@ export function LayoutRenderer({
           parentPath={path}
           index={index + 1}
           tabItemIndex={parentTabItemIndex}
+          stepItemIndex={parentStepItemIndex}
         />,
       )
     }
@@ -122,14 +131,15 @@ interface LayoutCanvasDropZoneGapProps {
   parentPath: LayoutNodePath
   index: number
   tabItemIndex?: number
+  stepItemIndex?: number
 }
 
 // A minimal, unstyled-by-default drop target participating in the real flex/grid flow of its
 // parent container, so its measured rect (and therefore its collision center) reflects the
 // actual visual layout without any custom geometry math on our side (see T12 note on grids
 // vs vertical lists).
-function LayoutCanvasDropZoneGap({ parentPath, index, tabItemIndex }: LayoutCanvasDropZoneGapProps) {
-  const dropZoneId = serializeDropZoneId({ parentPath, index, tabItemIndex })
+function LayoutCanvasDropZoneGap({ parentPath, index, tabItemIndex, stepItemIndex }: LayoutCanvasDropZoneGapProps) {
+  const dropZoneId = serializeDropZoneId({ parentPath, index, tabItemIndex, stepItemIndex })
   const { setNodeRef } = useDroppable({ id: dropZoneId })
 
   return <div ref={setNodeRef} data-drop-zone={dropZoneId} aria-hidden="true" className="h-1 min-w-1" />

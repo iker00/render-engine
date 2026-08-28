@@ -44,7 +44,7 @@ Los conceptos transversales (`visibility`, `queryStateFeedback`, referencias din
 | Nodo | Cuándo leer la ficha |
 |---|---|
 | [form.md](./form.md) | `form` como contenedor, `submitAction`, `persistOnUnmount`, `resetOnSuccess`, niños permitidos. |
-| [steps.md](./steps.md) | `steps` — formulario en pasos secuenciales (wizard), exclusivo dentro de `form`, navegación gateada por validación al pulsar "Siguiente", retroceso libre, tres variantes visuales (`horizontal`/`vertical`/`progress`), inicialización lazy por paso, botones de navegación autogenerados. |
+| [steps.md](./steps.md) | `steps` — formulario en pasos secuenciales (wizard), exclusivo dentro de `form`, navegación gateada por validación al pulsar "Siguiente" con gating adicional opcional por API (`onNext`), retroceso libre, tres variantes visuales (`horizontal`/`vertical`/`progress`), inicialización lazy por paso, botones de navegación autogenerados. |
 | [input.md](./input.md) | `input` con catálogo de `inputType`, validaciones aplicables, `defaultValue`. |
 | [textarea.md](./textarea.md) | Entrada multilínea. |
 | [select.md](./select.md) | Selección simple o múltiple, shapes de `items` manuales o dinámicos. |

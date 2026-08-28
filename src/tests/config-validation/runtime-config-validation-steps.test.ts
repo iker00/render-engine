@@ -279,3 +279,116 @@ describe('validateRuntimeConfig — steps inside form', () => {
     }
   })
 })
+
+describe('validateRuntimeConfig — steps item onNext', () => {
+  it('accepts a steps item with onNext declaring only operationName', () => {
+    const result = validateRuntimeConfig(
+      createStepsFormConfig({
+        props: {
+          items: [{ label: 'Step 1', onNext: { operationName: 'submitUserForm' } }],
+        },
+      }),
+    )
+    expect(result.status).toBe('ready')
+  })
+
+  it('accepts a steps item with onNext declaring operationName, query, body and headers', () => {
+    const result = validateRuntimeConfig(
+      createStepsFormConfig({
+        props: {
+          items: [
+            {
+              label: 'Step 1',
+              onNext: {
+                operationName: 'submitUserForm',
+                query: { page: 1 },
+                body: { note: 'ok' },
+                headers: { 'X-Trace': 'abc' },
+              },
+            },
+          ],
+        },
+      }),
+    )
+    expect(result.status).toBe('ready')
+  })
+
+  it('rejects a steps item onNext without operationName', () => {
+    const result = validateRuntimeConfig(
+      createStepsFormConfig({
+        props: { items: [{ label: 'Step 1', onNext: {} }] },
+      }),
+    )
+    expect(result.status).toBe('error')
+    if (result.status === 'error') {
+      expect(result.error.code).toBe('invalid-layout')
+      expect(result.error.message).toContain('items[0].onNext')
+    }
+  })
+
+  it('rejects a steps item onNext with an empty operationName', () => {
+    const result = validateRuntimeConfig(
+      createStepsFormConfig({
+        props: { items: [{ label: 'Step 1', onNext: { operationName: '' } }] },
+      }),
+    )
+    expect(result.status).toBe('error')
+    if (result.status === 'error') {
+      expect(result.error.code).toBe('invalid-layout')
+      expect(result.error.message).toContain('items[0].onNext')
+    }
+  })
+
+  it('rejects a steps item onNext.operationName that does not exist in api', () => {
+    const result = validateRuntimeConfig(
+      createStepsFormConfig({
+        props: { items: [{ label: 'Step 1', onNext: { operationName: 'unknownOperation' } }] },
+      }),
+    )
+    expect(result.status).toBe('error')
+    if (result.status === 'error') {
+      expect(result.error.code).toBe('invalid-layout')
+      expect(result.error.message).toContain('unknown operation "unknownOperation"')
+    }
+  })
+
+  it('rejects a steps item onNext with body when the referenced operation is GET', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithFormLayout(
+        {
+          children: [
+            createStepsNode({
+              props: {
+                items: [{ label: 'Step 1', onNext: { operationName: 'loadNextStep', body: { note: 'ok' } } }],
+              },
+            }),
+          ],
+        },
+        { api: { loadNextStep: { method: 'GET', endpoint: '/api/next-step' } } },
+      ),
+    )
+    expect(result.status).toBe('error')
+    if (result.status === 'error') {
+      expect(result.error.code).toBe('invalid-layout')
+      expect(result.error.message).toContain('GET operations do not support body')
+    }
+  })
+
+  it('accepts a steps item onNext without body when the referenced operation is GET', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithFormLayout(
+        {
+          children: [
+            createStepsNode({
+              props: {
+                items: [{ label: 'Step 1', onNext: { operationName: 'loadNextStep' } }],
+              },
+            }),
+          ],
+        },
+        { api: { loadNextStep: { method: 'GET', endpoint: '/api/next-step' } } },
+      ),
+    )
+    expect(result.status).toBe('ready')
+  })
+})

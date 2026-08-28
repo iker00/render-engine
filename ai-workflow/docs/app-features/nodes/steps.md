@@ -23,6 +23,7 @@ Nodo estructural que organiza un formulario en pasos secuenciales (wizard), excl
 | `label` | `string` | sí | Etiqueta visible del paso. Soporta interpolación `{{...}}`. |
 | `visibility` | `VisibilityRule` | no | Regla de visibilidad específica del item. Un paso oculto no aparece en el indicador, no es alcanzable y sus campos no participan en validación ni payload. |
 | `children` | `Node[]` | no | Nodos del panel de ese paso. Admite cualquier nodo válido del catálogo. |
+| `onNext` | `{ operationName: string, query?, body?, headers? }` | no | Operación de `api.*` que gatea el avance desde este paso (ver "Gating de avance con `onNext`" más abajo). Aplica igual al último paso, donde gatea el envío del `form`. |
 
 `steps` no acepta `children` en su raíz: solo `props.items[i].children`, igual que `tabs`.
 
@@ -43,10 +44,21 @@ Nodo estructural que organiza un formulario en pasos secuenciales (wizard), excl
 - El índice del paso más avanzado alcanzado (`maxVisitedIndex`) se actualiza solo al superarlo mediante un "Siguiente" válido, nunca al navegar hacia atrás.
 - Si el paso activo pasa a estar oculto por un cambio de `visibility` en runtime, el nodo activa automáticamente el primer paso visible disponible, sin intervención del usuario (mismo criterio que `tabs`).
 
+### Gating de avance con `onNext`
+
+- Cualquier item de `props.items` puede declarar `onNext: { operationName, query?, body?, headers? }`, una operación de `api.*` que gatea el avance desde ese paso. Aplica igual al último paso: ahí gatea el envío del `form` en vez del avance a un paso siguiente (ver "Botones de navegación").
+- Orden de evaluación al pulsar "Siguiente" (o el botón de envío si el último paso declara `onNext`): primero la validación de campos del paso activo, idéntica a un paso sin `onNext`. Solo si el paso es válido se ejecuta `onNext`; un paso con campos inválidos nunca llega a invocarlo.
+- Mientras `onNext` está en curso, el botón que lo disparó queda `disabled` y `aria-busy="true"`, y se muestra un indicador accesible `role="status"` (oculto visualmente) hasta que se resuelve.
+- Si `onNext` resuelve en error (error HTTP de la operación o su `errorCondition` de negocio), el paso no avanza y el mensaje de error se muestra bajo el panel con `role="alert"`. Un reintento que resuelve en éxito sustituye el error anterior; nunca se acumulan mensajes.
+- Si `onNext` resuelve en éxito, el paso avanza al siguiente paso visible con normalidad (o, en el último paso, se dispara el envío del `form`).
+- El botón "Atrás" nunca ejecuta `onNext`, en ningún paso — el retroceso sigue siendo libre y sin validación ni gating.
+- El estado de `onNext` (pendiente/error) es por instancia de `steps`, no por paso: al cambiar el paso activo (por ejemplo con "Atrás"), cualquier error de `onNext` pendiente se descarta.
+- Si el usuario navega fuera del paso que disparó `onNext` mientras la operación sigue en curso, el resultado se descarta al resolver: ni error ni avance se aplican sobre un paso que ya no es el activo.
+
 ### Botones de navegación
 
 - El nodo genera automáticamente hasta tres botones al final del panel activo: "Atrás", "Siguiente" y el botón de envío del último paso.
-- El botón del último paso visible se renderiza como `<button type="submit">` y dispara el `submitAction` ya existente del `form` padre — mismo mecanismo que usa hoy un `button` sin `action` dentro de `form`, sin ningún mecanismo de submit nuevo.
+- El botón del último paso visible se renderiza como `<button type="submit">` y dispara el `submitAction` ya existente del `form` padre — mismo mecanismo que usa hoy un `button` sin `action` dentro de `form`, sin ningún mecanismo de submit nuevo. **Excepción**: si el último item declara `onNext`, el botón se renderiza como `<button type="button">` con un interceptor que valida el paso, ejecuta `onNext` con el mismo gating de la sección anterior y, solo si resuelve en éxito, dispara `requestSubmit()` sobre el `form` para reutilizar el pipeline de envío existente. No existe ningún mecanismo de merge entre el resultado de `onNext` y el payload agregado del submit; son dos llamadas independientes a `api.*`.
 - Los botones "Atrás" y "Siguiente" son `type="button"` y no disparan submit nativo.
 - Cuando solo hay un paso visible, no se renderizan "Atrás" ni "Siguiente"; solo el botón de envío.
 - Los tres textos son configurables vía `props.backLabel`/`props.nextLabel`/`props.submitLabel`, con valores por defecto en inglés si no se personalizan.

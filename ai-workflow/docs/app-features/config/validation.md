@@ -30,11 +30,13 @@
 - Si `button.props.action.params` incluye arrays, objetos anidados o rutas `params.*` mal formadas, el config completo se rechaza antes del render sobre la ruta exacta.
 - Si un `button.props.action.operationName` apunta a una operación inexistente en `api`, el config completo se rechaza antes del render aunque el shape estructural sea válido.
 - Si `form.submitAction.operationName` apunta a una operación inexistente en `api`, el config completo se rechaza antes del render.
+- Si `steps.props.items[i].onNext.operationName` apunta a una operación inexistente en `api`, el config completo se rechaza antes del render, igual que `button.props.action.operationName`.
 - `resetForm` valida shape y `formId` no vacío, pero no intenta cerrar en bootstrap un catálogo semántico adicional de formularios.
 
 ## Reglas de `api` y headers
 - Si una operación `GET` declara `body`, el config completo se rechaza antes del render.
 - Si `button.props.action.type: executeOperation` o `form.submitAction` declaran `body` sobre una operación `GET`, el config completo se rechaza antes del render.
+- Si `steps.props.items[i].onNext` declara `body` sobre una operación `GET`, el config completo se rechaza antes del render, con el mismo criterio.
 - Si `api.headers`, `button.props.action.headers` o `form.submitAction.headers` usan valores no string, el config completo se rechaza antes del render.
 - Si `api.query`, `api.headers`, `button.props.action.query`, `button.props.action.headers`, `form.submitAction.query` o `form.submitAction.headers` contienen claves vacías, el config completo se rechaza antes del render.
 - `tokens.*` solo es soportado en superficies de `headers`: `api.{op}.headers`, `button.props.action.headers`, `form.submitAction.headers`, `preloads[].headers` e `executeOperations[].headers`. Referencias `tokens.*` en `query`, `body`, `params`, `visibility`, `defaultValue`, orígenes de colección o fuera de las superficies admitidas causan que el config se rechace antes del render.
