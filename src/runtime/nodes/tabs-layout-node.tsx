@@ -6,6 +6,7 @@ import { useRuntimeState } from '../runtime-state/use-runtime-state'
 import { LayoutRenderer } from '../layout-renderer'
 import { matchesVisibilityRule } from '../runtime-layout-visibility'
 import type { LayoutNodePath } from '../layout-node-path'
+import { IconNode } from './icon-node'
 import {
   getTabsBarClassName,
   getTabsButtonClassName,
@@ -99,6 +100,7 @@ function TabsNodeContent({ node, items, orientation, defaultTab, state, iteratio
             onClick={() => setActiveTab(index)}
             className={getTabsButtonClassName(isActive, orientation)}
           >
+            <IconNode name={item.icon} className="size-4 shrink-0 inline-block align-middle mr-2" />
             {resolvedLabel}
           </button>
         )

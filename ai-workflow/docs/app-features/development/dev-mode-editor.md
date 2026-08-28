@@ -175,7 +175,7 @@ Dentro de una pestaña, cada campo simple (input de texto, input numérico, sele
 ### Panel de propiedades (modo Editor)
 Los campos de cada pestaña se generan dinámicamente a partir del mismo JSON Schema derivado (`toJSONSchema` de Zod v4) que ya alimenta el autocompletado de Monaco — no existe un segundo contrato de UI hardcodeado por tipo de nodo. Editar cualquier campo actualiza el estado en memoria de inmediato y se refleja tanto en el contenido renderizado como en el buffer de Monaco, sin necesidad de pulsar ningún botón "Aplicar" adicional. Un campo `layout.span` declarado como mapa responsive por breakpoint se edita con merge superficial sobre el objeto existente: cambiar un breakpoint no borra los demás ya declarados que no sean visibles en el viewport actual.
 
-Un array editable declarado con `minItems` en su schema (por ejemplo `tabs.props.items`, con mínimo de una pestaña, o `submitAction.operations` cuando la variante es `executeOperations`, con el mismo mínimo) bloquea el botón "Quitar" de cada entrada mientras la longitud actual del array sea igual a ese mínimo, para no dejar el nodo en un estado estructuralmente inválido. Al pulsar "Añadir" sobre un array de objetos, el nuevo elemento se rellena con un valor por cada propiedad `required` de su sub-schema (usando el `default` declarado en el sub-schema cuando existe, o `''`/`0`/`false` según el tipo en caso contrario) en vez de un objeto vacío. Para el nodo `tabs` en particular, cada entrada de `props.items` en este panel expone únicamente `label` y `visibility`: `children` (el subárbol de contenido de la pestaña) queda excluido del editor genérico porque no es representable como campo de formulario — ese contenido solo se edita arrastrando nodos sobre la pestaña en el canvas o directamente desde Monaco — y una pestaña nueva creada con "Añadir" recibe la etiqueta por defecto "Nueva pestaña".
+Un array editable declarado con `minItems` en su schema (por ejemplo `tabs.props.items`, con mínimo de una pestaña, o `submitAction.operations` cuando la variante es `executeOperations`, con el mismo mínimo) bloquea el botón "Quitar" de cada entrada mientras la longitud actual del array sea igual a ese mínimo, para no dejar el nodo en un estado estructuralmente inválido. Al pulsar "Añadir" sobre un array de objetos, el nuevo elemento se rellena con un valor por cada propiedad `required` de su sub-schema (usando el `default` declarado en el sub-schema cuando existe, o `''`/`0`/`false` según el tipo en caso contrario) en vez de un objeto vacío. Para el nodo `tabs` en particular, cada entrada de `props.items` en este panel expone `label`, `icon` (con el [widget de búsqueda y selección de iconos Lucide](#widget-de-búsqueda-y-selección-de-iconos-lucide)) y `visibility`: `children` (el subárbol de contenido de la pestaña) queda excluido del editor genérico porque no es representable como campo de formulario — ese contenido solo se edita arrastrando nodos sobre la pestaña en el canvas o directamente desde Monaco — y una pestaña nueva creada con "Añadir" recibe la etiqueta por defecto "Nueva pestaña".
 
 Cuando la pestaña `Diseño` existe, el campo `layout.span` se edita siempre mediante su widget dedicado (ver [[#Widget dedicado para layout.span (columnas por breakpoint)]]), no como un campo numérico o de mapa genérico.
 
@@ -394,9 +394,14 @@ El hook `x-widget` del dispatcher (`WIDGET_REGISTRY`, clave `'icon'`) resuelve a
 del resto de entradas de ese registro (`layout-span`, `heading-level`, `tabs-orientation`, `choice-items`, todas
 activadas por `node.type`), el sentinel `{ 'x-widget': 'icon' }` se inyecta por convención de nombre de campo
 (`resolveIconPropsSchema`): cualquier nodo cuyo schema `props` generado declare una propiedad `icon` recibe el
-widget, sin una lista explícita de tipos que mantener. Cubre hoy los seis nodos que ya declaran `props.icon`
-(`button`, `heading`, `paragraph`, `link`, `stat`, `input`); un nodo futuro que reutilice esa misma forma
-(`icon: z.string().optional()`) lo hereda automáticamente sin cambios en el dispatcher.
+widget, sin una lista explícita de tipos que mantener. Cubre hoy los siete nodos que ya declaran `props.icon`
+(`button`, `heading`, `paragraph`, `link`, `stat`, `input`, `accordion`); un nodo futuro que reutilice esa misma
+forma (`icon: z.string().optional()`) lo hereda automáticamente sin cambios en el dispatcher.
+
+`tabs.props.items[].icon` queda fuera de esta convención automática: `resolveIconPropsSchema` solo inspecciona las
+propiedades de primer nivel del schema `props` de un nodo, no las de un sub-schema anidado dentro de un array
+(`items`). Por eso `resolveTabsPropsSchema` inyecta el mismo sentinel `{ 'x-widget': 'icon' }` de forma explícita
+para el campo `icon` de cada item, dentro del mismo bucle que ya excluye `children` de `visibleItemProperties`.
 
 #### Integración en `Shell`
 `MenuItemFieldsEditor` y `SidebarItemFieldsEditor` (ver [Sección Shell](#sección-shell-dominio-de-configuración))

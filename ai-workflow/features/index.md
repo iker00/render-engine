@@ -23,6 +23,22 @@ La política completa está definida en el documento de workflow del proyecto.
 
 ## Completadas
 
+- `2026-08-27-14-37-accordion-tabs-icon`: extiende el mecanismo de icono decorativo Lucide React (ya vigente en
+  `button`/`link`/`stat`/`heading`/`paragraph`) a `accordion` (`props.icon`, nuevo string opcional) y a cada item de
+  `tabs.props.items` (`icon`, nuevo campo opcional por item), en ambos casos con posición fija a la izquierda del
+  label, sin `iconPosition` configurable. En `accordion`, el icono se agrupa con el label en el mismo bloque flex de
+  la cabecera; el chevron de apertura/cierre se mantiene siempre pinneado a la derecha, sin relación con `icon`. En
+  `tabs`, cada item resuelve su `icon` de forma independiente (un item puede declararlo y otro no), igual en
+  orientación `horizontal` y `vertical`. Un nombre de icono que no resuelve a un icono Lucide conocido se ignora
+  silenciosamente en ambos nodos (mismo comportamiento que en el resto del catálogo): el label se renderiza igual,
+  sin error. Validación de config: `accordion.props.icon` y `tabs.props.items[].icon` solo exigen tipo `string`; la
+  resolución del nombre a un icono Lucide real es responsabilidad del render, no de la validación. Soporte en el
+  editor visual: `accordion` recibe el widget de búsqueda de iconos (`IconPickerPropertyField`) de forma automática
+  por la convención de nombre de campo ya existente (`resolveIconPropsSchema`, séptimo nodo cubierto sin cambios en
+  el dispatcher); `tabs.props.items[].icon` queda fuera de esa convención automática (anidado dentro de un array) y
+  requiere un swap explícito del mismo sentinel `{ 'x-widget': 'icon' }` en `resolveTabsPropsSchema`. Fuera de
+  alcance: tamaño/color/intercambio del icono más allá del nombre Lucide, iconos en el cuerpo del accordion o panel
+  de tabs, e icono derivado dinámicamente de una colección (`queries.*`).
 - `2026-08-25-14-49-gallery-node`: nuevo nodo hoja `gallery` en el catálogo, colección de imágenes con dos orígenes
   mutuamente excluyentes por instancia: `props.images` (lista literal `{src, alt}`, misma semántica que
   `image.props.src`/`alt`) o `props.source` (colección dinámica resuelta desde `queries.*`/`item.*`, mismo contrato

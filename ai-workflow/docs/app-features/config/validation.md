@@ -125,6 +125,7 @@
 - Los `children` de cada item se validan recursivamente como colección de nodos del catálogo, con la misma semántica que los `children` de `container`: tipos desconocidos producen `unsupported-node-type`; contratos inválidos producen `invalid-layout`.
 - No existe un allowlist de tipos de `children` para `tabs`: admite cualquier nodo válido del catálogo, incluidos `form`, `repeater`, `container` y todos los nodos hoja.
 - La ruta diagnóstica de errores dentro de los `children` sigue el patrón `props.items[N].children`.
+- Cada item de `props.items` admite `icon` opcional como string; cualquier tipo distinto de string rechaza el config completo antes del render. No hay resolución ni validación semántica del nombre del icono en config: es responsabilidad del render.
 
 ## Reglas del nodo `badge`
 

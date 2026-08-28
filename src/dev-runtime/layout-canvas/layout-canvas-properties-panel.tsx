@@ -432,6 +432,13 @@ const NEW_TAB_DEFAULT_LABEL = 'Nueva pestaña'
  * with the `{ 'x-widget': 'tabs-orientation' }` sentinel, resolved to `TabsOrientationPropertyField`
  * by the dispatcher's `x-widget` hook — same swap-only-that-key pattern as `level` above and
  * `items` below, independent of the `items` transformation.
+ *
+ * T5 (accordion-tabs-icon): also replaces each item's `properties.icon` (Zod's
+ * `z.string().optional()`, T3) with the `{ 'x-widget': 'icon' }` sentinel, resolved to
+ * `IconPickerPropertyField` by the dispatcher's `x-widget` hook. `resolveIconPropsSchema` above
+ * only swaps `props.icon` at the top level of a node's own `props`, never inside a nested array
+ * item's sub-schema — this handles the equivalent swap for `tabs.props.items[].icon` explicitly,
+ * inside the same loop that already excludes `children` from `visibleItemProperties`.
  */
 function resolveTabsPropsSchema(propsSchema: Record<string, unknown>): Record<string, unknown> {
   const properties = propsSchema.properties
@@ -451,6 +458,10 @@ function resolveTabsPropsSchema(propsSchema: Record<string, unknown>): Record<st
   const visibleItemProperties: Record<string, unknown> = {}
   for (const [propertyKey, propertySchema] of Object.entries(itemProperties)) {
     if (propertyKey === 'children') continue
+    if (propertyKey === 'icon') {
+      visibleItemProperties[propertyKey] = { 'x-widget': 'icon' }
+      continue
+    }
     visibleItemProperties[propertyKey] = propertySchema
   }
   const labelSchema = visibleItemProperties.label
