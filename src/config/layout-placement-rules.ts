@@ -50,6 +50,7 @@ export const FORM_ALLOWED_DESCENDANT_TYPES: ReadonlySet<LayoutNodeType> = new Se
   'accordion',
   'divider',
   'tabs',
+  'steps',
   'autocomplete',
   'alert',
   'badge',

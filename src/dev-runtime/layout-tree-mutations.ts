@@ -1,15 +1,17 @@
 import type { LayoutNode, TableCellNode, TableCellValue } from '../config/runtime-config'
-import type { TabsItem } from '../config/runtime-config-types'
+import type { StepsItem, TabsItem } from '../config/runtime-config-types'
 import { getNodeAtPath, type LayoutNodePath, type LayoutPathStep } from '../runtime/layout-node-path'
 
 export { getNodeAtPath }
 
 export interface InsertNodeAtOptions {
   tabItemIndex?: number
+  stepItemIndex?: number
 }
 
 export interface MovePathToOptions {
   toTabItemIndex?: number
+  toStepItemIndex?: number
 }
 
 interface ResolvedPathFrame {
@@ -83,6 +85,18 @@ function withTabItemChildren(node: LayoutNode, itemIndex: number, children: Layo
   return { ...node, props: { ...node.props, items: newItems } }
 }
 
+function withStepItemChildren(node: LayoutNode, itemIndex: number, children: LayoutNode[]): LayoutNode {
+  if (node.type !== 'steps') {
+    throw new Error(`layout-tree-mutations: node type "${node.type}" does not have steps items`)
+  }
+  const items = node.props.items
+  if (itemIndex < 0 || itemIndex >= items.length) {
+    throw new Error(`layout-tree-mutations: no steps item at index ${itemIndex}`)
+  }
+  const newItems = items.map((item, i) => (i === itemIndex ? { ...item, children } : item))
+  return { ...node, props: { ...node.props, items: newItems } }
+}
+
 function withTableRow(node: LayoutNode, rowIndex: number, row: TableCellValue[]): LayoutNode {
   if (node.type !== 'table') {
     throw new Error(`layout-tree-mutations: node type "${node.type}" does not have a props.rows collection`)
@@ -115,7 +129,8 @@ function setNodeCollection(node: LayoutNode, step: LayoutPathStep, collection: L
   if (step.field === 'template') return withTemplate(node, collection)
   if (step.field === 'row') return withTableRow(node, step.rowIndex, collection as unknown as TableCellValue[])
   if (step.field === 'cells') return withTableDynamicCells(node, collection as unknown as TableCellValue[])
-  return withTabItemChildren(node, step.itemIndex, collection)
+  if (step.field === 'tabItem') return withTabItemChildren(node, step.itemIndex, collection)
+  return withStepItemChildren(node, step.itemIndex, collection)
 }
 
 /**
@@ -197,19 +212,40 @@ function resolvePathFrames(
       continue
     }
 
-    if (currentNode === null || currentNode.type !== 'tabs') {
-      throw new Error('layout-tree-mutations: path does not resolve, "tabItem" step requires a tabs node')
+    if (step.field === 'tabItem') {
+      if (currentNode === null || currentNode.type !== 'tabs') {
+        throw new Error('layout-tree-mutations: path does not resolve, "tabItem" step requires a tabs node')
+      }
+      const item: TabsItem | undefined = currentNode.props.items[step.itemIndex]
+      if (!item) {
+        throw new Error(`layout-tree-mutations: path does not resolve, no tabs item at index ${step.itemIndex}`)
+      }
+      const tabItemChildren: LayoutNode[] = item.children ?? []
+      frames.push({ step, collection: tabItemChildren, parentNode: currentNode })
+      const candidate: LayoutNode | undefined = tabItemChildren[step.index]
+      if (!candidate) {
+        throw new Error(
+          `layout-tree-mutations: path does not resolve, no node at tabItem[${step.itemIndex}][${step.index}]`
+        )
+      }
+      currentNode = candidate
+      currentNodes = getChildNodesCollection(candidate)
+      continue
     }
-    const item: TabsItem | undefined = currentNode.props.items[step.itemIndex]
+
+    if (currentNode === null || currentNode.type !== 'steps') {
+      throw new Error('layout-tree-mutations: path does not resolve, "stepItem" step requires a steps node')
+    }
+    const item: StepsItem | undefined = currentNode.props.items[step.itemIndex]
     if (!item) {
-      throw new Error(`layout-tree-mutations: path does not resolve, no tabs item at index ${step.itemIndex}`)
+      throw new Error(`layout-tree-mutations: path does not resolve, no steps item at index ${step.itemIndex}`)
     }
-    const tabItemChildren: LayoutNode[] = item.children ?? []
-    frames.push({ step, collection: tabItemChildren, parentNode: currentNode })
-    const candidate: LayoutNode | undefined = tabItemChildren[step.index]
+    const stepItemChildren: LayoutNode[] = item.children ?? []
+    frames.push({ step, collection: stepItemChildren, parentNode: currentNode })
+    const candidate: LayoutNode | undefined = stepItemChildren[step.index]
     if (!candidate) {
       throw new Error(
-        `layout-tree-mutations: path does not resolve, no node at tabItem[${step.itemIndex}][${step.index}]`
+        `layout-tree-mutations: path does not resolve, no node at stepItem[${step.itemIndex}][${step.index}]`
       )
     }
     currentNode = candidate
@@ -269,6 +305,7 @@ function insertIntoParentNode(
   options?: InsertNodeAtOptions
 ): LayoutNode {
   const tabItemIndex = options?.tabItemIndex
+  const stepItemIndex = options?.stepItemIndex
 
   if (parentNode.type === 'tabs') {
     if (tabItemIndex === undefined) {
@@ -285,6 +322,23 @@ function insertIntoParentNode(
 
   if (tabItemIndex !== undefined) {
     throw new Error('layout-tree-mutations: options.tabItemIndex only applies when the target node is a tabs node')
+  }
+
+  if (parentNode.type === 'steps') {
+    if (stepItemIndex === undefined) {
+      throw new Error('layout-tree-mutations: insertNodeAt into a steps node requires options.stepItemIndex')
+    }
+    const items = parentNode.props.items
+    const item = items[stepItemIndex]
+    if (!item) {
+      throw new Error(`layout-tree-mutations: steps node has no item at index ${stepItemIndex}`)
+    }
+    const children = insertAtIndex(item.children ?? [], index, newNode)
+    return withStepItemChildren(parentNode, stepItemIndex, children)
+  }
+
+  if (stepItemIndex !== undefined) {
+    throw new Error('layout-tree-mutations: options.stepItemIndex only applies when the target node is a steps node')
   }
 
   if (parentNode.type === 'repeater') {
@@ -328,6 +382,7 @@ export function insertNodeAt(
 function stepsEqual(a: LayoutPathStep, b: LayoutPathStep): boolean {
   if (a.field !== b.field || a.index !== b.index) return false
   if (a.field === 'tabItem' && b.field === 'tabItem') return a.itemIndex === b.itemIndex
+  if (a.field === 'stepItem' && b.field === 'stepItem') return a.itemIndex === b.itemIndex
   if (a.field === 'row' && b.field === 'row') return a.rowIndex === b.rowIndex
   return true
 }
@@ -350,24 +405,32 @@ export function isSameOrDescendantPath(ancestorPath: LayoutNodePath, candidatePa
 function getSourceParentDescriptor(fromPath: LayoutNodePath): {
   parentPath: LayoutNodePath
   tabItemIndex: number | undefined
+  stepItemIndex: number | undefined
   index: number
 } {
   const lastStep = fromPath[fromPath.length - 1]
   const parentPath = fromPath.slice(0, -1)
   if (lastStep.field === 'tabItem') {
-    return { parentPath, tabItemIndex: lastStep.itemIndex, index: lastStep.index }
+    return { parentPath, tabItemIndex: lastStep.itemIndex, stepItemIndex: undefined, index: lastStep.index }
   }
-  return { parentPath, tabItemIndex: undefined, index: lastStep.index }
+  if (lastStep.field === 'stepItem') {
+    return { parentPath, tabItemIndex: undefined, stepItemIndex: lastStep.itemIndex, index: lastStep.index }
+  }
+  return { parentPath, tabItemIndex: undefined, stepItemIndex: undefined, index: lastStep.index }
 }
 
 function adjustIndexForSiblingMove(
   fromPath: LayoutNodePath,
   toParentPath: LayoutNodePath,
   toIndex: number,
-  toTabItemIndex: number | undefined
+  toTabItemIndex: number | undefined,
+  toStepItemIndex: number | undefined
 ): number {
   const source = getSourceParentDescriptor(fromPath)
-  const sameParent = isSamePath(source.parentPath, toParentPath) && source.tabItemIndex === toTabItemIndex
+  const sameParent =
+    isSamePath(source.parentPath, toParentPath) &&
+    source.tabItemIndex === toTabItemIndex &&
+    source.stepItemIndex === toStepItemIndex
   if (sameParent && source.index < toIndex) {
     return toIndex - 1
   }
@@ -377,6 +440,7 @@ function adjustIndexForSiblingMove(
 function stepsReferenceSameCollection(a: LayoutPathStep, b: LayoutPathStep): boolean {
   if (a.field !== b.field) return false
   if (a.field === 'tabItem' && b.field === 'tabItem') return a.itemIndex === b.itemIndex
+  if (a.field === 'stepItem' && b.field === 'stepItem') return a.itemIndex === b.itemIndex
   if (a.field === 'row' && b.field === 'row') return a.rowIndex === b.rowIndex
   return true
 }
@@ -393,7 +457,8 @@ function stepsReferenceSameCollection(a: LayoutPathStep, b: LayoutPathStep): boo
 function adjustParentPathForRemoval(
   fromPath: LayoutNodePath,
   toParentPath: LayoutNodePath,
-  toTabItemIndex: number | undefined
+  toTabItemIndex: number | undefined,
+  toStepItemIndex: number | undefined
 ): LayoutNodePath {
   if (fromPath.length === 0) return toParentPath
 
@@ -401,7 +466,11 @@ function adjustParentPathForRemoval(
   const lastFromStep = fromPath[fromPath.length - 1]
 
   const targetsSourceCollection =
-    lastFromStep.field === 'tabItem' ? toTabItemIndex === lastFromStep.itemIndex : toTabItemIndex === undefined
+    lastFromStep.field === 'tabItem'
+      ? toTabItemIndex === lastFromStep.itemIndex
+      : lastFromStep.field === 'stepItem'
+        ? toStepItemIndex === lastFromStep.itemIndex
+        : toTabItemIndex === undefined && toStepItemIndex === undefined
 
   if (isSamePath(sourceParentPath, toParentPath) && targetsSourceCollection) {
     // Case A: removal and insertion happen in the exact same collection — toParentPath
@@ -463,6 +532,19 @@ function findPathWithinNode(node: LayoutNode, target: LayoutNode): LayoutNodePat
     return null
   }
 
+  if (node.type === 'steps') {
+    for (let itemIndex = 0; itemIndex < node.props.items.length; itemIndex++) {
+      const item: StepsItem = node.props.items[itemIndex]
+      const found = findPathWithinChildren(item.children ?? [], target, (index) => ({
+        field: 'stepItem',
+        itemIndex,
+        index,
+      }))
+      if (found !== null) return found
+    }
+    return null
+  }
+
   if (node.type === 'table') {
     const rows = node.props.rows
     if (Array.isArray(rows)) {
@@ -514,11 +596,23 @@ export function movePathTo(
     throw new Error('layout-tree-mutations: movePathTo fromPath does not resolve to an existing node')
   }
 
-  const adjustedToIndex = adjustIndexForSiblingMove(fromPath, toParentPath, toIndex, options?.toTabItemIndex)
-  const adjustedToParentPath = adjustParentPathForRemoval(fromPath, toParentPath, options?.toTabItemIndex)
+  const adjustedToIndex = adjustIndexForSiblingMove(
+    fromPath,
+    toParentPath,
+    toIndex,
+    options?.toTabItemIndex,
+    options?.toStepItemIndex
+  )
+  const adjustedToParentPath = adjustParentPathForRemoval(
+    fromPath,
+    toParentPath,
+    options?.toTabItemIndex,
+    options?.toStepItemIndex
+  )
 
   const afterRemoval = removeNodeAt(rootNodes, fromPath)
   return insertNodeAt(afterRemoval, adjustedToParentPath, adjustedToIndex, movedNode, {
     tabItemIndex: options?.toTabItemIndex,
+    stepItemIndex: options?.toStepItemIndex,
   })
 }

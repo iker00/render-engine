@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { AutocompleteLayoutNode } from '../../config/runtime-config'
 import { resolveAutocompleteFieldDefinition } from '../../runtime/nodes/resolve-form-field-definition'
-import { collectAllFormFieldIds, collectResolvedFormFieldDefinitions } from '../../runtime/nodes/form-layout-node'
+import { collectAllFormFieldIds, collectResolvedFormFieldDefinitions } from '../../runtime/nodes/runtime-form-field-collection'
 import type { RuntimeState } from '../../runtime/runtime-state/runtime-state-types'
 
 const baseState: RuntimeState = {

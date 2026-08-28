@@ -81,6 +81,10 @@ function tabs(items: Array<{ label: string; children: unknown[] }>) {
   return { type: 'tabs', props: { items } }
 }
 
+function steps(items: Array<{ label: string; children: unknown[] }>) {
+  return { type: 'steps', props: { items } }
+}
+
 function accordion(label: string, children: unknown[]) {
   return { type: 'accordion', props: { label }, children }
 }
@@ -280,6 +284,37 @@ describe('drag reanida un nodo raíz hacia un destino con contenido, situado des
     expect(validateRuntimeConfig(parsed).status).toBe('ready')
   })
 
+  it('reanidar un nodo raíz dentro del panel activo de un steps que ya tiene un hijo deja ese panel con 2 hijos', async () => {
+    renderCanvas({
+      api: {},
+      initialPage: 'home',
+      pages: [
+        {
+          id: 'home',
+          layout: [heading('X'), form('formA', [steps([{ label: 'Step1', children: [heading('Y')] }])])],
+        },
+      ],
+    })
+
+    const FORM_PATH: LayoutNodePath = [{ field: 'children', index: 1 }]
+    const STEPS_PATH: LayoutNodePath = [...FORM_PATH, { field: 'children', index: 0 }]
+
+    dragEnd(X_PATH, { parentPath: STEPS_PATH, index: 1, stepItemIndex: 0 })
+
+    const { parsed } = await getMonacoJson()
+    const page = (
+      parsed.pages as Array<{
+        layout: Array<{
+          children?: Array<{ props: { items: Array<{ children: Array<{ props: { text: string } }> }> } }>
+        }>
+      }>
+    )[0]
+
+    expect(page.layout).toHaveLength(1)
+    expect(page.layout[0].children![0].props.items[0].children.map((node) => node.props.text)).toEqual(['Y', 'X'])
+    expect(validateRuntimeConfig(parsed).status).toBe('ready')
+  })
+
   it('reanidar un nodo raíz dentro de un accordion que ya tiene un hijo deja el accordion con 2 hijos', async () => {
     renderCanvas({
       api: {},
@@ -367,6 +402,81 @@ describe('drag reanida entre items de un mismo tabs (FR7)', () => {
 
     expect(tabsNode.props.items[0].children).toEqual([])
     expect(tabsNode.props.items[1].children.map((node) => node.props.text)).toEqual(['TabHeading'])
+  })
+})
+
+describe('drag reanida entre items de un mismo steps (T5, paralelo a tabs)', () => {
+  it('arrastrar un heading de items[0].children a items[1].children lo reanida, desapareciendo de items[0]', async () => {
+    const FORM_PATH: LayoutNodePath = [{ field: 'children', index: 0 }]
+    const STEPS_PATH: LayoutNodePath = [...FORM_PATH, { field: 'children', index: 0 }]
+    const HEADING_IN_STEP0_PATH: LayoutNodePath = [
+      ...STEPS_PATH,
+      { field: 'stepItem', itemIndex: 0, index: 0 },
+    ]
+
+    renderCanvas({
+      api: {},
+      initialPage: 'home',
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            form('formA', [
+              steps([
+                { label: 'Step1', children: [heading('StepHeading')] },
+                { label: 'Step2', children: [] },
+              ]),
+            ]),
+          ],
+        },
+      ],
+    })
+
+    dragEnd(HEADING_IN_STEP0_PATH, { parentPath: STEPS_PATH, index: 0, stepItemIndex: 1 })
+
+    const { parsed } = await getMonacoJson()
+    const stepsNode = (
+      parsed.pages as Array<{
+        layout: Array<{ children: Array<{ props: { items: Array<{ children: Array<{ props: { text: string } }> }> } }> }>
+      }>
+    )[0].layout[0].children[0]
+
+    expect(stepsNode.props.items[0].children).toEqual([])
+    expect(stepsNode.props.items[1].children.map((node) => node.props.text)).toEqual(['StepHeading'])
+  })
+
+  it('un drop attempt sobre un steps sin targetStepItemIndex resuelto no aplica ninguna mutación', async () => {
+    const FORM_PATH: LayoutNodePath = [{ field: 'children', index: 0 }]
+    const STEPS_PATH: LayoutNodePath = [...FORM_PATH, { field: 'children', index: 0 }]
+    const HEADING_IN_STEP0_PATH: LayoutNodePath = [
+      ...STEPS_PATH,
+      { field: 'stepItem', itemIndex: 0, index: 0 },
+    ]
+
+    const { initialConfigText } = renderCanvas({
+      api: {},
+      initialPage: 'home',
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            form('formA', [
+              steps([
+                { label: 'Step1', children: [heading('StepHeading')] },
+                { label: 'Step2', children: [] },
+              ]),
+            ]),
+          ],
+        },
+      ],
+    })
+
+    // No `stepItemIndex` on the target zone — isValidDropTarget (T3) rejects it before
+    // onCommitCanvasMutation is ever invoked, so the config stays untouched.
+    dragEnd(HEADING_IN_STEP0_PATH, { parentPath: STEPS_PATH, index: 0 })
+
+    const { text } = await getMonacoJson()
+    expect(text).toBe(initialConfigText)
   })
 })
 

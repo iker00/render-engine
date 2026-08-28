@@ -28,6 +28,7 @@
 - La validación se ejecuta al hacer submit del `form`.
 - Antes de validar, el runtime inicializa también cualquier campo visible del formulario que todavía no exista en store para que entre en la misma pasada de validación.
 - Mientras el usuario edita, el runtime no reejecuta una pasada completa de validación del formulario: solo reevalúa localmente el campo con error y conserva, cambia o limpia ese error según la primera regla visible que siga fallando.
+- **Gating de "Siguiente" en `steps`**: al pulsar "Siguiente" dentro de un nodo `steps`, el runtime ejecuta el mismo motor de validación pero acotado únicamente a los campos visibles del paso activo, sin introducir un motor de validación nuevo. Si falla, el paso no avanza. Retroceder ("Atrás") nunca valida. Ver [[../nodes/steps.md]].
 
 ## Dónde vive el resultado
 - Los errores viven solo en `forms.{formId}.{fieldId}.error`.

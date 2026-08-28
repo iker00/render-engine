@@ -88,6 +88,18 @@ function buildConfig(): RuntimeConfig {
               ],
             },
           },
+          // T5 fixture: a `steps` node with two items — only the active step's panel
+          // (index 0 by default, StepsNode's own local state) renders its children, mirroring
+          // how `tabs` only renders its active tab's children.
+          {
+            type: 'steps',
+            props: {
+              items: [
+                { label: 'Step1', children: [{ type: 'heading', props: { text: 'StepHeading', level: 2 } }] },
+                { label: 'Step2', children: [] },
+              ],
+            },
+          },
         ],
       },
     ],
@@ -107,6 +119,10 @@ const CONTAINER_B_EMPTY_PATH: LayoutNodePath = [{ field: 'children', index: 1 }]
 const TABLE_PATH: LayoutNodePath = [{ field: 'children', index: 2 }]
 const TABLE_CELL_CONTAINER_PATH: LayoutNodePath = [...TABLE_PATH, { field: 'row', rowIndex: 0, index: 1 }]
 const TABLE_CELL_CONTAINER_CHILD_PATH: LayoutNodePath = [...TABLE_CELL_CONTAINER_PATH, { field: 'children', index: 0 }]
+const STEPS_PATH: LayoutNodePath = [{ field: 'children', index: 3 }]
+const STEP0_HEADING_PATH: LayoutNodePath = [...STEPS_PATH, { field: 'stepItem', itemIndex: 0, index: 0 }]
+const STEP0_GAP_BEFORE_ZONE_ID = serializeDropZoneId({ parentPath: STEPS_PATH, index: 0, stepItemIndex: 0 })
+const STEP0_GAP_AFTER_ZONE_ID = serializeDropZoneId({ parentPath: STEPS_PATH, index: 1, stepItemIndex: 0 })
 
 const BETWEEN_SIBLINGS_ZONE_ID = serializeDropZoneId({ parentPath: CONTAINER_A_PATH, index: 1 })
 const EMPTY_PLACEHOLDER_ZONE_ID = serializeDropZoneId({ parentPath: CONTAINER_B_EMPTY_PATH, index: 0 })
@@ -278,6 +294,58 @@ describe('table cell exclusion from drag source (T4)', () => {
     })
 
     expect(onDropAttempt).not.toHaveBeenCalled()
+  })
+})
+
+describe('LayoutCanvasDndContext wiring: steps panel drop zones (targetStepItemIndex, T5)', () => {
+  it('registers a draggable node and a droppable gap zone inside the active panel of a steps node, encoding stepItemIndex', () => {
+    renderCanvas(() => {})
+
+    expect(draggableCalls).toContain(serializeLayoutNodePath(STEP0_HEADING_PATH))
+    expect(droppableCalls).toContain(STEP0_GAP_AFTER_ZONE_ID)
+
+    const zone = parseDropZoneId(STEP0_GAP_AFTER_ZONE_ID) as LayoutCanvasDropZone
+    expect(zone.parentPath).toEqual(STEPS_PATH)
+    expect(zone.index).toBe(1)
+    expect(zone.stepItemIndex).toBe(0)
+    expect(zone.tabItemIndex).toBeUndefined()
+  })
+
+  it('produces targetStepItemIndex in the drop attempt for an existing node dragged over a steps panel zone', () => {
+    const onDropAttempt = vi.fn()
+    renderCanvas(onDropAttempt)
+
+    capturedOnDragEnd!({
+      active: { id: serializeLayoutNodePath(STEP0_HEADING_PATH) },
+      over: { id: STEP0_GAP_BEFORE_ZONE_ID },
+    })
+
+    expect(onDropAttempt).toHaveBeenCalledWith({
+      draggedPath: STEP0_HEADING_PATH,
+      targetParentPath: STEPS_PATH,
+      targetIndex: 0,
+      targetTabItemIndex: undefined,
+      targetStepItemIndex: 0,
+    })
+  })
+
+  it('produces targetStepItemIndex in the drop attempt for a palette-originated drag over a steps panel zone', () => {
+    const onDropAttempt = vi.fn()
+    renderCanvas(onDropAttempt)
+
+    capturedOnDragEnd!({
+      active: { id: serializePaletteDragId('heading') },
+      over: { id: STEP0_GAP_AFTER_ZONE_ID },
+    })
+
+    expect(onDropAttempt).toHaveBeenCalledWith({
+      draggedPath: null,
+      draggedNodeType: 'heading',
+      targetParentPath: STEPS_PATH,
+      targetIndex: 1,
+      targetTabItemIndex: undefined,
+      targetStepItemIndex: 0,
+    })
   })
 })
 

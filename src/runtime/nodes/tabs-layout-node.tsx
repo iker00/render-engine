@@ -112,15 +112,13 @@ function TabsNodeContent({ node, items, orientation, defaultTab, state, iteratio
   const basePath = path ?? []
   const panel = (
     <div data-layout-node="tabs-panel" className={getTabsPanelClassName()}>
-      {activeItem?.children && activeItem.children.length > 0 ? (
-        <LayoutRenderer
-          nodes={activeItem.children}
-          iterationContext={iterationContext}
-          path={basePath}
-          parentTabItemIndex={effectiveActiveTab}
-          buildChildPath={(index) => [...basePath, { field: 'tabItem', itemIndex: effectiveActiveTab, index }]}
-        />
-      ) : null}
+      <LayoutRenderer
+        nodes={activeItem?.children ?? []}
+        iterationContext={iterationContext}
+        path={basePath}
+        parentTabItemIndex={effectiveActiveTab}
+        buildChildPath={(index) => [...basePath, { field: 'tabItem', itemIndex: effectiveActiveTab, index }]}
+      />
     </div>
   )
 

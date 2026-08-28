@@ -65,6 +65,7 @@ Reglas estructurales vigentes:
 - `heading`, `paragraph`, `list`, `image`, `table` y `button` siguen tratándose como nodos hoja; si reciben `children`, esos datos no pasan al resultado normalizado.
 - `repeater` rechaza `children` y solo admite repetición a través de `props.template`.
 - `input`, `textarea`, `select`, `radioGroup` y `checkboxGroup` solo son válidos como descendientes de un `form`.
+- `steps` también solo es válido como descendiente de un `form`, aunque es un nodo estructural (con `props.items[i].children`, no un nodo hoja de campo) — a diferencia de `tabs` y `accordion`, válidos también fuera de `form`.
 - `button` sin `action` solo es válido como descendiente de un `form`.
 - las claves extra no soportadas se descartan del objeto validado final sin convertir por sí solas la configuración en inválida.
 

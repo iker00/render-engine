@@ -40,82 +40,82 @@ function renderNodes(nodes: LayoutNode[], options?: { editMode?: { active?: bool
   return { ...result, onSelectNode, onHoverNode }
 }
 
-function buildTabsTree(): LayoutNode[] {
+function buildStepsTree(): LayoutNode[] {
   return [
     {
-      type: 'tabs',
-      id: 'tabs-1',
+      type: 'steps',
+      id: 'steps-1',
       props: {
         items: [
-          { label: 'Tab A', children: [{ type: 'paragraph', props: { text: 'Content A' } }] },
-          { label: 'Tab B', children: [{ type: 'paragraph', props: { text: 'Content B' } }] },
+          { label: 'Step A', children: [{ type: 'paragraph', props: { text: 'Content A' } }] },
+          { label: 'Step B', children: [{ type: 'paragraph', props: { text: 'Content B' } }] },
         ],
       },
     } as LayoutNode,
   ]
 }
 
-describe('TabsNode with LayoutEditModeProvider', () => {
-  it('exposes a node inside items[0].children with a data-node-path ending in a tabItem segment with itemIndex: 0', () => {
-    const { onSelectNode } = renderNodes(buildTabsTree(), { editMode: {} })
+describe('StepsNode with LayoutEditModeProvider', () => {
+  it('exposes a node inside items[0].children with a data-node-path ending in a stepItem segment with itemIndex: 0', () => {
+    const { onSelectNode } = renderNodes(buildStepsTree(), { editMode: {} })
 
     const paragraph = screen.getByText('Content A')
     const wrapper = paragraph.closest('[data-node-path]')
 
-    expect(wrapper).toHaveAttribute('data-node-path', 'children.0.tabItem.0.0')
+    expect(wrapper).toHaveAttribute('data-node-path', 'children.0.stepItem.0.0')
 
     fireEvent.click(paragraph)
 
     expect(onSelectNode).toHaveBeenCalledWith([
       { field: 'children', index: 0 },
-      { field: 'tabItem', itemIndex: 0, index: 0 },
+      { field: 'stepItem', itemIndex: 0, index: 0 },
     ])
   })
 
-  it('after clicking the second tab header, exposes a node inside items[1].children with itemIndex: 1', () => {
-    renderNodes(buildTabsTree(), { editMode: {} })
+  it('after advancing to the second step, exposes a node inside items[1].children with itemIndex: 1', () => {
+    renderNodes(buildStepsTree(), { editMode: {} })
 
-    fireEvent.click(screen.getByRole('button', { name: 'Tab B' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }))
 
     const paragraph = screen.getByText('Content B')
     const wrapper = paragraph.closest('[data-node-path]')
 
-    expect(wrapper).toHaveAttribute('data-node-path', 'children.0.tabItem.1.0')
+    expect(wrapper).toHaveAttribute('data-node-path', 'children.0.stepItem.1.0')
     expect(screen.queryByText('Content A')).not.toBeInTheDocument()
   })
 
-  it('renders a drop zone inside the active panel even when its tab declares no children (regression: an empty tab must still be a valid drop target)', () => {
+  it('renders a drop zone inside the active panel even when its step declares no children (regression: an empty step must still be a valid drop target)', () => {
     const { container } = renderNodes(
       [
         {
-          type: 'tabs',
-          id: 'tabs-1',
-          props: { items: [{ label: 'Tab A' }] },
+          type: 'steps',
+          id: 'steps-1',
+          props: { items: [{ label: 'Step A' }] },
         } as LayoutNode,
       ],
       { editMode: {} },
     )
 
-    const panel = container.querySelector('[data-layout-node="tabs-panel"]')
+    const panel = container.querySelector('[data-layout-node="steps-panel"]')
     const dropZones = panel ? Array.from(panel.querySelectorAll('[data-drop-zone]')) : []
 
     expect(dropZones).toHaveLength(1)
     expect(parseDropZoneId(dropZones[0].getAttribute('data-drop-zone')!)).toEqual({
       parentPath: [{ field: 'children', index: 0 }],
       index: 0,
-      tabItemIndex: 0,
+      stepItemIndex: 0,
     })
   })
 })
 
-describe('TabsNode without LayoutEditModeProvider (production regression)', () => {
-  it('switches the active tab panel exactly as before, with no data-node-path anywhere', () => {
-    const { container } = renderNodes(buildTabsTree())
+describe('StepsNode without LayoutEditModeProvider (production regression)', () => {
+  it('switches the active step panel exactly as before, with no data-node-path anywhere', () => {
+    const { container } = renderNodes(buildStepsTree())
 
     expect(screen.getByText('Content A')).toBeInTheDocument()
     expect(screen.queryByText('Content B')).not.toBeInTheDocument()
 
-    fireEvent.click(screen.getByRole('button', { name: 'Tab B' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }))
 
     expect(screen.queryByText('Content A')).not.toBeInTheDocument()
     expect(screen.getByText('Content B')).toBeInTheDocument()

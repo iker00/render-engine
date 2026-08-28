@@ -19,7 +19,7 @@
 ## Validación estructural global
 - Si `layout` no es un array válido, el arranque falla con un error explícito sobre la ruta afectada.
 - Si aparece un nodo no soportado en la raíz o dentro de `children`, el runtime lo trata como error de configuración y no lo reinterpreta.
-- Si `form.children` contiene nodos fuera de `input`, `textarea`, `select`, `radioGroup`, `checkboxGroup`, `fileInput`, `toggle`, `hidden`, `button`, `heading`, `paragraph`, `image`, `table`, `container`, `accordion`, `divider`, `tabs`, `alert`, `badge`, `stat` y `skeleton`, el config completo se rechaza antes del render, a cualquier profundidad del subárbol (incluidos los `fallback` de `queryStateFeedback` de nodos dentro de ese subárbol).
+- Si `form.children` contiene nodos fuera de `input`, `textarea`, `select`, `radioGroup`, `checkboxGroup`, `fileInput`, `toggle`, `hidden`, `button`, `heading`, `paragraph`, `image`, `table`, `container`, `accordion`, `divider`, `tabs`, `steps`, `alert`, `badge`, `stat` y `skeleton`, el config completo se rechaza antes del render, a cualquier profundidad del subárbol (incluidos los `fallback` de `queryStateFeedback` de nodos dentro de ese subárbol).
 - Si `input`, `textarea`, `select`, `radioGroup` o `checkboxGroup` aparecen fuera de un subárbol `form`, el config completo se rechaza antes del render.
 - Si un `button` sin `action` aparece fuera de un subárbol `form`, el config completo se rechaza antes del render.
 
@@ -30,11 +30,13 @@
 - Si `button.props.action.params` incluye arrays, objetos anidados o rutas `params.*` mal formadas, el config completo se rechaza antes del render sobre la ruta exacta.
 - Si un `button.props.action.operationName` apunta a una operación inexistente en `api`, el config completo se rechaza antes del render aunque el shape estructural sea válido.
 - Si `form.submitAction.operationName` apunta a una operación inexistente en `api`, el config completo se rechaza antes del render.
+- Si `steps.props.items[i].onNext.operationName` apunta a una operación inexistente en `api`, el config completo se rechaza antes del render, igual que `button.props.action.operationName`.
 - `resetForm` valida shape y `formId` no vacío, pero no intenta cerrar en bootstrap un catálogo semántico adicional de formularios.
 
 ## Reglas de `api` y headers
 - Si una operación `GET` declara `body`, el config completo se rechaza antes del render.
 - Si `button.props.action.type: executeOperation` o `form.submitAction` declaran `body` sobre una operación `GET`, el config completo se rechaza antes del render.
+- Si `steps.props.items[i].onNext` declara `body` sobre una operación `GET`, el config completo se rechaza antes del render, con el mismo criterio.
 - Si `api.headers`, `button.props.action.headers` o `form.submitAction.headers` usan valores no string, el config completo se rechaza antes del render.
 - Si `api.query`, `api.headers`, `button.props.action.query`, `button.props.action.headers`, `form.submitAction.query` o `form.submitAction.headers` contienen claves vacías, el config completo se rechaza antes del render.
 - `tokens.*` solo es soportado en superficies de `headers`: `api.{op}.headers`, `button.props.action.headers`, `form.submitAction.headers`, `preloads[].headers` e `executeOperations[].headers`. Referencias `tokens.*` en `query`, `body`, `params`, `visibility`, `defaultValue`, orígenes de colección o fuera de las superficies admitidas causan que el config se rechace antes del render.
@@ -126,6 +128,15 @@
 - No existe un allowlist de tipos de `children` para `tabs`: admite cualquier nodo válido del catálogo, incluidos `form`, `repeater`, `container` y todos los nodos hoja.
 - La ruta diagnóstica de errores dentro de los `children` sigue el patrón `props.items[N].children`.
 - Cada item de `props.items` admite `icon` opcional como string; cualquier tipo distinto de string rechaza el config completo antes del render. No hay resolución ni validación semántica del nombre del icono en config: es responsabilidad del render.
+
+## Reglas del nodo `steps`
+
+- `steps` es válido únicamente como descendiente (directo o indirecto) de un `form`; declarado fuera de `form`, el config completo se rechaza con `invalid-layout`.
+- `props.items` es obligatorio y debe ser un array con al menos un elemento; si está ausente o vacío, el config se rechaza con `invalid-layout` y ruta que incluye `props.items`.
+- Cada item de `props.items` debe declarar `label` como string; si falta, el config se rechaza con `invalid-layout` y ruta que incluye el índice del item y `.label` (p. ej. `props.items[0].label`).
+- `props.variant` solo acepta `"horizontal"`, `"vertical"` o `"progress"` si se declara; cualquier otro valor rechaza el config con `invalid-layout` y ruta que incluye `props.variant`.
+- Los `children` de cada item se validan recursivamente como colección de nodos del catálogo, con la misma semántica que `tabs`: tipos desconocidos producen `unsupported-node-type`; contratos inválidos producen `invalid-layout`.
+- La ruta diagnóstica de errores dentro de los `children` sigue el patrón `props.items[N].children`.
 
 ## Reglas del nodo `badge`
 

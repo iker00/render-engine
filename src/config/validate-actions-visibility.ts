@@ -847,6 +847,22 @@ function findInvalidActionTarget(
       }
     }
 
+    if (node.type === 'steps') {
+      for (let itemIndex = 0; itemIndex < node.props.items.length; itemIndex += 1) {
+        const item = node.props.items[itemIndex]
+
+        if (item.onNext && !operationNames.has(item.onNext.operationName)) {
+          return {
+            path: `${nodePath}.props.items[${itemIndex}].onNext`,
+            type: 'executeOperation',
+            target: item.onNext.operationName,
+            breadcrumb: nodeBreadcrumb,
+            node,
+          }
+        }
+      }
+    }
+
     if ((node.type === 'container' || node.type === 'form' || node.type === 'modal') && node.children) {
       const childResult = findInvalidActionTarget(node.children, `${nodePath}.children`, pageIds, operationNames, nodeBreadcrumb)
 

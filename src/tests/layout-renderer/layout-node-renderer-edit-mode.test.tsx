@@ -8,8 +8,11 @@ import type { LayoutEditModeContextValue } from '../../runtime/layout-edit-mode-
 import {
   deserializeLayoutNodePath,
   getNodeAtPath,
+  parseDropZoneId,
   pathEndsAtTableCell,
+  serializeDropZoneId,
   serializeLayoutNodePath,
+  type LayoutCanvasDropZone,
   type LayoutNodePath,
 } from '../../runtime/layout-node-path'
 import { RuntimeStateProvider } from '../../runtime/runtime-state/runtime-state-provider'
@@ -167,6 +170,64 @@ describe('getNodeAtPath', () => {
     ]
 
     expect(getNodeAtPath(tabsTree, path)).toBeNull()
+  })
+
+  const stepsTree: LayoutNode[] = [
+    {
+      type: 'steps',
+      props: {
+        items: [
+          { label: 'Step A', children: [{ type: 'heading', props: { text: 'A', level: 2 } }] },
+          {
+            label: 'Step B',
+            children: [
+              { type: 'paragraph', props: { text: 'first' } },
+              { type: 'paragraph', props: { text: 'second' } },
+            ],
+          },
+        ],
+      },
+    },
+  ]
+
+  it('resolves the node at a path ending in a stepItem step', () => {
+    const path: LayoutNodePath = [
+      { field: 'children', index: 0 },
+      { field: 'stepItem', itemIndex: 1, index: 0 },
+    ]
+
+    const node = getNodeAtPath(stepsTree, path)
+
+    expect(node).not.toBeNull()
+    expect(node?.type).toBe('paragraph')
+    expect(node && 'props' in node && (node.props as { text?: string }).text).toBe('first')
+  })
+
+  it('returns null for a stepItem step on a node that is not steps', () => {
+    const path: LayoutNodePath = [
+      { field: 'children', index: 0 },
+      { field: 'stepItem', itemIndex: 0, index: 0 },
+    ]
+
+    expect(getNodeAtPath(tree, path)).toBeNull()
+  })
+
+  it('returns null when itemIndex is out of range for a stepItem step', () => {
+    const path: LayoutNodePath = [
+      { field: 'children', index: 0 },
+      { field: 'stepItem', itemIndex: 5, index: 0 },
+    ]
+
+    expect(getNodeAtPath(stepsTree, path)).toBeNull()
+  })
+
+  it('returns null when index within the step item is out of range', () => {
+    const path: LayoutNodePath = [
+      { field: 'children', index: 0 },
+      { field: 'stepItem', itemIndex: 0, index: 5 },
+    ]
+
+    expect(getNodeAtPath(stepsTree, path)).toBeNull()
   })
 
   const manualTableTree: LayoutNode[] = [
@@ -342,6 +403,10 @@ describe('serializeLayoutNodePath', () => {
       { field: 'children', index: 0 },
       { field: 'tabItem', itemIndex: 1, index: 0 },
     ])
+    const withStepItem = serializeLayoutNodePath([
+      { field: 'children', index: 0 },
+      { field: 'stepItem', itemIndex: 1, index: 0 },
+    ])
     const withRow = serializeLayoutNodePath([
       { field: 'children', index: 0 },
       { field: 'row', rowIndex: 2, index: 1 },
@@ -354,11 +419,54 @@ describe('serializeLayoutNodePath', () => {
     expect(empty).toBe('')
     expect(withTemplate).toBe('children.0.template.1')
     expect(withTabItem).toBe('children.0.tabItem.1.0')
+    expect(withStepItem).toBe('children.0.stepItem.1.0')
     expect(withRow).toBe('children.0.row.2.1')
     expect(withCells).toBe('children.0.cells.1')
 
-    const values = new Set([empty, withTemplate, withTabItem, withRow, withCells])
-    expect(values.size).toBe(5)
+    const values = new Set([empty, withTemplate, withTabItem, withStepItem, withRow, withCells])
+    expect(values.size).toBe(6)
+  })
+})
+
+describe('serializeLayoutNodePath / deserializeLayoutNodePath round-trip for tabItem/stepItem paths', () => {
+  it('round-trips a path ending in a tabItem step (regression)', () => {
+    const path: LayoutNodePath = [
+      { field: 'children', index: 0 },
+      { field: 'tabItem', itemIndex: 1, index: 0 },
+    ]
+
+    expect(deserializeLayoutNodePath(serializeLayoutNodePath(path))).toEqual(path)
+  })
+
+  it('round-trips a path ending in a stepItem step', () => {
+    const path: LayoutNodePath = [
+      { field: 'children', index: 0 },
+      { field: 'stepItem', itemIndex: 1, index: 0 },
+    ]
+
+    expect(deserializeLayoutNodePath(serializeLayoutNodePath(path))).toEqual(path)
+  })
+})
+
+describe('serializeDropZoneId / parseDropZoneId with tabItemIndex/stepItemIndex', () => {
+  it('round-trips a stepItemIndex disambiguator for a drop target inside a steps node', () => {
+    const zone: LayoutCanvasDropZone = { parentPath: [{ field: 'children', index: 0 }], index: 1, stepItemIndex: 0 }
+
+    const id = serializeDropZoneId(zone)
+
+    expect(id).toBe('drop:children.0:1:stepItem.0')
+    expect(parseDropZoneId(id)).toEqual({ parentPath: [{ field: 'children', index: 0 }], index: 1, stepItemIndex: 0 })
+  })
+
+  it('still returns tabItemIndex (not stepItemIndex) for an id with a :tabItem. suffix (regression)', () => {
+    const zone: LayoutCanvasDropZone = { parentPath: [{ field: 'children', index: 0 }], index: 1, tabItemIndex: 0 }
+
+    const id = serializeDropZoneId(zone)
+
+    expect(id).toBe('drop:children.0:1:tabItem.0')
+    const parsed = parseDropZoneId(id)
+    expect(parsed).toEqual({ parentPath: [{ field: 'children', index: 0 }], index: 1, tabItemIndex: 0 })
+    expect(parsed?.stepItemIndex).toBeUndefined()
   })
 })
 

@@ -163,6 +163,23 @@ describe('getNodeTypeJsonSchema', () => {
     }
   })
 
+  it('reflects stepsNodeSchema props (items, variant, backLabel, nextLabel, submitLabel)', () => {
+    const schema = getNodeTypeJsonSchema('steps')
+    expect(schema).toBeDefined()
+    expect(typeof schema).toBe('object')
+
+    const properties = schema.properties as Record<string, unknown>
+    const propsSchema = properties['props'] as { properties?: Record<string, unknown> }
+    expect(propsSchema).toBeDefined()
+
+    const propProperties = propsSchema.properties ?? {}
+    expect(propProperties['items']).toBeDefined()
+    expect(propProperties['variant']).toBeDefined()
+    expect(propProperties['backLabel']).toBeDefined()
+    expect(propProperties['nextLabel']).toBeDefined()
+    expect(propProperties['submitLabel']).toBeDefined()
+  })
+
   // T2 (2026-08-25-09-15-autocomplete-node): autocompleteNodeSchema (T1) is registered in
   // nodeSchemaByType, so its JSON Schema must derive automatically without any dedicated widget —
   // same assertion shape as the container/repeater tests above, but for the field-specific props
@@ -204,12 +221,13 @@ describe('getNodeTypeJsonSchema', () => {
 })
 
 describe('getSupportedNodeTypesCatalog', () => {
-  it('returns the full node type catalog (30 types)', () => {
+  it('returns the full node type catalog (31 types)', () => {
     const catalog = getSupportedNodeTypesCatalog()
-    expect(catalog).toHaveLength(30)
+    expect(catalog).toHaveLength(31)
     expect(catalog).toContain('container')
     expect(catalog).toContain('button')
     expect(catalog).toContain('hidden')
     expect(catalog).toContain('fileManager')
+    expect(catalog).toContain('steps')
   })
 })

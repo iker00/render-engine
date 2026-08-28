@@ -19,6 +19,7 @@ export const supportedNodeTypes = [
   'checkboxGroup',
   'modal',
   'tabs',
+  'steps',
   'accordion',
   'badge',
   'alert',
@@ -685,6 +686,44 @@ export const tabsNodeSchema = z
         orientation: z.enum(['horizontal', 'vertical']).optional(),
         defaultTab: z.number().int().min(0).optional(),
         items: z.array(tabsItemSchema).min(1),
+      })
+      .strip(),
+    children: z.never().optional(),
+  })
+  .strip()
+
+export const stepOnNextActionSchema = z
+  .object({
+    operationName: nonEmptyStringSchema,
+    query: runtimeApiQuerySchema.optional(),
+    body: runtimeApiBodySchema.optional(),
+    headers: runtimeApiHeadersSchema.optional(),
+  })
+  .strip()
+
+export const stepsItemSchema = z
+  .object({
+    label: z.string(),
+    children: z.array(z.unknown()).optional(),
+    visibility: visibilitySchema.optional(),
+    onNext: stepOnNextActionSchema.optional(),
+  })
+  .strip()
+
+export const stepsNodeSchema = z
+  .object({
+    type: z.literal('steps'),
+    id: nodeIdSchema.optional(),
+    queryStateFeedback: queryStateFeedbackSchema.optional(),
+    visibility: visibilitySchema.optional(),
+    layout: layoutNodeLayoutSchema.optional(),
+    props: z
+      .object({
+        variant: z.enum(['horizontal', 'vertical', 'progress']).optional(),
+        backLabel: z.string().optional(),
+        nextLabel: z.string().optional(),
+        submitLabel: z.string().optional(),
+        items: z.array(stepsItemSchema).min(1),
       })
       .strip(),
     children: z.never().optional(),

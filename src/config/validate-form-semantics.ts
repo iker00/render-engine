@@ -210,6 +210,30 @@ function validateFormNodesInCollection(
       continue
     }
 
+    if (node.type === 'steps') {
+      if (!context.inForm) {
+        return enrichedInvalidLayoutFromNode(`Page "${pageId}" has an invalid layout at "${nodePath}": steps nodes must be descendants of a form node.`, nodeBreadcrumb, node)
+      }
+
+      for (let itemIndex = 0; itemIndex < node.props.items.length; itemIndex += 1) {
+        const item = node.props.items[itemIndex]
+        if (item.children && item.children.length > 0) {
+          const itemChildrenError = validateFormNodesInCollection(
+            item.children,
+            `${nodePath}.props.items[${itemIndex}].children`,
+            pageId,
+            { ...context, breadcrumb: nodeBreadcrumb },
+          )
+
+          if (itemChildrenError) {
+            return itemChildrenError
+          }
+        }
+      }
+
+      continue
+    }
+
     if (isFormOnlyLeafNode(node)) {
       if (!context.inForm || !context.currentFormId || !context.fieldIds) {
         return enrichedInvalidLayoutFromNode(`Page "${pageId}" has an invalid layout at "${nodePath}": ${node.type} nodes must be descendants of a form node.`, nodeBreadcrumb, node)
@@ -305,7 +329,7 @@ function validateFormChildren(
 
     if (!FORM_ALLOWED_DESCENDANT_TYPES.has(node.type)) {
       return enrichedInvalidLayoutFromNode(
-        `Page "${pageId}" has an invalid layout at "${nodePath}": form nodes only accept input, textarea, select, radioGroup, checkboxGroup, fileInput, toggle, hidden, button, heading, paragraph, image, table, container, accordion, divider, tabs, alert, badge, stat and skeleton descendants.`,
+        `Page "${pageId}" has an invalid layout at "${nodePath}": form nodes only accept input, textarea, select, radioGroup, checkboxGroup, fileInput, toggle, hidden, button, heading, paragraph, image, table, container, accordion, divider, tabs, steps, alert, badge, stat and skeleton descendants.`,
         nodeBreadcrumb,
         node,
       )
@@ -332,6 +356,27 @@ function validateFormChildren(
     }
 
     if (node.type === 'tabs') {
+      for (let itemIndex = 0; itemIndex < node.props.items.length; itemIndex += 1) {
+        const item = node.props.items[itemIndex]
+
+        if (item.children && item.children.length > 0) {
+          const itemChildrenError = validateFormChildren(
+            item.children,
+            `${nodePath}.props.items[${itemIndex}].children`,
+            pageId,
+            { ...context, breadcrumb: nodeBreadcrumb },
+          )
+
+          if (itemChildrenError) {
+            return itemChildrenError
+          }
+        }
+      }
+
+      continue
+    }
+
+    if (node.type === 'steps') {
       for (let itemIndex = 0; itemIndex < node.props.items.length; itemIndex += 1) {
         const item = node.props.items[itemIndex]
 

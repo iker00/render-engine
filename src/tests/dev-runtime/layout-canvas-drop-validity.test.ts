@@ -43,6 +43,10 @@ function tabs(items: { label: string; children?: LayoutNode[] }[]): LayoutNode {
   return { type: 'tabs', props: { items } } as LayoutNode
 }
 
+function steps(items: { label: string; children?: LayoutNode[] }[]): LayoutNode {
+  return { type: 'steps', props: { items } } as LayoutNode
+}
+
 function badge(label = 'Badge'): LayoutNode {
   return { type: 'badge', props: { label } }
 }
@@ -79,6 +83,7 @@ function tableNode(): LayoutNode {
 // [8] emptyForm: a form with no children yet (freshly-inserted placeholder)
 // [9] palette: extra real nodes to drag from, one per type under test
 // [10] cycleOuter: a container wrapping cycleInner, isolated for cycle tests
+// [11] formWithSteps: a form containing a nested steps node (form ancestor via nesting)
 const PAGE_LAYOUT: LayoutNode[] = [
   form('formA', [inputNode('inputA'), container([buttonWithoutAction()])]),
   form('formB', [inputNode('inputB')]),
@@ -99,6 +104,12 @@ const PAGE_LAYOUT: LayoutNode[] = [
   form('emptyForm', []),
   container([listNode(), modal('modal2', []), badge('Palette badge'), alertNode(), statNode(), skeletonNode(), tableNode()]),
   container([container([])]),
+  form('formWithSteps', [
+    steps([
+      { label: 'S1', children: [] },
+      { label: 'S2', children: [] },
+    ]),
+  ]),
 ]
 
 const FORM_A_PATH: LayoutNodePath = [{ field: 'children', index: 0 }]
@@ -143,6 +154,11 @@ const PALETTE_TABLE_PATH: LayoutNodePath = [{ field: 'children', index: 9 }, { f
 
 const CYCLE_OUTER_PATH: LayoutNodePath = [{ field: 'children', index: 10 }]
 const CYCLE_INNER_PATH: LayoutNodePath = [{ field: 'children', index: 10 }, { field: 'children', index: 0 }]
+
+const STEPS_IN_FORM_PATH: LayoutNodePath = [
+  { field: 'children', index: 11 },
+  { field: 'children', index: 0 },
+]
 
 describe('isValidDropTarget: form-only leaf nodes require a form ancestor', () => {
   it('rejects an input dragged from a form to a sibling container without a form ancestor', () => {
@@ -277,6 +293,42 @@ describe('isValidDropTarget: tabs target disambiguation', () => {
   it('accepts a form-only leaf dragged into a tabs node nested inside a form, with a valid targetTabItemIndex', () => {
     expect(
       isValidDropTarget(PAGE_LAYOUT, INPUT_A_PATH, TABS_IN_FORM_PATH, 0, { targetTabItemIndex: 0 }),
+    ).toBe(true)
+  })
+})
+
+describe('isValidDropTarget: steps target disambiguation', () => {
+  it('rejects a drop on a steps node without options.targetStepItemIndex', () => {
+    expect(isValidDropTarget(PAGE_LAYOUT, HEADING_IN_CONTAINER_NO_FORM_PATH, STEPS_IN_FORM_PATH, 0)).toBe(false)
+  })
+
+  it('rejects an out-of-range options.targetStepItemIndex', () => {
+    expect(
+      isValidDropTarget(PAGE_LAYOUT, HEADING_IN_CONTAINER_NO_FORM_PATH, STEPS_IN_FORM_PATH, 0, {
+        targetStepItemIndex: 5,
+      }),
+    ).toBe(false)
+  })
+
+  it('accepts a heading dragged into a steps node with a valid options.targetStepItemIndex', () => {
+    expect(
+      isValidDropTarget(PAGE_LAYOUT, HEADING_IN_CONTAINER_NO_FORM_PATH, STEPS_IN_FORM_PATH, 0, {
+        targetStepItemIndex: 0,
+      }),
+    ).toBe(true)
+  })
+
+  it('rejects options.targetStepItemIndex passed for a non-steps target', () => {
+    expect(
+      isValidDropTarget(PAGE_LAYOUT, HEADING_IN_CONTAINER_NO_FORM_PATH, CONTAINER_NO_FORM_PATH, 0, {
+        targetStepItemIndex: 0,
+      }),
+    ).toBe(false)
+  })
+
+  it('accepts a form-only leaf dragged into a steps node nested inside a form, with a valid targetStepItemIndex', () => {
+    expect(
+      isValidDropTarget(PAGE_LAYOUT, INPUT_A_PATH, STEPS_IN_FORM_PATH, 0, { targetStepItemIndex: 0 }),
     ).toBe(true)
   })
 })

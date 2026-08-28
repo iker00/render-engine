@@ -272,7 +272,7 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: `Page "home" has an invalid layout at "layout[0].children[0]": form nodes only accept input, textarea, select, radioGroup, checkboxGroup, fileInput, toggle, hidden, button, heading, paragraph, image, table, container, accordion, divider, tabs, alert, badge, stat and skeleton descendants.
+        message: `Page "home" has an invalid layout at "layout[0].children[0]": form nodes only accept input, textarea, select, radioGroup, checkboxGroup, fileInput, toggle, hidden, button, heading, paragraph, image, table, container, accordion, divider, tabs, steps, alert, badge, stat and skeleton descendants.
   → form("user-form") > list[0]
   Node: {"type":"list"}`,
       },
@@ -308,7 +308,7 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: `Page "home" has an invalid layout at "layout[0].children[0]": form nodes only accept input, textarea, select, radioGroup, checkboxGroup, fileInput, toggle, hidden, button, heading, paragraph, image, table, container, accordion, divider, tabs, alert, badge, stat and skeleton descendants.
+        message: `Page "home" has an invalid layout at "layout[0].children[0]": form nodes only accept input, textarea, select, radioGroup, checkboxGroup, fileInput, toggle, hidden, button, heading, paragraph, image, table, container, accordion, divider, tabs, steps, alert, badge, stat and skeleton descendants.
   → form("user-form") > repeater[0]
   Node: {"type":"repeater"}`,
         },
@@ -588,7 +588,7 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: `Page "home" has an invalid layout at "layout[0].children[0]": form nodes only accept input, textarea, select, radioGroup, checkboxGroup, fileInput, toggle, hidden, button, heading, paragraph, image, table, container, accordion, divider, tabs, alert, badge, stat and skeleton descendants.
+        message: `Page "home" has an invalid layout at "layout[0].children[0]": form nodes only accept input, textarea, select, radioGroup, checkboxGroup, fileInput, toggle, hidden, button, heading, paragraph, image, table, container, accordion, divider, tabs, steps, alert, badge, stat and skeleton descendants.
   → form("user-form") > map[0]
   Node: {"type":"map"}`,
       },
@@ -613,7 +613,7 @@ describe('validateRuntimeConfig', () => {
     expect(result.status).toBe('error')
     if (result.status !== 'error') throw new Error('Expected error')
     expect(result.error.message).toContain(
-      'form nodes only accept input, textarea, select, radioGroup, checkboxGroup, fileInput, toggle, hidden, button, heading, paragraph, image, table, container, accordion, divider, tabs, alert, badge, stat and skeleton descendants.',
+      'form nodes only accept input, textarea, select, radioGroup, checkboxGroup, fileInput, toggle, hidden, button, heading, paragraph, image, table, container, accordion, divider, tabs, steps, alert, badge, stat and skeleton descendants.',
     )
   })
 

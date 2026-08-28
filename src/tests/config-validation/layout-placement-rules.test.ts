@@ -73,7 +73,7 @@ describe('FORM_ALLOWED_DESCENDANT_TYPES', () => {
     expect(FORM_ALLOWED_DESCENDANT_TYPES.has('modal')).toBe(false)
   })
 
-  it('accepts exactly the 22 types documented as valid form descendants', () => {
+  it('accepts exactly the 23 types documented as valid form descendants', () => {
     const expected = [
       'input',
       'textarea',
@@ -92,6 +92,7 @@ describe('FORM_ALLOWED_DESCENDANT_TYPES', () => {
       'accordion',
       'divider',
       'tabs',
+      'steps',
       'autocomplete',
       'alert',
       'badge',
@@ -99,7 +100,7 @@ describe('FORM_ALLOWED_DESCENDANT_TYPES', () => {
       'skeleton',
     ]
 
-    expect(FORM_ALLOWED_DESCENDANT_TYPES.size).toBe(22)
+    expect(FORM_ALLOWED_DESCENDANT_TYPES.size).toBe(23)
 
     for (const type of expected) {
       expect(FORM_ALLOWED_DESCENDANT_TYPES.has(type as never)).toBe(true)

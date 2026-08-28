@@ -16,6 +16,7 @@ export type LayoutNodeType =
   | 'checkboxGroup'
   | 'modal'
   | 'tabs'
+  | 'steps'
   | 'accordion'
   | 'badge'
   | 'alert'
@@ -520,6 +521,35 @@ export interface TabsLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayo
   children?: never
 }
 
+export type StepsVariant = 'horizontal' | 'vertical' | 'progress'
+
+export interface StepOnNextAction {
+  operationName: string
+  query?: RuntimeApiQuery
+  body?: RuntimeApiBodyValue
+  headers?: RuntimeApiHeaders
+}
+
+export interface StepsItem {
+  label: string
+  children?: LayoutNode[]
+  visibility?: RuntimeVisibilityConfig
+  onNext?: StepOnNextAction
+}
+
+export interface StepsLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayoutFields {
+  type: 'steps'
+  id?: string
+  props: {
+    variant?: StepsVariant
+    backLabel?: string
+    nextLabel?: string
+    submitLabel?: string
+    items: StepsItem[]
+  }
+  children?: never
+}
+
 export interface AccordionLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayoutFields {
   type: 'accordion'
   id?: string
@@ -875,6 +905,7 @@ export type LayoutNode =
   | CheckboxGroupLayoutNode
   | ModalLayoutNode
   | TabsLayoutNode
+  | StepsLayoutNode
   | AccordionLayoutNode
   | BadgeLayoutNode
   | AlertLayoutNode

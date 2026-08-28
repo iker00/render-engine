@@ -12,6 +12,7 @@ import { isSameOrDescendantPath } from '../layout-tree-mutations'
 
 export interface IsValidDropTargetOptions {
   targetTabItemIndex?: number
+  targetStepItemIndex?: number
   /**
    * Only meaningful when `draggedPath` is `null` (drag originated in the node palette, T15 —
    * the node doesn't exist in the tree yet). Ignored whenever `draggedPath` is non-null: a
@@ -104,6 +105,7 @@ export function isValidDropTarget(
   if (targetParentPath.length > 0 && targetParentNode === null) return false
 
   const targetTabItemIndex = options?.targetTabItemIndex
+  const targetStepItemIndex = options?.targetStepItemIndex
 
   if (targetParentNode !== null && targetParentNode.type === 'tabs') {
     if (targetTabItemIndex === undefined) return false
@@ -111,8 +113,15 @@ export function isValidDropTarget(
     if (targetTabItemIndex < 0 || targetTabItemIndex >= items.length) return false
     // Valid tabs disambiguation: treated as an unrestricted-by-type acceptor (like `container`),
     // so the generic `nodeTypeAcceptsChildren` check below is intentionally skipped.
+  } else if (targetParentNode !== null && targetParentNode.type === 'steps') {
+    if (targetStepItemIndex === undefined) return false
+    const items = targetParentNode.props.items
+    if (targetStepItemIndex < 0 || targetStepItemIndex >= items.length) return false
+    // Valid steps disambiguation: treated as an unrestricted-by-type acceptor (like `container`),
+    // so the generic `nodeTypeAcceptsChildren` check below is intentionally skipped.
   } else {
     if (targetTabItemIndex !== undefined) return false
+    if (targetStepItemIndex !== undefined) return false
     if (targetParentNode !== null && !nodeTypeAcceptsChildren(targetParentNode.type)) return false
   }
 

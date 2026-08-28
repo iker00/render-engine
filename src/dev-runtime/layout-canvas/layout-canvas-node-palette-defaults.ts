@@ -117,6 +117,9 @@ export function buildDefaultNodeInstance(type: LayoutNodeType): LayoutNode {
     case 'tabs':
       return { type: 'tabs', props: { items: [{ label: 'Pestaña 1' }] } }
 
+    case 'steps':
+      return { type: 'steps', props: { items: [{ label: 'Paso 1' }] } }
+
     case 'accordion':
       return { type: 'accordion', props: { label: 'Sección' } }
 

@@ -23,7 +23,6 @@ La política completa está definida en el documento de workflow del proyecto.
 
 ## Completadas
 
-
 - `2026-08-27-12-19-download-operation-action`: nuevo tipo de acción `downloadOperation` en `button.props.action.type`
   y `link.props.action.type` (mismo shape que `executeOperation`: `operationName`, `query`/`body`/`headers`
   opcionales, más `filename` opcional). Al disparar, ejecuta un `fetch` autenticado contra la operación del catálogo
@@ -107,6 +106,31 @@ La política completa está definida en el documento de workflow del proyecto.
   celdas-nodo no necesitan doble resolución porque ya se renderizan perezosamente sobre las filas visibles.
   `table.props.rows.source: 'item.*'` (el item del `repeater` ambiental que provee el array de filas) no cambia: es
   una familia de referencia distinta del contexto de fila.
+- `2026-08-25-09-27-form-steps`: nuevo nodo estructural `steps` en el catálogo, exclusivo como descendiente de
+  `form` (a diferencia de `tabs`/`accordion`, válidos también fuera de `form`; validado con un caso explícito propio
+  en los dos walkers de `validate-form-semantics.ts`, sin forzarlo dentro de `FORM_ONLY_LEAF_NODE_TYPES`, pensado
+  para nodos hoja con `fieldId`). `props.items` (mismo shape que `tabs.props.items`: `label`/`visibility`/`children`)
+  con al menos un elemento, `props.variant` (`horizontal`/`vertical`/`progress`, default `horizontal`) y tres textos
+  planos opcionales (`backLabel`/`nextLabel`/`submitLabel`, con interpolación `{{...}}`) para los botones de
+  navegación que el propio nodo genera automáticamente. Navegación gateada por validación: "Siguiente" solo avanza
+  si el paso activo valida con el mismo motor ya existente (`validateFormFields`, sin motor nuevo) acotado a sus
+  campos visibles; "Atrás" y el clic en un paso ya alcanzado en el indicador (`horizontal`/`vertical`) nunca validan
+  y son siempre libres; no se puede saltar a un paso todavía no alcanzado. El botón del último paso reutiliza el
+  `submitAction` del `form` padre vía `<button type="submit">`, sin mecanismo de submit nuevo. Divergencia de ciclo
+  de vida con `tabs`: para descubrimiento, validación de submit y payload, `steps` se comporta exactamente igual que
+  `tabs` (todos los items visibles participan, independientemente del paso activo), pero la inicialización al
+  montar el `form` es lazy por paso en vez de eager — cada campo descubierto dentro de `steps` lleva una marca
+  `stepGroup` que el efecto de inicialización eager de `FormNode` usa para excluirlo, dejando su inicialización a un
+  efecto propio de `StepsNode` con clave el paso activo. El recorrido recursivo de descubrimiento de campos, antes
+  privado de `form-layout-node.tsx`, se extrae a un módulo reutilizable
+  (`src/runtime/nodes/runtime-form-field-collection.ts`) para que `StepsNode` invoque la misma lógica sobre el
+  subárbol de un paso concreto sin duplicar el manejo de `container`/`repeater`/nodos anidados. Estilo por variante
+  centralizado en un lookup `Record<Variant, ...>` (`runtime-node-styling-steps.ts`) solo para la porción de
+  indicador; `horizontal`/`vertical` reutilizan la técnica de "tab conectado" ya usada por `tabs` (fusión de borde
+  entre el paso activo y el panel) con marcador circular numerado por paso (activo/visitado/no alcanzado);
+  `progress` no tiene indicador clicable, solo texto "Paso X de Y" y el botón "Atrás". Sin soporte en `dev-editor`
+  (fuera de alcance), sin `defaultStep`, sin persistencia del paso activo entre `pageEntry`, sin generación dinámica
+  de pasos desde `queries.*`.
 - `2026-08-25-09-15-autocomplete-node`: nuevo nodo de formulario `autocomplete`, campo de texto que filtra/busca entre
   opciones (estáticas o dinámicas) para seleccionar uno o varios valores mostrados como chips en modo múltiple.
   `props.items` reutiliza exactamente los tres shapes cerrados de `select` (manual literal, manual escalar, dinámico

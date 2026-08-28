@@ -26,6 +26,7 @@ import {
   shellSchema,
   skeletonNodeSchema,
   statNodeSchema,
+  stepsNodeSchema,
   tabsNodeSchema,
   tableNodeSchema,
   textareaNodeSchema,
@@ -41,6 +42,7 @@ const layoutNodeSchema: z.ZodType<unknown> = z.lazy(() =>
     formNodeLooseSchema,
     modalNodeLooseSchema,
     tabsNodeLooseSchema,
+    stepsNodeLooseSchema,
     accordionNodeLooseSchema,
     headingNodeSchema,
     paragraphNodeSchema,
@@ -85,6 +87,28 @@ const tabsNodeLooseSchema = tabsNodeSchema.extend({
     .object({
       orientation: z.enum(['horizontal', 'vertical']).optional(),
       defaultTab: z.number().int().min(0).optional(),
+      items: z
+        .array(
+          z
+            .object({
+              label: z.string(),
+              children: z.array(layoutNodeSchema).optional(),
+            })
+            .strip(),
+        )
+        .min(1),
+    })
+    .strip(),
+})
+
+// steps items children are overridden to use recursive layoutNodeSchema
+const stepsNodeLooseSchema = stepsNodeSchema.extend({
+  props: z
+    .object({
+      variant: z.enum(['horizontal', 'vertical', 'progress']).optional(),
+      backLabel: z.string().optional(),
+      nextLabel: z.string().optional(),
+      submitLabel: z.string().optional(),
       items: z
         .array(
           z

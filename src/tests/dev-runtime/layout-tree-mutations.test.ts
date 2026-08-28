@@ -37,6 +37,10 @@ function tabsNode(items: { label: string; children?: LayoutNode[] }[]): LayoutNo
   return { type: 'tabs', props: { items } }
 }
 
+function stepsNode(items: { label: string; children?: LayoutNode[] }[]): LayoutNode {
+  return { type: 'steps', props: { items } }
+}
+
 function tableManual(rows: unknown[][], headers: string[] = ['A', 'B']): LayoutNode {
   return { type: 'table', props: { headers, rows } } as LayoutNode
 }
@@ -126,6 +130,37 @@ describe('replaceNodeAt', () => {
     const items = (result[0] as { props: { items: { children?: LayoutNode[] }[] } }).props.items
     expect((items[0].children![0] as { props: { text: string } }).props.text).toBe('Tab0Child')
     expect((items[1].children![0] as { props: { text: string } }).props.text).toBe('Tab1Child-updated')
+  })
+
+  it('replaces a node nested through an intermediate "stepItem" step, leaving other step items intact', () => {
+    const original = [
+      stepsNode([
+        { label: 'Step 0', children: [heading('Step0Child')] },
+        { label: 'Step 1', children: [heading('Step1Child')] },
+      ]),
+    ]
+    const snapshot = JSON.parse(JSON.stringify(original))
+
+    const path: LayoutNodePath = [
+      { field: 'children', index: 0 },
+      { field: 'stepItem', itemIndex: 1, index: 0 },
+    ]
+
+    const result = replaceNodeAt(original, path, () => heading('Step1Child-updated'))
+
+    expect(original).toEqual(snapshot)
+    const items = (result[0] as { props: { items: { children?: LayoutNode[] }[] } }).props.items
+    expect((items[0].children![0] as { props: { text: string } }).props.text).toBe('Step0Child')
+    expect((items[1].children![0] as { props: { text: string } }).props.text).toBe('Step1Child-updated')
+  })
+
+  it('throws when a "stepItem" step targets a node that is not a steps node', () => {
+    const original = [container([heading('A')])]
+    const path: LayoutNodePath = [
+      { field: 'children', index: 0 },
+      { field: 'stepItem', itemIndex: 0, index: 0 },
+    ]
+    expect(() => replaceNodeAt(original, path, (node) => node)).toThrow()
   })
 
   it('throws when a "template" step targets a node that is not a repeater', () => {
@@ -281,6 +316,53 @@ describe('insertNodeAt', () => {
 
     expect(() =>
       insertNodeAt(original, [{ field: 'children', index: 0 }], 0, heading('New'), { tabItemIndex: 5 })
+    ).toThrow()
+  })
+
+  it('inserts inside items[stepItemIndex].children of a steps node, creating the array when undefined, without affecting other items', () => {
+    const original = [
+      stepsNode([
+        { label: 'Step 0', children: [heading('Step0Child')] },
+        { label: 'Step 1' },
+      ]),
+    ]
+
+    const result = insertNodeAt(original, [{ field: 'children', index: 0 }], 0, heading('Step1Child'), {
+      stepItemIndex: 1,
+    })
+
+    const stepsResult = result[0] as { props: { items: { children?: LayoutNode[] }[] } }
+    expect(stepsResult.props.items[0].children).toHaveLength(1)
+    expect((stepsResult.props.items[0].children![0] as { props: { text: string } }).props.text).toBe(
+      'Step0Child'
+    )
+    expect(stepsResult.props.items[1].children).toHaveLength(1)
+    expect((stepsResult.props.items[1].children![0] as { props: { text: string } }).props.text).toBe(
+      'Step1Child'
+    )
+  })
+
+  it('throws when parentPath resolves to a steps node without options.stepItemIndex', () => {
+    const original = [stepsNode([{ label: 'Step 0' }])]
+
+    expect(() =>
+      insertNodeAt(original, [{ field: 'children', index: 0 }], 0, heading('New'))
+    ).toThrow()
+  })
+
+  it('throws when parentPath resolves to a non-steps node and options.stepItemIndex is provided', () => {
+    const original = [container([])]
+
+    expect(() =>
+      insertNodeAt(original, [{ field: 'children', index: 0 }], 0, heading('New'), { stepItemIndex: 0 })
+    ).toThrow()
+  })
+
+  it('throws when options.stepItemIndex points to a step item that does not exist', () => {
+    const original = [stepsNode([{ label: 'Step 0' }])]
+
+    expect(() =>
+      insertNodeAt(original, [{ field: 'children', index: 0 }], 0, heading('New'), { stepItemIndex: 5 })
     ).toThrow()
   })
 
@@ -448,6 +530,75 @@ describe('movePathTo', () => {
     expect(containerResult.children).toHaveLength(2)
     expect((containerResult.children[0] as { props: { text: string } }).props.text).toBe('Existing')
     expect((containerResult.children[1] as { props: { text: string } }).props.text).toBe('MoveMe')
+  })
+
+  it('moves a node out of a steps item children into a sibling container', () => {
+    const original = [
+      stepsNode([{ label: 'Step 0', children: [heading('MoveMe')] }]),
+      container([heading('Existing')]),
+    ]
+
+    const fromPath: LayoutNodePath = [
+      { field: 'children', index: 0 },
+      { field: 'stepItem', itemIndex: 0, index: 0 },
+    ]
+    const toParentPath: LayoutNodePath = [{ field: 'children', index: 1 }]
+
+    const result = movePathTo(original, fromPath, toParentPath, 1)
+
+    const stepsResult = result[0] as { props: { items: { children?: LayoutNode[] }[] } }
+    const containerResult = result[1] as { children: LayoutNode[] }
+
+    expect(stepsResult.props.items[0].children).toHaveLength(0)
+    expect(containerResult.children).toHaveLength(2)
+    expect((containerResult.children[0] as { props: { text: string } }).props.text).toBe('Existing')
+    expect((containerResult.children[1] as { props: { text: string } }).props.text).toBe('MoveMe')
+  })
+
+  it('renests a leading root node into the active panel of a steps node that already has one child', () => {
+    const original = [
+      heading('X'),
+      stepsNode([
+        { label: 'Step 0', children: [heading('Y')] },
+        { label: 'Step 1', children: [heading('Z')] },
+      ]),
+    ]
+
+    const result = movePathTo(original, [{ field: 'children', index: 0 }], [{ field: 'children', index: 1 }], 1, {
+      toStepItemIndex: 0,
+    })
+
+    expect(result).toHaveLength(1)
+    const stepsResult = result[0] as { props: { items: { children?: LayoutNode[] }[] } }
+    expect(
+      stepsResult.props.items[0].children!.map((n) => (n as { props: { text: string } }).props.text)
+    ).toEqual(['Y', 'X'])
+    expect(
+      stepsResult.props.items[1].children!.map((n) => (n as { props: { text: string } }).props.text)
+    ).toEqual(['Z'])
+  })
+
+  it('moves a node between two panels of the same steps node', () => {
+    const original = [
+      stepsNode([
+        { label: 'Step 0', children: [heading('MoveMe')] },
+        { label: 'Step 1', children: [heading('Existing')] },
+      ]),
+    ]
+
+    const fromPath: LayoutNodePath = [
+      { field: 'children', index: 0 },
+      { field: 'stepItem', itemIndex: 0, index: 0 },
+    ]
+    const toParentPath: LayoutNodePath = [{ field: 'children', index: 0 }]
+
+    const result = movePathTo(original, fromPath, toParentPath, 1, { toStepItemIndex: 1 })
+
+    const stepsResult = result[0] as { props: { items: { children?: LayoutNode[] }[] } }
+    expect(stepsResult.props.items[0].children).toHaveLength(0)
+    expect(
+      stepsResult.props.items[1].children!.map((n) => (n as { props: { text: string } }).props.text)
+    ).toEqual(['Existing', 'MoveMe'])
   })
 
   it('throws when toParentPath points to a descendant of fromPath (moving a container into its own child)', () => {

@@ -220,6 +220,11 @@ export function LayoutNodeRenderer({ node, renderedChildren, iterationContext, p
       renderedNode = <MapNode node={node} iterationContext={iterationContext} />
       break
     }
+    case 'steps': {
+      const StepsNode = NodeComponents.steps
+      renderedNode = <StepsNode node={node} iterationContext={iterationContext} path={path} />
+      break
+    }
     case 'gallery': {
       const GalleryNode = NodeComponents.gallery
       renderedNode = <GalleryNode node={node} iterationContext={iterationContext} />

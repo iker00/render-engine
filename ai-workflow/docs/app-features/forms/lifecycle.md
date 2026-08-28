@@ -1,6 +1,6 @@
 > Cuándo leer: estado por `formId.fieldId`, inicialización lazy, limpieza por desmontaje, `persistOnUnmount`, invalidación por `pageEntry`, comportamiento de campos ocultos.
 > Tamaño: medio.
-> Relacionados: [[defaults.md]], [[validation-rules.md]], [[../references/visibility.md]], [[../references/query-state-feedback.md]].
+> Relacionados: [[defaults.md]], [[validation-rules.md]], [[../references/visibility.md]], [[../references/query-state-feedback.md]], [[../nodes/steps.md]].
 
 # Ciclo de vida del estado de formulario
 
@@ -16,6 +16,7 @@
 - Si un campo ya tiene estado mientras su `form` sigue montado, el runtime conserva ese valor y no rehidrata el `defaultValue`.
 - Un campo controlado por `visibility` puede inicializarse lazy la primera vez que llegue a mostrarse, aunque el resto del formulario ya exista en store.
 - **Excepción con `tabs` dentro de `form`**: los campos en todos los tabs (con `visibility` visible) se inicializan de forma eager al montar el form, no lazy. Esto permite que campos en tabs inactivos se validen y participen en submit incluso si nunca han sido visitados.
+- **Excepción con `steps` dentro de `form`**: al contrario que `tabs`, los campos de un `steps` se inicializan lazy por paso: solo los del paso activo se inicializan la primera vez que ese paso se activa, no al montar el form. Ver [[#Campos dentro de steps en formularios]].
 - **Excepción con `hidden`**: los campos `hidden` se inicializan de forma eager al montar el form, independientemente de la visibilidad de nodos padres. El valor de `props.value` (literal o referencia dinámica) se resuelve una sola vez en el momento de la inicialización.
 
 ## Desmontaje y persistencia
@@ -46,10 +47,21 @@ Cuando un nodo `tabs` es hijo de un nodo `form`:
 - **Inicialización de `defaultValue`**: los campos en tabs inactivos se inicializan con su `defaultValue` resuelto al montar el form. Si el `defaultValue` referencia una `queries.*`, se resuelve contra el estado vigente de esa query.
 - **Estado local conservado**: mientras el form esté montado, los campos en tabs inactivos conservan `value`, `error`, `dirty`, `touched` y `defaultValue`. El cambio de tab no afecta su estado.
 
+## Campos dentro de `steps` en formularios
+
+Cuando un nodo `steps` es hijo de un nodo `form`, el descubrimiento de campos trata `steps` igual que `tabs` en tres de sus cuatro usos, pero diverge en el cuarto (inicialización al montar):
+
+- **Descubrimiento, validación de submit y payload**: los campos de todos los items de `steps` (con `visibility` evaluada como visible) se descubren, participan en la validación de submit y en el payload agregado **independientemente del paso activo**, igual que `tabs`. Si un campo `required` vive en un paso que el usuario nunca visitó, el submit del `form` lo descubre, lo inicializa y lo valida igual que si fuera visible — no hay forma de que un campo de un paso escape al submit por no haber sido visitado.
+- **Inicialización al montar — la diferencia con `tabs`**: a diferencia de `tabs` (eager, todos los campos de todos los items al montar el form), los campos de `steps` se inicializan **lazy por paso**. Solo los campos del paso activo se inicializan la primera vez que ese paso pasa a ser el activo; los campos de pasos todavía no visitados permanecen sin estado en el store hasta que el usuario los visita o hasta que el submit del `form` los descubre y valida.
+- **Mecanismo**: cada campo descubierto dentro de `steps` lleva una marca interna (`stepGroup`) que el `useEffect` de inicialización eager de `FormNode` usa para excluirlo de su pasada al montar. El propio nodo `StepsNode` mantiene su propio efecto de inicialización, con clave el paso activo, que inicializa solo los campos de ese paso todavía ausentes en store.
+- **Gating de "Siguiente"**: al pulsar "Siguiente" en un `steps`, el nodo resuelve los campos visibles del paso activo y los valida con el mismo motor de validación que usa el submit del `form` (`validateFormFields`), sin introducir un motor de validación nuevo. Si la validación falla, los errores se escriben en el mismo store de errores por campo (`forms.{formId}.{fieldId}.error`) y el paso no avanza.
+- **Items con `visibility` oculta**: si un item de `steps` tiene `visibility` que evalúa como oculto, sus campos no participan en inicialización, validación ni submit, igual que un item de `tabs` oculto.
+- **Retroceder nunca valida**: el botón "Atrás" de `steps` mueve el paso activo sin ejecutar ninguna validación; los valores ya introducidos en cualquier paso se conservan.
+
 ## Encaje en el contrato de páginas
 - El runtime implementa `form` como nodo contenedor real dentro de `pages[].layout`.
 - La raíz de `pages[].layout` sigue siendo una colección ordenada, así que un formulario puede convivir con otros bloques hermanos sin wrapper sintético.
-- `form.children` reutiliza el árbol declarativo existente y admite `input`, `textarea`, `select`, `radioGroup`, `checkboxGroup`, `toggle`, `hidden`, `autocomplete`, `button`, `heading`, `paragraph`, `image`, `table`, `container`, `accordion`, `tabs` y `divider`.
+- `form.children` reutiliza el árbol declarativo existente y admite `input`, `textarea`, `select`, `radioGroup`, `checkboxGroup`, `toggle`, `hidden`, `autocomplete`, `button`, `heading`, `paragraph`, `image`, `table`, `container`, `accordion`, `tabs`, `steps` y `divider`.
 - El dominio compartido `forms` del store sigue siendo la única fuente de verdad para valores y errores de formulario.
 
 ## Casos funcionales soportados
@@ -62,6 +74,7 @@ Cuando un nodo `tabs` es hijo de un nodo `form`:
 - reentrada a una página con `preloads` y `defaultValue` basado en `queries.*` sin hidratar transitoriamente el registro de la entrada anterior mientras la nueva carga está en curso
 - formularios cuyos labels u opciones visibles combinan texto literal con `forms.*`, `queries.*`, `params.*` o `item.*` mediante placeholders `{{...}}`
 - formularios organizados en secciones visuales por `tabs`, donde todos los campos de todos los tabs participan en validación y submit aunque el usuario solo haya visitado algunos
+- formularios organizados en pasos secuenciales (wizard) por `steps`, con navegación gateada por validación paso a paso y campos que se inicializan lazy por paso, pero cuyo submit final descubre y valida igual que `tabs` todos los pasos visibles, aunque el usuario no los haya visitado todos
 
 ## Lo que no hace todavía
 - No existe todavía una política nueva de limpieza global de formularios al cambiar de página.
