@@ -19,6 +19,7 @@ import { resolveRuntimeValueWithOptions } from '../runtime-references/runtime-re
 import { useLayoutEditModeContext } from '../use-layout-edit-mode-context'
 import { RuntimeStateContext } from './runtime-state-context'
 import {
+  executeDownloadOperationWithSnapshot,
   executeInlineQueryOperationWithSnapshot,
   executeQueryOperationWithSnapshot,
 } from './runtime-state-query-execution'
@@ -334,6 +335,33 @@ export function useRuntimeStateActions() {
     [config, dispatchAndSyncState, editModeContext, getLatestState],
   )
 
+  const executeDownloadOperation = useCallback(
+    async (
+      operationName: string,
+      options?: {
+        fetch?: typeof fetch
+        snapshotState?: RuntimeState
+        requestParams?: RuntimeApiRequestParams
+        iterationContext?: RuntimeIterationContext
+      },
+    ) => {
+      if (editModeContext !== null && editModeContext.active) {
+        return { status: 'skipped' as const }
+      }
+
+      return executeDownloadOperationWithSnapshot({
+        config,
+        dispatch: dispatchAndSyncState,
+        operationName,
+        snapshotState: options?.snapshotState ?? getLatestState(),
+        requestParams: options?.requestParams,
+        iterationContext: options?.iterationContext,
+        fetchImplementation: options?.fetch,
+      })
+    },
+    [config, dispatchAndSyncState, editModeContext, getLatestState],
+  )
+
   const executeInlineQueryOperation = useCallback(
     async (
       slotName: string,
@@ -360,6 +388,7 @@ export function useRuntimeStateActions() {
   return useMemo(
     () => ({
       executeQueryOperation,
+      executeDownloadOperation,
       executeInlineQueryOperation,
       goBackPage,
       initializeForm,
@@ -392,6 +421,7 @@ export function useRuntimeStateActions() {
       getLatestState,
       initialState,
       executeQueryOperation,
+      executeDownloadOperation,
       executeInlineQueryOperation,
       goBackPage,
       initializeForm,

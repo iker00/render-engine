@@ -57,6 +57,8 @@ export type RuntimeReferenceSurface =
   | 'map.props.markerSources.label'
   | 'gallery.props.images.src'
   | 'gallery.props.images.alt'
+  | 'button.props.action.filename'
+  | 'link.props.action.filename'
 
 export function reportRuntimeReferenceDiagnostic(
   result: RuntimeReferenceResolutionResult,

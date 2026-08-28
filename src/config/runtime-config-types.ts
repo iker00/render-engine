@@ -699,6 +699,17 @@ export interface ResetFormRuntimeUiAction {
   formId: string
 }
 
+// Deliberately excluded from `RuntimeUiAction` and `RuntimeUiActionListEntry` (decision D7):
+// `downloadOperation` is only valid as the first-level `action` of `button`/`link`, never as a
+// chained entry inside another action's `onSuccess`/`onError` list.
+export interface DownloadOperationRuntimeUiAction extends RuntimeApiRequestParams {
+  type: 'downloadOperation'
+  operationName: string
+  filename?: string
+  onSuccess?: RuntimeUiActionListEntry[]
+  onError?: RuntimeUiActionListEntry[]
+}
+
 export interface OpenModalRuntimeUiAction {
   type: 'openModal'
   modalId: string
@@ -734,7 +745,7 @@ export interface ButtonLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLa
   id?: string
   props: {
     label: string
-    action?: RuntimeUiAction
+    action?: RuntimeUiAction | DownloadOperationRuntimeUiAction
     color?: ButtonColor
     variant?: ButtonVariant
     fullWidth?: boolean
@@ -752,7 +763,7 @@ export interface LinkLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayo
     href?: string
     download?: string
     target?: string
-    action?: NavigateToRuntimeUiAction | GoBackRuntimeUiAction
+    action?: NavigateToRuntimeUiAction | GoBackRuntimeUiAction | DownloadOperationRuntimeUiAction
     icon?: string
     iconPosition?: 'left' | 'right'
   }

@@ -12,6 +12,7 @@ export function executeRuntimeNavigationAction(
 ) {
   executeRuntimeUiAction(action, {
     executeQueryOperation: async () => undefined,
+    executeDownloadOperation: async () => ({ status: 'skipped' as const }),
     goBackPage: handlers.goBackPage,
     navigateToPage: handlers.navigateToPage,
     resetForm: () => undefined,

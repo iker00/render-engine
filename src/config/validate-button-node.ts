@@ -7,6 +7,7 @@ import { mapLayoutNodeIssue } from './validate-layout-issue-mapping'
 import {
   mapQueryStateFeedbackIssue,
   mapVisibilityIssue,
+  validateDownloadOperationAction,
   validateRuntimeUiAction,
   validateRuntimeUiActionLifecycleBlocks,
   validateVisibility,
@@ -100,30 +101,38 @@ export function validateButtonNode(
     return enrichErrorResult(visibilityResult, breadcrumb, rawNode)
   }
 
-  let action: RuntimeUiAction | undefined
+  let action: ButtonLayoutNode['props']['action']
 
   if (parseResult.data.props.action !== undefined) {
-    const actionResult = validateRuntimeUiAction(parseResult.data.props.action, `${path}.props.action`, pageId)
+    const rawAction = parseResult.data.props.action as Record<string, unknown>
 
-    if (actionResult.status === 'error') {
-      return enrichErrorResult(actionResult, breadcrumb, rawNode)
+    if (rawAction.type === 'downloadOperation') {
+      const downloadResult = validateDownloadOperationAction(rawAction, `${path}.props.action`, pageId)
+
+      if (downloadResult.status === 'error') {
+        return enrichErrorResult(downloadResult, breadcrumb, rawNode)
+      }
+
+      action = downloadResult.action
+    } else {
+      const actionResult = validateRuntimeUiAction(parseResult.data.props.action, `${path}.props.action`, pageId)
+
+      if (actionResult.status === 'error') {
+        return enrichErrorResult(actionResult, breadcrumb, rawNode)
+      }
+
+      const lifecycleResult = validateRuntimeUiActionLifecycleBlocks(rawAction, `${path}.props.action`, pageId)
+
+      if (lifecycleResult.status === 'error') {
+        return enrichErrorResult(lifecycleResult, breadcrumb, rawNode)
+      }
+
+      action = {
+        ...actionResult.action,
+        ...(lifecycleResult.onSuccess !== undefined ? { onSuccess: lifecycleResult.onSuccess } : {}),
+        ...(lifecycleResult.onError !== undefined ? { onError: lifecycleResult.onError } : {}),
+      } as RuntimeUiAction
     }
-
-    const lifecycleResult = validateRuntimeUiActionLifecycleBlocks(
-      parseResult.data.props.action as Record<string, unknown>,
-      `${path}.props.action`,
-      pageId,
-    )
-
-    if (lifecycleResult.status === 'error') {
-      return enrichErrorResult(lifecycleResult, breadcrumb, rawNode)
-    }
-
-    action = {
-      ...actionResult.action,
-      ...(lifecycleResult.onSuccess !== undefined ? { onSuccess: lifecycleResult.onSuccess } : {}),
-      ...(lifecycleResult.onError !== undefined ? { onError: lifecycleResult.onError } : {}),
-    } as RuntimeUiAction
   }
 
   const buttonProps: ButtonLayoutNode['props'] = {

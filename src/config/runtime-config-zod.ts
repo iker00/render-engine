@@ -402,6 +402,17 @@ export const executeOperationsRuntimeUiActionSchema = z
   })
   .strip()
 
+export const downloadOperationRuntimeUiActionSchema = z
+  .object({
+    type: z.literal('downloadOperation'),
+    operationName: nonEmptyStringSchema,
+    query: runtimeApiQuerySchema.optional(),
+    body: runtimeApiBodySchema.optional(),
+    headers: runtimeApiHeadersSchema.optional(),
+    filename: z.string().optional(),
+  })
+  .strip()
+
 export const resetFormRuntimeUiActionSchema = z
   .object({
     type: z.literal('resetForm'),
@@ -447,6 +458,11 @@ export const executeOperationsWithLifecycleSchema = executeOperationsRuntimeUiAc
   onError: runtimeUiActionListSchema,
 })
 
+export const downloadOperationWithLifecycleSchema = downloadOperationRuntimeUiActionSchema.extend({
+  onSuccess: runtimeUiActionListSchema,
+  onError: runtimeUiActionListSchema,
+})
+
 export const buttonActionSchema = z.discriminatedUnion('type', [
   navigateToButtonActionSchema,
   goBackButtonActionSchema,
@@ -455,6 +471,7 @@ export const buttonActionSchema = z.discriminatedUnion('type', [
   resetFormRuntimeUiActionSchema,
   openModalRuntimeUiActionSchema,
   closeModalRuntimeUiActionSchema,
+  downloadOperationWithLifecycleSchema,
 ])
 
 export const formSubmitActionSchema = z.discriminatedUnion('type', [
@@ -714,7 +731,9 @@ export const linkNodeSchema = z
         href: z.string().optional(),
         download: z.string().optional(),
         target: z.string().optional(),
-        action: z.discriminatedUnion('type', [navigateToButtonActionSchema, goBackButtonActionSchema]).optional(),
+        action: z
+          .discriminatedUnion('type', [navigateToButtonActionSchema, goBackButtonActionSchema, downloadOperationWithLifecycleSchema])
+          .optional(),
         icon: z.string().optional(),
         iconPosition: z.enum(['left', 'right']).optional(),
       })

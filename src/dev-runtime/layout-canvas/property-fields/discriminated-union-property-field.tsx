@@ -12,7 +12,7 @@ interface DiscriminatedUnionPropertyFieldProps {
   required: boolean
 }
 
-// Readable Spanish labels for the 7 real action variants (RF7/RF8, design.md D3). A variant
+// Readable Spanish labels for the real action variants (RF7/RF8, design.md D3). A variant
 // `type` missing here (a fabricated schema in tests, or a future action variant) falls back to
 // its literal `type` value, so the selector never breaks for an unknown variant.
 const VARIANT_LABELS: Record<string, string> = {
@@ -23,6 +23,7 @@ const VARIANT_LABELS: Record<string, string> = {
   resetForm: 'Reiniciar formulario',
   openModal: 'Abrir modal',
   closeModal: 'Cerrar modal',
+  downloadOperation: 'Descargar operación',
 }
 
 const NO_ACTION_LABEL = 'Sin acción'

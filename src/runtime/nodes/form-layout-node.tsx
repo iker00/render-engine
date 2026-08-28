@@ -17,7 +17,7 @@ import { type ResolvedFormFieldDefinition, validateFormFields } from '../runtime
 import { useRuntimeState, useRuntimeStateActions } from '../runtime-state/use-runtime-state'
 import { selectFormFieldState } from '../runtime-state/runtime-state-selectors'
 import {
-  runRuntimeUiActionLifecycleList,
+  runActionOutcomeWithLifecycle,
   type RuntimeUiActionHandlers,
 } from '../runtime-actions/runtime-ui-action-executor'
 import type {
@@ -40,8 +40,20 @@ interface FormNodeProps {
 
 export function FormNode({ node, children, iterationContext }: FormNodeProps) {
   const state = useRuntimeState()
-  const { executeQueryOperation, goBackPage, initializeForm, navigateToPage, openModal, closeModal, readRuntimeState, removeForm, resetForm, setFormFieldError, setFormFieldValue } =
-    useRuntimeStateActions()
+  const {
+    executeQueryOperation,
+    executeDownloadOperation,
+    goBackPage,
+    initializeForm,
+    navigateToPage,
+    openModal,
+    closeModal,
+    readRuntimeState,
+    removeForm,
+    resetForm,
+    setFormFieldError,
+    setFormFieldValue,
+  } = useRuntimeStateActions()
   const mountedPageEntryIdRef = useRef(state.pageEntry.entryId)
 
   const fieldDefinitions = useMemo(
@@ -152,6 +164,7 @@ export function FormNode({ node, children, iterationContext }: FormNodeProps) {
     return {
       executeQueryOperation: (operationName, options) =>
         executeQueryOperation(operationName, options),
+      executeDownloadOperation,
       goBackPage,
       navigateToPage,
       openModal,
@@ -226,65 +239,72 @@ export function FormNode({ node, children, iterationContext }: FormNodeProps) {
     const submitAction = node.submitAction
 
     if (submitAction.type === 'executeOperations') {
-      const submitSnapshotState = readRuntimeState()
-      const filteredOperations = submitAction.operations.filter((entry) =>
-        matchesVisibilityRule(entry.when, submitSnapshotState, iterationContext),
+      const outcome = await runActionOutcomeWithLifecycle(
+        async () => {
+          const submitSnapshotState = readRuntimeState()
+          const filteredOperations = submitAction.operations.filter((entry) =>
+            matchesVisibilityRule(entry.when, submitSnapshotState, iterationContext),
+          )
+          const results = await Promise.all(
+            filteredOperations.map((entry) =>
+              executeQueryOperation(entry.operationName, {
+                snapshotState: submitSnapshotState,
+                requestParams: {
+                  query: entry.query,
+                  body: entry.body,
+                  headers: entry.headers,
+                },
+                iterationContext,
+                hiddenFormFields,
+                emptySubmitValues,
+                fileInputSources,
+              }),
+            ),
+          )
+
+          const allSuccess = results.every((r) => r.status === 'success')
+          const anyError = results.some((r) => r.status === 'error')
+          const status = allSuccess ? 'success' : anyError ? 'error' : 'skipped'
+          return { status }
+        },
+        node.onSuccess,
+        node.onError,
+        buildHandlers(),
+        readRuntimeState,
+        iterationContext,
       )
-      const results = await Promise.all(
-        filteredOperations.map((entry) =>
-          executeQueryOperation(entry.operationName, {
-            snapshotState: submitSnapshotState,
-            requestParams: {
-              query: entry.query,
-              body: entry.body,
-              headers: entry.headers,
-            },
-            iterationContext,
-            hiddenFormFields,
-            emptySubmitValues,
-            fileInputSources,
-          }),
-        ),
-      )
 
-      const allSuccess = results.every((r) => r.status === 'success')
-      const anyError = results.some((r) => r.status === 'error')
-
-      if (allSuccess) {
-        runRuntimeUiActionLifecycleList(node.onSuccess, buildHandlers(), readRuntimeState, iterationContext)
-
-        if (node.resetOnSuccess) {
-          resetForm(node.id)
-        }
-      } else if (anyError) {
-        runRuntimeUiActionLifecycleList(node.onError, buildHandlers(), readRuntimeState, iterationContext)
+      if (outcome.status === 'success' && node.resetOnSuccess) {
+        resetForm(node.id)
       }
 
       return
     }
 
     // executeOperation branch (default for 'executeOperation' type)
-    const result = await executeQueryOperation(submitAction.operationName, {
-      snapshotState: readRuntimeState(),
-      requestParams: {
-        query: submitAction.query,
-        body: submitAction.body,
-        headers: submitAction.headers,
-      },
+    const outcome = await runActionOutcomeWithLifecycle(
+      () =>
+        executeQueryOperation(submitAction.operationName, {
+          snapshotState: readRuntimeState(),
+          requestParams: {
+            query: submitAction.query,
+            body: submitAction.body,
+            headers: submitAction.headers,
+          },
+          iterationContext,
+          hiddenFormFields,
+          emptySubmitValues,
+          fileInputSources,
+        }),
+      node.onSuccess,
+      node.onError,
+      buildHandlers(),
+      readRuntimeState,
       iterationContext,
-      hiddenFormFields,
-      emptySubmitValues,
-      fileInputSources,
-    })
+    )
 
-    if (result.status === 'success') {
-      runRuntimeUiActionLifecycleList(node.onSuccess, buildHandlers(), readRuntimeState, iterationContext)
-
-      if (node.resetOnSuccess) {
-        resetForm(node.id)
-      }
-    } else if (result.status === 'error') {
-      runRuntimeUiActionLifecycleList(node.onError, buildHandlers(), readRuntimeState, iterationContext)
+    if (outcome.status === 'success' && node.resetOnSuccess) {
+      resetForm(node.id)
     }
   }
 

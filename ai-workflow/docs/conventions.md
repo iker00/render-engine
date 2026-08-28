@@ -85,6 +85,11 @@ src/
 - No repetir el esqueleto JSX del nodo por rama `if/else` cuando la única diferencia entre variantes es qué helper de estilo se invoca: la estructura común debe declararse una sola vez y la resolución por variante debe quedar centralizada.
 - Precedentes vigentes del patrón deseado en el propio código: `src/runtime/nodes/divider-layout-node.tsx` (lookup map `Record<Variant, string>`) y `src/runtime/nodes/button-layout-node.tsx` (delegación en un único helper de `runtime-node-styling.ts`).
 
+### Orquestación de lifecycle `onSuccess`/`onError` de acciones ejecutables
+- Cuando una acción declarativa necesita "ejecutar → decidir éxito/error → disparar `onSuccess`/`onError`", esa orquestación debe delegarse en el helper compartido `runActionOutcomeWithLifecycle` (`src/runtime/runtime-actions/runtime-ui-action-executor.ts`), no duplicarse por nodo o por tipo de operación.
+- Cada llamador solo aporta su propia función `execute` (p. ej. `executeQueryOperation`, el `Promise.all` de `executeOperations` o `runDownloadAction`); lo que no es la ejecución en sí (como `resetOnSuccess` o el ensamblado de campos de un submit de formulario) sigue siendo responsabilidad del nodo llamador, envolviendo la llamada al helper.
+- Precedente vigente: `src/runtime/nodes/button-layout-node.tsx` y `src/runtime/nodes/link-layout-node.tsx` para `executeOperation`/`executeOperations`/`downloadOperation`, `src/runtime/nodes/form-layout-node.tsx` para el submit.
+
 ### JSX frente a `createElement`
 - JSX es la forma por defecto para renderizar el elemento raíz de un nodo y sus hijos.
 - El uso explícito de `createElement` sólo se admite cuando exista una razón técnica real, por ejemplo un nombre de tag verdaderamente dinámico sin alternativa JSX limpia (caso actual de `src/runtime/nodes/icon-node.tsx`).
