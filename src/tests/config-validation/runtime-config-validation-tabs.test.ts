@@ -126,6 +126,57 @@ describe('validateRuntimeConfig — tabs node shape', () => {
     }
   })
 
+  it('accepts a tabs item with icon: "Star" and exposes it on the validated item', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithLayout([createTabsNode({ props: { items: [{ label: 'Tab 1', icon: 'Star' }] } })]),
+    )
+    expect(result.status).toBe('ready')
+    if (result.status === 'ready') {
+      const tabsNode = result.config.pages[0]?.layout[0] as { props: { items: Array<{ icon?: string }> } }
+      expect(tabsNode.props.items[0]?.icon).toBe('Star')
+    }
+  })
+
+  it('accepts a tabs item without icon and exposes icon as undefined (regression)', () => {
+    const result = validateRuntimeConfig(createConfigWithLayout([createTabsNode()]))
+    expect(result.status).toBe('ready')
+    if (result.status === 'ready') {
+      const tabsNode = result.config.pages[0]?.layout[0] as { props: { items: Array<{ icon?: string }> } }
+      expect(tabsNode.props.items[0]?.icon).toBeUndefined()
+    }
+  })
+
+  it('keeps icon independent per item when one item has icon and another does not', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithLayout([
+        createTabsNode({
+          props: {
+            items: [
+              { label: 'Tab 1', icon: 'Star' },
+              { label: 'Tab 2' },
+            ],
+          },
+        }),
+      ]),
+    )
+    expect(result.status).toBe('ready')
+    if (result.status === 'ready') {
+      const tabsNode = result.config.pages[0]?.layout[0] as { props: { items: Array<{ icon?: string }> } }
+      expect(tabsNode.props.items[0]?.icon).toBe('Star')
+      expect(tabsNode.props.items[1]?.icon).toBeUndefined()
+    }
+  })
+
+  it('rejects a tabs item with icon: true (non-string) with code invalid-layout', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithLayout([createTabsNode({ props: { items: [{ label: 'Tab 1', icon: true }] } })]),
+    )
+    expect(result.status).toBe('error')
+    if (result.status === 'error') {
+      expect(result.error.code).toBe('invalid-layout')
+    }
+  })
+
   it('rejects props.orientation with value diagonal with code invalid-layout and path including props.orientation', () => {
     const result = validateRuntimeConfig(
       createConfigWithLayout([

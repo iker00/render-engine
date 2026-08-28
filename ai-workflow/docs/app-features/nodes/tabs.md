@@ -10,7 +10,7 @@ Nodo estructural que organiza contenido en paneles navegables por pestañas. La 
 
 | Prop | Tipo | Requerido | Default | Descripción |
 |---|---|---|---|---|
-| `props.items` | `Array<{ label: string, visibility?: VisibilityRule, children?: Node[] }>` | sí | — | Lista de paneles. Debe tener al menos un elemento. |
+| `props.items` | `Array<{ label: string, visibility?: VisibilityRule, children?: Node[], icon?: string }>` | sí | — | Lista de paneles. Debe tener al menos un elemento. |
 | `props.orientation` | `"horizontal" \| "vertical"` | no | `"horizontal"` | Posición de la barra de tabs. `horizontal`: barra encima del panel. `vertical`: barra a la izquierda del panel. |
 | `props.defaultTab` | `number` (entero ≥ 0) | no | `0` | Índice 0-basado del tab activo al montar. |
 
@@ -21,6 +21,7 @@ Nodo estructural que organiza contenido en paneles navegables por pestañas. La 
 | `label` | `string` | sí | Etiqueta visible del tab. Soporta interpolación `{{...}}` con el sistema de referencias del runtime. |
 | `visibility` | `VisibilityRule` | no | — | Regla de visibilidad específica para este item. Usa el mismo shape que el `visibility` transversal del nodo (referencia, operador y valor opcionales). Tabs ocultos no aparecen en la barra y su panel no se renderiza. |
 | `children` | `Node[]` | no | Nodos del panel correspondiente. Admite cualquier nodo válido del catálogo. |
+| `icon` | `string` | no | Nombre de un icono Lucide (`PascalCase` o `kebab-case`) asociado al tab. Cualquier string se acepta en el contrato de configuración; la resolución a un icono Lucide conocido y su renderizado en la barra de tabs son responsabilidad del render, no de la validación. |
 
 ## Campos transversales
 
@@ -66,6 +67,7 @@ La barra de tabs se adapta al espacio disponible según la `orientation`:
 
 - En orientación `vertical` (barra a la izquierda): la barra tiene un ancho máximo fijo (~192px). Las etiquetas que superen ese ancho se muestran en múltiples líneas dentro del botón, permitiendo wrapping y ruptura de palabras largas sin desbordar el ancho de la barra.
 - En orientación `horizontal` (barra encima del panel): cuando el conjunto de botones supera el ancho disponible del container padre, la barra permite scroll horizontal interno. En pantallas anchas con pocos tabs, el comportamiento visual es idéntico al anterior: sin scroll visible.
+- Si `item.icon` resuelve a un icono Lucide válido, se renderiza dentro del botón del tab, siempre a la izquierda de su `label`, independientemente por item (un item puede tener icono y otro no) y de forma idéntica en ambas orientaciones. Un `icon` ausente o que no resuelve a un icono Lucide conocido no altera el render del botón respecto al comportamiento sin icono.
 
 #### Panel de contenido
 

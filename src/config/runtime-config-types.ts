@@ -506,6 +506,7 @@ export interface TabsItem {
   label: string
   children?: LayoutNode[]
   visibility?: RuntimeVisibilityConfig
+  icon?: string
 }
 
 export interface TabsLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayoutFields {
@@ -526,6 +527,7 @@ export interface AccordionLayoutNode extends LayoutNodeFeedbackFields, LayoutNod
     label: string
     defaultOpen?: boolean
     groupId?: string
+    icon?: string
   }
   children?: LayoutNode[]
 }

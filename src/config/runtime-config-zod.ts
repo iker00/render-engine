@@ -652,6 +652,7 @@ export const tabsItemSchema = z
     label: z.string(),
     children: z.array(z.unknown()).optional(),
     visibility: visibilitySchema.optional(),
+    icon: z.string().optional(),
   })
   .strip()
 
@@ -693,6 +694,7 @@ export const accordionNodeSchema = z
         label: nonEmptyStringSchema,
         defaultOpen: z.boolean().optional(),
         groupId: z.string().optional(),
+        icon: z.string().optional(),
       })
       .strip(),
     children: z.array(z.unknown()).optional(),

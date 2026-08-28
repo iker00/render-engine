@@ -790,6 +790,63 @@ describe('LayoutCanvasPropertiesPanel tabs node props.items (RF2, 0105)', () => 
   })
 })
 
+// T5 (accordion-tabs-icon): `resolveTabsPropsSchema` swaps each item's `properties.icon` for the
+// `{ 'x-widget': 'icon' }` sentinel, so `tabs.props.items[].icon` renders the same
+// `IconPickerPropertyField` grid as the top-level `props.icon` widget covered further below,
+// instead of a generic text input. Reuses the `tabsNode` item-array fixture pattern from the
+// describe block above, extended with an optional `icon` per item.
+describe('LayoutCanvasPropertiesPanel tabs items icon widget (T5, accordion-tabs-icon)', () => {
+  function tabsNodeWithIcons(items: Array<{ label: string; icon?: string }>): LayoutNode {
+    return { type: 'tabs', props: { items } } as LayoutNode
+  }
+
+  it('renders the icon widget grid for an item declaring icon, with the current value highlighted', () => {
+    const node = tabsNodeWithIcons([{ label: 'Uno', icon: 'Home' }])
+    render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={() => {}} />)
+
+    const itemsGroup = screen.getByRole('group', { name: 'items' })
+    const itemGroup = within(itemsGroup).getByRole('group', { name: 'items #1' })
+    fireEvent.focus(within(itemGroup).getByRole('textbox', { name: 'Buscar icono' }))
+
+    const grid = within(itemGroup).getByRole('grid', { name: 'icon' })
+    const homeCell = within(grid).getByText('Home').closest('[role="gridcell"]')!
+    expect(homeCell).toHaveAttribute('aria-selected', 'true')
+    expect(within(itemGroup).queryByRole('textbox', { name: 'icon' })).not.toBeInTheDocument()
+  })
+
+  it('selecting a different icon on one item commits only that item, preserving label and other items', () => {
+    const node = tabsNodeWithIcons([
+      { label: 'Uno', icon: 'Home' },
+      { label: 'Dos', icon: 'Star' },
+    ])
+    const onCommitNodeUpdate = vi.fn()
+    render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={onCommitNodeUpdate} />)
+
+    const itemsGroup = screen.getByRole('group', { name: 'items' })
+    const firstItemGroup = within(itemsGroup).getByRole('group', { name: 'items #1' })
+    fireEvent.focus(within(firstItemGroup).getByRole('textbox', { name: 'Buscar icono' }))
+
+    fireEvent.click(within(firstItemGroup).getByText('Settings').closest('[role="gridcell"]')!)
+
+    expect(onCommitNodeUpdate).toHaveBeenCalledTimes(1)
+    const [calledPath, updater] = onCommitNodeUpdate.mock.calls[0]
+    expect(calledPath).toBe(somePath)
+    const result = updater(node) as Extract<LayoutNode, { type: 'tabs' }>
+    expect(result.props.items).toEqual([
+      { label: 'Uno', icon: 'Settings' },
+      { label: 'Dos', icon: 'Star' },
+    ])
+  })
+
+  it('an item without icon still shows the label field, with no regression', () => {
+    const node = tabsNodeWithIcons([{ label: 'Uno' }])
+    render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={() => {}} />)
+
+    expect(screen.getByLabelText('label', { exact: false })).toHaveValue('Uno')
+    expect(screen.getByRole('textbox', { name: 'Buscar icono' })).toBeInTheDocument()
+  })
+})
+
 // T9 (0138): the panel-level "regression: array without minItems on a non-tabs node" describe
 // block that used to live here exercised the dispatcher's generic "array without minItems"
 // behavior through `table.props.headers` as its only real-node vehicle. `headers` (along with
@@ -2294,13 +2351,16 @@ describe('LayoutCanvasPropertiesPanel table rows/columns widget (T9, 0138)', () 
 // (`runtime-config-zod.ts`) — `resolveIconPropsSchema` swaps that key for the `{ 'x-widget': 'icon' }`
 // sentinel by field-name convention, independent of `node.type`. One builder per type below supplies
 // the minimal valid `props` shape for that node.
-const ICON_NODE_BUILDERS: Record<'button' | 'heading' | 'paragraph' | 'link' | 'stat' | 'input', (icon?: string) => LayoutNode> = {
+// `accordion` (T1, accordion-tabs-icon) is added here as a regression: it is not a new sentinel entry,
+// it just verifies the existing field-name convention already covers a seventh node type for free.
+const ICON_NODE_BUILDERS: Record<'button' | 'heading' | 'paragraph' | 'link' | 'stat' | 'input' | 'accordion', (icon?: string) => LayoutNode> = {
   button: (icon) => ({ type: 'button', props: { label: 'Enviar', variant: 'solid', ...(icon !== undefined ? { icon } : {}) } }) as LayoutNode,
   heading: (icon) => headingNode(icon !== undefined ? { icon } : {}),
   paragraph: (icon) => ({ type: 'paragraph', props: { text: 'Hola', ...(icon !== undefined ? { icon } : {}) } }) as LayoutNode,
   link: (icon) => ({ type: 'link', props: { label: 'Ir', ...(icon !== undefined ? { icon } : {}) } }) as LayoutNode,
   stat: (icon) => ({ type: 'stat', props: { label: 'Total', value: '10', ...(icon !== undefined ? { icon } : {}) } }) as LayoutNode,
   input: (icon) => ({ type: 'input', props: { fieldId: 'f1', label: 'Campo', ...(icon !== undefined ? { icon } : {}) } }) as LayoutNode,
+  accordion: (icon) => ({ type: 'accordion', props: { label: 'Sección', ...(icon !== undefined ? { icon } : {}) } }) as LayoutNode,
 }
 
 describe('LayoutCanvasPropertiesPanel icon widget (T2, 0129)', () => {

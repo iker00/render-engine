@@ -13,6 +13,7 @@ Nodo estructural que representa una única sección colapsable con cabecera inte
 | `props.label` | `string` | sí | — | Texto visible de la cabecera. Soporta interpolación `{{...}}` con el sistema de referencias del runtime. |
 | `props.defaultOpen` | `boolean` | no | `false` | Si `true`, la sección arranca expandida al montar. |
 | `props.groupId` | `string` | no | — | Cuando se declara, el accordion participa en un grupo de página. Solo puede haber un accordion del mismo `groupId` expandido a la vez. |
+| `props.icon` | `string` | no | — | Nombre de un icono Lucide (`PascalCase` o `kebab-case`) mostrado en la cabecera, a la izquierda del label. |
 
 ## Children
 
@@ -36,6 +37,7 @@ El nodo `accordion` aplica los campos transversales estándar sobre el nodo comp
 - La cabecera es un `<button type="button">` con `aria-expanded` que refleja el estado actual.
 - **Estilo visual**: la cabecera usa un fondo de tono suave del color primario (`app-accent/10`), con un tono más marcado en hover (`app-accent/20`). El anillo de foco usa el color primario (`app-accent`).
 - **Indicador chevron**: la cabecera muestra un icono chevron alineado a la derecha. El chevron apunta hacia abajo cuando el accordion está cerrado y hacia arriba cuando está abierto, con una rotación animada suave al cambiar de estado.
+- **Icono de cabecera (`props.icon`)**: si se declara y resuelve a un icono Lucide conocido, se renderiza fijo a la izquierda del label, agrupado con él en un mismo bloque flex. Su posición es independiente del chevron, que permanece siempre como último elemento de la cabecera, pinneado a la derecha. Un `props.icon` ausente o que no resuelve a un icono Lucide conocido no renderiza ningún elemento adicional ni produce error (mismo comportamiento que `IconNode` en otros nodos como `button`).
 - **Transición de apertura/cierre**: el cuerpo del accordion aparece y desaparece con una transición visual suave en lugar de aparecer o desaparecer de golpe. Los hijos se montan/desmontan de forma síncrona con `isOpen`, por lo que la transición opera sobre el wrapper exterior del cuerpo.
 - **Espaciado en el cuerpo**: cuando el accordion está expandido y tiene hijos, el cuerpo aplica un espaciado vertical fijo (`gap-5` en Tailwind, equivalente al alias `md` del nodo `container`) entre los hijos directos, evitando que aparezcan pegados. El espaciado es transparente cuando el cuerpo tiene un único hijo o está vacío.
 

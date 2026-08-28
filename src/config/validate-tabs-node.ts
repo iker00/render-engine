@@ -112,7 +112,9 @@ export function validateTabsNode(
       children = childrenResult.nodes
     }
 
-    normalizedItems.push({ label: rawItem.label, children, visibility: itemVisibilityResult.visibility })
+    const icon = typeof rawItem.icon === 'string' ? rawItem.icon : undefined
+
+    normalizedItems.push({ label: rawItem.label, children, visibility: itemVisibilityResult.visibility, icon })
   }
 
   return {
