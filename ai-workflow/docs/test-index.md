@@ -143,6 +143,7 @@ Ficheros de apoyo, no son tests: `config-validation/helpers.ts`, `dev-runtime/lu
 
 - `runtime-state-data-values.test.tsx` — pre-siembra de `queries` desde el prop `dataValues` del provider e integración con navegación, preloads y operaciones
 - `runtime-state-declarative-forms.test.tsx` — inicialización declarativa de formularios: normalización de select, defaults dinámicos, `select.multiple`, `radioGroup` y `checkboxGroup`
+- `runtime-state-download-operation.test.tsx` — `executeDownloadOperationWithSnapshot`/`executeDownloadOperation`: ciclo loading→success con `data: null`, errores de construcción y de fetch binario, supresión en modo edición, `getLatestState()` y slot `queries.*` compartido
 - `runtime-state-edit-mode-suppression.test.tsx` — supresión centralizada de navegación, operaciones y submit por `useRuntimeStateActions` bajo `LayoutEditModeProvider`
 - `runtime-state-form-lifecycle.test.tsx` — ciclo de vida del formulario: unmount/remount, `persistOnUnmount`, invalidación en page-entry y defaults dirigidos por query
 - `runtime-state-forms-queries.test.tsx` — form store y query state básicos: creación, actualización, reset, eliminación, selectors y defaults de feedback
@@ -162,6 +163,7 @@ Ficheros de apoyo, no son tests: `config-validation/helpers.ts`, `dev-runtime/lu
 ## runtime/
 
 - `resolve-autocomplete-field-definition.test.ts` — resolución de `defaultValue` de `autocomplete` (persistencia frente a colección dinámica cambiante, limpieza en shape estático, allowFreeText) y su wiring en la recogida de campos del formulario
+- `runtime-api-download.test.ts` — `executeBuiltRuntimeApiDownloadRequest`: éxito con blob y `content-disposition` (incluido body vacío en 2xx como descarga válida) y errores de red/HTTP
 - `runtime-api-empty-submit-value.test.ts` — sustitución de `''` por `emptySubmitValue` en resolvers de payload, headers y body
 - `runtime-api-execution.test.ts` — ejecución de operaciones y ciclo de vida de queries
 - `runtime-api-file-encoding-preflight.test.tsx` — preflight de codificación de ficheros (`fileValueOverrides`) e integración en `executeQueryOperation`
@@ -174,9 +176,11 @@ Ficheros de apoyo, no son tests: `config-validation/helpers.ts`, `dev-runtime/lu
 - `runtime-api-token-refresh-failed.test.ts` — propagación de `token-refresh-failed` desde resolvers hasta el builder cuando un token está en error
 - `runtime-autocomplete-collection.test.ts` — `resolveAutocompleteCollectionItems` (los tres shapes de items, incluido `item.*`) y `filterAutocompleteSuggestions` (gate por minChars, substring case-insensitive)
 - `runtime-browser-hash-navigation.test.ts` — sincronización de navegación con el hash del navegador
+- `runtime-button-download-action.test.tsx` — `button` con `action.type: downloadOperation`: disparo de descarga con `onSuccess`/`onError`, estado `disabled` durante la petición (incluido guard contra doble click), reflejo en `queries.{operationName}`, independencia entre instancias que comparten `operationName` y resolución de `item.*` en repeater
 - `runtime-button-lifecycle-actions.test.tsx` — `onSuccess`/`onError` de `button.props.action` tras `executeOperation`/`executeOperations`: encadenado, `when`, error de negocio, `item.*` en repeater y botón auxiliar dentro de form
 - `runtime-button-navigation.test.tsx` — navegación declarativa desde botones
 - `runtime-collection-pagination.test.ts` — paginación local de colecciones
+- `runtime-download-action.test.ts` — `resolveDownloadFilename` (prioridad Content-Disposition → filename dinámico → fallback) y `runDownloadAction` (invocación del handler inyectado, disparo del blob y estados success/error/skipped)
 - `runtime-file-base64-encoder.test.ts` — codificador puro de ficheros a base64 con shape `{name,size,mime,data}`
 - `runtime-file-input-hook.test.tsx` — nodo `FileInputNode`: selección, validaciones cliente, revocación de object URLs y previews
 - `runtime-file-manager-hook.test.tsx` — nodo `fileManager`: subida secuencial, validaciones, paginación, acciones Ver/Descargar/Eliminar y precarga
@@ -203,6 +207,7 @@ Ficheros de apoyo, no son tests: `config-validation/helpers.ts`, `dev-runtime/lu
 - `runtime-layout-visibility.test.ts` — reglas de visibilidad por condición: operadores, referencias y semántica de ausencia
 - `runtime-lazy-node.test.tsx` — wrapper LazyNode con Suspense + error boundary y contención por instancia
 - `runtime-link-action-href.test.ts` — resolutor puro de `href` para acciones `navigateTo`/`goBack` sobre el hash del navegador
+- `runtime-link-download-action.test.tsx` — `link` con `action.type: downloadOperation`: disparo de descarga con `onSuccess`/`onError`, `aria-disabled` durante la petición (incluido guard contra doble click), ausencia de `href`, reflejo en `queries.{operationName}`, resolución de `item.*` en repeater y no regresión de `navigateTo`/`goBack`
 - `runtime-map-marker-sources.test.ts` — `resolveMapMarkerSourceItems`: resolución de colección dinámica a marcadores, degradación silenciosa ante posición inválida, label por interpolación o ruta relativa
 - `runtime-node-components-map.test.tsx` — mapa central de componentes de nodo: cobertura de claves y rama eager en tests
 - `runtime-node-styling-gallery.test.ts` — helpers puros de estilo del nodo gallery: clases Tailwind de grid paginado, controles de paginación/carrusel/lightbox y placeholder vacío

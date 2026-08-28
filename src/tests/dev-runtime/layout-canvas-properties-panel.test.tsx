@@ -950,7 +950,7 @@ describe('LayoutCanvasPropertiesPanel discriminated union action selector (T5)',
     return { type: 'button', props: { label: 'Enviar', ...(action !== undefined ? { action } : {}) } } as LayoutNode
   }
 
-  it('shows the "Sin acción" plus the 7 real action variants for a button node', () => {
+  it('shows the "Sin acción" plus the 8 real action variants for a button node', () => {
     const node = buttonNode({ type: 'navigateTo', pageId: 'home' })
     render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={() => {}} />)
 
@@ -965,6 +965,7 @@ describe('LayoutCanvasPropertiesPanel discriminated union action selector (T5)',
       'Reiniciar formulario',
       'Abrir modal',
       'Cerrar modal',
+      'Descargar operación',
     ])
   })
 
@@ -1013,13 +1014,13 @@ describe('LayoutCanvasPropertiesPanel discriminated union action selector (T5)',
     expect(result.props).toEqual({ label: 'Enviar' })
   })
 
-  it('shows exactly the 2 link action variants plus "Sin acción" for a link node', () => {
+  it('shows exactly the 3 link action variants plus "Sin acción" for a link node', () => {
     const node: LayoutNode = { type: 'link', props: {} } as LayoutNode
     render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={() => {}} />)
 
     const select = screen.getByLabelText('action') as HTMLSelectElement
     const optionTexts = Array.from(select.options).map((option) => option.textContent)
-    expect(optionTexts).toEqual(['Sin acción', 'Navegar a página', 'Volver atrás'])
+    expect(optionTexts).toEqual(['Sin acción', 'Navegar a página', 'Volver atrás', 'Descargar operación'])
   })
 })
 

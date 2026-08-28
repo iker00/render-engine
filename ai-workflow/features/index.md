@@ -23,6 +23,19 @@ La política completa está definida en el documento de workflow del proyecto.
 
 ## Completadas
 
+- `2026-08-27-12-19-download-operation-action`: nuevo tipo de acción `downloadOperation` en `button.props.action.type`
+  y `link.props.action.type` (mismo shape que `executeOperation`: `operationName`, `query`/`body`/`headers`
+  opcionales, más `filename` opcional). Al disparar, ejecuta un `fetch` autenticado contra la operación del catálogo
+  `api` (headers resueltos con inyección de `tokens.*`, reutilizando el mismo request builder que `executeOperation`)
+  y, en éxito, arma un `Blob` con el cuerpo y dispara la descarga real del navegador. Nombre de fichero resuelto por
+  prioridad: `Content-Disposition` → `props.action.filename` → fallback genérico `"download"`. El estado se refleja
+  en `queries.{operationName}` (`data` siempre `null`, ya que un `Blob` no es JSON referenciable); el control
+  (`button`/`link`) queda deshabilitado por instancia mientras la descarga está en curso. `downloadOperation` admite
+  `onSuccess`/`onError` con la misma semántica que `executeOperation`, primera vez que `link` gana lifecycle
+  post-ejecución. La orquestación "ejecutar → decidir éxito/error → disparar `onSuccess`/`onError`", antes duplicada
+  entre `button` y `form`, se factorizó en un helper compartido (`runActionOutcomeWithLifecycle`) para que `link` no
+  añadiera una tercera copia del mismo patrón.
+
 - `2026-08-25-14-49-gallery-node`: nuevo nodo hoja `gallery` en el catálogo, colección de imágenes con dos orígenes
   mutuamente excluyentes por instancia: `props.images` (lista literal `{src, alt}`, misma semántica que
   `image.props.src`/`alt`) o `props.source` (colección dinámica resuelta desde `queries.*`/`item.*`, mismo contrato

@@ -1,4 +1,4 @@
-> Cuándo leer: nodo `button`, catálogo de acciones (`navigateTo`, `goBack`, `executeOperation`, `executeOperations`, `resetForm`, `openModal`, `closeModal`), submit implícito dentro de `form`, `onSuccess`/`onError` encadenados tras `executeOperation`/`executeOperations` de un botón.
+> Cuándo leer: nodo `button`, catálogo de acciones (`navigateTo`, `goBack`, `executeOperation`, `executeOperations`, `downloadOperation`, `resetForm`, `openModal`, `closeModal`), submit implícito dentro de `form`, `onSuccess`/`onError` encadenados tras `executeOperation`/`executeOperations`/`downloadOperation` de un botón.
 > Tamaño: medio.
 > Relacionados: [[../navigation/navigate-actions.md]], [[../queries/execution.md]], [[../forms/submit.md]], [[modal.md]].
 
@@ -9,7 +9,7 @@
 - `props.icon`: string opcional, nombre del icono Lucide React (ej. `"Search"`, `"User"`, `"ArrowRight"`). Se renderiza a la izquierda del label por defecto. Si el nombre no resuelve a un icono conocido, se ignora silenciosamente.
 - `props.iconPosition`: string opcional, enum cerrado `"left" | "right"`, default `"left"`. Controla el posicionamiento del icono declarado con `props.icon`. Solo tiene efecto cuando `props.icon` está declarado y resuelve a un icono conocido; en caso contrario se ignora silenciosamente.
 - `props.action`: opcional; sin `action` solo es válido dentro del subárbol de un `form` y actúa como submit implícito.
-- `props.action.type`: `navigateTo | goBack | executeOperation | executeOperations | resetForm | openModal | closeModal`.
+- `props.action.type`: `navigateTo | goBack | executeOperation | executeOperations | downloadOperation | resetForm | openModal | closeModal`.
 - `props.color`: opcional, enum cerrado de seis valores semánticos: `neutral | primary | success | warning | danger | info`, default `primary`.
 - `props.variant`: opcional, enum cerrado de cuatro variantes visuales: `solid | outline | ghost | link`, default `solid`.
 - `props.fullWidth`: opcional, boolean que, cuando es `true`, hace que el botón ocupe el 100% del ancho del contenedor padre, default `false`.
@@ -39,8 +39,19 @@
 - Overrides por operación siguen la misma semántica de merge que `executeOperation` singular.
 - `props.action.onSuccess`/`props.action.onError`: opcionales, a nivel de la acción completa (no por operación individual); ver [Acciones post-ejecución](#acciones-post-ejecución-onsuccess-onerror) más abajo.
 
+### `downloadOperation`
+- `props.action.operationName`: string obligatorio y no vacío, referencia a una operación de `api`.
+- `props.action.query`/`props.action.body`/`props.action.headers`: opcionales, misma semántica de resolución que `executeOperation` (incluida la resolución de `item.*` dentro de un `repeater`).
+- `props.action.filename`: opcional, referencia de texto dinámica que resuelve el nombre de fichero del `download` cuando la respuesta no trae `Content-Disposition` con `filename`. Si tampoco resuelve a un valor no vacío, se usa el literal genérico `download`.
+- Al pulsar el botón: se deshabilita (`disabled` nativo) mientras la descarga está en curso, ejecuta la operación vía `queries.{operationName}` (que refleja `loading` → `success`/`error` como cualquier otra operación) y dispara la descarga real del navegador (`Blob` + enlace temporal) solo en éxito.
+- Mientras el botón está deshabilitado, un click adicional no dispara una segunda descarga.
+- Al terminar (éxito o error) el botón vuelve a estar habilitado.
+- `props.action.onSuccess`/`props.action.onError`: opcionales, misma semántica que en `executeOperation` (ver [Acciones post-ejecución](#acciones-post-ejecución-onsuccess-onerror)); no son obligatorios para que la descarga se dispare.
+- Un error de red o una respuesta HTTP no-ok no dispara la descarga del navegador ni ejecuta `onSuccess`; ejecuta `onError` si está declarado.
+- Dos instancias de `button` que comparten el mismo `operationName` mantienen su propio estado `disabled` de forma independiente, aunque ambas lean el mismo `queries.{operationName}`.
+
 ## Acciones post-ejecución (`onSuccess`/`onError`)
-- Un botón con `props.action.type: executeOperation` o `executeOperations` puede declarar `onSuccess`/`onError`: listas ordenadas de acciones del mismo catálogo de botón (`navigateTo`, `goBack`, `executeOperation`, `executeOperations`, `resetForm`, `openModal`, `closeModal`), cada una con `when` opcional (mismo shape que `visibility`).
+- Un botón con `props.action.type: executeOperation`, `executeOperations` o `downloadOperation` puede declarar `onSuccess`/`onError`: listas ordenadas de acciones del mismo catálogo de botón (`navigateTo`, `goBack`, `executeOperation`, `executeOperations`, `resetForm`, `openModal`, `closeModal`), cada una con `when` opcional (mismo shape que `visibility`).
 - La semántica de ejecución es idéntica a `form.submitAction.onSuccess`/`onError` (ver [[../forms/submit.md#Acciones post-éxito onSuccess]]): orden declarado, todas las entradas cuyo `when` se cumple se ejecutan, `onSuccess` solo tras éxito y `onError` solo tras fallo, nunca ambos para la misma ejecución.
 - Con `executeOperation` (singular), éxito/error de esa única operación decide el bloque. Con `executeOperations` (plural), `onSuccess` requiere que **todas** las operaciones de la lista terminen en éxito; `onError` se dispara si **alguna** termina en error.
 - Las referencias `queries.{operationName}.*` usadas por los `when` de `onSuccess`/`onError` ya reflejan el estado y los datos de la ejecución que disparó el bloque.
@@ -86,7 +97,7 @@ Idéntica a la establecida en `badge`, `alert` y `stat`:
 - `info`: Información adicional o acción informativa.
 
 ## Reglas de render
-- `button.props` soporta `label`, `action`, `color`, `variant` y `fullWidth`; `label` admite literal, referencia completa o interpolación parcial visible, y `action` cubre `navigateTo`, `goBack`, `executeOperation`, `executeOperations`, `resetForm`, `openModal` y `closeModal`.
+- `button.props` soporta `label`, `action`, `color`, `variant` y `fullWidth`; `label` admite literal, referencia completa o interpolación parcial visible, y `action` cubre `navigateTo`, `goBack`, `executeOperation`, `executeOperations`, `downloadOperation`, `resetForm`, `openModal` y `closeModal`.
 - `navigateTo` puede añadir `params` escalares por entrada y escribirlos en `#/pageId?...` o `#/?...` para la home funcional.
 - `executeOperation` puede aportar `query`, `body` y `headers` por ejecución.
 - `executeOperations` lanza un array de operaciones en paralelo, cada una con overrides opcionales de `query`, `body` y `headers`.

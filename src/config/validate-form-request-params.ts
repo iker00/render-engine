@@ -48,6 +48,22 @@ function validateExecutionRequestParamsInCollection(
       }
     }
 
+    if (node.type === 'button' && node.props.action?.type === 'downloadOperation') {
+      const operation = api[node.props.action.operationName]
+
+      if (operation?.method === 'GET' && node.props.action.body !== undefined) {
+        return enrichedInvalidLayoutFromNode(`Page "${pageId}" has an invalid layout at "${nodePath}.props.action.body": GET operations do not support body.`, nodeBreadcrumb, node)
+      }
+    }
+
+    if (node.type === 'link' && node.props.action?.type === 'downloadOperation') {
+      const operation = api[node.props.action.operationName]
+
+      if (operation?.method === 'GET' && node.props.action.body !== undefined) {
+        return enrichedInvalidLayoutFromNode(`Page "${pageId}" has an invalid layout at "${nodePath}.props.action.body": GET operations do not support body.`, nodeBreadcrumb, node)
+      }
+    }
+
     if (node.type === 'form' && node.submitAction?.type === 'executeOperation') {
       const operation = api[node.submitAction.operationName]
 
@@ -99,7 +115,10 @@ function validateExecutionRequestParamsInCollection(
 
     const buttonAction = node.type === 'button' ? node.props.action : undefined
 
-    if ((buttonAction?.type === 'executeOperation' || buttonAction?.type === 'executeOperations') && buttonAction.onSuccess) {
+    if (
+      (buttonAction?.type === 'executeOperation' || buttonAction?.type === 'executeOperations' || buttonAction?.type === 'downloadOperation') &&
+      buttonAction.onSuccess
+    ) {
       const onSuccessError = validateActionListRequestParams(
         buttonAction.onSuccess,
         `${nodePath}.props.action.onSuccess`,
@@ -114,9 +133,44 @@ function validateExecutionRequestParamsInCollection(
       }
     }
 
-    if ((buttonAction?.type === 'executeOperation' || buttonAction?.type === 'executeOperations') && buttonAction.onError) {
+    if (
+      (buttonAction?.type === 'executeOperation' || buttonAction?.type === 'executeOperations' || buttonAction?.type === 'downloadOperation') &&
+      buttonAction.onError
+    ) {
       const onErrorError = validateActionListRequestParams(
         buttonAction.onError,
+        `${nodePath}.props.action.onError`,
+        pageId,
+        api,
+        node,
+        nodeBreadcrumb,
+      )
+
+      if (onErrorError) {
+        return onErrorError
+      }
+    }
+
+    const linkAction = node.type === 'link' ? node.props.action : undefined
+
+    if (linkAction?.type === 'downloadOperation' && linkAction.onSuccess) {
+      const onSuccessError = validateActionListRequestParams(
+        linkAction.onSuccess,
+        `${nodePath}.props.action.onSuccess`,
+        pageId,
+        api,
+        node,
+        nodeBreadcrumb,
+      )
+
+      if (onSuccessError) {
+        return onSuccessError
+      }
+    }
+
+    if (linkAction?.type === 'downloadOperation' && linkAction.onError) {
+      const onErrorError = validateActionListRequestParams(
+        linkAction.onError,
         `${nodePath}.props.action.onError`,
         pageId,
         api,

@@ -1,5 +1,6 @@
 import type {
   CloseModalRuntimeUiAction,
+  DownloadOperationRuntimeUiAction,
   ExecuteOperationRuntimeUiAction,
   ExecuteOperationsRuntimeUiAction,
   GoBackButtonAction,
@@ -27,6 +28,7 @@ import type { BreadcrumbSegment } from './validation-breadcrumb'
 import { buildBreadcrumbSegmentFromNode, enrichedInvalidLayoutFromNode } from './validation-breadcrumb'
 import {
   closeModalRuntimeUiActionSchema,
+  downloadOperationRuntimeUiActionSchema,
   executeOperationRuntimeUiActionSchema,
   executeOperationsRuntimeUiActionSchema,
   goBackButtonActionSchema,
@@ -239,6 +241,44 @@ export function validateFormSubmitAction(
     action,
     ...(lifecycleResult.onSuccess !== undefined ? { onSuccess: lifecycleResult.onSuccess } : {}),
     ...(lifecycleResult.onError !== undefined ? { onError: lifecycleResult.onError } : {}),
+  }
+}
+
+// Mirrors validateFormSubmitAction's pattern for executeOperation, but merges onSuccess/onError
+// into the returned action itself (D7: downloadOperation is a first-level action of button/link,
+// not part of the shared onSuccess/onError catalog, so its lifecycle lives on the action shape).
+export function validateDownloadOperationAction(
+  rawAction: Record<string, unknown>,
+  path: string,
+  pageId: string,
+): { status: 'ready'; action: DownloadOperationRuntimeUiAction } | { status: 'error'; error: RuntimeConfigError } {
+  const parseResult = downloadOperationRuntimeUiActionSchema.safeParse(rawAction)
+
+  if (!parseResult.success) {
+    return mapExecuteOperationActionIssue(pageId, path, rawAction, parseResult.error.issues[0]?.path ?? [])
+  }
+
+  const action: DownloadOperationRuntimeUiAction = parseResult.data
+
+  const requestParamsIssue = validateRuntimeApiRequestParams(action, path, pageId)
+
+  if (requestParamsIssue) {
+    return requestParamsIssue
+  }
+
+  const lifecycleResult = validateRuntimeUiActionLifecycleBlocks(rawAction, path, pageId)
+
+  if (lifecycleResult.status === 'error') {
+    return lifecycleResult
+  }
+
+  return {
+    status: 'ready',
+    action: {
+      ...action,
+      ...(lifecycleResult.onSuccess !== undefined ? { onSuccess: lifecycleResult.onSuccess } : {}),
+      ...(lifecycleResult.onError !== undefined ? { onError: lifecycleResult.onError } : {}),
+    },
   }
 }
 
@@ -766,6 +806,20 @@ function findInvalidActionTarget(
     }
 
     if (
+      node.type === 'button' &&
+      node.props.action?.type === 'downloadOperation' &&
+      !operationNames.has(node.props.action.operationName)
+    ) {
+      return {
+        path: `${nodePath}.props.action`,
+        type: 'executeOperation',
+        target: node.props.action.operationName,
+        breadcrumb: nodeBreadcrumb,
+        node,
+      }
+    }
+
+    if (
       node.type === 'link' &&
       node.props.action?.type === 'navigateTo' &&
       !pageIds.has(node.props.action.pageId)
@@ -774,6 +828,20 @@ function findInvalidActionTarget(
         path: `${nodePath}.props.action`,
         type: 'navigateTo',
         target: node.props.action.pageId,
+        breadcrumb: nodeBreadcrumb,
+        node,
+      }
+    }
+
+    if (
+      node.type === 'link' &&
+      node.props.action?.type === 'downloadOperation' &&
+      !operationNames.has(node.props.action.operationName)
+    ) {
+      return {
+        path: `${nodePath}.props.action`,
+        type: 'executeOperation',
+        target: node.props.action.operationName,
         breadcrumb: nodeBreadcrumb,
         node,
       }

@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import type {
   ButtonColor,
   ButtonLayoutNode,
@@ -5,15 +6,17 @@ import type {
   ExecuteOperationRuntimeUiAction,
   ExecuteOperationsRuntimeUiAction,
 } from '../../config/runtime-config'
+import type { DownloadOperationRuntimeUiAction } from '../../config/runtime-config-types'
 import { useOptionalFormContext } from '../use-optional-form-context'
 import {
   resolveRuntimeTextReference,
   type RuntimeIterationContext,
 } from '../runtime-references/runtime-reference-resolver'
 import { matchesVisibilityRule } from '../runtime-layout-visibility'
+import { runDownloadAction } from '../runtime-actions/runtime-download-action'
 import {
   executeRuntimeUiAction,
-  runRuntimeUiActionLifecycleList,
+  runActionOutcomeWithLifecycle,
   type RuntimeUiActionHandlers,
 } from '../runtime-actions/runtime-ui-action-executor'
 import { getButtonVariantClassName } from '../runtime-node-styling'
@@ -27,11 +30,20 @@ interface ButtonNodeProps {
 
 export function ButtonNode({ node, iterationContext }: ButtonNodeProps) {
   const state = useRuntimeState()
-  const { executeQueryOperation, goBackPage, navigateToPage, openModal, closeModal, readRuntimeState, resetForm } =
-    useRuntimeStateActions()
+  const {
+    executeQueryOperation,
+    executeDownloadOperation,
+    goBackPage,
+    navigateToPage,
+    openModal,
+    closeModal,
+    readRuntimeState,
+    resetForm,
+  } = useRuntimeStateActions()
   const formContext = useOptionalFormContext()
   const action = node.props.action
   const isImplicitSubmit = action === undefined && formContext !== null
+  const [isDownloading, setIsDownloading] = useState(false)
   const color: ButtonColor = node.props.color ?? 'primary'
   const variant: ButtonVariant = node.props.variant ?? 'solid'
   const fullWidth = node.props.fullWidth ?? false
@@ -43,6 +55,7 @@ export function ButtonNode({ node, iterationContext }: ButtonNodeProps) {
   function buildHandlers(): RuntimeUiActionHandlers {
     return {
       executeQueryOperation,
+      executeDownloadOperation,
       goBackPage,
       navigateToPage,
       openModal,
@@ -55,55 +68,91 @@ export function ButtonNode({ node, iterationContext }: ButtonNodeProps) {
     lifecycleAction: ExecuteOperationRuntimeUiAction | ExecuteOperationsRuntimeUiAction,
   ) {
     if (lifecycleAction.type === 'executeOperations') {
-      const snapshotState = readRuntimeState()
-      const filteredOperations = lifecycleAction.operations.filter((entry) =>
-        matchesVisibilityRule(entry.when, snapshotState, iterationContext),
-      )
-      const results = await Promise.all(
-        filteredOperations.map((entry) =>
-          executeQueryOperation(entry.operationName, {
-            snapshotState,
-            requestParams: {
-              query: entry.query,
-              body: entry.body,
-              headers: entry.headers,
-            },
-            iterationContext,
-          }),
-        ),
-      )
+      await runActionOutcomeWithLifecycle(
+        async () => {
+          const snapshotState = readRuntimeState()
+          const filteredOperations = lifecycleAction.operations.filter((entry) =>
+            matchesVisibilityRule(entry.when, snapshotState, iterationContext),
+          )
+          const results = await Promise.all(
+            filteredOperations.map((entry) =>
+              executeQueryOperation(entry.operationName, {
+                snapshotState,
+                requestParams: {
+                  query: entry.query,
+                  body: entry.body,
+                  headers: entry.headers,
+                },
+                iterationContext,
+              }),
+            ),
+          )
 
-      const allSuccess = results.every((result) => result.status === 'success')
-      const anyError = results.some((result) => result.status === 'error')
-
-      if (allSuccess) {
-        runRuntimeUiActionLifecycleList(lifecycleAction.onSuccess, buildHandlers(), readRuntimeState, iterationContext)
-      } else if (anyError) {
-        runRuntimeUiActionLifecycleList(lifecycleAction.onError, buildHandlers(), readRuntimeState, iterationContext)
-      }
+          const allSuccess = results.every((result) => result.status === 'success')
+          const anyError = results.some((result) => result.status === 'error')
+          const status = allSuccess ? 'success' : anyError ? 'error' : 'skipped'
+          return { status }
+        },
+        lifecycleAction.onSuccess,
+        lifecycleAction.onError,
+        buildHandlers(),
+        readRuntimeState,
+        iterationContext,
+      )
 
       return
     }
 
-    const result = await executeQueryOperation(lifecycleAction.operationName, {
-      snapshotState: readRuntimeState(),
-      requestParams: {
-        query: lifecycleAction.query,
-        body: lifecycleAction.body,
-        headers: lifecycleAction.headers,
-      },
+    await runActionOutcomeWithLifecycle(
+      () =>
+        executeQueryOperation(lifecycleAction.operationName, {
+          snapshotState: readRuntimeState(),
+          requestParams: {
+            query: lifecycleAction.query,
+            body: lifecycleAction.body,
+            headers: lifecycleAction.headers,
+          },
+          iterationContext,
+        }),
+      lifecycleAction.onSuccess,
+      lifecycleAction.onError,
+      buildHandlers(),
+      readRuntimeState,
       iterationContext,
-    })
+    )
+  }
 
-    if (result.status === 'success') {
-      runRuntimeUiActionLifecycleList(lifecycleAction.onSuccess, buildHandlers(), readRuntimeState, iterationContext)
-    } else if (result.status === 'error') {
-      runRuntimeUiActionLifecycleList(lifecycleAction.onError, buildHandlers(), readRuntimeState, iterationContext)
+  async function handleDownloadAction(downloadAction: DownloadOperationRuntimeUiAction) {
+    setIsDownloading(true)
+
+    try {
+      await runActionOutcomeWithLifecycle(
+        () =>
+          runDownloadAction(
+            downloadAction,
+            buildHandlers(),
+            readRuntimeState(),
+            'button.props.action.filename',
+            iterationContext,
+          ),
+        downloadAction.onSuccess,
+        downloadAction.onError,
+        buildHandlers(),
+        readRuntimeState,
+        iterationContext,
+      )
+    } finally {
+      setIsDownloading(false)
     }
   }
 
   function handleClick() {
-    if (!action) {
+    if (!action || isDownloading) {
+      return
+    }
+
+    if (action.type === 'downloadOperation') {
+      void handleDownloadAction(action)
       return
     }
 
@@ -124,6 +173,7 @@ export function ButtonNode({ node, iterationContext }: ButtonNodeProps) {
       type={isImplicitSubmit ? 'submit' : 'button'}
       className={className}
       onClick={action ? handleClick : undefined}
+      disabled={isDownloading}
     >
       {iconRight ? null : <IconNode name={node.props.icon} className="size-4 shrink-0" />}
       {label}

@@ -60,7 +60,7 @@ describe('getNodeTypeJsonSchema', () => {
     expect(propProperties['iconPosition']).toBeDefined()
   })
 
-  it('emits an action oneOf with the 7 button action variants, each with a distinct literal type', () => {
+  it('emits an action oneOf with the 8 button action variants, each with a distinct literal type', () => {
     const schema = getNodeTypeJsonSchema('button')
     const properties = schema.properties as Record<string, unknown>
     const propsSchema = properties['props'] as { properties?: Record<string, unknown> }
@@ -68,7 +68,7 @@ describe('getNodeTypeJsonSchema', () => {
     const actionSchema = propProperties['action'] as { oneOf?: Array<{ properties?: { type?: { const?: string } } }> }
 
     expect(actionSchema.oneOf).toBeDefined()
-    expect(actionSchema.oneOf).toHaveLength(7)
+    expect(actionSchema.oneOf).toHaveLength(8)
 
     const literalTypes = (actionSchema.oneOf ?? []).map((branch) => branch.properties?.type?.const)
     expect(literalTypes).toEqual([
@@ -79,11 +79,12 @@ describe('getNodeTypeJsonSchema', () => {
       'resetForm',
       'openModal',
       'closeModal',
+      'downloadOperation',
     ])
-    expect(new Set(literalTypes).size).toBe(7)
+    expect(new Set(literalTypes).size).toBe(8)
   })
 
-  it('emits an action oneOf with exactly the 2 link action variants (navigateTo, goBack)', () => {
+  it('emits an action oneOf with exactly the 3 link action variants (navigateTo, goBack, downloadOperation)', () => {
     const schema = getNodeTypeJsonSchema('link')
     const properties = schema.properties as Record<string, unknown>
     const propsSchema = properties['props'] as { properties?: Record<string, unknown> }
@@ -91,11 +92,11 @@ describe('getNodeTypeJsonSchema', () => {
     const actionSchema = propProperties['action'] as { oneOf?: Array<{ properties?: { type?: { const?: string } } }> }
 
     expect(actionSchema.oneOf).toBeDefined()
-    expect(actionSchema.oneOf).toHaveLength(2)
+    expect(actionSchema.oneOf).toHaveLength(3)
 
     const literalTypes = (actionSchema.oneOf ?? []).map((branch) => branch.properties?.type?.const)
-    expect(literalTypes).toEqual(['navigateTo', 'goBack'])
-    expect(new Set(literalTypes).size).toBe(2)
+    expect(literalTypes).toEqual(['navigateTo', 'goBack', 'downloadOperation'])
+    expect(new Set(literalTypes).size).toBe(3)
   })
 
   it('emits form.submitAction as an oneOf with exactly 2 branches (executeOperation, executeOperations), each exposing onSuccess/onError arrays of a 7-branch oneOf', () => {

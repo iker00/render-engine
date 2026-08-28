@@ -11,7 +11,7 @@ No es histórico acumulado ni sustituto de las fichas funcionales. El detalle es
 |---|---|---|---|
 | Runtime | estable | [runtime/](./app-features/runtime/index.md) | `0081` |
 | Contrato JSON | estable | [config/](./app-features/config/index.md) | `0110` |
-| Catálogo de nodos | estable | [nodes/](./app-features/nodes/index.md) | `2026-08-25-14-49-gallery-node` |
+| Catálogo de nodos | estable | [nodes/](./app-features/nodes/index.md) | `2026-08-27-12-19-download-operation-action` |
 | Referencias y strings dinámicas | estable | [references/](./app-features/references/index.md) | `2026-08-25-12-01-table-row-references` |
 | Formularios y validación | estable | [forms/](./app-features/forms/index.md) | `2026-08-25-09-15-autocomplete-node` |
 | Queries, preloads y feedback | estable | [queries/](./app-features/queries/index.md) | `2026-08-25-09-15-autocomplete-node` |

@@ -24,8 +24,8 @@ Los conceptos transversales (`visibility`, `queryStateFeedback`, referencias din
 | [heading-paragraph-list.md](./heading-paragraph-list.md) | `heading`, `paragraph`, `list` — nodos visuales simples con texto e items. |
 | [image.md](./image.md) | `<img>` declarativo, degradación cuando `src` o `alt` no resuelven. |
 | [table.md](./table.md) | Tablas semánticas de lectura, `headers`/`rows`/`columns`, filtros locales por columna, ordenación local, paginación local. |
-| [button.md](./button.md) | `button` y catálogo de acciones (`navigateTo`, `goBack`, `executeOperation`, `resetForm`, `openModal`, `closeModal`). |
-| [link.md](./link.md) | `link` — enlace declarativo como `<a>`, con `props.href` para URLs externas/descargas o `props.action` (`navigateTo`/`goBack`) para navegación interna. Contenido: texto simple (`props.label`) o árbol de nodos (`children`). |
+| [button.md](./button.md) | `button` y catálogo de acciones (`navigateTo`, `goBack`, `executeOperation`, `executeOperations`, `downloadOperation`, `resetForm`, `openModal`, `closeModal`). |
+| [link.md](./link.md) | `link` — enlace declarativo como `<a>`, con `props.href` para URLs externas/descargas estáticas o `props.action` (`navigateTo`/`goBack`/`downloadOperation`) para navegación interna o descarga vía `fetch` autenticado. Contenido: texto simple (`props.label`) o árbol de nodos (`children`). |
 | [badge.md](./badge.md) | `badge` — etiqueta visual compacta con variante `pill` o `circle` y paleta semántica cerrada de seis colores. |
 | [alert.md](./alert.md) | `alert` — bloque de aviso semántico con icono placeholder, cabecera opcional (`props.title`) y mensaje obligatorio (`props.message`), paleta semántica de seis tipos. |
 | [stat.md](./stat.md) | `stat` — métrica o KPI con cabecera descriptiva (`props.label`) y valor principal (`props.value`), tres variantes: `accent` (borde lateral de color), `tinted` (fondo suave) y `plain` (sin borde ni fondo, texto neutro), paleta semántica de seis colores. |

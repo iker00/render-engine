@@ -4,6 +4,7 @@ import type {
   RuntimeUiAction,
   RuntimeUiActionListEntry,
 } from '../../config/runtime-config'
+import type { RuntimeApiDownloadResult } from '../../queries/runtime-api-download-types'
 import type { RuntimeIterationContext } from '../runtime-references/runtime-reference-resolver'
 import { matchesVisibilityRule } from '../runtime-layout-visibility'
 import type { RuntimeState } from '../runtime-state/runtime-state-types'
@@ -13,6 +14,10 @@ export interface RuntimeUiActionHandlers {
     operationName: string,
     options?: { requestParams?: RuntimeApiRequestParams; iterationContext?: RuntimeIterationContext },
   ) => Promise<unknown>
+  executeDownloadOperation: (
+    operationName: string,
+    options?: { requestParams?: RuntimeApiRequestParams; iterationContext?: RuntimeIterationContext },
+  ) => Promise<RuntimeApiDownloadResult | { status: 'skipped' }>
   goBackPage: () => void
   navigateToPage: (
     pageId: string,
@@ -73,6 +78,36 @@ export function executeRuntimeUiAction(
       handlers.resetForm(action.formId)
       return
   }
+}
+
+/**
+ * Runs an operation, then dispatches the matching `onSuccess`/`onError`
+ * lifecycle action list based on its outcome. Shared by every runtime node
+ * that executes one or more operations and reacts to their result
+ * (`button`, `form`, and any future node with the same shape).
+ *
+ * `execute` may resolve to a richer status than `'success' | 'error'` (e.g.
+ * `executeQueryOperation` also resolves to `'skipped'` while in edit mode).
+ * Only `'success'` and `'error'` trigger a lifecycle list; any other status
+ * is a deliberate no-op, matching the pre-refactor behavior of the callers.
+ */
+export async function runActionOutcomeWithLifecycle<TResult extends { status: string }>(
+  execute: () => Promise<TResult>,
+  onSuccess: RuntimeUiActionListEntry[] | undefined,
+  onError: RuntimeUiActionListEntry[] | undefined,
+  handlers: RuntimeUiActionHandlers,
+  readState: () => RuntimeState,
+  iterationContext?: RuntimeIterationContext,
+): Promise<TResult> {
+  const result = await execute()
+
+  if (result.status === 'success') {
+    runRuntimeUiActionLifecycleList(onSuccess, handlers, readState, iterationContext)
+  } else if (result.status === 'error') {
+    runRuntimeUiActionLifecycleList(onError, handlers, readState, iterationContext)
+  }
+
+  return result
 }
 
 export function runRuntimeUiActionLifecycleList(
