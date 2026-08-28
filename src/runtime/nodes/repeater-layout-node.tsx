@@ -6,12 +6,14 @@ import type {
   RuntimeResponsiveLayoutValue,
 } from '../../config/runtime-config'
 import { LayoutRenderer } from '../layout-renderer'
-import { useRuntimeLayoutContext } from '../runtime-layout-context'
+import { useRuntimeLayoutContext } from '../use-runtime-layout-context'
+import { RuntimeLayoutContextProvider } from '../runtime-layout-context'
 import {
   createCollectionPaginationModel,
   createCollectionScrollWindow,
 } from '../runtime-collection-pagination'
 import {
+  getRepeaterGridClassName,
   getRepeaterPaginationButtonClassName,
   getRepeaterPaginationControlsClassName,
   getRepeaterPaginationCurrentButtonClassName,
@@ -19,9 +21,9 @@ import {
 import { CollectionPaginationControls } from './collection-pagination-controls'
 import type { RuntimeIterationContext } from '../runtime-references/runtime-reference-resolver'
 import { resolveRuntimeReference } from '../runtime-references/runtime-reference-resolver'
-import { useRuntimeState, useRuntimeStateActions } from '../runtime-state/runtime-state-provider'
+import { useRuntimeState, useRuntimeStateActions } from '../runtime-state/use-runtime-state'
 import { selectActiveModal } from '../runtime-state/runtime-state-selectors'
-import { useLayoutEditModeContext } from '../layout-edit-mode-context'
+import { useLayoutEditModeContext } from '../use-layout-edit-mode-context'
 import type { LayoutNodePath } from '../layout-node-path'
 
 interface RepeaterNodeProps {
@@ -79,14 +81,32 @@ export function RepeaterNode({ node, path }: RepeaterNodeProps) {
       key: EDIT_MODE_ITERATION_KEY,
       itemIndex: 0,
     }
-
-    return (
+    const editModeLayoutRenderer = (
       <LayoutRenderer
         nodes={node.props.template}
         iterationContext={editModeIterationContext}
         path={basePath}
         buildChildPath={(index) => [...basePath, { field: 'template', index }]}
       />
+    )
+
+    if (node.props.columns === undefined) {
+      return editModeLayoutRenderer
+    }
+
+    const gridStyling = getRepeaterGridClassName({
+      columns: node.props.columns,
+      gap: node.props.gap,
+      align: node.props.align,
+      justify: node.props.justify,
+    })
+
+    return (
+      <div className={gridStyling.className} style={gridStyling.style}>
+        <RuntimeLayoutContextProvider value={{ parentGridColumns: node.props.columns }}>
+          {editModeLayoutRenderer}
+        </RuntimeLayoutContextProvider>
+      </div>
     )
   }
 
@@ -130,22 +150,42 @@ function RepeaterNodeContent({
       : null
   const visibleIterations = scrollWindow?.visibleItems ?? paginationPage?.visibleItems ?? iterations
 
-  if (visibleIterations.length === 0) {
+  if (visibleIterations.length === 0 && node.props.columns === undefined) {
     return null
   }
 
+  const iterationsMarkup = visibleIterations.map((iteration) => {
+    const iterationContext: RuntimeIterationContext = {
+      item: iteration.item,
+      key: iteration.key,
+      itemKey: iteration.itemKey,
+      itemIndex: iteration.itemIndex,
+    }
+
+    return <LayoutRenderer key={iteration.key} nodes={node.props.template} iterationContext={iterationContext} />
+  })
+
+  const gridStyling =
+    node.props.columns === undefined
+      ? null
+      : getRepeaterGridClassName({
+          columns: node.props.columns,
+          gap: node.props.gap,
+          align: node.props.align,
+          justify: node.props.justify,
+        })
+
   return (
     <>
-      {visibleIterations.map((iteration) => {
-        const iterationContext: RuntimeIterationContext = {
-          item: iteration.item,
-          key: iteration.key,
-          itemKey: iteration.itemKey,
-          itemIndex: iteration.itemIndex,
-        }
-
-        return <LayoutRenderer key={iteration.key} nodes={node.props.template} iterationContext={iterationContext} />
-      })}
+      {gridStyling ? (
+        <div className={gridStyling.className} style={gridStyling.style}>
+          <RuntimeLayoutContextProvider value={{ parentGridColumns: node.props.columns ?? null }}>
+            {iterationsMarkup}
+          </RuntimeLayoutContextProvider>
+        </div>
+      ) : (
+        iterationsMarkup
+      )}
       {paginationPage && paginationPage.totalPages > 1 ? (
         <CollectionPaginationControls
           variant={paginationControlsVariant}

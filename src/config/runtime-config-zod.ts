@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import type { RuntimeApiBodyValue } from './runtime-config-types'
+import type { RuntimeApiBodyValue, SidebarItemConfig } from './runtime-config-types'
 
 export const supportedNodeTypes = [
   'container',
@@ -19,6 +19,7 @@ export const supportedNodeTypes = [
   'checkboxGroup',
   'modal',
   'tabs',
+  'steps',
   'accordion',
   'badge',
   'alert',
@@ -29,12 +30,15 @@ export const supportedNodeTypes = [
   'fileInput',
   'toggle',
   'hidden',
+  'map',
+  'gallery',
+  'autocomplete',
 ] as const
 
-export const tableCellAllowedNodeTypes = ['image', 'list', 'button', 'container', 'heading', 'paragraph'] as const
+export const tableCellAllowedNodeTypes = ['image', 'list', 'button', 'container', 'heading', 'paragraph', 'link'] as const
 export const supportedApiMethods = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'] as const
 export const supportedQueryStateFeedbackStates = ['idle', 'loading', 'error', 'empty', 'success'] as const
-export const supportedVisibilityOperators = ['equals', 'notEquals', 'isTruthy', 'isFalsy', 'greaterThan', 'lessThan'] as const
+export const supportedVisibilityOperators = ['equals', 'notEquals', 'isTruthy', 'isFalsy', 'greaterThan', 'lessThan', 'arrayContains'] as const
 export const supportedVisibilityGroupOperators = ['and', 'or'] as const
 export const supportedInputTypes = ['text', 'email', 'password', 'search', 'tel', 'url', 'number', 'date', 'datetime-local', 'time'] as const
 export const supportedContainerAlignValues = ['start', 'center', 'end', 'stretch'] as const
@@ -168,6 +172,7 @@ const visibilityConditionSchema = z
     operator: z.enum(supportedVisibilityOperators),
     value: z.unknown().optional(),
     negate: z.boolean().optional(),
+    itemField: z.string().optional(),
   })
   .strip()
 
@@ -267,6 +272,10 @@ export const repeaterNodeSchema = z
           })
           .strip(),
         pagination: collectionPaginationSchema.optional(),
+        columns: responsiveLayoutValueSchema.optional(),
+        gap: z.string().optional(),
+        align: z.enum(supportedContainerAlignValues).optional(),
+        justify: z.enum(supportedContainerJustifyValues).optional(),
         template: z.array(z.unknown()),
       })
       .strip(),
@@ -394,6 +403,17 @@ export const executeOperationsRuntimeUiActionSchema = z
   })
   .strip()
 
+export const downloadOperationRuntimeUiActionSchema = z
+  .object({
+    type: z.literal('downloadOperation'),
+    operationName: nonEmptyStringSchema,
+    query: runtimeApiQuerySchema.optional(),
+    body: runtimeApiBodySchema.optional(),
+    headers: runtimeApiHeadersSchema.optional(),
+    filename: z.string().optional(),
+  })
+  .strip()
+
 export const resetFormRuntimeUiActionSchema = z
   .object({
     type: z.literal('resetForm'),
@@ -415,19 +435,9 @@ export const closeModalRuntimeUiActionSchema = z
   })
   .strip()
 
-export const buttonActionSchema = z.discriminatedUnion('type', [
-  navigateToButtonActionSchema,
-  goBackButtonActionSchema,
-  executeOperationRuntimeUiActionSchema,
-  executeOperationsRuntimeUiActionSchema,
-  resetFormRuntimeUiActionSchema,
-  openModalRuntimeUiActionSchema,
-  closeModalRuntimeUiActionSchema,
-])
-
 // Shape of a single onSuccess/onError entry: the same 7 action variants accepted by
 // buttonActionSchema, each extended with an optional `when` condition.
-export const formLifecycleActionEntrySchema = z.discriminatedUnion('type', [
+export const runtimeUiActionListEntrySchema = z.discriminatedUnion('type', [
   navigateToButtonActionSchema.extend({ when: whenConditionSchema.optional() }),
   goBackButtonActionSchema.extend({ when: whenConditionSchema.optional() }),
   executeOperationRuntimeUiActionSchema.extend({ when: whenConditionSchema.optional() }),
@@ -437,17 +447,37 @@ export const formLifecycleActionEntrySchema = z.discriminatedUnion('type', [
   closeModalRuntimeUiActionSchema.extend({ when: whenConditionSchema.optional() }),
 ])
 
-const formLifecycleActionsSchema = z.array(formLifecycleActionEntrySchema).optional()
+export const runtimeUiActionListSchema = z.array(runtimeUiActionListEntrySchema).optional()
+
+export const executeOperationWithLifecycleSchema = executeOperationRuntimeUiActionSchema.extend({
+  onSuccess: runtimeUiActionListSchema,
+  onError: runtimeUiActionListSchema,
+})
+
+export const executeOperationsWithLifecycleSchema = executeOperationsRuntimeUiActionSchema.extend({
+  onSuccess: runtimeUiActionListSchema,
+  onError: runtimeUiActionListSchema,
+})
+
+export const downloadOperationWithLifecycleSchema = downloadOperationRuntimeUiActionSchema.extend({
+  onSuccess: runtimeUiActionListSchema,
+  onError: runtimeUiActionListSchema,
+})
+
+export const buttonActionSchema = z.discriminatedUnion('type', [
+  navigateToButtonActionSchema,
+  goBackButtonActionSchema,
+  executeOperationWithLifecycleSchema,
+  executeOperationsWithLifecycleSchema,
+  resetFormRuntimeUiActionSchema,
+  openModalRuntimeUiActionSchema,
+  closeModalRuntimeUiActionSchema,
+  downloadOperationWithLifecycleSchema,
+])
 
 export const formSubmitActionSchema = z.discriminatedUnion('type', [
-  executeOperationRuntimeUiActionSchema.extend({
-    onSuccess: formLifecycleActionsSchema,
-    onError: formLifecycleActionsSchema,
-  }),
-  executeOperationsRuntimeUiActionSchema.extend({
-    onSuccess: formLifecycleActionsSchema,
-    onError: formLifecycleActionsSchema,
-  }),
+  executeOperationWithLifecycleSchema,
+  executeOperationsWithLifecycleSchema,
 ])
 
 export const supportedButtonVariants = ['solid', 'outline', 'ghost', 'link'] as const
@@ -561,6 +591,7 @@ export const selectNodeSchema = z
         items: selectItemsSchema,
         multiple: z.boolean().optional(),
         placeholder: z.string().optional(),
+        emptySubmitValue: z.union([z.string(), z.number()]).optional(),
       })
       .strip(),
   })
@@ -596,6 +627,25 @@ export const checkboxGroupNodeSchema = z
   })
   .strip()
 
+export const autocompleteNodeSchema = z
+  .object({
+    type: z.literal('autocomplete'),
+    queryStateFeedback: queryStateFeedbackSchema.optional(),
+    visibility: visibilitySchema.optional(),
+    layout: layoutNodeLayoutSchema.optional(),
+    props: formFieldNodePropsSchema
+      .extend({
+        items: selectItemsSchema,
+        multiple: z.boolean().optional(),
+        placeholder: z.string().optional(),
+        allowFreeText: z.boolean().optional(),
+        minChars: z.number().int().nonnegative().optional(),
+        searchParamName: z.string().min(1).optional(),
+      })
+      .strip(),
+  })
+  .strip()
+
 export const modalNodeSchema = z
   .object({
     type: z.literal('modal'),
@@ -620,6 +670,7 @@ export const tabsItemSchema = z
     label: z.string(),
     children: z.array(z.unknown()).optional(),
     visibility: visibilitySchema.optional(),
+    icon: z.string().optional(),
   })
   .strip()
 
@@ -635,6 +686,44 @@ export const tabsNodeSchema = z
         orientation: z.enum(['horizontal', 'vertical']).optional(),
         defaultTab: z.number().int().min(0).optional(),
         items: z.array(tabsItemSchema).min(1),
+      })
+      .strip(),
+    children: z.never().optional(),
+  })
+  .strip()
+
+export const stepOnNextActionSchema = z
+  .object({
+    operationName: nonEmptyStringSchema,
+    query: runtimeApiQuerySchema.optional(),
+    body: runtimeApiBodySchema.optional(),
+    headers: runtimeApiHeadersSchema.optional(),
+  })
+  .strip()
+
+export const stepsItemSchema = z
+  .object({
+    label: z.string(),
+    children: z.array(z.unknown()).optional(),
+    visibility: visibilitySchema.optional(),
+    onNext: stepOnNextActionSchema.optional(),
+  })
+  .strip()
+
+export const stepsNodeSchema = z
+  .object({
+    type: z.literal('steps'),
+    id: nodeIdSchema.optional(),
+    queryStateFeedback: queryStateFeedbackSchema.optional(),
+    visibility: visibilitySchema.optional(),
+    layout: layoutNodeLayoutSchema.optional(),
+    props: z
+      .object({
+        variant: z.enum(['horizontal', 'vertical', 'progress']).optional(),
+        backLabel: z.string().optional(),
+        nextLabel: z.string().optional(),
+        submitLabel: z.string().optional(),
+        items: z.array(stepsItemSchema).min(1),
       })
       .strip(),
     children: z.never().optional(),
@@ -661,6 +750,7 @@ export const accordionNodeSchema = z
         label: nonEmptyStringSchema,
         defaultOpen: z.boolean().optional(),
         groupId: z.string().optional(),
+        icon: z.string().optional(),
       })
       .strip(),
     children: z.array(z.unknown()).optional(),
@@ -680,7 +770,9 @@ export const linkNodeSchema = z
         href: z.string().optional(),
         download: z.string().optional(),
         target: z.string().optional(),
-        action: z.discriminatedUnion('type', [navigateToButtonActionSchema, goBackButtonActionSchema]).optional(),
+        action: z
+          .discriminatedUnion('type', [navigateToButtonActionSchema, goBackButtonActionSchema, downloadOperationWithLifecycleSchema])
+          .optional(),
         icon: z.string().optional(),
         iconPosition: z.enum(['left', 'right']).optional(),
       })
@@ -899,6 +991,137 @@ export const hiddenNodeSchema = z
   })
   .strip()
 
+export const supportedMapHeights = ['sm', 'md', 'lg', 'xl'] as const
+export const supportedMapMarkerColors = ['neutral', 'primary', 'success', 'warning', 'danger', 'info'] as const
+
+const mapCenterSchema = z
+  .object({
+    lat: z.number().finite().min(-90).max(90),
+    lng: z.number().finite().min(-180).max(180),
+  })
+  .strip()
+
+const mapStaticMarkerSchema = z
+  .object({
+    lat: z.number().finite().min(-90).max(90),
+    lng: z.number().finite().min(-180).max(180),
+    label: z.string(),
+  })
+  .strip()
+
+const mapMarkerSourceSchema = z
+  .object({
+    source: nonEmptyStringSchema,
+    position: z
+      .object({
+        lat: nonEmptyStringSchema,
+        lng: nonEmptyStringSchema,
+      })
+      .strip(),
+    label: nonEmptyStringSchema,
+    color: z.enum(supportedMapMarkerColors).optional(),
+  })
+  .strip()
+
+export const mapNodeSchema = z
+  .object({
+    type: z.literal('map'),
+    id: nodeIdSchema.optional(),
+    queryStateFeedback: queryStateFeedbackSchema.optional(),
+    visibility: visibilitySchema.optional(),
+    layout: layoutNodeLayoutSchema.optional(),
+    props: z
+      .object({
+        center: mapCenterSchema.optional(),
+        zoom: z.number().int().finite().min(0).max(19).optional(),
+        height: z.enum(supportedMapHeights).optional(),
+        markers: z.array(mapStaticMarkerSchema).optional(),
+        markerSources: z.array(mapMarkerSourceSchema).optional(),
+      })
+      .strip()
+      .optional(),
+    children: z.never().optional(),
+  })
+  .strip()
+
+const galleryStaticImageSchema = z
+  .object({
+    src: nonEmptyStringSchema,
+    alt: nonEmptyStringSchema,
+  })
+  .strict()
+
+// Flexible source shape that accepts either the src or fetch branch (plus source/key/alt/mode).
+// Mutual exclusion between mode: 'src'/'fetch' and their matching field is enforced imperatively
+// by validateGalleryNode after parsing, the same way validateImageNode handles src/fetch.
+const galleryDynamicSourceSchema = z
+  .object({
+    source: nonEmptyStringSchema,
+    key: nonEmptyStringSchema,
+    alt: nonEmptyStringSchema,
+    mode: z.enum(['src', 'fetch']),
+    src: nonEmptyStringSchema.optional(),
+    fetch: imageFetchSchema.optional(),
+    idField: nonEmptyStringSchema.optional(),
+  })
+  .strict()
+
+const galleryPaginationControlsSchema = z
+  .object({
+    variant: z.enum(supportedCollectionPaginationControlsVariants).optional(),
+  })
+  .strict()
+
+// Same closed shape as repeater.props.pagination but without `enabled`: gallery pagination is
+// always active once display.mode: 'paginated' is declared.
+const galleryPaginationSchema = z
+  .object({
+    pageSize: z.number().int().finite().min(1),
+    controls: galleryPaginationControlsSchema.optional(),
+  })
+  .strict()
+
+const galleryPaginatedDisplaySchema = z
+  .object({
+    mode: z.literal('paginated'),
+    pagination: galleryPaginationSchema,
+  })
+  .strict()
+
+const galleryAutoplaySchema = z
+  .object({
+    enabled: z.literal(true),
+    intervalMs: z.number().int().positive(),
+  })
+  .strict()
+
+const galleryCarouselDisplaySchema = z
+  .object({
+    mode: z.literal('carousel'),
+    visibleCount: z.number().int().min(1).max(3),
+    autoplay: galleryAutoplaySchema.optional(),
+    loop: z.boolean().optional(),
+  })
+  .strict()
+
+export const galleryNodeSchema = z
+  .object({
+    type: z.literal('gallery'),
+    id: nodeIdSchema.optional(),
+    queryStateFeedback: queryStateFeedbackSchema.optional(),
+    visibility: visibilitySchema.optional(),
+    layout: layoutNodeLayoutSchema.optional(),
+    props: z
+      .object({
+        images: z.array(galleryStaticImageSchema).optional(),
+        source: galleryDynamicSourceSchema.optional(),
+        display: z.discriminatedUnion('mode', [galleryPaginatedDisplaySchema, galleryCarouselDisplaySchema]),
+      })
+      .strict(),
+    children: z.never().optional(),
+  })
+  .strip()
+
 export const runtimeTokenRefreshSchema = z
   .object({
     operation: nonEmptyStringSchema,
@@ -949,3 +1172,153 @@ export const fileInputNodeSchema = z
       .strip(),
   })
   .strip()
+
+// --- Shell (app-wide header) -------------------------------------------------------------
+// Additive root block, independent from the page layout tree. Uses `.strict()` throughout
+// (unlike most node schemas above, which `.strip()` extra keys) so the contract stays closed
+// and future unknown keys surface as validation errors instead of being silently dropped.
+
+// Fields shared by the root `menuItem` and its `menuItemChild` entries. `href`/`action` mirror
+// the same shape used by `link.props.href`/`link.props.action`. The mutually exclusive
+// combination with `children` (only added on the root variant below) is enforced by
+// `refineMenuItemShape` via `superRefine` so it is detected during Zod parsing and never needs
+// to be duplicated by cross-validation code later.
+const menuItemFieldsSchema = z
+  .object({
+    label: z.string(),
+    icon: z.string().optional(),
+    visibility: visibilitySchema.optional(),
+    href: z.string().optional(),
+    action: z.discriminatedUnion('type', [navigateToButtonActionSchema, goBackButtonActionSchema]).optional(),
+  })
+  .strict()
+
+const refineMenuItemShape = (
+  data: { href?: string; action?: unknown; children?: unknown[] },
+  ctx: z.RefinementCtx,
+): void => {
+  const hasHref = data.href !== undefined
+  const hasAction = data.action !== undefined
+  const hasChildren = data.children !== undefined
+
+  if (hasChildren && (hasHref || hasAction)) {
+    ctx.addIssue({
+      code: 'custom',
+      path: hasHref ? ['href'] : ['action'],
+      message: 'Menu items with children cannot declare href or action.',
+    })
+    return
+  }
+
+  if (hasHref && hasAction) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['href'],
+      message: 'Menu items cannot declare both href and action.',
+    })
+    return
+  }
+
+  if (!hasHref && !hasAction && !hasChildren) {
+    ctx.addIssue({
+      code: 'custom',
+      path: [],
+      message: 'Menu items must declare either href, action or children.',
+    })
+  }
+}
+
+// `menuItemChild` never accepts `children` itself: the key is absent from this schema's
+// shape, so `.strict()` rejects it at the Zod level rather than relying on the refinement.
+const menuItemChildSchema = menuItemFieldsSchema.superRefine(refineMenuItemShape)
+
+export const menuItemSchema = menuItemFieldsSchema
+  .extend({
+    children: z.array(menuItemChildSchema).nonempty().optional(),
+  })
+  .superRefine(refineMenuItemShape)
+
+// Restricted to `link`/`button` only — reuses the exact node schemas already defined above.
+export const shellHeaderActionNodeSchema = z.discriminatedUnion('type', [linkNodeSchema, buttonNodeSchema])
+
+export const shellHeaderSchema = z
+  .object({
+    // Same shape as `image.props` (already validated above), without the `type` wrapper.
+    logo: imagePropsSchema.optional(),
+    title: z.string().optional(),
+    menu: z.array(menuItemSchema).optional(),
+    actions: z.array(shellHeaderActionNodeSchema).optional(),
+  })
+  .strict()
+
+// `sidebarItem` shares the same base fields as `menuItem`/`menuItemChild` (label, icon,
+// visibility, href, action) but is a genuinely recursive tree: any node, at any depth, can
+// declare its own non-empty `children` of the same shape. Kept as a distinct schema (not a
+// reuse of `menuItemFieldsSchema`) so the two contracts can diverge independently later.
+const sidebarItemBaseFieldsSchema = z
+  .object({
+    label: z.string(),
+    icon: z.string().optional(),
+    visibility: visibilitySchema.optional(),
+    href: z.string().optional(),
+    action: z.discriminatedUnion('type', [navigateToButtonActionSchema, goBackButtonActionSchema]).optional(),
+  })
+  .strict()
+
+const refineSidebarItemShape = (
+  data: { href?: string; action?: unknown; children?: unknown[] },
+  ctx: z.RefinementCtx,
+): void => {
+  const hasHref = data.href !== undefined
+  const hasAction = data.action !== undefined
+  const hasChildren = data.children !== undefined
+
+  if (hasChildren && (hasHref || hasAction)) {
+    ctx.addIssue({
+      code: 'custom',
+      path: hasHref ? ['href'] : ['action'],
+      message: 'Sidebar items with children cannot declare href or action.',
+    })
+    return
+  }
+
+  if (hasHref && hasAction) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['href'],
+      message: 'Sidebar items cannot declare both href and action.',
+    })
+    return
+  }
+
+  if (!hasHref && !hasAction && !hasChildren) {
+    ctx.addIssue({
+      code: 'custom',
+      path: [],
+      message: 'Sidebar items must declare either href, action or children.',
+    })
+  }
+}
+
+export const sidebarItemSchema: z.ZodType<SidebarItemConfig> = z.lazy(() =>
+  sidebarItemBaseFieldsSchema
+    .extend({ children: z.array(sidebarItemSchema).nonempty().optional() })
+    .superRefine(refineSidebarItemShape),
+) as z.ZodType<SidebarItemConfig>
+
+export const shellSidebarSchema = z
+  .object({
+    items: z.array(sidebarItemSchema).optional(),
+    defaultCollapsed: z.boolean().optional(),
+  })
+  .strict()
+
+// `.strict()` keeps `shell` closed: `header` and `sidebar` are additive, independent siblings —
+// each optional on its own, so a config may declare either, both or neither.
+export const shellSchema = z
+  .object({
+    header: shellHeaderSchema.optional(),
+    sidebar: shellSidebarSchema.optional(),
+    scrollBehavior: z.enum(['page', 'fixed']).optional(),
+  })
+  .strict()

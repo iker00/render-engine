@@ -6,10 +6,8 @@ import { RuntimePage } from '../../runtime/runtime-page'
 import { RuntimeStateContext } from '../../runtime/runtime-state/runtime-state-context'
 import { createRuntimeState } from '../../runtime/runtime-state/runtime-state-reducer'
 import type { RuntimeState, RuntimeStateAction } from '../../runtime/runtime-state/runtime-state-types'
-import {
-  RuntimeStateProvider,
-  useRuntimeStateActions,
-} from '../../runtime/runtime-state/runtime-state-provider'
+import { RuntimeStateProvider } from '../../runtime/runtime-state/runtime-state-provider'
+import { useRuntimeStateActions } from '../../runtime/runtime-state/use-runtime-state'
 
 afterEach(() => {
   vi.unstubAllGlobals()

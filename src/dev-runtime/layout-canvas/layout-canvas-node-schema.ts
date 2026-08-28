@@ -2,9 +2,12 @@
 // internals, so this relies exclusively on the built-in Zod v4 `toJSONSchema`.
 import { toJSONSchema, z } from 'zod'
 import type { LayoutNodeType } from '../../config/runtime-config-types'
+import { injectConditionGroupWidgetSentinel } from './property-fields/inject-condition-group-widget-sentinel'
+import { injectNavigateParamsWidgetSentinel } from './property-fields/inject-navigate-params-widget-sentinel'
 import {
   accordionNodeSchema,
   alertNodeSchema,
+  autocompleteNodeSchema,
   badgeNodeSchema,
   buttonNodeSchema,
   checkboxGroupNodeSchema,
@@ -13,12 +16,14 @@ import {
   fileInputNodeSchema,
   fileManagerNodeSchema,
   formNodeSchema,
+  galleryNodeSchema,
   headingNodeSchema,
   hiddenNodeSchema,
   imageNodeSchema,
   inputNodeSchema,
   linkNodeSchema,
   listNodeSchema,
+  mapNodeSchema,
   modalNodeSchema,
   paragraphNodeSchema,
   radioGroupNodeSchema,
@@ -26,6 +31,7 @@ import {
   selectNodeSchema,
   skeletonNodeSchema,
   statNodeSchema,
+  stepsNodeSchema,
   supportedNodeTypes,
   tableNodeSchema,
   tabsNodeSchema,
@@ -51,6 +57,7 @@ const nodeSchemaByType: Record<LayoutNodeType, z.ZodType> = {
   checkboxGroup: checkboxGroupNodeSchema,
   modal: modalNodeSchema,
   tabs: tabsNodeSchema,
+  steps: stepsNodeSchema,
   accordion: accordionNodeSchema,
   badge: badgeNodeSchema,
   alert: alertNodeSchema,
@@ -61,6 +68,9 @@ const nodeSchemaByType: Record<LayoutNodeType, z.ZodType> = {
   fileInput: fileInputNodeSchema,
   toggle: toggleNodeSchema,
   hidden: hiddenNodeSchema,
+  map: mapNodeSchema,
+  gallery: galleryNodeSchema,
+  autocomplete: autocompleteNodeSchema,
 }
 
 const cachedSchemaByType = new Map<LayoutNodeType, Record<string, unknown>>()
@@ -70,7 +80,16 @@ export function getNodeTypeJsonSchema(type: LayoutNodeType): Record<string, unkn
   if (cached) {
     return cached
   }
-  const schema = toJSONSchema(nodeSchemaByType[type]) as unknown as Record<string, unknown>
+  const rawSchema = toJSONSchema(nodeSchemaByType[type]) as unknown as Record<string, unknown>
+  // T3 (0132): every `visibility`/`when` sub-schema (node root, and each action variant's
+  // `executeOperations.operations[].when` inside `props.action.oneOf[...]`) is replaced once here,
+  // on the cold cache path, so the properties panel and its dispatcher never see the raw union —
+  // they only ever get the `x-widget: 'condition-group'` sentinel.
+  const schemaWithConditionGroups = injectConditionGroupWidgetSentinel(rawSchema)
+  // T3 (0141): chained on the same cold cache path — swaps every `navigateTo` action variant's
+  // `properties.params` for the `x-widget: 'navigate-params'` sentinel. Independent key
+  // (`params` vs. `visibility`/`when`), so the two transforms never touch the same sub-schema.
+  const schema = injectNavigateParamsWidgetSentinel(schemaWithConditionGroups)
   cachedSchemaByType.set(type, schema)
   return schema
 }

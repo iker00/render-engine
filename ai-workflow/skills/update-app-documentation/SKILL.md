@@ -28,8 +28,8 @@ builds, ni operaciones destructivas más allá de las allí documentadas.
 ## Leer siempre
 
 - `ai-workflow/docs/vcs.md`
-- `ai-workflow/features/NNNN-feature-name/spec.md`
-- `ai-workflow/features/NNNN-feature-name/status.yaml`
+- `ai-workflow/features/YYYY-MM-DD-HH-MM-feature-name/spec.md`
+- `ai-workflow/features/YYYY-MM-DD-HH-MM-feature-name/status.yaml`
 - `ai-workflow/docs/app-features/index.md`
 - solo las fichas de `ai-workflow/docs/app-features/` que el índice marque como relevantes para la feature
   implementada (típicamente 1-3, rara vez más de 5)

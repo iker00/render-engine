@@ -2,8 +2,10 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { RuntimeConfig } from '../../config/runtime-config'
 import { RuntimePage } from '../../runtime/runtime-page'
-import { RuntimeStateProvider, useRuntimeStateActions } from '../../runtime/runtime-state/runtime-state-provider'
-import { RuntimeStateSnapshot, readRuntimeStateSnapshot } from '../runtime-state/helpers'
+import { RuntimeStateProvider } from '../../runtime/runtime-state/runtime-state-provider'
+import { useRuntimeStateActions } from '../../runtime/runtime-state/use-runtime-state'
+import { RuntimeStateSnapshot } from '../runtime-state/helpers'
+import { readRuntimeStateSnapshot } from '../runtime-state/read-runtime-state-snapshot'
 import { useEffect } from 'react'
 
 afterEach(() => {
@@ -20,30 +22,30 @@ function MultiOpFormFixture({ config }: { config: RuntimeConfig }) {
   )
 }
 
+function MultiOpFormSeedInnerFixture({ seedQueryName, seedData }: { seedQueryName: string; seedData: unknown }) {
+  const { initializeQuery, setQuerySuccess } = useRuntimeStateActions()
+
+  useEffect(() => {
+    initializeQuery(seedQueryName)
+    setQuerySuccess(seedQueryName, seedData)
+  }, [initializeQuery, setQuerySuccess, seedQueryName, seedData])
+
+  return (
+    <>
+      <RuntimePage />
+      <RuntimeStateSnapshot testId="runtime-state" />
+    </>
+  )
+}
+
 function MultiOpFormWithSeedFixture({ config, seedQueryName, seedData }: {
   config: RuntimeConfig
   seedQueryName: string
   seedData: unknown
 }) {
-  function InnerFixture() {
-    const { initializeQuery, setQuerySuccess } = useRuntimeStateActions()
-
-    useEffect(() => {
-      initializeQuery(seedQueryName)
-      setQuerySuccess(seedQueryName, seedData)
-    }, [initializeQuery, setQuerySuccess])
-
-    return (
-      <>
-        <RuntimePage />
-        <RuntimeStateSnapshot testId="runtime-state" />
-      </>
-    )
-  }
-
   return (
     <RuntimeStateProvider config={config}>
-      <InnerFixture />
+      <MultiOpFormSeedInnerFixture seedQueryName={seedQueryName} seedData={seedData} />
     </RuntimeStateProvider>
   )
 }

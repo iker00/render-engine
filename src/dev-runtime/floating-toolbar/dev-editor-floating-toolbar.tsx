@@ -1,7 +1,20 @@
-import { LayoutTemplate, Plug, StickyNote, KeyRound, Braces, Plus, SquarePen } from 'lucide-react'
+import { LayoutTemplate, Plug, StickyNote, KeyRound, Languages, PanelTop, Braces, Plus, SquarePen, Save } from 'lucide-react'
+import type {
+  EndpointOperationUnavailableReason,
+  ResolvedEndpointOperation,
+} from '../endpoints-config/resolve-endpoint-operation'
 
-type ToolbarMode = 'visual' | 'editor'
-type ToolbarDomain = 'layout'
+export type ToolbarMode = 'visual' | 'editor'
+export type ToolbarDomain = 'layout' | 'api' | 'shell' | 'translations' | 'pages' | 'tokens'
+
+// T6 (0131): save-config request state, owned by DevRuntimeReady (T5) and received here already
+// computed — this component never tracks its own save state.
+export type SaveState = 'idle' | 'loading' | 'success' | 'error'
+
+export interface SaveConfigErrorInfo {
+  kind: 'auth' | 'integration'
+  message: string
+}
 
 interface DevEditorFloatingToolbarProps {
   mode: ToolbarMode
@@ -10,10 +23,22 @@ interface DevEditorFloatingToolbarProps {
   activePageId: string
   onActivePageIdChange: (pageId: string) => void
   activeDomain: ToolbarDomain
+  onDomainSelected: (domain: ToolbarDomain) => void
   onOpenMonaco: () => void
   isMonacoOpen: boolean
   onOpenPalette: () => void
   isPaletteOpen: boolean
+  saveResolution: ResolvedEndpointOperation
+  saveState: SaveState
+  saveError: SaveConfigErrorInfo | null
+  onSave: () => void
+}
+
+// FR4: the "Guardar" button is always visible, but disabled with an explanatory `title` when the
+// operation can't be resolved yet — one message per `EndpointOperationUnavailableReason` (T1).
+const SAVE_UNAVAILABLE_MESSAGES: Record<EndpointOperationUnavailableReason, string> = {
+  'operation-not-declared': 'La operación de guardado no está declarada en la configuración de endpoints',
+  'token-not-resolvable': 'El token declarado para la operación de guardado no existe en tokens',
 }
 
 const CONTAINER_CLASSES = [
@@ -54,12 +79,27 @@ export function DevEditorFloatingToolbar({
   activePageId,
   onActivePageIdChange,
   activeDomain,
+  onDomainSelected,
   onOpenMonaco,
   isMonacoOpen,
   onOpenPalette,
   isPaletteOpen,
+  saveResolution,
+  saveState,
+  saveError,
+  onSave,
 }: DevEditorFloatingToolbarProps) {
   const isLayoutActive = activeDomain === 'layout'
+  const isApiActive = activeDomain === 'api'
+  const isShellActive = activeDomain === 'shell'
+  const isTranslationsActive = activeDomain === 'translations'
+  const isPagesActive = activeDomain === 'pages'
+  const isTokensActive = activeDomain === 'tokens'
+
+  const isSaveUnavailable = saveResolution.status === 'unavailable'
+  const isSaving = saveState === 'loading'
+  const saveDisabled = isSaveUnavailable || isSaving
+  const saveTitle = isSaveUnavailable ? SAVE_UNAVAILABLE_MESSAGES[saveResolution.reason] : undefined
 
   return (
     <div
@@ -91,38 +131,54 @@ export function DevEditorFloatingToolbar({
           data-testid="dev-editor-toolbar-domain-layout"
           className={buttonClasses({ pressed: isLayoutActive })}
           aria-pressed={isLayoutActive}
+          onClick={() => onDomainSelected('layout')}
         >
           <LayoutTemplate size={14} /> Layout
         </button>
         <button
           type="button"
           data-testid="dev-editor-toolbar-domain-api"
-          className={buttonClasses({ disabled: true })}
-          disabled
-          aria-disabled="true"
-          title="Próximamente"
+          className={buttonClasses({ pressed: isApiActive })}
+          aria-pressed={isApiActive}
+          onClick={() => onDomainSelected('api')}
         >
           <Plug size={14} /> Api
         </button>
         <button
           type="button"
           data-testid="dev-editor-toolbar-domain-pages"
-          className={buttonClasses({ disabled: true })}
-          disabled
-          aria-disabled="true"
-          title="Próximamente"
+          className={buttonClasses({ pressed: isPagesActive })}
+          aria-pressed={isPagesActive}
+          onClick={() => onDomainSelected('pages')}
         >
           <StickyNote size={14} /> Páginas
         </button>
         <button
           type="button"
           data-testid="dev-editor-toolbar-domain-tokens"
-          className={buttonClasses({ disabled: true })}
-          disabled
-          aria-disabled="true"
-          title="Próximamente"
+          className={buttonClasses({ pressed: isTokensActive })}
+          aria-pressed={isTokensActive}
+          onClick={() => onDomainSelected('tokens')}
         >
           <KeyRound size={14} /> Tokens
+        </button>
+        <button
+          type="button"
+          data-testid="dev-editor-toolbar-domain-translations"
+          className={buttonClasses({ pressed: isTranslationsActive })}
+          aria-pressed={isTranslationsActive}
+          onClick={() => onDomainSelected('translations')}
+        >
+          <Languages size={14} /> Traducciones
+        </button>
+        <button
+          type="button"
+          data-testid="dev-editor-toolbar-domain-shell"
+          className={buttonClasses({ pressed: isShellActive })}
+          aria-pressed={isShellActive}
+          onClick={() => onDomainSelected('shell')}
+        >
+          <PanelTop size={14} /> Shell
         </button>
       </div>
 
@@ -166,6 +222,43 @@ export function DevEditorFloatingToolbar({
         >
           <SquarePen /> Editor
         </button>
+      </div>
+
+      <div className={GROUP_CLASSES} role="group" aria-label="Guardar configuración">
+        <button
+          type="button"
+          data-testid="dev-editor-toolbar-save"
+          className={buttonClasses({ disabled: saveDisabled })}
+          disabled={saveDisabled}
+          aria-disabled={isSaveUnavailable ? 'true' : undefined}
+          title={saveTitle}
+          onClick={onSave}
+        >
+          <Save size={14} /> Guardar
+        </button>
+        {isSaving && (
+          <span role="status" data-testid="dev-editor-toolbar-save-status" className="text-xs text-gray-600">
+            <Save size={14} /> Guardando...
+          </span>
+        )}
+        {saveState === 'error' && saveError && (
+          <span
+            role="alert"
+            data-testid="dev-editor-toolbar-save-error"
+            className="rounded bg-red-50 px-2 py-1 text-xs text-red-800"
+          >
+            {saveError.message}
+          </span>
+        )}
+        {saveState === 'success' && (
+          <span
+            role="status"
+            data-testid="dev-editor-toolbar-save-success"
+            className="rounded bg-green-50 px-2 py-1 text-xs text-green-800"
+          >
+            Configuración guardada
+          </span>
+        )}
       </div>
     </div>
   )

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { parseRuntimeReference } from '../../runtime/runtime-references/runtime-reference-parser'
+import { parseRuntimeReference } from '../../config/runtime-reference-syntax'
 import {
   resolveRuntimeImageAlt,
   resolveRuntimeImageSource,
@@ -443,6 +443,110 @@ describe('Runtime reference resolution', () => {
     })
   })
 
+  describe('row reference parser contract', () => {
+    it('classifies row references as unsupported outside explicit row context', () => {
+      expect(parseRuntimeReference('row')).toMatchObject({
+        kind: 'reference',
+        status: 'unsupported',
+        namespace: 'row',
+      })
+
+      expect(parseRuntimeReference('row.slug')).toMatchObject({
+        kind: 'reference',
+        status: 'unsupported',
+        namespace: 'row',
+      })
+    })
+
+    it('classifies row references as supported when row context is enabled', () => {
+      expect(parseRuntimeReference('row', { allowRowReference: true })).toMatchObject({
+        kind: 'reference',
+        status: 'supported',
+        namespace: 'row',
+        path: [],
+      })
+
+      expect(parseRuntimeReference('row.slug', { allowRowReference: true })).toMatchObject({
+        kind: 'reference',
+        status: 'supported',
+        namespace: 'row',
+        path: ['slug'],
+      })
+
+      expect(parseRuntimeReference('row.meta.author.name', { allowRowReference: true })).toMatchObject({
+        kind: 'reference',
+        status: 'supported',
+        namespace: 'row',
+        path: ['meta', 'author', 'name'],
+      })
+
+      expect(parseRuntimeReference('row.tags.0', { allowRowReference: true })).toMatchObject({
+        kind: 'reference',
+        status: 'supported',
+        namespace: 'row',
+        path: ['tags', '0'],
+      })
+    })
+
+    it('classifies row.$index as supported when row context is enabled', () => {
+      expect(parseRuntimeReference('row.$index', { allowRowReference: true })).toMatchObject({
+        kind: 'reference',
+        status: 'supported',
+        namespace: 'row',
+        path: ['$index'],
+      })
+    })
+
+    it('classifies row.$index as unsupported outside explicit row context', () => {
+      expect(parseRuntimeReference('row.$index')).toMatchObject({
+        kind: 'reference',
+        status: 'unsupported',
+        namespace: 'row',
+        path: ['$index'],
+      })
+    })
+
+    it('keeps every $ variant other than the exact row.$index literal as invalid', () => {
+      expect(parseRuntimeReference('row.$index.algo', { allowRowReference: true })).toMatchObject({
+        kind: 'reference',
+        status: 'invalid',
+        namespace: 'row',
+      })
+
+      expect(parseRuntimeReference('row.algo.$index', { allowRowReference: true })).toMatchObject({
+        kind: 'reference',
+        status: 'invalid',
+        namespace: 'row',
+      })
+
+      expect(parseRuntimeReference('row.$key', { allowRowReference: true })).toMatchObject({
+        kind: 'reference',
+        status: 'invalid',
+        namespace: 'row',
+      })
+
+      expect(parseRuntimeReference('row.$other', { allowRowReference: true })).toMatchObject({
+        kind: 'reference',
+        status: 'invalid',
+        namespace: 'row',
+      })
+    })
+
+    it('treats escaped row references as visible literal text', () => {
+      expect(parseRuntimeReference('\\row.slug')).toEqual({
+        kind: 'literal',
+        value: 'row.slug',
+      })
+    })
+
+    it('keeps partial row-like text as literal', () => {
+      expect(parseRuntimeReference('User: row.slug')).toEqual({
+        kind: 'literal',
+        value: 'User: row.slug',
+      })
+    })
+  })
+
   describe('T0007-02 store-backed resolution', () => {
     it('reads current form values from the shared runtime state', () => {
       expect(resolveRuntimeReference('forms.userSearch.name', runtimeState)).toEqual({
@@ -876,6 +980,125 @@ describe('Runtime reference resolution', () => {
         status: 'missing',
         reference: parseRuntimeReference('params.userId'),
       })
+    })
+  })
+
+  describe('row resolution with explicit row context', () => {
+    it('resolves row.slug and nested row paths against iterationContext.row', () => {
+      expect(
+        resolveRuntimeReference('row.slug', runtimeState, { iterationContext: { row: { slug: 'abc' } } }),
+      ).toEqual({
+        status: 'resolved',
+        value: 'abc',
+        reference: parseRuntimeReference('row.slug', { allowRowReference: true }),
+      })
+
+      expect(
+        resolveRuntimeReference('row.meta.author.name', runtimeState, {
+          iterationContext: { row: { meta: { author: { name: 'Ada' } } } },
+        }),
+      ).toEqual({
+        status: 'resolved',
+        value: 'Ada',
+        reference: parseRuntimeReference('row.meta.author.name', { allowRowReference: true }),
+      })
+    })
+
+    it('resolves row.$index to the numeric rowIndex when provided', () => {
+      expect(resolveRuntimeReference('row.$index', runtimeState, { iterationContext: { rowIndex: 3 } })).toEqual({
+        status: 'resolved',
+        value: 3,
+        reference: parseRuntimeReference('row.$index', { allowRowReference: true }),
+      })
+    })
+
+    it('resolves row.$index as missing when rowIndex is absent', () => {
+      expect(resolveRuntimeReference('row.$index', runtimeState, { iterationContext: { row: {} } })).toEqual({
+        status: 'missing',
+        reference: parseRuntimeReference('row.$index', { allowRowReference: true }),
+      })
+    })
+
+    it('resolves row as unsupported outside an iteration context', () => {
+      expect(resolveRuntimeReference('row', runtimeState)).toEqual({
+        status: 'unsupported',
+        reference: parseRuntimeReference('row'),
+      })
+    })
+
+    it('resolves item.* and row.* independently when both are present in the same iteration context', () => {
+      const combinedIterationContext = {
+        item: { name: 'Repeater item' },
+        key: 'k',
+        itemIndex: 0,
+        row: { name: 'Row data' },
+        rowIndex: 1,
+      }
+
+      expect(
+        resolveRuntimeReference('item.name', runtimeState, { iterationContext: combinedIterationContext }),
+      ).toEqual({
+        status: 'resolved',
+        value: 'Repeater item',
+        reference: parseRuntimeReference('item.name', { allowItemReference: true }),
+      })
+
+      expect(
+        resolveRuntimeReference('row.name', runtimeState, { iterationContext: combinedIterationContext }),
+      ).toEqual({
+        status: 'resolved',
+        value: 'Row data',
+        reference: parseRuntimeReference('row.name', { allowRowReference: true }),
+      })
+    })
+
+    it('gives row.$index precedence over a literal $index property inside row', () => {
+      const iterationContextWithShadowIndex = { row: { $index: 'internal', name: 'Ada' }, rowIndex: 5 }
+
+      expect(
+        resolveRuntimeReference('row.$index', runtimeState, { iterationContext: iterationContextWithShadowIndex }),
+      ).toEqual({
+        status: 'resolved',
+        value: 5,
+        reference: parseRuntimeReference('row.$index', { allowRowReference: true }),
+      })
+
+      expect(
+        resolveRuntimeReference('row.name', runtimeState, { iterationContext: iterationContextWithShadowIndex }),
+      ).toEqual({
+        status: 'resolved',
+        value: 'Ada',
+        reference: parseRuntimeReference('row.name', { allowRowReference: true }),
+      })
+    })
+
+    it('interpolates row.$index and row.name in the same visible string', () => {
+      expect(
+        resolveRuntimeVisibleValue('Fila {{row.$index}}: {{row.name}}', runtimeState, 'table.cell', {
+          iterationContext: { row: { name: 'Ada' }, rowIndex: 2 },
+        }),
+      ).toBe('Fila 2: Ada')
+    })
+
+    it('resolves row.$index and degrades row data navigation to missing/empty when only rowIndex is present (manual mode)', () => {
+      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+      expect(resolveRuntimeReference('row.$index', runtimeState, { iterationContext: { rowIndex: 4 } })).toEqual({
+        status: 'resolved',
+        value: 4,
+        reference: parseRuntimeReference('row.$index', { allowRowReference: true }),
+      })
+
+      expect(resolveRuntimeReference('row.algo', runtimeState, { iterationContext: { rowIndex: 4 } })).toEqual({
+        status: 'missing',
+        reference: parseRuntimeReference('row.algo', { allowRowReference: true }),
+      })
+
+      expect(
+        resolveRuntimeVisibleValue('{{row.algo}}', runtimeState, 'table.cell', { iterationContext: { rowIndex: 4 } }),
+      ).toBe('')
+
+      consoleWarnSpy.mockRestore()
     })
   })
 

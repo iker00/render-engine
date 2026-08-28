@@ -1,7 +1,7 @@
 import type { AlertLayoutNode, AlertType } from '../../config/runtime-config'
 import { resolveRuntimeTextReference, type RuntimeIterationContext } from '../runtime-references/runtime-reference-resolver'
 import { getAlertBodyClassName, getAlertClassName, getAlertIconClassName, getAlertTitleClassName } from '../runtime-node-styling'
-import { useRuntimeState } from '../runtime-state/runtime-state-provider'
+import { useRuntimeState } from '../runtime-state/use-runtime-state'
 import { IconNode } from './icon-node'
 
 interface AlertNodeProps {

@@ -12,7 +12,7 @@ import {
 import type { LayoutNode, LayoutNodeType } from '../../config/runtime-config'
 import { deserializeLayoutNodePath, parseDropZoneId, type LayoutNodePath } from '../../runtime/layout-node-path'
 import { isValidDropTarget } from './layout-drop-validity'
-import { parsePaletteDragId } from './layout-canvas-node-palette'
+import { parsePaletteDragId } from './layout-canvas-palette-drag-id'
 
 /**
  * Raw, unvalidated drop intent (Decisión 7 / T12 de design.md): where a drag was released,
@@ -29,6 +29,7 @@ export interface LayoutCanvasDropAttempt {
   targetParentPath: LayoutNodePath
   targetIndex: number
   targetTabItemIndex?: number
+  targetStepItemIndex?: number
 }
 
 interface DragEndLikeEvent {
@@ -52,6 +53,7 @@ function parseDropAttempt(event: DragEndLikeEvent): LayoutCanvasDropAttempt | nu
       targetParentPath: zone.parentPath,
       targetIndex: zone.index,
       targetTabItemIndex: zone.tabItemIndex,
+      targetStepItemIndex: zone.stepItemIndex,
     }
   }
 
@@ -63,6 +65,7 @@ function parseDropAttempt(event: DragEndLikeEvent): LayoutCanvasDropAttempt | nu
     targetParentPath: zone.parentPath,
     targetIndex: zone.index,
     targetTabItemIndex: zone.tabItemIndex,
+    targetStepItemIndex: zone.stepItemIndex,
   }
 }
 
@@ -152,6 +155,7 @@ export function LayoutCanvasDndContext({
 
     const valid = isValidDropTarget(pageLayout, attempt.draggedPath, attempt.targetParentPath, attempt.targetIndex, {
       targetTabItemIndex: attempt.targetTabItemIndex,
+      targetStepItemIndex: attempt.targetStepItemIndex,
       draggedNodeType: attempt.draggedNodeType,
     })
     markDropTargetIndicator(String(event.over.id), valid)

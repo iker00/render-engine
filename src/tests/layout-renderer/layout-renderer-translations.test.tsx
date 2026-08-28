@@ -4,7 +4,7 @@ import type { RuntimeConfig, RuntimePageConfig } from '../../config/runtime-conf
 import { RuntimePage } from '../../runtime/runtime-page'
 import { RuntimeStateContext } from '../../runtime/runtime-state/runtime-state-context'
 import { createRuntimeState } from '../../runtime/runtime-state/runtime-state-reducer'
-import type { RuntimeState, RuntimeStateAction } from '../../runtime/runtime-state/runtime-state-types'
+import type { RuntimeStateAction } from '../../runtime/runtime-state/runtime-state-types'
 import { RuntimeStateProvider } from '../../runtime/runtime-state/runtime-state-provider'
 
 afterEach(() => {
@@ -28,35 +28,6 @@ function renderRuntimePageWithTranslations(
       <RuntimePage />
     </RuntimeStateProvider>,
   )
-}
-
-function renderRuntimePageWithState(activePage: RuntimePageConfig, state: RuntimeState) {
-  const config: RuntimeConfig = {
-    api: {},
-    initialPage: activePage.id,
-    pages: [activePage],
-  }
-  const dispatch = vi.fn<(action: RuntimeStateAction) => void>()
-  const dispatchAndSyncState = vi.fn<(action: RuntimeStateAction) => void>()
-
-  return {
-    ...render(
-      <RuntimeStateContext.Provider
-        value={{
-          config,
-          initialState: state,
-          state,
-          dispatch,
-          dispatchAndSyncState,
-          getLatestState: () => state,
-        }}
-      >
-        <RuntimePage />
-      </RuntimeStateContext.Provider>,
-    ),
-    dispatch,
-    dispatchAndSyncState,
-  }
 }
 
 describe('Layout renderer — translations', () => {

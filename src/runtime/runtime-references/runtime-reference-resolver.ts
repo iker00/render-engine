@@ -14,18 +14,20 @@ import {
 import type { RuntimeReferenceSurface } from './runtime-reference-diagnostics'
 import { hasFormatterSyntax, parseFormatterPlaceholder } from './runtime-formatter-parser'
 import { applyFormatterChain, findFirstFailingFormatterName } from './runtime-formatter-registry'
-import { parseRuntimeReference } from './runtime-reference-parser'
+import { parseRuntimeReference } from '../../config/runtime-reference-syntax'
 import type {
   RuntimeReferenceResolutionResult,
-  RuntimeSupportedReference,
   RuntimeTokenErrorResolution,
 } from './runtime-reference-types'
+import type { RuntimeSupportedReference } from '../../config/runtime-reference-syntax'
 
 export interface RuntimeIterationContext {
-  item: unknown
-  key: string
+  item?: unknown
+  key?: string
   itemKey?: string
-  itemIndex: number
+  itemIndex?: number
+  row?: unknown
+  rowIndex?: number
 }
 
 interface ResolveRuntimeReferenceOptions {
@@ -43,6 +45,7 @@ export function resolveRuntimeReference(
 ): RuntimeReferenceResolutionResult {
   const parsedReference = parseRuntimeReference(value, {
     allowItemReference: options.iterationContext !== undefined,
+    allowRowReference: options.iterationContext !== undefined,
   })
 
   if (parsedReference.kind === 'literal') {
@@ -333,6 +336,23 @@ function resolveSupportedReferenceValue(
     }
 
     return resolveNestedReferenceValue(iterationContext?.item, reference.path)
+  }
+
+  if (reference.namespace === 'row') {
+    if (reference.path.length === 1 && reference.path[0] === '$index') {
+      if (iterationContext?.rowIndex !== undefined) {
+        return {
+          found: true,
+          value: iterationContext.rowIndex,
+        } as const
+      }
+
+      return {
+        found: false,
+      } as const
+    }
+
+    return resolveNestedReferenceValue(iterationContext?.row, reference.path)
   }
 
   if (reference.namespace === 'forms') {

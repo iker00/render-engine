@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef } from 'react'
 import type { FileManagerLayoutNode } from '../../../config/runtime-config'
 import { evaluateFileManagerBatch } from '../../runtime-form-validations'
-import { useRuntimeState, useRuntimeStateActions } from '../../runtime-state/runtime-state-provider'
+import { useRuntimeState, useRuntimeStateActions } from '../../runtime-state/use-runtime-state'
 import { normalizeFileName } from './normalize-file-name'
 import { resolveFileManagerLabel } from './resolve-file-manager-label'
 import {

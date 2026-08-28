@@ -1,4 +1,5 @@
 import { useId } from 'react'
+import { PropertyFieldRow } from './property-field-row'
 
 interface NumberPropertyFieldProps {
   label: string
@@ -11,22 +12,14 @@ export function NumberPropertyField({ label, value, onChange, required = false }
   const inputId = useId()
 
   return (
-    <div className="flex flex-col gap-1">
-      <label htmlFor={inputId} className="text-xs font-medium text-gray-700">
-        {label}
-        {required && (
-          <span aria-hidden="true" className="ml-0.5 text-red-500">
-            *
-          </span>
-        )}
-      </label>
+    <PropertyFieldRow htmlFor={inputId} label={label} required={required}>
       <input
         id={inputId}
         type="number"
         value={value}
         onChange={(event) => onChange(Number(event.target.value))}
-        className="rounded border border-gray-300 px-2 py-1 text-sm text-gray-900 focus:border-gray-500 focus:outline-none"
+        className="w-full rounded-md border border-gray-300 bg-white px-2 py-1 text-sm text-gray-900 focus:border-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-400"
       />
-    </div>
+    </PropertyFieldRow>
   )
 }

@@ -21,6 +21,7 @@ import { validateFileManagerSemantics } from './validate-file-manager-nodes'
 import { validateFileInputSemantics } from './validate-file-input-nodes'
 import { validateTranslations } from './validate-translations'
 import { validateTokensConfig } from './validate-tokens-config'
+import { validateShellConfig } from './validate-shell'
 import type { BreadcrumbSegment } from './validation-breadcrumb'
 import { buildBreadcrumbSegmentFromNode, enrichedInvalidLayoutFromNode } from './validation-breadcrumb'
 
@@ -239,6 +240,20 @@ export function validateRuntimeConfig(rawConfig: unknown): RuntimeConfigValidati
 
   if (modalRefsError) {
     return modalRefsError
+  }
+
+  const shellResult = validateShellConfig(
+    rawConfig,
+    config.pages.map((entry) => entry.id),
+    Array.from(knownApiOperations),
+  )
+
+  if (shellResult.status === 'error') {
+    return shellResult
+  }
+
+  if (shellResult.shell !== undefined) {
+    config.shell = shellResult.shell
   }
 
   return {

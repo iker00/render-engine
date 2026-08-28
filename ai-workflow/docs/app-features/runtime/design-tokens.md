@@ -25,7 +25,7 @@ Ejemplo: `bg-primary-600`, `text-danger-700`, `border-neutral-200`.
 
 El runtime mantiene un conjunto adicional de tokens app-level que actúan como alias semánticos de la paleta base:
 
-- **`--color-app-background`** (`neutral-50`): Fondo general de la aplicación.
+- **`--color-app-background`** (`neutral-50`): token de paleta reutilizado por nodos concretos del catálogo (por ejemplo, el estado activo de `tabs`). Desde `0124` ya no se aplica como fondo general del runtime — el runtime no declara fondo propio a nivel raíz; el color de fondo visible lo aporta quien integra la app.
 - **`--color-app-surface`** (`#ffffff`): Superficies principales (tarjetas, modales).
 - **`--color-app-surface-subtle`** (`neutral-100`): Superficies de bajo contraste (bordes suaves, hover).
 - **`--color-app-text`** (`neutral-700`): Texto base de cuerpo.
@@ -39,7 +39,7 @@ El runtime mantiene un conjunto adicional de tokens app-level que actúan como a
 
 ## Radios y bordes redondeados
 
-- **`--radius-shell`**: Radio de esquinas del shell de aplicación.
+- **`--radius-shell`**: declarado en la paleta pero, desde `0124`, sin consumidor en `src/`: el marco del runtime dejó de renderizarse como tarjeta con esquinas redondeadas (ver [[../shell/index.md]]).
 - **`--radius-section`**: Radio de secciones y containers.
 - **`--radius-form`**: Radio de elementos de formulario.
 - **`--radius-control`**: Radio de controles pequeños (botones, inputs).

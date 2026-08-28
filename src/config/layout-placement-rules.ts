@@ -14,6 +14,7 @@ export const FORM_ONLY_LEAF_NODE_TYPES: ReadonlySet<LayoutNodeType> = new Set([
   'fileInput',
   'toggle',
   'hidden',
+  'autocomplete',
 ])
 
 /**
@@ -49,6 +50,12 @@ export const FORM_ALLOWED_DESCENDANT_TYPES: ReadonlySet<LayoutNodeType> = new Se
   'accordion',
   'divider',
   'tabs',
+  'steps',
+  'autocomplete',
+  'alert',
+  'badge',
+  'stat',
+  'skeleton',
 ])
 
 /**

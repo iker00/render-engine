@@ -15,10 +15,10 @@ La calidad del plan debe ser suficientemente alta como para que dos agentes comp
 
 ## Leer siempre
 - `ai-workflow/docs/workflow.md`
-- `ai-workflow/features/NNNN-feature-name/spec.md`
-- `ai-workflow/features/NNNN-feature-name/status.yaml`
-- `ai-workflow/features/NNNN-feature-name/design.md` si existe o si `status.yaml` marca `requires_design: true`
-- `ai-workflow/features/NNNN-feature-name/tasks.md` si existe
+- `ai-workflow/features/YYYY-MM-DD-HH-MM-feature-name/spec.md`
+- `ai-workflow/features/YYYY-MM-DD-HH-MM-feature-name/status.yaml`
+- `ai-workflow/features/YYYY-MM-DD-HH-MM-feature-name/design.md` si existe o si `status.yaml` marca `requires_design: true`
+- `ai-workflow/features/YYYY-MM-DD-HH-MM-feature-name/tasks.md` si existe
 - `ai-workflow/docs/context.md`
 - `ai-workflow/docs/architecture.md`
 - `ai-workflow/docs/conventions.md`
@@ -33,7 +33,7 @@ La calidad del plan debe ser suficientemente alta como para que dos agentes comp
 
 ## Objetivo
 Escribir o refinar:
-- `features/NNNN-feature-name/tasks.md` (incluye el contrato de tests por tarea como sub-bloque)
+- `features/YYYY-MM-DD-HH-MM-feature-name/tasks.md` (incluye el contrato de tests por tarea como sub-bloque)
 
 No implementar código en este paso. Si `status.yaml` marca `requires_design: true` y `artifacts.design` aún no es `ready`, detenerse y redirigir al usuario a `generate-feature-design`; ver "Restricciones" para el resto de límites sobre `design.md`.
 
@@ -51,6 +51,7 @@ Cada tarea debe incluir como mínimo, usando una estructura estable:
 - objetivo
 - fuera de alcance
 - dependencias
+- interfaces (sub-bloque estable; ver más abajo)
 - impacto esperado en archivos
 - tests (sub-bloque estable; ver más abajo)
 - documentación afectada
@@ -77,6 +78,16 @@ En el bloque `Impacto esperado en archivos`, cada tarea debe identificar:
 
 Si la ruta exacta todavía no se conoce, sé lo más concreto posible sobre el módulo o área que cambiará.
 
+### Sub-bloque `Interfaces` de cada tarea
+El subagente de implementación de una tarea solo lee el bloque literal de esa tarea, no el resto de `tasks.md` ni el código de otras tareas todavía no implementadas. Cuando una tarea depende de una función, clase, tipo o contrato que expone otra tarea, esa firma debe declararse explícitamente para que el subagente no tenga que inventarla ni ir a buscarla en código que puede no existir aún. El sub-bloque tiene dos subsecciones:
+
+- **Consume**: firmas que esta tarea necesita y que expone una tarea previa, formato `` `nombre(params): tipoRetorno` `` seguido de `(de T#)`.
+- **Produce**: firmas que esta tarea crea y que quedan disponibles para tareas posteriores, mismo formato de firma seguido de `— consumido por: T#, T#` (o `sin consumidores directos` si nada la usa todavía pero forma parte del contrato de la tarea).
+
+Si una tarea no consume ni produce ninguna firma reutilizable por otra tarea, el sub-bloque debe existir igual con `Consume: ninguno` / `Produce: ninguno`. No omitir el sub-bloque.
+
+La firma declarada en `Produce` de una tarea y la firma declarada en `Consume` de cada tarea que la usa deben coincidir literalmente (mismo nombre, misma forma de parámetros, mismo tipo de retorno). Un desajuste de nombre o firma entre tareas es un error de planificación, no un detalle a resolver en implementación.
+
 ### Sub-bloque `tests` de cada tarea
 El contrato de verificación de cada tarea vive dentro de la propia tarea. Debe incluir cuatro subsecciones estables, en este orden:
 
@@ -93,6 +104,7 @@ Si una tarea no requiere tests propios (refactor puro, doc-only), el sub-bloque 
 - Dividir el trabajo en tareas pequeñas, atómicas y secuenciales que puedan implementarse, probarse y revisarse con seguridad en un cambio acotado.
 - Si una tarea es demasiado grande para un cambio seguro o admite más de una interpretación razonable, dividirla.
 - Mantener las tareas ordenadas por dependencia.
+- Cuando una tarea produzca una función, clase, tipo o contrato que otra tarea posterior necesite usar, declarar esa firma en el `Produce` de la tarea que la crea y repetirla literalmente en el `Consume` de cada tarea que la usa: mismo nombre, misma firma. No dejar que una tarea posterior tenga que inventar o adivinar el contrato expuesto por otra.
 - Escribir `tasks.md` como contrato de ejecución para la skill de implementación: la implementación debe poder seguirlo sin reinterpretar alcance, orden ni estrategia general.
 - Redactar cada tarea de forma que minimice la varianza de ejecución entre agentes competentes.
 - Favorecer definiciones que lleven a resultados funcionalmente equivalentes, no a interpretaciones abiertas del mismo objetivo.
@@ -101,7 +113,6 @@ Si una tarea no requiere tests propios (refactor puro, doc-only), el sub-bloque 
 - Cada tarea debe dejar claro si habilita una tarea posterior o si bloquea el resto hasta quedar cerrada.
 - Cada tarea debe dejar claro cuándo se considera cerrada su implementación y cuándo se considera cerrado su estado documental.
 - Reflejar los límites arquitectónicos de `architecture.md`.
-- Reflejar los estándares de código, testing y manejo de errores definidos en `standards/`.
 - Marcar explícitamente el impacto en documentación para cada tarea en el campo `documentación afectada`, aunque el resultado sea `ninguno`.
 - Tratar `README.md` como documento de entrada breve; no incluirlo como documentación afectada salvo cambio de contrato público.
 - Preferir tareas que puedan completarse de principio a fin en una sola pasada de implementación.
@@ -122,6 +133,7 @@ Si una tarea no requiere tests propios (refactor puro, doc-only), el sub-bloque 
 - No dejar implícito el impacto en archivos.
 - No crear tareas puramente documentales; la actualización de documentación no es parte de `tasks.md`.
 - No dejar tareas con estructura libre que omitan bloques contractuales esenciales.
+- No dejar implícita una firma que una tarea consume de otra: si el `Consume` de una tarea no tiene una firma literalmente idéntica en el `Produce` de la tarea de la que depende, es un hueco de planificación, no un detalle a resolver en implementación.
 - No crear tareas vagas como "build UI" o "wire backend" sin un alcance más estrecho.
 - No escribir tareas que obliguen a la skill de implementación a decidir arquitectura, alcance o partición de trabajo sobre la marcha.
 - No esconder trabajo importante detrás de frases como "ajustes necesarios", "integración final" o "remates".
@@ -148,6 +160,7 @@ El usuario puede invocar `review-implementation-plan` manualmente si quiere un s
 - dos agentes competentes distintos podrían seguir el plan e implementar un resultado funcionalmente equivalente sin reinterpretar la feature
 - cada tarea incluye su sub-bloque `tests` con las cuatro subsecciones (ficheros, comportamiento cubierto, comandos, restricciones si aplica)
 - el sub-bloque `tests` de cada tarea es lo bastante literal como para que un subagente con contexto limpio implemente la tarea sin reinterpretar el alcance
+- cada tarea incluye su sub-bloque `Interfaces` (Consume/Produce), y cada firma declarada en `Produce` coincide literalmente con la firma que declaran en `Consume` las tareas que dependen de ella
 - `design.md` existe cuando el riesgo o la complejidad lo piden
 - `status.yaml` refleja correctamente si la feature está lista o no para implementación
 - cada tarea identifica el impacto en código, tests y documentación afectada

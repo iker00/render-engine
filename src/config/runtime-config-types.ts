@@ -16,6 +16,7 @@ export type LayoutNodeType =
   | 'checkboxGroup'
   | 'modal'
   | 'tabs'
+  | 'steps'
   | 'accordion'
   | 'badge'
   | 'alert'
@@ -26,6 +27,9 @@ export type LayoutNodeType =
   | 'fileInput'
   | 'toggle'
   | 'hidden'
+  | 'map'
+  | 'gallery'
+  | 'autocomplete'
 export type RuntimeApiMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
 export type RuntimeApiQueryValue = string | number | boolean
 export type RuntimeApiQuery = Record<string, RuntimeApiQueryValue>
@@ -74,13 +78,21 @@ export type RuntimeCollectionObjectValue =
 export type RuntimeCollectionObjectItem = Record<string, RuntimeCollectionObjectValue>
 
 export type QueryStateFeedbackVisibleState = 'idle' | 'loading' | 'error' | 'empty' | 'success'
-export type RuntimeVisibilityOperator = 'equals' | 'notEquals' | 'isTruthy' | 'isFalsy' | 'greaterThan' | 'lessThan'
+export type RuntimeVisibilityOperator =
+  | 'equals'
+  | 'notEquals'
+  | 'isTruthy'
+  | 'isFalsy'
+  | 'greaterThan'
+  | 'lessThan'
+  | 'arrayContains'
 export type RuntimeVisibilityGroupOperator = 'and' | 'or'
 
 export interface RuntimeVisibilityCondition {
   reference: string
   operator: RuntimeVisibilityOperator
   value?: RuntimeConfigValue
+  itemField?: string
   negate?: boolean
 }
 
@@ -178,6 +190,10 @@ export interface RepeaterLayoutNode extends LayoutNodeFeedbackFields, LayoutNode
       key: string
     }
     pagination?: RuntimeCollectionPaginationConfig
+    columns?: RuntimeResponsiveLayoutValue
+    gap?: string
+    align?: ContainerAlign
+    justify?: ContainerJustify
     template: LayoutNode[]
   }
   children?: never
@@ -235,6 +251,7 @@ export type TableCellNode =
   | ContainerLayoutNode
   | HeadingLayoutNode
   | ParagraphLayoutNode
+  | LinkLayoutNode
 export type TableCellValue = TableCellPrimitive | TableCellNode
 export type TableManualRows = TableCellValue[][]
 
@@ -271,8 +288,8 @@ export interface FormLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayo
   submitAction?: ExecuteOperationRuntimeUiAction | ExecuteOperationsRuntimeUiAction
   resetOnSuccess?: boolean
   children?: LayoutNode[]
-  onSuccess?: FormOnSuccessAction[]
-  onError?: FormOnErrorAction[]
+  onSuccess?: RuntimeUiActionListEntry[]
+  onError?: RuntimeUiActionListEntry[]
 }
 
 export type RuntimeFormValidationRuleName =
@@ -428,6 +445,7 @@ export interface SelectLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLa
     items: SelectLayoutNodeItems
     multiple?: boolean
     placeholder?: string
+    emptySubmitValue?: string | number
   }
   children?: unknown
 }
@@ -454,6 +472,20 @@ export interface CheckboxGroupLayoutNode extends LayoutNodeFeedbackFields, Layou
   children?: unknown
 }
 
+export interface AutocompleteLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayoutFields {
+  type: 'autocomplete'
+  id?: string
+  props: FormFieldLayoutNodeProps & {
+    items: SelectLayoutNodeItems
+    multiple?: boolean
+    placeholder?: string
+    allowFreeText?: boolean
+    minChars?: number
+    searchParamName?: string
+  }
+  children?: never
+}
+
 export type ModalSize = 'sm' | 'md' | 'lg'
 
 export interface ModalLayoutNodeProps {
@@ -475,6 +507,7 @@ export interface TabsItem {
   label: string
   children?: LayoutNode[]
   visibility?: RuntimeVisibilityConfig
+  icon?: string
 }
 
 export interface TabsLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayoutFields {
@@ -488,6 +521,35 @@ export interface TabsLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayo
   children?: never
 }
 
+export type StepsVariant = 'horizontal' | 'vertical' | 'progress'
+
+export interface StepOnNextAction {
+  operationName: string
+  query?: RuntimeApiQuery
+  body?: RuntimeApiBodyValue
+  headers?: RuntimeApiHeaders
+}
+
+export interface StepsItem {
+  label: string
+  children?: LayoutNode[]
+  visibility?: RuntimeVisibilityConfig
+  onNext?: StepOnNextAction
+}
+
+export interface StepsLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayoutFields {
+  type: 'steps'
+  id?: string
+  props: {
+    variant?: StepsVariant
+    backLabel?: string
+    nextLabel?: string
+    submitLabel?: string
+    items: StepsItem[]
+  }
+  children?: never
+}
+
 export interface AccordionLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayoutFields {
   type: 'accordion'
   id?: string
@@ -495,6 +557,7 @@ export interface AccordionLayoutNode extends LayoutNodeFeedbackFields, LayoutNod
     label: string
     defaultOpen?: boolean
     groupId?: string
+    icon?: string
   }
   children?: LayoutNode[]
 }
@@ -567,6 +630,68 @@ export interface SkeletonLayoutNode extends LayoutNodeFeedbackFields, LayoutNode
   children?: never
 }
 
+export interface MapStaticMarker {
+  lat: number
+  lng: number
+  label: string
+}
+
+export interface MapMarkerSource {
+  source: string
+  position: { lat: string; lng: string }
+  label: string
+  color?: ButtonColor
+}
+
+export type MapHeight = 'sm' | 'md' | 'lg' | 'xl'
+
+export interface MapLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayoutFields {
+  type: 'map'
+  id?: string
+  props?: {
+    center?: { lat: number; lng: number }
+    zoom?: number
+    height?: MapHeight
+    markers?: MapStaticMarker[]
+    markerSources?: MapMarkerSource[]
+  }
+  children?: never
+}
+
+export interface GalleryStaticImage {
+  src: string
+  alt: string
+}
+
+export type GalleryDynamicSource = { source: string; key: string; alt: string } & (
+  | { mode: 'src'; src: string }
+  | { mode: 'fetch'; fetch: ImageFetchConfig; idField?: string }
+)
+
+export interface GalleryPaginatedDisplay {
+  mode: 'paginated'
+  pagination: {
+    pageSize: number
+    controls?: { variant?: RuntimeCollectionPaginationControlsVariant }
+  }
+}
+
+export interface GalleryCarouselDisplay {
+  mode: 'carousel'
+  visibleCount: number
+  autoplay?: { enabled: true; intervalMs: number }
+  loop?: boolean
+}
+
+export interface GalleryLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayoutFields {
+  type: 'gallery'
+  id?: string
+  props: ({ images: GalleryStaticImage[] } | { source: GalleryDynamicSource }) & {
+    display: GalleryPaginatedDisplay | GalleryCarouselDisplay
+  }
+  children?: never
+}
+
 export interface NavigateToRuntimeUiAction {
   type: 'navigateTo'
   pageId: string
@@ -580,6 +705,8 @@ export interface GoBackRuntimeUiAction {
 export interface ExecuteOperationRuntimeUiAction extends RuntimeApiRequestParams {
   type: 'executeOperation'
   operationName: string
+  onSuccess?: RuntimeUiActionListEntry[]
+  onError?: RuntimeUiActionListEntry[]
 }
 
 export interface ExecuteOperationsRuntimeUiActionEntry {
@@ -593,11 +720,24 @@ export interface ExecuteOperationsRuntimeUiActionEntry {
 export interface ExecuteOperationsRuntimeUiAction {
   type: 'executeOperations'
   operations: ExecuteOperationsRuntimeUiActionEntry[]
+  onSuccess?: RuntimeUiActionListEntry[]
+  onError?: RuntimeUiActionListEntry[]
 }
 
 export interface ResetFormRuntimeUiAction {
   type: 'resetForm'
   formId: string
+}
+
+// Deliberately excluded from `RuntimeUiAction` and `RuntimeUiActionListEntry` (decision D7):
+// `downloadOperation` is only valid as the first-level `action` of `button`/`link`, never as a
+// chained entry inside another action's `onSuccess`/`onError` list.
+export interface DownloadOperationRuntimeUiAction extends RuntimeApiRequestParams {
+  type: 'downloadOperation'
+  operationName: string
+  filename?: string
+  onSuccess?: RuntimeUiActionListEntry[]
+  onError?: RuntimeUiActionListEntry[]
 }
 
 export interface OpenModalRuntimeUiAction {
@@ -621,9 +761,7 @@ export type RuntimeUiAction =
   | OpenModalRuntimeUiAction
   | CloseModalRuntimeUiAction
 
-export type FormOnSuccessAction = RuntimeUiAction & { when?: RuntimeWhenCondition }
-
-export type FormOnErrorAction = RuntimeUiAction & { when?: RuntimeWhenCondition }
+export type RuntimeUiActionListEntry = RuntimeUiAction & { when?: RuntimeWhenCondition }
 
 export type NavigateToButtonAction = NavigateToRuntimeUiAction
 export type GoBackButtonAction = GoBackRuntimeUiAction
@@ -637,7 +775,7 @@ export interface ButtonLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLa
   id?: string
   props: {
     label: string
-    action?: RuntimeUiAction
+    action?: RuntimeUiAction | DownloadOperationRuntimeUiAction
     color?: ButtonColor
     variant?: ButtonVariant
     fullWidth?: boolean
@@ -655,7 +793,7 @@ export interface LinkLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayo
     href?: string
     download?: string
     target?: string
-    action?: NavigateToRuntimeUiAction | GoBackRuntimeUiAction
+    action?: NavigateToRuntimeUiAction | GoBackRuntimeUiAction | DownloadOperationRuntimeUiAction
     icon?: string
     iconPosition?: 'left' | 'right'
   }
@@ -767,6 +905,7 @@ export type LayoutNode =
   | CheckboxGroupLayoutNode
   | ModalLayoutNode
   | TabsLayoutNode
+  | StepsLayoutNode
   | AccordionLayoutNode
   | BadgeLayoutNode
   | AlertLayoutNode
@@ -777,8 +916,62 @@ export type LayoutNode =
   | ToggleLayoutNode
   | HiddenLayoutNode
   | FileManagerLayoutNode
+  | MapLayoutNode
+  | GalleryLayoutNode
+  | AutocompleteLayoutNode
 
 export type LayoutNodeCollection = LayoutNode[]
+
+// `menuItem` (root) allows one nesting level via `children`; `menuItemChild` cannot declare
+// `children` itself — enforced by omitting the key from its type, not by a runtime check alone.
+export interface MenuItemChildConfig {
+  label: string
+  icon?: string
+  visibility?: RuntimeVisibilityConfig
+  href?: string
+  action?: NavigateToRuntimeUiAction | GoBackRuntimeUiAction
+}
+
+export interface MenuItemConfig extends MenuItemChildConfig {
+  children?: MenuItemChildConfig[]
+}
+
+// Same public shape as the `image` node's `props` (without the `type` wrapper).
+export type ShellHeaderLogoConfig = ImageLayoutNode['props']
+
+export type ShellHeaderActionNode = LinkLayoutNode | ButtonLayoutNode
+
+export interface ShellHeaderConfig {
+  logo?: ShellHeaderLogoConfig
+  title?: string
+  menu?: MenuItemConfig[]
+  actions?: ShellHeaderActionNode[]
+}
+
+// Unlike `menuItem`/`menuItemChild` (two fixed shapes, one nesting level), `sidebarItem` is
+// genuinely recursive: any node in the tree accepts the same fields, including its own
+// `children`, with no depth limit.
+export interface SidebarItemConfig {
+  label: string
+  icon?: string
+  visibility?: RuntimeVisibilityConfig
+  href?: string
+  action?: NavigateToRuntimeUiAction | GoBackRuntimeUiAction
+  children?: SidebarItemConfig[]
+}
+
+export interface ShellSidebarConfig {
+  items?: SidebarItemConfig[]
+  defaultCollapsed?: boolean
+}
+
+export type ShellScrollBehavior = 'page' | 'fixed'
+
+export interface ShellConfig {
+  header?: ShellHeaderConfig
+  sidebar?: ShellSidebarConfig
+  scrollBehavior?: ShellScrollBehavior
+}
 
 export interface RuntimePageConfig {
   id: string
@@ -810,6 +1003,7 @@ export interface RuntimeConfig {
   preloads?: RuntimePreloadConfig[]
   translations?: RuntimeTranslationsConfig
   tokens?: RuntimeTokensConfig
+  shell?: ShellConfig
 }
 
 export interface RuntimeConfigError {

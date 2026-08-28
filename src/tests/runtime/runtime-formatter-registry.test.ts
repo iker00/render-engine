@@ -28,7 +28,7 @@ function expectOk(
 
 // Normalize non-breaking / narrow-no-break spaces that Intl may emit.
 function normalizeSpaces(text: string): string {
-  return text.replace(/ /g, ' ').replace(/ /g, ' ')
+  return text.replace(/\u00A0/g, ' ').replace(/\u202F/g, ' ')
 }
 
 describe('RUNTIME_FORMATTER_REGISTRY.number', () => {

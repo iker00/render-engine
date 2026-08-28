@@ -9,6 +9,7 @@ export type RuntimeReferenceSurface =
   | 'select.props.label'
   | 'radioGroup.props.label'
   | 'checkboxGroup.props.label'
+  | 'autocomplete.props.label'
   | 'list.props.items'
   | 'select.props.items.label'
   | 'select.props.items.value'
@@ -16,6 +17,8 @@ export type RuntimeReferenceSurface =
   | 'radioGroup.props.items.value'
   | 'checkboxGroup.props.items.label'
   | 'checkboxGroup.props.items.value'
+  | 'autocomplete.props.items.label'
+  | 'autocomplete.props.items.value'
   | 'image.props.src'
   | 'image.props.alt'
   | 'table.cell'
@@ -30,9 +33,14 @@ export type RuntimeReferenceSurface =
   | 'stat.props.value'
   | `accordion[${string}].props.label`
   | `tabs[${string}].props.items[${string}].label`
+  | `steps[${string}].props.items[${string}].label`
+  | `steps[${string}].props.backLabel`
+  | `steps[${string}].props.nextLabel`
+  | `steps[${string}].props.submitLabel`
   | 'input.props.placeholder'
   | 'textarea.props.placeholder'
   | 'select.props.placeholder'
+  | 'autocomplete.props.placeholder'
   | 'form.validation.message'
   | `fileManager.props.labels.${string}`
   | 'fileManager.props.validations.message'
@@ -44,6 +52,17 @@ export type RuntimeReferenceSurface =
   | 'checkboxGroup.props.tooltip'
   | 'toggle.props.tooltip'
   | 'fileInput.props.tooltip'
+  | 'autocomplete.props.tooltip'
+  | 'shell.header.title'
+  | 'shell.header.menu.item.label'
+  | 'shell.header.menu.item.href'
+  | 'shell.sidebar.item.label'
+  | 'shell.sidebar.item.href'
+  | 'map.props.markerSources.label'
+  | 'gallery.props.images.src'
+  | 'gallery.props.images.alt'
+  | 'button.props.action.filename'
+  | 'link.props.action.filename'
 
 export function reportRuntimeReferenceDiagnostic(
   result: RuntimeReferenceResolutionResult,

@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { useRuntimeCurrentPage } from './runtime-state/runtime-state-provider'
+import { useRuntimeCurrentPage } from './runtime-state/use-runtime-state'
 
 export function RuntimeDocumentTitleEffect() {
   const page = useRuntimeCurrentPage()

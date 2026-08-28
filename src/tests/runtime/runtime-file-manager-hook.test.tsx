@@ -1,11 +1,11 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { FileManagerLayoutNode, RuntimeConfig } from '../../config/runtime-config'
-import { RuntimeStateProvider, useRuntimeStateActions } from '../../runtime/runtime-state/runtime-state-provider'
+import { RuntimeStateProvider } from '../../runtime/runtime-state/runtime-state-provider'
+import { useRuntimeStateActions } from '../../runtime/runtime-state/use-runtime-state'
 import { useFileManager } from '../../runtime/nodes/file-manager/use-file-manager'
-import { useEffect } from 'react'
 import type { RuntimeState } from '../../runtime/runtime-state/runtime-state-types'
-import { useRuntimeState } from '../../runtime/runtime-state/runtime-state-provider'
+import { useRuntimeState } from '../../runtime/runtime-state/use-runtime-state'
 
 afterEach(() => {
   window.history.replaceState(null, '', window.location.pathname + window.location.search)
@@ -35,7 +35,6 @@ function FileManagerHookFixture({
   node: FileManagerLayoutNode
   fetchMock?: typeof fetch
 }) {
-  const { executeInlineQueryOperation, setQuerySuccess } = useRuntimeStateActions()
   const { state: hookState, selectFiles, deleteFile } = useFileManager(node, { fetchOverride: fetchMock })
 
   return (

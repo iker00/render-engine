@@ -2,6 +2,7 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import type { ChangeEvent, Dispatch, SetStateAction } from 'react'
 import type {
   TableCellNode,
+  TableCellValue,
   TableDynamicRows,
   TableLayoutNode,
 } from '../../config/runtime-config'
@@ -41,13 +42,17 @@ import {
   getTableScrollContainerClassName,
   getTableSortButtonClassName,
 } from '../runtime-node-styling'
-import { useRuntimeState } from '../runtime-state/runtime-state-provider'
+import { useRuntimeState } from '../runtime-state/use-runtime-state'
 import { LayoutNodeRenderer } from '../layout-node-renderer'
-import { LayoutRenderer } from '../layout-renderer'
+import { LayoutRenderer, EmptyContainerPlaceholder } from '../layout-renderer'
+import { hasChildren, isEmptyPlaceholderCandidate } from '../layout-node-children'
+import { useLayoutEditModeContext } from '../use-layout-edit-mode-context'
+import type { LayoutNodePath } from '../layout-node-path'
 
 interface TableNodeProps {
   node: TableLayoutNode
   iterationContext?: RuntimeIterationContext
+  path?: LayoutNodePath
 }
 
 interface TablePaginationState {
@@ -56,10 +61,20 @@ interface TablePaginationState {
   scrollVisibleCount: number
 }
 
-export function TableNode({ node, iterationContext }: TableNodeProps) {
+export function TableNode({ node, iterationContext, path }: TableNodeProps) {
   const state = useRuntimeState()
   const tableInstanceId = useId()
-  const { rows, rowItemMap } = resolveTableRows(node, state, iterationContext)
+  const basePath = path ?? []
+  const editModeContext = useLayoutEditModeContext()
+  const activeEditModeContext = editModeContext !== null && editModeContext.active ? editModeContext : null
+  const isManualTableMode = Array.isArray(node.props.rows)
+  // Memoized so its identity is stable across renders that don't change these inputs (e.g. a
+  // local sort/filter/pagination interaction) — `processedRows` below depends on `rows`, and an
+  // unmemoized `rows` (a fresh array every render) would defeat that memoization entirely.
+  const { rows, rowItemMap, rowOriginalIndexMap } = useMemo(
+    () => resolveTableRows(node, state, iterationContext),
+    [node, state, iterationContext],
+  )
   const [filterValues, setFilterValues] = useState<TableFilterValues>({})
   const [sortState, setSortState] = useState<TableSortState | null>(null)
   const pageSize = node.props.pagination?.pageSize
@@ -177,28 +192,59 @@ export function TableNode({ node, iterationContext }: TableNodeProps) {
           <tbody>
             {visibleRows.map((row, rowIndex) => {
               const rowItem = rowItemMap.get(row)
-              const rowIterationContext: RuntimeIterationContext | undefined =
-                rowItem !== undefined ? { item: rowItem, key: String(rowIndex), itemIndex: rowIndex } : undefined
+              const rowIterationContext: RuntimeIterationContext = {
+                ...iterationContext,
+                ...(rowItem !== undefined ? { row: rowItem } : {}),
+                rowIndex: rowIndex + 1,
+              }
 
               return (
                 <tr key={`row-${rowIndex}`} className={getTableBodyRowClassName()}>
-                  {row.map((cell, cellIndex) => (
-                    <td key={`cell-${cellIndex}`} className={getTableCellClassName()}>
-                      {isTableCellNode(cell) ? (
-                        <LayoutNodeRenderer
-                          node={cell}
-                          iterationContext={rowIterationContext}
-                          renderedChildren={
-                            cell.type === 'container' && cell.children && cell.children.length > 0
-                              ? <LayoutRenderer nodes={cell.children} iterationContext={rowIterationContext} />
-                              : undefined
-                          }
-                        />
-                      ) : (
-                        cell
-                      )}
-                    </td>
-                  ))}
+                  {row.map((cell, cellIndex) => {
+                    const cellPath: LayoutNodePath = isManualTableMode
+                      ? [...basePath, { field: 'row', rowIndex: rowOriginalIndexMap.get(row)!, index: cellIndex }]
+                      : [...basePath, { field: 'cells', index: cellIndex }]
+
+                    return (
+                      <td key={`cell-${cellIndex}`} className={getTableCellClassName()}>
+                        {isTableCellNode(cell) ? (
+                          <LayoutNodeRenderer
+                            node={cell}
+                            iterationContext={rowIterationContext}
+                            path={cellPath}
+                            renderedChildren={
+                              hasChildren(cell)
+                                ? activeEditModeContext !== null && isEmptyPlaceholderCandidate(cell)
+                                  ? (
+                                      <EmptyContainerPlaceholder
+                                        nodeType={cell.type}
+                                        path={cellPath}
+                                        editModeContext={activeEditModeContext}
+                                      />
+                                    )
+                                  : (
+                                      <LayoutRenderer
+                                        nodes={cell.children ?? []}
+                                        iterationContext={rowIterationContext}
+                                        path={cellPath}
+                                      />
+                                    )
+                                : undefined
+                            }
+                          />
+                        ) : (
+                          resolveTableCellDisplayValue(
+                            cell,
+                            isManualTableMode
+                              ? (node.props.rows as TableCellValue[][])[rowOriginalIndexMap.get(row)!][cellIndex]
+                              : (node.props.rows as TableDynamicRows).cells[cellIndex],
+                            state,
+                            rowIterationContext,
+                          )
+                        )}
+                      </td>
+                    )
+                  })}
                 </tr>
               )
             })}
@@ -377,6 +423,13 @@ function isTableCellNode(cell: unknown): cell is TableCellNode {
 interface ResolvedTableRowsResult {
   rows: TableVisibleRow[]
   rowItemMap: Map<TableVisibleRow, unknown>
+  // Maps each resolved row (by object identity) back to its real index in `node.props.rows`
+  // (manual mode) or in the `items` iteration (dynamic mode) — see T3/design.md: filtering,
+  // sorting and pagination reorder/discard positions while preserving row object identity, so
+  // the final rendering index (`visibleRows.map((row, i) => ...)`) no longer matches the real
+  // position in `props.rows` once any of those is active. A cell's path must always address the
+  // real position, never the post-processing visual one.
+  rowOriginalIndexMap: Map<TableVisibleRow, number>
 }
 
 function resolveTableRows(
@@ -385,10 +438,11 @@ function resolveTableRows(
   iterationContext?: RuntimeIterationContext,
 ): ResolvedTableRowsResult {
   const rowItemMap = new Map<TableVisibleRow, unknown>()
+  const rowOriginalIndexMap = new Map<TableVisibleRow, number>()
 
   if (Array.isArray(node.props.rows)) {
-    const rows = node.props.rows.map((row) =>
-      row.map((cell) => {
+    const rows = node.props.rows.map((row, rowIndex) => {
+      const resolvedRow = row.map((cell) => {
         // NodeObject: pass through as-is (TableCellNode)
         if (isTableCellNode(cell)) {
           return cell
@@ -400,10 +454,13 @@ function resolveTableRows(
         }
 
         return normalizeTableCellValue(cell)
-      }),
-    )
+      })
 
-    return { rows, rowItemMap }
+      rowOriginalIndexMap.set(resolvedRow as unknown as TableVisibleRow, rowIndex)
+      return resolvedRow
+    })
+
+    return { rows, rowItemMap, rowOriginalIndexMap }
   }
 
   const dynamicRows = node.props.rows as TableDynamicRows
@@ -419,19 +476,19 @@ function resolveTableRows(
       return normalizeTableCellValue(
         resolveRuntimeVisibleValue(cell, state, 'table.cell', {
           iterationContext: {
-            item,
-            key: String(rowIndex),
-            itemIndex: rowIndex,
+            ...iterationContext,
+            row: item,
           },
         }),
       )
     })
 
     rowItemMap.set(row as unknown as TableVisibleRow, item)
+    rowOriginalIndexMap.set(row as unknown as TableVisibleRow, rowIndex)
     return row as unknown as TableVisibleRow
   })
 
-  return { rows, rowItemMap }
+  return { rows, rowItemMap, rowOriginalIndexMap }
 }
 
 function normalizeTableCellValue(value: string | number | boolean) {
@@ -440,4 +497,25 @@ function normalizeTableCellValue(value: string | number | boolean) {
   }
 
   return String(value)
+}
+
+// The value already resolved in Phase A (`resolveTableRows`) is used as the filter/sort
+// comparison key, but it can't carry the final visible `rowIndex` (unknown until after
+// filter/sort/pagination are applied). Re-resolve string cell templates here, in Phase B, with
+// `rowIterationContext` so that `row.$index` reflects the row's actual visible position.
+// Non-string templates (number/boolean, manual mode only) have no reference to resolve, so the
+// Phase A value is reused as-is.
+function resolveTableCellDisplayValue(
+  cell: string,
+  rawCell: TableCellValue,
+  state: ReturnType<typeof useRuntimeState>,
+  rowIterationContext: RuntimeIterationContext,
+) {
+  if (typeof rawCell !== 'string') {
+    return cell
+  }
+
+  return normalizeTableCellValue(
+    resolveRuntimeVisibleValue(rawCell, state, 'table.cell', { iterationContext: rowIterationContext }),
+  )
 }

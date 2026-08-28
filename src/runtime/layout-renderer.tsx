@@ -1,13 +1,15 @@
 import type { MouseEvent, ReactNode } from 'react'
 import { useDroppable } from '@dnd-kit/core'
-import type { LayoutNode, LayoutNodeCollection } from '../config/runtime-config'
+import type { LayoutNode } from '../config/runtime-config'
 import type { RuntimeIterationContext } from './runtime-references/runtime-reference-resolver'
 import type { LayoutNodePath } from './layout-node-path'
 import { LayoutNodeRenderer } from './layout-node-renderer'
-import { useLayoutEditModeContext, type LayoutEditModeContextValue } from './layout-edit-mode-context'
-import { useRuntimeLayoutContext } from './runtime-layout-context'
+import { useLayoutEditModeContext } from './use-layout-edit-mode-context'
+import type { LayoutEditModeContextValue } from './layout-edit-mode-context-value'
+import { useRuntimeLayoutContext } from './use-runtime-layout-context'
 import { serializeDropZoneId, serializeLayoutNodePath } from './layout-node-path'
 import { LayoutCanvasGridDropZonesOverlay } from './layout-canvas-grid-drop-zones'
+import { hasChildren, isEmptyPlaceholderCandidate, type EmptyPlaceholderNodeType } from './layout-node-children'
 
 export interface LayoutRendererProps {
   nodes: readonly LayoutNode[]
@@ -23,6 +25,12 @@ export interface LayoutRendererProps {
    * they need no equivalent — `parentPath` for their drop zones is just `path`.
    */
   parentTabItemIndex?: number
+  /**
+   * Drop-zone disambiguator, paralleling `parentTabItemIndex` (T4 / design.md D4): set only by
+   * `StepsNode` when rendering the active step's children, since `path` there is the steps
+   * node's own path (shared by every step item), not a per-stepItem path.
+   */
+  parentStepItemIndex?: number
 }
 
 export function LayoutRenderer({
@@ -31,6 +39,7 @@ export function LayoutRenderer({
   path = [],
   buildChildPath,
   parentTabItemIndex,
+  parentStepItemIndex,
 }: LayoutRendererProps) {
   const editModeContext = useLayoutEditModeContext()
   const { parentGridColumns } = useRuntimeLayoutContext()
@@ -65,6 +74,7 @@ export function LayoutRenderer({
         parentPath={path}
         index={0}
         tabItemIndex={parentTabItemIndex}
+        stepItemIndex={parentStepItemIndex}
       />,
     )
   }
@@ -97,6 +107,7 @@ export function LayoutRenderer({
           parentPath={path}
           index={index + 1}
           tabItemIndex={parentTabItemIndex}
+          stepItemIndex={parentStepItemIndex}
         />,
       )
     }
@@ -120,33 +131,27 @@ interface LayoutCanvasDropZoneGapProps {
   parentPath: LayoutNodePath
   index: number
   tabItemIndex?: number
+  stepItemIndex?: number
 }
 
 // A minimal, unstyled-by-default drop target participating in the real flex/grid flow of its
 // parent container, so its measured rect (and therefore its collision center) reflects the
 // actual visual layout without any custom geometry math on our side (see T12 note on grids
 // vs vertical lists).
-function LayoutCanvasDropZoneGap({ parentPath, index, tabItemIndex }: LayoutCanvasDropZoneGapProps) {
-  const dropZoneId = serializeDropZoneId({ parentPath, index, tabItemIndex })
+function LayoutCanvasDropZoneGap({ parentPath, index, tabItemIndex, stepItemIndex }: LayoutCanvasDropZoneGapProps) {
+  const dropZoneId = serializeDropZoneId({ parentPath, index, tabItemIndex, stepItemIndex })
   const { setNodeRef } = useDroppable({ id: dropZoneId })
 
   return <div ref={setNodeRef} data-drop-zone={dropZoneId} aria-hidden="true" className="h-1 min-w-1" />
 }
 
-type EmptyPlaceholderNodeType = 'container' | 'form'
-
 const EMPTY_PLACEHOLDER_LABEL: Record<EmptyPlaceholderNodeType, string> = {
   container: 'Contenedor vacío',
   form: 'Formulario vacío',
+  link: 'Enlace vacío',
 }
 
-function isEmptyPlaceholderCandidate(
-  node: Extract<LayoutNode, { children?: LayoutNodeCollection }>,
-): node is Extract<LayoutNode, { type: EmptyPlaceholderNodeType }> {
-  return (node.type === 'container' || node.type === 'form') && (node.children ?? []).length === 0
-}
-
-interface EmptyContainerPlaceholderProps {
+export interface EmptyContainerPlaceholderProps {
   nodeType: EmptyPlaceholderNodeType
   path: LayoutNodePath
   editModeContext: Extract<LayoutEditModeContextValue, { active: true }>
@@ -159,7 +164,7 @@ interface EmptyContainerPlaceholderProps {
 // {parentPath: <container's own path>, index: 0} — the same formula
 // `LayoutCanvasDropZoneGap` uses for the "before the first sibling" position, just realized
 // here as the already-existing placeholder element instead of a separate gap.
-function EmptyContainerPlaceholder({ nodeType, path, editModeContext }: EmptyContainerPlaceholderProps) {
+export function EmptyContainerPlaceholder({ nodeType, path, editModeContext }: EmptyContainerPlaceholderProps) {
   const placeholderPath: LayoutNodePath = [...path, { field: 'children', index: 0 }]
   const serializedPath = serializeLayoutNodePath(placeholderPath)
   const { setNodeRef: setDropZoneRef } = useDroppable({ id: serializeDropZoneId({ parentPath: path, index: 0 }) })
@@ -206,10 +211,6 @@ function EmptyContainerPlaceholder({ nodeType, path, editModeContext }: EmptyCon
       {EMPTY_PLACEHOLDER_LABEL[nodeType]}
     </div>
   )
-}
-
-function hasChildren(node: LayoutNode): node is Extract<LayoutNode, { children?: LayoutNodeCollection }> {
-  return node.type === 'container' || node.type === 'form' || node.type === 'modal' || node.type === 'link'
 }
 
 function getLayoutNodeKey(node: LayoutNode, index: number) {

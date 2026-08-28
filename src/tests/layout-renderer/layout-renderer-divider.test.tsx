@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { vi } from 'vitest'
 import type { RuntimeConfig, RuntimePageConfig } from '../../config/runtime-config'

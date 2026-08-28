@@ -4,11 +4,11 @@ import type { LayoutNode } from '../config/runtime-config'
 import type { RuntimeIterationContext } from './runtime-references/runtime-reference-resolver'
 import type { LayoutNodePath } from './layout-node-path'
 import { resolveLayoutNodeVisibility } from './runtime-layout-visibility'
-import { useRuntimeLayoutContext } from './runtime-layout-context'
-import { useLayoutEditModeContext } from './layout-edit-mode-context'
-import { serializeLayoutNodePath } from './layout-node-path'
+import { useRuntimeLayoutContext } from './use-runtime-layout-context'
+import { useLayoutEditModeContext } from './use-layout-edit-mode-context'
+import { pathEndsAtTableCell, serializeLayoutNodePath } from './layout-node-path'
 import { getGridChildSpanClassName } from './runtime-node-styling'
-import { useRuntimeState } from './runtime-state/runtime-state-provider'
+import { useRuntimeState } from './runtime-state/use-runtime-state'
 import { LayoutRenderer } from './layout-renderer'
 import { NodeComponents } from './nodes/node-components-map'
 import { LazyNode } from './lazy-node'
@@ -28,6 +28,7 @@ const NODE_TYPES_INERT_IN_EDIT_MODE: ReadonlySet<LayoutNode['type']> = new Set([
   'checkboxGroup',
   'toggle',
   'fileInput',
+  'autocomplete',
 ])
 
 export interface LayoutNodeRendererProps {
@@ -46,10 +47,15 @@ export function LayoutNodeRenderer({ node, renderedChildren, iterationContext, p
   // `useDraggable` is a safe no-op without an ancestor DndContext (default internal
   // context), and `disabled` keeps it inert whenever there is no LayoutEditModeContext, so
   // production/preview rendering (no provider) is unaffected. See T12 / design.md Decisión 7.
+  // A table cell node (path ending in a `row`/`cells` step, T4/design.md) is never a drag
+  // source: `table` never appears in `nodeTypeAcceptsChildren`, so no drop zone is ever
+  // generated to reorder cells against each other or against anything else — dragging one
+  // would only produce an inert gesture. A cell-container's own children (path continuing
+  // past `row`/`cells` with a `children` step) are unaffected and stay draggable normally.
   const serializedPath = serializeLayoutNodePath(path)
   const { setNodeRef: setDraggableNodeRef, listeners: draggableListeners } = useDraggable({
     id: serializedPath,
-    disabled: editModeContext === null || !editModeContext.active,
+    disabled: editModeContext === null || !editModeContext.active || pathEndsAtTableCell(path),
   })
   const resolvedVisibility = resolveLayoutNodeVisibility(node, state, iterationContext)
 
@@ -106,7 +112,7 @@ export function LayoutNodeRenderer({ node, renderedChildren, iterationContext, p
     }
     case 'table': {
       const TableNode = NodeComponents.table
-      renderedNode = <TableNode node={node} iterationContext={iterationContext} />
+      renderedNode = <TableNode node={node} iterationContext={iterationContext} path={path} />
       break
     }
     case 'button': {
@@ -209,6 +215,26 @@ export function LayoutNodeRenderer({ node, renderedChildren, iterationContext, p
       renderedNode = <HiddenNode node={node} iterationContext={iterationContext} />
       break
     }
+    case 'map': {
+      const MapNode = NodeComponents.map
+      renderedNode = <MapNode node={node} iterationContext={iterationContext} />
+      break
+    }
+    case 'steps': {
+      const StepsNode = NodeComponents.steps
+      renderedNode = <StepsNode node={node} iterationContext={iterationContext} path={path} />
+      break
+    }
+    case 'gallery': {
+      const GalleryNode = NodeComponents.gallery
+      renderedNode = <GalleryNode node={node} iterationContext={iterationContext} />
+      break
+    }
+    case 'autocomplete': {
+      const AutocompleteNode = NodeComponents.autocomplete
+      renderedNode = <AutocompleteNode node={node} iterationContext={iterationContext} />
+      break
+    }
   }
 
   renderedNode = <LazyNode>{renderedNode}</LazyNode>
@@ -289,7 +315,7 @@ export function LayoutNodeRenderer({ node, renderedChildren, iterationContext, p
   }
 
   const gridChildSpanClassName =
-    node.type === 'repeater' || node.type === 'modal' || node.type === 'hidden'
+    (node.type === 'repeater' && node.props.columns === undefined) || node.type === 'modal' || node.type === 'hidden'
       ? null
       : getGridChildSpanClassName(node.layout?.span, parentGridColumns)
 

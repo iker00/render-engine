@@ -48,14 +48,14 @@ export function LayoutCanvasBreadcrumb({ pageLayout, selectedPath, onSelectNode 
     <nav
       data-testid="layout-canvas-breadcrumb"
       aria-label="Ruta del nodo seleccionado"
-      className="flex flex-wrap items-center gap-1 border-b px-4 py-2 text-xs text-gray-600"
+      className="flex flex-wrap items-center gap-1 text-xs"
     >
       {segments.map((segment, index) => {
         const isLast = index === segments.length - 1
         return (
           <span key={serializeLayoutNodePath(segment.path)} className="flex items-center gap-1">
             {index > 0 && (
-              <span aria-hidden="true" className="text-gray-400">
+              <span aria-hidden="true" className="text-gray-300">
                 &gt;
               </span>
             )}
@@ -65,7 +65,7 @@ export function LayoutCanvasBreadcrumb({ pageLayout, selectedPath, onSelectNode 
               <button
                 type="button"
                 onClick={() => onSelectNode(segment.path)}
-                className="hover:underline"
+                className="text-gray-400 hover:text-gray-600 hover:underline"
               >
                 {segment.label}
               </button>

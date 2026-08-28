@@ -4,8 +4,8 @@ import type { ModalLayoutNode } from '../../config/runtime-config'
 import type { RuntimeIterationContext } from '../runtime-references/runtime-reference-resolver'
 import { getModalOverlayClassName, getModalPanelClassName } from '../runtime-node-styling'
 import { isModalOpen } from '../runtime-state/runtime-state-selectors'
-import { useRuntimeState, useRuntimeStateActions } from '../runtime-state/runtime-state-provider'
-import { useLayoutEditModeContext } from '../layout-edit-mode-context'
+import { useRuntimeState, useRuntimeStateActions } from '../runtime-state/use-runtime-state'
+import { useLayoutEditModeContext } from '../use-layout-edit-mode-context'
 
 interface ModalNodeProps {
   node: ModalLayoutNode

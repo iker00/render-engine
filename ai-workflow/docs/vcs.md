@@ -110,12 +110,13 @@ Al finalizar implementación y documentación (cuando código, tests y documenta
 2. **Hacer el commit único** con todos los cambios:
    ```
    git add .
-   git commit -m "feat: implement feature NNNN — short description"
+   git commit -m "feat: implement feature <slug> — short description"
    ```
    Para correcciones:
    ```
-   git commit -m "fix: fix NNNN — short description"
+   git commit -m "fix: fix <slug> — short description"
    ```
+   `<slug>` es la parte legible del nombre de carpeta de la feature (por ejemplo, para `2026-08-20-14-13-navigation-scroll-position` el slug es `navigation-scroll-position`). No incluir el prefijo temporal en el mensaje de commit; la fecha ya la aporta `git log`.
 
 3. **Pushear y crear el Merge Request**:
    ```

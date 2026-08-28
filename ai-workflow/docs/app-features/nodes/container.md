@@ -36,9 +36,9 @@
 - En mapas responsive, `base` representa la clase sin prefijo y actúa como fallback móvil recomendado; si se omite, el runtime degrada a una columna hasta que aplique el primer breakpoint declarado.
 - Los breakpoints omitidos heredan el valor efectivo anterior siguiendo la cascada de Tailwind.
 - Las claves de breakpoint desconocidas y los valores fuera de `1..12`, no enteros o no numéricos se rechazan antes del render con ruta diagnóstica explícita.
-- `layout.span` se aplica desde el borde central del renderer con un wrapper ligero solo para nodos visibles distintos de `repeater`; fuera de un grid efectivo no produce efecto.
+- `layout.span` se aplica desde el borde central del renderer con un wrapper ligero para nodos visibles y, adicionalmente, para `repeater` cuando declara su propio `props.columns` (modo grid propio); fuera de un grid efectivo no produce efecto.
 - Dentro de un grid efectivo, el runtime resuelve las columnas del padre y el `span` del hijo por breakpoint, hereda valores omitidos según la cascada de Tailwind y clampa cada tramo contra las columnas disponibles antes de emitir clases `col-span-*` enumeradas.
-- `repeater` puede declarar `layout.span` porque la superficie es transversal, pero esa prop no genera wrapper propio ni ocupación visible sobre el `repeater`; si una repetición necesita ocupar columnas, el nodo raíz visible de `props.template` debe declarar su propio `layout.span`.
+- `repeater` sin `props.columns` puede declarar `layout.span` porque la superficie es transversal, pero esa prop no genera wrapper propio ni ocupación visible sobre el `repeater`; si una repetición necesita ocupar columnas, el nodo raíz visible de `props.template` debe declarar su propio `layout.span`. Ver [[repeater.md]] para el modo grid propio del `repeater`, donde este comportamiento cambia.
 - `node.layout.span` se valida solo por shape; el contrato no exige conocer el padre para aceptarlo y el runtime lo degrada sin efecto cuando no existe un grid efectivo donde aplicarlo.
 
 ## Validación específica

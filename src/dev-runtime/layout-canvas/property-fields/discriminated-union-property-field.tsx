@@ -1,4 +1,5 @@
-import { buildDefaultObjectForRequiredFields, PropertyFieldDispatcher, type DiscriminatedUnionVariant } from './property-field-dispatcher'
+import { PropertyFieldDispatcher } from './property-field-dispatcher'
+import { buildDefaultObjectForRequiredFields, type DiscriminatedUnionVariant } from './property-field-schema-resolution'
 import { EnumPropertyField } from './enum-property-field'
 
 export type { DiscriminatedUnionVariant }
@@ -11,7 +12,7 @@ interface DiscriminatedUnionPropertyFieldProps {
   required: boolean
 }
 
-// Readable Spanish labels for the 7 real action variants (RF7/RF8, design.md D3). A variant
+// Readable Spanish labels for the real action variants (RF7/RF8, design.md D3). A variant
 // `type` missing here (a fabricated schema in tests, or a future action variant) falls back to
 // its literal `type` value, so the selector never breaks for an unknown variant.
 const VARIANT_LABELS: Record<string, string> = {
@@ -22,6 +23,7 @@ const VARIANT_LABELS: Record<string, string> = {
   resetForm: 'Reiniciar formulario',
   openModal: 'Abrir modal',
   closeModal: 'Cerrar modal',
+  downloadOperation: 'Descargar operación',
 }
 
 const NO_ACTION_LABEL = 'Sin acción'
@@ -90,8 +92,8 @@ export function DiscriminatedUnionPropertyField({ variants, value, onChange, lab
   const hasVisibleFields = isPlainObject(activeFieldsSchema?.properties) && Object.keys(activeFieldsSchema.properties).length > 0
 
   return (
-    <fieldset className="flex flex-col gap-2 rounded border border-gray-200 p-2">
-      <legend className="px-1 text-xs font-medium text-gray-700">{label}</legend>
+    <fieldset className="flex flex-col gap-2">
+      <legend className="pt-2 text-[11px] font-medium uppercase tracking-wide text-gray-500">{label}</legend>
       <EnumPropertyField label={label} value={selectValue} options={options} optionLabels={optionLabels} onChange={handleTypeChange} required={required} />
       {activeVariant && hasVisibleFields && (
         <PropertyFieldDispatcher schema={activeFieldsSchema} value={value} onChange={onChange} label={variantLabel(activeVariant.typeValue)} />

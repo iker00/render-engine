@@ -1,6 +1,6 @@
-> Cuándo leer: estructura de `repeater`, `props.items.source`, `props.items.key`, `props.template`, iteración sobre array y objeto plano, paginación local con variantes `previousNext`/`numbered`/`scroll`, comportamiento dentro de `pageEntry`.
+> Cuándo leer: estructura de `repeater`, `props.items.source`, `props.items.key`, `props.template`, iteración sobre array y objeto plano, paginación local con variantes `previousNext`/`numbered`/`scroll`, modo grid propio (`props.columns`/`gap`/`align`/`justify`), comportamiento dentro de `pageEntry`.
 > Tamaño: medio.
-> Relacionados: [[../queries/state-model.md]], [[../references/reference-resolution.md]].
+> Relacionados: [[../queries/state-model.md]], [[../references/reference-resolution.md]], [[container.md]].
 
 # `repeater`
 
@@ -12,6 +12,10 @@
 - `props.pagination.pageSize`: obligatorio, entero, finito y mayor o igual que `1`.
 - `props.pagination.controls`: opcional; si se omite, el runtime usa el default efectivo de controles anterior/siguiente.
 - `props.pagination.controls.variant`: opcional y limitado a `previousNext | numbered | scroll`.
+- `props.columns`: opcional; entero entre `1` y `12`, o mapa responsive cerrado por breakpoint `base | sm | md | lg | xl | 2xl` con valores enteros entre `1` y `12` — mismo shape que `container.props.columns`. Su presencia activa el modo grid del `repeater` (ver [[#Modo grid]]).
+- `props.gap`: opcional; misma escala estable `sm | md | lg | xl | 2xl` que `container.props.gap`, con la misma compatibilidad heredada para valor CSS string arbitrario. Solo tiene efecto en modo grid.
+- `props.align`: opcional, con el mismo catálogo cerrado `start | center | end | stretch` que `container.props.align`. Solo tiene efecto en modo grid.
+- `props.justify`: opcional, con el mismo catálogo cerrado `start | center | end | between | around | evenly` que `container.props.justify`. Solo tiene efecto en modo grid.
 - `props.template`: colección ordenada obligatoria de `LayoutNode[]`.
 - no admite `children`.
 
@@ -26,7 +30,8 @@ El repeater detecta automáticamente si la fuente resuelta es array u objeto pla
 - `repeater.props.items.key` exige una ruta relativa no vacía al item actual, o los literales reservados `"$key"` y `"$index"`.
 - `repeater.props.pagination` puede activar paginación local en cliente con variantes cerradas de controles.
 - `repeater.props.template` reutiliza una colección `LayoutNode[]` sin `children`.
-- `repeater` no paginado no introduce markup propio: expande su `template` como hermanos por iteración y omite cualquier item cuya key efectiva sea ausente, no escalar o duplicada, con diagnóstico en desarrollo.
+- `repeater` sin `props.columns` no introduce markup propio: expande su `template` como hermanos por iteración y omite cualquier item cuya key efectiva sea ausente, no escalar o duplicada, con diagnóstico en desarrollo.
+- `repeater` con `props.columns` envuelve las iteraciones visibles en un wrapper de grid propio; ver [[#Modo grid]] para su contrato completo.
 - `repeater` paginado aplica la paginación después de filtrar las iteraciones renderizables por key válida y única, mantiene `item.*` apuntando al item original visible y conserva estado local e independiente por instancia.
 - La página activa o cantidad visible de un `repeater` paginado vuelve a la posición inicial cuando cambia la colección resuelta (incluyendo cambio de shape array/objeto), `pageSize` o la variante de controles; navegar o avanzar localmente no modifica `queries.*`, `pageEntry`, formularios, navegación ni dispara red.
 
@@ -51,6 +56,16 @@ El repeater detecta automáticamente si la fuente resuelta es array u objeto pla
 - Las superficies donde `item.$index` es utilizable son las mismas donde hoy es utilizable `item.$key` e `item.*`.
 - `item.$index` fuera del subárbol de un `repeater` no forma parte del contrato soportado y degrada a string vacío en superficies textuales, igual que `item.*` fuera de un `repeater`.
 
+## Modo grid
+- `props.columns` presente activa el modo grid: las iteraciones visibles del `repeater` se envuelven en un único contenedor con clases de grid (`grid-cols-{n}` fijo o por breakpoint responsive), igual mecanismo que `container.props.columns` (ver [[container.md]]). `props.columns` ausente conserva el comportamiento actual: el `repeater` no introduce markup propio.
+- El grid envuelve exactamente las iteraciones actualmente visibles: después de excluir items con key ausente, no escalar o duplicada, y después de aplicar la ventana de paginación local vigente (página activa en `previousNext`/`numbered`, ventana acumulada en `scroll`) cuando `props.pagination` existe. Cada iteración visible ocupa una celda.
+- Sin `props.gap` declarado y con grid activo, usa `md` como separación por defecto, igual que `container`. Con `props.gap` declarado, se traduce a la misma escala estable (`sm | md | lg | xl | 2xl`) o a la misma compatibilidad heredada de valor CSS arbitrario.
+- `props.align` y `props.justify` se traducen a las mismas clases estables que sus equivalentes en `container` cuando el modo grid está activo; sin `columns`, no tienen efecto.
+- Los controles de paginación (`previousNext`, `numbered`, `scroll`) se renderizan siempre como hermanos del wrapper de grid, fuera de él, sin ocupar una celda.
+- El nodo raíz visible de `props.template` puede declarar su propio `layout.span` para ocupar más de una columna dentro del grid del `repeater`, con el mismo mecanismo de clamp contra columnas disponibles y cascada de breakpoints que documenta `container.md` — ver [[#layout.span sobre el propio repeater]] para cuándo el propio `repeater` (y no solo el nodo raíz de su `template`) es también elegible para `layout.span`.
+- Colección resuelta sin iteraciones renderizables con `columns` declarado: el wrapper de grid se renderiza sin celdas, sin markup adicional ni empty state propio.
+- En modo edición del canvas del editor visual, el wrapper de grid se aplica igual sobre la única iteración de muestra que renderiza el modo Editor (ver [[../development/dev-mode-editor.md]]).
+
 ## Variantes de controles
 - La variante `previousNext` es el default efectivo cuando `controls` o `controls.variant` se omiten y muestra controles mínimos `Anterior`/`Siguiente` cuando hay más de una página efectiva.
 - La variante `numbered` muestra `Primera`, `Anterior`, una ventana compacta de hasta cinco páginas numeradas, `Siguiente` y `Última`; la página activa queda identificada visualmente y con `aria-current="page"`, sin texto auxiliar de posición.
@@ -72,6 +87,12 @@ El repeater detecta automáticamente si la fuente resuelta es array u objeto pla
 - Si `repeater.props.pagination.controls.variant` existe, debe ser `previousNext`, `numbered` o `scroll`; cualquier otra variante se rechaza antes del render.
 - Si `repeater.props.pagination` o `repeater.props.pagination.controls` incluyen claves no soportadas, el config completo se rechaza antes del render sobre la ruta exacta de la clave extra.
 - Si `repeater.props.items.source` declara un origen dinámico, este debe apuntar exactamente a `queries.{queryName}.data` o a una ruta anidada bajo `queries.{queryName}.data.*`.
+- `repeater.props.columns`, `repeater.props.gap`, `repeater.props.align` y `repeater.props.justify` se validan contra los mismos catálogos y shapes cerrados que sus equivalentes en `container` (ver [[container.md#Validación específica]]); un valor fuera de contrato en cualquiera de los cuatro se rechaza antes del render con ruta diagnóstica explícita sobre `props.{columns|gap|align|justify}`.
+
+## `layout.span` sobre el propio `repeater`
+- Un `repeater` sin `props.columns` sigue excluido de `layout.span`: declararlo sobre el propio nodo no produce wrapper ni ocupación visible; el nodo raíz visible de `props.template` debe declarar su propio `layout.span` si necesita ocupar columnas del grid ancestro. Ver [[container.md]] para el contrato general de `layout.span`.
+- Un `repeater` con `props.columns` (modo grid propio) sí es elegible para `layout.span`: el wrapper de grid del propio `repeater` recibe `col-span-*`, clampado contra las columnas del grid ancestro más cercano (`container` o `repeater` padre en modo grid), igual que cualquier otro nodo de una sola caja.
+- El `layout.span` del nodo raíz de `props.template` se sigue clampando contra las columnas propias del `repeater` (`props.columns`), no contra las del ancestro, con independencia de si el propio `repeater` declara o no `layout.span`.
 
 ## Límites del nodo
 - `repeater` ya puede expandir un subárbol completo por item de una colección remota y aplicar paginación local opcional con `props.pagination`, pero sigue fuera de alcance cualquier DSL de templates, filtros cliente, ordenación, paginación remota o fuentes de colección ajenas a `queries.*`.

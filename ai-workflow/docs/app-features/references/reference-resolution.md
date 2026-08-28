@@ -1,4 +1,4 @@
-> Cuándo leer: familias soportadas de referencias (`queries.*`, `forms.*`, `params.*`, `item.*`), superficies donde aplican, reglas de navegación anidada y fronteras por familia.
+> Cuándo leer: familias soportadas de referencias (`queries.*`, `forms.*`, `params.*`, `item.*`, `row.*`), superficies donde aplican, reglas de navegación anidada y fronteras por familia.
 > Tamaño: medio.
 > Relacionados: [[dynamic-strings.md]], [[visibility.md]], [[../queries/state-model.md]], [[../forms/lifecycle.md]].
 
@@ -16,6 +16,9 @@ El escape literal con `\` permite mostrar una referencia completa tal cual, por 
 - `item.{segmentosAnidados}`
 - `item.$key`
 - `item.$index`
+- `row`
+- `row.{segmentosAnidados}`
+- `row.$index`
 - `forms.{formId}.{fieldId}`
 - `params.{paramName}`
 - `queries.{queryName}`
@@ -56,6 +59,9 @@ Esa misma convención se reutiliza también en:
 - `table.props.rows.cells`
 - `repeater.props.items.source`
 - `visibility.reference`
+- `shell.header.title`
+- `shell.header.menu.item.label`
+- `shell.header.menu.item.href`
 
 Superficies de headers (referencias completas + interpolación parcial):
 - `api.headers`
@@ -86,6 +92,8 @@ Las superficies de `query`, `body`, `params` y otras no listadas siguen fuera de
 - `item`, `item.slug`, `item.meta.author.name` o `item.tags.0` son ejemplos válidos dentro de ese contexto.
 - `item.*` puede usarse en las superficies visibles interpolables, `api.query`, `api.body`, `api.headers`, `button.props.action.query`, `button.props.action.body`, `button.props.action.headers`, `button.props.action.params`, `form.submitAction.query`, `form.submitAction.body`, `form.submitAction.headers`, `defaultValue` de campos, `visibility.reference`, `repeater.props.items.source`, `list.props.items.source`, `select.props.items.source`, `radioGroup.props.items.source` y `checkboxGroup.props.items.source`.
 - Fuera de un `repeater`, `item.*` no forma parte del contrato soportado aunque el shape del string siga siendo reconocible.
+- Dentro de las celdas de una `table` (cualquier modo), `item.*` ya no resuelve nunca como contexto de fila propio de la tabla: solo puede resolver contra el item del `repeater` ancestro más cercano cuando la `table` vive dentro de su subárbol iterado, o degradar a vacío si no hay ningún `repeater` ancestro. El contexto de fila propio de `table` usa el namespace `row.*` (ver "Frontera específica de `row.*`").
+- `table.props.rows.source` mantiene sin cambios su forma literal `'item.*'`: sigue refiriéndose al item del `repeater` ambiental que provee el array de filas de la tabla, una familia de referencia distinta del contexto de fila (`row.*`).
 
 ## Frontera específica de `item.$key`
 - `item.$key` es una referencia sintética soportada, distinta de la navegación genérica `item.{ruta}`. Expone la clave del diccionario de la entrada actual cuando el `repeater` itera un objeto plano.
@@ -100,6 +108,21 @@ Las superficies de `query`, `body`, `params` y otras no listadas siguen fuera de
 - `item.$index` tiene precedencia sobre cualquier propiedad literal `$index` que pudiera existir dentro del valor del item, de forma análoga a la precedencia de `item.$key`.
 - `item.$index` es la forma exacta soportada. Variantes como `item.$index.algo`, `item.algo.$index` u otras formas con `$` distintas del literal exacto son rutas inválidas.
 - Las mismas superficies donde aplica `item.*` e `item.$key` admiten también `item.$index`.
+
+## Frontera específica de `row.*`
+- `row` e `row.*` son válidos dentro de las celdas de una `table` (celdas-nodo en modo dinámico, y celdas string manuales y dinámicas), como namespace propio del contexto de fila de la tabla — distinto de `item.*`, que dentro de esas mismas celdas solo puede referirse al `repeater` ancestro.
+- `row`, `row.slug`, `row.meta.author.name` o `row.tags.0` son ejemplos válidos dentro de ese contexto, con la misma semántica de segmentos anidados que `item.*` (numérico como índice solo si el valor actual es array, clave literal si es objeto).
+- En modo dinámico, `row.*` navega el dato de la fila actual. En modo manual, `row.*` sin `.$index` no resuelve — no existe un dato subyacente que navegar, solo valores literales por celda (ver "Frontera específica de `row.$index`" para la excepción sintética).
+- Una `table` dinámica anidada dentro de un `repeater` puede combinar en el mismo string interpolado `item.algo` (del `repeater` ancestro) y `row.algo` (de la fila propia de la tabla) sin que uno sombree al otro.
+- Fuera de las celdas de una `table`, `row.*` no forma parte del contrato soportado aunque el shape del string siga siendo reconocible.
+
+## Frontera específica de `row.$index`
+- `row.$index` es una referencia sintética soportada, distinta de la navegación genérica `row.{ruta}`. Expone un entero 1-based con la posición de la fila dentro de la vista actualmente visible de la `table` (tras aplicar filtros, ordenación y paginación local).
+- Disponible en celdas-nodo y celdas string de `table`, tanto en modo dinámico como en modo manual — es la única forma de `row.*` accesible en modo manual.
+- `row.$index` se recalcula de forma contigua (1, 2, 3…) sobre las filas restantes cuando cambia la vista visible (filtro, orden o página), sin huecos.
+- `row.$index` tiene precedencia sobre cualquier propiedad literal `$index` que pudiera existir dentro del valor de la fila, de forma análoga a la precedencia de `item.$index`.
+- `row.$index` es la forma exacta soportada. No existe `row.$key` (a diferencia de `item.$key`): `table` no itera un diccionario, sus filas siempre tienen una posición ordinal en la vista visible.
+- Las mismas superficies donde aplica `row.*` admiten también `row.$index`.
 
 ## Frontera específica de `translations.*`
 - `translations.{key}` resuelve valores desde el catálogo de traducciones declarado en la raíz del JSON de configuración, aplicando una cadena de fallback por idioma.

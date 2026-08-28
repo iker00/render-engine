@@ -1,5 +1,16 @@
 import type { LayoutNode, LayoutNodeType } from '../../config/runtime-config'
 
+// "Eliminar nodo" over a table cell-node reverts the cell to its empty-text literal instead of
+// removing it from `props.rows`/`props.rows.cells` (T5, 0138): removing the cell entirely would
+// shift row/cell positions and columns must stay aligned with `headers`. Two distinct literals
+// are required because `validateTableDynamicRows` (`src/config/validate-table-node.ts`, via
+// `isNonEmptyString`) rejects an empty string for a dynamic-mode cell — a contract intentionally
+// left untouched by this task (see `runtime-config-validation-image-table.test.ts`'s pinned
+// "regression: current contract" test). `row` only exists in manual mode and `cells` only in
+// dynamic mode (T1/T2), so the last path step alone discriminates which literal applies.
+export const EMPTY_TABLE_CELL_TEXT_VALUE = ''
+export const EMPTY_DYNAMIC_TABLE_CELL_TEXT_VALUE = '—'
+
 // Monotonically increasing, module-scoped: guarantees every generated `fieldId`/`id` is unique
 // across the whole session, so a freshly-inserted `form`/`modal` never collides with an
 // existing one on the page (both must be globally unique per validateRuntimeConfig, see
@@ -106,6 +117,9 @@ export function buildDefaultNodeInstance(type: LayoutNodeType): LayoutNode {
     case 'tabs':
       return { type: 'tabs', props: { items: [{ label: 'Pestaña 1' }] } }
 
+    case 'steps':
+      return { type: 'steps', props: { items: [{ label: 'Paso 1' }] } }
+
     case 'accordion':
       return { type: 'accordion', props: { label: 'Sección' } }
 
@@ -135,6 +149,25 @@ export function buildDefaultNodeInstance(type: LayoutNodeType): LayoutNode {
 
     case 'hidden':
       return { type: 'hidden', props: { fieldId: generateUniqueId('field'), value: 'valor' } }
+
+    case 'map':
+      return { type: 'map' }
+
+    case 'gallery':
+      return {
+        type: 'gallery',
+        props: { images: [], display: { mode: 'paginated', pagination: { pageSize: 6 } } },
+      }
+
+    case 'autocomplete':
+      return {
+        type: 'autocomplete',
+        props: {
+          fieldId: generateUniqueId('field'),
+          label: 'Autocompletar',
+          items: [],
+        },
+      }
 
     default: {
       const exhaustiveCheck: never = type

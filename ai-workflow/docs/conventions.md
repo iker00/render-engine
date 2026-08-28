@@ -13,9 +13,10 @@ Definir reglas de implementación para que el código y la documentación manten
 ### Archivos y carpetas
 - Usar `kebab-case` para nombres de archivos y carpetas.
 - Agrupar por feature o por módulo de dominio, no por tipo técnico global cuando eso dificulte seguir un caso de uso.
-- Las carpetas de feature dentro de `ai-workflow/features/` deben seguir el formato `NNNN-feature-name`.
-- `NNNN` debe ser incremental y de cuatro dígitos, por ejemplo `0001-user-onboarding`.
+- Las carpetas de feature dentro de `ai-workflow/features/` deben seguir el formato `YYYY-MM-DD-HH-MM-feature-name`.
+- El prefijo temporal se genera con `date +%Y-%m-%d-%H-%M` en el momento de crear la carpeta (fase `generate-feature-spec`) y evita colisiones entre features desarrolladas en paralelo (por ejemplo en distintos worktrees).
 - El sufijo debe usar `kebab-case` ASCII para evitar problemas de rutas y tooling.
+- Features históricas conservan el formato antiguo `NNNN-feature-name` sin migración retroactiva. Al referenciar features entre sí, usar el slug legible (`navigation-scroll-position`) en lugar del ID completo cuando el prefijo temporal no aporte contexto.
 
 ### Código
 - Usar `camelCase` para variables, funciones y propiedades.
@@ -83,6 +84,11 @@ src/
 - Un nodo del runtime con variantes visuales (`variant`, o cualquier discriminador equivalente) debe resolver la selección de clases o estructura mediante un lookup map `Record<Variant, string>` o delegando en un único helper de `runtime-node-styling.ts`.
 - No repetir el esqueleto JSX del nodo por rama `if/else` cuando la única diferencia entre variantes es qué helper de estilo se invoca: la estructura común debe declararse una sola vez y la resolución por variante debe quedar centralizada.
 - Precedentes vigentes del patrón deseado en el propio código: `src/runtime/nodes/divider-layout-node.tsx` (lookup map `Record<Variant, string>`) y `src/runtime/nodes/button-layout-node.tsx` (delegación en un único helper de `runtime-node-styling.ts`).
+
+### Orquestación de lifecycle `onSuccess`/`onError` de acciones ejecutables
+- Cuando una acción declarativa necesita "ejecutar → decidir éxito/error → disparar `onSuccess`/`onError`", esa orquestación debe delegarse en el helper compartido `runActionOutcomeWithLifecycle` (`src/runtime/runtime-actions/runtime-ui-action-executor.ts`), no duplicarse por nodo o por tipo de operación.
+- Cada llamador solo aporta su propia función `execute` (p. ej. `executeQueryOperation`, el `Promise.all` de `executeOperations` o `runDownloadAction`); lo que no es la ejecución en sí (como `resetOnSuccess` o el ensamblado de campos de un submit de formulario) sigue siendo responsabilidad del nodo llamador, envolviendo la llamada al helper.
+- Precedente vigente: `src/runtime/nodes/button-layout-node.tsx` y `src/runtime/nodes/link-layout-node.tsx` para `executeOperation`/`executeOperations`/`downloadOperation`, `src/runtime/nodes/form-layout-node.tsx` para el submit.
 
 ### JSX frente a `createElement`
 - JSX es la forma por defecto para renderizar el elemento raíz de un nodo y sus hijos.

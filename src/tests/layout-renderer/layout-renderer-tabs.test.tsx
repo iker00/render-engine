@@ -5,7 +5,8 @@ import { RuntimePage } from '../../runtime/runtime-page'
 import { RuntimeStateContext } from '../../runtime/runtime-state/runtime-state-context'
 import { createRuntimeState } from '../../runtime/runtime-state/runtime-state-reducer'
 import type { RuntimeState, RuntimeStateAction } from '../../runtime/runtime-state/runtime-state-types'
-import { RuntimeStateProvider, useRuntimeStateActions } from '../../runtime/runtime-state/runtime-state-provider'
+import { RuntimeStateProvider } from '../../runtime/runtime-state/runtime-state-provider'
+import { useRuntimeStateActions } from '../../runtime/runtime-state/use-runtime-state'
 import { useEffect } from 'react'
 
 afterEach(() => {
@@ -1221,6 +1222,113 @@ describe('TabsNode — bar sizing and overflow', () => {
 
     expect(screen.queryByText('Content A')).not.toBeInTheDocument()
     expect(screen.getByText('Content B')).toBeInTheDocument()
+  })
+})
+
+describe('TabsNode — item icon', () => {
+  it('renders the icon inside the first tab button when item.icon resolves to a valid Lucide icon, and not in a sibling item without icon', () => {
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [
+        {
+          type: 'tabs',
+          props: {
+            items: [
+              { label: 'Starred', icon: 'Star', children: [] },
+              { label: 'Plain', children: [] },
+            ],
+          },
+        },
+      ],
+    }
+
+    renderRuntimePage(page)
+
+    const starredBtn = screen.getByRole('button', { name: 'Starred' })
+    const plainBtn = screen.getByRole('button', { name: 'Plain' })
+
+    expect(starredBtn.querySelectorAll('svg')).toHaveLength(1)
+    expect(plainBtn.querySelectorAll('svg')).toHaveLength(0)
+
+    // icon appears before the label text within the button
+    expect(starredBtn.firstChild?.nodeName.toLowerCase()).toBe('svg')
+  })
+
+  it('renders the tab button without an icon (same as before) when item.icon is not a valid Lucide icon name', () => {
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [
+        {
+          type: 'tabs',
+          props: {
+            items: [
+              { label: 'Bad Icon', icon: 'NotARealLucideIconName', children: [] },
+            ],
+          },
+        },
+      ],
+    }
+
+    renderRuntimePage(page)
+
+    const btn = screen.getByRole('button', { name: 'Bad Icon' })
+    expect(btn.querySelectorAll('svg')).toHaveLength(0)
+  })
+
+  it('renders the item icon the same way in vertical orientation as in horizontal orientation', () => {
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [
+        {
+          type: 'tabs',
+          props: {
+            orientation: 'vertical',
+            items: [
+              { label: 'Starred', icon: 'Star', children: [] },
+              { label: 'Plain', children: [] },
+            ],
+          },
+        },
+      ],
+    }
+
+    renderRuntimePage(page)
+
+    const starredBtn = screen.getByRole('button', { name: 'Starred' })
+    const plainBtn = screen.getByRole('button', { name: 'Plain' })
+
+    expect(starredBtn.querySelectorAll('svg')).toHaveLength(1)
+    expect(plainBtn.querySelectorAll('svg')).toHaveLength(0)
+  })
+
+  it('regression: a tab item hidden by visibility does not render its icon because its button is absent entirely', () => {
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [
+        {
+          type: 'tabs',
+          props: {
+            items: [
+              { label: 'Visible', children: [] },
+              {
+                label: 'Hidden',
+                icon: 'Star',
+                visibility: { reference: 'queries.q.data.show', operator: 'isTruthy' },
+                children: [],
+              },
+            ],
+          },
+        },
+      ],
+    }
+
+    const state = createRuntimePageState(page, buildQueryState('q', { show: false }))
+    renderRuntimePageWithState(page, state)
+
+    expect(screen.queryByRole('button', { name: 'Hidden' })).not.toBeInTheDocument()
+    const buttons = screen.getAllByRole('button')
+    expect(buttons).toHaveLength(1)
+    expect(buttons[0]).toHaveTextContent('Visible')
   })
 })
 

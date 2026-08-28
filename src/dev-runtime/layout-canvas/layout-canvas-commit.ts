@@ -1,4 +1,10 @@
-import type { LayoutNode, RuntimeConfig, RuntimeConfigError } from '../../config/runtime-config'
+import type {
+  LayoutNode,
+  RuntimeConfig,
+  RuntimeConfigError,
+  RuntimePageConfig,
+  RuntimePreloadConfig,
+} from '../../config/runtime-config'
 
 /**
  * Result of `commitCanvasMutation` (T4, `dev-runtime.tsx`). Declared here — not in
@@ -123,6 +129,27 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 /**
+ * Patches a single top-level key of `rawConfigText`, leaving every other root key exactly as it
+ * was in the raw text — never reserializes the rest of the document from an in-memory
+ * `RuntimeConfig` (see `patchRawConfigTextWithLayout`, whose `pages` patch this generalizes, and
+ * design.md/0122-T5's Shell config panel, which uses this directly for the `shell` key).
+ *
+ * `value === undefined` removes the key entirely rather than writing a literal `"key": undefined`
+ * (not valid JSON) — this is how the Shell panel's "deactivate header" toggle drops `shell`
+ * from the document instead of leaving a stray empty block behind.
+ */
+export function patchRootKey(rawConfigText: string, key: string, value: unknown): string {
+  const rawConfigObject = JSON.parse(rawConfigText) as Record<string, unknown>
+
+  if (value === undefined) {
+    const { [key]: _removed, ...rest } = rawConfigObject
+    return JSON.stringify(rest, null, 2)
+  }
+
+  return JSON.stringify({ ...rawConfigObject, [key]: value }, null, 2)
+}
+
+/**
  * Patches only the `layout` key of the page `activePageId` inside `rawConfigText`,
  * leaving the rest of the document (other pages, their `preloads`/`title`, `api`,
  * `initialPage`, `tokens`, `translations`) exactly as it was in the raw text.
@@ -144,5 +171,97 @@ export function patchRawConfigTextWithLayout(
     return rawPage
   })
 
-  return JSON.stringify({ ...rawConfigObject, pages: nextPages }, null, 2)
+  return patchRootKey(rawConfigText, 'pages', nextPages)
+}
+
+/**
+ * Converts the normalized `RuntimePreloadConfig[]` shape (`{ operationName, requestParams,
+ * when? }`, the shape `validateRuntimeConfig` produces and `ApiConfigPanel`/`PreloadsListEditor`
+ * edit in memory) back into the raw shape `validatePreloadEntries`
+ * (`src/config/validate-preloads.ts`) actually accepts on input: one object per entry whose only
+ * key (besides an optional sibling `when`) *is* the operation name, with `requestParams` as that
+ * key's value — e.g. `{ "loadUsers": { "query": { "page": "2" } } }`. Serializing the normalized
+ * shape as-is (`{ "operationName": "loadUsers", "requestParams": {...} }`) is a 2-key object
+ * without `when`, which `validatePreloadEntries` rejects as "must be an object with exactly one
+ * non-empty operationName key" — this is the raw/normalized divergence `preloads` has of its own,
+ * on top of (not replacing) the `layout`-specific one `denormalizeFormNodesForSerialization`
+ * already guards against.
+ */
+export function denormalizePreloadsForSerialization(
+  preloads: readonly RuntimePreloadConfig[],
+): unknown[] {
+  return preloads.map((preload) => {
+    const entry: Record<string, unknown> = { [preload.operationName]: preload.requestParams }
+    if (preload.when !== undefined) {
+      entry.when = preload.when
+    }
+    return entry
+  })
+}
+
+/**
+ * Patches only the `preloads` key of the page `activePageId` inside `rawConfigText` — sibling
+ * function to `patchRawConfigTextWithLayout` (same technique: parse, replace only the targeted
+ * page's key inside the raw `pages` array, delegate to `patchRootKey` for `pages`), but for
+ * `preloads` instead of `layout`. An `undefined` or empty `mutatedPreloads` drops the `preloads`
+ * key from that page's object entirely, rather than leaving a stray `"preloads": []` behind —
+ * same "no empty residual block" criterion `commitShellSectionToggle` (`ShellConfigPanel`)
+ * already applies when deactivating a shell section. A non-empty `mutatedPreloads` is written
+ * through `denormalizePreloadsForSerialization`, not as-is, to round-trip correctly through
+ * `validateRuntimeConfig`.
+ */
+export function patchRawConfigTextWithPagePreloads(
+  rawConfigText: string,
+  activePageId: string,
+  mutatedPreloads: readonly RuntimePreloadConfig[] | undefined,
+): string {
+  const rawConfigObject = JSON.parse(rawConfigText) as Record<string, unknown>
+  const rawPages = Array.isArray(rawConfigObject.pages) ? rawConfigObject.pages : []
+
+  const nextPages = rawPages.map((rawPage) => {
+    if (!isRecord(rawPage) || rawPage.id !== activePageId) return rawPage
+    if (mutatedPreloads === undefined || mutatedPreloads.length === 0) {
+      const { preloads: _removed, ...rest } = rawPage
+      return rest
+    }
+    return { ...rawPage, preloads: denormalizePreloadsForSerialization(mutatedPreloads) }
+  })
+
+  return patchRootKey(rawConfigText, 'pages', nextPages)
+}
+
+/**
+ * Patches the `pages` root key of `rawConfigText` for whole-page add/remove and `title` edits
+ * (0138, `PagesConfigPanel`), preserving the raw shape of every page that already existed in the
+ * text — critically `preloads`, which stays in its raw crude shape (`{ [operationName]:
+ * requestParams }`, see `validate-preloads.ts`) instead of the normalized
+ * `RuntimePageConfig.preloads` shape (`{ operationName, requestParams }`) that `mutatedPages`
+ * carries. `layout` is likewise carried over raw and unchanged, since `PagesConfigPanel` never
+ * edits an existing page's `layout`. Reserializing straight from `mutatedPages` (as
+ * `patchRootKey(rawConfigText, 'pages', mutatedPages)` would) breaks re-validation of any
+ * existing page that has `preloads`.
+ *
+ * `mutatedPages` is the already-mutated normalized page list `PagesConfigPanel`'s
+ * `onCommitPagesMutation` callback returns. For each entry, an existing raw page is matched by
+ * `id` and only its `title` is applied on top; an entry with no raw match (a brand-new page) is
+ * written as-is — `PagesConfigPanel` only ever adds `{ id, layout: [], title? }`, already
+ * raw-compatible.
+ */
+export function patchRawConfigTextWithPages(
+  rawConfigText: string,
+  mutatedPages: readonly RuntimePageConfig[],
+): string {
+  const rawConfigObject = JSON.parse(rawConfigText) as Record<string, unknown>
+  const rawPages = Array.isArray(rawConfigObject.pages) ? rawConfigObject.pages : []
+  const rawPagesById = new Map(rawPages.filter(isRecord).map((rawPage) => [rawPage.id, rawPage] as const))
+
+  const nextPages = mutatedPages.map((page) => {
+    const rawPage = rawPagesById.get(page.id)
+    if (rawPage === undefined) return page
+
+    const { title: _rawTitle, ...rawPageRest } = rawPage
+    return page.title !== undefined ? { ...rawPageRest, title: page.title } : rawPageRest
+  })
+
+  return patchRootKey(rawConfigText, 'pages', nextPages)
 }

@@ -22,6 +22,350 @@
     }
   },
   "initialPage": "home",
+  "shell": {
+    "header": {
+      "logo": {
+        "src": "https://picsum.photos/seed/rub-logo/64/64",
+        "alt": "Logo React UI Builder"
+      },
+      "title": "React UI Builder - Docs",
+      "menu": [
+        {
+          "label": "Inicio",
+          "icon": "home",
+          "action": {
+            "type": "navigateTo",
+            "pageId": "home"
+          }
+        },
+        {
+          "label": "Nodos",
+          "icon": "layout-grid",
+          "children": [
+            {
+              "label": "Texto",
+              "action": {
+                "type": "navigateTo",
+                "pageId": "text-nodes"
+              }
+            },
+            {
+              "label": "Contenedores",
+              "action": {
+                "type": "navigateTo",
+                "pageId": "containers"
+              }
+            },
+            {
+              "label": "Tablas",
+              "action": {
+                "type": "navigateTo",
+                "pageId": "tables"
+              }
+            },
+            {
+              "label": "Botones",
+              "action": {
+                "type": "navigateTo",
+                "pageId": "buttons"
+              }
+            }
+          ]
+        },
+        {
+          "label": "Runtime",
+          "icon": "database",
+          "children": [
+            {
+              "label": "Referencias dinamicas",
+              "action": {
+                "type": "navigateTo",
+                "pageId": "references"
+              }
+            },
+            {
+              "label": "Queries y preloads",
+              "action": {
+                "type": "navigateTo",
+                "pageId": "queries"
+              }
+            },
+            {
+              "label": "Shell",
+              "action": {
+                "type": "navigateTo",
+                "pageId": "shell"
+              }
+            }
+          ]
+        }
+      ],
+      "actions": [
+        {
+          "type": "button",
+          "props": {
+            "label": "Recargar usuarios",
+            "action": {
+              "type": "executeOperation",
+              "operationName": "fetchUsers"
+            },
+            "color": "neutral",
+            "variant": "ghost",
+            "icon": "refresh-cw"
+          }
+        },
+        {
+          "type": "link",
+          "props": {
+            "label": "Repositorio",
+            "href": "https://github.com",
+            "target": "_blank",
+            "icon": "external-link"
+          }
+        }
+      ]
+    },
+    "sidebar": {
+      "items": [
+        {
+          "label": "Inicio",
+          "icon": "home",
+          "action": {
+            "type": "navigateTo",
+            "pageId": "home"
+          }
+        },
+        {
+          "label": "Catalogo de nodos",
+          "icon": "layout-grid",
+          "children": [
+            {
+              "label": "Texto",
+              "icon": "type",
+              "action": {
+                "type": "navigateTo",
+                "pageId": "text-nodes"
+              }
+            },
+            {
+              "label": "Contenedores",
+              "icon": "box",
+              "action": {
+                "type": "navigateTo",
+                "pageId": "containers"
+              }
+            },
+            {
+              "label": "Imagenes",
+              "icon": "image",
+              "action": {
+                "type": "navigateTo",
+                "pageId": "images"
+              }
+            },
+            {
+              "label": "Tablas",
+              "icon": "table",
+              "action": {
+                "type": "navigateTo",
+                "pageId": "tables"
+              }
+            },
+            {
+              "label": "Botones",
+              "icon": "rectangle-ellipsis",
+              "action": {
+                "type": "navigateTo",
+                "pageId": "buttons"
+              }
+            },
+            {
+              "label": "Enlaces",
+              "icon": "link",
+              "action": {
+                "type": "navigateTo",
+                "pageId": "links"
+              }
+            }
+          ]
+        },
+        {
+          "label": "Formularios",
+          "icon": "sliders-horizontal",
+          "children": [
+            {
+              "label": "Campos de formulario",
+              "icon": "form",
+              "action": {
+                "type": "navigateTo",
+                "pageId": "form-fields"
+              }
+            },
+            {
+              "label": "Validaciones",
+              "icon": "list-checks",
+              "action": {
+                "type": "navigateTo",
+                "pageId": "form-validations"
+              }
+            },
+            {
+              "label": "Submit y reset",
+              "icon": "send",
+              "action": {
+                "type": "navigateTo",
+                "pageId": "form-submit"
+              }
+            }
+          ]
+        },
+        {
+          "label": "Decorativos y estructurales",
+          "icon": "layers",
+          "children": [
+            {
+              "label": "Badge, alert, stat, divider",
+              "icon": "tag",
+              "action": {
+                "type": "navigateTo",
+                "pageId": "decorative-nodes"
+              }
+            },
+            {
+              "label": "Skeleton",
+              "icon": "loader-circle",
+              "action": {
+                "type": "navigateTo",
+                "pageId": "skeleton-nodes"
+              }
+            },
+            {
+              "label": "Overlays",
+              "icon": "square",
+              "children": [
+                {
+                  "label": "Accordion",
+                  "icon": "chevrons-down-up",
+                  "action": {
+                    "type": "navigateTo",
+                    "pageId": "accordion-nodes"
+                  }
+                },
+                {
+                  "label": "Tabs",
+                  "icon": "menu",
+                  "action": {
+                    "type": "navigateTo",
+                    "pageId": "tabs-nodes"
+                  }
+                },
+                {
+                  "label": "Modal",
+                  "icon": "square-arrow-out-up-right",
+                  "action": {
+                    "type": "navigateTo",
+                    "pageId": "modal-nodes"
+                  }
+                }
+              ]
+            },
+            {
+              "label": "Gestor de ficheros",
+              "icon": "folder-open",
+              "action": {
+                "type": "navigateTo",
+                "pageId": "file-manager"
+              }
+            }
+          ]
+        },
+        {
+          "label": "Capacidades del runtime",
+          "icon": "database",
+          "children": [
+            {
+              "label": "Visibilidad condicional",
+              "icon": "eye",
+              "action": {
+                "type": "navigateTo",
+                "pageId": "visibility"
+              }
+            },
+            {
+              "label": "Referencias dinamicas",
+              "icon": "book-marked",
+              "action": {
+                "type": "navigateTo",
+                "pageId": "references"
+              }
+            },
+            {
+              "label": "Queries, preloads y feedback",
+              "icon": "refresh-ccw",
+              "action": {
+                "type": "navigateTo",
+                "pageId": "queries"
+              }
+            },
+            {
+              "label": "Navegacion y params",
+              "icon": "navigation",
+              "action": {
+                "type": "navigateTo",
+                "pageId": "navigation"
+              }
+            },
+            {
+              "label": "Repeater",
+              "icon": "repeat",
+              "action": {
+                "type": "navigateTo",
+                "pageId": "repeater"
+              }
+            },
+            {
+              "label": "Tokens de autenticacion",
+              "icon": "braces",
+              "action": {
+                "type": "navigateTo",
+                "pageId": "auth-tokens"
+              }
+            },
+            {
+              "label": "Shell (header + sidebar)",
+              "icon": "panel-left",
+              "action": {
+                "type": "navigateTo",
+                "pageId": "shell"
+              }
+            }
+          ]
+        }
+      ],
+      "defaultCollapsed": false
+    },
+    "scrollBehavior": "page"
+  },
+  "translations": {
+    "welcome_title": {
+      "es": "Bienvenido a la documentacion",
+      "en": "Welcome to the docs"
+    },
+    "docs_subtitle": {
+      "es": "Catalogo interactivo de nodos y capacidades del runtime",
+      "en": "Interactive catalog of nodes and runtime capabilities"
+    }
+  },
+  "preloads": [
+    {
+      "fetchPosts": {}
+    }
+  ],
+  "tokens": {
+    "apiKey": {
+      "value": "docs-demo-static-key"
+    }
+  },
   "pages": [
     {
       "id": "home",
@@ -409,6 +753,19 @@
                 "action": {
                   "type": "navigateTo",
                   "pageId": "auth-tokens"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Shell: cabecera y sidebar",
+                "variant": "outline",
+                "color": "info",
+                "fullWidth": true,
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "shell"
                 }
               }
             }
@@ -1550,6 +1907,11 @@
     },
     {
       "id": "tables",
+      "preloads": [
+        {
+          "fetchUsers": {}
+        }
+      ],
       "layout": [
         {
           "type": "container",
@@ -1944,6 +2306,77 @@
           ]
         },
         {
+          "type": "heading",
+          "props": {
+            "text": "Cell nodes en vivo (boton + imagen)",
+            "level": 3
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "Esta pagina precarga fetchUsers. La ultima columna es un boton por fila (navigateTo con params por item) y la primera es una imagen por fila (fetch avatar via picsum, con seed = item.id)."
+          }
+        },
+        {
+          "type": "table",
+          "props": {
+            "headers": [
+              "Avatar",
+              "Nombre",
+              "Email",
+              "Acciones"
+            ],
+            "rows": {
+              "source": "queries.fetchUsers.data",
+              "cells": [
+                {
+                  "type": "image",
+                  "props": {
+                    "src": "https://picsum.photos/seed/{{item.id}}/40/40",
+                    "alt": "Avatar de {{item.name}}"
+                  }
+                },
+                "item.name",
+                "item.email",
+                {
+                  "type": "button",
+                  "props": {
+                    "label": "Ver detalle",
+                    "icon": "arrow-right",
+                    "variant": "ghost",
+                    "iconPosition": "right",
+                    "action": {
+                      "type": "navigateTo",
+                      "pageId": "nav-target",
+                      "params": {
+                        "userId": "item.id"
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          "queryStateFeedback": {
+            "query": "fetchUsers",
+            "states": {
+              "loading": {
+                "mode": "fallback",
+                "fallback": [
+                  {
+                    "type": "skeleton",
+                    "props": {
+                      "variant": "text",
+                      "lines": 3
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
           "type": "divider"
         },
         {
@@ -1972,6 +2405,83 @@
               [
                 "scroll",
                 "Muestra pageSize items y amplia al llegar al final (infinite scroll)"
+              ]
+            ]
+          }
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Paginacion scroll en vivo",
+            "level": 3
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "Muestra pageSize filas inicialmente y amplia por bloques del mismo tamano al llegar al sentinel observado al final. Si el navegador no soporta IntersectionObserver, degrada a un boton local \"Mostrar mas\"."
+          }
+        },
+        {
+          "type": "table",
+          "props": {
+            "headers": [
+              "ID",
+              "Tarea",
+              "Estado"
+            ],
+            "pagination": {
+              "enabled": true,
+              "pageSize": 3,
+              "controls": {
+                "variant": "scroll"
+              }
+            },
+            "rows": [
+              [
+                "1",
+                "Configurar entorno",
+                "Completada"
+              ],
+              [
+                "2",
+                "Disenar API",
+                "Completada"
+              ],
+              [
+                "3",
+                "Implementar login",
+                "En progreso"
+              ],
+              [
+                "4",
+                "Tests unitarios",
+                "Pendiente"
+              ],
+              [
+                "5",
+                "Documentacion",
+                "Pendiente"
+              ],
+              [
+                "6",
+                "Revision de codigo",
+                "Pendiente"
+              ],
+              [
+                "7",
+                "Deploy staging",
+                "Pendiente"
+              ],
+              [
+                "8",
+                "Tests E2E",
+                "Pendiente"
+              ],
+              [
+                "9",
+                "Deploy produccion",
+                "Pendiente"
               ]
             ]
           }
@@ -2404,6 +2914,49 @@
           ]
         },
         {
+          "type": "paragraph",
+          "props": {
+            "text": "iconPosition: \"left\" (default) o \"right\" controla el lado del icono respecto al label."
+          }
+        },
+        {
+          "type": "container",
+          "props": {
+            "direction": "row",
+            "gap": "sm",
+            "wrap": "wrap"
+          },
+          "children": [
+            {
+              "type": "button",
+              "props": {
+                "label": "Icono a la izquierda (default)",
+                "icon": "arrow-right",
+                "iconPosition": "left",
+                "variant": "outline",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "buttons"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Icono a la derecha",
+                "icon": "arrow-right",
+                "iconPosition": "right",
+                "variant": "outline",
+                "color": "primary",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "buttons"
+                }
+              }
+            }
+          ]
+        },
+        {
           "type": "divider"
         },
         {
@@ -2750,6 +3303,71 @@
               "props": {
                 "text": "{ \"type\": \"link\", \"props\": { \"label\": \"Descargar informe\", \"href\": \"https://example.com/report.pdf\", \"download\": \"informe-2024.pdf\", \"icon\": \"download\" } }"
               }
+            },
+            {
+              "type": "divider",
+              "props": {
+                "variant": "dashed"
+              }
+            },
+            {
+              "type": "link",
+              "props": {
+                "label": "Descargar imagen de ejemplo",
+                "href": "https://picsum.photos/seed/download-demo/800/400",
+                "download": "imagen-ejemplo.jpg",
+                "icon": "download"
+              }
+            },
+            {
+              "type": "paragraph",
+              "props": {
+                "text": "El atributo download se aplica siempre; que el navegador fuerce la descarga o solo abra el recurso depende de si el origen es el mismo y de las cabeceras que devuelva el servidor — eso es responsabilidad del navegador, no del runtime."
+              }
+            }
+          ]
+        },
+        {
+          "type": "divider"
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "iconPosition",
+            "level": 2
+          }
+        },
+        {
+          "type": "container",
+          "props": {
+            "direction": "row",
+            "gap": "sm",
+            "wrap": "wrap"
+          },
+          "children": [
+            {
+              "type": "link",
+              "props": {
+                "label": "Icono a la izquierda (default)",
+                "icon": "arrow-right",
+                "iconPosition": "left",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "links"
+                }
+              }
+            },
+            {
+              "type": "link",
+              "props": {
+                "label": "Icono a la derecha",
+                "icon": "arrow-right",
+                "iconPosition": "right",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "links"
+                }
+              }
             }
           ]
         },
@@ -2949,7 +3567,13 @@
                 "icon",
                 "string",
                 "Solo con label",
-                "Nombre de icono Lucide. Se renderiza a la izquierda."
+                "Nombre de icono Lucide. Se renderiza a la izquierda por defecto."
+              ],
+              [
+                "iconPosition",
+                "\"left\" | \"right\"",
+                "Solo con label",
+                "Posicion del icono respecto al label. Default left."
               ],
               [
                 "children",
@@ -3167,6 +3791,7 @@
                 "fieldId": "countryField",
                 "label": "Pais",
                 "placeholder": "Selecciona un pais",
+                "emptySubmitValue": "unknown",
                 "items": [
                   {
                     "label": "Espana",
@@ -3185,6 +3810,52 @@
                     "value": "pt"
                   }
                 ]
+              }
+            },
+            {
+              "type": "paragraph",
+              "props": {
+                "text": "emptySubmitValue: \"unknown\" — mientras el campo este vacio (placeholder visible), el store y la UI siguen mostrando vacio, pero en el payload de submit se envia \"unknown\" en su lugar. No exime la validacion required si estuviera declarada."
+              }
+            },
+            {
+              "type": "container",
+              "props": {
+                "direction": "row",
+                "gap": "sm",
+                "align": "center"
+              },
+              "children": [
+                {
+                  "type": "button",
+                  "props": {
+                    "label": "Enviar pais (createPost)",
+                    "icon": "send",
+                    "variant": "outline",
+                    "action": {
+                      "type": "executeOperation",
+                      "operationName": "createPost",
+                      "body": {
+                        "country": "forms.fieldsDemo.countryField"
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "props": {
+                "text": "Valor recibido por el servidor: {{queries.createPost.data.country}}",
+                "icon": "server"
+              },
+              "queryStateFeedback": {
+                "query": "createPost",
+                "states": {
+                  "idle": {
+                    "mode": "hide"
+                  }
+                }
               }
             },
             {
@@ -3630,6 +4301,43 @@
                       "maxTotalSize": {
                         "value": 10,
                         "message": "Maximo 10 MB en total"
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "type": "container",
+              "props": {
+                "variant": "card",
+                "gap": "sm"
+              },
+              "children": [
+                {
+                  "type": "paragraph",
+                  "props": {
+                    "text": "capture abre la camara del dispositivo en movil (\"environment\" trasera, \"user\" frontal); en desktop se ignora y se comporta como un fileInput normal. Requiere que accept incluya al menos un MIME image/* o video/*: { \"type\": \"fileInput\", \"props\": { \"fieldId\": \"foto\", \"label\": \"Foto con la camara (movil)\", \"capture\": \"environment\", \"validations\": { \"accept\": { \"value\": [\"image/jpeg\", \"image/png\"] } } } }"
+                  }
+                },
+                {
+                  "type": "divider",
+                  "props": {
+                    "variant": "dashed"
+                  }
+                },
+                {
+                  "type": "fileInput",
+                  "props": {
+                    "fieldId": "cameraField",
+                    "label": "Foto con la camara (movil)",
+                    "capture": "environment",
+                    "validations": {
+                      "accept": {
+                        "value": [
+                          "image/jpeg",
+                          "image/png"
+                        ]
                       }
                     }
                   }
@@ -6186,7 +6894,7 @@
         {
           "type": "paragraph",
           "props": {
-            "text": "Operadores: equals, notEquals, isTruthy, isFalsy, greaterThan, lessThan."
+            "text": "Operadores: equals, notEquals, isTruthy, isFalsy, greaterThan, lessThan, arrayContains. Cualquier condicion simple admite ademas negate: true para invertir su resultado. Varias condiciones simples pueden agruparse con operator and/or (sin anidar grupos)."
           }
         },
         {
@@ -6352,6 +7060,191 @@
               "visibility": {
                 "reference": "forms.visibilityForm.searchQuery",
                 "operator": "isFalsy"
+              }
+            },
+            {
+              "type": "checkboxGroup",
+              "props": {
+                "fieldId": "tags",
+                "label": "Etiquetas (para arrayContains, mas abajo)",
+                "optionLayout": "inline",
+                "items": [
+                  {
+                    "label": "Urgente",
+                    "value": "urgent"
+                  },
+                  {
+                    "label": "Baja prioridad",
+                    "value": "low"
+                  },
+                  {
+                    "label": "Revision",
+                    "value": "review"
+                  }
+                ],
+                "defaultValue": [
+                  "urgent"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "type": "divider"
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "arrayContains, itemField y negate",
+            "level": 2
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "arrayContains coincide si reference resuelve a un array y al menos un elemento (o su itemField) es igual a value. negate invierte el resultado de cualquier condicion simple."
+          }
+        },
+        {
+          "type": "container",
+          "props": {
+            "variant": "card",
+            "gap": "sm"
+          },
+          "children": [
+            {
+              "type": "paragraph",
+              "props": {
+                "text": "Sin itemField, sobre el array de etiquetas de arriba: { \"reference\": \"forms.visibilityForm.tags\", \"operator\": \"arrayContains\", \"value\": \"urgent\" }"
+              }
+            },
+            {
+              "type": "divider",
+              "props": {
+                "variant": "dashed"
+              }
+            },
+            {
+              "type": "paragraph",
+              "props": {
+                "text": "Tienes la etiqueta \"Urgente\" seleccionada.",
+                "icon": "check-circle"
+              },
+              "visibility": {
+                "reference": "forms.visibilityForm.tags",
+                "operator": "arrayContains",
+                "value": "urgent"
+              }
+            },
+            {
+              "type": "paragraph",
+              "props": {
+                "text": "No tienes la etiqueta \"Urgente\" seleccionada (negate: true sobre la misma condicion).",
+                "icon": "circle"
+              },
+              "visibility": {
+                "reference": "forms.visibilityForm.tags",
+                "operator": "arrayContains",
+                "value": "urgent",
+                "negate": true
+              }
+            }
+          ]
+        },
+        {
+          "type": "container",
+          "props": {
+            "variant": "card",
+            "gap": "sm"
+          },
+          "children": [
+            {
+              "type": "paragraph",
+              "props": {
+                "text": "Con itemField, sobre queries.fetchUsers.data (array de objetos): { \"reference\": \"queries.fetchUsers.data\", \"operator\": \"arrayContains\", \"itemField\": \"address.city\", \"value\": \"Gwenborough\" }"
+              }
+            },
+            {
+              "type": "divider",
+              "props": {
+                "variant": "dashed"
+              }
+            },
+            {
+              "type": "paragraph",
+              "props": {
+                "text": "Pulsa \"Recargar usuarios\" en la cabecera de esta app (shell.header.actions) para poblar queries.fetchUsers y ver reaccionar este bloque."
+              }
+            },
+            {
+              "type": "paragraph",
+              "props": {
+                "text": "Al menos un usuario vive en Gwenborough.",
+                "icon": "map-pin"
+              },
+              "visibility": {
+                "reference": "queries.fetchUsers.data",
+                "operator": "arrayContains",
+                "itemField": "address.city",
+                "value": "Gwenborough"
+              }
+            }
+          ]
+        },
+        {
+          "type": "divider"
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Composicion booleana: grupos and / or",
+            "level": 2
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "Un grupo compuesto declara operator (and | or) y conditions (array no vacio de condiciones simples). No se admite anidar grupos dentro de conditions."
+          }
+        },
+        {
+          "type": "container",
+          "props": {
+            "variant": "card",
+            "gap": "sm"
+          },
+          "children": [
+            {
+              "type": "paragraph",
+              "props": {
+                "text": "{ \"visibility\": { \"operator\": \"or\", \"conditions\": [ { \"reference\": \"forms.visibilityForm.userType\", \"operator\": \"equals\", \"value\": \"empresa\" }, { \"reference\": \"forms.visibilityForm.searchQuery\", \"operator\": \"isTruthy\" } ] } }"
+              }
+            },
+            {
+              "type": "divider",
+              "props": {
+                "variant": "dashed"
+              }
+            },
+            {
+              "type": "paragraph",
+              "props": {
+                "text": "Visible si Tipo de usuario = Empresa O si has escrito algo en el campo de busqueda (ambos campos del formulario de mas arriba).",
+                "icon": "check-circle"
+              },
+              "visibility": {
+                "operator": "or",
+                "conditions": [
+                  {
+                    "reference": "forms.visibilityForm.userType",
+                    "operator": "equals",
+                    "value": "empresa"
+                  },
+                  {
+                    "reference": "forms.visibilityForm.searchQuery",
+                    "operator": "isTruthy"
+                  }
+                ]
               }
             }
           ]
@@ -6738,6 +7631,208 @@
               ]
             ]
           }
+        },
+        {
+          "type": "divider"
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Formatters dentro del placeholder",
+            "level": 2
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "Gramatica: {{ referencia | formatter [: arg] | formatter [: arg] | ... }}. Los formatters se aplican de izquierda a derecha sobre el valor ya resuelto de la referencia. Una cadena mal formada degrada ese placeholder a string vacio."
+          }
+        },
+        {
+          "type": "form",
+          "id": "formattersDemo",
+          "children": [
+            {
+              "type": "container",
+              "props": {
+                "columns": {
+                  "base": 1,
+                  "sm": 2
+                },
+                "gap": "sm"
+              },
+              "children": [
+                {
+                  "type": "input",
+                  "props": {
+                    "fieldId": "amount",
+                    "label": "Importe (numero)",
+                    "defaultValue": "1234.567"
+                  }
+                },
+                {
+                  "type": "input",
+                  "props": {
+                    "fieldId": "eventDate",
+                    "label": "Fecha ISO",
+                    "defaultValue": "2026-07-31"
+                  }
+                },
+                {
+                  "type": "input",
+                  "props": {
+                    "fieldId": "name",
+                    "label": "Texto para uppercase/lowercase/capitalize/truncate",
+                    "defaultValue": "maria garcia"
+                  }
+                }
+              ]
+            },
+            {
+              "type": "divider",
+              "props": {
+                "variant": "dashed"
+              }
+            },
+            {
+              "type": "table",
+              "props": {
+                "headers": [
+                  "Formatter",
+                  "Placeholder",
+                  "Resultado"
+                ],
+                "rows": [
+                  [
+                    "number",
+                    "{{forms.formattersDemo.amount | number:2}}",
+                    "{{forms.formattersDemo.amount | number:2}}"
+                  ],
+                  [
+                    "currency",
+                    "{{forms.formattersDemo.amount | currency:\"EUR\"}}",
+                    "{{forms.formattersDemo.amount | currency:\"EUR\"}}"
+                  ],
+                  [
+                    "percent",
+                    "{{forms.formattersDemo.amount | percent:1}}",
+                    "{{forms.formattersDemo.amount | percent:1}}"
+                  ],
+                  [
+                    "date",
+                    "{{forms.formattersDemo.eventDate | date:\"dd/MM/yyyy\"}}",
+                    "{{forms.formattersDemo.eventDate | date:\"dd/MM/yyyy\"}}"
+                  ],
+                  [
+                    "uppercase",
+                    "{{forms.formattersDemo.name | uppercase}}",
+                    "{{forms.formattersDemo.name | uppercase}}"
+                  ],
+                  [
+                    "lowercase",
+                    "{{forms.formattersDemo.name | lowercase}}",
+                    "{{forms.formattersDemo.name | lowercase}}"
+                  ],
+                  [
+                    "capitalize",
+                    "{{forms.formattersDemo.name | capitalize}}",
+                    "{{forms.formattersDemo.name | capitalize}}"
+                  ],
+                  [
+                    "truncate",
+                    "{{forms.formattersDemo.name | truncate:5}}",
+                    "{{forms.formattersDemo.name | truncate:5}}"
+                  ],
+                  [
+                    "encadenado",
+                    "{{forms.formattersDemo.name | capitalize | truncate:8}}",
+                    "{{forms.formattersDemo.name | capitalize | truncate:8}}"
+                  ]
+                ]
+              }
+            },
+            {
+              "type": "paragraph",
+              "props": {
+                "text": "Cambia los campos de arriba y observa la tabla recalcularse. El argumento va tras : entre comillas dobles (string) o como numero; los espacios alrededor de | y : son opcionales."
+              }
+            }
+          ]
+        },
+        {
+          "type": "divider"
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "translations.*",
+            "level": 2
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "translations.{key} resuelve un valor desde el catalogo raiz translations, aplicando fallback: idioma activo (atributo data-lang, por defecto \"es\") -> idioma por defecto \"es\" -> en desarrollo el nombre de la clave, en produccion string vacio."
+          }
+        },
+        {
+          "type": "container",
+          "props": {
+            "variant": "card",
+            "gap": "sm"
+          },
+          "children": [
+            {
+              "type": "heading",
+              "props": {
+                "text": "Catalogo raiz de esta app de documentacion",
+                "level": 3
+              }
+            },
+            {
+              "type": "divider",
+              "props": {
+                "variant": "dashed"
+              }
+            },
+            {
+              "type": "paragraph",
+              "props": {
+                "text": "{ \"translations\": { \"welcome_title\": { \"es\": \"Bienvenido a la documentacion\", \"en\": \"Welcome to the docs\" }, \"docs_subtitle\": { \"es\": \"Catalogo interactivo...\", \"en\": \"Interactive catalog...\" } } }"
+              }
+            },
+            {
+              "type": "divider",
+              "props": {
+                "variant": "dashed"
+              }
+            },
+            {
+              "type": "heading",
+              "props": {
+                "text": "{{translations.welcome_title}}",
+                "level": 3
+              }
+            },
+            {
+              "type": "paragraph",
+              "props": {
+                "text": "{{translations.docs_subtitle}}"
+              }
+            },
+            {
+              "type": "paragraph",
+              "props": {
+                "text": "Como no se declara data-lang en el elemento raiz de esta app, el idioma activo por defecto es \"es\"."
+              }
+            }
+          ]
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "translations.* solo admite exactamente un segmento tras el namespace (translations.group.key no es valido) y queda fuera de alcance en api.query/body/headers, visibility.reference, origenes de coleccion y defaultValue de campos: en esas superficies se trata como string literal."
+          }
         }
       ]
     },
@@ -7058,6 +8153,174 @@
                     "props": {
                       "variant": "text",
                       "lines": 5
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "divider"
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Estado empty y modo show",
+            "level": 2
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "empty se considera: null, undefined, string vacio, array vacio u objeto sin claves. El modo show fuerza la visibilidad del nodo original en un estado que por defecto estaria oculto (por ejemplo idle)."
+          }
+        },
+        {
+          "type": "container",
+          "props": {
+            "direction": "row",
+            "gap": "sm"
+          },
+          "children": [
+            {
+              "type": "button",
+              "props": {
+                "label": "Buscar posts de un usuario inexistente",
+                "icon": "search-x",
+                "action": {
+                  "type": "executeOperation",
+                  "operationName": "searchPosts",
+                  "query": {
+                    "userId": "999"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "El buscador de posts esta listo para usarse (queryStateFeedback con mode: \"show\" sobre el estado idle, que por defecto esta oculto).",
+            "icon": "check-circle"
+          },
+          "queryStateFeedback": {
+            "query": "searchPosts",
+            "states": {
+              "idle": {
+                "mode": "show"
+              }
+            }
+          }
+        },
+        {
+          "type": "alert",
+          "props": {
+            "type": "warning",
+            "message": "Sin resultados para esa busqueda (estado empty: la respuesta fue exitosa pero el array vino vacio)."
+          },
+          "queryStateFeedback": {
+            "query": "searchPosts",
+            "states": {
+              "idle": {
+                "mode": "hide"
+              },
+              "loading": {
+                "mode": "hide"
+              },
+              "success": {
+                "mode": "hide"
+              },
+              "empty": {
+                "mode": "show"
+              }
+            }
+          }
+        },
+        {
+          "type": "divider"
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Precargas globales de aplicacion (preloads raiz)",
+            "level": 2
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "El bloque raiz preloads (hermano de api/pages/initialPage) se dispara en paralelo exactamente una vez por instancia de runtime montada, sin depender de initialPage ni relanzarse al navegar internamente entre paginas. No admite when ni item.*."
+          }
+        },
+        {
+          "type": "container",
+          "props": {
+            "variant": "card",
+            "gap": "sm"
+          },
+          "children": [
+            {
+              "type": "heading",
+              "props": {
+                "text": "Config real de esta app de documentacion",
+                "level": 3
+              }
+            },
+            {
+              "type": "divider",
+              "props": {
+                "variant": "dashed"
+              }
+            },
+            {
+              "type": "paragraph",
+              "props": {
+                "text": "{ \"preloads\": [ { \"fetchPosts\": {} } ], \"pages\": [ ... ] }"
+              }
+            }
+          ]
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "queries.fetchPosts ya esta poblada al llegar a esta pagina, aunque ninguna pagina la declare en su propio pages[].preloads: la disparo el preloads raiz al arrancar el runtime."
+          }
+        },
+        {
+          "type": "table",
+          "props": {
+            "headers": [
+              "ID",
+              "Titulo"
+            ],
+            "pagination": {
+              "enabled": true,
+              "pageSize": 3,
+              "controls": {
+                "variant": "previousNext"
+              }
+            },
+            "rows": {
+              "source": "queries.fetchPosts.data",
+              "cells": [
+                "item.id",
+                "item.title"
+              ]
+            }
+          },
+          "queryStateFeedback": {
+            "query": "fetchPosts",
+            "states": {
+              "loading": {
+                "mode": "fallback",
+                "fallback": [
+                  {
+                    "type": "skeleton",
+                    "props": {
+                      "variant": "text",
+                      "lines": 3
                     }
                   }
                 ]
@@ -7821,6 +9084,86 @@
           "type": "paragraph",
           "props": {
             "text": "Cuando key es \"$key\" y la source es un array, no hay clave de diccionario disponible: todas las iteraciones se omiten."
+          }
+        },
+        {
+          "type": "divider"
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "item.$index (propiedad sintetica)",
+            "level": 2
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "item.$index expone el indice numerico (0, 1, 2...) de la iteracion actual, con independencia del valor de items.key. Funciona con fuentes array u objeto plano. En un repeater paginado, item.$index sigue reflejando la posicion dentro de la coleccion completa, no la posicion relativa dentro de la pagina visible."
+          }
+        },
+        {
+          "type": "repeater",
+          "props": {
+            "items": {
+              "source": "queries.fetchPosts.data",
+              "key": "$index"
+            },
+            "pagination": {
+              "enabled": true,
+              "pageSize": 3,
+              "controls": {
+                "variant": "previousNext"
+              }
+            },
+            "template": [
+              {
+                "type": "container",
+                "props": {
+                  "direction": "row",
+                  "gap": "sm",
+                  "align": "center"
+                },
+                "children": [
+                  {
+                    "type": "badge",
+                    "props": {
+                      "label": "$index = {{item.$index}}",
+                      "color": "info"
+                    }
+                  },
+                  {
+                    "type": "paragraph",
+                    "props": {
+                      "text": "id real: {{item.id}} — {{item.title}}"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "queryStateFeedback": {
+            "query": "fetchPosts",
+            "states": {
+              "loading": {
+                "mode": "fallback",
+                "fallback": [
+                  {
+                    "type": "skeleton",
+                    "props": {
+                      "variant": "text",
+                      "lines": 3
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "Con key: \"$index\", item.$index tiene precedencia sobre cualquier propiedad literal $index que pudiera existir dentro del item, y desbloquea iterar arrays de valores primitivos que no tienen una ruta relativa util para usar como key."
           }
         },
         {
@@ -8703,6 +10046,421 @@
               ]
             }
           ]
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "Esta app de documentacion declara justo ese token estatico en su raiz (tokens.apiKey, sin refresh) y lo inyecta en vivo en una operacion real:"
+          }
+        },
+        {
+          "type": "container",
+          "props": {
+            "direction": "row",
+            "gap": "sm",
+            "align": "center"
+          },
+          "children": [
+            {
+              "type": "button",
+              "props": {
+                "label": "Ejecutar fetchTodos con X-API-Key",
+                "icon": "key",
+                "variant": "outline",
+                "action": {
+                  "type": "executeOperation",
+                  "operationName": "fetchTodos",
+                  "headers": {
+                    "X-API-Key": "tokens.apiKey.value"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "Estado de queries.fetchTodos: {{queries.fetchTodos.status}} — el header X-API-Key se construyo con tokens.apiKey.value sin exponer su valor en ningun sitio visible del layout.",
+            "icon": "check-circle"
+          },
+          "queryStateFeedback": {
+            "query": "fetchTodos",
+            "states": {
+              "idle": {
+                "mode": "hide"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "shell",
+      "layout": [
+        {
+          "type": "container",
+          "props": {
+            "direction": "row",
+            "justify": "between",
+            "align": "center"
+          },
+          "children": [
+            {
+              "type": "heading",
+              "props": {
+                "text": "Shell de aplicacion",
+                "level": 1
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Volver al inicio",
+                "variant": "ghost",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "home"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "divider"
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "shell.header",
+            "level": 2
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "Cabecera compartida y persistente entre paginas, declarada bajo el bloque raiz opcional shell.header. Esta misma pagina de documentacion ya la usa en vivo: mira la cabecera en la parte superior, con logo, titulo, menu con desplegables (Nodos, Runtime) y las acciones (boton Recargar usuarios, enlace Repositorio) empujadas al extremo derecho."
+          }
+        },
+        {
+          "type": "container",
+          "props": {
+            "variant": "card",
+            "gap": "sm"
+          },
+          "children": [
+            {
+              "type": "heading",
+              "props": {
+                "text": "Config real de esta app de documentacion",
+                "level": 3
+              }
+            },
+            {
+              "type": "divider",
+              "props": {
+                "variant": "dashed"
+              }
+            },
+            {
+              "type": "paragraph",
+              "props": {
+                "text": "{ \"shell\": { \"header\": { \"logo\": { \"src\": \"...\", \"alt\": \"Logo\" }, \"title\": \"React UI Builder - Docs\", \"menu\": [ { \"label\": \"Nodos\", \"icon\": \"layout-grid\", \"children\": [ { \"label\": \"Texto\", \"action\": { \"type\": \"navigateTo\", \"pageId\": \"text-nodes\" } } ] } ], \"actions\": [ { \"type\": \"button\", \"props\": { \"label\": \"Recargar usuarios\", \"action\": { \"type\": \"executeOperation\", \"operationName\": \"fetchUsers\" } } } ] } } }"
+              }
+            }
+          ]
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Contrato de menuItem",
+            "level": 3
+          }
+        },
+        {
+          "type": "table",
+          "props": {
+            "headers": [
+              "Campo",
+              "Tipo",
+              "Notas"
+            ],
+            "rows": [
+              [
+                "label",
+                "string, obligatorio",
+                "referencia de texto dinamica (literal, referencia o interpolacion)"
+              ],
+              [
+                "icon",
+                "string, opcional",
+                "catalogo Lucide; si no resuelve se ignora en silencio"
+              ],
+              [
+                "visibility",
+                "Visibility, opcional",
+                "mismo contrato transversal, sin soporte de item.*"
+              ],
+              [
+                "href",
+                "string, condicional",
+                "mismo contrato que link.props.href"
+              ],
+              [
+                "action",
+                "navigateTo | goBack, condicional",
+                "mismo contrato que link.props.action"
+              ],
+              [
+                "children",
+                "menuItem[], condicional",
+                "solo en el nivel raiz, maximo un nivel de profundidad"
+              ]
+            ]
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "href, action y children son mutuamente excluyentes: cada menuItem declara exactamente uno de los tres."
+          }
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Desplegable de menuItem.children",
+            "level": 3
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "Prueba en vivo el desplegable Nodos o Runtime de la cabecera de esta pagina: se abre con click/tap (role=menu, aria-haspopup, aria-expanded), se cierra con click fuera, con Esc (devolviendo el foco al trigger) o al seleccionar un item, y soporta navegacion con flecha arriba/abajo, Home/End y Enter/Espacio."
+          }
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Estado activo de navegacion",
+            "level": 3
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "Es un valor derivado en cada render: el menuItem (raiz o hijo) cuyo action.navigateTo.pageId coincide con la pagina visible se marca automaticamente como activo; si el item activo esta dentro de children, su padre tambien se marca activo aunque no sea navegable. Navega a Inicio y observa el resaltado del item Inicio en la cabecera y en el sidebar."
+          }
+        },
+        {
+          "type": "divider"
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "shell.sidebar",
+            "level": 2
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "Navegacion lateral jerarquica compartida entre paginas, declarada bajo shell.sidebar. Tambien esta en vivo en esta app: el arbol de la izquierda organiza las mismas categorias que la pagina de inicio, con una rama Overlays anidada a tres niveles de profundidad dentro de Decorativos y estructurales."
+          }
+        },
+        {
+          "type": "container",
+          "props": {
+            "variant": "card",
+            "gap": "sm"
+          },
+          "children": [
+            {
+              "type": "heading",
+              "props": {
+                "text": "Config real de esta app de documentacion (extracto)",
+                "level": 3
+              }
+            },
+            {
+              "type": "divider",
+              "props": {
+                "variant": "dashed"
+              }
+            },
+            {
+              "type": "paragraph",
+              "props": {
+                "text": "{ \"shell\": { \"sidebar\": { \"defaultCollapsed\": false, \"items\": [ { \"label\": \"Decorativos y estructurales\", \"children\": [ { \"label\": \"Overlays\", \"children\": [ { \"label\": \"Accordion\", \"action\": { \"type\": \"navigateTo\", \"pageId\": \"accordion-nodes\" } } ] } ] } ] } } }"
+              }
+            }
+          ]
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Contrato de sidebarItem",
+            "level": 3
+          }
+        },
+        {
+          "type": "table",
+          "props": {
+            "headers": [
+              "Campo",
+              "Tipo",
+              "Notas"
+            ],
+            "rows": [
+              [
+                "label",
+                "string, obligatorio",
+                "referencia de texto dinamica"
+              ],
+              [
+                "icon",
+                "string, opcional",
+                "catalogo Lucide; sin icon en modo rail muestra la inicial del label"
+              ],
+              [
+                "visibility",
+                "Visibility, opcional",
+                "sin soporte de item.*"
+              ],
+              [
+                "href",
+                "string, condicional",
+                "mismo contrato que link.props.href"
+              ],
+              [
+                "action",
+                "navigateTo | goBack, condicional",
+                "mismo contrato que link.props.action"
+              ],
+              [
+                "children",
+                "sidebarItem[], condicional",
+                "recursivo, sin limite de profundidad (a diferencia de menuItem)"
+              ]
+            ]
+          }
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Modo rail y flyout",
+            "level": 3
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "El propio sidebar expone, antes de la lista de items, un control para colapsar toda la barra a modo rail (solo iconos). Pruebalo en el sidebar de esta pagina: en rail, una rama con children (por ejemplo Decorativos y estructurales) abre sus hijos como un flyout flotante al hacer click sobre su icono, en vez de expandirse inline."
+          }
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Auto-expansion de ancestros",
+            "level": 3
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "Navega a Accordion desde el catalogo de nodos: las ramas Decorativos y estructurales y Overlays se expanden automaticamente en el sidebar para mantener visible el item activo, sin colapsar ninguna rama que ya tuvieras abierta manualmente."
+          }
+        },
+        {
+          "type": "divider"
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "shell.scrollBehavior",
+            "level": 2
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "Campo opcional del bloque raiz shell, hermano de header y sidebar. Esta app de documentacion declara \"scrollBehavior\": \"page\" (el default), visible arriba en el extracto de config."
+          }
+        },
+        {
+          "type": "table",
+          "props": {
+            "headers": [
+              "Valor",
+              "Comportamiento"
+            ],
+            "rows": [
+              [
+                "page (default)",
+                "la pagina completa hace scroll; el header queda sticky arriba"
+              ],
+              [
+                "fixed",
+                "header y sidebar quedan fijos ocupando el alto del contenedor de montaje; solo el area de contenido de la pagina activa hace scroll interno"
+              ]
+            ]
+          }
+        },
+        {
+          "type": "container",
+          "props": {
+            "variant": "card",
+            "gap": "sm"
+          },
+          "children": [
+            {
+              "type": "heading",
+              "props": {
+                "text": "JSON de ejemplo con fixed",
+                "level": 3
+              }
+            },
+            {
+              "type": "divider",
+              "props": {
+                "variant": "dashed"
+              }
+            },
+            {
+              "type": "paragraph",
+              "props": {
+                "text": "{ \"shell\": { \"header\": { ... }, \"sidebar\": { ... }, \"scrollBehavior\": \"fixed\" } }"
+              }
+            },
+            {
+              "type": "paragraph",
+              "props": {
+                "text": "Con fixed, el confinamiento real requiere que el contenedor de montaje tenga una altura acotada; sin ella, ese aspecto concreto degrada visualmente a un comportamiento equivalente a page."
+              }
+            }
+          ]
+        },
+        {
+          "type": "divider"
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Fuera de alcance (v1)",
+            "level": 2
+          }
+        },
+        {
+          "type": "list",
+          "props": {
+            "items": [
+              "Comportamiento responsive/mobile del header y del sidebar (colapso, menu hamburguesa, overlay a pantalla completa)",
+              "Theming o estilos visuales configurables del shell mas alla de las utilidades Tailwind ya usadas por el resto del runtime",
+              "Cualquier tipo de nodo en shell.header.actions distinto de link/button",
+              "Cualquier slot de nodos libres dentro de shell.sidebar: solo admite el arbol de sidebarItem",
+              "Opt-out de shell.header o shell.sidebar por pagina: si se declaran, aplican a todas las paginas sin excepcion",
+              "Ancho configurable del sidebar (expandido o en rail)"
+            ]
+          }
         }
       ]
     }

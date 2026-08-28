@@ -10,10 +10,12 @@ function ControlledKeyValueField({
   initialValue,
   label,
   onChangeSpy,
+  isValueEditable,
 }: {
   initialValue: Record<string, unknown>
   label: string
   onChangeSpy: (value: Record<string, unknown>) => void
+  isValueEditable?: (value: unknown) => boolean
 }) {
   const [value, setValue] = useState(initialValue)
   return (
@@ -24,6 +26,7 @@ function ControlledKeyValueField({
         onChangeSpy(nextValue)
         setValue(nextValue)
       }}
+      isValueEditable={isValueEditable}
     />
   )
 }
@@ -178,6 +181,85 @@ describe('KeyValuePropertyField', () => {
 
       expect(onChangeSpy).toHaveBeenCalledWith({ nombre: 'Ana', metadatos: { origen: 'web' }, '': '' })
       expect((screen.getByLabelText('body valor #3') as HTMLInputElement).value).toBe('')
+    })
+  })
+
+  describe('isValueEditable prop (T2)', () => {
+    it('without the prop, a number or boolean value stays editable (default unchanged)', () => {
+      render(
+        <ControlledKeyValueField
+          initialValue={{ page: 1, active: true }}
+          label="Config"
+          onChangeSpy={vi.fn()}
+        />,
+      )
+
+      const pageValueInput = screen.getByLabelText('Config valor #1')
+      const activeValueInput = screen.getByLabelText('Config valor #2')
+      expect(pageValueInput.tagName).toBe('INPUT')
+      expect(activeValueInput.tagName).toBe('INPUT')
+    })
+
+    it('without the prop, an object/array value still falls back to the read-only raw-JSON field', () => {
+      render(
+        <ControlledKeyValueField
+          initialValue={{ metadatos: { origen: 'web' } }}
+          label="body"
+          onChangeSpy={vi.fn()}
+        />,
+      )
+
+      const nestedValueField = screen.getByLabelText('body valor #1')
+      expect(nestedValueField.tagName).toBe('TEXTAREA')
+      expect(nestedValueField).toBeDisabled()
+    })
+
+    it('with the prop, only rows for which it returns true render as editable inputs', () => {
+      const onChangeSpy = vi.fn()
+      render(
+        <ControlledKeyValueField
+          initialValue={{ userId: 'texto', page: 42, active: true, note: null, meta: {}, tags: [] }}
+          label="Parámetros"
+          onChangeSpy={onChangeSpy}
+          isValueEditable={(v) => typeof v === 'string'}
+        />,
+      )
+
+      const stringField = screen.getByLabelText('Parámetros valor #1')
+      expect(stringField.tagName).toBe('INPUT')
+
+      const numberField = screen.getByLabelText('Parámetros valor #2')
+      const booleanField = screen.getByLabelText('Parámetros valor #3')
+      const nullField = screen.getByLabelText('Parámetros valor #4')
+      const objectField = screen.getByLabelText('Parámetros valor #5')
+      const arrayField = screen.getByLabelText('Parámetros valor #6')
+      for (const field of [numberField, booleanField, nullField, objectField, arrayField]) {
+        expect(field.tagName).toBe('TEXTAREA')
+        expect(field).toBeDisabled()
+      }
+    })
+
+    it('editing the key or using Quitar/Añadir on a row degraded by isValueEditable still works', () => {
+      const onChangeSpy = vi.fn()
+      render(
+        <ControlledKeyValueField
+          initialValue={{ userId: 'texto', page: 42 }}
+          label="Parámetros"
+          onChangeSpy={onChangeSpy}
+          isValueEditable={(v) => typeof v === 'string'}
+        />,
+      )
+
+      const degradedKeyInput = screen.getByLabelText('Parámetros clave #2') as HTMLInputElement
+      expect(degradedKeyInput.value).toBe('page')
+      fireEvent.change(degradedKeyInput, { target: { value: 'count' } })
+      expect(onChangeSpy).toHaveBeenCalledWith({ userId: 'texto', count: 42 })
+
+      fireEvent.click(screen.getByRole('button', { name: 'Quitar Parámetros #2' }))
+      expect(onChangeSpy).toHaveBeenLastCalledWith({ userId: 'texto' })
+
+      fireEvent.click(screen.getByRole('button', { name: 'Añadir Parámetros' }))
+      expect(onChangeSpy).toHaveBeenLastCalledWith({ userId: 'texto', '': '' })
     })
   })
 })

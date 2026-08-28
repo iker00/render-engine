@@ -208,7 +208,19 @@ export async function executeBuiltRuntimeApiRequest({
     }
   }
 
-  const responseText = await response.text()
+  let responseText: string
+
+  try {
+    responseText = await response.text()
+  } catch {
+    return {
+      status: 'error',
+      error: {
+        code: 'network-error',
+        message: `The api operation "${request.operationName}" failed due to a network error while reading the response body.`,
+      },
+    }
+  }
 
   if (responseText.length === 0) {
     return {

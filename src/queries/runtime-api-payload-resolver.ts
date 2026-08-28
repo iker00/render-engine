@@ -15,12 +15,13 @@ import {
   findFirstFailingFormatterName,
 } from '../runtime/runtime-references/runtime-formatter-registry'
 import type { RuntimeState } from '../runtime/runtime-state/runtime-state-types'
-import type { RuntimeApiHiddenFormFields } from './runtime-api-types'
+import type { RuntimeApiEmptySubmitValues, RuntimeApiHiddenFormFields } from './runtime-api-types'
 
 interface ResolvePayloadValueOptions {
   state: RuntimeState
   iterationContext?: RuntimeIterationContext
   hiddenFormFields?: RuntimeApiHiddenFormFields
+  emptySubmitValues?: RuntimeApiEmptySubmitValues
   fileValueOverrides?: ReadonlyMap<string, RuntimeApiBodyValue[]>
 }
 
@@ -32,7 +33,7 @@ export function resolvePayloadValue(
   | { status: 'omit' }
   | { status: 'error' }
   | { status: 'token-error'; tokenId: string } {
-  const { state, iterationContext, hiddenFormFields } = options
+  const { state, iterationContext, hiddenFormFields, emptySubmitValues } = options
 
   if (typeof value !== 'string') {
     return {
@@ -67,6 +68,20 @@ export function resolvePayloadValue(
     ) {
       return {
         status: 'omit',
+      } as const
+    }
+
+    if (
+      resolvedReference.value === '' &&
+      emptySubmitValues !== undefined &&
+      resolvedReference.reference.namespace === 'forms' &&
+      resolvedReference.reference.path.length === 2 &&
+      resolvedReference.reference.path[0] === emptySubmitValues.formId &&
+      emptySubmitValues.valuesByFieldId.has(resolvedReference.reference.path[1])
+    ) {
+      return {
+        status: 'ready',
+        value: String(emptySubmitValues.valuesByFieldId.get(resolvedReference.reference.path[1])),
       } as const
     }
 
@@ -335,10 +350,9 @@ function resolveHeaderTemplateValue(
   }
 
   // Interpolation path
-  const { state, iterationContext, hiddenFormFields } = options
+  const { state, iterationContext, hiddenFormFields, emptySubmitValues } = options
 
   let failed = false
-  let failedPlaceholder = ''
   let tokenError: { tokenId: string } | null = null
   let shouldOmit = false
 
@@ -365,7 +379,6 @@ function resolveHeaderTemplateValue(
 
       if (referenceValue.length === 0) {
         failed = true
-        failedPlaceholder = _placeholder
         return ''
       }
     } else {
@@ -373,7 +386,6 @@ function resolveHeaderTemplateValue(
 
       if (parseResult.status === 'unresolvable-chain') {
         failed = true
-        failedPlaceholder = _placeholder
         return ''
       }
 
@@ -406,7 +418,6 @@ function resolveHeaderTemplateValue(
       }
 
       failed = true
-      failedPlaceholder = referenceValue
       return ''
     }
 
@@ -425,7 +436,15 @@ function resolveHeaderTemplateValue(
         return ''
       }
 
-      let finalValue: unknown = result.value
+      let finalValue: unknown =
+        result.value === '' &&
+        emptySubmitValues !== undefined &&
+        result.reference.namespace === 'forms' &&
+        result.reference.path.length === 2 &&
+        result.reference.path[0] === emptySubmitValues.formId &&
+        emptySubmitValues.valuesByFieldId.has(result.reference.path[1])
+          ? String(emptySubmitValues.valuesByFieldId.get(result.reference.path[1]))
+          : result.value
 
       if (formatters.length > 0) {
         const chainResult = applyFormatterChain(result.value, formatters)
@@ -438,7 +457,6 @@ function resolveHeaderTemplateValue(
             `api.headers[${headerKey}]`,
           )
           failed = true
-          failedPlaceholder = referenceValue
           return ''
         }
 
@@ -455,13 +473,11 @@ function resolveHeaderTemplateValue(
 
       // null, object, array — not serializable as header value
       failed = true
-      failedPlaceholder = referenceValue
       return ''
     }
 
     // literal, invalid, unsupported — all produce request-build-failed
     failed = true
-    failedPlaceholder = referenceValue
     return ''
   })
 

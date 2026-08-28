@@ -1,6 +1,6 @@
 > Cuándo leer: `form` como contenedor, `id`, `submitAction`, `persistOnUnmount`, `resetOnSuccess`, niños permitidos, gramática visual dentro del runtime.
 > Tamaño: medio.
-> Relacionados: [[../forms/lifecycle.md]], [[../forms/submit.md]], [[input.md]], [[textarea.md]], [[select.md]], [[choice-groups.md]], [[button.md]].
+> Relacionados: [[../forms/lifecycle.md]], [[../forms/submit.md]], [[input.md]], [[textarea.md]], [[select.md]], [[choice-groups.md]], [[button.md]], [[steps.md]].
 
 # `form`
 
@@ -16,7 +16,7 @@
 - `submitAction.onSuccess`: lista opcional de acciones a ejecutar tras un submit exitoso (cada una puede ser `navigateTo`, `goBack`, `executeOperation`, `executeOperations`, `resetForm`, `openModal` o `closeModal`, y cada una puede declarar opcionalmente `when` con el mismo shape que `visibility`).
 - `submitAction.onError`: lista opcional de acciones a ejecutar tras un submit fallido (cada una puede ser `navigateTo`, `goBack`, `executeOperation`, `executeOperations`, `resetForm`, `openModal` o `closeModal`, y cada una puede declarar opcionalmente `when` con el mismo shape que `visibility`).
 - `resetOnSuccess`: boolean opcional, válido solo cuando existe `submitAction`; se ejecuta después de `onSuccess` si está activo.
-- `children`: colección ordenada con soporte para `input`, `textarea`, `select`, `radioGroup`, `checkboxGroup`, `fileInput`, `button`, `heading`, `paragraph`, `image`, `table`, `container`, `accordion`, `tabs` y `divider`.
+- `children`: colección ordenada con soporte para `input`, `textarea`, `select`, `radioGroup`, `checkboxGroup`, `fileInput`, `button`, `heading`, `paragraph`, `image`, `table`, `container`, `accordion`, `tabs`, `steps` y `divider`.
 
 ## Reglas de render
 - `form` renderiza un `<form>` real, hereda un contexto estable de `formId` a sus descendientes, inicializa solo los campos todavía ausentes en el store, elimina por defecto `forms.{formId}` al desmontarse realmente y puede ejecutar `submitAction.type: executeOperation` con `query`, `body` y `headers` por envío.
@@ -34,7 +34,8 @@
 - Si un `fieldId` se repite dentro del mismo `form`, el config completo se rechaza antes del render.
 - Si `form.submitAction.operationName` apunta a una operación inexistente en `api`, el config completo se rechaza antes del render.
 - Si `form.resetOnSuccess: true` aparece sin `submitAction`, el config completo se rechaza antes del render.
-- Si un `form.children` contiene nodos fuera de `input`, `textarea`, `select`, `radioGroup`, `checkboxGroup`, `fileInput`, `button`, `heading`, `paragraph`, `image`, `table`, `container`, `accordion`, `tabs` y `divider`, el config completo se rechaza antes del render.
+- Si un `form.children` contiene nodos fuera de `input`, `textarea`, `select`, `radioGroup`, `checkboxGroup`, `fileInput`, `button`, `heading`, `paragraph`, `image`, `table`, `container`, `accordion`, `tabs`, `steps` y `divider`, el config completo se rechaza antes del render.
+- `steps` es válido únicamente dentro de `form` (a diferencia de `tabs` y `accordion`, permitidos también fuera de `form`); declarado fuera de `form`, el config se rechaza antes del render.
 
 ## Sub-temas relacionados
 El ciclo de vida del estado, la validación de los campos hijos, los valores por defecto y la semántica de submit/reset viven en [`../forms/`](../forms/index.md):

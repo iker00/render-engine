@@ -18,13 +18,14 @@ Este documento resume la arquitectura estable que deben respetar las features nu
 - `runtime-actions/` traduce acciones declarativas a handlers del provider. Los nodos interactivos disparan acciones; no gestionan por su cuenta navegacion, red ni reset de formularios.
 - `runtime-collection-sources` normaliza colecciones para consumidores como `list`, `select`, `radioGroup` y `checkboxGroup`.
 - `runtime-form-validations` concentra la evaluacion de reglas locales de formulario.
+- Un modulo `runtime-*` dedicado puede disparar una operacion `queries.*` como consecuencia directa de la interaccion de un nodo individual (ej. `runtime-search-trigger` para `autocomplete`), en vez de por `preloads`, accion de boton o submit. Vive fuera de `runtime-actions/` porque no traduce una accion declarada en el config; sigue delegando la ejecucion real en la fachada compartida de `src/queries/`.
 - `runtime-query-state-feedback` concentra la derivacion `idle | loading | error | empty | success`.
 - `runtime-node-styling` concentra la gramatica visual estable, utilidades de `Tailwind`, variante `card`, gaps y spans de grid.
 
 ## Fronteras que no deben romperse
 - La configuracion se valida antes de renderizar. Los componentes visuales no deben aceptar contratos ambiguos que deberian rechazarse en `src/config/`.
 - La red vive en `src/queries/`. Los nodos visuales no deben construir `fetch`, URLs ni `RequestInit` directamente.
-- La resolucion de referencias vive en `runtime-references/`. Evitar parsers locales o accesos ad hoc al estado compartido.
+- La resolucion de referencias contra estado en vivo vive en `runtime-references/`. La sintaxis de referencias (parseo de `queries.*`/`forms.*`/`params.*`/`item.*` y de placeholders `{{...}}`) vive en `src/config/runtime-reference-syntax.ts` como contrato neutral consumido por `src/config/` y por `runtime-references/`, para que la validacion previa al render no dependa de `src/runtime/`. Evitar parsers locales o accesos ad hoc al estado compartido.
 - El estado compartido vive en `runtime-state/`. Los nodos pueden consumir fachada y contexto, pero no duplicar dominios de estado paralelos.
 - La navegacion del runtime se sincroniza con hash routing simple. No introducir un router general por `pathname` salvo decision arquitectonica explicita.
 - El estilo estable vive en tokens globales y utilidades centralizadas. Evitar estilos inline o APIs visuales libres si no hay feature de theming.

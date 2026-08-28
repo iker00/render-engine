@@ -7,8 +7,9 @@ import type {
   SelectLayoutNodeItems,
   SelectManualScalarItemsSource,
 } from '../config/runtime-config'
+import type { MapMarkerSource } from '../config/runtime-config-types'
 import type { RuntimeReferenceSurface } from './runtime-references/runtime-reference-diagnostics'
-import { hasRuntimeTemplateDelimiter } from './runtime-references/runtime-reference-parser'
+import { hasRuntimeTemplateDelimiter } from '../config/runtime-reference-syntax'
 import type { RuntimeIterationContext } from './runtime-references/runtime-reference-resolver'
 import {
   resolveRuntimeReference,
@@ -26,7 +27,11 @@ export interface ResolvedSelectCollectionItem {
   value: string
 }
 
-type ChoiceCollectionSurface = 'select.props.items' | 'radioGroup.props.items' | 'checkboxGroup.props.items'
+type ChoiceCollectionSurface =
+  | 'select.props.items'
+  | 'radioGroup.props.items'
+  | 'checkboxGroup.props.items'
+  | 'autocomplete.props.items'
 type ChoiceCollectionItems =
   | SelectLayoutNodeItems
   | RadioGroupLayoutNode['props']['items']
@@ -49,6 +54,10 @@ const CHOICE_PROJECTION_SURFACES: Record<ChoiceCollectionSurface, ChoiceProjecti
     label: 'checkboxGroup.props.items.label',
     value: 'checkboxGroup.props.items.value',
   },
+  'autocomplete.props.items': {
+    label: 'autocomplete.props.items.label',
+    value: 'autocomplete.props.items.value',
+  },
 }
 
 export function resolveListCollectionItems(items: ListLayoutNodeItems, state: RuntimeState) {
@@ -69,6 +78,92 @@ export function resolveCollectionSourceItems(
   }
 
   return result.value
+}
+
+export interface ResolvedMapMarkerSourceItem {
+  lat: number
+  lng: number
+  label: string
+}
+
+export function resolveMapMarkerSourceItems(
+  source: MapMarkerSource,
+  state: RuntimeState,
+  options: { iterationContext?: RuntimeIterationContext } = {},
+): ResolvedMapMarkerSourceItem[] {
+  const collectionItems = resolveCollectionSourceItems(source.source, state, options)
+  const markers: ResolvedMapMarkerSourceItem[] = []
+
+  for (let index = 0; index < collectionItems.length; index += 1) {
+    const item = collectionItems[index]
+
+    const lat = resolveMapMarkerCoordinate(item, source.position.lat, 'lat', {
+      itemPath: `${source.source}[${index}]`,
+    })
+
+    if (lat === null) {
+      continue
+    }
+
+    const lng = resolveMapMarkerCoordinate(item, source.position.lng, 'lng', {
+      itemPath: `${source.source}[${index}]`,
+    })
+
+    if (lng === null) {
+      continue
+    }
+
+    const label = resolveMapMarkerLabel(item, source.label, state, index)
+
+    if (label === null) {
+      continue
+    }
+
+    markers.push({ lat, lng, label })
+  }
+
+  return markers
+}
+
+function resolveMapMarkerCoordinate(
+  item: unknown,
+  path: string,
+  axis: 'lat' | 'lng',
+  { itemPath }: { itemPath: string },
+) {
+  const resolvedValue = resolveCollectionItemPath(item, path)
+  const range = axis === 'lat' ? { min: -90, max: 90 } : { min: -180, max: 180 }
+
+  if (
+    !resolvedValue.found ||
+    typeof resolvedValue.value !== 'number' ||
+    !Number.isFinite(resolvedValue.value) ||
+    resolvedValue.value < range.min ||
+    resolvedValue.value > range.max
+  ) {
+    reportCollectionItemDiagnostic({
+      itemPath,
+      surface: 'map.props.markerSources',
+      projectionPath: path,
+    })
+    return null
+  }
+
+  return resolvedValue.value
+}
+
+function resolveMapMarkerLabel(item: unknown, label: string, state: RuntimeState, index: number) {
+  if (hasRuntimeTemplateDelimiter(label)) {
+    return resolveInterpolatedCollectionString(label, state, 'map.props.markerSources.label', {
+      iterationContext: {
+        item,
+        key: String(index),
+        itemIndex: index,
+      },
+    })
+  }
+
+  return normalizeCollectionItemPathText(item, label)
 }
 
 export function resolveListCollectionItemsWithOptions(
@@ -106,6 +201,27 @@ export function resolveSelectCollectionItems(
   options: { iterationContext?: RuntimeIterationContext } = {},
 ) {
   return resolveChoiceCollectionItems(items, state, 'select.props.items', options)
+}
+
+export function resolveAutocompleteCollectionItems(
+  items: SelectLayoutNodeItems,
+  state: RuntimeState,
+  options: { iterationContext?: RuntimeIterationContext } = {},
+) {
+  return resolveChoiceCollectionItems(items, state, 'autocomplete.props.items', options)
+}
+
+export function filterAutocompleteSuggestions(
+  items: ResolvedSelectCollectionItem[],
+  searchText: string,
+  minChars: number,
+): ResolvedSelectCollectionItem[] {
+  if (searchText.length < minChars) {
+    return []
+  }
+
+  const normalizedSearchText = searchText.toLowerCase()
+  return items.filter((item) => item.label.toLowerCase().includes(normalizedSearchText))
 }
 
 export function resolveChoiceCollectionItems(
@@ -444,7 +560,7 @@ function reportCollectionItemDiagnostic({
   projectionPath,
 }: {
   itemPath: string
-  surface: 'list.props.items' | ChoiceCollectionSurface
+  surface: 'list.props.items' | ChoiceCollectionSurface | 'map.props.markerSources'
   projectionPath: string
 }) {
   if (!import.meta.env.DEV) {

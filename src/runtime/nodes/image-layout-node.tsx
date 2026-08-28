@@ -5,7 +5,7 @@ import {
   type RuntimeIterationContext,
 } from '../runtime-references/runtime-reference-resolver'
 import { getImageNodeClassName } from '../runtime-node-styling'
-import { useRuntimeState } from '../runtime-state/runtime-state-provider'
+import { useRuntimeState } from '../runtime-state/use-runtime-state'
 import { useImageFetchSource } from './use-image-fetch-source'
 
 interface ImageNodeProps {

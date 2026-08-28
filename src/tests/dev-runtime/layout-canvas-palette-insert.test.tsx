@@ -6,7 +6,7 @@ import { FORM_ONLY_LEAF_NODE_TYPES } from '../../config/layout-placement-rules'
 import { DevRuntimeReady } from '../../dev-runtime/dev-runtime'
 import { buildDefaultNodeInstance } from '../../dev-runtime/layout-canvas/layout-canvas-node-palette-defaults'
 import { getSupportedNodeTypesCatalog } from '../../dev-runtime/layout-canvas/layout-canvas-node-schema'
-import { serializePaletteDragId } from '../../dev-runtime/layout-canvas/layout-canvas-node-palette'
+import { serializePaletteDragId } from '../../dev-runtime/layout-canvas/layout-canvas-palette-drag-id'
 import {
   serializeDropZoneId,
   serializeLayoutNodePath,
@@ -69,6 +69,14 @@ function form(id: string, children: unknown[]) {
   return { type: 'form', id, children }
 }
 
+function link(children: unknown[]) {
+  return { type: 'link', props: { href: '#' }, children }
+}
+
+function steps(items: Array<{ label: string; children: unknown[] }>) {
+  return { type: 'steps', props: { items } }
+}
+
 function buildReadyProps(rawConfig: unknown) {
   const initialConfigText = JSON.stringify(rawConfig, null, 2)
   const validation = validateRuntimeConfig(rawConfig)
@@ -118,8 +126,10 @@ describe('buildDefaultNodeInstance: every catalog type is validly insertable (FR
     // Form-only leaf types (input/textarea/select/radioGroup/checkboxGroup/fileInput/toggle/
     // hidden) only make sense as descendants of a form — every other catalog type is inserted
     // directly at the page root, matching how the palette drop-validity engine (T13/T15) would
-    // actually allow it to land.
-    const layout: LayoutNode[] = FORM_ONLY_LEAF_NODE_TYPES.has(type)
+    // actually allow it to land. `steps` is a non-leaf exception: unlike `tabs`, it is exclusive
+    // to `form` (see validate-form-semantics.ts), so it needs the same form wrapper as the
+    // form-only leaf types even though it is not one of them.
+    const layout: LayoutNode[] = FORM_ONLY_LEAF_NODE_TYPES.has(type) || type === 'steps'
       ? [{ type: 'form', id: 'hostForm', children: [node] } as LayoutNode]
       : [node]
 
@@ -175,6 +185,48 @@ describe('items: [] por defecto para select/radioGroup/checkboxGroup (T3, RF10)'
       expect(validateRuntimeConfig(parsed).status).toBe('ready')
     },
   )
+})
+
+// T2 (2026-08-25-09-15-autocomplete-node): autocomplete (T1) is a form-only leaf node type
+// (FORM_ONLY_LEAF_NODE_TYPES), so it must be insertable from the palette inside a form and
+// rejected outside one — same pattern already covered above for input/select/radioGroup.
+describe('drag insert de autocomplete desde la paleta', () => {
+  it('arrastrar autocomplete desde la paleta hasta dentro de un form existente lo inserta con fieldId no vacío, label "Autocompletar" y props.items estrictamente igual a []', async () => {
+    renderCanvas({
+      api: {},
+      initialPage: 'home',
+      pages: [{ id: 'home', layout: [form('formA', [])] }],
+    })
+
+    paletteDragEnd('autocomplete', { parentPath: [{ field: 'children', index: 0 }], index: 0 })
+
+    const { parsed } = await getMonacoJson()
+    const formNode = (
+      parsed.pages as Array<{
+        layout: Array<{ children: Array<{ type: string; props: { fieldId: string; label: string; items: unknown } }> }>
+      }>
+    )[0].layout[0]
+
+    expect(formNode.children).toHaveLength(1)
+    expect(formNode.children[0].type).toBe('autocomplete')
+    expect(formNode.children[0].props.fieldId).not.toBe('')
+    expect(formNode.children[0].props.label).toBe('Autocompletar')
+    expect(formNode.children[0].props.items).toEqual([])
+    expect(validateRuntimeConfig(parsed).status).toBe('ready')
+  })
+
+  it('arrastrar autocomplete desde la paleta hasta un destino sin form ancestro no inserta nada (destino inválido)', async () => {
+    const { initialConfigText } = renderCanvas({
+      api: {},
+      initialPage: 'home',
+      pages: [{ id: 'home', layout: [container([heading('Plain')])] }],
+    })
+
+    paletteDragEnd('autocomplete', { parentPath: [{ field: 'children', index: 0 }], index: 0 })
+
+    const { text } = await getMonacoJson()
+    expect(text).toBe(initialConfigText)
+  })
 })
 
 describe('LayoutCanvasNodePalette: lists the full catalog (FR8)', () => {
@@ -283,6 +335,57 @@ describe('drag insert desde la paleta (FR8)', () => {
     expect(insertedTextsInOrder[0]).toBe('A')
     expect(insertedTextsInOrder[2]).toBe('B')
     expect(insertedTextsInOrder[3]).toBe('C')
+    expect(validateRuntimeConfig(parsed).status).toBe('ready')
+  })
+
+  // 0126-T3 restriction: confirm `link` is a valid palette-drop destination end-to-end, not just
+  // by analogy with `container`/`form` above — a `link` already in "Elementos anidados" mode
+  // (`children: []`, reachable from the properties panel's content-mode widget once T1's
+  // validation relaxation is in place) must accept a drag-inserted child the same way.
+  it('arrastrar heading desde la paleta hasta un link en modo "Elementos anidados" lo inserta dentro de children', async () => {
+    renderCanvas({
+      api: {},
+      initialPage: 'home',
+      pages: [{ id: 'home', layout: [link([])] }],
+    })
+
+    paletteDragEnd('heading', { parentPath: [{ field: 'children', index: 0 }], index: 0 })
+
+    const { parsed } = await getMonacoJson()
+    const linkNode = (parsed.pages as Array<{ layout: Array<{ type: string; children: Array<{ type: string }> }> }>)[0].layout[0]
+
+    expect(linkNode.type).toBe('link')
+    expect(linkNode.children).toHaveLength(1)
+    expect(linkNode.children[0].type).toBe('heading')
+    expect(validateRuntimeConfig(parsed).status).toBe('ready')
+  })
+
+  // T5: análogo a la inserción en un panel de `tabs` — un `input` requiere form ancestor,
+  // así que el `steps` vive dentro de un `form`, igual que el fixture usado arriba para
+  // "select"/"radioGroup"/"checkboxGroup" dentro de un form directo.
+  it('arrastrar input desde la paleta hasta el panel de un paso de un steps dentro de un form lo inserta en props.items[i].children', async () => {
+    renderCanvas({
+      api: {},
+      initialPage: 'home',
+      pages: [{ id: 'home', layout: [form('formA', [steps([{ label: 'Step1', children: [] }])])] }],
+    })
+
+    const stepsPath: LayoutNodePath = [{ field: 'children', index: 0 }, { field: 'children', index: 0 }]
+    paletteDragEnd('input', { parentPath: stepsPath, index: 0, stepItemIndex: 0 })
+
+    const { parsed } = await getMonacoJson()
+    const formNode = (
+      parsed.pages as Array<{
+        layout: Array<{
+          children: Array<{ type: string; props: { items: Array<{ children: Array<{ type: string }> }> } }>
+        }>
+      }>
+    )[0].layout[0]
+
+    const stepsNode = formNode.children[0]
+    expect(stepsNode.type).toBe('steps')
+    expect(stepsNode.props.items[0].children).toHaveLength(1)
+    expect(stepsNode.props.items[0].children[0].type).toBe('input')
     expect(validateRuntimeConfig(parsed).status).toBe('ready')
   })
 

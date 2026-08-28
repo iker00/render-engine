@@ -16,13 +16,336 @@ La política completa está definida en el documento de workflow del proyecto.
 
 ## Planificadas
 
-(Todas las features actuales han sido completadas. Próximas features: `EDITOR-VISUAL-ROADMAP.md` en la raíz del repo define el roadmap de edición visual para `Api`, `Páginas` y `Tokens`.)
+(Todas las features actuales han sido completadas. Próximas features: `EDITOR-VISUAL-ROADMAP.md` en la raíz del repo define el roadmap de edición visual para `Api` y `Tokens`.)
 
 ## Archivadas
 - `0035-image-node-api-source`: archivada. Se descarta por ahora porque el caso de imágenes privadas encaja mejor con URLs protegidas o firmadas desde backend que con una carga remota específica integrada en el nodo `image`.
 
 ## Completadas
 
+- `2026-08-27-12-19-download-operation-action`: nuevo tipo de acción `downloadOperation` en `button.props.action.type`
+  y `link.props.action.type` (mismo shape que `executeOperation`: `operationName`, `query`/`body`/`headers`
+  opcionales, más `filename` opcional). Al disparar, ejecuta un `fetch` autenticado contra la operación del catálogo
+  `api` (headers resueltos con inyección de `tokens.*`, reutilizando el mismo request builder que `executeOperation`)
+  y, en éxito, arma un `Blob` con el cuerpo y dispara la descarga real del navegador. Nombre de fichero resuelto por
+  prioridad: `Content-Disposition` → `props.action.filename` → fallback genérico `"download"`. El estado se refleja
+  en `queries.{operationName}` (`data` siempre `null`, ya que un `Blob` no es JSON referenciable); el control
+  (`button`/`link`) queda deshabilitado por instancia mientras la descarga está en curso. `downloadOperation` admite
+  `onSuccess`/`onError` con la misma semántica que `executeOperation`, primera vez que `link` gana lifecycle
+  post-ejecución. La orquestación "ejecutar → decidir éxito/error → disparar `onSuccess`/`onError`", antes duplicada
+  entre `button` y `form`, se factorizó en un helper compartido (`runActionOutcomeWithLifecycle`) para que `link` no
+  añadiera una tercera copia del mismo patrón.
+- `2026-08-27-14-37-accordion-tabs-icon`: extiende el mecanismo de icono decorativo Lucide React (ya vigente en
+  `button`/`link`/`stat`/`heading`/`paragraph`) a `accordion` (`props.icon`, nuevo string opcional) y a cada item de
+  `tabs.props.items` (`icon`, nuevo campo opcional por item), en ambos casos con posición fija a la izquierda del
+  label, sin `iconPosition` configurable. En `accordion`, el icono se agrupa con el label en el mismo bloque flex de
+  la cabecera; el chevron de apertura/cierre se mantiene siempre pinneado a la derecha, sin relación con `icon`. En
+  `tabs`, cada item resuelve su `icon` de forma independiente (un item puede declararlo y otro no), igual en
+  orientación `horizontal` y `vertical`. Un nombre de icono que no resuelve a un icono Lucide conocido se ignora
+  silenciosamente en ambos nodos (mismo comportamiento que en el resto del catálogo): el label se renderiza igual,
+  sin error. Validación de config: `accordion.props.icon` y `tabs.props.items[].icon` solo exigen tipo `string`; la
+  resolución del nombre a un icono Lucide real es responsabilidad del render, no de la validación. Soporte en el
+  editor visual: `accordion` recibe el widget de búsqueda de iconos (`IconPickerPropertyField`) de forma automática
+  por la convención de nombre de campo ya existente (`resolveIconPropsSchema`, séptimo nodo cubierto sin cambios en
+  el dispatcher); `tabs.props.items[].icon` queda fuera de esa convención automática (anidado dentro de un array) y
+  requiere un swap explícito del mismo sentinel `{ 'x-widget': 'icon' }` en `resolveTabsPropsSchema`. Fuera de
+  alcance: tamaño/color/intercambio del icono más allá del nombre Lucide, iconos en el cuerpo del accordion o panel
+  de tabs, e icono derivado dinámicamente de una colección (`queries.*`).
+- `2026-08-25-14-49-gallery-node`: nuevo nodo hoja `gallery` en el catálogo, colección de imágenes con dos orígenes
+  mutuamente excluyentes por instancia: `props.images` (lista literal `{src, alt}`, misma semántica que
+  `image.props.src`/`alt`) o `props.source` (colección dinámica resuelta desde `queries.*`/`item.*`, mismo contrato
+  de `source`/`key` que `repeater.props.items`, reutilizando sin modificar `resolveCollectionSourceItems` y
+  `validateCollectionSource`). Dentro de `source`, un submodo de carga por foto también mutuamente excluyente:
+  `mode: 'src'` (ruta relativa/interpolación por item, igual que `image.props.src`) o `mode: 'fetch'` (petición HTTP
+  binaria por foto, mismo contrato `url`/`method`/`headers`/`body` que `image.props.fetch`, resuelta con `item.*`
+  como contexto); en `fetch`, un campo opcional `idField` (añadido en T9, posterior al cierre inicial de T1-T7)
+  declara en qué propiedad del item está el id de control de cada elemento — si un elemento no resuelve un id
+  válido (string no vacío o number), se omite sin disparar la petición, sin exponer ese id como una referencia
+  nueva (la interpolación de `fetch` sigue leyendo solo `item.*`). Dos modos de visualización por instancia,
+  también obligatorios y mutuamente excluyentes: `display.mode: 'paginated'` (reutiliza sin modificar el mismo
+  modelo de paginación local de `repeater`/`table`, `createCollectionPaginationModel`/`CollectionPaginationControls`)
+  o `display.mode: 'carousel'` (1-3 imágenes visibles simultáneamente, autoplay y loop opcionales desactivados por
+  defecto, construido sobre `embla-carousel-react` + `embla-carousel-autoplay`, librería headless MIT elegida
+  porque no impone CSS propio — el markup de slides/flechas es JSX + Tailwind del propio proyecto). Lightbox propio
+  (no una instancia del nodo `modal`, para que cada iteración de `gallery` dentro de un `repeater` tenga su lightbox
+  aislado sin pasar por el registro global `openModal`/`closeModal`) con navegación anterior/siguiente sobre el
+  conjunto completo de fotos (no solo las visibles), cierre por botón/clic fuera/`Esc`; reutiliza la misma unidad de
+  resolución por-item que las tiles visibles (`useImageFetchSource`), de forma que el número de peticiones `fetch`
+  simultáneas queda acotado a "tiles renderizadas + como máximo una foto de lightbox", nunca al tamaño de la
+  colección — sin foco atrapado ni navegación por flechas de teclado dentro del lightbox (fuera de alcance v1
+  explícito). Code-splitting en dos niveles: a nivel de nodo (mismo patrón dual `eagerMap`/`lazyMap` que el resto
+  del catálogo) y, dentro del propio módulo de `gallery`, un `React.lazy` adicional solo para la vista de carrusel
+  (única que importa `embla`), de forma que una instancia en modo `paginated` nunca descarga ese chunk. Caso límite
+  no cubierto por el contrato textual heredado de `repeater`: declarar `source.key: "$key"` en origen dinámico
+  siempre resuelve a ninguna key válida y deja la galería sin fotos sin error, porque el origen dinámico de
+  `gallery` solo resuelve colecciones de forma array (nunca la variante objeto/diccionario que sí soporta
+  `repeater`). Soporte completo en `dev-editor`: selector "Origen" (Estático/Dinámico, mismo patrón de segmentos que
+  el "Modo" de `container`) y, en Dinámico, un widget dedicado para `props.source` con su propio sub-selector
+  `mode` (`src`/`fetch`) que reutiliza el editor genérico ya existente de `image.props.fetch`.
+- `2026-08-25-12-01-table-row-references`: nuevo namespace de referencia `row.*` para el contexto de fila propio de
+  `table`, que deja de usar `item.*` (cambio de comportamiento intencional, sin compatibilidad retroactiva ni alias).
+  `row.*` navega el dato de la fila actual con la misma semántica de segmentos anidados que `item.*`, disponible en
+  celdas-nodo en modo dinámico y en celdas string (manual y dinámico, con forma completa e interpolación parcial
+  `{{row...}}`). Nueva referencia sintética `row.$index`: entero 1-based con la posición de la fila dentro de la
+  vista actualmente visible (tras filtros, ordenación y paginación local), disponible en ambos modos y ambos tipos
+  de celda; en modo manual es el único segmento de `row.*` accesible (no hay dato subyacente que navegar). Resuelve
+  el sombreado que existía hoy cuando una `table` dinámica vive dentro de un `repeater`: el `iterationContext` que
+  construye `table-layout-node.tsx` para resolver celdas pasa de sustituir por completo el contexto ambiental
+  recibido a componerlo por spread (`{ ...iterationContext, row, rowIndex }`), de forma que `item.*` del `repeater`
+  ancestro más cercano sigue resolviendo dentro de las celdas de la `table` anidada sin que `row` lo pise; efecto
+  colateral necesario: en modo manual las celdas-nodo dentro de un `repeater` recuperan acceso a `item.*` del
+  ancestro, que hoy se perdía por completo en ese modo. `RuntimeIterationContext`
+  (`src/runtime/runtime-references/runtime-reference-resolver.ts`) gana los campos hermanos opcionales `row`/
+  `rowIndex` junto a `item`/`key`/`itemKey`/`itemIndex` (estos últimos pasan de obligatorios a opcionales, cambio de
+  tipo compatible hacia atrás). `row` se registra en `src/config/runtime-reference-syntax.ts` como namespace
+  condicional de primera clase (`allowRowReference`, mismo patrón que `allowItemReference`), con `row.$index` como
+  única forma sintética soportada (no existe `row.$key`: `table` no itera un diccionario). Como el pipeline local de
+  `table` (`processTableRows`) filtra/ordena sobre el valor de celda ya resuelto como string antes de conocerse la
+  posición final visible, las celdas string se resuelven dos veces: una vez como clave de filtro/orden (sin
+  `row.$index` correcto) y otra vez, tras aplicar filtro+orden+paginación, con el `rowIndex` final — las
+  celdas-nodo no necesitan doble resolución porque ya se renderizan perezosamente sobre las filas visibles.
+  `table.props.rows.source: 'item.*'` (el item del `repeater` ambiental que provee el array de filas) no cambia: es
+  una familia de referencia distinta del contexto de fila.
+- `2026-08-25-09-27-form-steps`: nuevo nodo estructural `steps` en el catálogo, exclusivo como descendiente de
+  `form` (a diferencia de `tabs`/`accordion`, válidos también fuera de `form`; validado con un caso explícito propio
+  en los dos walkers de `validate-form-semantics.ts`, sin forzarlo dentro de `FORM_ONLY_LEAF_NODE_TYPES`, pensado
+  para nodos hoja con `fieldId`). `props.items` (mismo shape que `tabs.props.items`: `label`/`visibility`/`children`)
+  con al menos un elemento, `props.variant` (`horizontal`/`vertical`/`progress`, default `horizontal`) y tres textos
+  planos opcionales (`backLabel`/`nextLabel`/`submitLabel`, con interpolación `{{...}}`) para los botones de
+  navegación que el propio nodo genera automáticamente. Navegación gateada por validación: "Siguiente" solo avanza
+  si el paso activo valida con el mismo motor ya existente (`validateFormFields`, sin motor nuevo) acotado a sus
+  campos visibles; "Atrás" y el clic en un paso ya alcanzado en el indicador (`horizontal`/`vertical`) nunca validan
+  y son siempre libres; no se puede saltar a un paso todavía no alcanzado. El botón del último paso reutiliza el
+  `submitAction` del `form` padre vía `<button type="submit">`, sin mecanismo de submit nuevo. Divergencia de ciclo
+  de vida con `tabs`: para descubrimiento, validación de submit y payload, `steps` se comporta exactamente igual que
+  `tabs` (todos los items visibles participan, independientemente del paso activo), pero la inicialización al
+  montar el `form` es lazy por paso en vez de eager — cada campo descubierto dentro de `steps` lleva una marca
+  `stepGroup` que el efecto de inicialización eager de `FormNode` usa para excluirlo, dejando su inicialización a un
+  efecto propio de `StepsNode` con clave el paso activo. El recorrido recursivo de descubrimiento de campos, antes
+  privado de `form-layout-node.tsx`, se extrae a un módulo reutilizable
+  (`src/runtime/nodes/runtime-form-field-collection.ts`) para que `StepsNode` invoque la misma lógica sobre el
+  subárbol de un paso concreto sin duplicar el manejo de `container`/`repeater`/nodos anidados. Estilo por variante
+  centralizado en un lookup `Record<Variant, ...>` (`runtime-node-styling-steps.ts`) solo para la porción de
+  indicador; `horizontal`/`vertical` reutilizan la técnica de "tab conectado" ya usada por `tabs` (fusión de borde
+  entre el paso activo y el panel) con marcador circular numerado por paso (activo/visitado/no alcanzado);
+  `progress` no tiene indicador clicable, solo texto "Paso X de Y" y el botón "Atrás". Sin soporte en `dev-editor`
+  (fuera de alcance), sin `defaultStep`, sin persistencia del paso activo entre `pageEntry`, sin generación dinámica
+  de pasos desde `queries.*`.
+- `2026-08-25-09-15-autocomplete-node`: nuevo nodo de formulario `autocomplete`, campo de texto que filtra/busca entre
+  opciones (estáticas o dinámicas) para seleccionar uno o varios valores mostrados como chips en modo múltiple.
+  `props.items` reutiliza exactamente los tres shapes cerrados de `select` (manual literal, manual escalar, dinámico
+  unificado); el shape estático y `source: 'item.*'` filtran en cliente por substring case-insensitive del `label`
+  respetando `props.minChars`, mientras que `source: 'queries.{queryName}.data'`/`.data.*` dispara la ejecución de la
+  operación asociada mientras el usuario escribe — cuarta superficie de disparo de `queries.*` del runtime, junto a
+  `preloads`, botón y submit. El disparo vive en un módulo `runtime-*` dedicado (`runtime-search-trigger.ts`, fuera de
+  `runtime-actions/` porque no traduce una acción declarada en el config) con debounce fijo de `300ms` no configurable
+  y gate por `minChars`, delegando la ejecución real en la misma fachada `executeQueryOperation` ya usada por botones y
+  submit. El texto en curso viaja a la operación de dos formas distintas según cardinalidad, sin ampliar ningún
+  contrato declarativo: en selección simple, `forms.{formId}.{fieldId}` refleja el texto tal cual se escribe (con o
+  sin `allowFreeText`) para que la operación lo referencie directamente; en selección múltiple, viaja por
+  `requestParams.query`/`requestParams.body` bajo la clave `props.searchParamName` (opcional, default `'search'`,
+  añadido tras el cierre inicial de `design.md` al detectarse que una clave fija sin configurar reproducía el mismo
+  problema que la decisión original había descartado evitar). Cada instancia rastrea localmente la `requestSignature`
+  de su última búsqueda disparada y solo pinta `queries.{queryName}.data` como sugerencias cuando coincide con la
+  vigente — límite de producto aceptado y documentado: instancias que comparten `queryName` (p. ej. dentro de un
+  `repeater` sin `item.*`) no buscan de forma verdaderamente independiente y simultánea. A diferencia de
+  `select`/`radioGroup`/`checkboxGroup`, el shape dinámico de `autocomplete` invierte la regla de "limpiar valor si
+  desaparece de la colección resuelta": una vez fijado un valor o añadido un chip, persiste aunque una búsqueda
+  posterior no lo incluya, porque `queries.{queryName}.data` representa solo las sugerencias de la búsqueda más
+  reciente, no un catálogo completo; el shape estático manual sí seguía limpiando como siempre. `allowFreeText`
+  (default `false`) reutiliza la semántica de `input` en simple (valor efectivo = texto en vivo, sin confirmación) y
+  añade chip por confirmación explícita (Enter) en múltiple. Patrón ARIA de combobox con sugerencias (`role=combobox`,
+  `aria-expanded`, `aria-controls`, `listbox`/`option`, `aria-activedescendant`) y asociación label↔control vía
+  `htmlFor` explícito (no wrapper implícito, para no interferir con los botones "Quitar" de los chips). Efecto
+  colateral corregido en `runtime-api-request.ts`: una operación `GET` nunca lleva body en la petición final aunque
+  `requestParams.body` reciba un valor, evitando que `fetch` la rechazase de forma silenciosa. Fuera de alcance:
+  `emptySubmitValue`, resaltado del texto coincidente en sugerencias, paginación de resultados y widget dedicado de
+  edición en el panel de propiedades del editor visual.
+- `2026-08-24-12-58-map-node`: nuevo nodo hoja `map` en el catálogo, mapa interactivo `Leaflet`/`react-leaflet` sobre
+  tiles de OpenStreetMap, sin API key. `props.center`/`props.zoom`/`props.height` opcionales (defaults Pamplona,
+  zoom 13, altura `md`, resueltos en el componente de render, no en validación). Dos orígenes de marcadores:
+  `props.markers` estático (lista literal `{lat, lng, label}`) o `props.markerSources` dinámico (una o varias
+  fuentes simultáneas sobre `queries.*`, mismo contrato de `source` que `repeater.items.source` más `position.lat`/
+  `position.lng`/`label` como ruta relativa o interpolación, análogo a `select` dinámico). Si se declaran ambos,
+  `markerSources` prevalece y `markers` se descarta en la normalización, sin rechazar el config (decisión revisada
+  tras la implementación inicial, que sí rechazaba la combinación). Cada fuente dinámica se resuelve con
+  `resolveMapMarkerSourceItems` (nueva función pura en `runtime-collection-sources.ts`, reutiliza
+  `resolveCollectionSourceItems`); un item sin coordenadas válidas se omite en silencio sin romper el resto del mapa.
+  Diferenciación visual por fuente con la paleta semántica cerrada de seis colores ya usada por `badge`/`alert`/
+  `stat`, asignada por ciclo cuando no se declara `color` explícito. Marcador con icono `divIcon` de SVG inline
+  (evita el problema conocido de `L.Icon.Default` con bundlers) y popup con la etiqueta al pulsar, sin ninguna
+  acción del catálogo. `leaflet`/`react-leaflet` se cargan con code-splitting propio (`React.lazy`, CSS como
+  side-effect del módulo diferido) para que solo las páginas con `map` paguen su peso de bundle; `vite.config.ts`
+  marca `leaflet` como libre de efectos secundarios para tree-shaking porque su build CJS sin `sideEffects: false`
+  lo mantendría alcanzable desde el entrypoint pese al lazy-loading. Gate de bundle (`runtime-nodes-bundle.test.ts`)
+  ampliado para verificar que la clase raíz `leaflet-container` no aparece en el chunk inicial. Sin soporte en
+  `dev-editor` (fuera de alcance), sin clustering/rutas/geolocalización.
+- `0135-dev-editor-query-feedback-accordion`: tercera y última entrega del rediseño del panel de propiedades del
+  editor visual (F-C, sucesora de `0133`/F-A y `0134`/F-B); sustituye, dentro de la pestaña `Queries`, el editor
+  genérico de objeto de `queryStateFeedback.states` por un acordeón dedicado (`QueryStateFeedbackAccordionPropertyField`,
+  nueva entrada `'query-state-feedback-accordion'` en el mismo `WIDGET_REGISTRY` del dispatcher que ya usan
+  `layout-span`/`choice-items`). Una fila por cada clave de `states` ya presente, siempre en el orden fijo
+  `idle → loading → error → empty → success`; un selector "Añadir estado…" ofrece de alta las claves ausentes con el
+  modo por defecto que reproduce el comportamiento implícito ya vigente (`success` → `Mostrar`, resto → `Ocultar`,
+  sin cambio de comportamiento visible), y "Quitar" por fila borra la clave (o la subsección `states` entera si era
+  la última). Cada fila expandible/colapsable (`aria-expanded`) muestra un selector de tres modos
+  `Mostrar`/`Ocultar`/`Fallback` (reutiliza `SegmentedTogglePropertyField`); el modo `Fallback` produce un commit
+  válido (`{ mode: 'fallback', fallback: [...] }`) pero se mantiene inerte en esta entrega — sin ningún control de
+  inserción/edición/borrado de nodos, solo una nota remitiendo a Monaco — y conserva el mismo array `fallback` al
+  hacer ida y vuelta entre modos dentro de la misma sesión de edición del nodo, gracias a una caché por estado
+  (`fallbackCacheByState`) que vive en `LayoutCanvasPropertiesPanel`, no en el widget (se desmonta en cada cambio de
+  pestaña), junto con el conjunto de filas expandidas; ambos expuestos al widget vía un contexto propio
+  (`QueryStateFeedbackAccordionWidgetContext`) y reiniciados solo al cambiar de nodo seleccionado. Un `mode` fuera de
+  catálogo (introducido a mano en Monaco) no rompe el widget: la fila queda sin ningún segmento activo hasta que el
+  usuario elige uno. Mismo pipeline de commit/validación (`validateRuntimeConfig`) y mismo aviso `role="alert"` ante
+  rechazo que el resto del panel. El campo `query` no cambia: sigue como fila de texto simple. Sin cambios en el
+  contrato JSON de `queryStateFeedback`, su validación, ni en su semántica de producción. Edición del contenido de
+  `fallback` queda explícitamente diferida a una entrega futura.
+- `0131-dev-editor-external-config-save`: primera vía real de persistencia del config JSON del editor de
+  desarrollo hacia un backend externo (hasta ahora, "Aplicar" solo actualizaba `currentConfig` en memoria de
+  sesión). Añade un nuevo bloque de config de endpoints externos declarado en runtime (`data-endpoints-config` /
+  `src/dev/endpoints-config.json`, mismo patrón atributo-de-host/fichero-local que `data-config`): una `baseUrl`
+  común más, por operación (`searchTexts`, `getTranslationsBatch`, `saveConfig`), su `path`, un `tokenId` que
+  resuelve contra `tokens.*` del config activo, y — solo para `saveConfig` — los tres identificadores de negocio
+  fijos (`idGestion`, `idSeccion`, `idObjetoOcurrencia`) que exige la operación real de PlataGes
+  (`ActualizarJSONConfiguracionEnPlataGes`). Las tres operaciones se declaran de forma independiente; sin la
+  operación declarada, o con un `tokenId` no resoluble, el control afectado queda deshabilitado con mensaje
+  explicativo, sin bloquear el resto del editor (una config sintácticamente inválida se trata igual que ausente).
+  Añade el botón "Guardar" a la barra flotante (con atajo Ctrl+S/Cmd+S global, `preventDefault` siempre activo
+  mientras `DevRuntime` está montado) que serializa `currentConfig` como JSON minificado y lo envía con
+  `Authorization: Bearer <token resuelto>`, con feedback `role="status"`/`role="alert"` y guard contra doble envío
+  mientras la petición está en curso. Migra las dos operaciones de Traducciones (`0130`) para resolver `baseUrl` y
+  token desde esta misma config en vez del host fijo `VITE_PLATAGES_API_BASE_URL` y el desplegable manual de
+  token, que se retira; el `path` declarado para esas dos operaciones queda sin usar en la URL real (siguen las
+  rutas internas fijas del proveedor) — solo la operación de guardado usa su `path` íntegro. El transporte HTTP y
+  el mapeo de errores de PlataGes se extraen a un cliente compartido (`platages-http-client.ts`), reutilizado por
+  el proveedor de guardado (`save-config-provider.ts`) y por el de Traducciones. Exclusivo del editor de
+  desarrollo: sin cambios en el runtime de producción ni en su contrato observable.
+- `0130-dev-editor-translations-panel`: nueva sección de nivel superior "Traducciones" en la barra flotante del
+  editor visual (sexto botón del selector de dominio, entre `Tokens` y `Shell`; mismo tipo de panel de formulario
+  dedicado que `Shell`, sustituye el canvas al seleccionarse), que gestiona el bloque raíz `translations` sin editar
+  JSON a mano en Monaco. Cubre gestión manual completa (tabla con una fila por clave y una columna por idioma —
+  unión de idiomas presentes en cualquier entrada —, alta con clave no vacía/no duplicada, edición de celda con
+  commit al perder el foco y borrado de la clave de idioma en vez de string vacío al dejar una celda en blanco,
+  borrado de entrada completa, añadir columna de idioma nueva) y sincronización de solo lectura con un proveedor
+  externo de gestión de textos ya identificado para esta instalación (PlataGes, `pre-frontapi.pamplona.es`): acción
+  "Buscar y añadir" (busca por coincidencia parcial, marca como "Ya existe" y bloquea selección de un resultado cuyo
+  identificador ya es clave de `translations`, añade los seleccionados con clave = identificador y solo el idioma
+  por defecto del proveedor poblado) y acción "Refrescar todo" (recopila las claves de `translations` que son
+  literalmente un entero válido, las envía en un único lote, sobrescribe por idioma usando una tabla fija de mapeo
+  código de proveedor → código de app `1 → "es"`, `2 → "eu"`, nunca borra entradas, deja intactas las claves sin
+  respuesta, atómica: un fallo de red no aplica ningún cambio). Ambas acciones requieren elegir un `tokens.*` ya
+  declarado en un desplegable como Bearer; sin ningún token declarado quedan deshabilitadas con mensaje explicativo.
+  Toda mutación confirmada pasa por el mismo pipeline commit/validación/patch de clave raíz
+  (`commitTranslationsMutation` en `dev-runtime.tsx`, análogo a `commitShellMutation`) que ya usan `Layout` y
+  `Shell`, con el mismo patrón de aviso `role="alert"` (`CommitRejectionBanner`) ante un commit rechazado. El
+  cliente HTTP del proveedor externo (`createPlatagesTranslationsProvider`, interfaz `TranslationsProvider`) vive
+  aislado en un módulo propio (`src/dev-runtime/translations-panel/translations-provider.ts`), separado de la UI y
+  del pipeline de commit, para que sustituirlo por otro proveedor en el futuro sea un cambio localizado, sin
+  construir todavía una capa de configuración genérica de "proveedores de traducción". Exclusivo del editor de
+  desarrollo: sin cambios en el runtime de producción ni en el contrato de `translations` consumido por
+  `{{translations.*}}`.
+- `0129-dev-editor-icon-widget`: sustituye el input de texto libre de todo campo `icon` del editor visual (panel
+  de propiedades de `Layout` y panel `Shell`) por un widget reutilizable de búsqueda y selección
+  (`IconPickerPropertyField`, presentacional puro, `{ label, value, onChange }`): input de búsqueda con filtro
+  substring case-insensitive sobre el catálogo completo de nombres válidos de `lucide-react` (derivado del
+  registro canónico `icons` del paquete, no de su namespace completo con alias `Icon`-suffixed, mismo criterio de
+  validez que ya usa `IconNode` en runtime), cuadrícula de resultados paginada (4 columnas, 60 celdas por página,
+  del orden de mil setecientas entradas en total) con semántica accesible `role="grid"`/`gridcell` (no
+  `listbox`) y navegación en dos ejes con flechas, clamp en los bordes de página, roving tabindex y `ArrowDown`
+  desde el input para entrar a la cuadrícula. La cuadrícula permanece desmontada hasta que el input recibe foco;
+  un chip de previsualización (icono + nombre) sigue mostrando el valor reconocido con la cuadrícula cerrada.
+  Seleccionar una celda (click/Enter) aplica el nombre y cierra la cuadrícula devolviendo el foco al input, sea o
+  no un cambio real (idempotente sin `onChange` al reelegir la celda ya activa); `Escape` o un click fuera del
+  widget también cierran sin aplicar cambio. Un valor no reconocido se muestra sin preview, con una nota "Valor
+  actual" y sin bloquear la búsqueda — misma degradación silenciosa que producción. Un botón "Quitar icono"
+  aplica `undefined`. Integración en `Layout`: el hook `x-widget` del dispatcher (`WIDGET_REGISTRY`, clave
+  `'icon'`) se activa por convención de nombre de campo (`resolveIconPropsSchema`: cualquier nodo cuyo `props`
+  generado declare `icon` recibe el widget) en vez de una lista explícita de `node.type`, cubriendo los seis
+  nodos ya existentes (`button`, `heading`, `paragraph`, `link`, `stat`, `input`) y heredable automáticamente por
+  cualquier nodo futuro con la misma forma. Integración en `Shell`: `MenuItemFieldsEditor` y
+  `SidebarItemFieldsEditor` montan el mismo componente directamente (fuera del hook `x-widget`, exclusivo de
+  `Layout`) para `menuItem`/`menuItemChild`/`sidebarItem`, con el mismo pipeline de commit y patrón de aviso
+  `role="alert"` ya vigente en ambos paneles. Sin cambios en el contrato JSON de `icon` ni en su resolución o
+  degradación en producción o modo Visual.
+- `0127-dev-editor-span-widget`: sustituye el editor genérico de `layout.span` en el panel de propiedades del
+  editor visual (modo Editor) por un widget dedicado (`LayoutSpanPropertyField`), registrado en el mismo
+  `WIDGET_REGISTRY` del dispatcher que ya usa `choice-items` (`0108`) bajo la clave `'layout-span'`, sin introducir
+  un segundo mecanismo de extensión. La subsección `Layout` completa (no solo el campo `span`) pasa a mostrarse
+  únicamente cuando el nodo seleccionado tiene al menos un `container` ancestro, a cualquier profundidad, con
+  `props.columns` declarado — sin ese ancestro no hay ningún campo de respaldo para `layout.span`, ni el widget ni
+  el editor genérico anterior. El widget muestra siempre las seis filas `base`/`sm`/`md`/`lg`/`xl`/`2xl`, cada una
+  con un input numérico y un indicador `/ N` cuyo denominador se resuelve del `container` ancestro más cercano
+  reutilizando la misma cascada mobile-first ya usada por el runtime para `container.props.columns` responsive
+  (`resolveAncestorContainerColumns`, nuevo módulo en `src/dev-runtime/layout-canvas/`), sin duplicar esa lógica.
+  Una fila sin clave explícita muestra en gris el valor heredado de esa misma cascada aplicada al propio
+  `layout.span` y no expone botón "Quitar"; una fila con clave explícita sí lo expone, y quitar la última clave
+  restante commitea `layout.span` como `undefined` en vez de un mapa vacío `{}`. Un `layout.span` como entero plano
+  se convierte a mapa responsive sembrado con `{ base: <entero previo> }` en la primera edición de cualquier fila.
+  Cada fila valida su commit con el mismo pipeline (`validateRuntimeConfig`) y sigue el mismo patrón de aviso
+  `role="alert"` por fila ya vigente en el resto del panel, con limpieza independiente por fila. El commit del
+  widget (`commitLayoutSpan`, `commit-layout-span.ts`) reutiliza el mismo `onCommitNodeUpdate` del panel sin
+  introducir un canal de mutación paralelo. Sin cambios en el contrato JSON de `layout.span` ni
+  `container.props.columns`, ni en su validación; sin cambios de comportamiento en producción ni en modo Visual.
+  Primera de una posible serie de widgets dedicados para el editor de nodos, tratada deliberadamente como piloto
+  acotado a este único campo.
+- `0124-app-shell-layout-appearance`: elimina el contenedor tipo "tarjeta" que envolvía todo el runtime (borde,
+  sombra, fondo de superficie, padding perimetral vía `rounded-shell`/`p-4 sm:p-6 lg:p-8`) y el límite de ancho
+  centrado (`max-w-shell`, incluida la fila interna de `shell.header`), para que el runtime ocupe el 100% del ancho
+  y alto de su contenedor de montaje tanto en standalone como embebido; también retira el fondo general decorativo
+  (gradiente de `body` y `background: var(--color-app-background)` de `:root`) y el alto mínimo forzado
+  (`min-h-screen`, `body`/`#root { min-height: 100vh }`). `--color-app-background` sigue existiendo en la paleta
+  (consumido por otros nodos, p. ej. el estado activo de `tabs`) pero deja de aplicarse como fondo general;
+  `--radius-shell` queda declarado sin consumidor. Introduce `getAppShellContentPaddingClassName` (`p-6 sm:p-8
+  lg:p-10`), aplicado solo al área de contenido (con o sin sidebar) y al bloque de error de config, nunca al
+  chrome. Nuevo campo opcional `shell.scrollBehavior` (`"page"` | `"fixed"`, default `"page"`, validado con
+  `z.enum` dentro del `.strict()` ya existente de `shellSchema`): en `"page"` el comportamiento es idéntico al
+  previo (página completa hace scroll, header `sticky`); en `"fixed"`, `AppShell`/`dev-runtime.tsx` aplican una
+  cascada `overflow-hidden` (raíz) → `flex-1 min-h-0` (fila del body) → `flex-1 min-h-0 overflow-y-auto` (envoltorio
+  de contenido) para que el chrome quede fijo y solo el contenido de página haga scroll interno; `AppShellHeader`
+  pasa a aceptar `ref` como prop normal (React 19, sin `forwardRef`) junto con una nueva prop `pinned` que resuelve `sticky top-0` frente a flujo normal vía un lookup
+  map (`appShellHeaderVariantClassNameMap`, sin rama `if/else`, siguiendo `conventions.md`). `shell.sidebar`
+  mantiene scroll propio independiente de `scrollBehavior` (FR11): en `"page"` se posiciona `sticky` bajo el header
+  con su alto acotado al viewport vía la variable CSS `--shell-sidebar-sticky-top`, alimentada por una medición en
+  tiempo de ejecución del alto real del header (`useLayoutEffect` + `ResizeObserver` en `AppShell`/`dev-runtime.tsx`,
+  con `getBoundingClientRect()` síncrono antes del primer paint para evitar un flash a `top: 0px`); en `"fixed"` el
+  sidebar ya queda confinado por la cascada flex del chrome fijo y solo necesita `overflow-y-auto` propio, sin
+  `sticky`. Como efecto colateral de que el `<nav>` del sidebar pase a ser su propio contenedor con scroll,
+  `SidebarRailFlyout` (modo rail) cambia su panel de `position: absolute` (que quedaría recortado por el nuevo
+  `overflow-y-auto` del sidebar) a `position: fixed`, con coordenadas medidas vía `getBoundingClientRect()` del
+  trigger al abrirse (variables CSS `--sidebar-rail-flyout-top`/`--sidebar-rail-flyout-left`) y cierre automático
+  ante cualquier scroll de un ancestro (listener de `scroll` en `document` con `capture: true`, ya que la posición
+  medida no se sigue en vivo). `src/tests/setup.ts` añade un stub global de `ResizeObserver` (jsdom no lo
+  implementa) para que cualquier test que monte un `shell.header` no vacío no falle por su ausencia, sobreescribible
+  por fichero con `vi.stubGlobal`. Nueva suite `app-shell-scroll-behavior.test.tsx` cubre las cinco combinaciones de
+  `scrollBehavior`/header/sidebar end-to-end.
+- `0123-app-shell-sidebar`: nuevo campo opcional `sidebar` dentro del bloque `shell` ya existente (`0122`), hermano
+  aditivo de `header`, con árbol de navegación lateral de profundidad arbitraria y un modo compacto ("rail", solo
+  iconos). `shell.sidebar` admite `items` (array opcional de `sidebarItem`) y `defaultCollapsed` (boolean,
+  default `false`). A diferencia de `menuItem`/`menuItemChild` del header (dos tipos Zod fijos, capados a un nivel),
+  `sidebarItem` es un único tipo genuinamente recursivo (`z.lazy`): `label` obligatorio, `icon`/`visibility`
+  opcionales, y exactamente uno de `href`, `action` (`navigateTo`/`goBack`) o `children` (array no vacío de
+  `sidebarItem`, sin tope de profundidad). Validación cruzada recursiva añadida a `src/config/validate-shell.ts`
+  (`validateSidebarItemCrossRefs`), reutilizando sin modificar la lógica de visibilidad ya genérica del header.
+  Cuando coexisten `header` y `sidebar`, el header ocupa el ancho completo arriba y el sidebar arranca debajo
+  ocupando la altura restante; solo `sidebar` ocupa la altura completa del viewport. Nuevo componente
+  `AppShellSidebar` (`src/runtime/runtime-shell/`), hermano de `AppShellHeader`, montado una única vez por sesión
+  con el mismo ciclo de vida (fuera de `pageEntry`). Expansión de ramas inline sin exclusión mutua, con
+  auto-expansión de ancestros al navegar que **une** paths al conjunto ya expandido sin resetearlo nunca (una rama
+  expandida/colapsada manualmente por el usuario sobrevive a la navegación salvo que deba reabrirse por contener
+  al nuevo item activo). El estado de colapso (rail) y de expansión de ramas es estado local de React, no un nuevo
+  dominio de `runtime-state/`, porque el punto de montaje ya es estable durante toda la sesión. El estado "activo"
+  (`computeActiveSidebarItemIds`) se deriva en cada render igual que el header, pero propagado a ancestros de
+  cualquier profundidad. En modo rail, una rama se abre como flyout (`SidebarRailFlyout`) reutilizando el mismo
+  patrón de accesibilidad del desplegable del header (click-fuera/Esc con retorno de foco/flechas), con la
+  particularidad de que un hijo de profundidad 3+ dentro del flyout se expande inline en el mismo panel en vez de
+  abrir un segundo flyout anidado. Un `sidebarItem` sin `icon` en rail muestra como fallback la inicial mayúscula
+  de su `label` resuelto. El editor visual añade un toggle "Sidebar activo" (independiente de "Header activo": se
+  corrigió además una regresión donde desactivar/activar una sección de `shell` podía borrar la otra ya
+  configurada — 0123-T7) y un componente de lista recursivo (`SidebarItemListEditor`) que se renderiza a sí mismo
+  para los `children` de cualquier item, con reordenación por arrastre limitada al mismo nivel/mismo padre.
+- `0122-app-shell-header`: nuevo bloque raíz opcional `shell`, hermano de `api`/`pages`/`initialPage`/`preloads`/`tokens`/`translations`, que agrupa chrome de aplicación compartido y persistente entre páginas; en esta feature admite únicamente `shell.header` con cuatro elementos independientes y opcionales (`logo`, que reutiliza literalmente el contrato de `props` del nodo `image`; `title`, texto resuelto como referencia dinámica; `menu`, array de `menuItem`; `actions`, array restringido a `link`/`button`). `menuItem` declara `label` obligatorio, `icon` y `visibility` opcionales, y exactamente uno de `href` (contrato de `link.props.href`), `action` (`navigateTo`/`goBack`, contrato de `link.props.action`) o `children` (array no vacío de `menuItem` sin `children` propio, máximo un nivel de anidamiento); `menuItem.visibility` reutiliza el contrato transversal salvo `item.*`, no soportado a nivel de shell. Validación cruzada en módulo dedicado `src/config/validate-shell.ts` (orquestado desde `validate-runtime-config.ts`) con política de mensajes propia (`Shell configuration is invalid at "shell..."`), sin reutilizar el formato de errores de `pages[].layout`. El header se renderiza una única vez por sesión en `src/runtime/runtime-shell/`, fuera del ciclo de vida de `layout-renderer`/`pageEntry`, con disposición izquierda→derecha (`logo`, `title`, `menu`) y `actions` siempre al extremo derecho. El desplegable de un `menuItem` con `children` es un componente propio sin dependencia nueva (`position: absolute`, `aria-haspopup`/`aria-expanded`/`role="menu"`, apertura por click, cierre por click fuera/Esc/selección, navegación por flechas y Home/End). El estado "activo" del menú (raíz y padres de un hijo activo) es un valor derivado en cada render comparando `action.navigateTo.pageId` contra la página visible, sin nuevo dominio de estado. El editor visual añade una quinta pestaña de dominio "Shell" en la barra flotante (junto a `Layout`, `Api`, `Páginas`, `Tokens`) que sustituye el canvas por un formulario dedicado (`ShellConfigPanel`): toggle de activación, edición de logo/título, lista de menú con reordenación por arrastre limitada a un mismo nivel (raíz o hijos de un mismo padre, sin `@dnd-kit/sortable`), y lista de acciones reordenable con botones subir/bajar que reutiliza el panel de propiedades completo de `Layout`. El commit de Shell reutiliza el mismo pipeline de validación y parcheo selectivo del canvas (`patchRootKey` sobre la clave raíz `shell`), incluida la misma guardia de cambios aplicados y el mismo patrón de aviso de commit rechazado (`CommitRejectionBanner`, extraído a módulo compartido). Diseñado para que una futura `shell.sidebar` (Spec B) sea aditiva sin reestructurar `shell.header`.
+- `0121-select-empty-submit-fallback`: nuevo prop opcional `select.props.emptySubmitValue` (literal escalar `string | number`), exclusivo de selección simple (`multiple` ausente o `false`), que sustituye el `''` enviado en el payload de submit cuando el campo no tiene selección. La sustitución ocurre únicamente al construir el payload de submit (`api.body`/`api.query`/`api.headers` y los canales equivalentes de `submitAction`) mediante un nuevo canal opcional `RuntimeApiEmptySubmitValues` (formId + mapa fieldId→valor) que atraviesa `runtime-api-request.ts`/`runtime-api-payload-resolver.ts`, recolectado en `form-layout-node.tsx` recorriendo el subárbol del formulario (`container`, `repeater.props.template`, `tabs[].children`); el valor se normaliza a string en el payload final. No cambia el store (sigue en `''`) ni la UI (sigue mostrando el placeholder), no afecta a `visibility`/`queryStateFeedback`/`defaultValue` de otros campos, no exime la validación `required`, y no necesita coincidir con ningún `value` de `props.items`. La omisión de campos ocultos en submit tiene prioridad: nunca reintroduce una clave ya omitida por estar oculta. `select.props.multiple: true` con `emptySubmitValue` declarado rechaza el config completo en bootstrap.
 - `0110-global-preloads-first-load`: añade un nuevo bloque raíz opcional `preloads`, hermano de `api`/`pages`/`initialPage`, que dispara en paralelo un conjunto de operaciones `api` exactamente una vez por instancia de runtime montada, independiente de `initialPage` y de `pageEntry`, sin bloquear el render de la página inicial. Reutiliza el shape ya validado de `pages[].preloads` pero con reglas más restrictivas: rechaza `when` y referencias `item.*` en bootstrap, y valida que cada `operationName` exista en el catálogo `api`. Cada operación referenciada escribe en `queries.{operationName}` con la misma semántica de estado que cualquier otra ejecución, consumible con el feedback ya existente (`queryStateFeedback`). Introduce una política de reintentos acotados exclusiva de este mecanismo (`src/queries/runtime-api-retry.ts`, `GLOBAL_PRELOAD_MAX_ATTEMPTS = 3`): hasta 3 intentos totales sin espera entre ellos, aplicada de forma uniforme a cualquier `code` de error; el resto de superficies (`pages[].preloads`, `executeOperation`, `executeOperations`) siguen haciendo un único intento. Un nuevo módulo `src/runtime/runtime-global-preloads/` aísla el plan puro (`planGlobalPreloads`) y el hook de disparo (`useRuntimeGlobalPreloads`, guardia por `useRef` resistente a StrictMode) del resto de orquestación del provider. `createRuntimeStateFromBrowserHash` siembra `queries.{operationName}` en `status: 'loading'` con la firma de request efectiva antes del primer render, lo que además garantiza deduplicación con `pages[].preloads` cuando comparten `operationName` y request efectiva en la primera carga. Un config sin bloque `preloads` o con `preloads: []` se comporta exactamente igual que antes de la feature.
 - `0109-file-input-base64-json-submit`: sustituye la serialización `multipart/form-data` de `fileInput` en submit por serialización JSON, donde cada fichero seleccionado viaja como `{ name, size, mime, data }` con `data` en base64 estándar sin prefijo. `fileInput` deja de ser un caso especial de inclusión automática en el payload y pasa a comportarse como cualquier otro campo del formulario: solo aporta clave al body si `submitAction.body`/`api.body` lo referencia explícitamente con `forms.{formId}.{fieldId}`; sin referencia, no aporta ninguna clave aunque haya ficheros seleccionados. La referencia resuelve siempre a un array de objetos (uno por fichero, en orden de selección) con independencia de `props.multiple`. La codificación ocurre de forma asíncrona en el momento del submit (`src/queries/runtime-file-base64-encoder.ts`, API nativa `FileReader`, sin dependencias nuevas), no al seleccionar: el estado en `forms.{formId}.{fieldId}.value` sigue siendo `File[]` y la preview sigue operando sobre esos `File` nativos sin cambios. El resolver del body (`runtime-api-payload-resolver.ts`) acepta un canal opcional `fileValueOverrides` que sustituye el valor resuelto de una referencia `forms.{formId}.{fieldId}` completa (nunca interpolada ni con sufijos) por el array ya codificado, con la omisión por campo oculto (`hiddenFormFields`) teniendo prioridad sobre el override. El executor (`runtime-api-executor.ts`) añade un preflight asíncrono que codifica en paralelo los `File[]` de un nuevo canal `fileInputSources` antes de invocar el builder; si alguna codificación falla, la query transita a `status: error` con `code: request-build-failed` sin emitir red, igual que otros fallos de construcción de request. `form-layout-node.tsx` deja de construir `requestParams.files` desde los campos `fileInput` visibles y en su lugar construye `fileInputSources` a partir de sus valores `File[]` en estado. El cambio es total y deliberado: no introduce flag ni modo dual multipart/JSON, y rompe cualquier integración de backend que esperase `multipart/form-data` desde `fileInput`. `fileManager` (subida standalone fuera de formulario) no se toca: sigue enviando `multipart/form-data` sin cambios.
 - `0108-choice-items-simplification-and-form-editor`: reduce el contrato `props.items` de `select`, `radioGroup` y `checkboxGroup` de cinco shapes a tres (manual literal, manual escalar, dinámico unificado con `itemType: 'scalar' | 'object'` obligatorio) y añade edición completa desde el panel de propiedades del editor visual, sin depender de Monaco. Los shapes retirados (manual objeto; los dos dinámicos separados sin `itemType` explícito) se rechazan en bootstrap con `code: invalid-layout` y ruta exacta, sin adaptador de compatibilidad. `runtime-config-zod.ts` pasa `items` de `z.unknown()` a `selectItemsSchema` (unión externa con un `z.discriminatedUnion('itemType', ...)` interno para la rama dinámica), y `validateSelectItemsContract` se adelgaza para delegar la forma estructural en Zod y conservar solo las comprobaciones de dominio (validez de `source` como referencia, `label`/`value` como projection path, homogeneidad de `value` en manual literal). `runtime-collection-sources.ts` pierde las ramas ya inalcanzables de manual objeto. La paleta inserta `select`/`radioGroup`/`checkboxGroup` con `props.items: []` en vez del placeholder `[{ label: 'Opción 1', value: 'opcion-1' }]`. El panel de propiedades introduce un widget dedicado (`ChoiceItemsPropertyField`) para las tres variantes, enganchado mediante un hook nuevo `x-widget` en `PropertyFieldDispatcher` (registro cerrado, sin API para widgets ad-hoc) porque las variantes no comparten un discriminador `type` literal que el patrón de selector de variante de `0107` pudiera reutilizar directamente; el panel sustituye el sub-schema `items` por el sentinel `{ 'x-widget': 'choice-items' }` solo para estos tres nodos (mismo precedente que `resolveTabsPropsSchema`), sin afectar al schema que consume el autocompletado de Monaco.

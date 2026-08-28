@@ -79,7 +79,7 @@ function getTableBodyRows(table: HTMLElement) {
 }
 
 describe('table rich cells', () => {
-  it('renders a dynamic image cell resolving src and alt from item.* per row', () => {
+  it('renders a dynamic image cell resolving src and alt from row.* per row', () => {
     const activePage: RuntimePageConfig = {
       id: 'rich-table-dynamic-image',
       layout: [
@@ -90,8 +90,8 @@ describe('table rich cells', () => {
             rows: {
               source: 'queries.users.data.results',
               cells: [
-                'item.name',
-                { type: 'image', props: { src: 'item.avatar', alt: 'item.name' } },
+                'row.name',
+                { type: 'image', props: { src: 'row.avatar', alt: 'row.name' } },
               ],
             },
           },
@@ -132,7 +132,7 @@ describe('table rich cells', () => {
     expect(graceImg).toHaveAttribute('src', '/media/grace.png')
   })
 
-  it('renders a dynamic button cell that navigates with item.* params when clicked', () => {
+  it('renders a dynamic button cell that navigates with row.* params when clicked', () => {
     const detailPage: RuntimePageConfig = {
       id: 'detail',
       layout: [],
@@ -147,12 +147,12 @@ describe('table rich cells', () => {
             rows: {
               source: 'queries.users.data.results',
               cells: [
-                'item.name',
+                'row.name',
                 {
                   type: 'button',
                   props: {
                     label: 'Ver',
-                    action: { type: 'navigateTo', pageId: 'detail', params: { id: 'item.id' } },
+                    action: { type: 'navigateTo', pageId: 'detail', params: { id: 'row.id' } },
                   },
                 },
               ],
@@ -211,7 +211,7 @@ describe('table rich cells', () => {
     )
   })
 
-  it('renders a dynamic container cell with image and paragraph children propagating item.*', () => {
+  it('renders a dynamic container cell with image and paragraph children propagating row.*', () => {
     const activePage: RuntimePageConfig = {
       id: 'rich-table-dynamic-container',
       layout: [
@@ -226,8 +226,8 @@ describe('table rich cells', () => {
                   type: 'container',
                   props: {},
                   children: [
-                    { type: 'image', props: { src: 'item.avatar', alt: 'item.name' } },
-                    { type: 'paragraph', props: { text: 'item.name' } },
+                    { type: 'image', props: { src: 'row.avatar', alt: 'row.name' } },
+                    { type: 'paragraph', props: { text: 'row.name' } },
                   ],
                 },
               ],
@@ -277,7 +277,7 @@ describe('table rich cells', () => {
             rows: {
               source: 'queries.users.data.results',
               cells: [
-                'item.name',
+                'row.name',
                 {
                   type: 'button',
                   props: { label: 'Ver' },
@@ -328,10 +328,10 @@ describe('table rich cells', () => {
             rows: {
               source: 'queries.users.data.results',
               cells: [
-                'item.name',
+                'row.name',
                 {
                   type: 'image',
-                  props: { src: 'item.avatar', alt: 'item.name' },
+                  props: { src: 'row.avatar', alt: 'row.name' },
                   queryStateFeedback: {
                     query: 'slowQuery',
                     states: { loading: { mode: 'fallback', fallback: [{ type: 'paragraph', props: { text: 'Cargando...' } }] } },
@@ -457,7 +457,7 @@ describe('table rich cells', () => {
             rows: {
               source: 'queries.users.data.results',
               cells: [
-                'item.name',
+                'row.name',
                 { type: 'button', props: { label: 'Ver' } },
               ],
             },
@@ -592,5 +592,352 @@ describe('table rich cells', () => {
     expect(cells[0]).toHaveTextContent('Ada')
     // The container renders but is empty
     expect(cells[1]).toBeInTheDocument()
+  })
+
+  it('resolves item.* from the repeater ancestor and row.* from the table row at the same time inside an interpolated string', () => {
+    const activePage: RuntimePageConfig = {
+      id: 'repeater-table-item-and-row',
+      layout: [
+        {
+          type: 'repeater',
+          props: {
+            items: { source: 'queries.departments.data', key: 'id' },
+            template: [
+              {
+                type: 'table',
+                props: {
+                  headers: ['Info'],
+                  rows: {
+                    source: 'item.members',
+                    cells: [
+                      '{{item.deptName}} - {{row.name}}',
+                      { type: 'paragraph', props: { text: '{{item.deptName}} - {{row.name}}' } },
+                    ],
+                  },
+                },
+              },
+            ],
+          },
+        },
+      ],
+    }
+
+    renderRuntimePageWithState(
+      activePage,
+      createRuntimePageState(activePage, {
+        departments: {
+          status: 'success',
+          data: [{ id: 'dept-1', deptName: 'Engineering', members: [{ name: 'Ada' }] }],
+          error: null,
+        },
+      }),
+    )
+
+    const table = screen.getByRole('table')
+    const cells = within(getTableBodyRows(table)[0]).getAllByRole('cell')
+    expect(cells[0]).toHaveTextContent('Engineering - Ada')
+    expect(cells[1]).toHaveTextContent('Engineering - Ada')
+  })
+
+  it('degrades item.* to empty and resolves row.* normally in a dynamic table without a repeater ancestor', () => {
+    const activePage: RuntimePageConfig = {
+      id: 'dynamic-table-no-repeater-item-vs-row',
+      layout: [
+        {
+          type: 'table',
+          props: {
+            headers: ['Item', 'Row'],
+            rows: {
+              source: 'queries.users.data.results',
+              cells: ['item.name', 'row.name'],
+            },
+          },
+        },
+      ],
+    }
+
+    renderRuntimePageWithState(
+      activePage,
+      createRuntimePageState(activePage, {
+        users: {
+          status: 'success',
+          data: { results: [{ name: 'Ada' }] },
+          error: null,
+        },
+      }),
+    )
+
+    const cells = within(getTableBodyRows(screen.getByRole('table'))[0]).getAllByRole('cell')
+    expect(cells[0]).toHaveTextContent('')
+    expect(cells[1]).toHaveTextContent('Ada')
+  })
+
+  it('keeps item.$key accessible inside table cells when the repeater source is a plain object', () => {
+    const activePage: RuntimePageConfig = {
+      id: 'repeater-table-object-source-key',
+      layout: [
+        {
+          type: 'repeater',
+          props: {
+            items: { source: 'queries.departments.data', key: '$key' },
+            template: [
+              {
+                type: 'table',
+                props: {
+                  headers: ['Department', 'Member'],
+                  rows: {
+                    source: 'item.members',
+                    cells: ['item.$key', 'row.name'],
+                  },
+                },
+              },
+            ],
+          },
+        },
+      ],
+    }
+
+    renderRuntimePageWithState(
+      activePage,
+      createRuntimePageState(activePage, {
+        departments: {
+          status: 'success',
+          data: {
+            engineering: { members: [{ name: 'Ada' }] },
+          },
+          error: null,
+        },
+      }),
+    )
+
+    const cells = within(getTableBodyRows(screen.getByRole('table'))[0]).getAllByRole('cell')
+    expect(cells[0]).toHaveTextContent('engineering')
+    expect(cells[1]).toHaveTextContent('Ada')
+  })
+
+  it('propagates row and row.$index through a recursively nested container inside a cell-node, same depth as item', () => {
+    const activePage: RuntimePageConfig = {
+      id: 'rich-table-nested-container-row',
+      layout: [
+        {
+          type: 'table',
+          props: {
+            headers: ['Info'],
+            rows: {
+              source: 'queries.users.data.results',
+              cells: [
+                {
+                  type: 'container',
+                  props: {},
+                  children: [
+                    {
+                      type: 'container',
+                      props: {},
+                      children: [{ type: 'paragraph', props: { text: '{{row.name}} #{{row.$index}}' } }],
+                    },
+                  ],
+                },
+              ],
+            },
+          },
+        },
+      ],
+    }
+
+    renderRuntimePageWithState(
+      activePage,
+      createRuntimePageState(activePage, {
+        users: {
+          status: 'success',
+          data: { results: [{ name: 'Ada' }, { name: 'Grace' }] },
+          error: null,
+        },
+      }),
+    )
+
+    const rows = getTableBodyRows(screen.getByRole('table'))
+    expect(within(rows[0]).getByText('Ada #1')).toBeInTheDocument()
+    expect(within(rows[1]).getByText('Grace #2')).toBeInTheDocument()
+  })
+
+  it('leaves the td empty when a NodeObject cell inside a repeater-nested table has visibility that resolves to hidden, preserving item.* ancestor context for other cells', () => {
+    const activePage: RuntimePageConfig = {
+      id: 'rich-table-repeater-visibility-hidden',
+      layout: [
+        {
+          type: 'repeater',
+          props: {
+            items: { source: 'queries.departments.data', key: 'id' },
+            template: [
+              {
+                type: 'table',
+                props: {
+                  headers: ['Name', 'Action'],
+                  rows: {
+                    source: 'item.members',
+                    cells: [
+                      'row.name',
+                      {
+                        type: 'button',
+                        props: { label: 'Ver {{item.deptName}}' },
+                        visibility: { reference: 'queries.departments.status', operator: 'equals', value: 'never' },
+                      },
+                    ],
+                  },
+                },
+              },
+            ],
+          },
+        },
+      ],
+    }
+
+    renderRuntimePageWithState(
+      activePage,
+      createRuntimePageState(activePage, {
+        departments: {
+          status: 'success',
+          data: [{ id: 'dept-1', deptName: 'Engineering', members: [{ name: 'Ada' }] }],
+          error: null,
+        },
+      }),
+    )
+
+    const cells = within(getTableBodyRows(screen.getByRole('table'))[0]).getAllByRole('cell')
+    expect(cells[0]).toHaveTextContent('Ada')
+    expect(within(cells[1]).queryByRole('button')).not.toBeInTheDocument()
+    expect(cells[1]).toHaveTextContent('')
+  })
+
+  it('resolves item.* from the repeater ancestor inside a manual-mode NodeObject cell (regression: table no longer replaces ambient context in manual mode)', () => {
+    const activePage: RuntimePageConfig = {
+      id: 'manual-table-repeater-item-context',
+      layout: [
+        {
+          type: 'repeater',
+          props: {
+            items: { source: 'queries.departments.data', key: 'id' },
+            template: [
+              {
+                type: 'table',
+                props: {
+                  headers: ['Name', 'Action'],
+                  rows: [['Ada', { type: 'button', props: { label: 'Ver {{item.deptName}}' } }]],
+                },
+              },
+            ],
+          },
+        },
+      ],
+    }
+
+    renderRuntimePageWithState(
+      activePage,
+      createRuntimePageState(activePage, {
+        departments: {
+          status: 'success',
+          data: [{ id: 'dept-1', deptName: 'Engineering' }],
+          error: null,
+        },
+      }),
+    )
+
+    expect(screen.getByRole('button', { name: 'Ver Engineering' })).toBeInTheDocument()
+  })
+
+  it('recalculates row.$index contiguously over the visible subset after filtering excludes rows', () => {
+    const activePage: RuntimePageConfig = {
+      id: 'rich-table-filter-row-index',
+      layout: [
+        {
+          type: 'table',
+          props: {
+            headers: ['Name', 'Position'],
+            columns: [{ id: 'Name', filterable: true }],
+            rows: [
+              ['Ada', '{{row.$index}}'],
+              ['Grace', '{{row.$index}}'],
+              ['Lin', '{{row.$index}}'],
+            ],
+          },
+        },
+      ],
+    }
+
+    renderRuntimePageWithState(activePage, createRuntimePageState(activePage, {}))
+    const table = screen.getByRole('table')
+
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Filtrar Name' }), { target: { value: 'a' } })
+
+    const rows = getTableBodyRows(table)
+    expect(rows).toHaveLength(2)
+    expect(within(rows[0]).getAllByRole('cell').map((cell) => cell.textContent)).toEqual(['Ada', '1'])
+    expect(within(rows[1]).getAllByRole('cell').map((cell) => cell.textContent)).toEqual(['Grace', '2'])
+  })
+
+  it('recalculates row.$index reflecting the new order after sorting a sortable column', () => {
+    const activePage: RuntimePageConfig = {
+      id: 'rich-table-sort-row-index',
+      layout: [
+        {
+          type: 'table',
+          props: {
+            headers: ['Name', 'Position'],
+            columns: [{ id: 'Name', sortable: true }],
+            rows: [
+              ['Grace', '{{row.$index}}'],
+              ['Ada', '{{row.$index}}'],
+            ],
+          },
+        },
+      ],
+    }
+
+    renderRuntimePageWithState(activePage, createRuntimePageState(activePage, {}))
+    const table = screen.getByRole('table')
+
+    fireEvent.click(within(table).getByRole('button', { name: 'Ordenar Name' }))
+
+    const rows = getTableBodyRows(table)
+    expect(within(rows[0]).getAllByRole('cell').map((cell) => cell.textContent)).toEqual(['Ada', '1'])
+    expect(within(rows[1]).getAllByRole('cell').map((cell) => cell.textContent)).toEqual(['Grace', '2'])
+  })
+
+  it('resolves row.$index to the row position, not a literal $index property present in the row data', () => {
+    const activePage: RuntimePageConfig = {
+      id: 'rich-table-row-index-precedence',
+      layout: [
+        {
+          type: 'table',
+          props: {
+            headers: ['Name', 'Position'],
+            rows: {
+              source: 'queries.users.data.results',
+              cells: ['row.name', '{{row.$index}}'],
+            },
+          },
+        },
+      ],
+    }
+
+    renderRuntimePageWithState(
+      activePage,
+      createRuntimePageState(activePage, {
+        users: {
+          status: 'success',
+          data: {
+            results: [
+              { name: 'Ada', $index: 'bogus' },
+              { name: 'Grace', $index: 'bogus2' },
+            ],
+          },
+          error: null,
+        },
+      }),
+    )
+
+    const rows = getTableBodyRows(screen.getByRole('table'))
+    expect(within(rows[0]).getAllByRole('cell').map((cell) => cell.textContent)).toEqual(['Ada', '1'])
+    expect(within(rows[1]).getAllByRole('cell').map((cell) => cell.textContent)).toEqual(['Grace', '2'])
   })
 })

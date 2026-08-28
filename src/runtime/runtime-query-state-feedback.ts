@@ -83,7 +83,7 @@ export function isLayoutNodeVisible(
   return resolvedFeedback.mode === 'show'
 }
 
-function getDefaultQueryStateFeedbackRule(visibleState: RuntimeQueryVisibleState): Exclude<QueryStateFeedbackRule, { mode: 'fallback' }> {
+export function getDefaultQueryStateFeedbackRule(visibleState: RuntimeQueryVisibleState): Exclude<QueryStateFeedbackRule, { mode: 'fallback' }> {
   if (visibleState === 'success') {
     return {
       mode: 'show',

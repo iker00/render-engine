@@ -13,6 +13,7 @@ import {
   type LayoutNodePath,
 } from '../../runtime/layout-node-path'
 import { RuntimeStateProvider } from '../../runtime/runtime-state/runtime-state-provider'
+import { serializePaletteDragId } from '../../dev-runtime/layout-canvas/layout-canvas-palette-drag-id'
 
 // Light mock of @dnd-kit/core (see subagent-prompt.md / T12 tests contract): real pointer
 // simulation against PointerSensor is impractical in jsdom (no real layout, no real
@@ -22,6 +23,11 @@ import { RuntimeStateProvider } from '../../runtime/runtime-state/runtime-state-
 // implementation (recorded via a spy) so the hooks still behave like the real library and
 // exercise the actual id-construction path in layout-node-renderer.tsx / layout-renderer.tsx.
 const draggableCalls: string[] = []
+// Records the `disabled` argument alongside the id (T4): the existing `draggableCalls` array
+// above only ever tracked ids for "was this node registered as draggable at all" assertions,
+// but T4 needs to inspect the `disabled` value itself for a table cell vs. a cell-container's
+// child, so a second array parallels it without disturbing any pre-existing assertion.
+const draggableArgs: Array<{ id: string; disabled: boolean | undefined }> = []
 const droppableCalls: string[] = []
 let capturedOnDragEnd: ((event: { active: { id: string }; over: { id: string } | null }) => void) | null = null
 
@@ -33,8 +39,9 @@ vi.mock('@dnd-kit/core', async () => {
       capturedOnDragEnd = props.onDragEnd as typeof capturedOnDragEnd
       return props.children
     },
-    useDraggable: (args: { id: string | number }) => {
+    useDraggable: (args: { id: string | number; disabled?: boolean }) => {
       draggableCalls.push(String(args.id))
+      draggableArgs.push({ id: String(args.id), disabled: args.disabled })
       return actual.useDraggable(args)
     },
     useDroppable: (args: { id: string | number }) => {
@@ -61,6 +68,38 @@ function buildConfig(): RuntimeConfig {
             ],
           },
           { type: 'container', props: {}, children: [] },
+          // T4 fixture: a manual-mode table with one row of two cells — a plain-text
+          // primitive cell (Text mode: no wrapper of any kind, see table-layout-node.tsx) and
+          // a `container` node cell with one nested child, to distinguish "the cell itself"
+          // (never a drag source, T4) from "a child of a cell-container" (still draggable).
+          {
+            type: 'table',
+            props: {
+              headers: ['A', 'B'],
+              rows: [
+                [
+                  'Plain text cell',
+                  {
+                    type: 'container',
+                    props: {},
+                    children: [{ type: 'heading', props: { text: 'Nested', level: 2 } }],
+                  },
+                ],
+              ],
+            },
+          },
+          // T5 fixture: a `steps` node with two items — only the active step's panel
+          // (index 0 by default, StepsNode's own local state) renders its children, mirroring
+          // how `tabs` only renders its active tab's children.
+          {
+            type: 'steps',
+            props: {
+              items: [
+                { label: 'Step1', children: [{ type: 'heading', props: { text: 'StepHeading', level: 2 } }] },
+                { label: 'Step2', children: [] },
+              ],
+            },
+          },
         ],
       },
     ],
@@ -77,6 +116,13 @@ const HEADING_SECOND_PATH: LayoutNodePath = [
   { field: 'children', index: 1 },
 ]
 const CONTAINER_B_EMPTY_PATH: LayoutNodePath = [{ field: 'children', index: 1 }]
+const TABLE_PATH: LayoutNodePath = [{ field: 'children', index: 2 }]
+const TABLE_CELL_CONTAINER_PATH: LayoutNodePath = [...TABLE_PATH, { field: 'row', rowIndex: 0, index: 1 }]
+const TABLE_CELL_CONTAINER_CHILD_PATH: LayoutNodePath = [...TABLE_CELL_CONTAINER_PATH, { field: 'children', index: 0 }]
+const STEPS_PATH: LayoutNodePath = [{ field: 'children', index: 3 }]
+const STEP0_HEADING_PATH: LayoutNodePath = [...STEPS_PATH, { field: 'stepItem', itemIndex: 0, index: 0 }]
+const STEP0_GAP_BEFORE_ZONE_ID = serializeDropZoneId({ parentPath: STEPS_PATH, index: 0, stepItemIndex: 0 })
+const STEP0_GAP_AFTER_ZONE_ID = serializeDropZoneId({ parentPath: STEPS_PATH, index: 1, stepItemIndex: 0 })
 
 const BETWEEN_SIBLINGS_ZONE_ID = serializeDropZoneId({ parentPath: CONTAINER_A_PATH, index: 1 })
 const EMPTY_PLACEHOLDER_ZONE_ID = serializeDropZoneId({ parentPath: CONTAINER_B_EMPTY_PATH, index: 0 })
@@ -106,6 +152,7 @@ function renderCanvas(onDropAttempt: (attempt: LayoutCanvasDropAttempt) => void)
 
 beforeEach(() => {
   draggableCalls.length = 0
+  draggableArgs.length = 0
   droppableCalls.length = 0
   capturedOnDragEnd = null
 })
@@ -192,6 +239,113 @@ describe('LayoutCanvasDndContext onDragEnd: raw drop attempt', () => {
     })
 
     expect(onDropAttempt).not.toHaveBeenCalled()
+  })
+})
+
+describe('table cell exclusion from drag source (T4)', () => {
+  it('disables useDraggable for a table cell node, whose path ends in a `row` step', () => {
+    renderCanvas(() => {})
+
+    const call = draggableArgs.find((entry) => entry.id === serializeLayoutNodePath(TABLE_CELL_CONTAINER_PATH))
+    expect(call).toBeDefined()
+    expect(call!.disabled).toBe(true)
+  })
+
+  it('keeps a child of a cell-container draggable normally — its path continues past `row` with a `children` step', () => {
+    renderCanvas(() => {})
+
+    const call = draggableArgs.find((entry) => entry.id === serializeLayoutNodePath(TABLE_CELL_CONTAINER_CHILD_PATH))
+    expect(call).toBeDefined()
+    expect(call!.disabled).toBe(false)
+  })
+
+  it('registers no droppable zone for any cell position of a table row, unlike a container with the same child count', () => {
+    renderCanvas(() => {})
+
+    // Control: container A has 2 children, so it gets 3 gap zones (indices 0, 1, 2) keyed by
+    // its own path — the same shape a table row's 2 cells would need if cell reordering were
+    // ever a supported gesture.
+    expect(droppableCalls).toContain(serializeDropZoneId({ parentPath: CONTAINER_A_PATH, index: 0 }))
+    expect(droppableCalls).toContain(serializeDropZoneId({ parentPath: CONTAINER_A_PATH, index: 1 }))
+    expect(droppableCalls).toContain(serializeDropZoneId({ parentPath: CONTAINER_A_PATH, index: 2 }))
+
+    // `table` is absent from `nodeTypeAcceptsChildren` (layout-placement-rules.ts), so
+    // LayoutRenderer never runs its drop-zone-gap logic for the table's own path — no zone
+    // exists at any index for either the primitive text cell (index 0) or the node cell
+    // (index 1) position.
+    expect(droppableCalls).not.toContain(serializeDropZoneId({ parentPath: TABLE_PATH, index: 0 }))
+    expect(droppableCalls).not.toContain(serializeDropZoneId({ parentPath: TABLE_PATH, index: 1 }))
+    expect(droppableCalls).not.toContain(serializeDropZoneId({ parentPath: TABLE_PATH, index: 2 }))
+  })
+
+  it('a palette-origin drag over a table cell position produces no drop attempt — no data-drop-zone ever exists there', () => {
+    const onDropAttempt = vi.fn()
+    renderCanvas(onDropAttempt)
+
+    // Since no droppable was ever registered for a cell position (previous test), @dnd-kit's
+    // own collision detection can never resolve `over` to one when a palette drag is released
+    // there — it reports `over: null`, exactly like a drag cancelled outside any droppable.
+    // parseDropAttempt (layout-canvas-dnd-context.tsx) short-circuits on `over === null`
+    // before it would even need to distinguish a palette-origin id from a node path, so the
+    // callback is never invoked and the config stays untouched.
+    capturedOnDragEnd!({
+      active: { id: serializePaletteDragId('heading') },
+      over: null,
+    })
+
+    expect(onDropAttempt).not.toHaveBeenCalled()
+  })
+})
+
+describe('LayoutCanvasDndContext wiring: steps panel drop zones (targetStepItemIndex, T5)', () => {
+  it('registers a draggable node and a droppable gap zone inside the active panel of a steps node, encoding stepItemIndex', () => {
+    renderCanvas(() => {})
+
+    expect(draggableCalls).toContain(serializeLayoutNodePath(STEP0_HEADING_PATH))
+    expect(droppableCalls).toContain(STEP0_GAP_AFTER_ZONE_ID)
+
+    const zone = parseDropZoneId(STEP0_GAP_AFTER_ZONE_ID) as LayoutCanvasDropZone
+    expect(zone.parentPath).toEqual(STEPS_PATH)
+    expect(zone.index).toBe(1)
+    expect(zone.stepItemIndex).toBe(0)
+    expect(zone.tabItemIndex).toBeUndefined()
+  })
+
+  it('produces targetStepItemIndex in the drop attempt for an existing node dragged over a steps panel zone', () => {
+    const onDropAttempt = vi.fn()
+    renderCanvas(onDropAttempt)
+
+    capturedOnDragEnd!({
+      active: { id: serializeLayoutNodePath(STEP0_HEADING_PATH) },
+      over: { id: STEP0_GAP_BEFORE_ZONE_ID },
+    })
+
+    expect(onDropAttempt).toHaveBeenCalledWith({
+      draggedPath: STEP0_HEADING_PATH,
+      targetParentPath: STEPS_PATH,
+      targetIndex: 0,
+      targetTabItemIndex: undefined,
+      targetStepItemIndex: 0,
+    })
+  })
+
+  it('produces targetStepItemIndex in the drop attempt for a palette-originated drag over a steps panel zone', () => {
+    const onDropAttempt = vi.fn()
+    renderCanvas(onDropAttempt)
+
+    capturedOnDragEnd!({
+      active: { id: serializePaletteDragId('heading') },
+      over: { id: STEP0_GAP_AFTER_ZONE_ID },
+    })
+
+    expect(onDropAttempt).toHaveBeenCalledWith({
+      draggedPath: null,
+      draggedNodeType: 'heading',
+      targetParentPath: STEPS_PATH,
+      targetIndex: 1,
+      targetTabItemIndex: undefined,
+      targetStepItemIndex: 0,
+    })
   })
 })
 

@@ -5,6 +5,14 @@ export interface KeyValuePropertyFieldProps {
   label: string
   value: Record<string, unknown>
   onChange: (value: Record<string, unknown>) => void
+  /**
+   * Overrides the default editability criterion (`isNestedValue`, below) for every row. When
+   * provided, a row renders as an editable text input only if this returns `true` for its current
+   * value; otherwise it falls back to the same read-only `RawJsonPropertyField` used today for
+   * nested object/array values (T2, FR3/D5 — e.g. `NavigateParamsPropertyField` degrading any
+   * non-string row instead of only object/array ones).
+   */
+  isValueEditable?: (value: unknown) => boolean
 }
 
 /**
@@ -24,7 +32,7 @@ export interface KeyValuePropertyFieldProps {
  * only — the key stays editable, "Quitar" stays available, and "Añadir" still creates new rows as
  * plain string/string pairs.
  */
-export function KeyValuePropertyField({ label, value, onChange }: KeyValuePropertyFieldProps) {
+export function KeyValuePropertyField({ label, value, onChange, isValueEditable }: KeyValuePropertyFieldProps) {
   const entries = Object.entries(value)
 
   function handleKeyChange(index: number, newKey: string) {
@@ -65,6 +73,7 @@ export function KeyValuePropertyField({ label, value, onChange }: KeyValueProper
           onKeyChange={(newKey) => handleKeyChange(index, newKey)}
           onValueChange={(newValue) => handleValueChange(index, newValue)}
           onRemove={() => handleRemove(index)}
+          isValueEditable={isValueEditable}
         />
       ))}
       <button
@@ -87,6 +96,7 @@ interface KeyValueRowProps {
   onKeyChange: (newKey: string) => void
   onValueChange: (newValue: string) => void
   onRemove: () => void
+  isValueEditable?: (value: unknown) => boolean
 }
 
 // A row's value can't be edited as this field's plain text/text pair once it stops being a
@@ -96,12 +106,13 @@ function isNestedValue(entryValue: unknown): boolean {
   return entryValue !== null && typeof entryValue === 'object'
 }
 
-function KeyValueRow({ label, index, entryKey, entryValue, onKeyChange, onValueChange, onRemove }: KeyValueRowProps) {
+function KeyValueRow({ label, index, entryKey, entryValue, onKeyChange, onValueChange, onRemove, isValueEditable }: KeyValueRowProps) {
   const keyInputId = useId()
   const valueInputId = useId()
   const valueLabel = `${label} valor #${index + 1}`
   // Never coerce an incoming non-string value; only the display string is derived (R1).
   const displayValue = typeof entryValue === 'string' ? entryValue : String(entryValue)
+  const isReadOnly = isValueEditable ? !isValueEditable(entryValue) : isNestedValue(entryValue)
 
   return (
     <div className="flex items-start gap-2">
@@ -118,7 +129,7 @@ function KeyValueRow({ label, index, entryKey, entryValue, onKeyChange, onValueC
         />
       </div>
       <div className="flex flex-1 flex-col gap-1">
-        {isNestedValue(entryValue) ? (
+        {isReadOnly ? (
           // T7: an object/array value has no safe text-input representation — same fallback the
           // dispatcher uses for any value it can't render as a form field, applied per-row instead
           // of forking the whole editor. Read-only here; committing this row's value stays the

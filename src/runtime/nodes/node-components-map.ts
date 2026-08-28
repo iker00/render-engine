@@ -1,6 +1,7 @@
 import React from 'react'
 import { AccordionNode } from './accordion-layout-node'
 import { AlertNode } from './alert-layout-node'
+import { AutocompleteNode } from './autocomplete-layout-node'
 import { BadgeNode } from './badge-layout-node'
 import { ButtonNode } from './button-layout-node'
 import { CheckboxGroupNode } from './checkbox-group-layout-node'
@@ -9,12 +10,14 @@ import { DividerNode } from './divider-layout-node'
 import { FileInputNode } from './file-input-layout-node'
 import { FileManagerNode } from './file-manager-layout-node'
 import { FormNode } from './form-layout-node'
+import { GalleryNode } from './gallery-layout-node'
 import { HiddenNode } from './hidden-layout-node'
 import { HeadingNode } from './heading-layout-node'
 import { ImageNode } from './image-layout-node'
 import { InputNode } from './input-layout-node'
 import { LinkNode } from './link-layout-node'
 import { ListNode } from './list-layout-node'
+import { MapNode } from './map-layout-node'
 import { ModalNode } from './modal-layout-node'
 import { ParagraphNode } from './paragraph-layout-node'
 import { RadioGroupNode } from './radio-group-layout-node'
@@ -22,6 +25,7 @@ import { RepeaterNode } from './repeater-layout-node'
 import { SelectNode } from './select-layout-node'
 import { SkeletonNode } from './skeleton-layout-node'
 import { StatNode } from './stat-layout-node'
+import { StepsNode } from './steps-layout-node'
 import { TableNode } from './table-layout-node'
 import { TabsNode } from './tabs-layout-node'
 import { TextareaNode } from './textarea-layout-node'
@@ -36,6 +40,7 @@ type AnyComponent = React.ComponentType<any>
 const eagerMap = {
   accordion: AccordionNode as AnyComponent,
   alert: AlertNode as AnyComponent,
+  autocomplete: AutocompleteNode as AnyComponent,
   badge: BadgeNode as AnyComponent,
   button: ButtonNode as AnyComponent,
   checkboxGroup: CheckboxGroupNode as AnyComponent,
@@ -44,12 +49,14 @@ const eagerMap = {
   fileInput: FileInputNode as AnyComponent,
   fileManager: FileManagerNode as AnyComponent,
   form: FormNode as AnyComponent,
+  gallery: GalleryNode as AnyComponent,
   heading: HeadingNode as AnyComponent,
   hidden: HiddenNode as AnyComponent,
   image: ImageNode as AnyComponent,
   input: InputNode as AnyComponent,
   link: LinkNode as AnyComponent,
   list: ListNode as AnyComponent,
+  map: MapNode as AnyComponent,
   modal: ModalNode as AnyComponent,
   paragraph: ParagraphNode as AnyComponent,
   radioGroup: RadioGroupNode as AnyComponent,
@@ -57,6 +64,7 @@ const eagerMap = {
   select: SelectNode as AnyComponent,
   skeleton: SkeletonNode as AnyComponent,
   stat: StatNode as AnyComponent,
+  steps: StepsNode as AnyComponent,
   table: TableNode as AnyComponent,
   tabs: TabsNode as AnyComponent,
   textarea: TextareaNode as AnyComponent,
@@ -68,6 +76,9 @@ const eagerMap = {
 const lazyMap = {
   accordion: React.lazy(() => import('./accordion-layout-node').then((m) => ({ default: m.AccordionNode }))),
   alert: React.lazy(() => import('./alert-layout-node').then((m) => ({ default: m.AlertNode }))),
+  autocomplete: React.lazy(() =>
+    import('./autocomplete-layout-node').then((m) => ({ default: m.AutocompleteNode })),
+  ),
   badge: React.lazy(() => import('./badge-layout-node').then((m) => ({ default: m.BadgeNode }))),
   button: React.lazy(() => import('./button-layout-node').then((m) => ({ default: m.ButtonNode }))),
   checkboxGroup: React.lazy(() =>
@@ -82,12 +93,14 @@ const lazyMap = {
     import('./file-manager-layout-node').then((m) => ({ default: m.FileManagerNode })),
   ),
   form: React.lazy(() => import('./form-layout-node').then((m) => ({ default: m.FormNode }))),
+  gallery: React.lazy(() => import('./gallery-layout-node').then((m) => ({ default: m.GalleryNode }))),
   heading: React.lazy(() => import('./heading-layout-node').then((m) => ({ default: m.HeadingNode }))),
   hidden: React.lazy(() => import('./hidden-layout-node').then((m) => ({ default: m.HiddenNode }))),
   image: React.lazy(() => import('./image-layout-node').then((m) => ({ default: m.ImageNode }))),
   input: React.lazy(() => import('./input-layout-node').then((m) => ({ default: m.InputNode }))),
   link: React.lazy(() => import('./link-layout-node').then((m) => ({ default: m.LinkNode }))),
   list: React.lazy(() => import('./list-layout-node').then((m) => ({ default: m.ListNode }))),
+  map: React.lazy(() => import('./map-layout-node').then((m) => ({ default: m.MapNode }))),
   modal: React.lazy(() => import('./modal-layout-node').then((m) => ({ default: m.ModalNode }))),
   paragraph: React.lazy(() => import('./paragraph-layout-node').then((m) => ({ default: m.ParagraphNode }))),
   radioGroup: React.lazy(() =>
@@ -97,6 +110,7 @@ const lazyMap = {
   select: React.lazy(() => import('./select-layout-node').then((m) => ({ default: m.SelectNode }))),
   skeleton: React.lazy(() => import('./skeleton-layout-node').then((m) => ({ default: m.SkeletonNode }))),
   stat: React.lazy(() => import('./stat-layout-node').then((m) => ({ default: m.StatNode }))),
+  steps: React.lazy(() => import('./steps-layout-node').then((m) => ({ default: m.StepsNode }))),
   table: React.lazy(() => import('./table-layout-node').then((m) => ({ default: m.TableNode }))),
   tabs: React.lazy(() => import('./tabs-layout-node').then((m) => ({ default: m.TabsNode }))),
   textarea: React.lazy(() => import('./textarea-layout-node').then((m) => ({ default: m.TextareaNode }))),

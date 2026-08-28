@@ -16,12 +16,13 @@ Orden recomendado de lectura:
 |---|---|
 | [`runtime/`](./runtime/index.md) | Visión global del runtime, organización interna de `src/`, política transversal de errores, límites globales de v1. |
 | [`config/`](./config/index.md) | Estructura del JSON soportado (`api`, `pages`, `initialPage`, `preloads`, `layout`), modelo de página, validación previa al render. |
-| [`references/`](./references/index.md) | Sistema de referencias dinámicas (`queries.*`, `forms.*`, `params.*`, `item.*`), interpolación `{{...}}`, `visibility`, `queryStateFeedback`. |
+| [`references/`](./references/index.md) | Sistema de referencias dinámicas (`queries.*`, `forms.*`, `params.*`, `item.*`, `row.*` en celdas de `table`), interpolación `{{...}}`, `visibility`, `queryStateFeedback`. |
 | [`auth/`](./auth/index.md) | Tokens de autenticación, inyección en operaciones, refresco automático proactivo. |
 | [`nodes/`](./nodes/index.md) | Una ficha por nodo soportado: `container`, `repeater`, `table`, `image`, `form`, `input`, `textarea`, `select`, `choice-groups`, `toggle`, `hidden`, `button`, `heading-paragraph-list`. |
 | [`forms/`](./forms/index.md) | Ciclo de vida del estado de formulario, valores por defecto, reglas de validación local, submit y reset. |
 | [`queries/`](./queries/index.md) | Modelo de estado de queries, ejecución declarativa de operaciones `api`, `preloads`, feedback visual por estado. |
 | [`navigation/`](./navigation/index.md) | Modelo de páginas, hash routing canónico, acciones `navigateTo`/`goBack`, params transportados, `pageEntry`. |
+| [`shell/`](./shell/index.md) | Chrome de aplicación compartido y persistente entre páginas: cabecera configurable (`shell.header`) con logo, título, menú con desplegables y acciones de usuario; navegación lateral jerárquica (`shell.sidebar`) con árbol recursivo, modo rail y flyouts. |
 | [`development/`](./development/index.md) | Modo desarrollo local sin backend, carga de configuración desde `src/dev/config.json` o `data-config`. |
 
 ## Guía rápida de selección
@@ -31,6 +32,7 @@ Orden recomendado de lectura:
 - Si la petición afecta a formularios, leer las fichas de [`forms/`](./forms/index.md) o los nodos de formulario en [`nodes/`](./nodes/index.md) según el alcance.
 - Si la petición afecta a llamadas API, `preloads`, loading, error o empty state, leer los sub-docs relevantes bajo [`queries/`](./queries/index.md).
 - Si la petición afecta a flujo multipágina o navegación, leer [`navigation/`](./navigation/index.md).
+- Si la petición afecta a la cabecera/chrome de aplicación compartido entre páginas, leer [`shell/header.md`](./shell/header.md); si afecta a la navegación lateral, leer [`shell/sidebar.md`](./shell/sidebar.md).
 - Si la petición afecta al modo local de trabajo sin backend, leer [`development/local-config.md`](./development/local-config.md).
 - Si la petición es global o transversal del runtime, empezar por [`runtime/overview.md`](./runtime/overview.md).
 - Si la petición afecta solo a setup técnico o tooling, probablemente no necesita ninguna ficha funcional.

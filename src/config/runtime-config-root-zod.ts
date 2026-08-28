@@ -23,8 +23,10 @@ import {
   runtimeTokensConfigSchema,
   runtimeTranslationsSchema,
   selectNodeSchema,
+  shellSchema,
   skeletonNodeSchema,
   statNodeSchema,
+  stepsNodeSchema,
   tabsNodeSchema,
   tableNodeSchema,
   textareaNodeSchema,
@@ -40,6 +42,7 @@ const layoutNodeSchema: z.ZodType<unknown> = z.lazy(() =>
     formNodeLooseSchema,
     modalNodeLooseSchema,
     tabsNodeLooseSchema,
+    stepsNodeLooseSchema,
     accordionNodeLooseSchema,
     headingNodeSchema,
     paragraphNodeSchema,
@@ -98,6 +101,28 @@ const tabsNodeLooseSchema = tabsNodeSchema.extend({
     .strip(),
 })
 
+// steps items children are overridden to use recursive layoutNodeSchema
+const stepsNodeLooseSchema = stepsNodeSchema.extend({
+  props: z
+    .object({
+      variant: z.enum(['horizontal', 'vertical', 'progress']).optional(),
+      backLabel: z.string().optional(),
+      nextLabel: z.string().optional(),
+      submitLabel: z.string().optional(),
+      items: z
+        .array(
+          z
+            .object({
+              label: z.string(),
+              children: z.array(layoutNodeSchema).optional(),
+            })
+            .strip(),
+        )
+        .min(1),
+    })
+    .strip(),
+})
+
 const accordionNodeLooseSchema = accordionNodeSchema.extend({
   children: z.array(layoutNodeSchema).optional(),
 })
@@ -129,5 +154,6 @@ export const runtimeConfigRootSchema = z
     initialPage: z.string().min(1),
     translations: runtimeTranslationsSchema.optional(),
     tokens: runtimeTokensConfigSchema.optional(),
+    shell: shellSchema.optional(),
   })
   .strip()

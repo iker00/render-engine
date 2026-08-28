@@ -10,8 +10,9 @@ Cualquier nodo soportado puede declarar opcionalmente una `visibility` que es un
 ### Condición simple
 Una condición simple especifica:
 - `reference`: referencia runtime completa no vacía
-- `operator`: `equals | notEquals | isTruthy | isFalsy | greaterThan | lessThan`
-- `value`: obligatorio solo para `equals`, `notEquals`, `greaterThan` y `lessThan`
+- `operator`: `equals | notEquals | isTruthy | isFalsy | greaterThan | lessThan | arrayContains`
+- `value`: obligatorio para `equals`, `notEquals`, `greaterThan`, `lessThan` y `arrayContains`
+- `itemField`: (opcional, string) solo válido cuando `operator` es `arrayContains`; ruta de segmentos anidados (ej. `"user.code"`) que se resuelve dentro de cada elemento del array
 - `negate`: (opcional, booleano) invierte el resultado de la condición
 
 ### Grupo compuesto
@@ -43,6 +44,7 @@ Este mismo shape se reutiliza en otros contextos del runtime para declarar condi
 
 ### Visibilidad transversal y precedencia
 - `visibility` es transversal a `container`, `heading`, `paragraph`, `list`, `image`, `table`, `button`, `form`, `input`, `textarea`, `select`, `radioGroup`, `checkboxGroup`, `modal`, `tabs`, `accordion`, `badge`, `alert`, `stat`, `divider`, `skeleton`, `fileManager`, `fileInput`, `toggle` y `hidden`.
+- `shell.header.menu[*].visibility` (raíz o dentro de `children`) y `shell.header.actions[*].visibility` reutilizan el mismo contrato, con una excepción: no admiten `item.*`, al no existir contexto de iteración a nivel de shell. Ver [[../shell/header.md]].
 - si un nodo no declara `visibility`, conserva su comportamiento visible previo.
 - si un nodo declara a la vez `queryStateFeedback` y `visibility`, primero se resuelve `queryStateFeedback`; `visibility` (simple o grupo) solo se evalúa cuando el resultado visible restante sigue siendo el nodo original.
 
@@ -54,6 +56,15 @@ Este mismo shape se reutiliza en otros contextos del runtime para declarar condi
 - `greaterThan` y `lessThan` comparan directamente números; si el valor observado es un array, usan `length`.
 - strings, objetos, `null` y otros valores no comparables para `greaterThan` y `lessThan` degradan a no match en vez de abrir coerciones implícitas.
 - una referencia válida pero ausente se trata como valor ausente: `isFalsy` la considera falsa, `isTruthy` no hace match y el resto de operadores no hace match.
+
+### `arrayContains`
+- `arrayContains` coincide si `reference` resuelve a un array y **al menos un elemento** (o su `itemField`, si se declara) es estrictamente igual a `value`.
+- Sin `itemField`, la comparación es contra el elemento completo del array (soporta arrays de valores primitivos, ej. `["a", "b", "c"]`).
+- Con `itemField`, cada elemento objeto del array se proyecta por esa ruta de segmentos anidados (ej. `itemField: "user.code"` navega `item.user.code` para cada `item`) y se compara el resultado contra `value`.
+- Si `reference` no resuelve a un array (objeto no-array, string, número, booleano, `null` o ausente), la condición no coincide, sin coerciones implícitas — mismo criterio que `greaterThan`/`lessThan`.
+- Un elemento cuyo `itemField` no resuelve (elemento no objeto, o falta el segmento) se ignora sin invalidar la evaluación del resto del array; equivale a que ese elemento no aporte coincidencia.
+- Array vacío nunca coincide, independientemente de `itemField`.
+- `value` admite `null`; coincide si algún elemento (o su `itemField`) es exactamente `null`.
 
 ### Negación de condición
 - `negate: true` en una condición simple invierte el resultado de su evaluación.
@@ -73,11 +84,13 @@ Este mismo shape se reutiliza en otros contextos del runtime para declarar condi
 ### Condición simple
 - Si `visibility.reference` sale del alcance `params.{paramName}`, `item.*`, `forms.*` o `queries.*` soportado, el config completo se rechaza antes del render sobre la ruta exacta.
 - `params.{paramName}` requiere exactamente un segmento dinámico: `params.userId` es válido; `params`, `params.user.id` o formas sin segmento siguen siendo inválidas.
-- Si `visibility.operator` usa un valor fuera del catálogo soportado (`equals | notEquals | isTruthy | isFalsy | greaterThan | lessThan`), el config completo se rechaza antes del render.
+- Si `visibility.operator` usa un valor fuera del catálogo soportado (`equals | notEquals | isTruthy | isFalsy | greaterThan | lessThan | arrayContains`), el config completo se rechaza antes del render.
 - Si `visibility.operator` es `isTruthy` o `isFalsy` y declara `value`, el config completo se rechaza antes del render.
-- Si `visibility.operator` es `equals`, `notEquals`, `greaterThan` o `lessThan` y omite `value`, el config completo se rechaza antes del render.
-- Si `visibility.operator` es `equals` o `notEquals` y `value` no es un literal escalar (`string | number | boolean | null`), el config completo se rechaza antes del render.
+- Si `visibility.operator` es `equals`, `notEquals`, `greaterThan`, `lessThan` o `arrayContains` y omite `value`, el config completo se rechaza antes del render.
+- Si `visibility.operator` es `equals`, `notEquals` o `arrayContains` y `value` no es un literal escalar (`string | number | boolean | null`), el config completo se rechaza antes del render.
 - Si `visibility.operator` es `greaterThan` o `lessThan` y `value` no es numérico, el config completo se rechaza antes del render.
+- Si `visibility.itemField` está presente y no es un string, el config completo se rechaza antes del render.
+- Si `visibility.itemField` está presente y `visibility.operator` no es `arrayContains`, el config completo se rechaza antes del render.
 - Si `visibility.negate` está presente y no es booleano, el config completo se rechaza antes del render.
 
 ### Grupo compuesto

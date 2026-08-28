@@ -10,5 +10,110 @@
     "b",
     "c",
     "d"
+  ],
+  "userPermissions": [
+    {
+      "code": "1-1"
+    },
+    {
+      "code": "1-2"
+    },
+    {
+      "code": "1-3"
+    }
+  ],
+  "locations1": [
+    {
+      "lat": 42.818779,
+      "lng": -1.643927,
+      "label": "Plaza del Castillo, 31001 Pamplona, Spain"
+    },
+    {
+      "lat": 42.821159,
+      "lng": -1.645761,
+      "label": "Ayuntamiento de Pamplona, Plaza Consistorial, 31001 Pamplona, Spain"
+    },
+    {
+      "lat": 42.822361,
+      "lng": -1.641771,
+      "label": "Catedral de Santa María la Real, Calle Dormitalería, 31001 Pamplona, Spain"
+    },
+    {
+      "lat": 42.816419,
+      "lng": -1.646736,
+      "label": "Ciudadela de Pamplona, 31002 Pamplona, Spain"
+    },
+    {
+      "lat": 42.812478,
+      "lng": -1.646348,
+      "label": "Parque de la Taconera, 31001 Pamplona, Spain"
+    },
+    {
+      "lat": 42.816943,
+      "lng": -1.644111,
+      "label": "Plaza del Toros, Paseo Hemingway, 31002 Pamplona, Spain"
+    },
+    {
+      "lat": 42.813722,
+      "lng": -1.640417,
+      "label": "Universidad de Navarra, 31009 Pamplona, Spain"
+    },
+    {
+      "lat": 42.808932,
+      "lng": -1.632676,
+      "label": "Planetario de Pamplona, Sancho Ramírez kalea, 31008 Pamplona, Spain"
+    },
+    {
+      "lat": 42.817625,
+      "lng": -1.649826,
+      "label": "Bosque de Oliveti, 31002 Pamplona, Spain"
+    },
+    {
+      "lat": 42.827,
+      "lng": -1.6455,
+      "label": "Vuelta del Castillo, 31006 Pamplona, Spain"
+    }
+  ],
+  "burladaLocations": [
+    {
+      "lat": 42.822954,
+      "lng": -1.616726,
+      "label": "Ayuntamiento de Burlada, Plaza Alcalde Etxeberria, 31600 Burlada, Spain"
+    },
+    {
+      "lat": 42.823793,
+      "lng": -1.615202,
+      "label": "Parroquia de San Miguel, Kale Nagusia, 31600 Burlada, Spain"
+    },
+    {
+      "lat": 42.825364,
+      "lng": -1.612981,
+      "label": "Polideportivo Municipal de Burlada, 31600 Burlada, Spain"
+    },
+    {
+      "lat": 42.819651,
+      "lng": -1.619876,
+      "label": "Parque Fluvial del río Arga, 31600 Burlada, Spain"
+    },
+    {
+      "lat": 42.826748,
+      "lng": -1.614529,
+      "label": "Plaza Antoniutti, 31600 Burlada, Spain"
+    },
+    {
+      "lat": 42.821067,
+      "lng": -1.617843,
+      "label": "Mercado de Burlada, Kale Nagusia, 31600 Burlada, Spain"
+    },
+    {
+      "lat": 42.824512,
+      "lng": -1.618965,
+      "label": "Casa de Cultura de Burlada, 31600 Burlada, Spain"
+    },
+    {
+      "lat": 42.818205,
+      "lng": -1.614117,
+      "label": "Parque de la Magdalena, 31600 Burlada, Spain"
+    }
   ]
 }

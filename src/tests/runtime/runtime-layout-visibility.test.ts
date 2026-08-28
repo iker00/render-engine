@@ -1140,4 +1140,234 @@ describe('Runtime layout visibility', () => {
       ).toBe(false)
     })
   })
+
+  describe('arrayContains', () => {
+    function stateWithQueryXData(data: unknown): RuntimeState {
+      return {
+        ...runtimeState,
+        queries: {
+          ...runtimeState.queries,
+          x: {
+            status: 'success',
+            data,
+            error: null,
+          },
+        },
+      }
+    }
+
+    it('matches when itemField resolves to the condition value on some element of an object array', () => {
+      const state = stateWithQueryXData({
+        permissions: [{ code: '1-1' }, { code: '1-2' }, { code: '2-2' }, { code: '3-1' }],
+      })
+
+      expect(
+        matchesVisibilityRule(
+          { reference: 'queries.x.data.permissions', operator: 'arrayContains', itemField: 'code', value: '3-1' },
+          state,
+        ),
+      ).toBe(true)
+
+      expect(
+        matchesVisibilityRule(
+          { reference: 'queries.x.data.permissions', operator: 'arrayContains', itemField: 'code', value: '9-9' },
+          state,
+        ),
+      ).toBe(false)
+    })
+
+    it('matches the full element against the condition value when itemField is not declared (primitive array)', () => {
+      const state = stateWithQueryXData({ tags: ['a', 'b', 'c'] })
+
+      expect(
+        matchesVisibilityRule({ reference: 'queries.x.data.tags', operator: 'arrayContains', value: 'b' }, state),
+      ).toBe(true)
+
+      expect(
+        matchesVisibilityRule({ reference: 'queries.x.data.tags', operator: 'arrayContains', value: 'z' }, state),
+      ).toBe(false)
+    })
+
+    it('navigates nested itemField segments before comparing', () => {
+      const state = stateWithQueryXData({
+        permissions: [{ user: { code: '1-1' } }, { user: { code: '3-1' } }],
+      })
+
+      expect(
+        matchesVisibilityRule(
+          {
+            reference: 'queries.x.data.permissions',
+            operator: 'arrayContains',
+            itemField: 'user.code',
+            value: '3-1',
+          },
+          state,
+        ),
+      ).toBe(true)
+    })
+
+    it('does not match when the reference does not resolve', () => {
+      expect(
+        matchesVisibilityRule(
+          { reference: 'queries.x.data.permissions', operator: 'arrayContains', value: 'a' },
+          stateWithQueryXData({}),
+        ),
+      ).toBe(false)
+
+      expect(
+        matchesVisibilityRule(
+          { reference: 'queries.x.data.permissions', operator: 'arrayContains', value: 'a' },
+          runtimeState,
+        ),
+      ).toBe(false)
+
+      expect(
+        matchesVisibilityRule(
+          { reference: 'queries.x.data.permissions', operator: 'arrayContains', value: 'a' },
+          stateWithQueryXData('not navigable'),
+        ),
+      ).toBe(false)
+    })
+
+    it('does not match when the resolved reference value is not an array', () => {
+      const nonArrayValues: unknown[] = [{ nested: true }, 'a string', 42, true, null]
+
+      nonArrayValues.forEach((permissions) => {
+        expect(
+          matchesVisibilityRule(
+            { reference: 'queries.x.data.permissions', operator: 'arrayContains', value: 'a' },
+            stateWithQueryXData({ permissions }),
+          ),
+        ).toBe(false)
+      })
+    })
+
+    it('does not match an empty array, with or without itemField', () => {
+      const state = stateWithQueryXData({ permissions: [] })
+
+      expect(
+        matchesVisibilityRule(
+          { reference: 'queries.x.data.permissions', operator: 'arrayContains', value: 'a' },
+          state,
+        ),
+      ).toBe(false)
+
+      expect(
+        matchesVisibilityRule(
+          { reference: 'queries.x.data.permissions', operator: 'arrayContains', itemField: 'code', value: 'a' },
+          state,
+        ),
+      ).toBe(false)
+    })
+
+    it('does not match when itemField segment is missing on every element', () => {
+      const state = stateWithQueryXData({
+        permissions: [{ other: 'x' }, { other: 'y' }],
+      })
+
+      expect(
+        matchesVisibilityRule(
+          { reference: 'queries.x.data.permissions', operator: 'arrayContains', itemField: 'code', value: '3-1' },
+          state,
+        ),
+      ).toBe(false)
+    })
+
+    it('does not match when itemField is declared over an array of primitives', () => {
+      const state = stateWithQueryXData({ tags: ['a', 'b'] })
+
+      expect(
+        matchesVisibilityRule(
+          { reference: 'queries.x.data.tags', operator: 'arrayContains', itemField: 'code', value: 'a' },
+          state,
+        ),
+      ).toBe(false)
+    })
+
+    it('ignores non plain-object elements in a mixed array without invalidating the match', () => {
+      const state = stateWithQueryXData({
+        permissions: [{ code: '1-1' }, 'suelto', 42, null],
+      })
+
+      expect(
+        matchesVisibilityRule(
+          { reference: 'queries.x.data.permissions', operator: 'arrayContains', itemField: 'code', value: '1-1' },
+          state,
+        ),
+      ).toBe(true)
+    })
+
+    it('matches value: null with itemField using strict equality', () => {
+      const state = stateWithQueryXData({
+        permissions: [{ code: null }, { code: 'x' }],
+      })
+
+      expect(
+        matchesVisibilityRule(
+          { reference: 'queries.x.data.permissions', operator: 'arrayContains', itemField: 'code', value: null },
+          state,
+        ),
+      ).toBe(true)
+    })
+
+    it('behaves the same on a single-element array as on any other size', () => {
+      const state = stateWithQueryXData({ tags: ['only'] })
+
+      expect(
+        matchesVisibilityRule({ reference: 'queries.x.data.tags', operator: 'arrayContains', value: 'only' }, state),
+      ).toBe(true)
+
+      expect(
+        matchesVisibilityRule({ reference: 'queries.x.data.tags', operator: 'arrayContains', value: 'other' }, state),
+      ).toBe(false)
+    })
+
+    it('negate: true inverts the match', () => {
+      const state = stateWithQueryXData({ tags: ['a', 'b', 'c'] })
+
+      expect(
+        matchesVisibilityRule(
+          { reference: 'queries.x.data.tags', operator: 'arrayContains', value: 'z', negate: true },
+          state,
+        ),
+      ).toBe(true)
+
+      expect(
+        matchesVisibilityRule(
+          { reference: 'queries.x.data.tags', operator: 'arrayContains', value: 'b', negate: true },
+          state,
+        ),
+      ).toBe(false)
+    })
+
+    it('composes with or/and groups alongside other operators', () => {
+      const state = stateWithQueryXData({ tags: ['a', 'b', 'c'] })
+
+      expect(
+        matchesVisibilityRule(
+          {
+            operator: 'or',
+            conditions: [
+              { reference: 'queries.x.data.tags', operator: 'arrayContains', value: 'b' },
+              { reference: 'forms.profileForm.role', operator: 'equals', value: 'editor' },
+            ],
+          },
+          state,
+        ),
+      ).toBe(true)
+
+      expect(
+        matchesVisibilityRule(
+          {
+            operator: 'and',
+            conditions: [
+              { reference: 'queries.x.data.tags', operator: 'arrayContains', value: 'b' },
+              { reference: 'forms.profileForm.role', operator: 'equals', value: 'editor' },
+            ],
+          },
+          state,
+        ),
+      ).toBe(false)
+    })
+  })
 })

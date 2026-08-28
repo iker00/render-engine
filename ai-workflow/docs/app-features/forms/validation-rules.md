@@ -28,6 +28,7 @@
 - La validación se ejecuta al hacer submit del `form`.
 - Antes de validar, el runtime inicializa también cualquier campo visible del formulario que todavía no exista en store para que entre en la misma pasada de validación.
 - Mientras el usuario edita, el runtime no reejecuta una pasada completa de validación del formulario: solo reevalúa localmente el campo con error y conserva, cambia o limpia ese error según la primera regla visible que siga fallando.
+- **Gating de "Siguiente" en `steps`**: al pulsar "Siguiente" dentro de un nodo `steps`, el runtime ejecuta el mismo motor de validación pero acotado únicamente a los campos visibles del paso activo, sin introducir un motor de validación nuevo. Si falla, el paso no avanza. Retroceder ("Atrás") nunca valida. Ver [[../nodes/steps.md]].
 
 ## Dónde vive el resultado
 - Los errores viven solo en `forms.{formId}.{fieldId}.error`.
@@ -37,15 +38,15 @@
 ## Semántica por tipo de campo
 - `input` y `textarea` `required` consideran inválidos `''` y strings compuestos solo por espacios.
 - `toggle` `required` exige que el valor sea `true` (activado). Un toggle en `false` con `required` falla la validación.
-- `select` simple y `radioGroup` `required` consideran inválido `''` aunque exista una opción placeholder visible en el caso de `select`.
-- `select.multiple` y `checkboxGroup` `required` consideran inválido `[]`.
+- `select` simple, `radioGroup` y `autocomplete` simple `required` consideran inválido `''` aunque exista una opción placeholder visible en el caso de `select`.
+- `select.multiple`, `checkboxGroup` y `autocomplete` con `multiple: true` `required` consideran inválido `[]`.
 - `minLength` y `maxLength` solo aplican a `input` textuales y `textarea`, usando la longitud efectiva del string actual sin trim adicional.
 - `min` y `max` solo aplican a `inputType: 'number'`, comparando contra el valor numérico efectivo del campo cuando existe.
-- `minSelections` y `maxSelections` solo aplican a `select.multiple` y `checkboxGroup`, contando la selección efectiva después de normalizar el catálogo visible.
+- `minSelections` y `maxSelections` solo aplican a `select.multiple`, `checkboxGroup` y `autocomplete` con `multiple: true`, contando la selección efectiva después de normalizar el catálogo visible.
 - `pattern` solo aplica a `input` textuales (`inputType` text, email, password, search, tel, url) y `textarea`. Valida el valor contra una expresión regular JavaScript sin flags ni anclaje automático. Si el campo está vacío, `pattern` no falla. Si el pattern no compila como `RegExp` válido, el config se rechaza antes del render. Shape: `string` o `{ value: string, message?: string }`.
 - `email` solo aplica a `input` textuales y `textarea`. Valida formato básico de email (presencia de `@`, al menos un carácter antes y después, dominio con al menos un punto). Si el campo está vacío, `email` no falla. Shape: `true` o `{ value: true, message?: string }`.
 - `url` solo aplica a `input` textuales y `textarea`. Valida que el string sea parseable como URL válida con protocolo `http` o `https`. Si el campo está vacío, `url` no falla. Shape: `true` o `{ value: true, message?: string }`.
-- `pattern`, `email` y `url` se rechazan en `input` con `inputType` `number`, `date`, `datetime-local`, `time` y en `select`, `radioGroup`, `checkboxGroup`, `toggle`.
+- `pattern`, `email` y `url` se rechazan en `input` con `inputType` `number`, `date`, `datetime-local`, `time` y en `select`, `radioGroup`, `checkboxGroup`, `toggle`, `autocomplete`.
 
 ## Validaciones de ficheros (fileManager y fileInput)
 

@@ -14,6 +14,11 @@ export interface RuntimeApiHiddenFormFields {
   fieldIds: ReadonlySet<string>
 }
 
+export interface RuntimeApiEmptySubmitValues {
+  formId: string
+  valuesByFieldId: ReadonlyMap<string, string | number>
+}
+
 /**
  * Channel carrying raw `File[]` selections for a form's file-like fields,
  * keyed by field id. The executor encodes each array to base64 in a preflight
@@ -32,6 +37,7 @@ export interface BuildRuntimeApiRequestOptions {
   requestParams?: RuntimeApiRequestParams
   iterationContext?: RuntimeIterationContext
   hiddenFormFields?: RuntimeApiHiddenFormFields
+  emptySubmitValues?: RuntimeApiEmptySubmitValues
   fileValueOverrides?: ReadonlyMap<string, RuntimeApiBodyValue[]>
 }
 
@@ -42,6 +48,7 @@ export interface BuildInlineRuntimeApiRequestOptions {
   requestParams?: RuntimeApiRequestParams
   iterationContext?: RuntimeIterationContext
   hiddenFormFields?: RuntimeApiHiddenFormFields
+  emptySubmitValues?: RuntimeApiEmptySubmitValues
   fileValueOverrides?: ReadonlyMap<string, RuntimeApiBodyValue[]>
 }
 

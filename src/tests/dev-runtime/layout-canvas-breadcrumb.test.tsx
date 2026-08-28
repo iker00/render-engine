@@ -73,6 +73,23 @@ describe('LayoutCanvasBreadcrumb rendering', () => {
   })
 })
 
+// T3 (0133): restyle — ancestor segments read as attenuated, the last (selected) segment as
+// highlighted. Same data-testid/behavior as before; only the visual weighting changes.
+describe('LayoutCanvasBreadcrumb restyle', () => {
+  it('gives ancestor segment buttons an attenuated style and the last segment a highlighted one', () => {
+    render(
+      <LayoutCanvasBreadcrumb pageLayout={buildNestedLayout()} selectedPath={HEADING_PATH} onSelectNode={() => {}} />,
+    )
+
+    const containerSegment = screen.getByText('container')
+    expect(containerSegment.className).toContain('text-gray-400')
+
+    const headingSegment = screen.getByText('heading')
+    expect(headingSegment.className).toContain('font-medium')
+    expect(headingSegment.className).toContain('text-gray-900')
+  })
+})
+
 describe('LayoutCanvasBreadcrumb navigation', () => {
   it('invokes onSelectNode with the container path when clicking the container segment, not form or heading', () => {
     const onSelectNode = vi.fn()

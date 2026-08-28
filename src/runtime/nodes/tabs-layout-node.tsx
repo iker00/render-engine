@@ -2,10 +2,11 @@ import { useState } from 'react'
 import type { TabsLayoutNode } from '../../config/runtime-config'
 import type { RuntimeIterationContext } from '../runtime-references/runtime-reference-resolver'
 import { resolveRuntimeTextReference } from '../runtime-references/runtime-reference-resolver'
-import { useRuntimeState } from '../runtime-state/runtime-state-provider'
+import { useRuntimeState } from '../runtime-state/use-runtime-state'
 import { LayoutRenderer } from '../layout-renderer'
 import { matchesVisibilityRule } from '../runtime-layout-visibility'
 import type { LayoutNodePath } from '../layout-node-path'
+import { IconNode } from './icon-node'
 import {
   getTabsBarClassName,
   getTabsButtonClassName,
@@ -99,6 +100,7 @@ function TabsNodeContent({ node, items, orientation, defaultTab, state, iteratio
             onClick={() => setActiveTab(index)}
             className={getTabsButtonClassName(isActive, orientation)}
           >
+            <IconNode name={item.icon} className="size-4 shrink-0 inline-block align-middle mr-2" />
             {resolvedLabel}
           </button>
         )
@@ -110,15 +112,13 @@ function TabsNodeContent({ node, items, orientation, defaultTab, state, iteratio
   const basePath = path ?? []
   const panel = (
     <div data-layout-node="tabs-panel" className={getTabsPanelClassName()}>
-      {activeItem?.children && activeItem.children.length > 0 ? (
-        <LayoutRenderer
-          nodes={activeItem.children}
-          iterationContext={iterationContext}
-          path={basePath}
-          parentTabItemIndex={effectiveActiveTab}
-          buildChildPath={(index) => [...basePath, { field: 'tabItem', itemIndex: effectiveActiveTab, index }]}
-        />
-      ) : null}
+      <LayoutRenderer
+        nodes={activeItem?.children ?? []}
+        iterationContext={iterationContext}
+        path={basePath}
+        parentTabItemIndex={effectiveActiveTab}
+        buildChildPath={(index) => [...basePath, { field: 'tabItem', itemIndex: effectiveActiveTab, index }]}
+      />
     </div>
   )
 

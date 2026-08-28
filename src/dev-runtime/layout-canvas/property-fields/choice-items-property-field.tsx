@@ -224,7 +224,7 @@ interface DynamicItemsEditorProps {
   onChange: (value: unknown) => void
 }
 
-function DynamicItemsEditor({ label, value, onChange }: DynamicItemsEditorProps) {
+function DynamicItemsEditor({ value, onChange }: DynamicItemsEditorProps) {
   function handleSourceChange(nextSource: string) {
     onChange({ ...value, source: nextSource })
   }

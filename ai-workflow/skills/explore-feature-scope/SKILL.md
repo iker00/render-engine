@@ -11,7 +11,7 @@ Usa esta skill cuando una petición todavía no esté lista para escribir `spec.
 
 Esta skill debe comportarse como una conversación de discovery: aclarar el problema, detectar ambigüedades, revisar el contexto mínimo necesario y ayudar al usuario a decidir si la feature ya está suficientemente acotada como para invocar `generate-feature-spec`.
 
-Esta skill no produce artefactos. No crea ni modifica ficheros en `ai-workflow/features/NNNN-feature-name/`. No toca `status.yaml`. No genera `discovery.md`. Su única salida es la conversación con el usuario.
+Esta skill no produce artefactos. No crea ni modifica ficheros en `ai-workflow/features/YYYY-MM-DD-HH-MM-feature-name/`. No toca `status.yaml`. No genera `discovery.md`. Su única salida es la conversación con el usuario.
 
 ## Leer siempre
 - `ai-workflow/docs/workflow.md`
@@ -41,7 +41,7 @@ Al cerrar la conversación, la skill debe terminar con una recomendación explí
 - No tocar `status.yaml`.
 - No escribir `discovery.md`, `spec.md`, `design.md` ni `tasks.md`.
 - No proponer cambios de código durante esta fase.
-- No reservar todavía un identificador `NNNN-feature-name`; eso lo hace `generate-feature-spec` cuando el usuario decida pasar a esa fase.
+- No reservar todavía un identificador `YYYY-MM-DD-HH-MM-feature-name`; eso lo hace `generate-feature-spec` cuando el usuario decida pasar a esa fase.
 - Hacer preguntas concretas cuando detectes ambigüedad funcional bloqueante; siempre con una sugerencia explícita acompañando cada pregunta.
 - Cuando varias alternativas razonables existan, presentar las opciones brevemente con sus trade-offs y dejar la decisión al usuario.
 - Mantener el diálogo breve y accionable; evitar análisis exhaustivos sin valor para la decisión.

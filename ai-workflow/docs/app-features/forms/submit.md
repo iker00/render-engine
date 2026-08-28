@@ -29,7 +29,17 @@
 - Un formulario sin ningún `fileInput` referenciado mantiene exactamente el mismo comportamiento de submit que un formulario sin `fileInput`, sin regresión.
 - Este comportamiento aplica únicamente a `fileInput`. El nodo `fileManager` (subida standalone fuera de formulario) sigue enviando `multipart/form-data` por fichero contra sus operaciones configuradas, sin cambios; ver [[../nodes/file-input.md]] y [[../nodes/file-manager.md]].
 
+### `emptySubmitValue` en `select` de selección simple
+
+Un `select` de selección simple puede declarar `props.emptySubmitValue` (literal escalar `string | number`) para sustituir el `''` que se enviaría en el payload cuando el campo está vacío en el momento del submit.
+- La sustitución solo afecta a la resolución de `forms.{formId}.{fieldId}` dentro del payload de submit (`body`, `query`, `headers` de la operación base o de `submitAction`, normalizada a string); el store y la UI del campo no cambian.
+- Si el campo tiene un valor efectivo distinto de `''`, `emptySubmitValue` no tiene ningún efecto.
+- `emptySubmitValue` no exime la validación `required`: un campo vacío con `required` activo sigue bloqueando el submit.
+- Si el campo está oculto en el momento del submit, se aplica la omisión de campos ocultos ya descrita arriba; `emptySubmitValue` nunca reintroduce una clave omitida.
+- Contrato completo y ejemplos en [[../nodes/select.md]]; detalle a nivel de resolución de payload en [[../queries/execution.md]].
+
 ## Acciones post-éxito (`onSuccess`)
+- Esta capacidad ya no es exclusiva de `submitAction`: `button.props.action.type: executeOperation`/`executeOperations` acepta la misma pareja `onSuccess`/`onError` con idéntica semántica, ver [[../nodes/button.md#Acciones post-ejecución onSuccess onError]].
 - `submitAction` acepta opcionalmente `onSuccess`: una lista ordenada de acciones a ejecutar tras un submit exitoso.
 - Las acciones de `onSuccess` pueden ser cualquiera del catálogo de botón: `navigateTo`, `goBack`, `executeOperation`, `executeOperations`, `resetForm`, `openModal`, `closeModal`.
 - Cada acción en `onSuccess` puede declarar opcionalmente `when` con el mismo shape que `visibility`: `{ reference, operator, value? }`.

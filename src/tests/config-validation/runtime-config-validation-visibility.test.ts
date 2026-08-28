@@ -599,6 +599,246 @@ describe('validateRuntimeConfig', () => {
       })
     })
 
+    it('accepts arrayContains with itemField and a string value', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithLayout([
+          {
+            type: 'heading',
+            visibility: {
+              reference: 'queries.x.data.permissions',
+              operator: 'arrayContains',
+              itemField: 'code',
+              value: '3-1',
+            },
+            props: { text: 'Welcome', level: 1 },
+          },
+        ]),
+      )
+      expect(result.status).toBe('ready')
+    })
+
+    it('accepts arrayContains without itemField', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithLayout([
+          {
+            type: 'heading',
+            visibility: {
+              reference: 'queries.x.data.tags',
+              operator: 'arrayContains',
+              value: 'b',
+            },
+            props: { text: 'Welcome', level: 1 },
+          },
+        ]),
+      )
+      expect(result.status).toBe('ready')
+    })
+
+    it('accepts arrayContains with null, numeric and boolean scalar values', () => {
+      for (const value of [null, 3, true]) {
+        const result = validateRuntimeConfig(
+          createConfigWithLayout([
+            {
+              type: 'heading',
+              visibility: {
+                reference: 'queries.x.data.tags',
+                operator: 'arrayContains',
+                value,
+              },
+              props: { text: 'Welcome', level: 1 },
+            },
+          ]),
+        )
+        expect(result.status).toBe('ready')
+      }
+    })
+
+    it('accepts arrayContains with negate: true', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithLayout([
+          {
+            type: 'heading',
+            visibility: {
+              reference: 'queries.x.data.tags',
+              operator: 'arrayContains',
+              value: 'b',
+              negate: true,
+            },
+            props: { text: 'Welcome', level: 1 },
+          },
+        ]),
+      )
+      expect(result.status).toBe('ready')
+    })
+
+    it('rejects arrayContains without value at visibility.value', () => {
+      expect(
+        validateRuntimeConfig(
+          createConfigWithLayout([
+            {
+              type: 'heading',
+              visibility: {
+                reference: 'queries.x.data.tags',
+                operator: 'arrayContains',
+              },
+              props: {
+                text: 'Welcome',
+                level: 1,
+              },
+            },
+          ]),
+        ),
+      ).toEqual({
+        status: 'error',
+        error: {
+          code: 'invalid-layout',
+          displayMode: 'development-only',
+          message: `Page "home" has an invalid layout at "layout[0].visibility.value": operator "arrayContains" requires value.
+  → heading("Welcome")
+  Node: {"type":"heading","props":{"text":"Welcome"}}`,
+        },
+      })
+    })
+
+    it('rejects arrayContains with a non-scalar value (object or array) at visibility.value', () => {
+      for (const value of [{ role: 'admin' }, ['admin']]) {
+        expect(
+          validateRuntimeConfig(
+            createConfigWithLayout([
+              {
+                type: 'heading',
+                visibility: {
+                  reference: 'queries.x.data.tags',
+                  operator: 'arrayContains',
+                  value,
+                },
+                props: {
+                  text: 'Welcome',
+                  level: 1,
+                },
+              },
+            ]),
+          ),
+        ).toEqual({
+          status: 'error',
+          error: {
+            code: 'invalid-layout',
+            displayMode: 'development-only',
+            message: `Page "home" has an invalid layout at "layout[0].visibility.value": operator "arrayContains" only accepts string, number, boolean or null.
+  → heading("Welcome")
+  Node: {"type":"heading","props":{"text":"Welcome"}}`,
+          },
+        })
+      }
+    })
+
+    it('rejects arrayContains with a non-string itemField at visibility.itemField', () => {
+      // node visibility is validated through the zod schema (itemField: z.string().optional()) before the
+      // manual validator runs, so a type mismatch surfaces as the generic path-only invalid-layout message.
+      for (const itemField of [123, true, null, { code: 1 }, ['code']]) {
+        const result = validateRuntimeConfig(
+          createConfigWithLayout([
+            {
+              type: 'heading',
+              visibility: {
+                reference: 'queries.x.data.permissions',
+                operator: 'arrayContains',
+                value: '3-1',
+                itemField,
+              },
+              props: {
+                text: 'Welcome',
+                level: 1,
+              },
+            },
+          ]),
+        )
+        expect(result.status).toBe('error')
+        if (result.status !== 'error') throw new Error('Expected error')
+        expect(result.error.message).toContain('layout[0].visibility.itemField')
+      }
+    })
+
+    it('rejects arrayContains with a non-string itemField in pages[].preloads[*].when with the exact message', () => {
+      // preloads[].when bypasses zod's whenConditionSchema (preloads entries are typed as z.unknown()), so this
+      // is the context that actually exercises the manual "itemField must be a string." message.
+      for (const itemField of [123, true, null, { code: 1 }, ['code']]) {
+        const result = validateRuntimeConfig({
+          api: {},
+          pages: [
+            {
+              id: 'home',
+              layout: [],
+              preloads: [
+                {
+                  loadUser: {},
+                  when: {
+                    reference: 'params.mode',
+                    operator: 'arrayContains',
+                    value: 'admin',
+                    itemField,
+                  },
+                },
+              ],
+            },
+          ],
+          initialPage: 'home',
+        })
+        expect(result.status).toBe('error')
+        if (result.status !== 'error') throw new Error('Expected error')
+        expect(result.error.message).toContain('pages[0].preloads[0].when.itemField')
+        expect(result.error.message).toContain('itemField must be a string.')
+      }
+    })
+
+    it('rejects itemField present when operator is not arrayContains at visibility.itemField', () => {
+      const nonArrayContainsConditions: Array<Record<string, unknown>> = [
+        { reference: 'forms.profile.role', operator: 'equals', value: 'admin', itemField: 'code' },
+        { reference: 'forms.profile.role', operator: 'notEquals', value: 'admin', itemField: 'code' },
+        { reference: 'forms.profile.role', operator: 'isTruthy', itemField: 'code' },
+        { reference: 'forms.profile.role', operator: 'isFalsy', itemField: 'code' },
+        { reference: 'queries.q.data.count', operator: 'greaterThan', value: 1, itemField: 'code' },
+        { reference: 'queries.q.data.count', operator: 'lessThan', value: 1, itemField: 'code' },
+      ]
+
+      for (const visibility of nonArrayContainsConditions) {
+        const result = validateRuntimeConfig(
+          createConfigWithLayout([
+            {
+              type: 'heading',
+              visibility,
+              props: { text: 'Welcome', level: 1 },
+            },
+          ]),
+        )
+        expect(result.status).toBe('error')
+        if (result.status !== 'error') throw new Error('Expected error')
+        expect(result.error.message).toContain(
+          'layout[0].visibility.itemField": itemField is only valid when operator is "arrayContains".',
+        )
+      }
+    })
+
+    it('rejects arrayContains with non-boolean negate at visibility.negate (regression, no new casuistry)', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithLayout([
+          {
+            type: 'heading',
+            visibility: {
+              reference: 'queries.x.data.tags',
+              operator: 'arrayContains',
+              value: 'b',
+              negate: 'yes',
+            },
+            props: { text: 'Welcome', level: 1 },
+          },
+        ]),
+      )
+      expect(result.status).toBe('error')
+      if (result.status !== 'error') throw new Error('Expected error')
+      expect(result.error.message).toContain('layout[0].visibility.negate')
+    })
+
     // T3 (updated): params.{paramName} is now a valid visibility reference
     it('accepts params.{paramName} as a valid visibility reference with isTruthy operator', () => {
       const result = validateRuntimeConfig(
@@ -891,6 +1131,26 @@ describe('validateRuntimeConfig', () => {
           conditions: [
             { reference: 'params.mode', operator: 'equals', value: 'edit' },
             { reference: 'forms.profile.role', operator: 'isTruthy' },
+          ],
+        })
+      }
+    })
+
+    it('accepts a group with an arrayContains condition alongside another simple condition', () => {
+      const result = whenConditionSchema.safeParse({
+        operator: 'and',
+        conditions: [
+          { reference: 'queries.x.data.tags', operator: 'arrayContains', itemField: 'code', value: '3-1' },
+          { reference: 'params.mode', operator: 'isTruthy' },
+        ],
+      })
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data).toEqual({
+          operator: 'and',
+          conditions: [
+            { reference: 'queries.x.data.tags', operator: 'arrayContains', itemField: 'code', value: '3-1' },
+            { reference: 'params.mode', operator: 'isTruthy' },
           ],
         })
       }
@@ -1313,6 +1573,104 @@ describe('validateRuntimeConfig', () => {
           },
         ]),
       )
+      expect(result.status).toBe('ready')
+    })
+  })
+
+  describe('arrayContains — reused across the four visibility/when contexts', () => {
+    it('accepts arrayContains in submitAction.onSuccess[*].when', () => {
+      const result = validateRuntimeConfig({
+        api: {
+          submitUserForm: { method: 'POST', endpoint: '/api/forms' },
+        },
+        pages: [
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'form',
+                id: 'user-form',
+                submitAction: {
+                  type: 'executeOperation',
+                  operationName: 'submitUserForm',
+                  onSuccess: [
+                    {
+                      type: 'goBack',
+                      when: {
+                        reference: 'queries.submitUserForm.data.tags',
+                        operator: 'arrayContains',
+                        itemField: 'code',
+                        value: '3-1',
+                      },
+                    },
+                  ],
+                },
+                children: [],
+              },
+            ],
+          },
+        ],
+        initialPage: 'home',
+      })
+      expect(result.status).toBe('ready')
+    })
+
+    it('accepts arrayContains in pages[].preloads[*].when', () => {
+      const result = validateRuntimeConfig({
+        api: {},
+        pages: [
+          {
+            id: 'home',
+            layout: [],
+            preloads: [
+              {
+                loadUser: {},
+                when: {
+                  reference: 'params.mode',
+                  operator: 'arrayContains',
+                  value: 'admin',
+                },
+              },
+            ],
+          },
+        ],
+        initialPage: 'home',
+      })
+      expect(result.status).toBe('ready')
+    })
+
+    it('accepts arrayContains in button.props.action.operations[*].when (executeOperations)', () => {
+      const result = validateRuntimeConfig({
+        api: {},
+        pages: [
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'button',
+                props: {
+                  label: 'Run',
+                  action: {
+                    type: 'executeOperations',
+                    operations: [
+                      {
+                        operationName: 'op1',
+                        when: {
+                          reference: 'queries.op1.data.tags',
+                          operator: 'arrayContains',
+                          itemField: 'code',
+                          value: '3-1',
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            ],
+          },
+        ],
+        initialPage: 'home',
+      })
       expect(result.status).toBe('ready')
     })
   })
