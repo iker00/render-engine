@@ -89,6 +89,7 @@ export function validateAccordionNode(
         label: parseResult.data.props.label,
         defaultOpen: parseResult.data.props.defaultOpen,
         groupId: parseResult.data.props.groupId,
+        icon: parseResult.data.props.icon,
       },
       children,
     },

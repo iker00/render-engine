@@ -13,6 +13,7 @@ import {
   getAccordionChevronClassName,
   getAccordionHeaderClassName,
 } from '../runtime-node-styling'
+import { IconNode } from './icon-node'
 
 interface AccordionNodeProps {
   node: AccordionLayoutNode
@@ -103,7 +104,10 @@ export function AccordionNode({ node, iterationContext, path }: AccordionNodePro
         onClick={handleToggle}
         className={getAccordionHeaderClassName()}
       >
-        <span>{resolvedLabel}</span>
+        <span className="flex items-center gap-2">
+          <IconNode name={node.props.icon} className="size-4 shrink-0" />
+          <span>{resolvedLabel}</span>
+        </span>
         <svg
           data-layout-node="accordion-chevron"
           aria-hidden="true"

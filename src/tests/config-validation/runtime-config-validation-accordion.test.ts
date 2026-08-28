@@ -113,6 +113,26 @@ describe('validateRuntimeConfig — accordion node: acceptance', () => {
     )
     expect(result.status).toBe('ready')
   })
+
+  it('accepts props.icon: "ChevronRight" and exposes it on the validated node', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithLayout([createAccordionNode({ props: { label: 'Sección', icon: 'ChevronRight' } })]),
+    )
+    expect(result.status).toBe('ready')
+    if (result.status === 'ready') {
+      const accordionNode = result.config.pages[0]?.layout[0] as { props: { icon?: string } }
+      expect(accordionNode.props.icon).toBe('ChevronRight')
+    }
+  })
+
+  it('accepts an accordion without props.icon and exposes props.icon as undefined (regression)', () => {
+    const result = validateRuntimeConfig(createConfigWithLayout([createAccordionNode()]))
+    expect(result.status).toBe('ready')
+    if (result.status === 'ready') {
+      const accordionNode = result.config.pages[0]?.layout[0] as { props: { icon?: string } }
+      expect(accordionNode.props.icon).toBeUndefined()
+    }
+  })
 })
 
 describe('validateRuntimeConfig — accordion node: rejection', () => {
@@ -159,6 +179,16 @@ describe('validateRuntimeConfig — accordion node: rejection', () => {
     expect(result.status).toBe('error')
     if (result.status === 'error') {
       expect(result.error.message).toContain('props.groupId')
+    }
+  })
+
+  it('rejects props.icon: 42 (number, not string) — error contains props', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithLayout([createAccordionNode({ props: { label: 'Sección', icon: 42 } })]),
+    )
+    expect(result.status).toBe('error')
+    if (result.status === 'error') {
+      expect(result.error.message).toContain('props')
     }
   })
 

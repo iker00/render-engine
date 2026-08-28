@@ -870,6 +870,119 @@ describe('AccordionNode — body gap between children', () => {
   })
 })
 
+describe('AccordionNode — header icon', () => {
+  it('renders an icon before the label when props.icon is a valid Lucide name', () => {
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [
+        {
+          type: 'accordion',
+          props: { label: 'Con icono', icon: 'ChevronRight' },
+        },
+      ],
+    }
+
+    const { container } = renderRuntimePage(page)
+    const header = container.querySelector('[data-layout-node="accordion-header"]')!
+    const svgs = header.querySelectorAll('svg')
+
+    // Icon svg + chevron svg = 2, icon comes first in DOM order
+    expect(svgs).toHaveLength(2)
+    expect(svgs[svgs.length - 1]).toHaveAttribute('data-layout-node', 'accordion-chevron')
+
+    const iconSvg = svgs[0]
+    expect(iconSvg).toHaveAttribute('aria-hidden', 'true')
+    expect(iconSvg.compareDocumentPosition(screen.getByText('Con icono'))).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    )
+  })
+
+  it('icon does not add to the accessible name of the header button', () => {
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [
+        {
+          type: 'accordion',
+          props: { label: 'Nombre accesible', icon: 'ChevronRight' },
+        },
+      ],
+    }
+
+    renderRuntimePage(page)
+
+    expect(screen.getByRole('button', { name: 'Nombre accesible' })).toBeInTheDocument()
+  })
+
+  it('renders no icon element and keeps header unchanged when props.icon is not a known Lucide name', () => {
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [
+        {
+          type: 'accordion',
+          props: { label: 'Icono inválido', icon: 'NoExiste' },
+        },
+      ],
+    }
+
+    const { container } = renderRuntimePage(page)
+    const header = container.querySelector('[data-layout-node="accordion-header"]')!
+    const svgs = header.querySelectorAll('svg')
+
+    // Only the chevron remains
+    expect(svgs).toHaveLength(1)
+    expect(svgs[0]).toHaveAttribute('data-layout-node', 'accordion-chevron')
+    expect(screen.getByRole('button', { name: 'Icono inválido' })).toBeInTheDocument()
+  })
+
+  it('renders header exactly as before this task when props.icon is absent (regression)', () => {
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [
+        {
+          type: 'accordion',
+          props: { label: 'Sin icono' },
+        },
+      ],
+    }
+
+    const { container } = renderRuntimePage(page)
+    const header = container.querySelector('[data-layout-node="accordion-header"]')!
+    const svgs = header.querySelectorAll('svg')
+
+    expect(header.textContent).toBe('Sin icono')
+    expect(svgs).toHaveLength(1)
+    expect(svgs[0]).toHaveAttribute('data-layout-node', 'accordion-chevron')
+  })
+
+  it('icon behaves the same across all instances of a groupId when declared', () => {
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [
+        {
+          type: 'accordion',
+          props: { label: 'Grupo icono A', groupId: 'grupo-icono', icon: 'ChevronRight', defaultOpen: true },
+          children: [{ type: 'paragraph', props: { text: 'Cuerpo A' } }],
+        },
+        {
+          type: 'accordion',
+          props: { label: 'Grupo icono B', groupId: 'grupo-icono', icon: 'ChevronRight' },
+          children: [{ type: 'paragraph', props: { text: 'Cuerpo B' } }],
+        },
+      ],
+    }
+
+    const { container } = renderRuntimePage(page)
+    const headers = container.querySelectorAll('[data-layout-node="accordion-header"]')
+
+    expect(headers).toHaveLength(2)
+    headers.forEach((header) => {
+      const svgs = header.querySelectorAll('svg')
+      expect(svgs).toHaveLength(2)
+      expect(svgs[svgs.length - 1]).toHaveAttribute('data-layout-node', 'accordion-chevron')
+    })
+  })
+})
+
 describe('AccordionNode — header styling and chevron', () => {
   it('header has bg-primary-50 and hover:bg-primary-100 classes and no legacy app-accent or gray classes', () => {
     const page: RuntimePageConfig = {
