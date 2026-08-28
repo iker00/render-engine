@@ -1,9 +1,8 @@
 import type {
   CloseModalRuntimeUiAction,
+  DownloadOperationRuntimeUiAction,
   ExecuteOperationRuntimeUiAction,
   ExecuteOperationsRuntimeUiAction,
-  FormOnErrorAction,
-  FormOnSuccessAction,
   GoBackButtonAction,
   NavigateToButtonAction,
   OpenModalRuntimeUiAction,
@@ -15,6 +14,7 @@ import type {
   RuntimeConfigError,
   RuntimeConfigValue,
   RuntimeUiAction,
+  RuntimeUiActionListEntry,
   RuntimeVisibilityConfig,
   RuntimeVisibilityGroup,
   RuntimeVisibilityOperator,
@@ -28,6 +28,7 @@ import type { BreadcrumbSegment } from './validation-breadcrumb'
 import { buildBreadcrumbSegmentFromNode, enrichedInvalidLayoutFromNode } from './validation-breadcrumb'
 import {
   closeModalRuntimeUiActionSchema,
+  downloadOperationRuntimeUiActionSchema,
   executeOperationRuntimeUiActionSchema,
   executeOperationsRuntimeUiActionSchema,
   goBackButtonActionSchema,
@@ -195,7 +196,7 @@ export function validateFormSubmitAction(
   rawAction: unknown,
   path: string,
   pageId: string,
-): { status: 'ready'; action: ExecuteOperationRuntimeUiAction | ExecuteOperationsRuntimeUiAction; onSuccess?: FormOnSuccessAction[]; onError?: FormOnErrorAction[] } | { status: 'error'; error: RuntimeConfigError } {
+): { status: 'ready'; action: ExecuteOperationRuntimeUiAction | ExecuteOperationsRuntimeUiAction; onSuccess?: RuntimeUiActionListEntry[]; onError?: RuntimeUiActionListEntry[] } | { status: 'error'; error: RuntimeConfigError } {
   if (!isRecord(rawAction)) {
     return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}".`)
   }
@@ -229,8 +230,65 @@ export function validateFormSubmitAction(
     }
   }
 
-  let onSuccess: FormOnSuccessAction[] | undefined
-  let onError: FormOnErrorAction[] | undefined
+  const lifecycleResult = validateRuntimeUiActionLifecycleBlocks(rawAction, path, pageId)
+
+  if (lifecycleResult.status === 'error') {
+    return lifecycleResult
+  }
+
+  return {
+    status: 'ready',
+    action,
+    ...(lifecycleResult.onSuccess !== undefined ? { onSuccess: lifecycleResult.onSuccess } : {}),
+    ...(lifecycleResult.onError !== undefined ? { onError: lifecycleResult.onError } : {}),
+  }
+}
+
+// Mirrors validateFormSubmitAction's pattern for executeOperation, but merges onSuccess/onError
+// into the returned action itself (D7: downloadOperation is a first-level action of button/link,
+// not part of the shared onSuccess/onError catalog, so its lifecycle lives on the action shape).
+export function validateDownloadOperationAction(
+  rawAction: Record<string, unknown>,
+  path: string,
+  pageId: string,
+): { status: 'ready'; action: DownloadOperationRuntimeUiAction } | { status: 'error'; error: RuntimeConfigError } {
+  const parseResult = downloadOperationRuntimeUiActionSchema.safeParse(rawAction)
+
+  if (!parseResult.success) {
+    return mapExecuteOperationActionIssue(pageId, path, rawAction, parseResult.error.issues[0]?.path ?? [])
+  }
+
+  const action: DownloadOperationRuntimeUiAction = parseResult.data
+
+  const requestParamsIssue = validateRuntimeApiRequestParams(action, path, pageId)
+
+  if (requestParamsIssue) {
+    return requestParamsIssue
+  }
+
+  const lifecycleResult = validateRuntimeUiActionLifecycleBlocks(rawAction, path, pageId)
+
+  if (lifecycleResult.status === 'error') {
+    return lifecycleResult
+  }
+
+  return {
+    status: 'ready',
+    action: {
+      ...action,
+      ...(lifecycleResult.onSuccess !== undefined ? { onSuccess: lifecycleResult.onSuccess } : {}),
+      ...(lifecycleResult.onError !== undefined ? { onError: lifecycleResult.onError } : {}),
+    },
+  }
+}
+
+export function validateRuntimeUiActionLifecycleBlocks(
+  rawAction: Record<string, unknown>,
+  path: string,
+  pageId: string,
+): { status: 'ready'; onSuccess?: RuntimeUiActionListEntry[]; onError?: RuntimeUiActionListEntry[] } | { status: 'error'; error: RuntimeConfigError } {
+  let onSuccess: RuntimeUiActionListEntry[] | undefined
+  let onError: RuntimeUiActionListEntry[] | undefined
 
   // Validate onSuccess if present
   if (rawAction.onSuccess !== undefined) {
@@ -238,7 +296,7 @@ export function validateFormSubmitAction(
       return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.onSuccess".`)
     }
 
-    const onSuccessAccumulator: FormOnSuccessAction[] = []
+    const onSuccessAccumulator: RuntimeUiActionListEntry[] = []
 
     for (let index = 0; index < rawAction.onSuccess.length; index += 1) {
       const rawEntry = rawAction.onSuccess[index]
@@ -274,7 +332,7 @@ export function validateFormSubmitAction(
       return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}.onError".`)
     }
 
-    const onErrorAccumulator: FormOnErrorAction[] = []
+    const onErrorAccumulator: RuntimeUiActionListEntry[] = []
 
     for (let index = 0; index < rawAction.onError.length; index += 1) {
       const rawEntry = rawAction.onError[index]
@@ -306,7 +364,6 @@ export function validateFormSubmitAction(
 
   return {
     status: 'ready',
-    action,
     ...(onSuccess !== undefined ? { onSuccess } : {}),
     ...(onError !== undefined ? { onError } : {}),
   }
@@ -749,6 +806,20 @@ function findInvalidActionTarget(
     }
 
     if (
+      node.type === 'button' &&
+      node.props.action?.type === 'downloadOperation' &&
+      !operationNames.has(node.props.action.operationName)
+    ) {
+      return {
+        path: `${nodePath}.props.action`,
+        type: 'executeOperation',
+        target: node.props.action.operationName,
+        breadcrumb: nodeBreadcrumb,
+        node,
+      }
+    }
+
+    if (
       node.type === 'link' &&
       node.props.action?.type === 'navigateTo' &&
       !pageIds.has(node.props.action.pageId)
@@ -757,6 +828,20 @@ function findInvalidActionTarget(
         path: `${nodePath}.props.action`,
         type: 'navigateTo',
         target: node.props.action.pageId,
+        breadcrumb: nodeBreadcrumb,
+        node,
+      }
+    }
+
+    if (
+      node.type === 'link' &&
+      node.props.action?.type === 'downloadOperation' &&
+      !operationNames.has(node.props.action.operationName)
+    ) {
+      return {
+        path: `${nodePath}.props.action`,
+        type: 'executeOperation',
+        target: node.props.action.operationName,
         breadcrumb: nodeBreadcrumb,
         node,
       }

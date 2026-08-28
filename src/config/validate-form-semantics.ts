@@ -1,4 +1,4 @@
-import type { FormOnErrorAction, LayoutNode, LayoutNodeCollection, RuntimeConfigError } from './runtime-config-types'
+import type { LayoutNode, LayoutNodeCollection, RuntimeConfigError, RuntimeUiActionListEntry } from './runtime-config-types'
 import { buttonRequiresFormAncestor, FORM_ALLOWED_DESCENDANT_TYPES, FORM_ONLY_LEAF_NODE_TYPES } from './layout-placement-rules'
 import type { BreadcrumbSegment } from './validation-breadcrumb'
 import { buildBreadcrumbSegmentFromNode, enrichedInvalidLayoutFromNode } from './validation-breadcrumb'
@@ -116,7 +116,7 @@ function validateFormNodesInCollection(
       }
 
       if (node.onSuccess) {
-        const onSuccessError = validateOnSuccessActionTargets(
+        const onSuccessError = validateActionListTargets(
           node.onSuccess,
           `${nodePath}.submitAction.onSuccess`,
           pageId,
@@ -131,7 +131,7 @@ function validateFormNodesInCollection(
       }
 
       if (node.onError) {
-        const onErrorError = validateOnErrorActionTargets(
+        const onErrorError = validateActionListTargets(
           node.onError,
           `${nodePath}.submitAction.onError`,
           pageId,
@@ -252,12 +252,48 @@ function validateFormNodesInCollection(
       continue
     }
 
-    if (node.type === 'button' && buttonRequiresFormAncestor(node) && !context.inForm) {
-      return enrichedInvalidLayoutFromNode(
-        `Page "${pageId}" has an invalid layout at "${nodePath}": button nodes without an action must be descendants of a form node.`,
-        nodeBreadcrumb,
-        node,
-      )
+    if (node.type === 'button') {
+      if (buttonRequiresFormAncestor(node) && !context.inForm) {
+        return enrichedInvalidLayoutFromNode(
+          `Page "${pageId}" has an invalid layout at "${nodePath}": button nodes without an action must be descendants of a form node.`,
+          nodeBreadcrumb,
+          node,
+        )
+      }
+
+      const buttonAction = node.props.action
+
+      if (buttonAction?.type === 'executeOperation' || buttonAction?.type === 'executeOperations') {
+        if (buttonAction.onSuccess) {
+          const onSuccessError = validateActionListTargets(
+            buttonAction.onSuccess,
+            `${nodePath}.props.action.onSuccess`,
+            pageId,
+            context.pageIds,
+            context.operationNames,
+            context.modalIds,
+          )
+
+          if (onSuccessError) {
+            return onSuccessError
+          }
+        }
+
+        if (buttonAction.onError) {
+          const onErrorError = validateActionListTargets(
+            buttonAction.onError,
+            `${nodePath}.props.action.onError`,
+            pageId,
+            context.pageIds,
+            context.operationNames,
+            context.modalIds,
+          )
+
+          if (onErrorError) {
+            return onErrorError
+          }
+        }
+      }
     }
   }
 
@@ -293,7 +329,7 @@ function validateFormChildren(
 
     if (!FORM_ALLOWED_DESCENDANT_TYPES.has(node.type)) {
       return enrichedInvalidLayoutFromNode(
-        `Page "${pageId}" has an invalid layout at "${nodePath}": form nodes only accept input, textarea, select, radioGroup, checkboxGroup, fileInput, toggle, hidden, button, heading, paragraph, image, table, container, accordion, divider, tabs and steps descendants.`,
+        `Page "${pageId}" has an invalid layout at "${nodePath}": form nodes only accept input, textarea, select, radioGroup, checkboxGroup, fileInput, toggle, hidden, button, heading, paragraph, image, table, container, accordion, divider, tabs, steps, alert, badge, stat and skeleton descendants.`,
         nodeBreadcrumb,
         node,
       )
@@ -381,48 +417,8 @@ function validateFormChildren(
   return null
 }
 
-function validateOnSuccessActionTargets(
-  actions: import('./runtime-config-types').FormOnSuccessAction[],
-  basePath: string,
-  pageId: string,
-  pageIds: ReadonlySet<string>,
-  operationNames: ReadonlySet<string>,
-  modalIds: ReadonlySet<string>,
-): { status: 'error'; error: RuntimeConfigError } | null {
-  for (let index = 0; index < actions.length; index += 1) {
-    const action = actions[index]
-    const actionPath = `${basePath}[${index}]`
-
-    if (action.type === 'navigateTo' && !pageIds.has(action.pageId)) {
-      return invalidLayout(
-        `Page "${pageId}" has an invalid layout at "${actionPath}.pageId": unknown page "${action.pageId}".`,
-      )
-    }
-
-    if (action.type === 'executeOperation' && !operationNames.has(action.operationName)) {
-      return invalidLayout(
-        `Page "${pageId}" has an invalid layout at "${actionPath}.operationName": unknown operation "${action.operationName}".`,
-      )
-    }
-
-    if (action.type === 'openModal' && !modalIds.has(action.modalId)) {
-      return invalidLayout(
-        `Page "${pageId}" has an invalid layout at "${actionPath}.modalId": unknown modal "${action.modalId}".`,
-      )
-    }
-
-    if (action.type === 'closeModal' && !modalIds.has(action.modalId)) {
-      return invalidLayout(
-        `Page "${pageId}" has an invalid layout at "${actionPath}.modalId": unknown modal "${action.modalId}".`,
-      )
-    }
-  }
-
-  return null
-}
-
-function validateOnErrorActionTargets(
-  actions: FormOnErrorAction[],
+export function validateActionListTargets(
+  actions: RuntimeUiActionListEntry[],
   basePath: string,
   pageId: string,
   pageIds: ReadonlySet<string>,

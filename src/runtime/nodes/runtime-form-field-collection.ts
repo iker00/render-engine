@@ -5,6 +5,7 @@ import { resolveRuntimeValueWithOptions } from '../runtime-references/runtime-re
 import { type ResolvedFormFieldDefinition } from '../runtime-form-validations'
 import type { RuntimeState } from '../runtime-state/runtime-state-types'
 import {
+  resolveAutocompleteFieldDefinition,
   resolveResolvedFormFieldDefinition,
   resolveToggleFieldDefinition,
 } from './resolve-form-field-definition'
@@ -72,6 +73,10 @@ export function collectResolvedFormFieldDefinitions(
     if (node.type === 'toggle') {
       fields.push(resolveToggleFieldDefinition(node, state, iterationContext))
     }
+
+    if (node.type === 'autocomplete') {
+      fields.push(resolveAutocompleteFieldDefinition(node, state, iterationContext))
+    }
   }
 
   return fields
@@ -129,7 +134,8 @@ export function collectAllFormFieldIds(nodes: LayoutNodeCollection): string[] {
       node.type === 'checkboxGroup' ||
       node.type === 'fileInput' ||
       node.type === 'toggle' ||
-      node.type === 'hidden'
+      node.type === 'hidden' ||
+      node.type === 'autocomplete'
     ) {
       fieldIds.push(node.props.fieldId)
     }

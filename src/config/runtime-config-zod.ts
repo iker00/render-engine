@@ -31,6 +31,8 @@ export const supportedNodeTypes = [
   'toggle',
   'hidden',
   'map',
+  'gallery',
+  'autocomplete',
 ] as const
 
 export const tableCellAllowedNodeTypes = ['image', 'list', 'button', 'container', 'heading', 'paragraph', 'link'] as const
@@ -401,6 +403,17 @@ export const executeOperationsRuntimeUiActionSchema = z
   })
   .strip()
 
+export const downloadOperationRuntimeUiActionSchema = z
+  .object({
+    type: z.literal('downloadOperation'),
+    operationName: nonEmptyStringSchema,
+    query: runtimeApiQuerySchema.optional(),
+    body: runtimeApiBodySchema.optional(),
+    headers: runtimeApiHeadersSchema.optional(),
+    filename: z.string().optional(),
+  })
+  .strip()
+
 export const resetFormRuntimeUiActionSchema = z
   .object({
     type: z.literal('resetForm'),
@@ -422,19 +435,9 @@ export const closeModalRuntimeUiActionSchema = z
   })
   .strip()
 
-export const buttonActionSchema = z.discriminatedUnion('type', [
-  navigateToButtonActionSchema,
-  goBackButtonActionSchema,
-  executeOperationRuntimeUiActionSchema,
-  executeOperationsRuntimeUiActionSchema,
-  resetFormRuntimeUiActionSchema,
-  openModalRuntimeUiActionSchema,
-  closeModalRuntimeUiActionSchema,
-])
-
 // Shape of a single onSuccess/onError entry: the same 7 action variants accepted by
 // buttonActionSchema, each extended with an optional `when` condition.
-export const formLifecycleActionEntrySchema = z.discriminatedUnion('type', [
+export const runtimeUiActionListEntrySchema = z.discriminatedUnion('type', [
   navigateToButtonActionSchema.extend({ when: whenConditionSchema.optional() }),
   goBackButtonActionSchema.extend({ when: whenConditionSchema.optional() }),
   executeOperationRuntimeUiActionSchema.extend({ when: whenConditionSchema.optional() }),
@@ -444,17 +447,37 @@ export const formLifecycleActionEntrySchema = z.discriminatedUnion('type', [
   closeModalRuntimeUiActionSchema.extend({ when: whenConditionSchema.optional() }),
 ])
 
-const formLifecycleActionsSchema = z.array(formLifecycleActionEntrySchema).optional()
+export const runtimeUiActionListSchema = z.array(runtimeUiActionListEntrySchema).optional()
+
+export const executeOperationWithLifecycleSchema = executeOperationRuntimeUiActionSchema.extend({
+  onSuccess: runtimeUiActionListSchema,
+  onError: runtimeUiActionListSchema,
+})
+
+export const executeOperationsWithLifecycleSchema = executeOperationsRuntimeUiActionSchema.extend({
+  onSuccess: runtimeUiActionListSchema,
+  onError: runtimeUiActionListSchema,
+})
+
+export const downloadOperationWithLifecycleSchema = downloadOperationRuntimeUiActionSchema.extend({
+  onSuccess: runtimeUiActionListSchema,
+  onError: runtimeUiActionListSchema,
+})
+
+export const buttonActionSchema = z.discriminatedUnion('type', [
+  navigateToButtonActionSchema,
+  goBackButtonActionSchema,
+  executeOperationWithLifecycleSchema,
+  executeOperationsWithLifecycleSchema,
+  resetFormRuntimeUiActionSchema,
+  openModalRuntimeUiActionSchema,
+  closeModalRuntimeUiActionSchema,
+  downloadOperationWithLifecycleSchema,
+])
 
 export const formSubmitActionSchema = z.discriminatedUnion('type', [
-  executeOperationRuntimeUiActionSchema.extend({
-    onSuccess: formLifecycleActionsSchema,
-    onError: formLifecycleActionsSchema,
-  }),
-  executeOperationsRuntimeUiActionSchema.extend({
-    onSuccess: formLifecycleActionsSchema,
-    onError: formLifecycleActionsSchema,
-  }),
+  executeOperationWithLifecycleSchema,
+  executeOperationsWithLifecycleSchema,
 ])
 
 export const supportedButtonVariants = ['solid', 'outline', 'ghost', 'link'] as const
@@ -604,6 +627,25 @@ export const checkboxGroupNodeSchema = z
   })
   .strip()
 
+export const autocompleteNodeSchema = z
+  .object({
+    type: z.literal('autocomplete'),
+    queryStateFeedback: queryStateFeedbackSchema.optional(),
+    visibility: visibilitySchema.optional(),
+    layout: layoutNodeLayoutSchema.optional(),
+    props: formFieldNodePropsSchema
+      .extend({
+        items: selectItemsSchema,
+        multiple: z.boolean().optional(),
+        placeholder: z.string().optional(),
+        allowFreeText: z.boolean().optional(),
+        minChars: z.number().int().nonnegative().optional(),
+        searchParamName: z.string().min(1).optional(),
+      })
+      .strip(),
+  })
+  .strip()
+
 export const modalNodeSchema = z
   .object({
     type: z.literal('modal'),
@@ -628,6 +670,7 @@ export const tabsItemSchema = z
     label: z.string(),
     children: z.array(z.unknown()).optional(),
     visibility: visibilitySchema.optional(),
+    icon: z.string().optional(),
   })
   .strip()
 
@@ -707,6 +750,7 @@ export const accordionNodeSchema = z
         label: nonEmptyStringSchema,
         defaultOpen: z.boolean().optional(),
         groupId: z.string().optional(),
+        icon: z.string().optional(),
       })
       .strip(),
     children: z.array(z.unknown()).optional(),
@@ -726,7 +770,9 @@ export const linkNodeSchema = z
         href: z.string().optional(),
         download: z.string().optional(),
         target: z.string().optional(),
-        action: z.discriminatedUnion('type', [navigateToButtonActionSchema, goBackButtonActionSchema]).optional(),
+        action: z
+          .discriminatedUnion('type', [navigateToButtonActionSchema, goBackButtonActionSchema, downloadOperationWithLifecycleSchema])
+          .optional(),
         icon: z.string().optional(),
         iconPosition: z.enum(['left', 'right']).optional(),
       })
@@ -994,6 +1040,84 @@ export const mapNodeSchema = z
       })
       .strip()
       .optional(),
+    children: z.never().optional(),
+  })
+  .strip()
+
+const galleryStaticImageSchema = z
+  .object({
+    src: nonEmptyStringSchema,
+    alt: nonEmptyStringSchema,
+  })
+  .strict()
+
+// Flexible source shape that accepts either the src or fetch branch (plus source/key/alt/mode).
+// Mutual exclusion between mode: 'src'/'fetch' and their matching field is enforced imperatively
+// by validateGalleryNode after parsing, the same way validateImageNode handles src/fetch.
+const galleryDynamicSourceSchema = z
+  .object({
+    source: nonEmptyStringSchema,
+    key: nonEmptyStringSchema,
+    alt: nonEmptyStringSchema,
+    mode: z.enum(['src', 'fetch']),
+    src: nonEmptyStringSchema.optional(),
+    fetch: imageFetchSchema.optional(),
+    idField: nonEmptyStringSchema.optional(),
+  })
+  .strict()
+
+const galleryPaginationControlsSchema = z
+  .object({
+    variant: z.enum(supportedCollectionPaginationControlsVariants).optional(),
+  })
+  .strict()
+
+// Same closed shape as repeater.props.pagination but without `enabled`: gallery pagination is
+// always active once display.mode: 'paginated' is declared.
+const galleryPaginationSchema = z
+  .object({
+    pageSize: z.number().int().finite().min(1),
+    controls: galleryPaginationControlsSchema.optional(),
+  })
+  .strict()
+
+const galleryPaginatedDisplaySchema = z
+  .object({
+    mode: z.literal('paginated'),
+    pagination: galleryPaginationSchema,
+  })
+  .strict()
+
+const galleryAutoplaySchema = z
+  .object({
+    enabled: z.literal(true),
+    intervalMs: z.number().int().positive(),
+  })
+  .strict()
+
+const galleryCarouselDisplaySchema = z
+  .object({
+    mode: z.literal('carousel'),
+    visibleCount: z.number().int().min(1).max(3),
+    autoplay: galleryAutoplaySchema.optional(),
+    loop: z.boolean().optional(),
+  })
+  .strict()
+
+export const galleryNodeSchema = z
+  .object({
+    type: z.literal('gallery'),
+    id: nodeIdSchema.optional(),
+    queryStateFeedback: queryStateFeedbackSchema.optional(),
+    visibility: visibilitySchema.optional(),
+    layout: layoutNodeLayoutSchema.optional(),
+    props: z
+      .object({
+        images: z.array(galleryStaticImageSchema).optional(),
+        source: galleryDynamicSourceSchema.optional(),
+        display: z.discriminatedUnion('mode', [galleryPaginatedDisplaySchema, galleryCarouselDisplaySchema]),
+      })
+      .strict(),
     children: z.never().optional(),
   })
   .strip()

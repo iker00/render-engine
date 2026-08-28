@@ -28,6 +28,8 @@ export type LayoutNodeType =
   | 'toggle'
   | 'hidden'
   | 'map'
+  | 'gallery'
+  | 'autocomplete'
 export type RuntimeApiMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
 export type RuntimeApiQueryValue = string | number | boolean
 export type RuntimeApiQuery = Record<string, RuntimeApiQueryValue>
@@ -286,8 +288,8 @@ export interface FormLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayo
   submitAction?: ExecuteOperationRuntimeUiAction | ExecuteOperationsRuntimeUiAction
   resetOnSuccess?: boolean
   children?: LayoutNode[]
-  onSuccess?: FormOnSuccessAction[]
-  onError?: FormOnErrorAction[]
+  onSuccess?: RuntimeUiActionListEntry[]
+  onError?: RuntimeUiActionListEntry[]
 }
 
 export type RuntimeFormValidationRuleName =
@@ -470,6 +472,20 @@ export interface CheckboxGroupLayoutNode extends LayoutNodeFeedbackFields, Layou
   children?: unknown
 }
 
+export interface AutocompleteLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayoutFields {
+  type: 'autocomplete'
+  id?: string
+  props: FormFieldLayoutNodeProps & {
+    items: SelectLayoutNodeItems
+    multiple?: boolean
+    placeholder?: string
+    allowFreeText?: boolean
+    minChars?: number
+    searchParamName?: string
+  }
+  children?: never
+}
+
 export type ModalSize = 'sm' | 'md' | 'lg'
 
 export interface ModalLayoutNodeProps {
@@ -491,6 +507,7 @@ export interface TabsItem {
   label: string
   children?: LayoutNode[]
   visibility?: RuntimeVisibilityConfig
+  icon?: string
 }
 
 export interface TabsLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayoutFields {
@@ -540,6 +557,7 @@ export interface AccordionLayoutNode extends LayoutNodeFeedbackFields, LayoutNod
     label: string
     defaultOpen?: boolean
     groupId?: string
+    icon?: string
   }
   children?: LayoutNode[]
 }
@@ -640,6 +658,40 @@ export interface MapLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayou
   children?: never
 }
 
+export interface GalleryStaticImage {
+  src: string
+  alt: string
+}
+
+export type GalleryDynamicSource = { source: string; key: string; alt: string } & (
+  | { mode: 'src'; src: string }
+  | { mode: 'fetch'; fetch: ImageFetchConfig; idField?: string }
+)
+
+export interface GalleryPaginatedDisplay {
+  mode: 'paginated'
+  pagination: {
+    pageSize: number
+    controls?: { variant?: RuntimeCollectionPaginationControlsVariant }
+  }
+}
+
+export interface GalleryCarouselDisplay {
+  mode: 'carousel'
+  visibleCount: number
+  autoplay?: { enabled: true; intervalMs: number }
+  loop?: boolean
+}
+
+export interface GalleryLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayoutFields {
+  type: 'gallery'
+  id?: string
+  props: ({ images: GalleryStaticImage[] } | { source: GalleryDynamicSource }) & {
+    display: GalleryPaginatedDisplay | GalleryCarouselDisplay
+  }
+  children?: never
+}
+
 export interface NavigateToRuntimeUiAction {
   type: 'navigateTo'
   pageId: string
@@ -653,6 +705,8 @@ export interface GoBackRuntimeUiAction {
 export interface ExecuteOperationRuntimeUiAction extends RuntimeApiRequestParams {
   type: 'executeOperation'
   operationName: string
+  onSuccess?: RuntimeUiActionListEntry[]
+  onError?: RuntimeUiActionListEntry[]
 }
 
 export interface ExecuteOperationsRuntimeUiActionEntry {
@@ -666,11 +720,24 @@ export interface ExecuteOperationsRuntimeUiActionEntry {
 export interface ExecuteOperationsRuntimeUiAction {
   type: 'executeOperations'
   operations: ExecuteOperationsRuntimeUiActionEntry[]
+  onSuccess?: RuntimeUiActionListEntry[]
+  onError?: RuntimeUiActionListEntry[]
 }
 
 export interface ResetFormRuntimeUiAction {
   type: 'resetForm'
   formId: string
+}
+
+// Deliberately excluded from `RuntimeUiAction` and `RuntimeUiActionListEntry` (decision D7):
+// `downloadOperation` is only valid as the first-level `action` of `button`/`link`, never as a
+// chained entry inside another action's `onSuccess`/`onError` list.
+export interface DownloadOperationRuntimeUiAction extends RuntimeApiRequestParams {
+  type: 'downloadOperation'
+  operationName: string
+  filename?: string
+  onSuccess?: RuntimeUiActionListEntry[]
+  onError?: RuntimeUiActionListEntry[]
 }
 
 export interface OpenModalRuntimeUiAction {
@@ -694,9 +761,7 @@ export type RuntimeUiAction =
   | OpenModalRuntimeUiAction
   | CloseModalRuntimeUiAction
 
-export type FormOnSuccessAction = RuntimeUiAction & { when?: RuntimeWhenCondition }
-
-export type FormOnErrorAction = RuntimeUiAction & { when?: RuntimeWhenCondition }
+export type RuntimeUiActionListEntry = RuntimeUiAction & { when?: RuntimeWhenCondition }
 
 export type NavigateToButtonAction = NavigateToRuntimeUiAction
 export type GoBackButtonAction = GoBackRuntimeUiAction
@@ -710,7 +775,7 @@ export interface ButtonLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLa
   id?: string
   props: {
     label: string
-    action?: RuntimeUiAction
+    action?: RuntimeUiAction | DownloadOperationRuntimeUiAction
     color?: ButtonColor
     variant?: ButtonVariant
     fullWidth?: boolean
@@ -728,7 +793,7 @@ export interface LinkLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayo
     href?: string
     download?: string
     target?: string
-    action?: NavigateToRuntimeUiAction | GoBackRuntimeUiAction
+    action?: NavigateToRuntimeUiAction | GoBackRuntimeUiAction | DownloadOperationRuntimeUiAction
     icon?: string
     iconPosition?: 'left' | 'right'
   }
@@ -852,6 +917,8 @@ export type LayoutNode =
   | HiddenLayoutNode
   | FileManagerLayoutNode
   | MapLayoutNode
+  | GalleryLayoutNode
+  | AutocompleteLayoutNode
 
 export type LayoutNodeCollection = LayoutNode[]
 

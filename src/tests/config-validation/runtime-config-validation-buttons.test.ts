@@ -3675,3 +3675,1148 @@ describe('validateRuntimeConfig — second-pass action target errors include bre
     expect(result.error.message).toContain('button("View")')
   })
 })
+
+// T2: button.props.action.onSuccess/onError shape and when validation
+
+describe('validateRuntimeConfig — button.props.action.onSuccess/onError', () => {
+  it('accepts an executeOperation action with onSuccess containing a valid executeOperation entry', () => {
+    const result = validateRuntimeConfig({
+      api: {
+        searchUsers: { method: 'GET', endpoint: '/api/users' },
+      },
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'button',
+              props: {
+                label: 'Load users',
+                action: {
+                  type: 'executeOperation',
+                  operationName: 'searchUsers',
+                  onSuccess: [{ type: 'executeOperation', operationName: 'searchUsers' }],
+                },
+              },
+            },
+          ],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(result.status).toBe('ready')
+    if (result.status !== 'ready') throw new Error('Expected ready')
+
+    const action = (result.config.pages[0].layout[0] as { props: { action: Record<string, unknown> } }).props.action
+    expect(action.onSuccess).toEqual([{ type: 'executeOperation', operationName: 'searchUsers' }])
+  })
+
+  it('accepts an executeOperation action with onError containing a valid executeOperation entry', () => {
+    const result = validateRuntimeConfig({
+      api: {
+        searchUsers: { method: 'GET', endpoint: '/api/users' },
+      },
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'button',
+              props: {
+                label: 'Load users',
+                action: {
+                  type: 'executeOperation',
+                  operationName: 'searchUsers',
+                  onError: [{ type: 'executeOperation', operationName: 'searchUsers' }],
+                },
+              },
+            },
+          ],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(result.status).toBe('ready')
+    if (result.status !== 'ready') throw new Error('Expected ready')
+
+    const action = (result.config.pages[0].layout[0] as { props: { action: Record<string, unknown> } }).props.action
+    expect(action.onError).toEqual([{ type: 'executeOperation', operationName: 'searchUsers' }])
+  })
+
+  it('accepts onSuccess/onError entries with a valid when referencing queries.{op}.status', () => {
+    const result = validateRuntimeConfig({
+      api: {
+        searchUsers: { method: 'GET', endpoint: '/api/users' },
+      },
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'button',
+              props: {
+                label: 'Load users',
+                action: {
+                  type: 'executeOperation',
+                  operationName: 'searchUsers',
+                  onSuccess: [
+                    {
+                      type: 'executeOperation',
+                      operationName: 'searchUsers',
+                      when: { reference: 'queries.searchUsers.status', operator: 'equals', value: 'success' },
+                    },
+                  ],
+                  onError: [
+                    {
+                      type: 'executeOperation',
+                      operationName: 'searchUsers',
+                      when: { reference: 'queries.searchUsers.status', operator: 'equals', value: 'success' },
+                    },
+                  ],
+                },
+              },
+            },
+          ],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(result.status).toBe('ready')
+    if (result.status !== 'ready') throw new Error('Expected ready')
+
+    const action = (result.config.pages[0].layout[0] as { props: { action: Record<string, unknown> } }).props.action
+    expect(action.onSuccess).toEqual([
+      {
+        type: 'executeOperation',
+        operationName: 'searchUsers',
+        when: { reference: 'queries.searchUsers.status', operator: 'equals', value: 'success' },
+      },
+    ])
+    expect(action.onError).toEqual([
+      {
+        type: 'executeOperation',
+        operationName: 'searchUsers',
+        when: { reference: 'queries.searchUsers.status', operator: 'equals', value: 'success' },
+      },
+    ])
+  })
+
+  it('rejects an onSuccess/onError entry with an invalid when.reference', () => {
+    const onSuccessResult = validateRuntimeConfig({
+      api: {
+        searchUsers: { method: 'GET', endpoint: '/api/users' },
+      },
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'button',
+              props: {
+                label: 'Load users',
+                action: {
+                  type: 'executeOperation',
+                  operationName: 'searchUsers',
+                  onSuccess: [
+                    {
+                      type: 'executeOperation',
+                      operationName: 'searchUsers',
+                      when: { reference: 'tokens.foo', operator: 'isTruthy' },
+                    },
+                  ],
+                },
+              },
+            },
+          ],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(onSuccessResult.status).toBe('error')
+    if (onSuccessResult.status !== 'error') throw new Error('Expected error')
+    expect(onSuccessResult.error.message).toContain('layout[0].props.action.onSuccess[0].when')
+
+    const onErrorResult = validateRuntimeConfig({
+      api: {
+        searchUsers: { method: 'GET', endpoint: '/api/users' },
+      },
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'button',
+              props: {
+                label: 'Load users',
+                action: {
+                  type: 'executeOperation',
+                  operationName: 'searchUsers',
+                  onError: [
+                    {
+                      type: 'executeOperation',
+                      operationName: 'searchUsers',
+                      when: { reference: 'tokens.foo', operator: 'isTruthy' },
+                    },
+                  ],
+                },
+              },
+            },
+          ],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(onErrorResult.status).toBe('error')
+    if (onErrorResult.status !== 'error') throw new Error('Expected error')
+    expect(onErrorResult.error.message).toContain('layout[0].props.action.onError[0].when')
+  })
+
+  it('rejects onSuccess/onError when not an array', () => {
+    const onSuccessResult = validateRuntimeConfig({
+      api: {
+        searchUsers: { method: 'GET', endpoint: '/api/users' },
+      },
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'button',
+              props: {
+                label: 'Load users',
+                action: {
+                  type: 'executeOperation',
+                  operationName: 'searchUsers',
+                  onSuccess: { type: 'executeOperation', operationName: 'searchUsers' },
+                },
+              },
+            },
+          ],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(onSuccessResult.status).toBe('error')
+
+    const onErrorResult = validateRuntimeConfig({
+      api: {
+        searchUsers: { method: 'GET', endpoint: '/api/users' },
+      },
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'button',
+              props: {
+                label: 'Load users',
+                action: {
+                  type: 'executeOperation',
+                  operationName: 'searchUsers',
+                  onError: { type: 'executeOperation', operationName: 'searchUsers' },
+                },
+              },
+            },
+          ],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(onErrorResult.status).toBe('error')
+  })
+
+  it('accepts an executeOperations action with onSuccess/onError at the action level (not per-operation)', () => {
+    const result = validateRuntimeConfig({
+      api: {
+        deleteItem: { method: 'DELETE', endpoint: '/api/items/1' },
+        reloadList: { method: 'GET', endpoint: '/api/items' },
+      },
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'button',
+              props: {
+                label: 'Delete and reload',
+                action: {
+                  type: 'executeOperations',
+                  operations: [{ operationName: 'deleteItem' }, { operationName: 'reloadList' }],
+                  onSuccess: [{ type: 'navigateTo', pageId: 'home' }],
+                  onError: [{ type: 'goBack' }],
+                },
+              },
+            },
+          ],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(result.status).toBe('ready')
+    if (result.status !== 'ready') throw new Error('Expected ready')
+
+    const action = (result.config.pages[0].layout[0] as { props: { action: Record<string, unknown> } }).props.action
+    expect(action.onSuccess).toEqual([{ type: 'navigateTo', pageId: 'home' }])
+    expect(action.onError).toEqual([{ type: 'goBack' }])
+  })
+
+  it('accepts a navigateTo action with an extra onSuccess key that is silently dropped (.strip())', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithPages([
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'button',
+              props: {
+                label: 'Go to details',
+                action: {
+                  type: 'navigateTo',
+                  pageId: 'details',
+                  onSuccess: [{ type: 'goBack' }],
+                },
+              },
+            },
+          ],
+        },
+        { id: 'details', layout: [] },
+      ]),
+    )
+
+    expect(result.status).toBe('ready')
+    if (result.status !== 'ready') throw new Error('Expected ready')
+
+    const action = (result.config.pages[0].layout[0] as { props: { action: Record<string, unknown> } }).props.action
+    expect(action).toEqual({ type: 'navigateTo', pageId: 'details' })
+    expect(action.onSuccess).toBeUndefined()
+  })
+
+  it('regression: a button action without onSuccess/onError produces the same node as before', () => {
+    const result = validateRuntimeConfig({
+      api: {
+        searchUsers: { method: 'GET', endpoint: '/api/users' },
+      },
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'button',
+              props: {
+                label: 'Load users',
+                action: {
+                  type: 'executeOperation',
+                  operationName: 'searchUsers',
+                },
+              },
+            },
+          ],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(result.status).toBe('ready')
+    if (result.status !== 'ready') throw new Error('Expected ready')
+
+    expect(result.config.pages[0].layout[0]).toEqual({
+      type: 'button',
+      props: {
+        label: 'Load users',
+        action: {
+          type: 'executeOperation',
+          operationName: 'searchUsers',
+        },
+      },
+    })
+  })
+})
+
+// T3: button.props.action.onSuccess/onError target references and GET+body validation
+
+describe('validateRuntimeConfig — button.props.action.onSuccess/onError target validation', () => {
+  it('rejects onSuccess executeOperation entry with an inexistent operationName', () => {
+    const result = validateRuntimeConfig({
+      api: {
+        searchUsers: { method: 'GET', endpoint: '/api/users' },
+      },
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'button',
+              props: {
+                label: 'Load users',
+                action: {
+                  type: 'executeOperation',
+                  operationName: 'searchUsers',
+                  onSuccess: [{ type: 'executeOperation', operationName: 'nonExistentOp' }],
+                },
+              },
+            },
+          ],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(result.status).toBe('error')
+    if (result.status !== 'error') throw new Error('Expected error')
+    expect(result.error.message).toContain('layout[0].props.action.onSuccess[0].operationName')
+    expect(result.error.message).toContain('unknown operation "nonExistentOp"')
+  })
+
+  it('rejects onError navigateTo entry with an inexistent pageId', () => {
+    const result = validateRuntimeConfig({
+      api: {
+        searchUsers: { method: 'GET', endpoint: '/api/users' },
+      },
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'button',
+              props: {
+                label: 'Load users',
+                action: {
+                  type: 'executeOperation',
+                  operationName: 'searchUsers',
+                  onError: [{ type: 'navigateTo', pageId: 'missing-page' }],
+                },
+              },
+            },
+          ],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(result.status).toBe('error')
+    if (result.status !== 'error') throw new Error('Expected error')
+    expect(result.error.message).toContain('layout[0].props.action.onError[0].pageId')
+    expect(result.error.message).toContain('unknown page "missing-page"')
+  })
+
+  it('rejects onSuccess openModal entry with an inexistent modalId', () => {
+    const result = validateRuntimeConfig({
+      api: {
+        searchUsers: { method: 'GET', endpoint: '/api/users' },
+      },
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'button',
+              props: {
+                label: 'Load users',
+                action: {
+                  type: 'executeOperation',
+                  operationName: 'searchUsers',
+                  onSuccess: [{ type: 'openModal', modalId: 'nonExistentModal' }],
+                },
+              },
+            },
+          ],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(result.status).toBe('error')
+    if (result.status !== 'error') throw new Error('Expected error')
+    expect(result.error.message).toContain('layout[0].props.action.onSuccess[0].modalId')
+    expect(result.error.message).toContain('unknown modal "nonExistentModal"')
+  })
+
+  it('rejects onSuccess closeModal entry with an inexistent modalId', () => {
+    const result = validateRuntimeConfig({
+      api: {
+        searchUsers: { method: 'GET', endpoint: '/api/users' },
+      },
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'button',
+              props: {
+                label: 'Load users',
+                action: {
+                  type: 'executeOperation',
+                  operationName: 'searchUsers',
+                  onSuccess: [{ type: 'closeModal', modalId: 'nonExistentModal' }],
+                },
+              },
+            },
+          ],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(result.status).toBe('error')
+    if (result.status !== 'error') throw new Error('Expected error')
+    expect(result.error.message).toContain('layout[0].props.action.onSuccess[0].modalId')
+    expect(result.error.message).toContain('unknown modal "nonExistentModal"')
+  })
+
+  it('rejects onSuccess executeOperation entry resolving to a GET operation with body', () => {
+    const result = validateRuntimeConfig({
+      api: {
+        searchUsers: { method: 'GET', endpoint: '/api/users' },
+      },
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'button',
+              props: {
+                label: 'Load users',
+                action: {
+                  type: 'executeOperation',
+                  operationName: 'searchUsers',
+                  onSuccess: [{ type: 'executeOperation', operationName: 'searchUsers', body: { search: 'Ada' } }],
+                },
+              },
+            },
+          ],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(result.status).toBe('error')
+    if (result.status !== 'error') throw new Error('Expected error')
+    expect(result.error.message).toContain('layout[0].props.action.onSuccess[0].body')
+    expect(result.error.message).toContain('GET operations do not support body.')
+  })
+
+  it('rejects onError executeOperation entry resolving to a GET operation with body', () => {
+    const result = validateRuntimeConfig({
+      api: {
+        searchUsers: { method: 'GET', endpoint: '/api/users' },
+      },
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'button',
+              props: {
+                label: 'Load users',
+                action: {
+                  type: 'executeOperation',
+                  operationName: 'searchUsers',
+                  onError: [{ type: 'executeOperation', operationName: 'searchUsers', body: { search: 'Ada' } }],
+                },
+              },
+            },
+          ],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(result.status).toBe('error')
+    if (result.status !== 'error') throw new Error('Expected error')
+    expect(result.error.message).toContain('layout[0].props.action.onError[0].body')
+    expect(result.error.message).toContain('GET operations do not support body.')
+  })
+
+  it('accepts onSuccess/onError referencing existing operationName, pageId and modalId (happy path)', () => {
+    const result = validateRuntimeConfig({
+      api: {
+        searchUsers: { method: 'GET', endpoint: '/api/users' },
+        logActivity: { method: 'POST', endpoint: '/api/activity' },
+      },
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            { type: 'modal', id: 'confirm-modal', children: [] },
+            {
+              type: 'button',
+              props: {
+                label: 'Load users',
+                action: {
+                  type: 'executeOperation',
+                  operationName: 'searchUsers',
+                  onSuccess: [
+                    { type: 'navigateTo', pageId: 'details' },
+                    { type: 'executeOperation', operationName: 'logActivity' },
+                    { type: 'openModal', modalId: 'confirm-modal' },
+                  ],
+                  onError: [{ type: 'closeModal', modalId: 'confirm-modal' }],
+                },
+              },
+            },
+          ],
+        },
+        { id: 'details', layout: [] },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(result.status).toBe('ready')
+  })
+})
+
+// T1: button.props.action.type "downloadOperation" and link.props.action.type "downloadOperation"
+
+describe('validateRuntimeConfig — downloadOperation action', () => {
+  it('accepts a button downloadOperation action with only operationName', () => {
+    const result = validateRuntimeConfig({
+      api: {
+        downloadReport: { method: 'GET', endpoint: '/api/reports/1' },
+      },
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'button',
+              props: {
+                label: 'Download report',
+                action: { type: 'downloadOperation', operationName: 'downloadReport' },
+              },
+            },
+          ],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(result.status).toBe('ready')
+    if (result.status !== 'ready') throw new Error('Expected ready')
+
+    expect(result.config.pages[0].layout[0]).toEqual({
+      type: 'button',
+      props: {
+        label: 'Download report',
+        action: { type: 'downloadOperation', operationName: 'downloadReport' },
+      },
+    })
+  })
+
+  it('accepts a button downloadOperation action with query, body, headers and filename', () => {
+    const result = validateRuntimeConfig({
+      api: {
+        downloadReport: { method: 'POST', endpoint: '/api/reports' },
+      },
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'button',
+              props: {
+                label: 'Download report',
+                action: {
+                  type: 'downloadOperation',
+                  operationName: 'downloadReport',
+                  query: { format: 'pdf' },
+                  body: { reportId: 42 },
+                  headers: { Authorization: 'Bearer token' },
+                  filename: 'report.pdf',
+                },
+              },
+            },
+          ],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(result.status).toBe('ready')
+    if (result.status !== 'ready') throw new Error('Expected ready')
+
+    expect(result.config.pages[0].layout[0]).toEqual({
+      type: 'button',
+      props: {
+        label: 'Download report',
+        action: {
+          type: 'downloadOperation',
+          operationName: 'downloadReport',
+          query: { format: 'pdf' },
+          body: { reportId: 42 },
+          headers: { Authorization: 'Bearer token' },
+          filename: 'report.pdf',
+        },
+      },
+    })
+  })
+
+  it('accepts a link downloadOperation action with the same shape as button', () => {
+    const result = validateRuntimeConfig({
+      api: {
+        downloadReport: { method: 'POST', endpoint: '/api/reports' },
+      },
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'link',
+              props: {
+                label: 'Download report',
+                action: {
+                  type: 'downloadOperation',
+                  operationName: 'downloadReport',
+                  query: { format: 'pdf' },
+                  body: { reportId: 42 },
+                  headers: { Authorization: 'Bearer token' },
+                  filename: 'report.pdf',
+                },
+              },
+            },
+          ],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(result.status).toBe('ready')
+    if (result.status !== 'ready') throw new Error('Expected ready')
+
+    expect(result.config.pages[0].layout[0]).toEqual({
+      type: 'link',
+      props: {
+        label: 'Download report',
+        action: {
+          type: 'downloadOperation',
+          operationName: 'downloadReport',
+          query: { format: 'pdf' },
+          body: { reportId: 42 },
+          headers: { Authorization: 'Bearer token' },
+          filename: 'report.pdf',
+        },
+      },
+    })
+  })
+
+  it('accepts a button downloadOperation action with onSuccess/onError lists including a "when" condition', () => {
+    const result = validateRuntimeConfig({
+      api: {
+        downloadReport: { method: 'GET', endpoint: '/api/reports/1' },
+        logActivity: { method: 'POST', endpoint: '/api/activity' },
+      },
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'button',
+              props: {
+                label: 'Download report',
+                action: {
+                  type: 'downloadOperation',
+                  operationName: 'downloadReport',
+                  onSuccess: [
+                    {
+                      type: 'executeOperation',
+                      operationName: 'logActivity',
+                      when: { reference: 'queries.downloadReport.status', operator: 'equals', value: 'success' },
+                    },
+                    { type: 'navigateTo', pageId: 'details' },
+                  ],
+                  onError: [{ type: 'goBack' }],
+                },
+              },
+            },
+          ],
+        },
+        { id: 'details', layout: [] },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(result.status).toBe('ready')
+    if (result.status !== 'ready') throw new Error('Expected ready')
+
+    const action = (result.config.pages[0].layout[0] as { props: { action: Record<string, unknown> } }).props.action
+    expect(action.onSuccess).toEqual([
+      {
+        type: 'executeOperation',
+        operationName: 'logActivity',
+        when: { reference: 'queries.downloadReport.status', operator: 'equals', value: 'success' },
+      },
+      { type: 'navigateTo', pageId: 'details' },
+    ])
+    expect(action.onError).toEqual([{ type: 'goBack' }])
+  })
+
+  it('accepts a link downloadOperation action with onSuccess/onError lists', () => {
+    const result = validateRuntimeConfig({
+      api: {
+        downloadReport: { method: 'GET', endpoint: '/api/reports/1' },
+      },
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'link',
+              props: {
+                label: 'Download report',
+                action: {
+                  type: 'downloadOperation',
+                  operationName: 'downloadReport',
+                  onSuccess: [{ type: 'navigateTo', pageId: 'details' }],
+                  onError: [{ type: 'goBack' }],
+                },
+              },
+            },
+          ],
+        },
+        { id: 'details', layout: [] },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(result.status).toBe('ready')
+    if (result.status !== 'ready') throw new Error('Expected ready')
+
+    const action = (result.config.pages[0].layout[0] as { props: { action: Record<string, unknown> } }).props.action
+    expect(action.onSuccess).toEqual([{ type: 'navigateTo', pageId: 'details' }])
+    expect(action.onError).toEqual([{ type: 'goBack' }])
+  })
+
+  it('rejects a button downloadOperation action with an inexistent operationName', () => {
+    const result = validateRuntimeConfig({
+      api: {
+        downloadReport: { method: 'GET', endpoint: '/api/reports/1' },
+      },
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'button',
+              props: {
+                label: 'Broken',
+                action: { type: 'downloadOperation', operationName: 'missingOperation' },
+              },
+            },
+          ],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(result.status).toBe('error')
+    if (result.status !== 'error') throw new Error('Expected error')
+    expect(result.error.message).toContain('layout[0].props.action.operationName')
+    expect(result.error.message).toContain('unknown operation "missingOperation"')
+  })
+
+  it('rejects a link downloadOperation action with an inexistent operationName', () => {
+    const result = validateRuntimeConfig({
+      api: {
+        downloadReport: { method: 'GET', endpoint: '/api/reports/1' },
+      },
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'link',
+              props: {
+                label: 'Broken',
+                action: { type: 'downloadOperation', operationName: 'missingOperation' },
+              },
+            },
+          ],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(result.status).toBe('error')
+    if (result.status !== 'error') throw new Error('Expected error')
+    expect(result.error.message).toContain('layout[0].props.action.operationName')
+    expect(result.error.message).toContain('unknown operation "missingOperation"')
+  })
+
+  it('rejects a button downloadOperation action targeting a GET operation with body', () => {
+    const result = validateRuntimeConfig({
+      api: {
+        downloadReport: { method: 'GET', endpoint: '/api/reports/1' },
+      },
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'button',
+              props: {
+                label: 'Broken',
+                action: { type: 'downloadOperation', operationName: 'downloadReport', body: { id: 1 } },
+              },
+            },
+          ],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(result.status).toBe('error')
+    if (result.status !== 'error') throw new Error('Expected error')
+    expect(result.error.message).toContain('layout[0].props.action.body')
+    expect(result.error.message).toContain('GET operations do not support body.')
+  })
+
+  it('rejects a link downloadOperation action targeting a GET operation with body', () => {
+    const result = validateRuntimeConfig({
+      api: {
+        downloadReport: { method: 'GET', endpoint: '/api/reports/1' },
+      },
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'link',
+              props: {
+                label: 'Broken',
+                action: { type: 'downloadOperation', operationName: 'downloadReport', body: { id: 1 } },
+              },
+            },
+          ],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(result.status).toBe('error')
+    if (result.status !== 'error') throw new Error('Expected error')
+    expect(result.error.message).toContain('layout[0].props.action.body')
+    expect(result.error.message).toContain('GET operations do not support body.')
+  })
+
+  it('rejects a button downloadOperation onSuccess entry resolving to a GET operation with body', () => {
+    const result = validateRuntimeConfig({
+      api: {
+        downloadReport: { method: 'POST', endpoint: '/api/reports' },
+        searchUsers: { method: 'GET', endpoint: '/api/users' },
+      },
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'button',
+              props: {
+                label: 'Download report',
+                action: {
+                  type: 'downloadOperation',
+                  operationName: 'downloadReport',
+                  onSuccess: [{ type: 'executeOperation', operationName: 'searchUsers', body: { search: 'Ada' } }],
+                },
+              },
+            },
+          ],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(result.status).toBe('error')
+    if (result.status !== 'error') throw new Error('Expected error')
+    expect(result.error.message).toContain('layout[0].props.action.onSuccess[0].body')
+    expect(result.error.message).toContain('GET operations do not support body.')
+  })
+
+  it('rejects a link downloadOperation onError entry resolving to a GET operation with body', () => {
+    const result = validateRuntimeConfig({
+      api: {
+        downloadReport: { method: 'POST', endpoint: '/api/reports' },
+        searchUsers: { method: 'GET', endpoint: '/api/users' },
+      },
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'link',
+              props: {
+                label: 'Download report',
+                action: {
+                  type: 'downloadOperation',
+                  operationName: 'downloadReport',
+                  onError: [{ type: 'executeOperation', operationName: 'searchUsers', body: { search: 'Ada' } }],
+                },
+              },
+            },
+          ],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(result.status).toBe('error')
+    if (result.status !== 'error') throw new Error('Expected error')
+    expect(result.error.message).toContain('layout[0].props.action.onError[0].body')
+    expect(result.error.message).toContain('GET operations do not support body.')
+  })
+
+  it('rejects a downloadOperation entry nested inside another action\'s onSuccess/onError list (D7)', () => {
+    const api = {
+      downloadReport: { method: 'GET', endpoint: '/api/reports/1' },
+      searchUsers: { method: 'GET', endpoint: '/api/users' },
+    }
+
+    const insideExecuteOperation = validateRuntimeConfig({
+      api,
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'button',
+              props: {
+                label: 'Broken',
+                action: {
+                  type: 'executeOperation',
+                  operationName: 'searchUsers',
+                  onSuccess: [{ type: 'downloadOperation', operationName: 'downloadReport' }],
+                },
+              },
+            },
+          ],
+        },
+      ],
+      initialPage: 'home',
+    })
+    expect(insideExecuteOperation.status).toBe('error')
+
+    const insideExecuteOperations = validateRuntimeConfig({
+      api,
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'button',
+              props: {
+                label: 'Broken',
+                action: {
+                  type: 'executeOperations',
+                  operations: [{ operationName: 'searchUsers' }],
+                  onError: [{ type: 'downloadOperation', operationName: 'downloadReport' }],
+                },
+              },
+            },
+          ],
+        },
+      ],
+      initialPage: 'home',
+    })
+    expect(insideExecuteOperations.status).toBe('error')
+
+    const insideDownloadOperationItself = validateRuntimeConfig({
+      api,
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'button',
+              props: {
+                label: 'Broken',
+                action: {
+                  type: 'downloadOperation',
+                  operationName: 'downloadReport',
+                  onSuccess: [{ type: 'downloadOperation', operationName: 'downloadReport' }],
+                },
+              },
+            },
+          ],
+        },
+      ],
+      initialPage: 'home',
+    })
+    expect(insideDownloadOperationItself.status).toBe('error')
+  })
+
+  it('rejects a downloadOperation action with a missing or empty operationName', () => {
+    const missing = validateRuntimeConfig({
+      api: {},
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'button',
+              props: { label: 'Broken', action: { type: 'downloadOperation' } },
+            },
+          ],
+        },
+      ],
+      initialPage: 'home',
+    })
+    expect(missing.status).toBe('error')
+    if (missing.status !== 'error') throw new Error('Expected error')
+    expect(missing.error.message).toContain('layout[0].props.action.operationName')
+
+    const empty = validateRuntimeConfig({
+      api: {},
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'button',
+              props: { label: 'Broken', action: { type: 'downloadOperation', operationName: '   ' } },
+            },
+          ],
+        },
+      ],
+      initialPage: 'home',
+    })
+    expect(empty.status).toBe('error')
+    if (empty.status !== 'error') throw new Error('Expected error')
+    expect(empty.error.message).toContain('layout[0].props.action.operationName')
+  })
+
+  it('accepts a link downloadOperation action without href (mutually exclusive with action, no regression)', () => {
+    const result = validateRuntimeConfig({
+      api: {
+        downloadReport: { method: 'GET', endpoint: '/api/reports/1' },
+      },
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'link',
+              props: {
+                label: 'Download report',
+                action: { type: 'downloadOperation', operationName: 'downloadReport' },
+              },
+            },
+          ],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(result.status).toBe('ready')
+    if (result.status !== 'ready') throw new Error('Expected ready')
+
+    const node = result.config.pages[0].layout[0] as { props: { href?: string; action?: unknown } }
+    expect(node.props.href).toBeUndefined()
+    expect(node.props.action).toEqual({ type: 'downloadOperation', operationName: 'downloadReport' })
+  })
+})

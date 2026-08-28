@@ -27,7 +27,11 @@ export interface ResolvedSelectCollectionItem {
   value: string
 }
 
-type ChoiceCollectionSurface = 'select.props.items' | 'radioGroup.props.items' | 'checkboxGroup.props.items'
+type ChoiceCollectionSurface =
+  | 'select.props.items'
+  | 'radioGroup.props.items'
+  | 'checkboxGroup.props.items'
+  | 'autocomplete.props.items'
 type ChoiceCollectionItems =
   | SelectLayoutNodeItems
   | RadioGroupLayoutNode['props']['items']
@@ -49,6 +53,10 @@ const CHOICE_PROJECTION_SURFACES: Record<ChoiceCollectionSurface, ChoiceProjecti
   'checkboxGroup.props.items': {
     label: 'checkboxGroup.props.items.label',
     value: 'checkboxGroup.props.items.value',
+  },
+  'autocomplete.props.items': {
+    label: 'autocomplete.props.items.label',
+    value: 'autocomplete.props.items.value',
   },
 }
 
@@ -193,6 +201,27 @@ export function resolveSelectCollectionItems(
   options: { iterationContext?: RuntimeIterationContext } = {},
 ) {
   return resolveChoiceCollectionItems(items, state, 'select.props.items', options)
+}
+
+export function resolveAutocompleteCollectionItems(
+  items: SelectLayoutNodeItems,
+  state: RuntimeState,
+  options: { iterationContext?: RuntimeIterationContext } = {},
+) {
+  return resolveChoiceCollectionItems(items, state, 'autocomplete.props.items', options)
+}
+
+export function filterAutocompleteSuggestions(
+  items: ResolvedSelectCollectionItem[],
+  searchText: string,
+  minChars: number,
+): ResolvedSelectCollectionItem[] {
+  if (searchText.length < minChars) {
+    return []
+  }
+
+  const normalizedSearchText = searchText.toLowerCase()
+  return items.filter((item) => item.label.toLowerCase().includes(normalizedSearchText))
 }
 
 export function resolveChoiceCollectionItems(

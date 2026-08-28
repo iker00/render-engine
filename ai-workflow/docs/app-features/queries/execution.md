@@ -11,10 +11,12 @@
 - La fachada pública actual del runtime expone `executeQueryOperation(operationName, { requestParams? })` para ejecutar una operación declarada y escribir su resultado en `queries.{operationName}`.
 - `button.props.action.type: executeOperation` reutiliza esa misma fachada compartida desde el árbol `layout`.
 - `button.props.action.type: executeOperations` (plural) lanza en paralelo un array de operaciones, cada una con overrides opcionales de `query`, `body` y `headers` por operación. Cada operación actualiza `queries.{operationName}` de forma independiente.
+- `button.props.action.type: executeOperation`/`executeOperations` acepta `onSuccess`/`onError` opcionales para encadenar acciones tras el resultado (ver [Refetch declarativo](#refetch-declarativo-tras-éxitoerror-onsuccess-onerror) más abajo).
 - `form.submitAction.type: executeOperation` reutiliza la misma fachada compartida desde el submit nativo del formulario.
 - `form.submitAction.type: executeOperations` (plural) lanza en paralelo un array de operaciones con la misma política de overrides que botones, y aplica `resetOnSuccess` de forma colectivo: el formulario solo se resetea si **todas** las operaciones terminan en éxito.
 - `steps.props.items[i].onNext` reutiliza esa misma fachada compartida para gatear el avance desde un paso (o el envío del `form` en el último paso): solo tras superar la validación de campos del paso se ejecuta, y un resultado en error bloquea el avance sin disparar `submitAction`.
 - Cuando la acción o el submit ocurren dentro de un `repeater`, `query`, `body` y `headers` también pueden resolverse desde `item.*` para la iteración activa.
+- `autocomplete` (con `props.items` de shape dinámico `queries.{queryName}.data`/`.data.*`) dispara la misma fachada por su cuenta mientras el usuario escribe, con debounce fijo de `300ms` y gate por `props.minChars`: cuarta superficie de disparo, junto a `preloads`, botón y submit. El disparo vive en un módulo `runtime-*` dedicado (`runtime-search-trigger`), no en `runtime-actions/`, porque no es una acción declarada en el config sino consecuencia de la interacción del propio nodo. Detalle completo en [[../nodes/autocomplete.md#disparo-de-búsqueda-dinámica]].
 - La UI no construye manualmente URLs, query strings ni payloads JSON.
 
 ## Semántica de errores tipados
@@ -36,6 +38,7 @@
 - si el request efectivo lleva body serializado y no existe ya un `content-type` explícito en ninguna variante de casing, el builder añade `content-type: application/json`
 
 ## Reglas de payload
+- Una operación `GET` nunca lleva body en la petición final, aunque `requestParams.body` reciba un valor (p. ej. desde el disparo de `autocomplete`, que aporta `requestParams.query` y `requestParams.body` a la vez sin conocer el método de la operación): el builder lo descarta antes de construir la petición, en vez de dejar que `fetch` lo rechace de forma silenciosa.
 - `query` admite solo valores finales `string`, `number` y `boolean`
 - `body` admite cualquier árbol JSON serializable
 - `body: null` en la raíz equivale a una petición deliberada sin body serializado
@@ -61,9 +64,9 @@
 - Si el campo está oculto por `visibility`/`queryStateFeedback` en el momento del submit, la omisión de campos ocultos tiene prioridad: la clave se omite y `emptySubmitValue` no la reintroduce.
 - Si el campo tiene un valor efectivo distinto de `''`, `emptySubmitValue` no tiene ningún efecto.
 
-## Refetch y mutadoras (estado actual)
-- Algunas acciones pueden necesitar relanzar queries después de éxito.
-- Caso típico: borrar un item y recargar el listado.
-- La intención funcional es soportar este patrón sin exigir lógica imperativa dispersa.
+## Refetch declarativo tras éxito/error (`onSuccess`/`onError`)
+- `button.props.action.type: executeOperation`/`executeOperations` y `form.submitAction.type: executeOperation`/`executeOperations` aceptan `onSuccess`/`onError`: listas ordenadas de acciones (incluido `executeOperation`/`executeOperations` de nuevo) que se ejecutan tras el resultado de la operación disparadora.
+- Caso típico: un botón que borra un item encadena en `onSuccess` un `executeOperation` que relanza el listado, sin refresco manual ni formulario artificial.
+- Detalle completo de la semántica (orden, `when`, éxito/error con `executeOperations` plural, anidamiento a un solo nivel) en [[../nodes/button.md#Acciones post-ejecución onSuccess onError]] y [[../forms/submit.md#Acciones post-éxito onSuccess]].
 
-La base de estado y la red real ya están conectadas para ejecución por nombre, precargas automáticas al entrar en página, disparo declarativo desde `button.props.action` y submit declarativo desde `form.submitAction`. Siguen pendientes la orquestación automática de refetch y otros triggers más generales fuera de estas superficies actuales.
+La base de estado y la red real ya están conectadas para ejecución por nombre, precargas automáticas al entrar en página, disparo declarativo desde `button.props.action` (incluyendo su propio encadenamiento `onSuccess`/`onError`) y submit declarativo desde `form.submitAction`.

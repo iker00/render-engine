@@ -19,7 +19,7 @@
 ## Validación estructural global
 - Si `layout` no es un array válido, el arranque falla con un error explícito sobre la ruta afectada.
 - Si aparece un nodo no soportado en la raíz o dentro de `children`, el runtime lo trata como error de configuración y no lo reinterpreta.
-- Si `form.children` contiene nodos fuera de `input`, `textarea`, `select`, `radioGroup`, `checkboxGroup`, `button`, `heading`, `paragraph`, `image`, `table`, `container`, `accordion`, `tabs`, `steps` y `divider`, el config completo se rechaza antes del render.
+- Si `form.children` contiene nodos fuera de `input`, `textarea`, `select`, `radioGroup`, `checkboxGroup`, `fileInput`, `toggle`, `hidden`, `button`, `heading`, `paragraph`, `image`, `table`, `container`, `accordion`, `divider`, `tabs`, `steps`, `alert`, `badge`, `stat` y `skeleton`, el config completo se rechaza antes del render, a cualquier profundidad del subárbol (incluidos los `fallback` de `queryStateFeedback` de nodos dentro de ese subárbol).
 - Si `input`, `textarea`, `select`, `radioGroup` o `checkboxGroup` aparecen fuera de un subárbol `form`, el config completo se rechaza antes del render.
 - Si un `button` sin `action` aparece fuera de un subárbol `form`, el config completo se rechaza antes del render.
 
@@ -127,6 +127,7 @@
 - Los `children` de cada item se validan recursivamente como colección de nodos del catálogo, con la misma semántica que los `children` de `container`: tipos desconocidos producen `unsupported-node-type`; contratos inválidos producen `invalid-layout`.
 - No existe un allowlist de tipos de `children` para `tabs`: admite cualquier nodo válido del catálogo, incluidos `form`, `repeater`, `container` y todos los nodos hoja.
 - La ruta diagnóstica de errores dentro de los `children` sigue el patrón `props.items[N].children`.
+- Cada item de `props.items` admite `icon` opcional como string; cualquier tipo distinto de string rechaza el config completo antes del render. No hay resolución ni validación semántica del nombre del icono en config: es responsabilidad del render.
 
 ## Reglas del nodo `steps`
 

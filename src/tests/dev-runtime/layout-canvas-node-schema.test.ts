@@ -60,7 +60,7 @@ describe('getNodeTypeJsonSchema', () => {
     expect(propProperties['iconPosition']).toBeDefined()
   })
 
-  it('emits an action oneOf with the 7 button action variants, each with a distinct literal type', () => {
+  it('emits an action oneOf with the 8 button action variants, each with a distinct literal type', () => {
     const schema = getNodeTypeJsonSchema('button')
     const properties = schema.properties as Record<string, unknown>
     const propsSchema = properties['props'] as { properties?: Record<string, unknown> }
@@ -68,7 +68,7 @@ describe('getNodeTypeJsonSchema', () => {
     const actionSchema = propProperties['action'] as { oneOf?: Array<{ properties?: { type?: { const?: string } } }> }
 
     expect(actionSchema.oneOf).toBeDefined()
-    expect(actionSchema.oneOf).toHaveLength(7)
+    expect(actionSchema.oneOf).toHaveLength(8)
 
     const literalTypes = (actionSchema.oneOf ?? []).map((branch) => branch.properties?.type?.const)
     expect(literalTypes).toEqual([
@@ -79,11 +79,12 @@ describe('getNodeTypeJsonSchema', () => {
       'resetForm',
       'openModal',
       'closeModal',
+      'downloadOperation',
     ])
-    expect(new Set(literalTypes).size).toBe(7)
+    expect(new Set(literalTypes).size).toBe(8)
   })
 
-  it('emits an action oneOf with exactly the 2 link action variants (navigateTo, goBack)', () => {
+  it('emits an action oneOf with exactly the 3 link action variants (navigateTo, goBack, downloadOperation)', () => {
     const schema = getNodeTypeJsonSchema('link')
     const properties = schema.properties as Record<string, unknown>
     const propsSchema = properties['props'] as { properties?: Record<string, unknown> }
@@ -91,11 +92,11 @@ describe('getNodeTypeJsonSchema', () => {
     const actionSchema = propProperties['action'] as { oneOf?: Array<{ properties?: { type?: { const?: string } } }> }
 
     expect(actionSchema.oneOf).toBeDefined()
-    expect(actionSchema.oneOf).toHaveLength(2)
+    expect(actionSchema.oneOf).toHaveLength(3)
 
     const literalTypes = (actionSchema.oneOf ?? []).map((branch) => branch.properties?.type?.const)
-    expect(literalTypes).toEqual(['navigateTo', 'goBack'])
-    expect(new Set(literalTypes).size).toBe(2)
+    expect(literalTypes).toEqual(['navigateTo', 'goBack', 'downloadOperation'])
+    expect(new Set(literalTypes).size).toBe(3)
   })
 
   it('emits form.submitAction as an oneOf with exactly 2 branches (executeOperation, executeOperations), each exposing onSuccess/onError arrays of a 7-branch oneOf', () => {
@@ -179,6 +180,29 @@ describe('getNodeTypeJsonSchema', () => {
     expect(propProperties['submitLabel']).toBeDefined()
   })
 
+  // T2 (2026-08-25-09-15-autocomplete-node): autocompleteNodeSchema (T1) is registered in
+  // nodeSchemaByType, so its JSON Schema must derive automatically without any dedicated widget —
+  // same assertion shape as the container/repeater tests above, but for the field-specific props
+  // (items/multiple/placeholder/allowFreeText/minChars) plus the shared field props (fieldId/label).
+  it('reflects autocompleteNodeSchema props (fieldId/label/items/multiple/placeholder/allowFreeText/minChars)', () => {
+    const schema = getNodeTypeJsonSchema('autocomplete')
+    expect(schema).toBeDefined()
+    expect(typeof schema).toBe('object')
+
+    const properties = schema.properties as Record<string, unknown>
+    const propsSchema = properties['props'] as { properties?: Record<string, unknown> }
+    expect(propsSchema).toBeDefined()
+
+    const propProperties = propsSchema.properties ?? {}
+    expect(propProperties['fieldId']).toBeDefined()
+    expect(propProperties['label']).toBeDefined()
+    expect(propProperties['items']).toBeDefined()
+    expect(propProperties['multiple']).toBeDefined()
+    expect(propProperties['placeholder']).toBeDefined()
+    expect(propProperties['allowFreeText']).toBeDefined()
+    expect(propProperties['minChars']).toBeDefined()
+  })
+
   it('returns the same reference on a second call for the same type (cache)', () => {
     const first = getNodeTypeJsonSchema('container')
     const second = getNodeTypeJsonSchema('container')
@@ -197,9 +221,9 @@ describe('getNodeTypeJsonSchema', () => {
 })
 
 describe('getSupportedNodeTypesCatalog', () => {
-  it('returns the full node type catalog (29 types)', () => {
+  it('returns the full node type catalog (31 types)', () => {
     const catalog = getSupportedNodeTypesCatalog()
-    expect(catalog).toHaveLength(29)
+    expect(catalog).toHaveLength(31)
     expect(catalog).toContain('container')
     expect(catalog).toContain('button')
     expect(catalog).toContain('hidden')

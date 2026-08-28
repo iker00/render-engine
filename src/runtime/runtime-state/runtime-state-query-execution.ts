@@ -1,5 +1,7 @@
 import type { Dispatch } from 'react'
 import type { RuntimeApiBodyValue, RuntimeApiOperation, RuntimeApiRequestParams, RuntimeConfig } from '../../config/runtime-config'
+import { executeBuiltRuntimeApiDownloadRequest } from '../../queries/runtime-api-download'
+import type { RuntimeApiDownloadResult } from '../../queries/runtime-api-download-types'
 import {
   buildInlineRuntimeApiRequest,
   buildRuntimeApiRequest,
@@ -190,6 +192,85 @@ export async function executeQueryOperationWithSnapshot({
       payload: {
         queryName: operationName,
         data: result.data,
+        requestSignature: requestResult.request.requestSignature,
+      },
+    })
+
+    return result
+  }
+
+  dispatch({
+    type: 'queries/set-error',
+    payload: {
+      queryName: operationName,
+      error: result.error satisfies RuntimeQueryError,
+      requestSignature: requestResult.request.requestSignature,
+    },
+  })
+
+  return result
+}
+
+export async function executeDownloadOperationWithSnapshot({
+  config,
+  dispatch,
+  operationName,
+  snapshotState,
+  requestParams,
+  iterationContext,
+  fetchImplementation,
+}: {
+  config: RuntimeConfig
+  dispatch: Dispatch<RuntimeStateAction>
+  operationName: string
+  snapshotState: RuntimeState
+  requestParams?: RuntimeApiRequestParams
+  iterationContext?: RuntimeIterationContext
+  fetchImplementation?: typeof fetch
+}): Promise<RuntimeApiDownloadResult> {
+  const requestResult = buildRuntimeApiRequest({
+    config,
+    operationName,
+    state: snapshotState,
+    requestParams,
+    iterationContext,
+  })
+
+  if (requestResult.status === 'error') {
+    dispatch({
+      type: 'queries/set-error',
+      payload: {
+        queryName: operationName,
+        error: requestResult.error satisfies RuntimeQueryError,
+        requestSignature: null,
+      },
+    })
+
+    return requestResult
+  }
+
+  dispatch({
+    type: 'queries/set-loading',
+    payload: {
+      queryName: operationName,
+      requestSignature: requestResult.request.requestSignature,
+    },
+  })
+
+  const result = await executeBuiltRuntimeApiDownloadRequest({
+    request: requestResult.request,
+    fetch: fetchImplementation,
+  })
+
+  if (result.status === 'success') {
+    // D8: the fetched Blob is not JSON serializable nor referenceable from `queries.*`
+    // consumers, so the slot's `data` stays `null` on success; the caller (T5) reads the
+    // `blob`/`contentDisposition` from this function's return value directly.
+    dispatch({
+      type: 'queries/set-success',
+      payload: {
+        queryName: operationName,
+        data: null,
         requestSignature: requestResult.request.requestSignature,
       },
     })

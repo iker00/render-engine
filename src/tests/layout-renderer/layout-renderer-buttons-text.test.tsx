@@ -1681,7 +1681,7 @@ describe('RuntimePage', () => {
             headers: ['Code', 'Name'],
             rows: {
               source: 'queries.searchUsers.data.results',
-              cells: ['{{item.code}}', '{{item.name}} ({{item.status}})'],
+              cells: ['{{row.code}}', '{{row.name}} ({{row.status}})'],
             },
           },
         },

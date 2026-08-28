@@ -272,7 +272,7 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: `Page "home" has an invalid layout at "layout[0].children[0]": form nodes only accept input, textarea, select, radioGroup, checkboxGroup, fileInput, toggle, hidden, button, heading, paragraph, image, table, container, accordion, divider, tabs and steps descendants.
+        message: `Page "home" has an invalid layout at "layout[0].children[0]": form nodes only accept input, textarea, select, radioGroup, checkboxGroup, fileInput, toggle, hidden, button, heading, paragraph, image, table, container, accordion, divider, tabs, steps, alert, badge, stat and skeleton descendants.
   → form("user-form") > list[0]
   Node: {"type":"list"}`,
       },
@@ -308,7 +308,7 @@ describe('validateRuntimeConfig', () => {
       error: {
         code: 'invalid-layout',
         displayMode: 'development-only',
-        message: `Page "home" has an invalid layout at "layout[0].children[0]": form nodes only accept input, textarea, select, radioGroup, checkboxGroup, fileInput, toggle, hidden, button, heading, paragraph, image, table, container, accordion, divider, tabs and steps descendants.
+        message: `Page "home" has an invalid layout at "layout[0].children[0]": form nodes only accept input, textarea, select, radioGroup, checkboxGroup, fileInput, toggle, hidden, button, heading, paragraph, image, table, container, accordion, divider, tabs, steps, alert, badge, stat and skeleton descendants.
   → form("user-form") > repeater[0]
   Node: {"type":"repeater"}`,
         },
@@ -457,6 +457,193 @@ describe('validateRuntimeConfig', () => {
   Node: {"type":"form","id":"user-form"}`,
       },
     })
+  })
+
+  it('accepts alert, badge, stat and skeleton as direct children of form.children', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithFormLayout({
+        children: [
+          {
+            type: 'input',
+            props: {
+              fieldId: 'name',
+              label: 'Name',
+            },
+          },
+          {
+            type: 'alert',
+            props: { message: 'Heads up' },
+          },
+          {
+            type: 'badge',
+            props: { label: 'New' },
+          },
+          {
+            type: 'stat',
+            props: { label: 'Revenue', value: '$12,000' },
+          },
+          {
+            type: 'skeleton',
+          },
+        ],
+      }),
+    )
+
+    expect(result.status).toBe('ready')
+  })
+
+  it('accepts a container inside a form that in turn contains a skeleton', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithFormLayout({
+        children: [
+          {
+            type: 'container',
+            children: [
+              {
+                type: 'skeleton',
+              },
+            ],
+          },
+        ],
+      }),
+    )
+
+    expect(result.status).toBe('ready')
+  })
+
+  it('accepts a tabs node inside a form whose first item contains a badge and a stat', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithFormLayout({
+        children: [
+          {
+            type: 'tabs',
+            props: {
+              items: [
+                {
+                  label: 'Tab A',
+                  children: [
+                    { type: 'badge', props: { label: 'New' } },
+                    { type: 'stat', props: { label: 'Revenue', value: '$12,000' } },
+                  ],
+                },
+              ],
+            },
+          },
+        ],
+      }),
+    )
+
+    expect(result.status).toBe('ready')
+  })
+
+  it('accepts a skeleton as queryStateFeedback.states.loading.fallback on the form node itself', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithFormLayout({
+        queryStateFeedback: {
+          query: 'someQuery',
+          states: {
+            loading: {
+              mode: 'fallback',
+              fallback: [{ type: 'skeleton' }],
+            },
+          },
+        },
+      }),
+    )
+
+    expect(result.status).toBe('ready')
+  })
+
+  it('accepts an alert as queryStateFeedback.states.error.fallback on the form node itself', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithFormLayout({
+        queryStateFeedback: {
+          query: 'someQuery',
+          states: {
+            error: {
+              mode: 'fallback',
+              fallback: [{ type: 'alert', props: { type: 'danger', message: 'Something went wrong' } }],
+            },
+          },
+        },
+      }),
+    )
+
+    expect(result.status).toBe('ready')
+  })
+
+  it('rejects map as a direct child of form.children with the expanded catalogue message', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithFormLayout({
+        children: [
+          {
+            type: 'map',
+          },
+        ],
+      }),
+    )
+
+    expect(result).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message: `Page "home" has an invalid layout at "layout[0].children[0]": form nodes only accept input, textarea, select, radioGroup, checkboxGroup, fileInput, toggle, hidden, button, heading, paragraph, image, table, container, accordion, divider, tabs, steps, alert, badge, stat and skeleton descendants.
+  → form("user-form") > map[0]
+  Node: {"type":"map"}`,
+      },
+    })
+  })
+
+  it('rejects link as a direct child of form.children with the expanded catalogue message', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithFormLayout({
+        children: [
+          {
+            type: 'link',
+            props: {
+              label: 'Go',
+              href: 'https://example.com',
+            },
+          },
+        ],
+      }),
+    )
+
+    expect(result.status).toBe('error')
+    if (result.status !== 'error') throw new Error('Expected error')
+    expect(result.error.message).toContain(
+      'form nodes only accept input, textarea, select, radioGroup, checkboxGroup, fileInput, toggle, hidden, button, heading, paragraph, image, table, container, accordion, divider, tabs, steps, alert, badge, stat and skeleton descendants.',
+    )
+  })
+
+  it('rejects a map inside a descendant queryStateFeedback.states.error.fallback mixed with a valid alert, pointing at the map index', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithFormLayout({
+        children: [
+          {
+            type: 'input',
+            props: { fieldId: 'name', label: 'Name' },
+            queryStateFeedback: {
+              query: 'someQuery',
+              states: {
+                error: {
+                  mode: 'fallback',
+                  fallback: [
+                    { type: 'alert', props: { message: 'x' } },
+                    { type: 'map' },
+                  ],
+                },
+              },
+            },
+          },
+        ],
+      }),
+    )
+
+    expect(result.status).toBe('error')
+    if (result.status !== 'error') throw new Error('Expected error')
+    expect(result.error.message).toContain('layout[0].children[0].queryStateFeedback.states.error.fallback[1]')
   })
 
   it('accepts form.persistOnUnmount as an optional boolean without changing historical form semantics', () => {

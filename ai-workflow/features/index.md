@@ -23,6 +23,89 @@ La política completa está definida en el documento de workflow del proyecto.
 
 ## Completadas
 
+- `2026-08-27-12-19-download-operation-action`: nuevo tipo de acción `downloadOperation` en `button.props.action.type`
+  y `link.props.action.type` (mismo shape que `executeOperation`: `operationName`, `query`/`body`/`headers`
+  opcionales, más `filename` opcional). Al disparar, ejecuta un `fetch` autenticado contra la operación del catálogo
+  `api` (headers resueltos con inyección de `tokens.*`, reutilizando el mismo request builder que `executeOperation`)
+  y, en éxito, arma un `Blob` con el cuerpo y dispara la descarga real del navegador. Nombre de fichero resuelto por
+  prioridad: `Content-Disposition` → `props.action.filename` → fallback genérico `"download"`. El estado se refleja
+  en `queries.{operationName}` (`data` siempre `null`, ya que un `Blob` no es JSON referenciable); el control
+  (`button`/`link`) queda deshabilitado por instancia mientras la descarga está en curso. `downloadOperation` admite
+  `onSuccess`/`onError` con la misma semántica que `executeOperation`, primera vez que `link` gana lifecycle
+  post-ejecución. La orquestación "ejecutar → decidir éxito/error → disparar `onSuccess`/`onError`", antes duplicada
+  entre `button` y `form`, se factorizó en un helper compartido (`runActionOutcomeWithLifecycle`) para que `link` no
+  añadiera una tercera copia del mismo patrón.
+- `2026-08-27-14-37-accordion-tabs-icon`: extiende el mecanismo de icono decorativo Lucide React (ya vigente en
+  `button`/`link`/`stat`/`heading`/`paragraph`) a `accordion` (`props.icon`, nuevo string opcional) y a cada item de
+  `tabs.props.items` (`icon`, nuevo campo opcional por item), en ambos casos con posición fija a la izquierda del
+  label, sin `iconPosition` configurable. En `accordion`, el icono se agrupa con el label en el mismo bloque flex de
+  la cabecera; el chevron de apertura/cierre se mantiene siempre pinneado a la derecha, sin relación con `icon`. En
+  `tabs`, cada item resuelve su `icon` de forma independiente (un item puede declararlo y otro no), igual en
+  orientación `horizontal` y `vertical`. Un nombre de icono que no resuelve a un icono Lucide conocido se ignora
+  silenciosamente en ambos nodos (mismo comportamiento que en el resto del catálogo): el label se renderiza igual,
+  sin error. Validación de config: `accordion.props.icon` y `tabs.props.items[].icon` solo exigen tipo `string`; la
+  resolución del nombre a un icono Lucide real es responsabilidad del render, no de la validación. Soporte en el
+  editor visual: `accordion` recibe el widget de búsqueda de iconos (`IconPickerPropertyField`) de forma automática
+  por la convención de nombre de campo ya existente (`resolveIconPropsSchema`, séptimo nodo cubierto sin cambios en
+  el dispatcher); `tabs.props.items[].icon` queda fuera de esa convención automática (anidado dentro de un array) y
+  requiere un swap explícito del mismo sentinel `{ 'x-widget': 'icon' }` en `resolveTabsPropsSchema`. Fuera de
+  alcance: tamaño/color/intercambio del icono más allá del nombre Lucide, iconos en el cuerpo del accordion o panel
+  de tabs, e icono derivado dinámicamente de una colección (`queries.*`).
+- `2026-08-25-14-49-gallery-node`: nuevo nodo hoja `gallery` en el catálogo, colección de imágenes con dos orígenes
+  mutuamente excluyentes por instancia: `props.images` (lista literal `{src, alt}`, misma semántica que
+  `image.props.src`/`alt`) o `props.source` (colección dinámica resuelta desde `queries.*`/`item.*`, mismo contrato
+  de `source`/`key` que `repeater.props.items`, reutilizando sin modificar `resolveCollectionSourceItems` y
+  `validateCollectionSource`). Dentro de `source`, un submodo de carga por foto también mutuamente excluyente:
+  `mode: 'src'` (ruta relativa/interpolación por item, igual que `image.props.src`) o `mode: 'fetch'` (petición HTTP
+  binaria por foto, mismo contrato `url`/`method`/`headers`/`body` que `image.props.fetch`, resuelta con `item.*`
+  como contexto); en `fetch`, un campo opcional `idField` (añadido en T9, posterior al cierre inicial de T1-T7)
+  declara en qué propiedad del item está el id de control de cada elemento — si un elemento no resuelve un id
+  válido (string no vacío o number), se omite sin disparar la petición, sin exponer ese id como una referencia
+  nueva (la interpolación de `fetch` sigue leyendo solo `item.*`). Dos modos de visualización por instancia,
+  también obligatorios y mutuamente excluyentes: `display.mode: 'paginated'` (reutiliza sin modificar el mismo
+  modelo de paginación local de `repeater`/`table`, `createCollectionPaginationModel`/`CollectionPaginationControls`)
+  o `display.mode: 'carousel'` (1-3 imágenes visibles simultáneamente, autoplay y loop opcionales desactivados por
+  defecto, construido sobre `embla-carousel-react` + `embla-carousel-autoplay`, librería headless MIT elegida
+  porque no impone CSS propio — el markup de slides/flechas es JSX + Tailwind del propio proyecto). Lightbox propio
+  (no una instancia del nodo `modal`, para que cada iteración de `gallery` dentro de un `repeater` tenga su lightbox
+  aislado sin pasar por el registro global `openModal`/`closeModal`) con navegación anterior/siguiente sobre el
+  conjunto completo de fotos (no solo las visibles), cierre por botón/clic fuera/`Esc`; reutiliza la misma unidad de
+  resolución por-item que las tiles visibles (`useImageFetchSource`), de forma que el número de peticiones `fetch`
+  simultáneas queda acotado a "tiles renderizadas + como máximo una foto de lightbox", nunca al tamaño de la
+  colección — sin foco atrapado ni navegación por flechas de teclado dentro del lightbox (fuera de alcance v1
+  explícito). Code-splitting en dos niveles: a nivel de nodo (mismo patrón dual `eagerMap`/`lazyMap` que el resto
+  del catálogo) y, dentro del propio módulo de `gallery`, un `React.lazy` adicional solo para la vista de carrusel
+  (única que importa `embla`), de forma que una instancia en modo `paginated` nunca descarga ese chunk. Caso límite
+  no cubierto por el contrato textual heredado de `repeater`: declarar `source.key: "$key"` en origen dinámico
+  siempre resuelve a ninguna key válida y deja la galería sin fotos sin error, porque el origen dinámico de
+  `gallery` solo resuelve colecciones de forma array (nunca la variante objeto/diccionario que sí soporta
+  `repeater`). Soporte completo en `dev-editor`: selector "Origen" (Estático/Dinámico, mismo patrón de segmentos que
+  el "Modo" de `container`) y, en Dinámico, un widget dedicado para `props.source` con su propio sub-selector
+  `mode` (`src`/`fetch`) que reutiliza el editor genérico ya existente de `image.props.fetch`.
+- `2026-08-25-12-01-table-row-references`: nuevo namespace de referencia `row.*` para el contexto de fila propio de
+  `table`, que deja de usar `item.*` (cambio de comportamiento intencional, sin compatibilidad retroactiva ni alias).
+  `row.*` navega el dato de la fila actual con la misma semántica de segmentos anidados que `item.*`, disponible en
+  celdas-nodo en modo dinámico y en celdas string (manual y dinámico, con forma completa e interpolación parcial
+  `{{row...}}`). Nueva referencia sintética `row.$index`: entero 1-based con la posición de la fila dentro de la
+  vista actualmente visible (tras filtros, ordenación y paginación local), disponible en ambos modos y ambos tipos
+  de celda; en modo manual es el único segmento de `row.*` accesible (no hay dato subyacente que navegar). Resuelve
+  el sombreado que existía hoy cuando una `table` dinámica vive dentro de un `repeater`: el `iterationContext` que
+  construye `table-layout-node.tsx` para resolver celdas pasa de sustituir por completo el contexto ambiental
+  recibido a componerlo por spread (`{ ...iterationContext, row, rowIndex }`), de forma que `item.*` del `repeater`
+  ancestro más cercano sigue resolviendo dentro de las celdas de la `table` anidada sin que `row` lo pise; efecto
+  colateral necesario: en modo manual las celdas-nodo dentro de un `repeater` recuperan acceso a `item.*` del
+  ancestro, que hoy se perdía por completo en ese modo. `RuntimeIterationContext`
+  (`src/runtime/runtime-references/runtime-reference-resolver.ts`) gana los campos hermanos opcionales `row`/
+  `rowIndex` junto a `item`/`key`/`itemKey`/`itemIndex` (estos últimos pasan de obligatorios a opcionales, cambio de
+  tipo compatible hacia atrás). `row` se registra en `src/config/runtime-reference-syntax.ts` como namespace
+  condicional de primera clase (`allowRowReference`, mismo patrón que `allowItemReference`), con `row.$index` como
+  única forma sintética soportada (no existe `row.$key`: `table` no itera un diccionario). Como el pipeline local de
+  `table` (`processTableRows`) filtra/ordena sobre el valor de celda ya resuelto como string antes de conocerse la
+  posición final visible, las celdas string se resuelven dos veces: una vez como clave de filtro/orden (sin
+  `row.$index` correcto) y otra vez, tras aplicar filtro+orden+paginación, con el `rowIndex` final — las
+  celdas-nodo no necesitan doble resolución porque ya se renderizan perezosamente sobre las filas visibles.
+  `table.props.rows.source: 'item.*'` (el item del `repeater` ambiental que provee el array de filas) no cambia: es
+  una familia de referencia distinta del contexto de fila.
 - `2026-08-25-09-27-form-steps`: nuevo nodo estructural `steps` en el catálogo, exclusivo como descendiente de
   `form` (a diferencia de `tabs`/`accordion`, válidos también fuera de `form`; validado con un caso explícito propio
   en los dos walkers de `validate-form-semantics.ts`, sin forzarlo dentro de `FORM_ONLY_LEAF_NODE_TYPES`, pensado
@@ -48,6 +131,36 @@ La política completa está definida en el documento de workflow del proyecto.
   `progress` no tiene indicador clicable, solo texto "Paso X de Y" y el botón "Atrás". Sin soporte en `dev-editor`
   (fuera de alcance), sin `defaultStep`, sin persistencia del paso activo entre `pageEntry`, sin generación dinámica
   de pasos desde `queries.*`.
+- `2026-08-25-09-15-autocomplete-node`: nuevo nodo de formulario `autocomplete`, campo de texto que filtra/busca entre
+  opciones (estáticas o dinámicas) para seleccionar uno o varios valores mostrados como chips en modo múltiple.
+  `props.items` reutiliza exactamente los tres shapes cerrados de `select` (manual literal, manual escalar, dinámico
+  unificado); el shape estático y `source: 'item.*'` filtran en cliente por substring case-insensitive del `label`
+  respetando `props.minChars`, mientras que `source: 'queries.{queryName}.data'`/`.data.*` dispara la ejecución de la
+  operación asociada mientras el usuario escribe — cuarta superficie de disparo de `queries.*` del runtime, junto a
+  `preloads`, botón y submit. El disparo vive en un módulo `runtime-*` dedicado (`runtime-search-trigger.ts`, fuera de
+  `runtime-actions/` porque no traduce una acción declarada en el config) con debounce fijo de `300ms` no configurable
+  y gate por `minChars`, delegando la ejecución real en la misma fachada `executeQueryOperation` ya usada por botones y
+  submit. El texto en curso viaja a la operación de dos formas distintas según cardinalidad, sin ampliar ningún
+  contrato declarativo: en selección simple, `forms.{formId}.{fieldId}` refleja el texto tal cual se escribe (con o
+  sin `allowFreeText`) para que la operación lo referencie directamente; en selección múltiple, viaja por
+  `requestParams.query`/`requestParams.body` bajo la clave `props.searchParamName` (opcional, default `'search'`,
+  añadido tras el cierre inicial de `design.md` al detectarse que una clave fija sin configurar reproducía el mismo
+  problema que la decisión original había descartado evitar). Cada instancia rastrea localmente la `requestSignature`
+  de su última búsqueda disparada y solo pinta `queries.{queryName}.data` como sugerencias cuando coincide con la
+  vigente — límite de producto aceptado y documentado: instancias que comparten `queryName` (p. ej. dentro de un
+  `repeater` sin `item.*`) no buscan de forma verdaderamente independiente y simultánea. A diferencia de
+  `select`/`radioGroup`/`checkboxGroup`, el shape dinámico de `autocomplete` invierte la regla de "limpiar valor si
+  desaparece de la colección resuelta": una vez fijado un valor o añadido un chip, persiste aunque una búsqueda
+  posterior no lo incluya, porque `queries.{queryName}.data` representa solo las sugerencias de la búsqueda más
+  reciente, no un catálogo completo; el shape estático manual sí seguía limpiando como siempre. `allowFreeText`
+  (default `false`) reutiliza la semántica de `input` en simple (valor efectivo = texto en vivo, sin confirmación) y
+  añade chip por confirmación explícita (Enter) en múltiple. Patrón ARIA de combobox con sugerencias (`role=combobox`,
+  `aria-expanded`, `aria-controls`, `listbox`/`option`, `aria-activedescendant`) y asociación label↔control vía
+  `htmlFor` explícito (no wrapper implícito, para no interferir con los botones "Quitar" de los chips). Efecto
+  colateral corregido en `runtime-api-request.ts`: una operación `GET` nunca lleva body en la petición final aunque
+  `requestParams.body` reciba un valor, evitando que `fetch` la rechazase de forma silenciosa. Fuera de alcance:
+  `emptySubmitValue`, resaltado del texto coincidente en sugerencias, paginación de resultados y widget dedicado de
+  edición en el panel de propiedades del editor visual.
 - `2026-08-24-12-58-map-node`: nuevo nodo hoja `map` en el catálogo, mapa interactivo `Leaflet`/`react-leaflet` sobre
   tiles de OpenStreetMap, sin API key. `props.center`/`props.zoom`/`props.height` opcionales (defaults Pamplona,
   zoom 13, altura `md`, resueltos en el componente de render, no en validación). Dos orígenes de marcadores:

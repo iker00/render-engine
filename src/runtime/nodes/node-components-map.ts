@@ -1,6 +1,7 @@
 import React from 'react'
 import { AccordionNode } from './accordion-layout-node'
 import { AlertNode } from './alert-layout-node'
+import { AutocompleteNode } from './autocomplete-layout-node'
 import { BadgeNode } from './badge-layout-node'
 import { ButtonNode } from './button-layout-node'
 import { CheckboxGroupNode } from './checkbox-group-layout-node'
@@ -9,6 +10,7 @@ import { DividerNode } from './divider-layout-node'
 import { FileInputNode } from './file-input-layout-node'
 import { FileManagerNode } from './file-manager-layout-node'
 import { FormNode } from './form-layout-node'
+import { GalleryNode } from './gallery-layout-node'
 import { HiddenNode } from './hidden-layout-node'
 import { HeadingNode } from './heading-layout-node'
 import { ImageNode } from './image-layout-node'
@@ -38,6 +40,7 @@ type AnyComponent = React.ComponentType<any>
 const eagerMap = {
   accordion: AccordionNode as AnyComponent,
   alert: AlertNode as AnyComponent,
+  autocomplete: AutocompleteNode as AnyComponent,
   badge: BadgeNode as AnyComponent,
   button: ButtonNode as AnyComponent,
   checkboxGroup: CheckboxGroupNode as AnyComponent,
@@ -46,6 +49,7 @@ const eagerMap = {
   fileInput: FileInputNode as AnyComponent,
   fileManager: FileManagerNode as AnyComponent,
   form: FormNode as AnyComponent,
+  gallery: GalleryNode as AnyComponent,
   heading: HeadingNode as AnyComponent,
   hidden: HiddenNode as AnyComponent,
   image: ImageNode as AnyComponent,
@@ -72,6 +76,9 @@ const eagerMap = {
 const lazyMap = {
   accordion: React.lazy(() => import('./accordion-layout-node').then((m) => ({ default: m.AccordionNode }))),
   alert: React.lazy(() => import('./alert-layout-node').then((m) => ({ default: m.AlertNode }))),
+  autocomplete: React.lazy(() =>
+    import('./autocomplete-layout-node').then((m) => ({ default: m.AutocompleteNode })),
+  ),
   badge: React.lazy(() => import('./badge-layout-node').then((m) => ({ default: m.BadgeNode }))),
   button: React.lazy(() => import('./button-layout-node').then((m) => ({ default: m.ButtonNode }))),
   checkboxGroup: React.lazy(() =>
@@ -86,6 +93,7 @@ const lazyMap = {
     import('./file-manager-layout-node').then((m) => ({ default: m.FileManagerNode })),
   ),
   form: React.lazy(() => import('./form-layout-node').then((m) => ({ default: m.FormNode }))),
+  gallery: React.lazy(() => import('./gallery-layout-node').then((m) => ({ default: m.GalleryNode }))),
   heading: React.lazy(() => import('./heading-layout-node').then((m) => ({ default: m.HeadingNode }))),
   hidden: React.lazy(() => import('./hidden-layout-node').then((m) => ({ default: m.HiddenNode }))),
   image: React.lazy(() => import('./image-layout-node').then((m) => ({ default: m.ImageNode }))),

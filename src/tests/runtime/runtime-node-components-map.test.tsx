@@ -17,6 +17,7 @@ function Wrapper({ children }: { children: React.ReactNode }) {
 const EXPECTED_KEYS = [
   'accordion',
   'alert',
+  'autocomplete',
   'badge',
   'button',
   'checkboxGroup',
@@ -25,6 +26,7 @@ const EXPECTED_KEYS = [
   'fileInput',
   'fileManager',
   'form',
+  'gallery',
   'heading',
   'hidden',
   'image',
@@ -47,10 +49,10 @@ const EXPECTED_KEYS = [
 ]
 
 describe('NodeComponents map', () => {
-  it('exports exactly 29 keys — no missing, no extra', () => {
+  it('exports exactly 31 keys — no missing, no extra', () => {
     const keys = Object.keys(NodeComponents).sort()
     expect(keys).toEqual([...EXPECTED_KEYS].sort())
-    expect(keys).toHaveLength(29)
+    expect(keys).toHaveLength(31)
   })
 
   it('each value in the map is truthy (not undefined)', () => {

@@ -10,7 +10,13 @@ import type { BreadcrumbSegment } from './validation-breadcrumb'
 import { enrichedInvalidLayout, enrichErrorResult } from './validation-breadcrumb'
 import { validateLayoutCollection, validateQueryStateFeedback } from './validate-layout-nodes-core'
 import { mapLayoutNodeIssue } from './validate-layout-issue-mapping'
-import { mapQueryStateFeedbackIssue, mapVisibilityIssue, validateRuntimeUiAction, validateVisibility } from './validate-actions-visibility'
+import {
+  mapQueryStateFeedbackIssue,
+  mapVisibilityIssue,
+  validateDownloadOperationAction,
+  validateRuntimeUiAction,
+  validateVisibility,
+} from './validate-actions-visibility'
 import { isRecord, formatPathSegment } from './validate-node-shared-helpers'
 import { LINK_ALLOWED_CHILD_TYPES } from './layout-placement-rules'
 
@@ -157,22 +163,32 @@ export function validateLinkNode(
     return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.target": target requires props.href.`, breadcrumb, rawNode)
   }
 
-  // Cross-validation (7): action.type must be navigateTo or goBack
+  // Cross-validation (7): action.type must be navigateTo, goBack or downloadOperation
   let validatedAction: LinkLayoutNode['props']['action'] | undefined
   if (hasAction) {
     const rawAction = action as Record<string, unknown>
 
-    if (rawAction.type !== 'navigateTo' && rawAction.type !== 'goBack') {
+    if (rawAction.type !== 'navigateTo' && rawAction.type !== 'goBack' && rawAction.type !== 'downloadOperation') {
       return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}.props.action.type".`, breadcrumb, rawNode)
     }
 
-    const linkActionResult = validateRuntimeUiAction(rawAction, `${path}.props.action`, pageId)
+    if (rawAction.type === 'downloadOperation') {
+      const downloadResult = validateDownloadOperationAction(rawAction, `${path}.props.action`, pageId)
 
-    if (linkActionResult.status === 'error') {
-      return enrichErrorResult(linkActionResult, breadcrumb, rawNode)
+      if (downloadResult.status === 'error') {
+        return enrichErrorResult(downloadResult, breadcrumb, rawNode)
+      }
+
+      validatedAction = downloadResult.action
+    } else {
+      const linkActionResult = validateRuntimeUiAction(rawAction, `${path}.props.action`, pageId)
+
+      if (linkActionResult.status === 'error') {
+        return enrichErrorResult(linkActionResult, breadcrumb, rawNode)
+      }
+
+      validatedAction = linkActionResult.action as LinkLayoutNode['props']['action']
     }
-
-    validatedAction = linkActionResult.action as LinkLayoutNode['props']['action']
   }
 
   const props: LinkLayoutNode['props'] = {}

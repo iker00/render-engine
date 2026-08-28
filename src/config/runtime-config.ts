@@ -2,6 +2,7 @@ export type {
   AccordionLayoutNode,
   AlertLayoutNode,
   AlertType,
+  AutocompleteLayoutNode,
   BadgeLayoutNode,
   BadgeVariant,
   BadgeColor,
@@ -119,11 +120,15 @@ export type {
   FileManagerLayoutNode,
   FileInputLayoutNode,
   RuntimeFileInputValidations,
-  FormOnErrorAction,
-  FormOnSuccessAction,
+  RuntimeUiActionListEntry,
   RuntimeTokenRefreshConfig,
   HiddenLayoutNode,
-  ToggleLayoutNode
+  ToggleLayoutNode,
+  GalleryStaticImage,
+  GalleryDynamicSource,
+  GalleryPaginatedDisplay,
+  GalleryCarouselDisplay,
+  GalleryLayoutNode
 } from './runtime-config-types'
 export type { RuntimeTranslationsConfig, RuntimeTranslationsLangMap } from './runtime-config-types'
 export { validateRuntimeConfig } from './validate-runtime-config'

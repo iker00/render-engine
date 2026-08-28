@@ -23,6 +23,7 @@
 ## Opciones que desaparecen
 - En `select` simple y en `radioGroup`, si el valor efectivo no coincide con ninguna opción disponible en la colección resuelta, el campo queda vacío.
 - En `select.multiple` y en `checkboxGroup`, solo se conservan seleccionados los valores que sigan existiendo en la colección efectiva disponible.
+- **Excepción — `autocomplete` con `props.items` dinámico** (`queries.*` o `item.*`): no sigue esta regla. Una vez fijado un valor simple o añadido un chip, permanece seleccionado aunque una búsqueda o resolución posterior deje de incluirlo entre las sugerencias, porque en shape dinámico la colección representa solo las sugerencias visibles de la búsqueda más reciente, no un catálogo completo y estable. `autocomplete` con `props.items` manual (literal o escalar) sigue el comportamiento estándar de arriba. Ver [[../nodes/autocomplete.md#persistencia-de-selecciones-frente-a-datos-dinámicos-cambiantes]].
 
 ## Reset
 - El reset por formulario restaura el estado inicial efectivo de cada campo usando ese `defaultValue` cuando exista.

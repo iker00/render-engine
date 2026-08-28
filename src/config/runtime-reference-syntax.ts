@@ -1,5 +1,6 @@
 export type RuntimeReferenceNamespace =
   | 'item'
+  | 'row'
   | 'forms'
   | 'queries'
   | 'navigation'
@@ -22,7 +23,7 @@ export interface RuntimeLiteralReference {
 export interface RuntimeSupportedReference {
   kind: 'reference'
   status: 'supported'
-  namespace: 'item' | 'forms' | 'queries' | 'params' | 'translations' | 'tokens'
+  namespace: 'item' | 'row' | 'forms' | 'queries' | 'params' | 'translations' | 'tokens'
   path: string[]
   source: string
 }
@@ -30,7 +31,7 @@ export interface RuntimeSupportedReference {
 export interface RuntimeUnsupportedReference {
   kind: 'reference'
   status: 'unsupported'
-  namespace: 'item' | 'navigation' | 'routeParams'
+  namespace: 'item' | 'row' | 'navigation' | 'routeParams'
   path: string[]
   source: string
 }
@@ -45,13 +46,15 @@ export interface RuntimeInvalidReference {
 
 const SUPPORTED_NAMESPACES = new Set(['forms', 'queries', 'params', 'translations', 'tokens'] as const)
 const RESERVED_NAMESPACES = new Set(['navigation', 'routeParams'] as const)
-const REFERENCE_PATTERN = /^(item|forms|queries|navigation|routeParams|params|translations|tokens)(\.[A-Za-z0-9_-]+)*$/
+const REFERENCE_PATTERN = /^(item|row|forms|queries|navigation|routeParams|params|translations|tokens)(\.[A-Za-z0-9_-]+)*$/
 const REFERENCE_SEGMENT_PATTERN = /^[A-Za-z0-9_-]+$/
 const ITEM_KEY_SYNTHETIC_SEGMENT = '$key'
 const ITEM_INDEX_SYNTHETIC_SEGMENT = '$index'
+const ROW_INDEX_SYNTHETIC_SEGMENT = '$index'
 
 interface ParseRuntimeReferenceOptions {
   allowItemReference?: boolean
+  allowRowReference?: boolean
 }
 
 export function parseRuntimeReference(value: string, options: ParseRuntimeReferenceOptions = {}): RuntimeReferenceParseResult {
@@ -96,6 +99,26 @@ export function parseRuntimeReference(value: string, options: ParseRuntimeRefere
     } satisfies RuntimeUnsupportedReference
   }
 
+  if (namespace === 'row') {
+    if (options.allowRowReference) {
+      return {
+        kind: 'reference',
+        status: 'supported',
+        namespace,
+        path,
+        source: value,
+      } satisfies RuntimeSupportedReference
+    }
+
+    return {
+      kind: 'reference',
+      status: 'unsupported',
+      namespace,
+      path,
+      source: value,
+    } satisfies RuntimeUnsupportedReference
+  }
+
   if (isSupportedNamespace(namespace)) {
     return {
       kind: 'reference',
@@ -122,8 +145,8 @@ export function parseRuntimeReference(value: string, options: ParseRuntimeRefere
   }
 }
 
-function isSupportedNamespace(namespace: RuntimeReferenceNamespace): namespace is Exclude<RuntimeSupportedReference['namespace'], 'item'> {
-  return SUPPORTED_NAMESPACES.has(namespace as Exclude<RuntimeSupportedReference['namespace'], 'item'>)
+function isSupportedNamespace(namespace: RuntimeReferenceNamespace): namespace is Exclude<RuntimeSupportedReference['namespace'], 'item' | 'row'> {
+  return SUPPORTED_NAMESPACES.has(namespace as Exclude<RuntimeSupportedReference['namespace'], 'item' | 'row'>)
 }
 
 function isReservedNamespace(namespace: RuntimeReferenceNamespace): namespace is 'navigation' | 'routeParams' {
@@ -139,6 +162,7 @@ function hasRecognizedNamespace(value: string): boolean {
 
   return (
     namespace === 'item' ||
+    namespace === 'row' ||
     namespace === 'forms' ||
     namespace === 'queries' ||
     namespace === 'navigation' ||
@@ -154,12 +178,18 @@ function hasValidReferenceShape(namespace: RuntimeReferenceNamespace, path: stri
     return true
   }
 
+  if (namespace === 'row' && path.length === 1 && path[0] === ROW_INDEX_SYNTHETIC_SEGMENT) {
+    return true
+  }
+
   if (path.some((segment) => segment.length === 0 || !REFERENCE_SEGMENT_PATTERN.test(segment))) {
     return false
   }
 
   switch (namespace) {
     case 'item':
+      return path.length >= 0
+    case 'row':
       return path.length >= 0
     case 'forms':
       if (path.length === 0) {

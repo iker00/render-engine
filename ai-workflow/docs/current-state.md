@@ -11,10 +11,10 @@ No es histórico acumulado ni sustituto de las fichas funcionales. El detalle es
 |---|---|---|---|
 | Runtime | estable | [runtime/](./app-features/runtime/index.md) | `0081` |
 | Contrato JSON | estable | [config/](./app-features/config/index.md) | `2026-08-25-09-27-form-steps` |
-| Referencias y strings dinámicas | estable | [references/](./app-features/references/index.md) | `0101` |
-| Catálogo de nodos | estable | [nodes/](./app-features/nodes/index.md) | `2026-08-25-12-46-steps-editor-and-step-gate` |
+| Catálogo de nodos | estable | [nodes/](./app-features/nodes/index.md) | `2026-08-27-12-19-download-operation-action` |
+| Referencias y strings dinámicas | estable | [references/](./app-features/references/index.md) | `2026-08-25-12-01-table-row-references` |
 | Formularios y validación | estable | [forms/](./app-features/forms/index.md) | `2026-08-25-09-27-form-steps` |
-| Queries, preloads y feedback | estable | [queries/](./app-features/queries/index.md) | `0110` |
+| Queries, preloads y feedback | estable | [queries/](./app-features/queries/index.md) | `2026-08-25-09-15-autocomplete-node` |
 | Navegación y páginas | estable | [navigation/](./app-features/navigation/index.md) | `0137` |
 | Shell de aplicación (cabecera y sidebar) | estable | [shell/](./app-features/shell/index.md) | `0124` |
 | Accesibilidad | estable | [nodes/](./app-features/nodes/index.md), [queries/](./app-features/queries/index.md), [navigation/](./app-features/navigation/index.md) | `0046` |

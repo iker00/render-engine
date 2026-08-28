@@ -790,6 +790,63 @@ describe('LayoutCanvasPropertiesPanel tabs node props.items (RF2, 0105)', () => 
   })
 })
 
+// T5 (accordion-tabs-icon): `resolveTabsPropsSchema` swaps each item's `properties.icon` for the
+// `{ 'x-widget': 'icon' }` sentinel, so `tabs.props.items[].icon` renders the same
+// `IconPickerPropertyField` grid as the top-level `props.icon` widget covered further below,
+// instead of a generic text input. Reuses the `tabsNode` item-array fixture pattern from the
+// describe block above, extended with an optional `icon` per item.
+describe('LayoutCanvasPropertiesPanel tabs items icon widget (T5, accordion-tabs-icon)', () => {
+  function tabsNodeWithIcons(items: Array<{ label: string; icon?: string }>): LayoutNode {
+    return { type: 'tabs', props: { items } } as LayoutNode
+  }
+
+  it('renders the icon widget grid for an item declaring icon, with the current value highlighted', () => {
+    const node = tabsNodeWithIcons([{ label: 'Uno', icon: 'Home' }])
+    render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={() => {}} />)
+
+    const itemsGroup = screen.getByRole('group', { name: 'items' })
+    const itemGroup = within(itemsGroup).getByRole('group', { name: 'items #1' })
+    fireEvent.focus(within(itemGroup).getByRole('textbox', { name: 'Buscar icono' }))
+
+    const grid = within(itemGroup).getByRole('grid', { name: 'icon' })
+    const homeCell = within(grid).getByText('Home').closest('[role="gridcell"]')!
+    expect(homeCell).toHaveAttribute('aria-selected', 'true')
+    expect(within(itemGroup).queryByRole('textbox', { name: 'icon' })).not.toBeInTheDocument()
+  })
+
+  it('selecting a different icon on one item commits only that item, preserving label and other items', () => {
+    const node = tabsNodeWithIcons([
+      { label: 'Uno', icon: 'Home' },
+      { label: 'Dos', icon: 'Star' },
+    ])
+    const onCommitNodeUpdate = vi.fn()
+    render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={onCommitNodeUpdate} />)
+
+    const itemsGroup = screen.getByRole('group', { name: 'items' })
+    const firstItemGroup = within(itemsGroup).getByRole('group', { name: 'items #1' })
+    fireEvent.focus(within(firstItemGroup).getByRole('textbox', { name: 'Buscar icono' }))
+
+    fireEvent.click(within(firstItemGroup).getByText('Settings').closest('[role="gridcell"]')!)
+
+    expect(onCommitNodeUpdate).toHaveBeenCalledTimes(1)
+    const [calledPath, updater] = onCommitNodeUpdate.mock.calls[0]
+    expect(calledPath).toBe(somePath)
+    const result = updater(node) as Extract<LayoutNode, { type: 'tabs' }>
+    expect(result.props.items).toEqual([
+      { label: 'Uno', icon: 'Settings' },
+      { label: 'Dos', icon: 'Star' },
+    ])
+  })
+
+  it('an item without icon still shows the label field, with no regression', () => {
+    const node = tabsNodeWithIcons([{ label: 'Uno' }])
+    render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={() => {}} />)
+
+    expect(screen.getByLabelText('label', { exact: false })).toHaveValue('Uno')
+    expect(screen.getByRole('textbox', { name: 'Buscar icono' })).toBeInTheDocument()
+  })
+})
+
 // T9 (0138): the panel-level "regression: array without minItems on a non-tabs node" describe
 // block that used to live here exercised the dispatcher's generic "array without minItems"
 // behavior through `table.props.headers` as its only real-node vehicle. `headers` (along with
@@ -813,10 +870,15 @@ describe('LayoutCanvasPropertiesPanel choice-items widget for select/radioGroup/
     return { type: 'checkboxGroup', props: { fieldId: 'choice', label: 'Elige', items } } as LayoutNode
   }
 
+  function autocompleteNode(items: unknown = [{ label: 'Uno', value: 'uno' }]): LayoutNode {
+    return { type: 'autocomplete', props: { fieldId: 'choice', label: 'Elige', items } } as LayoutNode
+  }
+
   it.each([
     ['select', selectNode],
     ['radioGroup', radioGroupNode],
     ['checkboxGroup', checkboxGroupNode],
+    ['autocomplete', autocompleteNode],
   ])('renders the widget mode selector for props.items on a %s node, not the read-only raw-JSON escape hatch', (_type, buildNode) => {
     render(<LayoutCanvasPropertiesPanel node={buildNode()} path={somePath} onCommitNodeUpdate={() => {}} />)
 
@@ -825,6 +887,22 @@ describe('LayoutCanvasPropertiesPanel choice-items widget for select/radioGroup/
     expect(Array.from(modeSelect.options).map((option) => option.value)).toEqual(['manualLiteral', 'manualScalar', 'dynamic'])
     // No disabled raw-JSON `<textarea>` fallback anywhere inside the items widget.
     expect(itemsGroup.querySelectorAll('textarea')).toHaveLength(0)
+  })
+
+  it('editing props.items via the choice-items widget on an autocomplete node propagates to the committed node (parity with select/radioGroup/checkboxGroup)', () => {
+    const node = autocompleteNode([{ label: 'Uno', value: 'uno' }])
+    const onCommitNodeUpdate = vi.fn()
+    render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={onCommitNodeUpdate} />)
+
+    const itemsGroup = screen.getByRole('group', { name: 'items' })
+    const itemGroup = within(itemsGroup).getByRole('group', { name: 'items #1' })
+    fireEvent.change(within(itemGroup).getByLabelText('label', { exact: false }), { target: { value: 'Cambiado' } })
+
+    expect(onCommitNodeUpdate).toHaveBeenCalledTimes(1)
+    const [calledPath, updater] = onCommitNodeUpdate.mock.calls[0]
+    expect(calledPath).toBe(somePath)
+    const result = updater(node) as Extract<LayoutNode, { type: 'autocomplete' }>
+    expect(result.props.items).toEqual([{ label: 'Cambiado', value: 'uno' }])
   })
 
   it('editing a manual literal item commits props.items as a flat array of {label, value}', () => {
@@ -929,7 +1007,7 @@ describe('LayoutCanvasPropertiesPanel discriminated union action selector (T5)',
     return { type: 'button', props: { label: 'Enviar', ...(action !== undefined ? { action } : {}) } } as LayoutNode
   }
 
-  it('shows the "Sin acción" plus the 7 real action variants for a button node', () => {
+  it('shows the "Sin acción" plus the 8 real action variants for a button node', () => {
     const node = buttonNode({ type: 'navigateTo', pageId: 'home' })
     render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={() => {}} />)
 
@@ -944,6 +1022,7 @@ describe('LayoutCanvasPropertiesPanel discriminated union action selector (T5)',
       'Reiniciar formulario',
       'Abrir modal',
       'Cerrar modal',
+      'Descargar operación',
     ])
   })
 
@@ -992,13 +1071,90 @@ describe('LayoutCanvasPropertiesPanel discriminated union action selector (T5)',
     expect(result.props).toEqual({ label: 'Enviar' })
   })
 
-  it('shows exactly the 2 link action variants plus "Sin acción" for a link node', () => {
+  it('shows exactly the 3 link action variants plus "Sin acción" for a link node', () => {
     const node: LayoutNode = { type: 'link', props: {} } as LayoutNode
     render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={() => {}} />)
 
     const select = screen.getByLabelText('action') as HTMLSelectElement
     const optionTexts = Array.from(select.options).map((option) => option.textContent)
-    expect(optionTexts).toEqual(['Sin acción', 'Navegar a página', 'Volver atrás'])
+    expect(optionTexts).toEqual(['Sin acción', 'Navegar a página', 'Volver atrás', 'Descargar operación'])
+  })
+})
+
+// T6 (button-execute-operation-lifecycle-actions): `buttonActionSchema`'s `executeOperation`/
+// `executeOperations` variants now nest `onSuccess`/`onError` directly on the action object itself
+// (T1 of this feature), unlike `form.submitAction` where the panel needs a dedicated merge/split
+// (see `layout-canvas-properties-panel.tsx`'s `submitAction`-specific plumbing) because
+// `FormLayoutNode` keeps `onSuccess`/`onError` as separate sibling fields next to `submitAction`.
+// For `button`, `props.action` already carries `onSuccess`/`onError` as ordinary properties of the
+// active variant's own JSON Schema, so `DiscriminatedUnionPropertyField` renders them through the
+// same generic recursive `PropertyFieldDispatcher` call it already uses for `operationName`/`body`/
+// `query` — no dedicated code in `src/dev-runtime/` is expected for this task.
+describe('LayoutCanvasPropertiesPanel button props.action onSuccess/onError lifecycle fields (T6)', () => {
+  function buttonNode(action: Record<string, unknown>): LayoutNode {
+    return { type: 'button', props: { label: 'Enviar', action } } as LayoutNode
+  }
+
+  it('shows the onSuccess/onError array fields below the variant\'s own fields for an executeOperation action', () => {
+    const node = buttonNode({ type: 'executeOperation', operationName: 'save' })
+    render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={() => {}} />)
+
+    expect(screen.getByLabelText('operationName', { exact: false })).toHaveValue('save')
+    expect(screen.getByRole('group', { name: 'onSuccess' })).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: 'onError' })).toBeInTheDocument()
+  })
+
+  it('adding an onSuccess entry exposes a 7-variant selector for that entry, and commits props.action.onSuccess with the added entry', () => {
+    const node = buttonNode({ type: 'executeOperation', operationName: 'save' })
+    const onCommitNodeUpdate = vi.fn()
+    const { rerender } = render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={onCommitNodeUpdate} />)
+
+    const onSuccessGroup = screen.getByRole('group', { name: 'onSuccess' })
+    fireEvent.click(within(onSuccessGroup).getByRole('button', { name: 'Añadir onSuccess' }))
+
+    expect(onCommitNodeUpdate).toHaveBeenCalledTimes(1)
+    const [calledPath, updater] = onCommitNodeUpdate.mock.calls[0]
+    expect(calledPath).toBe(somePath)
+    const result = updater(node) as Extract<LayoutNode, { type: 'button' }>
+    expect(result.props.action).toEqual({
+      type: 'executeOperation',
+      operationName: 'save',
+      onSuccess: [{ type: 'navigateTo', pageId: '' }],
+    })
+
+    rerender(<LayoutCanvasPropertiesPanel node={result} path={somePath} onCommitNodeUpdate={onCommitNodeUpdate} />)
+    const entryGroup = screen.getByRole('group', { name: 'onSuccess #1' })
+    const entrySelect = within(entryGroup).getByRole('combobox', { name: 'onSuccess #1' }) as HTMLSelectElement
+    const optionTexts = Array.from(entrySelect.options).map((option) => option.textContent)
+    expect(optionTexts).toEqual([
+      'Navegar a página',
+      'Volver atrás',
+      'Ejecutar operación',
+      'Ejecutar operaciones',
+      'Reiniciar formulario',
+      'Abrir modal',
+      'Cerrar modal',
+    ])
+  })
+
+  it('switching the action variant from executeOperation to navigateTo drops residual onSuccess/onError (no leftover lifecycle fields)', () => {
+    const node = buttonNode({
+      type: 'executeOperation',
+      operationName: 'save',
+      onSuccess: [{ type: 'goBack' }],
+      onError: [{ type: 'goBack' }],
+    })
+    const onCommitNodeUpdate = vi.fn()
+    render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={onCommitNodeUpdate} />)
+
+    fireEvent.change(screen.getByLabelText('action'), { target: { value: 'navigateTo' } })
+
+    expect(onCommitNodeUpdate).toHaveBeenCalledTimes(1)
+    const [, updater] = onCommitNodeUpdate.mock.calls[0]
+    const result = updater(node) as Extract<LayoutNode, { type: 'button' }>
+    expect(result.props.action).toEqual({ type: 'navigateTo', pageId: '' })
+    expect(result.props.action).not.toHaveProperty('onSuccess')
+    expect(result.props.action).not.toHaveProperty('onError')
   })
 })
 
@@ -2196,13 +2352,16 @@ describe('LayoutCanvasPropertiesPanel table rows/columns widget (T9, 0138)', () 
 // (`runtime-config-zod.ts`) — `resolveIconPropsSchema` swaps that key for the `{ 'x-widget': 'icon' }`
 // sentinel by field-name convention, independent of `node.type`. One builder per type below supplies
 // the minimal valid `props` shape for that node.
-const ICON_NODE_BUILDERS: Record<'button' | 'heading' | 'paragraph' | 'link' | 'stat' | 'input', (icon?: string) => LayoutNode> = {
+// `accordion` (T1, accordion-tabs-icon) is added here as a regression: it is not a new sentinel entry,
+// it just verifies the existing field-name convention already covers a seventh node type for free.
+const ICON_NODE_BUILDERS: Record<'button' | 'heading' | 'paragraph' | 'link' | 'stat' | 'input' | 'accordion', (icon?: string) => LayoutNode> = {
   button: (icon) => ({ type: 'button', props: { label: 'Enviar', variant: 'solid', ...(icon !== undefined ? { icon } : {}) } }) as LayoutNode,
   heading: (icon) => headingNode(icon !== undefined ? { icon } : {}),
   paragraph: (icon) => ({ type: 'paragraph', props: { text: 'Hola', ...(icon !== undefined ? { icon } : {}) } }) as LayoutNode,
   link: (icon) => ({ type: 'link', props: { label: 'Ir', ...(icon !== undefined ? { icon } : {}) } }) as LayoutNode,
   stat: (icon) => ({ type: 'stat', props: { label: 'Total', value: '10', ...(icon !== undefined ? { icon } : {}) } }) as LayoutNode,
   input: (icon) => ({ type: 'input', props: { fieldId: 'f1', label: 'Campo', ...(icon !== undefined ? { icon } : {}) } }) as LayoutNode,
+  accordion: (icon) => ({ type: 'accordion', props: { label: 'Sección', ...(icon !== undefined ? { icon } : {}) } }) as LayoutNode,
 }
 
 describe('LayoutCanvasPropertiesPanel icon widget (T2, 0129)', () => {
