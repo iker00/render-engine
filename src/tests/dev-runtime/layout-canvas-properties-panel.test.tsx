@@ -1273,7 +1273,7 @@ describe('LayoutCanvasPropertiesPanel undefined sanitization on commit (T8)', ()
     const onCommitNodeUpdate = vi.fn()
     render(<LayoutCanvasPropertiesPanel node={node} path={somePath} onCommitNodeUpdate={onCommitNodeUpdate} />)
 
-    fireEvent.change(screen.getByLabelText('label', { exact: false }), { target: { value: 'Nuevo texto' } })
+    fireEvent.change(screen.getByLabelText(/^label\b/), { target: { value: 'Nuevo texto' } })
 
     expect(onCommitNodeUpdate).toHaveBeenCalledTimes(1)
     const [, updater] = onCommitNodeUpdate.mock.calls[0]

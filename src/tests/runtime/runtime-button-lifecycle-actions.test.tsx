@@ -558,3 +558,230 @@ describe('ButtonNode direct execution with onSuccess/onError lifecycle', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 })
+
+describe('ButtonNode variant "switch" action execution', () => {
+  it('fires its action on click when rendered outside any form', async () => {
+    const fetchMock = createFetchMockByEndpoint({
+      '/api/toggle': jsonResponse({ ok: true }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const config: RuntimeConfig = {
+      api: {
+        toggleOp: { method: 'POST', endpoint: '/api/toggle' },
+      },
+      initialPage: 'home',
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'button',
+              props: {
+                label: 'Active',
+                variant: 'switch',
+                checked: false,
+                action: { type: 'executeOperation', operationName: 'toggleOp' },
+              },
+            },
+          ],
+        },
+      ],
+    }
+
+    render(<ButtonLifecycleFixture config={config} />)
+    fireEvent.click(screen.getByRole('switch'))
+
+    await waitFor(() => {
+      const state = readRuntimeStateSnapshot('runtime-state')
+      expect(state.queries.toggleOp?.status).toBe('success')
+    })
+  })
+
+  it('sends switch.next resolved to true in the body when checked is false at click time', async () => {
+    const fetchMock = createFetchMockByEndpoint({
+      '/api/toggle': jsonResponse({ ok: true }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const config: RuntimeConfig = {
+      api: {
+        toggleOp: { method: 'POST', endpoint: '/api/toggle' },
+      },
+      initialPage: 'home',
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'button',
+              props: {
+                label: 'Active',
+                variant: 'switch',
+                checked: false,
+                action: {
+                  type: 'executeOperation',
+                  operationName: 'toggleOp',
+                  body: { isPrimary: 'switch.next' },
+                },
+              },
+            },
+          ],
+        },
+      ],
+    }
+
+    render(<ButtonLifecycleFixture config={config} />)
+    fireEvent.click(screen.getByRole('switch'))
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+    expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body))).toEqual({ isPrimary: true })
+  })
+
+  it('sends switch.next resolved to false in the body when checked is already true at click time, without any disabled state', async () => {
+    const fetchMock = createFetchMockByEndpoint({
+      '/api/toggle': jsonResponse({ ok: true }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const config: RuntimeConfig = {
+      api: {
+        toggleOp: { method: 'POST', endpoint: '/api/toggle' },
+      },
+      initialPage: 'home',
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'button',
+              props: {
+                label: 'Active',
+                variant: 'switch',
+                checked: true,
+                action: {
+                  type: 'executeOperation',
+                  operationName: 'toggleOp',
+                  body: { isPrimary: 'switch.next' },
+                },
+              },
+            },
+          ],
+        },
+      ],
+    }
+
+    render(<ButtonLifecycleFixture config={config} />)
+    const switchControl = screen.getByRole('switch')
+    expect(switchControl).not.toHaveAttribute('disabled')
+
+    fireEvent.click(switchControl)
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+    expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body))).toEqual({ isPrimary: false })
+  })
+
+  it('resolves item.* references in a repeater against the row that triggered the switch click', async () => {
+    const fetchMock = createFetchMockByEndpoint({
+      '/api/toggle-item': jsonResponse({ ok: true }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const config: RuntimeConfig = {
+      api: {
+        toggleItem: { method: 'POST', endpoint: '/api/toggle-item' },
+      },
+      initialPage: 'home',
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'repeater',
+              props: {
+                items: { source: 'queries.items.data', key: 'id' },
+                template: [
+                  {
+                    type: 'button',
+                    props: {
+                      label: 'Primary',
+                      variant: 'switch',
+                      checked: 'item.isPrimary',
+                      action: {
+                        type: 'executeOperation',
+                        operationName: 'toggleItem',
+                        body: { id: 'item.id', isPrimary: 'switch.next' },
+                      },
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      ],
+    }
+
+    render(
+      <ButtonLifecycleWithSeedFixture
+        config={config}
+        seedQueryName="items"
+        seedData={[
+          { id: 'row-1', isPrimary: false },
+          { id: 'row-2', isPrimary: true },
+        ]}
+      />,
+    )
+
+    await waitFor(() => expect(screen.getAllByRole('switch')).toHaveLength(2))
+    fireEvent.click(screen.getAllByRole('switch')[1])
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+    expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body))).toEqual({ id: 'row-2', isPrimary: false })
+  })
+
+  it('runs an onSuccess that relaunches a listing query the same way as any other button', async () => {
+    const fetchMock = createFetchMockByEndpoint({
+      '/api/toggle': jsonResponse({ ok: true }),
+      '/api/list': jsonResponse({ ok: true }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const config: RuntimeConfig = {
+      api: {
+        toggleOp: { method: 'POST', endpoint: '/api/toggle' },
+        listOp: { method: 'GET', endpoint: '/api/list' },
+      },
+      initialPage: 'home',
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'button',
+              props: {
+                label: 'Active',
+                variant: 'switch',
+                checked: false,
+                action: {
+                  type: 'executeOperation',
+                  operationName: 'toggleOp',
+                  onSuccess: [{ type: 'executeOperation', operationName: 'listOp' }],
+                },
+              },
+            },
+          ],
+        },
+      ],
+    }
+
+    render(<ButtonLifecycleFixture config={config} />)
+    fireEvent.click(screen.getByRole('switch'))
+
+    await waitFor(() => {
+      const state = readRuntimeStateSnapshot('runtime-state')
+      expect(state.queries.toggleOp?.status).toBe('success')
+      expect(state.queries.listOp?.status).toBe('success')
+    })
+  })
+})

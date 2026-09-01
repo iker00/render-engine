@@ -1,4 +1,12 @@
-import type { ButtonLayoutNode, LayoutNodeFeedbackFields, RuntimeConfigError, RuntimeUiAction } from './runtime-config-types'
+import type {
+  ButtonLayoutNode,
+  LayoutNodeFeedbackFields,
+  RuntimeApiBodyValue,
+  RuntimeApiHeaders,
+  RuntimeApiQuery,
+  RuntimeConfigError,
+  RuntimeUiAction,
+} from './runtime-config-types'
 import { buttonNodeSchema } from './runtime-config-zod'
 import type { BreadcrumbSegment } from './validation-breadcrumb'
 import { enrichedInvalidLayout, enrichErrorResult } from './validation-breadcrumb'
@@ -13,6 +21,7 @@ import {
   validateVisibility,
 } from './validate-actions-visibility'
 import { formatPathSegment } from './validate-node-shared-helpers'
+import { parseRuntimeReference } from './runtime-reference-syntax'
 
 export function validateButtonNode(
   rawNode: Record<string, unknown>,
@@ -101,6 +110,48 @@ export function validateButtonNode(
     return enrichErrorResult(visibilityResult, breadcrumb, rawNode)
   }
 
+  const isSwitchVariant = parseResult.data.props.variant === 'switch'
+
+  if (isSwitchVariant && parseResult.data.props.checked === undefined) {
+    return enrichedInvalidLayout(
+      `Page "${pageId}" has an invalid layout at "${path}": button nodes with variant "switch" must declare props.checked.`,
+      breadcrumb,
+      rawNode,
+    )
+  }
+
+  if (!isSwitchVariant && parseResult.data.props.checked !== undefined) {
+    return enrichedInvalidLayout(
+      `Page "${pageId}" has an invalid layout at "${path}.props.checked": props.checked is only supported when props.variant is "switch".`,
+      breadcrumb,
+      rawNode,
+    )
+  }
+
+  if (!isSwitchVariant && parseResult.data.props.labelVisible !== undefined) {
+    return enrichedInvalidLayout(
+      `Page "${pageId}" has an invalid layout at "${path}.props.labelVisible": props.labelVisible is only supported when props.variant is "switch".`,
+      breadcrumb,
+      rawNode,
+    )
+  }
+
+  if (isSwitchVariant && parseResult.data.props.icon !== undefined) {
+    return enrichedInvalidLayout(
+      `Page "${pageId}" has an invalid layout at "${path}.props.icon": button nodes with variant "switch" cannot declare props.icon.`,
+      breadcrumb,
+      rawNode,
+    )
+  }
+
+  if (isSwitchVariant && parseResult.data.props.action === undefined) {
+    return enrichedInvalidLayout(
+      `Page "${pageId}" has an invalid layout at "${path}": button nodes with variant "switch" must declare props.action.`,
+      breadcrumb,
+      rawNode,
+    )
+  }
+
   let action: ButtonLayoutNode['props']['action']
 
   if (parseResult.data.props.action !== undefined) {
@@ -135,6 +186,25 @@ export function validateButtonNode(
     }
   }
 
+  // node.visibility.reference is not scanned here for switch.next: validateVisibility above already
+  // rejects any reference outside params/item/forms/queries shapes, so a switch.next reference there
+  // is already caught before this point is reached.
+  if (isSwitchNextReference(parseResult.data.props.checked)) {
+    return enrichedInvalidLayout(
+      `Page "${pageId}" has an invalid layout at "${path}.props.checked": switch.next is only supported in props.action query, body or headers of a button with variant "switch".`,
+      breadcrumb,
+      rawNode,
+    )
+  }
+
+  if (actionRequestSurfaceHasSwitchNextReference(action) && !isSwitchVariant) {
+    return enrichedInvalidLayout(
+      `Page "${pageId}" has an invalid layout at "${path}.props.action": switch.next is only supported in props.action query, body or headers of a button with variant "switch".`,
+      breadcrumb,
+      rawNode,
+    )
+  }
+
   const buttonProps: ButtonLayoutNode['props'] = {
     label: parseResult.data.props.label,
     action,
@@ -142,6 +212,8 @@ export function validateButtonNode(
     variant: parseResult.data.props.variant,
     fullWidth: parseResult.data.props.fullWidth,
     icon: parseResult.data.props.icon,
+    checked: parseResult.data.props.checked,
+    labelVisible: parseResult.data.props.labelVisible,
   }
 
   if (parseResult.data.props.iconPosition !== undefined) {
@@ -159,4 +231,70 @@ export function validateButtonNode(
       props: buttonProps,
     },
   }
+}
+
+// switch.next is a synthetic reference only meaningful as the "toggled value" of the switch
+// button that declares it (resolved live in T3). Its bootstrap frontier is intentionally narrow:
+// accepted only inside the request surface (query/body/headers, including operations[] entries)
+// of a button's own props.action when that button is variant "switch"; rejected everywhere else,
+// including props.checked, visibility.reference, or the action of a non-switch button.
+function isSwitchNextReference(value: unknown): boolean {
+  if (typeof value !== 'string') {
+    return false
+  }
+
+  const parsed = parseRuntimeReference(value, { allowSwitchNextReference: true })
+  return parsed.kind === 'reference' && parsed.namespace === 'switch'
+}
+
+function bodyHasSwitchNextReference(value: RuntimeApiBodyValue | undefined): boolean {
+  if (value === undefined || value === null) {
+    return false
+  }
+
+  if (isSwitchNextReference(value)) {
+    return true
+  }
+
+  if (Array.isArray(value)) {
+    return value.some(bodyHasSwitchNextReference)
+  }
+
+  if (typeof value === 'object') {
+    return Object.values(value).some(bodyHasSwitchNextReference)
+  }
+
+  return false
+}
+
+function requestParamsHaveSwitchNextReference(requestParams: {
+  query?: RuntimeApiQuery
+  body?: RuntimeApiBodyValue
+  headers?: RuntimeApiHeaders
+}): boolean {
+  if (requestParams.query && Object.values(requestParams.query).some(isSwitchNextReference)) {
+    return true
+  }
+
+  if (requestParams.headers && Object.values(requestParams.headers).some(isSwitchNextReference)) {
+    return true
+  }
+
+  return bodyHasSwitchNextReference(requestParams.body)
+}
+
+function actionRequestSurfaceHasSwitchNextReference(action: ButtonLayoutNode['props']['action']): boolean {
+  if (!action) {
+    return false
+  }
+
+  if (action.type === 'executeOperations') {
+    return action.operations.some((entry) => requestParamsHaveSwitchNextReference(entry))
+  }
+
+  if (action.type === 'executeOperation' || action.type === 'downloadOperation') {
+    return requestParamsHaveSwitchNextReference(action)
+  }
+
+  return false
 }

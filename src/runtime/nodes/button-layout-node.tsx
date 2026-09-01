@@ -10,6 +10,7 @@ import type { DownloadOperationRuntimeUiAction } from '../../config/runtime-conf
 import { useOptionalFormContext } from '../use-optional-form-context'
 import {
   resolveRuntimeTextReference,
+  resolveRuntimeValueWithOptions,
   type RuntimeIterationContext,
 } from '../runtime-references/runtime-reference-resolver'
 import { matchesVisibilityRule } from '../runtime-layout-visibility'
@@ -20,12 +21,29 @@ import {
   type RuntimeUiActionHandlers,
 } from '../runtime-actions/runtime-ui-action-executor'
 import { getButtonVariantClassName } from '../runtime-node-styling'
+import { getButtonSwitchClassName } from '../runtime-node-styling-button'
 import { useRuntimeState, useRuntimeStateActions } from '../runtime-state/use-runtime-state'
 import { IconNode } from './icon-node'
+import { SwitchControl } from './switch-control'
 
 interface ButtonNodeProps {
   node: ButtonLayoutNode
   iterationContext?: RuntimeIterationContext
+}
+
+/**
+ * Resolves `button.props.checked` with the same boolean-or-full-reference mechanism already
+ * used for form field `defaultValue` (`resolveToggleFieldDefinition`): a literal boolean is
+ * used as-is, a well-formed reference without an available boolean value degrades to `false`.
+ */
+function resolveButtonSwitchChecked(
+  checkedProp: boolean | string | undefined,
+  state: ReturnType<typeof useRuntimeState>,
+  iterationContext?: RuntimeIterationContext,
+): boolean {
+  const resolvedValue = resolveRuntimeValueWithOptions(checkedProp, state, { iterationContext })
+
+  return resolvedValue.status === 'resolved' && typeof resolvedValue.value === 'boolean' ? resolvedValue.value : false
 }
 
 export function ButtonNode({ node, iterationContext }: ButtonNodeProps) {
@@ -45,7 +63,8 @@ export function ButtonNode({ node, iterationContext }: ButtonNodeProps) {
   const isImplicitSubmit = action === undefined && formContext !== null
   const [isDownloading, setIsDownloading] = useState(false)
   const color: ButtonColor = node.props.color ?? 'primary'
-  const variant: ButtonVariant = node.props.variant ?? 'solid'
+  const declaredVariant: ButtonVariant = node.props.variant ?? 'solid'
+  const variant: Exclude<ButtonVariant, 'switch'> = declaredVariant === 'switch' ? 'solid' : declaredVariant
   const fullWidth = node.props.fullWidth ?? false
   const className = getButtonVariantClassName(color, variant, fullWidth)
   const label = resolveRuntimeTextReference(node.props.label, state, 'button.props.label', { iterationContext })
@@ -66,6 +85,7 @@ export function ButtonNode({ node, iterationContext }: ButtonNodeProps) {
 
   async function handleActionWithLifecycle(
     lifecycleAction: ExecuteOperationRuntimeUiAction | ExecuteOperationsRuntimeUiAction,
+    switchNextValue?: boolean,
   ) {
     if (lifecycleAction.type === 'executeOperations') {
       await runActionOutcomeWithLifecycle(
@@ -84,6 +104,7 @@ export function ButtonNode({ node, iterationContext }: ButtonNodeProps) {
                   headers: entry.headers,
                 },
                 iterationContext,
+                switchNextValue,
               }),
             ),
           )
@@ -113,6 +134,7 @@ export function ButtonNode({ node, iterationContext }: ButtonNodeProps) {
             headers: lifecycleAction.headers,
           },
           iterationContext,
+          switchNextValue,
         }),
       lifecycleAction.onSuccess,
       lifecycleAction.onError,
@@ -165,6 +187,46 @@ export function ButtonNode({ node, iterationContext }: ButtonNodeProps) {
     }
 
     executeRuntimeUiAction(action, buildHandlers(), { iterationContext })
+  }
+
+  function handleSwitchClick() {
+    if (!action) {
+      return
+    }
+
+    const switchNextValue = !resolveButtonSwitchChecked(node.props.checked, readRuntimeState(), iterationContext)
+
+    if (action.type === 'downloadOperation') {
+      void handleDownloadAction(action)
+      return
+    }
+
+    if (action.type === 'executeOperation' || action.type === 'executeOperations') {
+      void handleActionWithLifecycle(action, switchNextValue)
+      return
+    }
+
+    executeRuntimeUiAction(action, buildHandlers(), { iterationContext })
+  }
+
+  if (declaredVariant === 'switch') {
+    const checkedValue = resolveButtonSwitchChecked(node.props.checked, state, iterationContext)
+    const labelVisible = node.props.labelVisible !== false
+    const { trackClassName, knobClassName } = getButtonSwitchClassName(checkedValue, color)
+
+    return (
+      <div className="inline-flex items-center gap-2" data-layout-node="button">
+        <SwitchControl
+          checked={checkedValue}
+          onClick={handleSwitchClick}
+          trackClassName={trackClassName}
+          knobClassName={knobClassName}
+          ariaLabel={labelVisible ? undefined : label}
+          ariaDescribedBy={undefined}
+        />
+        {labelVisible ? <span>{label}</span> : null}
+      </div>
+    )
   }
 
   return (

@@ -1,6 +1,7 @@
 export type RuntimeReferenceNamespace =
   | 'item'
   | 'row'
+  | 'switch'
   | 'forms'
   | 'queries'
   | 'navigation'
@@ -23,7 +24,7 @@ export interface RuntimeLiteralReference {
 export interface RuntimeSupportedReference {
   kind: 'reference'
   status: 'supported'
-  namespace: 'item' | 'row' | 'forms' | 'queries' | 'params' | 'translations' | 'tokens'
+  namespace: 'item' | 'row' | 'switch' | 'forms' | 'queries' | 'params' | 'translations' | 'tokens'
   path: string[]
   source: string
 }
@@ -31,7 +32,7 @@ export interface RuntimeSupportedReference {
 export interface RuntimeUnsupportedReference {
   kind: 'reference'
   status: 'unsupported'
-  namespace: 'item' | 'row' | 'navigation' | 'routeParams'
+  namespace: 'item' | 'row' | 'switch' | 'navigation' | 'routeParams'
   path: string[]
   source: string
 }
@@ -46,15 +47,17 @@ export interface RuntimeInvalidReference {
 
 const SUPPORTED_NAMESPACES = new Set(['forms', 'queries', 'params', 'translations', 'tokens'] as const)
 const RESERVED_NAMESPACES = new Set(['navigation', 'routeParams'] as const)
-const REFERENCE_PATTERN = /^(item|row|forms|queries|navigation|routeParams|params|translations|tokens)(\.[A-Za-z0-9_-]+)*$/
+const REFERENCE_PATTERN = /^(item|row|switch|forms|queries|navigation|routeParams|params|translations|tokens)(\.[A-Za-z0-9_-]+)*$/
 const REFERENCE_SEGMENT_PATTERN = /^[A-Za-z0-9_-]+$/
 const ITEM_KEY_SYNTHETIC_SEGMENT = '$key'
 const ITEM_INDEX_SYNTHETIC_SEGMENT = '$index'
 const ROW_INDEX_SYNTHETIC_SEGMENT = '$index'
+const SWITCH_NEXT_SYNTHETIC_SEGMENT = 'next'
 
 interface ParseRuntimeReferenceOptions {
   allowItemReference?: boolean
   allowRowReference?: boolean
+  allowSwitchNextReference?: boolean
 }
 
 export function parseRuntimeReference(value: string, options: ParseRuntimeReferenceOptions = {}): RuntimeReferenceParseResult {
@@ -119,6 +122,26 @@ export function parseRuntimeReference(value: string, options: ParseRuntimeRefere
     } satisfies RuntimeUnsupportedReference
   }
 
+  if (namespace === 'switch') {
+    if (options.allowSwitchNextReference) {
+      return {
+        kind: 'reference',
+        status: 'supported',
+        namespace,
+        path,
+        source: value,
+      } satisfies RuntimeSupportedReference
+    }
+
+    return {
+      kind: 'reference',
+      status: 'unsupported',
+      namespace,
+      path,
+      source: value,
+    } satisfies RuntimeUnsupportedReference
+  }
+
   if (isSupportedNamespace(namespace)) {
     return {
       kind: 'reference',
@@ -145,8 +168,8 @@ export function parseRuntimeReference(value: string, options: ParseRuntimeRefere
   }
 }
 
-function isSupportedNamespace(namespace: RuntimeReferenceNamespace): namespace is Exclude<RuntimeSupportedReference['namespace'], 'item' | 'row'> {
-  return SUPPORTED_NAMESPACES.has(namespace as Exclude<RuntimeSupportedReference['namespace'], 'item' | 'row'>)
+function isSupportedNamespace(namespace: RuntimeReferenceNamespace): namespace is Exclude<RuntimeSupportedReference['namespace'], 'item' | 'row' | 'switch'> {
+  return SUPPORTED_NAMESPACES.has(namespace as Exclude<RuntimeSupportedReference['namespace'], 'item' | 'row' | 'switch'>)
 }
 
 function isReservedNamespace(namespace: RuntimeReferenceNamespace): namespace is 'navigation' | 'routeParams' {
@@ -163,6 +186,7 @@ function hasRecognizedNamespace(value: string): boolean {
   return (
     namespace === 'item' ||
     namespace === 'row' ||
+    namespace === 'switch' ||
     namespace === 'forms' ||
     namespace === 'queries' ||
     namespace === 'navigation' ||
@@ -182,6 +206,10 @@ function hasValidReferenceShape(namespace: RuntimeReferenceNamespace, path: stri
     return true
   }
 
+  if (namespace === 'switch' && path.length === 1 && path[0] === SWITCH_NEXT_SYNTHETIC_SEGMENT) {
+    return true
+  }
+
   if (path.some((segment) => segment.length === 0 || !REFERENCE_SEGMENT_PATTERN.test(segment))) {
     return false
   }
@@ -191,6 +219,8 @@ function hasValidReferenceShape(namespace: RuntimeReferenceNamespace, path: stri
       return path.length >= 0
     case 'row':
       return path.length >= 0
+    case 'switch':
+      return false
     case 'forms':
       if (path.length === 0) {
         return false

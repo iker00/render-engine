@@ -36,6 +36,7 @@ export interface BuildRuntimeApiRequestOptions {
   state: RuntimeState
   requestParams?: RuntimeApiRequestParams
   iterationContext?: RuntimeIterationContext
+  switchNextValue?: boolean
   hiddenFormFields?: RuntimeApiHiddenFormFields
   emptySubmitValues?: RuntimeApiEmptySubmitValues
   fileValueOverrides?: ReadonlyMap<string, RuntimeApiBodyValue[]>
@@ -47,6 +48,7 @@ export interface BuildInlineRuntimeApiRequestOptions {
   state: RuntimeState
   requestParams?: RuntimeApiRequestParams
   iterationContext?: RuntimeIterationContext
+  switchNextValue?: boolean
   hiddenFormFields?: RuntimeApiHiddenFormFields
   emptySubmitValues?: RuntimeApiEmptySubmitValues
   fileValueOverrides?: ReadonlyMap<string, RuntimeApiBodyValue[]>

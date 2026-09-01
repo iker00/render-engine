@@ -480,7 +480,7 @@ export const formSubmitActionSchema = z.discriminatedUnion('type', [
   executeOperationsWithLifecycleSchema,
 ])
 
-export const supportedButtonVariants = ['solid', 'outline', 'ghost', 'link'] as const
+export const supportedButtonVariants = ['solid', 'outline', 'ghost', 'link', 'switch'] as const
 export const supportedButtonColors = ['neutral', 'primary', 'success', 'warning', 'danger', 'info'] as const
 
 export const buttonNodeSchema = z
@@ -499,6 +499,8 @@ export const buttonNodeSchema = z
         fullWidth: z.boolean().optional(),
         icon: z.string().optional(),
         iconPosition: z.enum(['left', 'right']).optional(),
+        checked: z.union([z.boolean(), z.string()]).optional(),
+        labelVisible: z.boolean().optional(),
       })
       .strip(),
   })

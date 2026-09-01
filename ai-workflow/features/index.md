@@ -23,6 +23,31 @@ La política completa está definida en el documento de workflow del proyecto.
 
 ## Completadas
 
+- `2026-09-01-11-24-button-switch-variant`: nuevo valor `switch` en el enum cerrado de `button.props.variant`
+  (`solid | outline | ghost | link | switch`), pensado para marcar un item como principal/favorito desde una fila de
+  `table`/`repeater` sin pasar por un `form`. Se renderiza como `<button role="switch" aria-checked>` bifurcando el
+  esqueleto JSX de las otras cuatro variantes (excepción justificada y documentada en `design.md` frente al
+  principio general de esqueleto único de `conventions.md`, porque cambia rol ARIA, derivación de estado visual y
+  tratamiento del label), reutilizando un componente presentacional (`switch-control.tsx`) extraído del marcado que
+  antes vivía privado en `toggle-layout-node.tsx`, ahora compartido entre `toggle` y esta variante. Nuevo prop
+  `checked` (boolean literal o referencia dinámica completa, misma frontera que `defaultValue` de campos de
+  formulario, degradación a `false` sin dato disponible) obligatorio con `variant: 'switch'` y prohibido en el
+  resto; nuevo prop `labelVisible` (boolean, default `true`) que intercambia label visible por `aria-label`. El
+  estado marcado se recalcula siempre desde `checked` en cada render, nunca de forma optimista local: un click
+  dispara la `action` ya existente de `button` con normalidad (mismo catálogo, mismo ejecutor, sin `disabled`
+  nuevo), y la exclusividad "solo un principal" queda fuera de alcance, resuelta en backend y reflejada tras el
+  refetch de `onSuccess`. Nueva referencia sintética `switch.next`, acotada a `props.action.query`/`body`/`headers`
+  (y `operations[].*` con `executeOperations`) del propio botón switch, que resuelve la negación del `checked`
+  vigente en el momento del click; se propaga como campo hermano opcional (`switchNextValue`) de `iterationContext`
+  a través de toda la cadena de opciones que ya usa el pipeline de referencias para datos locales al disparo
+  (`resolveRuntimeReference`, `executeQueryOperation`, `runtime-api-request.ts`,
+  `runtime-api-payload-resolver.ts`), sin ampliar `RuntimeIterationContext` (que sigue siendo solo el contexto de
+  iteración de `repeater`/`table`) y sin un segundo mecanismo de resolución. `switch` se da de alta como namespace
+  nuevo en `runtime-reference-syntax.ts`, con frontera de bootstrap propia en `validate-button-node.ts` (no hereda
+  de un módulo genérico preexistente de fronteras sintéticas, que no existía). `color` tiñe el track solo en
+  `checked: true`; `icon`/`iconPosition` no admitidos en esta variante. Sin cambios de comportamiento en
+  `toggle`/`checkboxGroup` ni en botones existentes con las otras cuatro variantes.
+
 - `2026-08-27-12-19-download-operation-action`: nuevo tipo de acción `downloadOperation` en `button.props.action.type`
   y `link.props.action.type` (mismo shape que `executeOperation`: `operationName`, `query`/`body`/`headers`
   opcionales, más `filename` opcional). Al disparar, ejecuta un `fetch` autenticado contra la operación del catálogo

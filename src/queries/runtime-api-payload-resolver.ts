@@ -20,6 +20,7 @@ import type { RuntimeApiEmptySubmitValues, RuntimeApiHiddenFormFields } from './
 interface ResolvePayloadValueOptions {
   state: RuntimeState
   iterationContext?: RuntimeIterationContext
+  switchNextValue?: boolean
   hiddenFormFields?: RuntimeApiHiddenFormFields
   emptySubmitValues?: RuntimeApiEmptySubmitValues
   fileValueOverrides?: ReadonlyMap<string, RuntimeApiBodyValue[]>
@@ -33,7 +34,7 @@ export function resolvePayloadValue(
   | { status: 'omit' }
   | { status: 'error' }
   | { status: 'token-error'; tokenId: string } {
-  const { state, iterationContext, hiddenFormFields, emptySubmitValues } = options
+  const { state, iterationContext, switchNextValue, hiddenFormFields, emptySubmitValues } = options
 
   if (typeof value !== 'string') {
     return {
@@ -42,7 +43,7 @@ export function resolvePayloadValue(
     } as const
   }
 
-  const resolvedReference = resolveRuntimeReference(value, state, { iterationContext })
+  const resolvedReference = resolveRuntimeReference(value, state, { iterationContext, switchNextValue })
 
   if (resolvedReference.status === 'literal') {
     return {
@@ -125,13 +126,13 @@ function resolveFileValueOverride(
   value: string,
   options: ResolvePayloadValueOptions,
 ): { status: 'ready'; value: RuntimeApiBodyValue[] } | { status: 'omit' } | null {
-  const { state, iterationContext, hiddenFormFields, fileValueOverrides } = options
+  const { state, iterationContext, switchNextValue, hiddenFormFields, fileValueOverrides } = options
 
   if (fileValueOverrides === undefined) {
     return null
   }
 
-  const resolvedReference = resolveRuntimeReference(value, state, { iterationContext })
+  const resolvedReference = resolveRuntimeReference(value, state, { iterationContext, switchNextValue })
 
   const reference =
     resolvedReference.status === 'resolved' || resolvedReference.status === 'missing'
@@ -350,7 +351,7 @@ function resolveHeaderTemplateValue(
   }
 
   // Interpolation path
-  const { state, iterationContext, hiddenFormFields, emptySubmitValues } = options
+  const { state, iterationContext, switchNextValue, hiddenFormFields, emptySubmitValues } = options
 
   let failed = false
   let tokenError: { tokenId: string } | null = null
@@ -395,7 +396,7 @@ function resolveHeaderTemplateValue(
       }
     }
 
-    const result = resolveRuntimeReference(referenceValue, state, { iterationContext })
+    const result = resolveRuntimeReference(referenceValue, state, { iterationContext, switchNextValue })
 
     if (result.status === 'token-error') {
       tokenError = { tokenId: result.reference.path[0] }

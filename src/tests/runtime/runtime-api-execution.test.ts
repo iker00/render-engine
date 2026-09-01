@@ -594,6 +594,91 @@ describe('Runtime api execution', () => {
     })
   })
 
+  it('resolves switch.next in the body from the explicit switchNextValue option', () => {
+    const configWithSwitchNext: RuntimeConfig = {
+      ...runtimeConfig,
+      api: {
+        ...runtimeConfig.api,
+        updatePrimary: {
+          method: 'POST',
+          endpoint: '/api/primary',
+          body: {
+            isPrimary: 'switch.next',
+          },
+        },
+      },
+    }
+
+    expect(
+      buildRuntimeApiRequest({
+        config: configWithSwitchNext,
+        operationName: 'updatePrimary',
+        state: runtimeState,
+        switchNextValue: true,
+      }),
+    ).toEqual({
+      status: 'ready',
+      request: expect.objectContaining({
+        init: expect.objectContaining({
+          body: JSON.stringify({ isPrimary: true }),
+        }),
+      }),
+    })
+
+    expect(
+      buildRuntimeApiRequest({
+        config: configWithSwitchNext,
+        operationName: 'updatePrimary',
+        state: runtimeState,
+        switchNextValue: false,
+      }),
+    ).toEqual({
+      status: 'ready',
+      request: expect.objectContaining({
+        init: expect.objectContaining({
+          body: JSON.stringify({ isPrimary: false }),
+        }),
+      }),
+    })
+  })
+
+  it('resolves item.* and switch.next together in the same body without conflict (repeater)', () => {
+    const configWithRepeaterSwitch: RuntimeConfig = {
+      ...runtimeConfig,
+      api: {
+        ...runtimeConfig.api,
+        updateRowPrimary: {
+          method: 'POST',
+          endpoint: '/api/rows/primary',
+          body: {
+            rowId: 'item.id',
+            isPrimary: 'switch.next',
+          },
+        },
+      },
+    }
+
+    expect(
+      buildRuntimeApiRequest({
+        config: configWithRepeaterSwitch,
+        operationName: 'updateRowPrimary',
+        state: runtimeState,
+        iterationContext: {
+          item: { id: 'row-3' },
+          key: '2',
+        },
+        switchNextValue: true,
+      }),
+    ).toEqual({
+      status: 'ready',
+      request: expect.objectContaining({
+        init: expect.objectContaining({
+          body: JSON.stringify({ rowId: 'row-3', isPrimary: true }),
+        }),
+      }),
+    })
+  })
+
   it('rejects missing or unsupported final query values before emitting a request', () => {
     expect(
       buildRuntimeApiRequest({
