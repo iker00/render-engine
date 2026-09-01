@@ -227,6 +227,48 @@ describe('RUNTIME_FORMATTER_REGISTRY.truncate', () => {
   })
 })
 
+describe('RUNTIME_FORMATTER_REGISTRY.length', () => {
+  it('counts elements of an array', () => {
+    expect(expectOk(apply('length', [1, 2, 3, 4, 5])).value).toBe(5)
+  })
+
+  it('counts zero elements for an empty array', () => {
+    expect(expectOk(apply('length', [])).value).toBe(0)
+  })
+
+  it('counts characters of a string', () => {
+    expect(expectOk(apply('length', 'hola')).value).toBe(4)
+  })
+
+  it('counts zero characters for an empty string', () => {
+    expect(expectOk(apply('length', '')).value).toBe(0)
+  })
+
+  it('counts UTF-16 code units, not grapheme clusters, for a composed emoji', () => {
+    expect(expectOk(apply('length', '😀')).value).toBe('😀'.length)
+  })
+
+  it('rejects number, boolean, null, undefined, NaN, Infinity and plain objects as unresolvable', () => {
+    const rejected: unknown[] = [
+      42,
+      true,
+      null,
+      undefined,
+      Number.NaN,
+      Number.POSITIVE_INFINITY,
+      {},
+    ]
+    for (const value of rejected) {
+      expect(apply('length', value).status).toBe('unresolvable')
+    }
+  })
+
+  it('rejects any argument (none-arg formatter)', () => {
+    expect(apply('length', 'foo', stringArg('foo')).status).toBe('unresolvable')
+    expect(apply('length', 'foo', numberArg(2)).status).toBe('unresolvable')
+  })
+})
+
 describe('applyFormatterChain', () => {
   it('returns ok with the formatted value for a single formatter', () => {
     const invocations: RuntimeFormatterInvocation[] = [{ name: 'number', argument: noArg }]
@@ -268,5 +310,30 @@ describe('applyFormatterChain', () => {
 
     expect(spy).toHaveBeenCalledTimes(1)
     spy.mockRestore()
+  })
+
+  it('chains length with number to format an element count with grouping', () => {
+    const invocations: RuntimeFormatterInvocation[] = [
+      { name: 'length', argument: noArg },
+      { name: 'number', argument: noArg },
+    ]
+    const bigArray = Array.from({ length: 1500 }, (_, index) => index)
+    expect(applyFormatterChain(bigArray, invocations)).toEqual({ status: 'ok', value: '1.500' })
+  })
+
+  it('chains uppercase with length to count characters of the uppercased string', () => {
+    const invocations: RuntimeFormatterInvocation[] = [
+      { name: 'uppercase', argument: noArg },
+      { name: 'length', argument: noArg },
+    ]
+    expect(applyFormatterChain('ana', invocations)).toEqual({ status: 'ok', value: 3 })
+  })
+
+  it('chains length with uppercase producing an unchanged numeric string', () => {
+    const invocations: RuntimeFormatterInvocation[] = [
+      { name: 'length', argument: noArg },
+      { name: 'uppercase', argument: noArg },
+    ]
+    expect(applyFormatterChain([1, 2, 3, 4, 5], invocations)).toEqual({ status: 'ok', value: '5' })
   })
 })

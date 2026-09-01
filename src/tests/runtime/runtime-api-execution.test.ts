@@ -2052,6 +2052,11 @@ describe('Runtime api endpoint interpolation', () => {
           data: 'ana',
           error: null,
         },
+        list: {
+          status: 'success',
+          data: { items: ['a', 'b', 'c', 'd', 'e'] },
+          error: null,
+        },
       },
     }
 
@@ -2194,6 +2199,31 @@ describe('Runtime api endpoint interpolation', () => {
           code: 'request-build-failed',
           message: expect.stringContaining('endpoint'),
         },
+      })
+    })
+
+    it('applies length formatter to a resolved array reference in the endpoint', () => {
+      const config: RuntimeConfig = {
+        ...runtimeConfig,
+        api: {
+          getByCount: {
+            method: 'GET',
+            endpoint: '/n/{{queries.list.data.items | length}}',
+          },
+        },
+      }
+
+      const result = buildRuntimeApiRequest({
+        config,
+        operationName: 'getByCount',
+        state: stateWithFormatterQueries,
+      })
+
+      expect(result).toEqual({
+        status: 'ready',
+        request: expect.objectContaining({
+          url: '/n/5',
+        }),
       })
     })
   })

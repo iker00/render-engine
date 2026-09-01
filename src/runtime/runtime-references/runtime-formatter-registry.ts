@@ -12,6 +12,7 @@ export type RuntimeFormatterName =
   | 'lowercase'
   | 'capitalize'
   | 'truncate'
+  | 'length'
 
 export type RuntimeFormatterChainResult =
   | { status: 'ok'; value: string | number | boolean }
@@ -194,6 +195,13 @@ function applyTruncate(value: unknown, argument: RuntimeFormatterArgument): Runt
   return { status: 'ok', value: `${text.slice(0, limit)}…` }
 }
 
+function applyLength(value: unknown, argument: RuntimeFormatterArgument): RuntimeFormatterChainResult {
+  if (!argumentIsNone(argument)) return UNRESOLVABLE
+  if (Array.isArray(value)) return { status: 'ok', value: value.length }
+  if (typeof value === 'string') return { status: 'ok', value: value.length }
+  return UNRESOLVABLE
+}
+
 export const RUNTIME_FORMATTER_REGISTRY: Record<RuntimeFormatterName, RuntimeFormatterEntry> = {
   number: { argument: 'optional-number', apply: applyNumber },
   currency: { argument: 'optional-string', apply: applyCurrency },
@@ -203,6 +211,7 @@ export const RUNTIME_FORMATTER_REGISTRY: Record<RuntimeFormatterName, RuntimeFor
   lowercase: { argument: 'none', apply: applyLowercase },
   capitalize: { argument: 'none', apply: applyCapitalize },
   truncate: { argument: 'number', apply: applyTruncate },
+  length: { argument: 'none', apply: applyLength },
 }
 
 const REGISTRY_KEYS = new Set<string>(Object.keys(RUNTIME_FORMATTER_REGISTRY))
