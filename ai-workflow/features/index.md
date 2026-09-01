@@ -23,6 +23,16 @@ La política completa está definida en el documento de workflow del proyecto.
 
 ## Completadas
 
+- `2026-09-01-10-59-length-formatter`: nuevo formatter `length` en el catálogo cerrado v1 de interpolación
+  (`{{referencia | formatter}}`), sin argumento, junto a `number`, `currency`, `percent`, `date`, `uppercase`,
+  `lowercase`, `capitalize` y `truncate`. Acepta `array` (cuenta elementos) y `string` (cuenta caracteres en
+  unidades UTF-16, mismo criterio que `truncate`), devolviendo un entero en texto plano sin formato de locale;
+  cualquier otro tipo de entrada (objeto plano, `number`, `boolean`, `null`, `undefined`, `NaN`, `Infinity`) hace
+  la cadena no resoluble. Disponible en las mismas superficies que el resto del catálogo — visibles, las cuatro
+  superficies de headers y `api.endpoint` — sin registro paralelo, reutilizando `applyFormatterChain` sin
+  cambios. Encadenable en cualquier posición, con el caso de uso principal `{{referencia | length | number}}`
+  para formatear en miles un contador derivado de un array o string ya presente en el runtime.
+
 - `2026-08-27-12-19-download-operation-action`: nuevo tipo de acción `downloadOperation` en `button.props.action.type`
   y `link.props.action.type` (mismo shape que `executeOperation`: `operationName`, `query`/`body`/`headers`
   opcionales, más `filename` opcional). Al disparar, ejecuta un `fetch` autenticado contra la operación del catálogo

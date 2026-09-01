@@ -90,11 +90,13 @@ Las siguientes superficies usan solo referencias completas o literales y NO apli
 - `lowercase` — pasa a minúsculas. Sin argumento.
 - `capitalize` — capitaliza la primera letra. Sin argumento.
 - `truncate` — trunca a un número de caracteres y añade `…` cuando el input excede ese límite. Argumento obligatorio numérico entero no negativo. `truncate:0` sobre texto no vacío produce `"…"`.
+- `length` — devuelve el número de elementos de un `array` o el número de caracteres de un `string` (unidades UTF-16, mismo criterio que `truncate`), como entero en texto plano sin formato de locale. Sin argumento. Encadenable, por ejemplo `{{referencia | length | number}}` para aplicar formato de miles a un contador.
 
 ### Compatibilidad de valor de entrada por formatter
 - `number`, `currency`, `percent` aceptan `number` finito o `string` que matchee `/^-?\d+(\.\d+)?$/`. Cualquier otro tipo (`NaN`, `Infinity`, string vacío, objetos, arrays, `null`, `undefined`) hace la cadena no resoluble.
 - `date` acepta solo strings ISO 8601 (shape date-only o date-time con `T`) que parseen a `Date` válida. Cualquier otro shape o valor hace la cadena no resoluble.
 - `uppercase`, `lowercase`, `capitalize`, `truncate` aceptan `string`, `number` finito o `boolean`. Objetos, arrays, `null`, `undefined`, `NaN`, `Infinity` hacen la cadena no resoluble.
+- `length` acepta `array` (cualquier longitud, incluida vacía) o `string` (incluido vacío). Cualquier otro tipo (`object` plano, `number`, `boolean`, `null`, `undefined`, `NaN`, `Infinity`) hace la cadena no resoluble.
 
 ### Semántica de cadena no resoluble en superficies visibles
 - Cuando la cadena de formatters no resuelve — nombre desconocido, argumento no válido para el formatter, valor de entrada incompatible o cualquier fallo intermedio en el encadenamiento — ese placeholder se sustituye por string vacío en la string resuelta, sin afectar al texto literal que lo rodea ni al resto de placeholders.

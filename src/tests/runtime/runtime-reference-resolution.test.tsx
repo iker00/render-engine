@@ -1870,6 +1870,14 @@ describe('Runtime reference resolution', () => {
         dateTime: { status: 'success', data: '2026-07-16T10:30:45+02:00', error: null },
         name: { status: 'success', data: 'ana', error: null },
         ratio: { status: 'success', data: 0.4256, error: null },
+        list: { status: 'success', data: { items: ['a', 'b', 'c', 'd', 'e'] }, error: null },
+        emptyList: { status: 'success', data: { items: [] }, error: null },
+        bigList: {
+          status: 'success',
+          data: { items: Array.from({ length: 1500 }, (_, index) => index) },
+          error: null,
+        },
+        obj: { status: 'success', data: { foo: 'bar' }, error: null },
       },
     }
 
@@ -2070,6 +2078,74 @@ describe('Runtime reference resolution', () => {
           'heading.props.text',
         ),
       ).toBe('A  B')
+    })
+
+    it('counts array elements with {{queries.list.data.items | length}}', () => {
+      expect(
+        resolveRuntimeVisibleValue(
+          '{{queries.list.data.items | length}}',
+          formatterState,
+          'heading.props.text',
+        ),
+      ).toBe('5')
+    })
+
+    it('counts zero elements for an empty array with {{queries.emptyList.data.items | length}}', () => {
+      expect(
+        resolveRuntimeVisibleValue(
+          '{{queries.emptyList.data.items | length}}',
+          formatterState,
+          'heading.props.text',
+        ),
+      ).toBe('0')
+    })
+
+    it('counts string characters with {{queries.name.data | length}}', () => {
+      expect(
+        resolveRuntimeVisibleValue('{{queries.name.data | length}}', formatterState, 'heading.props.text'),
+      ).toBe('3')
+    })
+
+    it('chains {{queries.bigList.data.items | length | number}} to format the count with grouping', () => {
+      expect(
+        resolveRuntimeVisibleValue(
+          '{{queries.bigList.data.items | length | number}}',
+          formatterState,
+          'heading.props.text',
+        ),
+      ).toBe('1.500')
+    })
+
+    it('produces empty string when length receives a plain object', () => {
+      expect(
+        resolveRuntimeVisibleValue('A {{queries.obj.data | length}} B', formatterState, 'heading.props.text'),
+      ).toBe('A  B')
+    })
+
+    it('produces empty string when length receives a number', () => {
+      expect(
+        resolveRuntimeVisibleValue('A {{queries.total.data | length}} B', formatterState, 'heading.props.text'),
+      ).toBe('A  B')
+    })
+
+    it('produces empty string when length receives an unexpected argument', () => {
+      expect(
+        resolveRuntimeVisibleValue(
+          'A {{queries.list.data.items | length:2}} B',
+          formatterState,
+          'heading.props.text',
+        ),
+      ).toBe('A  B')
+    })
+
+    it('chains {{queries.name.data | uppercase | length}} to count the uppercased string', () => {
+      expect(
+        resolveRuntimeVisibleValue(
+          '{{queries.name.data | uppercase | length}}',
+          formatterState,
+          'heading.props.text',
+        ),
+      ).toBe('3')
     })
   })
 })

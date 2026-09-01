@@ -629,6 +629,18 @@ describe('resolveHeaders — formatter failures produce request-build-failed', (
     if (result.status !== 'error') return
     expect(result.error.code).toBe('request-build-failed')
   })
+
+  it('fails with request-build-failed when input type is not compatible with length (number)', () => {
+    const state = makeStateWithQuery('total', 1234.5)
+    const result = resolveHeaders(
+      { 'X-Fail': 'X-Fail: {{queries.total.data | length}}' },
+      'op "test"',
+      { state },
+    )
+    expect(result.status).toBe('error')
+    if (result.status !== 'error') return
+    expect(result.error.code).toBe('request-build-failed')
+  })
 })
 
 describe('resolveHeaders — hidden-form-field omission preserved with formatter chain (D5)', () => {
