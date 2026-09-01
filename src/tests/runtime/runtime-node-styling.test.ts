@@ -37,6 +37,7 @@ import {
   getAppShellErrorEyebrowClassName,
   getAppShellErrorTitleClassName,
   getAppShellFrameClassName,
+  getButtonSwitchClassName,
   getButtonVariantClassName,
   getChoiceGroupClassName,
   getChoiceOptionClassName,
@@ -744,6 +745,31 @@ describe('runtime node styling', () => {
 
     it('getButtonVariantClassName includes cursor-pointer (regression control)', () => {
       expect(getButtonVariantClassName('primary', 'solid', false)).toContain('cursor-pointer')
+    })
+  })
+
+  describe('getButtonSwitchClassName', () => {
+    const allColors = ['neutral', 'primary', 'success', 'warning', 'danger', 'info'] as const
+
+    it('produces a distinct track className per semantic color when checked is true', () => {
+      const trackClassNames = allColors.map((color) => getButtonSwitchClassName(true, color).trackClassName)
+
+      expect(new Set(trackClassNames).size).toBe(allColors.length)
+    })
+
+    it('produces the same neutral track className regardless of color when checked is false', () => {
+      const trackClassNames = allColors.map((color) => getButtonSwitchClassName(false, color).trackClassName)
+
+      trackClassNames.forEach((trackClassName) => {
+        expect(trackClassName).toBe(trackClassNames[0])
+      })
+    })
+
+    it('returns a non-empty knobClassName for both checked states', () => {
+      allColors.forEach((color) => {
+        expect(getButtonSwitchClassName(true, color).knobClassName.length).toBeGreaterThan(0)
+        expect(getButtonSwitchClassName(false, color).knobClassName.length).toBeGreaterThan(0)
+      })
     })
   })
 

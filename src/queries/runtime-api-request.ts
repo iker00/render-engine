@@ -43,6 +43,7 @@ export function buildRuntimeApiRequest({
   state,
   requestParams,
   iterationContext,
+  switchNextValue,
   hiddenFormFields,
   emptySubmitValues,
   fileValueOverrides,
@@ -65,6 +66,7 @@ export function buildRuntimeApiRequest({
     state,
     requestParams,
     iterationContext,
+    switchNextValue,
     hiddenFormFields,
     emptySubmitValues,
     fileValueOverrides,
@@ -77,12 +79,13 @@ export function buildInlineRuntimeApiRequest({
   state,
   requestParams,
   iterationContext,
+  switchNextValue,
   hiddenFormFields,
   emptySubmitValues,
   fileValueOverrides,
 }: BuildInlineRuntimeApiRequestOptions): RuntimeApiRequestBuildResult {
   const effectiveRequestParams = mergeRuntimeApiRequestParams(operation, requestParams)
-  const resolveOptions = { state, iterationContext, hiddenFormFields, emptySubmitValues }
+  const resolveOptions = { state, iterationContext, switchNextValue, hiddenFormFields, emptySubmitValues }
   const messagePrefix = `The api operation "${operationName}"`
 
   const endpointResult = resolveEndpoint(operationName, operation.endpoint, resolveOptions)
@@ -181,7 +184,7 @@ function resolveEndpoint(
     return { status: 'ready', endpoint }
   }
 
-  const { state, iterationContext } = resolveOptions
+  const { state, iterationContext, switchNextValue } = resolveOptions
   let failed = false
   let failedPlaceholder = ''
 
@@ -225,7 +228,7 @@ function resolveEndpoint(
       }
     }
 
-    const result = resolveRuntimeReference(referenceValue, state, { iterationContext })
+    const result = resolveRuntimeReference(referenceValue, state, { iterationContext, switchNextValue })
     reportRuntimeReferenceDiagnostic(result, 'api.endpoint')
 
     if (result.status !== 'resolved') {

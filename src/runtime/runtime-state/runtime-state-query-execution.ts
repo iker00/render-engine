@@ -104,6 +104,7 @@ export async function executeQueryOperationWithSnapshot({
   snapshotState,
   requestParams,
   iterationContext,
+  switchNextValue,
   hiddenFormFields,
   emptySubmitValues,
   fileInputSources,
@@ -116,6 +117,7 @@ export async function executeQueryOperationWithSnapshot({
   snapshotState: RuntimeState
   requestParams?: RuntimeApiRequestParams
   iterationContext?: RuntimeIterationContext
+  switchNextValue?: boolean
   hiddenFormFields?: RuntimeApiHiddenFormFields
   emptySubmitValues?: RuntimeApiEmptySubmitValues
   fileInputSources?: RuntimeApiFileInputSources
@@ -153,6 +155,7 @@ export async function executeQueryOperationWithSnapshot({
     state: snapshotState,
     requestParams,
     iterationContext,
+    switchNextValue,
     hiddenFormFields,
     emptySubmitValues,
     fileValueOverrides,

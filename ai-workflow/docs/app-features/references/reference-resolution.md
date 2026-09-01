@@ -1,4 +1,4 @@
-> Cuándo leer: familias soportadas de referencias (`queries.*`, `forms.*`, `params.*`, `item.*`, `row.*`), superficies donde aplican, reglas de navegación anidada y fronteras por familia.
+> Cuándo leer: familias soportadas de referencias (`queries.*`, `forms.*`, `params.*`, `item.*`, `row.*`, `switch.next`), superficies donde aplican, reglas de navegación anidada y fronteras por familia.
 > Tamaño: medio.
 > Relacionados: [[dynamic-strings.md]], [[visibility.md]], [[../queries/state-model.md]], [[../forms/lifecycle.md]].
 
@@ -30,6 +30,7 @@ El escape literal con `\` permite mostrar una referencia completa tal cual, por 
 - `queries.{queryName}.data.{segmentosAnidados}`
 - `translations.{key}`
 - `tokens.{tokenId}.value`
+- `switch.next`
 
 ## Reglas funcionales generales
 - la navegación anidada adicional solo se admite bajo `queries.{queryName}.data` y bajo `queries.{queryName}.error` (limitada a `.message` y `.code`)
@@ -48,6 +49,7 @@ La misma convención de referencias completas se reutiliza dentro de `api.query`
 - una referencia soportada pero sin valor disponible no invalida el config en bootstrap; produce un error de construcción del request al ejecutar la operación
 
 Esa misma convención se reutiliza también en:
+- `button.props.checked` (solo válido cuando `button.props.variant: 'switch'`)
 - `button.props.action.query`
 - `button.props.action.body`
 - `button.props.action.params`
@@ -139,3 +141,11 @@ Las superficies de `query`, `body`, `params` y otras no listadas siguen fuera de
 - `tokens.{tokenId}.value` **solo** está soportada en superficies de headers: `api.{op}.headers`, `button.props.action.headers`, `form.submitAction.headers`, `preloads[].headers` e incluidas dentro de `executeOperations[].headers`. Usarla en cualquier otra superficie (`query`, `body`, `params`, `visibility`, `defaultValue`, orígenes de colección) provoca error de bootstrap `invalid-layout`.
 - `tokens.*` no se puede interpolar en superficies visibles ni en placeholders `{{tokens...}}`; cualquier intento causa que el placeholder se degrade a string vacío sin exponerse el valor del token.
 - Los valores de tokens no aparecen en logs ni en diagnósticos de error expuestos al usuario (criterio de seguridad).
+
+## Frontera específica de `switch.next`
+- `switch.next` es una referencia sintética, no una navegación genérica sobre un namespace de datos: expone el booleano contrario al `props.checked` resuelto de la propia instancia de `button` con `variant: 'switch'`, en el momento del click que dispara su `action`.
+- `switch.next` es la única forma soportada de este namespace (mismo criterio de forma exacta que `item.$key`/`item.$index`/`row.$index`): variantes como `switch`, `switch.nextx` o `switch.next.extra` son rutas inválidas.
+- Solo está soportada dentro de `props.action.query`/`body`/`headers` del propio `button` que declara `variant: 'switch'`, y dentro de cada entrada de `props.action.operations[].query`/`body`/`headers` cuando `action.type: executeOperations` (misma extensión singular/plural que ya aplica `item.*`).
+- Un `switch.next` en cualquier otra superficie —`props.checked` del mismo botón, `visibility.reference`, la `action` de otro nodo, o un `button` cuyo `variant` no es `switch`— es rechazado en bootstrap, no degradado en runtime.
+- Se resuelve como campo hermano de `iterationContext` en las opciones que ya transporta el pipeline de referencias (no forma parte de `RuntimeIterationContext`, que es conceptual y funcionalmente el contexto de iteración de `repeater`/`table`), por lo que convive sin conflicto con `item.*`/`row.*` en el mismo `body`/`query`/`headers` cuando el `button` vive dentro de un `repeater`.
+- Con `checked` literal fijo (sin referencia dinámica), `switch.next` sigue resolviendo la negación de ese literal en cada click; como `checked` nunca cambia por sí solo, todos los clicks sucesivos envían el mismo valor negado.

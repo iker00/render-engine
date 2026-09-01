@@ -103,6 +103,7 @@ export {
   getPrimaryButtonNodeClassName,
   getSecondaryButtonNodeClassName,
   getButtonVariantClassName,
+  getButtonSwitchClassName,
 } from './runtime-node-styling-button'
 export { getContainerNodeSurface, getContainerNodeStyling } from './runtime-node-styling-container'
 export {

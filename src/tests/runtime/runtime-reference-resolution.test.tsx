@@ -547,6 +547,53 @@ describe('Runtime reference resolution', () => {
     })
   })
 
+  describe('switch.next reference parser contract', () => {
+    it('classifies switch.next as supported when switch-next context is enabled', () => {
+      expect(parseRuntimeReference('switch.next', { allowSwitchNextReference: true })).toMatchObject({
+        kind: 'reference',
+        status: 'supported',
+        namespace: 'switch',
+        path: ['next'],
+      })
+    })
+
+    it('classifies switch.next as unsupported outside explicit switch-next context', () => {
+      expect(parseRuntimeReference('switch.next')).toMatchObject({
+        kind: 'reference',
+        status: 'unsupported',
+        namespace: 'switch',
+        path: ['next'],
+      })
+
+      expect(parseRuntimeReference('switch.next', {})).toMatchObject({
+        kind: 'reference',
+        status: 'unsupported',
+        namespace: 'switch',
+        path: ['next'],
+      })
+    })
+
+    it('rejects any switch.* shape other than the exact switch.next literal as invalid', () => {
+      expect(parseRuntimeReference('switch.nextx', { allowSwitchNextReference: true })).toMatchObject({
+        kind: 'reference',
+        status: 'invalid',
+        namespace: 'switch',
+      })
+
+      expect(parseRuntimeReference('switch.next.extra', { allowSwitchNextReference: true })).toMatchObject({
+        kind: 'reference',
+        status: 'invalid',
+        namespace: 'switch',
+      })
+
+      expect(parseRuntimeReference('switch', { allowSwitchNextReference: true })).toMatchObject({
+        kind: 'reference',
+        status: 'invalid',
+        namespace: 'switch',
+      })
+    })
+  })
+
   describe('T0007-02 store-backed resolution', () => {
     it('reads current form values from the shared runtime state', () => {
       expect(resolveRuntimeReference('forms.userSearch.name', runtimeState)).toEqual({
@@ -1099,6 +1146,54 @@ describe('Runtime reference resolution', () => {
       ).toBe('')
 
       consoleWarnSpy.mockRestore()
+    })
+  })
+
+  describe('switch.next resolution with explicit switchNextValue', () => {
+    it('resolves switch.next to true when switchNextValue is true', () => {
+      expect(resolveRuntimeReference('switch.next', runtimeState, { switchNextValue: true })).toEqual({
+        status: 'resolved',
+        value: true,
+        reference: parseRuntimeReference('switch.next', { allowSwitchNextReference: true }),
+      })
+    })
+
+    it('resolves switch.next to false when switchNextValue is false', () => {
+      expect(resolveRuntimeReference('switch.next', runtimeState, { switchNextValue: false })).toEqual({
+        status: 'resolved',
+        value: false,
+        reference: parseRuntimeReference('switch.next', { allowSwitchNextReference: true }),
+      })
+    })
+
+    it('resolves switch.next as unsupported when switchNextValue is not provided', () => {
+      expect(resolveRuntimeReference('switch.next', runtimeState, {})).toEqual({
+        status: 'unsupported',
+        reference: parseRuntimeReference('switch.next'),
+      })
+
+      expect(resolveRuntimeReference('switch.next', runtimeState)).toEqual({
+        status: 'unsupported',
+        reference: parseRuntimeReference('switch.next'),
+      })
+    })
+
+    it('resolves item.* and switch.next independently when both are present in the same call', () => {
+      expect(
+        resolveRuntimeReference('item.slug', runtimeState, { iterationContext, switchNextValue: true }),
+      ).toEqual({
+        status: 'resolved',
+        value: 'hello-world',
+        reference: parseRuntimeReference('item.slug', { allowItemReference: true }),
+      })
+
+      expect(
+        resolveRuntimeReference('switch.next', runtimeState, { iterationContext, switchNextValue: true }),
+      ).toEqual({
+        status: 'resolved',
+        value: true,
+        reference: parseRuntimeReference('switch.next', { allowSwitchNextReference: true }),
+      })
     })
   })
 

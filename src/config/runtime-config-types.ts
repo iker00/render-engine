@@ -768,7 +768,7 @@ export type GoBackButtonAction = GoBackRuntimeUiAction
 export type ButtonAction = RuntimeUiAction
 
 export type ButtonColor = 'neutral' | 'primary' | 'success' | 'warning' | 'danger' | 'info'
-export type ButtonVariant = 'solid' | 'outline' | 'ghost' | 'link'
+export type ButtonVariant = 'solid' | 'outline' | 'ghost' | 'link' | 'switch'
 
 export interface ButtonLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayoutFields {
   type: 'button'
@@ -781,6 +781,8 @@ export interface ButtonLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLa
     fullWidth?: boolean
     icon?: string
     iconPosition?: 'left' | 'right'
+    checked?: boolean | string
+    labelVisible?: boolean
   }
   children?: unknown
 }

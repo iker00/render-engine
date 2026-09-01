@@ -1448,7 +1448,7 @@ describe('LayoutCanvasPropertiesPanel icon widget — end-to-end real pipeline (
     const { root } = renderCanvas(buttonIconWidgetConfig('Home'))
     selectNodeByPath(root, BUTTON_PATH)
 
-    fireEvent.change(screen.getByLabelText('label', { exact: false }), { target: { value: 'Nuevo label' } })
+    fireEvent.change(screen.getByLabelText(/^label\b/), { target: { value: 'Nuevo label' } })
 
     const parsed = await getMonacoJson()
     const button = readButtonFromMonacoJson(parsed)

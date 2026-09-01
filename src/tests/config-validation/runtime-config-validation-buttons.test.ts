@@ -821,6 +821,86 @@ describe('validateRuntimeConfig', () => {
     })
   })
 
+  it('rejects a switch button without props.action', () => {
+    expect(
+      validateRuntimeConfig(
+        createConfigWithPages([
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'button',
+                props: {
+                  label: 'Enabled',
+                  variant: 'switch',
+                  checked: true,
+                },
+              },
+            ],
+          },
+        ]),
+      ),
+    ).toMatchObject({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        message: expect.stringContaining('props.action'),
+      },
+    })
+  })
+
+  it('rejects a switch button without props.action outside a form via the switch-specific rule, not the generic form rule', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithPages([
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'button',
+              props: {
+                label: 'Enabled',
+                variant: 'switch',
+                checked: true,
+              },
+            },
+          ],
+        },
+      ]),
+    )
+
+    expect(result.status).toBe('error')
+
+    if (result.status !== 'error') {
+      throw new Error('Expected error result')
+    }
+
+    expect(result.error.message).not.toContain('must be descendants of a form node')
+    expect(result.error.message).toContain('variant "switch"')
+  })
+
+  it('accepts a switch button with props.action present outside a form (does not trigger the generic action-required rule)', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithPages([
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'button',
+              props: {
+                label: 'Enabled',
+                variant: 'switch',
+                checked: true,
+                action: { type: 'goBack' },
+              },
+            },
+          ],
+        },
+      ]),
+    )
+
+    expect(result.status).toBe('ready')
+  })
+
   it('rejects navigateTo actions without a valid existing pageId', () => {
     expect(
       validateRuntimeConfig(
@@ -3255,6 +3335,253 @@ describe('validateRuntimeConfig', () => {
       expect(result.status).toBe('error')
       if (result.status === 'error') {
         expect(result.error.message).toContain('tokens.*')
+      }
+    })
+  })
+
+  describe('switch.next gating in button actions', () => {
+    it('accepts switch.next in props.action.query, body and headers for a switch button', () => {
+      const result = validateRuntimeConfig({
+        api: { toggle: { method: 'POST', endpoint: '/api/toggle' } },
+        pages: [
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'button',
+                props: {
+                  label: 'Toggle',
+                  variant: 'switch',
+                  checked: true,
+                  action: {
+                    type: 'executeOperation',
+                    operationName: 'toggle',
+                    query: { next: 'switch.next' },
+                    body: { next: 'switch.next' },
+                    headers: { 'X-Next': 'switch.next' },
+                  },
+                },
+              },
+            ],
+          },
+        ],
+        initialPage: 'home',
+      })
+      expect(result.status).toBe('ready')
+    })
+
+    it('accepts switch.next in executeOperations operations[].query, body and headers for a switch button', () => {
+      const result = validateRuntimeConfig({
+        api: { toggle: { method: 'POST', endpoint: '/api/toggle' } },
+        pages: [
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'button',
+                props: {
+                  label: 'Toggle',
+                  variant: 'switch',
+                  checked: true,
+                  action: {
+                    type: 'executeOperations',
+                    operations: [
+                      {
+                        operationName: 'toggle',
+                        query: { next: 'switch.next' },
+                        body: { next: 'switch.next' },
+                        headers: { 'X-Next': 'switch.next' },
+                      },
+                    ],
+                  },
+                },
+              },
+            ],
+          },
+        ],
+        initialPage: 'home',
+      })
+      expect(result.status).toBe('ready')
+    })
+
+    it('rejects switch.next in props.action.query, body or headers when the button variant is not "switch" (including variant absent)', () => {
+      const withoutVariant = validateRuntimeConfig({
+        api: { toggle: { method: 'POST', endpoint: '/api/toggle' } },
+        pages: [
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'button',
+                props: {
+                  label: 'Toggle',
+                  action: {
+                    type: 'executeOperation',
+                    operationName: 'toggle',
+                    query: { next: 'switch.next' },
+                  },
+                },
+              },
+            ],
+          },
+        ],
+        initialPage: 'home',
+      })
+      expect(withoutVariant.status).toBe('error')
+      if (withoutVariant.status === 'error') {
+        expect(withoutVariant.error.message).toContain('switch.next')
+      }
+
+      const withSolidVariant = validateRuntimeConfig({
+        api: { toggle: { method: 'POST', endpoint: '/api/toggle' } },
+        pages: [
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'button',
+                props: {
+                  label: 'Toggle',
+                  variant: 'solid',
+                  action: {
+                    type: 'executeOperation',
+                    operationName: 'toggle',
+                    body: { next: 'switch.next' },
+                  },
+                },
+              },
+            ],
+          },
+        ],
+        initialPage: 'home',
+      })
+      expect(withSolidVariant.status).toBe('error')
+      if (withSolidVariant.status === 'error') {
+        expect(withSolidVariant.error.message).toContain('switch.next')
+      }
+
+      const withHeadersReference = validateRuntimeConfig({
+        api: { toggle: { method: 'POST', endpoint: '/api/toggle' } },
+        pages: [
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'button',
+                props: {
+                  label: 'Toggle',
+                  action: {
+                    type: 'executeOperation',
+                    operationName: 'toggle',
+                    headers: { 'X-Next': 'switch.next' },
+                  },
+                },
+              },
+            ],
+          },
+        ],
+        initialPage: 'home',
+      })
+      expect(withHeadersReference.status).toBe('error')
+      if (withHeadersReference.status === 'error') {
+        expect(withHeadersReference.error.message).toContain('switch.next')
+      }
+    })
+
+    it('rejects switch.next referenced in props.checked of a switch button', () => {
+      const result = validateRuntimeConfig({
+        api: {},
+        pages: [
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'button',
+                props: {
+                  label: 'Toggle',
+                  variant: 'switch',
+                  checked: 'switch.next',
+                  action: { type: 'goBack' },
+                },
+              },
+            ],
+          },
+        ],
+        initialPage: 'home',
+      })
+      expect(result.status).toBe('error')
+      if (result.status === 'error') {
+        expect(result.error.message).toContain('switch.next')
+      }
+    })
+
+    it('rejects switch.next referenced in node.visibility.reference of a switch button', () => {
+      const result = validateRuntimeConfig({
+        api: {},
+        pages: [
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'button',
+                props: {
+                  label: 'Toggle',
+                  variant: 'switch',
+                  checked: true,
+                  action: { type: 'goBack' },
+                },
+                visibility: { reference: 'switch.next', operator: 'isTruthy' },
+              },
+            ],
+          },
+        ],
+        initialPage: 'home',
+      })
+      expect(result.status).toBe('error')
+      if (result.status === 'error') {
+        expect(result.error.message).toContain('.visibility.reference')
+      }
+    })
+
+    it('rejects switch.next referenced in the action of another button node that is not itself a switch', () => {
+      const result = validateRuntimeConfig({
+        api: { toggle: { method: 'POST', endpoint: '/api/toggle' } },
+        pages: [
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'button',
+                props: {
+                  label: 'Toggle',
+                  variant: 'switch',
+                  checked: true,
+                  action: {
+                    type: 'executeOperation',
+                    operationName: 'toggle',
+                    query: { next: 'switch.next' },
+                  },
+                },
+              },
+              {
+                type: 'button',
+                props: {
+                  label: 'Broken',
+                  action: {
+                    type: 'executeOperation',
+                    operationName: 'toggle',
+                    query: { next: 'switch.next' },
+                  },
+                },
+              },
+            ],
+          },
+        ],
+        initialPage: 'home',
+      })
+      expect(result.status).toBe('error')
+      if (result.status === 'error') {
+        expect(result.error.message).toContain('switch.next')
       }
     })
   })

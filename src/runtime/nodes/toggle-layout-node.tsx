@@ -14,6 +14,7 @@ import { getValidationErrorForEditedField } from '../runtime-form-validations'
 import { useRuntimeState, useRuntimeStateActions } from '../runtime-state/use-runtime-state'
 import { selectFormFieldState } from '../runtime-state/runtime-state-selectors'
 import { FieldTooltip } from './field-tooltip'
+import { SwitchControl } from './switch-control'
 
 interface ToggleNodeProps {
   node: ToggleLayoutNode
@@ -66,16 +67,13 @@ export function ToggleNode({ node, iterationContext }: ToggleNodeProps) {
   }
 
   const toggleButton = (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={value}
-      aria-describedby={hasError ? `${formContext.formId}-${node.props.fieldId}-error` : undefined}
+    <SwitchControl
+      checked={value}
       onClick={handleClick}
-      className={getToggleButtonClassName(value)}
-    >
-      <span className={getToggleKnobClassName(value)} />
-    </button>
+      trackClassName={getToggleButtonClassName(value)}
+      knobClassName={getToggleKnobClassName(value)}
+      ariaDescribedBy={hasError ? `${formContext.formId}-${node.props.fieldId}-error` : undefined}
+    />
   )
 
   return (

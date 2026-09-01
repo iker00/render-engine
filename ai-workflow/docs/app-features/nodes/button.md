@@ -11,8 +11,11 @@
 - `props.action`: opcional; sin `action` solo es válido dentro del subárbol de un `form` y actúa como submit implícito.
 - `props.action.type`: `navigateTo | goBack | executeOperation | executeOperations | downloadOperation | resetForm | openModal | closeModal`.
 - `props.color`: opcional, enum cerrado de seis valores semánticos: `neutral | primary | success | warning | danger | info`, default `primary`.
-- `props.variant`: opcional, enum cerrado de cuatro variantes visuales: `solid | outline | ghost | link`, default `solid`.
+- `props.variant`: opcional, enum cerrado de cinco variantes visuales: `solid | outline | ghost | link | switch`, default `solid`.
 - `props.fullWidth`: opcional, boolean que, cuando es `true`, hace que el botón ocupe el 100% del ancho del contenedor padre, default `false`.
+- `props.checked`: boolean literal o referencia dinámica completa (misma frontera que `defaultValue` de campos de formulario: `item.*`, `queries.*`, `forms.*`, `params.*`). Obligatorio cuando `props.variant: 'switch'`; no válido (config rechazado) en cualquier otro `variant`.
+- `props.labelVisible`: boolean opcional, default `true`. Solo válido cuando `props.variant: 'switch'`; no válido (config rechazado) en cualquier otro `variant`. Cuando es `false`, `label` deja de renderizarse como texto visible y pasa a usarse como `aria-label` del control.
+- `props.icon`/`props.iconPosition` no son válidos cuando `props.variant: 'switch'` (config rechazado): la variante switch no admite icono.
 
 ### `navigateTo`
 - `props.action.pageId`: string obligatorio y no vacío.
@@ -87,6 +90,17 @@ Botón sin borde ni fondo visible en estado normal, solo texto con el color sem�
 ### Variante `link`
 Botón que se renderiza visualmente como un enlace de texto (sin fondo ni borde), con texto de color semántico. Al hacer hover, aparece un subrayado. Útil para acciones incrustadas en texto corrido o tablas.
 
+### Variante `switch`
+Se renderiza como `<button type="button" role="switch" aria-checked={checked}>`, misma semántica de accesibilidad que ya usa `toggle` (comparten el mismo componente presentacional del control), en vez del esqueleto rectangular de las otras cuatro variantes.
+
+- El estado visual marcado/no marcado se recalcula en cada render a partir del valor resuelto de `props.checked`; un click no lo cambia de forma local ni optimista. Una referencia bien formada cuyo dato aún no existe degrada a `false` (no marcado), consistente con la política general de degradación segura del runtime. Un `checked` literal fijo mantiene siempre ese estado visual.
+- `props.color` tiñe el track solo cuando `checked` resuelve `true`, con el color semántico configurado; con `checked: false` el track usa siempre el mismo tratamiento neutro, sin variación por `color`.
+- `props.labelVisible: false` oculta el texto de `label` en el DOM visible pero lo expone como `aria-label` del control; con `labelVisible` ausente o `true`, `label` se renderiza como texto visible junto al control y el control no añade `aria-label` propio.
+- Un click siempre dispara la `action` configurada, con el mismo catálogo y resolución de `item.*`/`query`/`body`/`headers` que el resto de variantes de `button` (incluida dentro de `repeater`, `table`, `modal` o como botón auxiliar de `form`); la variante switch no introduce ningún estado `disabled` — el click dispara la `action` incluso con el switch ya `checked: true`.
+- `props.action` es obligatorio con `variant: 'switch'` (config rechazado sin él), incluso fuera de un `form`: sin `action` el control no tendría ningún efecto observable.
+- `props.action.query`/`body`/`headers` (y cada entrada de `props.action.operations[]` cuando `action.type: executeOperations`) puede referenciar la referencia sintética `switch.next`, que resuelve al booleano contrario al `checked` resuelto de esa misma instancia en el momento del click (p. ej. `body: { isPrimary: "switch.next" }`). Frontera y detalle en [[../references/reference-resolution.md#Frontera específica de switch.next]]. `switch.next` fuera de esa superficie (`props.checked`, `visibility.reference`, la `action` de otro nodo, o un `button` cuyo `variant` no es `switch`) se rechaza en bootstrap.
+- La variante no gestiona exclusividad entre switches ("solo un item principal a la vez"): se asume resuelta en backend y reflejada en la siguiente lectura del dato de origen de `checked`, típicamente tras el refetch encadenado en `onSuccess` de la propia `action`.
+
 ### Paleta de colores semánticos
 Idéntica a la establecida en `badge`, `alert` y `stat`:
 - `neutral`: Sin connotación semántica específica.
@@ -97,7 +111,7 @@ Idéntica a la establecida en `badge`, `alert` y `stat`:
 - `info`: Información adicional o acción informativa.
 
 ## Reglas de render
-- `button.props` soporta `label`, `action`, `color`, `variant` y `fullWidth`; `label` admite literal, referencia completa o interpolación parcial visible, y `action` cubre `navigateTo`, `goBack`, `executeOperation`, `executeOperations`, `downloadOperation`, `resetForm`, `openModal` y `closeModal`.
+- `button.props` soporta `label`, `action`, `color`, `variant`, `fullWidth`, y — solo con `variant: 'switch'` — `checked`/`labelVisible`; `label` admite literal, referencia completa o interpolación parcial visible, y `action` cubre `navigateTo`, `goBack`, `executeOperation`, `executeOperations`, `downloadOperation`, `resetForm`, `openModal` y `closeModal`.
 - `navigateTo` puede añadir `params` escalares por entrada y escribirlos en `#/pageId?...` o `#/?...` para la home funcional.
 - `executeOperation` puede aportar `query`, `body` y `headers` por ejecución.
 - `executeOperations` lanza un array de operaciones en paralelo, cada una con overrides opcionales de `query`, `body` y `headers`.
@@ -122,7 +136,13 @@ Idéntica a la establecida en `badge`, `alert` y `stat`:
 - Si una entrada `executeOperation` de `props.action.onSuccess`/`onError` lleva `body` pero `api[operationName].method === 'GET'`, el config se rechaza antes del render con el error `GET operations do not support body.`
 - Una entrada dentro de `props.action.onSuccess`/`onError` que declare su propio `onSuccess`/`onError` se rechaza en bootstrap (anidamiento no soportado).
 - Si `button.props.color` toma un valor fuera del enum cerrado (`neutral | primary | success | warning | danger | info`), el config completo se rechaza antes del render con código `invalid-layout` y ruta exacta.
-- Si `button.props.variant` toma un valor fuera del enum cerrado (`solid | outline | ghost | link`), el config completo se rechaza antes del render con código `invalid-layout` y ruta exacta.
+- Si `button.props.variant` toma un valor fuera del enum cerrado (`solid | outline | ghost | link | switch`), el config completo se rechaza antes del render con código `invalid-layout` y ruta exacta.
 - Si `button.props.fullWidth` no es un valor booleano, el config completo se rechaza antes del render con código `invalid-layout` y ruta exacta.
 - Si `button.props.iconPosition` toma un valor fuera del enum cerrado (`"left" | "right"`), el config completo se rechaza antes del render con código `invalid-layout` y ruta exacta.
 - Un botón sin `color` ni `variant` explícitos se comporta como `color: primary` y `variant: solid`.
+- Si `button.props.variant: 'switch'` y `checked` está ausente, el config completo se rechaza antes del render.
+- Si `button.props.checked` o `button.props.labelVisible` están presentes con `variant` distinto de `switch` (incluido `variant` ausente), el config completo se rechaza antes del render.
+- Si `button.props.variant: 'switch'` y `props.icon` está declarado, el config completo se rechaza antes del render.
+- Si `button.props.variant: 'switch'` y `props.action` está ausente, el config completo se rechaza antes del render — sustituye, para esta variante, a la regla genérica de "botón sin `action` fuera de `form`": un `switch` con `action` se acepta con normalidad fuera de un `form`.
+- Si `switch.next` aparece en `props.action.query`/`body`/`headers` (o en `operations[].query`/`body`/`headers` con `action.type: executeOperations`) de un `button` cuyo `variant` no es `switch`, el config completo se rechaza antes del render.
+- Si `switch.next` aparece en cualquier superficie distinta de `props.action.query`/`body`/`headers`/`operations[].*` del propio `button` con `variant: 'switch'` (por ejemplo `props.checked`, `visibility.reference`, o la `action` de otro nodo), el config completo se rechaza antes del render.

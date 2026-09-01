@@ -32,6 +32,7 @@ export interface RuntimeIterationContext {
 
 interface ResolveRuntimeReferenceOptions {
   iterationContext?: RuntimeIterationContext
+  switchNextValue?: boolean
   localPlaceholders?: Record<string, string>
 }
 
@@ -46,6 +47,7 @@ export function resolveRuntimeReference(
   const parsedReference = parseRuntimeReference(value, {
     allowItemReference: options.iterationContext !== undefined,
     allowRowReference: options.iterationContext !== undefined,
+    allowSwitchNextReference: options.switchNextValue !== undefined,
   })
 
   if (parsedReference.kind === 'literal') {
@@ -70,7 +72,7 @@ export function resolveRuntimeReference(
   }
 
   if (state) {
-    const resolvedValue = resolveSupportedReferenceValue(parsedReference, state, options.iterationContext)
+    const resolvedValue = resolveSupportedReferenceValue(parsedReference, state, options)
 
     if ('tokenError' in resolvedValue) {
       return {
@@ -272,8 +274,14 @@ export function resolveRuntimeValueWithOptions(
 function resolveSupportedReferenceValue(
   reference: RuntimeSupportedReference,
   state: RuntimeState,
-  iterationContext?: RuntimeIterationContext,
+  options: ResolveRuntimeReferenceOptions,
 ): { found: true; value: unknown } | { found: false } | { tokenError: true } {
+  const { iterationContext } = options
+
+  if (reference.namespace === 'switch') {
+    return { found: true, value: options.switchNextValue } as const
+  }
+
   if (reference.namespace === 'tokens') {
     const [tokenId] = reference.path
     const tokenState = (state.tokens ?? {})[tokenId]

@@ -36,12 +36,29 @@ const buttonLinkVariantClassMap: Record<ButtonColor, string> = {
   info: 'border-transparent bg-transparent text-info-600 hover:underline underline-offset-2',
 }
 
-const buttonVariantClassMaps: Record<ButtonVariant, Record<ButtonColor, string>> = {
+const buttonVariantClassMaps: Record<Exclude<ButtonVariant, 'switch'>, Record<ButtonColor, string>> = {
   solid: buttonSolidVariantClassMap,
   outline: buttonOutlineVariantClassMap,
   ghost: buttonGhostVariantClassMap,
   link: buttonLinkVariantClassMap,
 }
+
+const buttonSwitchTrackBaseClassName =
+  'relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-app-accent'
+
+const buttonSwitchCheckedTrackColorClassMap: Record<ButtonColor, string> = {
+  neutral: 'bg-neutral-500',
+  primary: 'bg-primary-600',
+  success: 'bg-success-600',
+  warning: 'bg-warning-500',
+  danger: 'bg-danger-600',
+  info: 'bg-info-500',
+}
+
+const buttonSwitchUncheckedTrackColorClassName = 'bg-neutral-200'
+
+const buttonSwitchKnobBaseClassName =
+  'pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out'
 
 export function getButtonNodeClassName() {
   return getSecondaryButtonNodeClassName()
@@ -99,7 +116,7 @@ export function getSecondaryButtonNodeClassName() {
 
 export function getButtonVariantClassName(
   color: ButtonColor,
-  variant: ButtonVariant,
+  variant: Exclude<ButtonVariant, 'switch'>,
   fullWidth: boolean,
 ): string {
   const fontWeight = variant === 'solid' ? 'font-semibold' : 'font-medium'
@@ -125,4 +142,16 @@ export function getButtonVariantClassName(
   const variantClasses = buttonVariantClassMaps[variant][color]
 
   return [...baseClasses, widthClass, variantClasses].join(' ')
+}
+
+export function getButtonSwitchClassName(
+  checked: boolean,
+  color: ButtonColor,
+): { trackClassName: string; knobClassName: string } {
+  const trackColorClassName = checked ? buttonSwitchCheckedTrackColorClassMap[color] : buttonSwitchUncheckedTrackColorClassName
+
+  return {
+    trackClassName: `${buttonSwitchTrackBaseClassName} ${trackColorClassName}`,
+    knobClassName: `${buttonSwitchKnobBaseClassName} ${checked ? 'translate-x-5' : 'translate-x-0'}`,
+  }
 }

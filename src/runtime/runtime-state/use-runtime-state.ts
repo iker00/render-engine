@@ -310,6 +310,7 @@ export function useRuntimeStateActions() {
         snapshotState?: RuntimeState
         requestParams?: RuntimeApiRequestParams
         iterationContext?: RuntimeIterationContext
+        switchNextValue?: boolean
         hiddenFormFields?: RuntimeApiHiddenFormFields
         emptySubmitValues?: RuntimeApiEmptySubmitValues
         fileInputSources?: RuntimeApiFileInputSources
@@ -326,6 +327,7 @@ export function useRuntimeStateActions() {
         snapshotState: options?.snapshotState ?? getLatestState(),
         requestParams: options?.requestParams,
         iterationContext: options?.iterationContext,
+        switchNextValue: options?.switchNextValue,
         hiddenFormFields: options?.hiddenFormFields,
         emptySubmitValues: options?.emptySubmitValues,
         fileInputSources: options?.fileInputSources,
