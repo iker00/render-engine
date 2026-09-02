@@ -37,6 +37,13 @@ Si el paso 1 falla, detenerse y explicitar qué artefacto o estado falta.
 
 Si el paso 2 falla, detenerse sin lanzar ningún subagente. La respuesta final debe listar los errores detectados y dejar claro que la pasada no arrancó porque el repo no estaba en verde de entrada. La corrección de esa deuda ajena queda fuera del alcance de la skill: el usuario decide si la arregla y relanza, o si la deja para otro flujo.
 
+3. **Commit de planificación**, antes de lanzar el primer subagente y solo si los dos pasos anteriores pasan:
+   ```
+   git add ai-workflow/features/<carpeta-de-la-feature>/
+   git diff --cached --quiet || git commit -m "docs: plan feature <slug>"
+   ```
+   `<slug>` es la parte legible del nombre de carpeta de la feature (formato Conventional Commits en `ai-workflow/docs/vcs.md`). Esto deja `spec.md`, `design.md` (si existe), `tasks.md` y `status.yaml` ya commiteados antes de que arranque ninguna tarea, para que el `git add -A` del paso 6 (commit de la primera tarea) no los arrastre por error. Si esta skill se relanza para retomar una pasada anterior y esos artefactos ya estaban commiteados, `git diff --cached --quiet` evita un commit vacío.
+
 ## Contexto compartido y validación: automáticos
 
 El orquestador **no** prepara contexto ni ejecuta validaciones por tarea. De eso se encargan la definición del agente y dos hooks registrados en `.claude/settings.json` con matcher `implement-task`:
@@ -66,8 +73,13 @@ Consecuencias para el orquestador:
 4. Lanzar un subagente para esa tarea con la herramienta `Agent` (ver "Lanzamiento del subagente").
 5. Recibir el texto final del subagente y parsearlo como JSON. Tolerar `\`\`\`json` y `\`\`\`` envolventes si el subagente los añade. Si el JSON no se puede parsear o falta algún campo obligatorio, tratarlo como `status: "failed"` con `blocker_reason` describiendo el problema de protocolo y continuar por la rama de fallo del paso 6.
 6. Según el `status` devuelto:
-   - `completed`: actualizar `status.yaml` (mover el ID de `in_progress_task_id` a `completed_task_ids`, limpiar `in_progress_task_id`). Pasar a la siguiente tarea.
-   - `blocked` o `failed`: detener la pasada, dejar la tarea en `in_progress_task_id`, registrar el motivo en `status.yaml.blocked_by` y saltar al paso 8.
+   - `completed`: actualizar `status.yaml` (mover el ID de `in_progress_task_id` a `completed_task_ids`, limpiar `in_progress_task_id`) y, después de actualizarlo, hacer **un único commit con todo lo de esta tarea** — código, tests y la propia actualización de `status.yaml` — usando el `commit_message` que trae el JSON del subagente:
+     ```
+     git add -A
+     git commit -m "<commit_message del subagente>"
+     ```
+     El subagente nunca ejecuta git por su cuenta; el commit lo hace siempre el orquestador, aquí, después de recibir `status: "completed"` y actualizar `status.yaml`. `git add -A` es seguro en este punto porque no queda nada suelto de fases anteriores (el commit de planificación ya recogió `spec.md`/`design.md`/`tasks.md`/el `status.yaml` inicial antes de la primera tarea). Pasar a la siguiente tarea.
+   - `blocked` o `failed`: detener la pasada, dejar la tarea en `in_progress_task_id`, registrar el motivo en `status.yaml.blocked_by` y saltar al paso 8. No commitear en este caso: los cambios (incluido el `status.yaml` con el bloqueo) quedan sin commitear para que el usuario decida cómo seguir.
 7. Repetir desde el paso 1.
 8. Ejecutar la validación final de cobertura del proyecto (`pnpm test`). Si no se implementó ninguna tarea en esta pasada (gate fallido o bloqueo temprano sin código nuevo), se puede omitir y dejar los flags de validación en `false`.
 9. Actualizar `status.yaml`:
@@ -97,6 +109,7 @@ Consecuencias para el orquestador:
   - `files_created`, `files_modified`, `tests_added_or_updated`
   - `notes_for_documentation`
   - `blocker_reason`
+  - `commit_message` (usado para el commit de la tarea cuando `status` es `completed`)
 
 ## Reglas de trabajo (orquestador)
 - Mantener el orden definido por `tasks.md`. No reordenar ni fusionar tareas.

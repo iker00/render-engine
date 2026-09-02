@@ -4,7 +4,6 @@ description: Genera o refina la spec funcional de una feature de este proyecto a
 model: sonnet
 allowed-tools: Read, Write, Edit, Bash
 ---
-
 # Generar spec de feature
 
 Usa esta skill cuando la tarea sea definir una feature antes de planificar su implementación.
@@ -14,18 +13,17 @@ Esta skill debe comportarse como la fase de alineamiento de un flujo guiado por 
 ## Cuándo usar esta skill
 
 **Úsala cuando:**
+
 - El usuario pide escribir o refinar `spec.md` para una feature concreta
 - La feature está en fase de definición y aún no hay spec cerrada
 - `status.yaml` no existe o marca `phase: idea` / `phase: exploration`
 - Frases típicas: "escribe la spec de X", "define la feature Y", "qué debería hacer Z", "crea la spec para <slug>"
 
 **No la uses cuando:**
+
 - Ya existe una `spec.md` cerrada y el siguiente paso es planificación → `generate-implementation-plan`
 - El usuario quiere explorar sin comprometerse a una spec → `explore-feature-scope`
 - La feature requiere decisiones técnicas antes de especificar → `generate-feature-design`
-
-## Reglas VCS
-Leer `ai-workflow/docs/vcs.md` y aplicar la sección **"Fase generate-feature-spec"** antes de tocar ningún artefacto. Ejecutar directamente sin pedir confirmación.
 
 ## Leer siempre
 - `ai-workflow/docs/workflow.md`
@@ -43,6 +41,7 @@ Leer `ai-workflow/docs/vcs.md` y aplicar la sección **"Fase generate-feature-sp
 - `ai-workflow/features/index.md` si hace falta histórico reciente, coordinación con otras features o actualizar el mapa de entregas.
 
 ## Objetivo
+
 Cerrar las dudas mínimas necesarias de producto antes de escribir o refinar `features/YYYY-MM-DD-HH-MM-feature-name/spec.md`, y dejar `status.yaml` alineado con el estado de la feature.
 
 El resultado debe mantenerse en el nivel de producto y comportamiento. No conviertas todavía la spec en tareas de implementación.
@@ -50,13 +49,16 @@ El resultado debe mantenerse en el nivel de producto y comportamiento. No convie
 Si la feature requiere decisiones técnicas relevantes para su implementación (arquitectura, integración con runtime, migración, trade-offs técnicos), marcar `requires_design: true` en `status.yaml` y redirigir al usuario a `generate-feature-design` como siguiente paso.
 
 ## Fase obligatoria de aclaración
+
 Antes de generar o reescribir la spec:
+
 - revisa la sección `Riesgos o preguntas abiertas` de la `spec.md` existente si la hubiera
 - identifica solo las dudas que bloquean una spec cerrada y planificable
 - descarta preguntas cosméticas, duplicadas o que puedan resolverse razonablemente con el contexto existente
 - formula al usuario el número mínimo de preguntas necesarias
 
 Cada pregunta debe:
+
 - ir numerada
 - describir la duda de forma concreta y breve
 - incluir una sugerencia explícita de la mejor solución posible según el contexto del proyecto
@@ -70,6 +72,7 @@ Formato esperado de las preguntas:
 ```
 
 Tras recibir respuesta:
+
 - incorpora las decisiones confirmadas a la spec
 - elimina de `Riesgos o preguntas abiertas` las dudas ya resueltas
 - conserva solo riesgos reales no resueltos o dependencias externas que sigan abiertas
@@ -77,7 +80,9 @@ Tras recibir respuesta:
 Si no quedan dudas bloqueantes, no hagas preguntas y genera la spec directamente.
 
 ## Estructura de la spec
+
 La spec debe contener:
+
 - objetivo
 - alcance
 - fuera de alcance
@@ -88,12 +93,22 @@ La spec debe contener:
 - riesgos o preguntas abiertas
 
 También puede incluir, cuando sea útil:
+
 - áreas de producto afectadas a alto nivel
 - documentación probablemente afectada a alto nivel
 
 Estos son solo apoyos para el alineamiento. No son tareas de implementación.
 
 ## Reglas de trabajo
+
+- Reglas VCS: una vez resueltas las dudas de la fase de aclaración y justo antes de crear la carpeta de la feature o
+escribir cualquier artefacto (no al arrancar la skill, no durante la conversación de aclaración), ejecutar
+directamente sin pedir confirmación:
+  1. `git checkout dev`. Si falla por cambios sin commitear (working tree sucio), **detener el flujo y avisar** para
+   decidir manualmente cómo proceder (no hacer stash ni descartar cambios automáticamente).
+  2. `git pull` para asegurar que la base local está al día.
+  3. Crear la rama desde `dev`: `git checkout -b feature/<descripción>` o `fix/<descripción>` según corresponda  
+   (nomenclatura y formato de commit en `ai-workflow/docs/vcs.md`).
 - Si la carpeta de la feature todavía no existe, crearla con el formato `ai-workflow/features/<timestamp>-<slug>/`, donde `<timestamp>` se obtiene ejecutando `date +%Y-%m-%d-%H-%M` en el momento de la creación y `<slug>` es un `kebab-case` ASCII descriptivo. No inventar el timestamp ni copiarlo de otra feature. Si la carpeta ya existe con el formato antiguo `NNNN-feature-name`, respetar el nombre existente sin renombrar.
 - Basar la spec en el contexto existente del proyecto, no en suposiciones genéricas.
 - Mantener la terminología consistente con `context.md` y con las fichas de `ai-workflow/docs/app-features/`.
@@ -117,6 +132,7 @@ Estos son solo apoyos para el alineamiento. No son tareas de implementación.
 - Si la feature sigue siendo demasiado ambigua para escribir una buena spec, detenerse y explicitar qué decisiones de producto faltan antes de comprometer la spec.
 
 ## Nivel de calidad esperado
+
 - La spec debe ser lo bastante concreta como para planificar la implementación.
 - Los criterios de aceptación deben poder comprobarse con tests.
 - Los elementos fuera de alcance deben evitar ampliaciones accidentales del alcance.
@@ -124,6 +140,7 @@ Estos son solo apoyos para el alineamiento. No son tareas de implementación.
 - Las preguntas abiertas finales deben ser excepcionales: solo riesgos reales, decisiones externas pendientes o incertidumbres no resolubles en esta fase.
 
 ## Terminado cuando
+
 - se han hecho y resuelto las preguntas mínimas necesarias, si existían
 - `spec.md` está actualizada
 - `status.yaml` existe y refleja el estado real tras esta fase, incluida la decisión sobre `requires_design`
@@ -131,3 +148,4 @@ Estos son solo apoyos para el alineamiento. No son tareas de implementación.
 - la planificación técnica se deja intencionadamente para el siguiente paso
 - la spec es revisable sin necesitar detalles de código
 - la respuesta final indica explícitamente el siguiente paso: `generate-feature-design` si `requires_design: true`, o `generate-implementation-plan` en otro caso
+
