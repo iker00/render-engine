@@ -93,6 +93,19 @@ describe('modal inside repeater template', () => {
     expect(within(screen.getByTestId('modal-panel')).queryByText('Bob')).not.toBeInTheDocument()
   })
 
+  it('applies max-h-[90vh] and overflow-y-auto to the panel of an opened iteration instance', () => {
+    renderWithItems([
+      { id: '1', name: 'Alice' },
+      { id: '2', name: 'Bob' },
+    ])
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open Alice' }))
+
+    const panelClassName = screen.getByTestId('modal-panel').className
+    expect(panelClassName).toContain('max-h-[90vh]')
+    expect(panelClassName).toContain('overflow-y-auto')
+  })
+
   it('opening the modal for iteration N closes the modal for iteration M (global one-at-a-time rule)', () => {
     renderWithItems([
       { id: '1', name: 'Alice' },

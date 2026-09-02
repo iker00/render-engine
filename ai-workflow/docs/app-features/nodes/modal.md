@@ -16,6 +16,7 @@
 - Solo puede haber un modal abierto a la vez. Abrir un modal mientras hay otro ya abierto cierra el anterior automáticamente.
 - Tres mecanismos cierran el modal: pulsar ESC, hacer clic en el overlay exterior y ejecutar una acción `closeModal` desde un botón.
 - `props.size` traduce a tres anchos visuales diferenciados: `sm` (estrecho), `md` (estándar) y `lg` (ancho).
+- El panel del modal está limitado a un alto máximo de `90vh` del viewport, independientemente del `props.size`. Cuando el contenido de `children` supera ese límite, el panel activa scroll vertical interno (`overflow-y-auto`) para permitir el desplazamiento del contenido sin crecer más allá del límite. Cuando el contenido cabe dentro del límite de `90vh`, el panel se comporta como antes: sin scrollbar visible y alto ajustado al contenido.
 - `props.defaultOpen: true` abre el modal automáticamente al entrar a la página, sin interacción previa del usuario.
 - Un `form` dentro de `modal` mantiene exactamente el mismo ciclo de vida, reglas de validación y semántica de submit que cualquier otro `form` del runtime.
 - El foco se atrapa dentro del panel mientras está abierto; al cerrar, se restaura el foco al elemento que lo tenía antes de abrir.
@@ -45,11 +46,17 @@
 - [[button.md#closemodal]] — cierra el modal referenciado por `modalId`.
 
 ## Casos límite
-- **Modal sin `children`**: válido; renderiza un panel vacío.
+- **Modal sin `children`**: válido; renderiza un panel vacío sin scrollbar.
+- **Modal con contenido que cabe en el viewport**: no muestra scrollbar; el alto del panel se ajusta al contenido, igual que antes del límite de `90vh`.
+- **Modal con contenido más alto que `90vh`**: el panel limita su alto y muestra scrollbar vertical; el usuario puede desplazarse para ver todo el contenido sin que el panel crezca más allá del límite.
+- **Contenido dinámico que crece después de abrir el modal**: el límite de `90vh` y el scroll reaccionan al alto real del contenido en cada render.
+- **Viewport muy pequeño (móvil)**: el límite de `90vh` se recalcula sobre el alto real del viewport del dispositivo; el panel nunca queda completamente fuera de pantalla.
+- **`form` largo dentro de `modal`** (muchos campos): el scroll del panel permite llegar hasta los botones de submit/cierre sin que estos queden inaccesibles.
+- **Modal con scroll activo**: el foco sigue atrapado dentro del panel y se restaura al cerrar, igual que sin scroll.
 - **`closeModal` sobre un modal ya cerrado**: no produce efecto ni error visible.
 - **`defaultOpen: true` + `visibility: false` al cargar**: el modal no se renderiza; la visibilidad tiene precedencia sobre `defaultOpen`.
 - **Botón fuera del modal que cierra ese modal**: válido; la acción `closeModal` funciona desde cualquier ubicación.
 - **`form` con `persistOnUnmount: false` dentro de `modal`**: al cerrar el modal el formulario mantiene su estado si el nodo modal sigue en el árbol; al navegar a otra página el formulario pierde estado según el comportamiento habitual.
 - **Navegar a otra página**: todos los modales se cierran automáticamente.
 - **Modal sin `props.label` y sin heading hijo**: el fallback `aria-label="Diálogo"` garantiza nombre accesible siempre.
-- **Modal dentro de `repeater`**: cada instancia de modal tiene su propio panel con `role="dialog"` y el mismo `aria-label` derivado de `props.label` o del fallback.
+- **Modal dentro de `repeater`**: cada instancia de modal tiene su propio panel con `role="dialog"` y el mismo `aria-label` derivado de `props.label` o del fallback. El límite de alto y el scroll se aplican de forma independiente a cada instancia.

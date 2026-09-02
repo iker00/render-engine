@@ -18,6 +18,7 @@ Esta skill puede ejecutarse de dos formas:
 En ambos casos el contrato de la revisión es el mismo. La única diferencia es que, en modo sub-agente, el contexto del agente está limpio y la salida debe ser un veredicto explícito (plan aprobado o refinamientos concretos) que el agente principal pueda aplicar.
 
 ## Leer siempre
+Lee en un único turno (varias llamadas Read en el mismo mensaje) todos los ficheros fijos; el marcado «si existe...» no rompe el paralelismo:
 - `ai-workflow/docs/workflow.md`
 - `ai-workflow/features/YYYY-MM-DD-HH-MM-feature-name/spec.md`
 - `ai-workflow/features/YYYY-MM-DD-HH-MM-feature-name/tasks.md`
@@ -26,8 +27,8 @@ En ambos casos el contrato de la revisión es el mismo. La única diferencia es 
 - `ai-workflow/docs/context.md`
 - `ai-workflow/docs/architecture.md`
 - `ai-workflow/docs/conventions.md`
-- `ai-workflow/docs/app-features/index.md`
-- solo las fichas de `ai-workflow/docs/app-features/` que el índice marque como relevantes (típicamente 1-3, rara vez más de 5)
+
+En otro turno, lee `ai-workflow/docs/app-features/index.md`; con su contenido, identifica las fichas de `ai-workflow/docs/app-features/` relevantes (típicamente 1-3, rara vez más de 5) y léelas todas en un único turno posterior.
 
 ## Leer si aplica
 - `ai-workflow/docs/current-state.md` si hace falta confirmar estado vigente o límites actuales.

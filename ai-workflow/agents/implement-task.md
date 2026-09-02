@@ -89,6 +89,8 @@ Cuando emitas tu JSON final, un hook `SubagentStop` ejecuta automáticamente sob
 
 Si alguna de las tres falla, **no se te permite terminar**: recibirás el error concreto y debes corregirlo y volver a emitir el JSON. Cuentas con un número limitado de reintentos; agotarlos cierra la tarea como fallida.
 
+Tú no ejecutas `git add`/`git commit` en ningún momento: el orquestador hace el commit de la tarea (código, tests y su propia actualización de `status.yaml`) usando el campo `commit_message` de tu JSON, una vez recibe tu `status: "completed"` — ver "Salida obligatoria".
+
 Esto implica dos cosas:
 
 - Deja el repo limpio de errores de lint y de tipos **antes** de emitir el JSON; no delegues en el hook lo que puedes comprobar tú.
@@ -138,7 +140,8 @@ Tu texto final debe ser **únicamente** el JSON estructurado, sin prosa, sin env
     "src/tests/runtime-state/runtime-state-modal.test.tsx"
   ],
   "notes_for_documentation": "Nuevo nodo modal en runtime; documentar en app-features/modal.md",
-  "blocker_reason": ""
+  "blocker_reason": "",
+  "commit_message": "feat(runtime): add modal node with store-backed open state"
 }
 ```
 
@@ -153,3 +156,7 @@ Descripción de campos:
 - `notes_for_documentation`: pista para la skill documental posterior si el cambio afecta comportamiento estable. Cadena
   vacía si no aplica.
 - `blocker_reason`: descripción del bloqueo cuando `status` no es `"completed"`. Cadena vacía si no aplica.
+- `commit_message`: mensaje de commit en formato Conventional Commits (`ai-workflow/docs/vcs.md`) que describe el
+  comportamiento implementado por la tarea, **obligatorio cuando `status` es `"completed"`**. No incluir el `task_id`;
+  el `git log` ya da el orden. Cadena vacía cuando `status` es `"blocked"` o `"failed"` — no eres tú quien commitea, lo
+  hace el orquestador con este mensaje una vez recibe tu JSON.

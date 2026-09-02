@@ -9,12 +9,12 @@ El proyecto usa dos ramas permanentes:
 
 Todo el trabajo de features ocurre en ramas de vida corta creadas desde `dev`. Nunca se trabaja directamente sobre `master` ni sobre `dev`.
 
-**Política de commits**: Cada feature se consolida en **un único commit** al final de su ciclo de vida completo que incluye TODOS los cambios siguientes:
-- Código fuente y tests.
-- Documentación funcional actualizada (`ai-workflow/docs/app-features/`).
-- Artefactos del flujo de la feature (`spec.md`, `design.md`, `tasks.md`, `status.yaml`).
+**Política de commits**: una feature se consolida en tres tipos de commit, nunca en trabajo suelto sin commitear entre medio:
+- **Un commit de planificación**, hecho por `implement-task-test-first` justo antes de lanzar la primera tarea, con `spec.md`, `design.md` (si existe), `tasks.md` y `status.yaml` tal como quedaron al cerrar la planificación. Deja esos artefactos fuera del alcance de los commits de tareas.
+- **Un commit por tarea de implementación**, hecho por el orquestador (`implement-task-test-first`) justo después de que el subagente de implementación la cierre con éxito (contrato en `ai-workflow/agents/implement-task.md`) y de que el orquestador actualice `status.yaml`. El subagente nunca ejecuta git: solo propone el `commit_message`; el orquestador hace `git add -A` + commit con el código, los tests y la actualización de `status.yaml` de esa tarea juntos.
+- **Un commit final de documentación**, hecho por `update-app-documentation` al cerrar la feature, con la documentación funcional y los artefactos del flujo actualizados en esta última fase (`spec.md`, `design.md`, `tasks.md`, `status.yaml`). No reabre ni reescribe los commits anteriores.
 
-**No se hacen commits intermedios** de trabajo parcial, ni commits separados por fase (implementación vs. documentación). Todos los cambios permanecen en working tree hasta que la feature esté completamente lista (código + tests + documentación + artefactos), momento en el que se consolida en un único commit.
+No se generan commits especulativos ni de trabajo en curso fuera de estos tres puntos de cierre.
 
 ### Nomenclatura de ramas
 ```
@@ -22,45 +22,6 @@ feature/<descripción-en-kebab-case>
 fix/<descripción-en-kebab-case>
 ```
 Usar `feature/` para nuevas funcionalidades y `fix/` para correcciones de defecto. La descripción debe ser breve y legible.
-
-### Diff filtrado para actualización de documentación
-
-Cuando el objetivo del diff es actualizar documentación funcional del proyecto (no revisar código, no auditar, no preparar un commit), el diff completo suele arrastrar archivos que por naturaleza no aportan a la documentación. Aplicar este procedimiento en tres pasos:
-
-Paso 1 — inventario ligero (siempre):
-```
-git status --short
-git diff --name-only dev
-git diff --stat dev
-```
-
-Paso 2 — filtrado mecánico de la lista (no interpretativo). Excluir siempre:
-- `pnpm-lock.yaml`, `package-lock.json`, `dist/**`, `build/**` y otros generados
-- `ai-workflow/features/**` (ya se cargan por separado como artefactos de feature: spec, tasks, status, design)
-- Tooling: `.eslintrc*`, `.prettierrc*`, `tsconfig*.json`, `vitest.config*`
-- `src/dev/**` (lo cubre la fase interactiva de documentación)
-
-Todo lo demás se incluye. Los tests (`src/tests/**`, `*.test.ts`, `*.spec.ts`) **sí se incluyen** porque su contenido alimenta la actualización del índice de tests.
-
-Paso 3 — diff selectivo de los archivos que sobrevivieron al filtro:
-```
-git diff dev -- <archivo1> <archivo2> ...
-```
-
-Si el filtro deja la lista vacía, no hay nada documentalmente relevante: dejar constancia y detener sin tocar documentación.
-
-## Fase generate-feature-spec
-
-Al comenzar la fase de especificación de una feature:
-1. Hacer `git checkout dev`. Si el `checkout` falla por cambios sin commitear (working tree sucio), **detener el flujo y avisar** para decidir manualmente cómo proceder (no hacer stash ni descartar cambios automáticamente).
-2. Hacer `git pull` para asegurar que la base local está al día.
-3. Crear la nueva rama desde `dev`:
-   ```
-   git checkout -b feature/<descripción>
-   ```
-   o `fix/<descripción>` según corresponda.
-
-Todos los artefactos del flujo (spec, design, tasks, código, documentación) se generan sobre esta rama durante el ciclo de vida de la feature. **No se hacen commits intermedios de trabajo parcial.** Todos los cambios permanecen en el working tree hasta que la feature esté completamente lista (implementación + documentación).
 
 ## Formato de commit
 
@@ -93,44 +54,8 @@ fix(tests): ...
 - No incluir IDs de tarea ni tickets si el nombre de feature ya da el contexto suficiente.
 - No añadir a Claude como coautor.
 
-## Fase update-app-documentation
-
-**IMPORTANTE: Esta es la última fase. Una vez aquí, se hace UN ÚNICO COMMIT con TODO.**
-
-Cuando `status.yaml` marca `feature_status: completed` y `documentation.done: true`, la feature está lista para commit. Proceder inmediatamente sin pedir confirmación adicional.
-
-Al finalizar implementación y documentación (cuando código, tests y documentación están completos, reflejado en `status.yaml`):
-
-1. **Verificar que está todo en working tree** (nada commiteado aún, o todo revertido a antes del primer commit si los hubo):
-   - ✅ Código fuente implementado
-   - ✅ Tests completos y verdes
-   - ✅ Documentación funcional actualizada en `ai-workflow/docs/app-features/`
-   - ✅ Artefactos de feature completos (`spec.md`, `design.md`, `tasks.md`, `status.yaml`)
-
-2. **Hacer el commit único** con todos los cambios:
-   ```
-   git add .
-   git commit -m "feat: implement feature <slug> — short description"
-   ```
-   Para correcciones:
-   ```
-   git commit -m "fix: fix <slug> — short description"
-   ```
-   `<slug>` es la parte legible del nombre de carpeta de la feature (por ejemplo, para `2026-08-20-14-13-navigation-scroll-position` el slug es `navigation-scroll-position`). No incluir el prefijo temporal en el mensaje de commit; la fecha ya la aporta `git log`.
-
-3. **Pushear y crear el Merge Request**:
-   ```
-   git push -o merge_request.create -o merge_request.target=dev -o merge_request.title="<mismo patrón que el commit>" -o merge_request.description="<descripción en una sola línea>" origin <nombre-rama>
-   ```
-   - Título: mismo patrón que el mensaje de commit.
-   - Descripción: **una sola línea sin saltos de línea**. Las opciones `-o` de `git push` rechazan cualquier carácter de nueva línea (`fatal: push options must not have new line characters`), por lo que la descripción no puede ser el volcado literal de `spec.md`. Escribir un resumen breve en una sola línea (por ejemplo, la sección "Objetivo" de la spec compactada) y, si hace falta la spec completa como cuerpo del MR, editarla desde la UI de GitLab tras la creación.
-   - Sin asignación de reviewer ni assignee por defecto.
-
-**Regla de oro**: Si encuentras un commit parcial (solo código sin docs, o docs sin código), eso es un error. El flujo debe terminar con UN ÚNICO COMMIT que incluya código, tests, documentación y artefactos.
-
 ## Lo que NO aplica (errores comunes a evitar)
-- ❌ No se hacen commits parciales durante la implementación (ej: commit de código sin docs, o docs en commit separado).
-- ❌ No se hacen commits intermedios por tarea, por fase (implementación vs. documentación) ni por tipo de artefacto.
+- ❌ No se hacen commits parciales dentro de una misma tarea (código sin sus tests, o tests sin el código que validan): cada commit de tarea incluye ambos juntos.
 - ❌ No se usan squash merges, rebase interactivos ni amends de commits ya empujados a remoto.
 - ❌ No hay changelog generado automáticamente desde los commits.
-- ❌ No se hacen "commits de documentación" separados después de un "commit de código". Ejemplo incorrecto: `git commit código/tests`, luego `git commit docs/`. Debe ser: un solo commit con todo.
+- ❌ El commit final de documentación no reabre, reescribe ni aplasta los commits de tareas ya hechos.

@@ -22,6 +22,7 @@ Esta skill aplica cuando:
 Si `requires_design` es `false` o `artifacts.design` ya es `ready`, esta skill no debería invocarse y se debe pasar directamente a `generate-implementation-plan`.
 
 ## Leer siempre
+Lee en un único turno (varias llamadas Read en el mismo mensaje) todos los ficheros fijos; los marcados «si existe»/«si ya existe» no rompen el paralelismo:
 - `ai-workflow/docs/workflow.md`
 - `ai-workflow/features/YYYY-MM-DD-HH-MM-feature-name/spec.md`
 - `ai-workflow/features/YYYY-MM-DD-HH-MM-feature-name/status.yaml`
@@ -29,9 +30,9 @@ Si `requires_design` es `false` o `artifacts.design` ya es `ready`, esta skill n
 - `ai-workflow/docs/context.md`
 - `ai-workflow/docs/architecture.md`
 - `ai-workflow/docs/conventions.md`
-- `ai-workflow/docs/app-features/index.md`
-- solo las fichas de `ai-workflow/docs/app-features/` que el índice marque como relevantes para la feature (típicamente 1-3, rara vez más de 5)
 - `ai-workflow/templates/design.md`
+
+En otro turno, lee `ai-workflow/docs/app-features/index.md`; con su contenido, identifica las fichas de `ai-workflow/docs/app-features/` relevantes para la feature (típicamente 1-3, rara vez más de 5) y léelas todas en un único turno posterior.
 
 ## Leer si aplica
 - `ai-workflow/docs/current-state.md` si hace falta confirmar el estado vigente o un límite actual.

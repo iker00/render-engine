@@ -1962,5 +1962,19 @@ describe('runtime node styling', () => {
         expect(cn).toContain('p-6')
       }
     })
+
+    it('includes max-h-[90vh] and overflow-y-auto for sm, md and lg without exception', () => {
+      for (const size of ['sm', 'md', 'lg'] as const) {
+        const cn = getModalPanelClassName(size)
+        expect(cn).toContain('max-h-[90vh]')
+        expect(cn).toContain('overflow-y-auto')
+      }
+    })
+
+    it('includes max-h-[90vh] and overflow-y-auto for the default md value when called without argument', () => {
+      const cn = getModalPanelClassName()
+      expect(cn).toContain('max-h-[90vh]')
+      expect(cn).toContain('overflow-y-auto')
+    })
   })
 })
