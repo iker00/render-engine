@@ -14,6 +14,7 @@ Esta skill debe comportarse como la fase de planificación de un flujo guiado po
 La calidad del plan debe ser suficientemente alta como para que dos agentes competentes distintos interpreten lo mismo y produzcan un resultado funcionalmente equivalente, aunque el código final no sea idéntico línea por línea.
 
 ## Leer siempre
+Lee en un único turno (varias llamadas Read en el mismo mensaje) todos los ficheros fijos; los marcados «si existe...» no rompen el paralelismo:
 - `ai-workflow/docs/workflow.md`
 - `ai-workflow/features/YYYY-MM-DD-HH-MM-feature-name/spec.md`
 - `ai-workflow/features/YYYY-MM-DD-HH-MM-feature-name/status.yaml`
@@ -22,9 +23,9 @@ La calidad del plan debe ser suficientemente alta como para que dos agentes comp
 - `ai-workflow/docs/context.md`
 - `ai-workflow/docs/architecture.md`
 - `ai-workflow/docs/conventions.md`
-- `ai-workflow/docs/app-features/index.md`
-- solo las fichas de `ai-workflow/docs/app-features/` que el índice marque como relevantes para la feature (típicamente 1-3, rara vez más de 5)
 - `ai-workflow/docs/test-index.md`
+
+En otro turno, lee `ai-workflow/docs/app-features/index.md`; con su contenido, identifica las áreas relevantes y lee sus `index.md` en un único turno; con esas fichas, identifica los sub-documentos concretos para la feature (típicamente 1-3, rara vez más de 5) y léelos en un único turno final.
 
 ## Leer si aplica
 - `ai-workflow/docs/current-state.md` si hace falta confirmar el estado vigente o un límite actual.

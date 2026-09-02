@@ -12,7 +12,7 @@ Esta skill actúa como **orquestador**: lanza un subagente con contexto limpio p
 El orquestador no implementa código por sí mismo. El contrato del subagente vive en la definición del agente `implement-task` (`ai-workflow/agents/implement-task.md`, enlazada desde `.claude/agents/`), escrita a mano y que nada genera ni modifica. El contexto compartido de la pasada se lo entrega un hook. El orquestador no lee ni pega ninguno de los dos: solo entrega el bloque de tarea.
 
 ## Leer siempre (orquestador)
-Lo mínimo para decidir qué tarea toca y mantener el estado:
+Lo mínimo para decidir qué tarea toca y mantener el estado, en un único turno (varias llamadas Read en el mismo mensaje):
 - `ai-workflow/docs/workflow.md`
 - `ai-workflow/features/YYYY-MM-DD-HH-MM-feature-name/tasks.md`
 - `ai-workflow/features/YYYY-MM-DD-HH-MM-feature-name/status.yaml`

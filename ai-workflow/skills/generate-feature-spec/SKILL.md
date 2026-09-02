@@ -26,15 +26,17 @@ Esta skill debe comportarse como la fase de alineamiento de un flujo guiado por 
 - La feature requiere decisiones técnicas antes de especificar → `generate-feature-design`
 
 ## Leer siempre
+Lee en un único turno (varias llamadas Read en el mismo mensaje) todos los ficheros fijos, junto con los aplicables de "Leer si aplica"; los marcados «si existe»/«si ya existe» no rompen el paralelismo:
 - `ai-workflow/docs/workflow.md`
 - `ai-workflow/docs/context.md`
-- `ai-workflow/docs/app-features/index.md`
-- solo las fichas de `ai-workflow/docs/app-features/` que el índice marque como relevantes para la petición (típicamente 1-3, rara vez más de 5)
 - `ai-workflow/docs/current-state.md` si existe
 - `ai-workflow/features/YYYY-MM-DD-HH-MM-feature-name/status.yaml` si existe
 - `ai-workflow/features/YYYY-MM-DD-HH-MM-feature-name/spec.md` si ya existe
 
+En otro turno, lee `ai-workflow/docs/app-features/index.md`; con su contenido, identifica las áreas relevantes y lee sus `index.md` en un único turno; con esas fichas, identifica los sub-documentos concretos para la petición (típicamente 1-3, rara vez más de 5) y léelos en un único turno final.
+
 ## Leer si aplica
+Léelo en el mismo turno que "Leer siempre" — su aplicabilidad se decide desde la petición, sin depender de ninguna lectura previa:
 - `ai-workflow/docs/architecture.md` si la petición menciona un límite arquitectónico, una frontera de capa o un punto de extensión estable.
 - `ai-workflow/docs/conventions.md` si la petición menciona naming, estructura de carpetas o convenciones de código.
 - `ai-workflow/templates/status.yaml` si `status.yaml` de la feature no existe todavía y hay que crearlo.

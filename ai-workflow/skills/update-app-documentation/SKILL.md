@@ -3,6 +3,8 @@ name: update-app-documentation
 description: Actualiza la documentación funcional y operativa del proyecto después de una implementación ya realizada. Úsala cuando el código y los tests relevantes ya estén cerrados y quieras reflejar el comportamiento estable en `ai-workflow/docs/` y en el índice de features.
 model: haiku
 allowed-tools: Read, Edit, Bash
+context: fork
+background: false
 ---
 
 # Actualizar documentación de la app
@@ -28,13 +30,13 @@ documentadas.
 
 ## Leer siempre
 
+Lee en un único turno (varias llamadas Read en el mismo mensaje) todos los ficheros fijos; el marcado «si existe» no rompe el paralelismo:
 - `ai-workflow/docs/vcs.md`
 - `ai-workflow/features/YYYY-MM-DD-HH-MM-feature-name/spec.md`
 - `ai-workflow/features/YYYY-MM-DD-HH-MM-feature-name/status.yaml`
-- `ai-workflow/docs/app-features/index.md`
-- solo las fichas de `ai-workflow/docs/app-features/` que el índice marque como relevantes para la feature
-  implementada (típicamente 1-3, rara vez más de 5)
 - `ai-workflow/features/index.md` si existe
+
+En otro turno, lee `ai-workflow/docs/app-features/index.md`; con su contenido, identifica las áreas relevantes y lee sus `index.md` en un único turno; con esas fichas, identifica los sub-documentos concretos para la feature implementada (típicamente 1-3, rara vez más de 5) y léelos en un único turno final.
 
 ## Ejecutar siempre al arrancar
 

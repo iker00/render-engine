@@ -14,14 +14,17 @@ Esta skill debe comportarse como una conversación de discovery: aclarar el prob
 Esta skill no produce artefactos. No crea ni modifica ficheros en `ai-workflow/features/YYYY-MM-DD-HH-MM-feature-name/`. No toca `status.yaml`. No genera `discovery.md`. Su única salida es la conversación con el usuario.
 
 ## Leer siempre
+Lee en el mismo turno que los aplicables de "Leer si aplica" (salvo la cadena de `app-features/`, que va en otro turno):
 - `ai-workflow/docs/workflow.md`
 
 ## Leer si aplica
+De los que apliquen según la conversación, léelos en el mismo turno que "Leer siempre" — su aplicabilidad se decide desde la petición del usuario, no requiere leer nada antes:
 - `ai-workflow/docs/context.md` si la conversación menciona un dominio del producto o un concepto de marco general no evidente.
-- `ai-workflow/docs/app-features/index.md` y solo las fichas relevantes si la conversación afecta comportamiento de producto, contrato JSON, runtime visible, formularios, queries, navegación o modo de desarrollo local. Típicamente 0-2 fichas; nunca más de 3 en una conversación de exploración.
 - `ai-workflow/docs/current-state.md` si hace falta confirmar si una capacidad ya existe o si sigue fuera de alcance.
 - `ai-workflow/docs/architecture.md` si hay dudas técnicas que condicionen el alcance de producto.
 - `ai-workflow/features/index.md` si hace falta contexto histórico o coordinación con features planificadas, archivadas o completadas.
+
+Si la conversación afecta comportamiento de producto, contrato JSON, runtime visible, formularios, queries, navegación o modo de desarrollo local: en otro turno, lee `ai-workflow/docs/app-features/index.md`; con eso, lee en un único turno los `index.md` de las áreas relevantes; con esas fichas, lee en un único turno final los sub-documentos concretos (típicamente 0-2, nunca más de 3 en una conversación de exploración).
 
 ## Objetivo
 Sostener un diálogo útil con el usuario para:

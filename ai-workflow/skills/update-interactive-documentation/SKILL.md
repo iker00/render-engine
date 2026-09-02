@@ -24,12 +24,14 @@ Esta skill actúa como un puente entre la documentación funcional escrita (fich
 - Se quiere implementar código nuevo → usar `implement-task-test-first`
 
 ## Leer siempre
-- [ ] `ai-workflow/docs/app-features/index.md`
-- [ ] los `index.md` de cada área en `ai-workflow/docs/app-features/` para identificar sub-documentos relevantes
+Turno 1, en un único turno (varias llamadas Read en el mismo mensaje), los ficheros fijos:
 - [ ] `src/dev/documentation.json` (fichero completo, todas las páginas)
 - [ ] `ai-workflow/docs/context.md`
 
+Turno 2: lee `ai-workflow/docs/app-features/index.md`; con su contenido, identifica las áreas relevantes y lee sus `index.md` en un único turno para identificar sub-documentos relevantes.
+
 ## Leer según aplique
+Con los sub-documentos ya identificados, léelos todos en un único turno:
 - [ ] las fichas concretas de `ai-workflow/docs/app-features/nodes/` para los nodos que necesiten actualización o creación de sección
 - [ ] las fichas de `ai-workflow/docs/app-features/forms/`, `queries/`, `references/`, `navigation/`, `config/`, `runtime/`, `auth/`, `development/` según las brechas detectadas
 - [ ] `ai-workflow/docs/conventions.md` si hace falta respetar convenciones del proyecto
