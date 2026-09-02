@@ -334,6 +334,13 @@ describe('ModalNode', () => {
       expect(smClass).not.toBe(mdClass)
       expect(mdClass).not.toBe(lgClass)
       expect(smClass).not.toBe(lgClass)
+
+      expect(smClass).toContain('max-h-[90vh]')
+      expect(smClass).toContain('overflow-y-auto')
+      expect(mdClass).toContain('max-h-[90vh]')
+      expect(mdClass).toContain('overflow-y-auto')
+      expect(lgClass).toContain('max-h-[90vh]')
+      expect(lgClass).toContain('overflow-y-auto')
     })
   })
 

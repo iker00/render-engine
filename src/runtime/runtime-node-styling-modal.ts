@@ -21,5 +21,7 @@ export function getModalPanelClassName(size: 'sm' | 'md' | 'lg' = 'md') {
     'shadow-shell',
     'cursor-auto',
     'sm:p-8',
+    'max-h-[90vh]',
+    'overflow-y-auto',
   ].join(' ')
 }
