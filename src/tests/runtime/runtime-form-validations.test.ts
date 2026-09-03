@@ -339,7 +339,7 @@ describe('runtime form validations', () => {
     })
   })
 
-  it('resolves {{translations.key}} in custom message from the active language catalog', () => {
+  it('resolves {{t.key}} in custom message from the active language catalog', () => {
     const state: RuntimeState = {
       ...baseState,
       modal: { activeModalId: null, activeIterationKey: null },
@@ -363,7 +363,7 @@ describe('runtime form validations', () => {
         {
           fieldId: 'bio',
           type: 'input',
-          validations: { maxLength: { value: 100, message: '{{translations.max_length_error}}' } },
+          validations: { maxLength: { value: 100, message: '{{t.max_length_error}}' } },
           multiple: false,
           defaultValue: '',
         },
@@ -1297,7 +1297,7 @@ describe('evaluateFileManagerBatch', () => {
     expect(result.acceptedFiles).toEqual([validFile, anotherValidFile])
   })
 
-  it('resolves {{translations.key}} inside a custom accept message from the active language catalog', () => {
+  it('resolves {{t.key}} inside a custom accept message from the active language catalog', () => {
     const state: RuntimeState = {
       ...baseState,
       modal: { activeModalId: null, activeIterationKey: null },
@@ -1310,7 +1310,7 @@ describe('evaluateFileManagerBatch', () => {
       tokens: {},
     }
     const validations: RuntimeFileManagerValidations = {
-      accept: { value: ['application/pdf'], message: '{{translations.tipoNoValido}}' },
+      accept: { value: ['application/pdf'], message: '{{t.tipoNoValido}}' },
     }
     const invalidFile = makeFile('doc.txt', 'text/plain', 1000)
 
@@ -1330,7 +1330,7 @@ describe('evaluateFileManagerBatch', () => {
     expect(result.rejection?.message).toBe('Máximo 2 MB')
   })
 
-  it('resolves {{translations.key}} inside a custom maxTotalSize message (batch scope)', () => {
+  it('resolves {{t.key}} inside a custom maxTotalSize message (batch scope)', () => {
     const state: RuntimeState = {
       ...baseState,
       modal: { activeModalId: null, activeIterationKey: null },
@@ -1343,7 +1343,7 @@ describe('evaluateFileManagerBatch', () => {
       tokens: {},
     }
     const validations: RuntimeFileManagerValidations = {
-      maxTotalSize: { value: 0.001, message: '{{translations.excedido}}' },
+      maxTotalSize: { value: 0.001, message: '{{t.excedido}}' },
     }
     const file = makeFile('big.pdf', 'application/pdf', 2000)
 

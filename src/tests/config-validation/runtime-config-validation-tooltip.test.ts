@@ -249,7 +249,7 @@ describe('validateRuntimeConfig — tooltip prop', () => {
     const result = validateRuntimeConfig(
       createFieldInForm({
         type: 'input',
-        props: { fieldId: 'name', label: 'Name', tooltip: '{{translations.helpText}}' },
+        props: { fieldId: 'name', label: 'Name', tooltip: '{{t.helpText}}' },
       }),
     )
     expect(result.status).toBe('ready')
@@ -258,7 +258,7 @@ describe('validateRuntimeConfig — tooltip prop', () => {
     if (formNode.type !== 'form') throw new Error('Expected form')
     expect(formNode.children?.[0]).toMatchObject({
       type: 'input',
-      props: { fieldId: 'name', tooltip: '{{translations.helpText}}' },
+      props: { fieldId: 'name', tooltip: '{{t.helpText}}' },
     })
   })
 })

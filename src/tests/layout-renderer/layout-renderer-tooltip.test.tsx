@@ -305,7 +305,7 @@ describe('tooltip integration in field nodes', () => {
           type: 'form',
           id: 'f',
           children: [
-            { type: 'input', props: { fieldId: 'name', label: 'Name', tooltip: '{{translations.helpText}}' } },
+            { type: 'input', props: { fieldId: 'name', label: 'Name', tooltip: '{{t.helpText}}' } },
           ],
         },
       ],
@@ -349,7 +349,7 @@ describe('tooltip integration in field nodes', () => {
           type: 'form',
           id: 'f',
           children: [
-            { type: 'input', props: { fieldId: 'name', label: 'Name', tooltip: '{{translations.missing}}' } },
+            { type: 'input', props: { fieldId: 'name', label: 'Name', tooltip: '{{t.missing}}' } },
           ],
         },
       ],

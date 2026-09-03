@@ -1017,7 +1017,7 @@ describe('useFileManager', () => {
         ...declarativeNode,
         props: {
           ...declarativeNode.props,
-          labels: { uploadListPathMissing: 'translations.subidaSinLista' },
+          labels: { uploadListPathMissing: 't.subidaSinLista' },
         },
       }
 
@@ -1074,7 +1074,7 @@ describe('useFileManager', () => {
         ...declarativeNode,
         props: {
           ...declarativeNode.props,
-          labels: { deleteError: 'translations.borradoFallido' },
+          labels: { deleteError: 't.borradoFallido' },
         },
       }
 

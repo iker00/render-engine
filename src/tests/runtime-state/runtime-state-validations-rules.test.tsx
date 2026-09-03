@@ -551,12 +551,12 @@ describe('Runtime shared state store', () => {
     ).toBeNull()
   })
 
-  it('resolves {{translations.key}} in the inline reevaluation error message via the active language catalog', () => {
+  it('resolves {{t.key}} in the inline reevaluation error message via the active language catalog', () => {
     const fieldDefinition: ResolvedFormFieldDefinition = {
       fieldId: 'username',
       type: 'input',
       validations: {
-        required: { value: true, message: '{{translations.field_required}}' },
+        required: { value: true, message: '{{t.field_required}}' },
       },
       multiple: false,
       defaultValue: '',
