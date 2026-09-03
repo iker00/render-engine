@@ -121,9 +121,9 @@ describe('formatValidationMessage', () => {
     expect(result).toBe(' es requerido')
   })
 
-  it('resolves {{translations.key}} from the active language catalog', () => {
+  it('resolves {{t.key}} from the active language catalog', () => {
     const result = formatValidationMessage({
-      rule: { value: 100, message: '{{translations.max_length_error}}' },
+      rule: { value: 100, message: '{{t.max_length_error}}' },
       defaultMessage: 'Must be at most 100 characters.',
       state: stateWithTranslations,
     })
@@ -131,9 +131,9 @@ describe('formatValidationMessage', () => {
     expect(result).toBe('Maximum length exceeded')
   })
 
-  it('returns fallback string when {{translations.unknown_key}} has no entry in the catalog', () => {
+  it('returns fallback string when {{t.unknown_key}} has no entry in the catalog', () => {
     const result = formatValidationMessage({
-      rule: { value: true, message: '{{translations.unknown_key}}' },
+      rule: { value: true, message: '{{t.unknown_key}}' },
       defaultMessage: 'Required',
       state: baseState,
     })
@@ -142,9 +142,9 @@ describe('formatValidationMessage', () => {
     expect(result).toBe('unknown_key')
   })
 
-  it('combines {{value}} and {{translations.key}} interpolations in a single message', () => {
+  it('combines {{value}} and {{t.key}} interpolations in a single message', () => {
     const result = formatValidationMessage({
-      rule: { value: 4, message: 'Hola {{translations.greeting}}, mínimo {{value}}' },
+      rule: { value: 4, message: 'Hola {{t.greeting}}, mínimo {{value}}' },
       defaultMessage: 'Must be at least 4 characters.',
       state: stateWithTranslations,
     })

@@ -39,7 +39,7 @@ describe('Layout renderer — translations', () => {
           {
             type: 'button',
             props: {
-              label: 'translations.confirmBtn',
+              label: 't.confirmBtn',
               action: { type: 'goBack' },
             },
           },
@@ -60,7 +60,7 @@ describe('Layout renderer — translations', () => {
           {
             type: 'button',
             props: {
-              label: 'translations.confirmBtn',
+              label: 't.confirmBtn',
               action: { type: 'goBack' },
             },
           },
@@ -81,7 +81,7 @@ describe('Layout renderer — translations', () => {
           {
             type: 'heading',
             props: {
-              text: 'Hola, {{translations.greeting}}',
+              text: 'Hola, {{t.greeting}}',
               level: 1,
             },
           },
@@ -102,7 +102,7 @@ describe('Layout renderer — translations', () => {
           {
             type: 'button',
             props: {
-              label: 'translations.confirmBtn',
+              label: 't.confirmBtn',
               action: { type: 'goBack' },
             },
           },
@@ -124,7 +124,7 @@ describe('Layout renderer — translations', () => {
           {
             type: 'heading',
             props: {
-              text: 'translations.confirmBtn',
+              text: 't.confirmBtn',
               level: 2,
             },
           },
@@ -147,7 +147,7 @@ describe('Layout renderer — translations', () => {
           {
             type: 'heading',
             props: {
-              text: 'translations.missingKey',
+              text: 't.missingKey',
               level: 2,
             },
           },
@@ -170,7 +170,7 @@ describe('Layout renderer — translations', () => {
           {
             type: 'heading',
             props: {
-              text: 'translations.missingKey',
+              text: 't.missingKey',
               level: 2,
             },
           },
@@ -192,7 +192,7 @@ describe('Layout renderer — translations', () => {
             type: 'image',
             props: {
               src: '/img/icon.svg',
-              alt: 'translations.searchIcon',
+              alt: 't.searchIcon',
             },
           },
         ],
@@ -204,7 +204,7 @@ describe('Layout renderer — translations', () => {
     expect(screen.getByRole('img', { name: 'Buscar' })).toBeInTheDocument()
   })
 
-  it('degrades translations.group.key (two-segment path) to empty string and does not throw', () => {
+  it('degrades t.group.key (two-segment path) to empty string and does not throw', () => {
     expect(() => {
       renderRuntimePageWithTranslations(
         {
@@ -213,7 +213,7 @@ describe('Layout renderer — translations', () => {
             {
               type: 'heading',
               props: {
-                text: 'translations.group.key',
+                text: 't.group.key',
                 level: 2,
               },
             },
@@ -228,8 +228,8 @@ describe('Layout renderer — translations', () => {
     expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent('')
   })
 
-  it('does not throw when visibility.reference contains a translations.* path and renders without error', () => {
-    // translations.* in visibility.reference is out of scope per the spec; the visibility
+  it('does not throw when visibility.reference contains a t.* path and renders without error', () => {
+    // t.* in visibility.reference is out of scope per the spec; the visibility
     // evaluator calls resolveRuntimeReference which now resolves the translation to a string.
     // The important contract here is: no throw and no crash; the visibility outcome simply
     // follows whatever the resolved value is (truthy string → shown, empty → hidden).
@@ -240,7 +240,7 @@ describe('Layout renderer — translations', () => {
           type: 'heading',
           props: { text: 'Visible heading', level: 1 },
           visibility: {
-            reference: 'translations.flag',
+            reference: 't.flag',
             operator: 'isTruthy',
           },
         },

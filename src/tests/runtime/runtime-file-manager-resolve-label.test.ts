@@ -78,7 +78,7 @@ describe('resolveFileManagerLabel', () => {
   it('resolves a full reference to the active translations catalog value', () => {
     expect(
       resolveFileManagerLabel({
-        labels: { listEmpty: 'translations.saludo' },
+        labels: { listEmpty: 't.saludo' },
         key: 'listEmpty',
         defaultText: 'No hay ficheros subidos.',
         state,
@@ -112,7 +112,7 @@ describe('resolveFileManagerLabel', () => {
   it('resolves a translations placeholder and a local placeholder in the same pass', () => {
     expect(
       resolveFileManagerLabel({
-        labels: { uploadFileError: '{{translations.foo}} - {{fileName}}' },
+        labels: { uploadFileError: '{{t.foo}} - {{fileName}}' },
         key: 'uploadFileError',
         defaultText: 'Error al subir el fichero.',
         placeholders: { fileName: 'foo.pdf' },
@@ -121,15 +121,15 @@ describe('resolveFileManagerLabel', () => {
     ).toBe('Zorro - foo.pdf')
   })
 
-  it('does not re-interpolate a placeholder value that itself contains {{translations.foo}}', () => {
+  it('does not re-interpolate a placeholder value that itself contains {{t.foo}}', () => {
     expect(
       resolveFileManagerLabel({
         labels: { uploadFileError: 'Nombre: {{fileName}}' },
         key: 'uploadFileError',
         defaultText: 'Error al subir el fichero.',
-        placeholders: { fileName: '{{translations.foo}}' },
+        placeholders: { fileName: '{{t.foo}}' },
         state,
       }),
-    ).toBe('Nombre: {{translations.foo}}')
+    ).toBe('Nombre: {{t.foo}}')
   })
 })

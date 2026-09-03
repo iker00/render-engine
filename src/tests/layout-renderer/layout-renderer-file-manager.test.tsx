@@ -1290,10 +1290,10 @@ describe('FileManagerNode — props.labels: lista y paginación', () => {
     expect(emptyParagraph?.textContent).toBe('')
   })
 
-  it('resolves labels.listEmpty as a translations.* reference according to activeLanguage', () => {
+  it('resolves labels.listEmpty as a t.* reference according to activeLanguage', () => {
     stubFetchPending()
     const page = makeFileManagerPage({
-      props: { fieldName: 'docs', labels: { listEmpty: 'translations.vacio' } },
+      props: { fieldName: 'docs', labels: { listEmpty: 't.vacio' } },
     } as Partial<RuntimePageConfig['layout'][0]>)
     const config: RuntimeConfig = {
       api: {},
