@@ -12,8 +12,8 @@ implementation:
   completed_task_ids: [T1, T2, T3, T4, T5, T6]
   in_progress_task_id: null
 validation:
-  tests_green: false
-  coverage_gate_passed: false
+  tests_green: true
+  coverage_gate_passed: true
 documentation:
   ready: false
   done: false
