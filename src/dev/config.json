@@ -7765,14 +7765,14 @@
         {
           "type": "heading",
           "props": {
-            "text": "translations.*",
+            "text": "t.*",
             "level": 2
           }
         },
         {
           "type": "paragraph",
           "props": {
-            "text": "translations.{key} resuelve un valor desde el catalogo raiz translations, aplicando fallback: idioma activo (atributo data-lang, por defecto \"es\") -> idioma por defecto \"es\" -> en desarrollo el nombre de la clave, en produccion string vacio."
+            "text": "t.{key} resuelve un valor desde el catalogo raiz translations, aplicando fallback: idioma activo (atributo data-lang, por defecto \"es\") -> idioma por defecto \"es\" -> en desarrollo el nombre de la clave, en produccion string vacio."
           }
         },
         {
@@ -7810,14 +7810,14 @@
             {
               "type": "heading",
               "props": {
-                "text": "{{translations.welcome_title}}",
+                "text": "{{t.welcome_title}}",
                 "level": 3
               }
             },
             {
               "type": "paragraph",
               "props": {
-                "text": "{{translations.docs_subtitle}}"
+                "text": "{{t.docs_subtitle}}"
               }
             },
             {
@@ -7831,7 +7831,7 @@
         {
           "type": "paragraph",
           "props": {
-            "text": "translations.* solo admite exactamente un segmento tras el namespace (translations.group.key no es valido) y queda fuera de alcance en api.query/body/headers, visibility.reference, origenes de coleccion y defaultValue de campos: en esas superficies se trata como string literal."
+            "text": "t.* solo admite exactamente un segmento tras el namespace (t.group.key no es valido) y queda fuera de alcance en api.query/body/headers, visibility.reference, origenes de coleccion y defaultValue de campos: en esas superficies se trata como string literal."
           }
         }
       ]
