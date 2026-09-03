@@ -214,3 +214,52 @@ La sección de `src/dev/config.json` referida usa `t.*` en vez de `translations.
 
 ### Cierre de implementación
 `pnpm test --run src/tests/config-validation/runtime-config-root-zod.test.ts` en verde tras la edición.
+
+---
+
+## T4 — Migrar la referencia `translations.foo` del describe `localPlaceholders` en el fichero de resolución de referencias
+
+### Objetivo
+Corregir un hueco de planificación detectado al cierre de la pasada de implementación de T1–T3: el describe `localPlaceholders` de `src/tests/runtime/runtime-reference-resolution.test.tsx` (fuera de las secciones `T0050-03`/`T0050-04` que cerró T1, y fuera del alcance de T2 porque ese fichero completo quedó excluido como "cerrado en T1") seguía usando `translations.foo` como referencia de traducción tras el rename de namespace, dejando el gate final `pnpm test` en rojo. Migrar esas referencias a `t.foo` sin cambiar ningún otro comportamiento del describe.
+
+### Fuera de alcance
+- Cualquier otra sección de `src/tests/runtime/runtime-reference-resolution.test.tsx` (`T0050-03`, `T0050-04`, `T0078-05`, `T0092-T3`, `T0101`, etc.): ya migradas o no relacionadas con `translations`/`t`.
+- Cualquier otro fichero de test.
+- Añadir casos de test nuevos no relacionados con este gap.
+
+### Dependencias
+T1 y T2 completadas y commiteadas.
+
+### Interfaces
+**Consume**: comportamiento de reconocimiento/resolución de `t.{key}` provisto por T1 (sin firma nueva).
+**Produce**: ninguno.
+
+### Impacto esperado en archivos
+- Tests a modificar (ampliación): `src/tests/runtime/runtime-reference-resolution.test.tsx`, únicamente el describe `localPlaceholders` (aprox. líneas 1897–1962 antes de esta tarea).
+
+### Tests
+**Ficheros de test**:
+- `src/tests/runtime/runtime-reference-resolution.test.tsx` (ampliación) — modificar únicamente el describe `localPlaceholders`.
+
+**Comportamiento cubierto**:
+- El test `'keeps resolving {{translations.*}} through the catalog while localPlaceholders holds unrelated keys'` pasa a usar `{{t.foo}}` como entrada y sigue esperando `'Zorro'` como resultado contra el mismo catálogo (`{ foo: { es: 'Zorro', en: 'Fox' } }`, `activeLanguage: 'es'`); renombrar el título del test para reflejar `t.*` en vez de `translations.*`.
+- El test `'does not re-interpolate a localPlaceholders value that itself contains {{translations.foo}}'` pasa a usar `{{t.foo}}` tanto en el valor de `localPlaceholders.fileName` como en el resultado esperado (`'Nombre: {{t.foo}}'`), preservando que el valor no se reinterpola; renombrar el título del test para reflejar `t.foo` en vez de `translations.foo`.
+- El resto del describe `localPlaceholders` (placeholders locales sin relación con traducciones) no cambia.
+
+**Comandos durante la implementación**:
+```
+pnpm test --run src/tests/runtime/runtime-reference-resolution.test.tsx
+```
+
+**Restricciones**:
+- No modificar ninguna otra sección del fichero.
+- No cambiar el valor esperado (`expect(...)`) de ningún test salvo el propio string de referencia de entrada/salida ya descrito.
+
+### Documentación afectada
+Ninguna adicional a la ya señalada en T1 (misma sección de `reference-resolution.md`/`dynamic-strings.md`).
+
+### Criterios de finalización
+El describe `localPlaceholders` de `runtime-reference-resolution.test.tsx` usa `t.foo` en vez de `translations.foo` en sus dos tests afectados y está en verde para el comando listado.
+
+### Cierre de implementación
+`pnpm test --run src/tests/runtime/runtime-reference-resolution.test.tsx` en verde tras la edición, y el gate final `pnpm test` de la pasada deja de tener el fallo registrado en `status.yaml.blocked_by`.
