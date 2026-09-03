@@ -1936,20 +1936,20 @@ describe('Runtime reference resolution', () => {
       ).toBe('Total 2/')
     })
 
-    it('keeps resolving {{translations.*}} through the catalog while localPlaceholders holds unrelated keys', () => {
+    it('keeps resolving {{t.*}} through the catalog while localPlaceholders holds unrelated keys', () => {
       expect(
-        resolveRuntimeVisibleValue('{{translations.foo}}', stateWithTranslations, 'heading.props.text', {
+        resolveRuntimeVisibleValue('{{t.foo}}', stateWithTranslations, 'heading.props.text', {
           localPlaceholders: { fileName: 'foo.pdf' },
         }),
       ).toBe('Zorro')
     })
 
-    it('does not re-interpolate a localPlaceholders value that itself contains {{translations.foo}}', () => {
+    it('does not re-interpolate a localPlaceholders value that itself contains {{t.foo}}', () => {
       expect(
         resolveRuntimeVisibleValue('Nombre: {{fileName}}', stateWithTranslations, 'heading.props.text', {
-          localPlaceholders: { fileName: '{{translations.foo}}' },
+          localPlaceholders: { fileName: '{{t.foo}}' },
         }),
-      ).toBe('Nombre: {{translations.foo}}')
+      ).toBe('Nombre: {{t.foo}}')
     })
 
     it('propagates localPlaceholders from resolveRuntimeTextReference through resolveRuntimeVisibleValue', () => {
