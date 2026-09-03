@@ -5,6 +5,7 @@ import type {
   RuntimeApiRequestParams,
   RuntimeConfigValue,
 } from '../../config/runtime-config'
+import { computeModalRepeaterOwnership } from '../../config/runtime-modal-repeater-ownership'
 import type {
   RuntimeApiEmptySubmitValues,
   RuntimeApiFileInputSources,
@@ -43,6 +44,7 @@ export function useRuntimeState() {
 export function useRuntimeStateActions() {
   const { config, dispatchAndSyncState, getLatestState, initialState } = useRuntimeStateContext()
   const editModeContext = useLayoutEditModeContext()
+  const modalOwnership = useMemo(() => computeModalRepeaterOwnership(config.pages), [config.pages])
 
   const navigateToPage = useCallback(
     (
@@ -182,15 +184,17 @@ export function useRuntimeStateActions() {
         return
       }
 
+      const isPageLevelModal = modalOwnership.get(modalId) === null
+
       dispatchAndSyncState({
         type: 'modal/open',
         payload: {
           modalId,
-          iterationKey: options?.iterationContext?.key,
+          iterationKey: isPageLevelModal ? undefined : options?.iterationContext?.key,
         },
       })
     },
-    [dispatchAndSyncState, editModeContext],
+    [dispatchAndSyncState, editModeContext, modalOwnership],
   )
 
   const closeModal = useCallback(
@@ -199,15 +203,17 @@ export function useRuntimeStateActions() {
         return
       }
 
+      const isPageLevelModal = modalOwnership.get(modalId) === null
+
       dispatchAndSyncState({
         type: 'modal/close',
         payload: {
           modalId,
-          iterationKey: options?.iterationContext?.key,
+          iterationKey: isPageLevelModal ? undefined : options?.iterationContext?.key,
         },
       })
     },
-    [dispatchAndSyncState, editModeContext],
+    [dispatchAndSyncState, editModeContext, modalOwnership],
   )
 
   const resetForm = useCallback(
