@@ -297,7 +297,7 @@ function resolveSupportedReferenceValue(
     return { found: true, value: tokenState.value }
   }
 
-  if (reference.namespace === 'translations') {
+  if (reference.namespace === 't') {
     const key = reference.path[0]
     const { translations, activeLanguage } = state.i18n
     const entry = translations[key]

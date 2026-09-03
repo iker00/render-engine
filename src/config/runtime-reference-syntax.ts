@@ -7,7 +7,7 @@ export type RuntimeReferenceNamespace =
   | 'navigation'
   | 'routeParams'
   | 'params'
-  | 'translations'
+  | 't'
   | 'tokens'
 
 export type RuntimeReferenceParseResult =
@@ -24,7 +24,7 @@ export interface RuntimeLiteralReference {
 export interface RuntimeSupportedReference {
   kind: 'reference'
   status: 'supported'
-  namespace: 'item' | 'row' | 'switch' | 'forms' | 'queries' | 'params' | 'translations' | 'tokens'
+  namespace: 'item' | 'row' | 'switch' | 'forms' | 'queries' | 'params' | 't' | 'tokens'
   path: string[]
   source: string
 }
@@ -45,9 +45,9 @@ export interface RuntimeInvalidReference {
   source: string
 }
 
-const SUPPORTED_NAMESPACES = new Set(['forms', 'queries', 'params', 'translations', 'tokens'] as const)
+const SUPPORTED_NAMESPACES = new Set(['forms', 'queries', 'params', 't', 'tokens'] as const)
 const RESERVED_NAMESPACES = new Set(['navigation', 'routeParams'] as const)
-const REFERENCE_PATTERN = /^(item|row|switch|forms|queries|navigation|routeParams|params|translations|tokens)(\.[A-Za-z0-9_-]+)*$/
+const REFERENCE_PATTERN = /^(item|row|switch|forms|queries|navigation|routeParams|params|t|tokens)(\.[A-Za-z0-9_-]+)*$/
 const REFERENCE_SEGMENT_PATTERN = /^[A-Za-z0-9_-]+$/
 const ITEM_KEY_SYNTHETIC_SEGMENT = '$key'
 const ITEM_INDEX_SYNTHETIC_SEGMENT = '$index'
@@ -192,7 +192,7 @@ function hasRecognizedNamespace(value: string): boolean {
     namespace === 'navigation' ||
     namespace === 'routeParams' ||
     namespace === 'params' ||
-    namespace === 'translations' ||
+    namespace === 't' ||
     namespace === 'tokens'
   )
 }
@@ -239,7 +239,7 @@ function hasValidReferenceShape(namespace: RuntimeReferenceNamespace, path: stri
       }
 
       return path.length === 1
-    case 'translations':
+    case 't':
       return path.length === 1
     case 'tokens':
       return path.length === 2 && path[1] === 'value'
