@@ -16,5 +16,5 @@ validation:
   coverage_gate_passed: true
 documentation:
   ready: true
-  done: false
-feature_status: implemented
+  done: true
+feature_status: completed

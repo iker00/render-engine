@@ -42,7 +42,7 @@
 - `item` e `item.*` se resuelven contra la iteración de `repeater` cuando existe, o contra el item local de la proyección de colección que se está materializando
 - `row` e `row.*` se resuelven contra el dato de la fila actual dentro de celdas de `table` (modo dinámico); `row.$index` resuelve la posición 1-based de la fila en la vista visible en celdas de `table` en cualquier modo. Dentro de esas mismas celdas, `item.*` deja de referirse a la fila propia y solo resuelve contra el `repeater` ancestro más cercano, si existe
 - `params.*` conserva la frontera `params.{paramName}`; `params.user.id` queda fuera de contrato y produce string vacío dentro de un placeholder
-- `translations.{key}` se resuelve aplicando la cadena de fallback del catálogo según el idioma activo declarado en `data-lang`
+- `t.{key}` se resuelve aplicando la cadena de fallback del catálogo según el idioma activo declarado en `data-lang`
 
 ### En superficies de headers
 - cada placeholder se resuelve con la misma capa central que las referencias completas

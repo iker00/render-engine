@@ -28,7 +28,7 @@ El escape literal con `\` permite mostrar una referencia completa tal cual, por 
 - `queries.{queryName}.error.message`
 - `queries.{queryName}.error.code`
 - `queries.{queryName}.data.{segmentosAnidados}`
-- `translations.{key}`
+- `t.{key}`
 - `tokens.{tokenId}.value`
 - `switch.next`
 
@@ -126,13 +126,13 @@ Las superficies de `query`, `body`, `params` y otras no listadas siguen fuera de
 - `row.$index` es la forma exacta soportada. No existe `row.$key` (a diferencia de `item.$key`): `table` no itera un diccionario, sus filas siempre tienen una posición ordinal en la vista visible.
 - Las mismas superficies donde aplica `row.*` admiten también `row.$index`.
 
-## Frontera específica de `translations.*`
-- `translations.{key}` resuelve valores desde el catálogo de traducciones declarado en la raíz del JSON de configuración, aplicando una cadena de fallback por idioma.
+## Frontera específica de `t.*`
+- `t.{key}` resuelve valores desde el catálogo de traducciones declarado en la raíz del JSON de configuración, aplicando una cadena de fallback por idioma.
 - El idioma activo se declara mediante el atributo `data-lang` del elemento raíz; si no está presente o es vacío, el runtime usa `"es"` por defecto.
-- `translations.{key}` admite exactamente un segmento dinámico tras el namespace. `translations.group.key` (dos segmentos) no se reconoce como referencia válida.
+- `t.{key}` admite exactamente un segmento dinámico tras el namespace. `t.group.key` (dos segmentos) no se reconoce como referencia válida.
 - La cadena de fallback es: idioma activo → idioma por defecto (`"es"`) → en desarrollo: nombre de la clave; en producción: string vacío.
-- `translations.{key}` puede usarse en todas las superficies visibles interpolables que ya admiten referencias completas: `heading.props.text`, `paragraph.props.text`, `button.props.label`, `input.props.label`, `input.props.placeholder`, `textarea.props.label`, `textarea.props.placeholder`, `select.props.label`, `radioGroup.props.label`, `checkboxGroup.props.label`, elementos de `list.props.items`, celdas de `table`, `image.props.alt`, y dentro de placeholders `{{translations.key}}` en cualquiera de las anteriores.
-- `translations.*` queda fuera de alcance en `api.query`, `api.body`, `api.headers`, `visibility.reference`, orígenes de colección (`repeater.props.items.source`, `list.props.items.source`, `select.props.items.source`, `radioGroup.props.items.source`, `checkboxGroup.props.items.source`) y en `defaultValue` de campos de formulario; en esas superficies se trata como string literal.
+- `t.{key}` puede usarse en todas las superficies visibles interpolables que ya admiten referencias completas: `heading.props.text`, `paragraph.props.text`, `button.props.label`, `input.props.label`, `input.props.placeholder`, `textarea.props.label`, `textarea.props.placeholder`, `select.props.label`, `radioGroup.props.label`, `checkboxGroup.props.label`, elementos de `list.props.items`, celdas de `table`, `image.props.alt`, y dentro de placeholders `{{t.key}}` en cualquiera de las anteriores.
+- `t.*` queda fuera de alcance en `api.query`, `api.body`, `api.headers`, `visibility.reference`, orígenes de colección (`repeater.props.items.source`, `list.props.items.source`, `select.props.items.source`, `radioGroup.props.items.source`, `checkboxGroup.props.items.source`) y en `defaultValue` de campos de formulario; en esas superficies se trata como string literal.
 
 ## Frontera específica de `tokens.*`
 - `tokens.{tokenId}.value` es la única forma soportada de referencia a tokens. Variantes como `tokens.{tokenId}` (sin `.value`), `tokens.{tokenId}.status` u otras rutas adicionales no forman parte del contrato válido y se tratan como referencias inválidas.
