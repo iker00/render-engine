@@ -727,4 +727,90 @@ describe('form with submitAction.type: executeOperations', () => {
     const state = readRuntimeStateSnapshot('runtime-state')
     expect(state.queries.submitProfile?.status).toBe('success')
   })
+
+  it('opens the onSuccess modal only after the second onSuccess entry has resolved, never before its fetch is dispatched', async () => {
+    let resolveLogActivity: ((response: Response) => void) | null = null
+    const fetchMock = vi.fn<typeof fetch>().mockImplementation((input) => {
+      const url = String(input)
+      if (url.includes('/api/profile')) {
+        return Promise.resolve(
+          new Response(JSON.stringify({ ok: true }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          }),
+        )
+      }
+      if (url.includes('/api/log')) {
+        return new Promise<Response>((resolve) => {
+          resolveLogActivity = resolve
+        })
+      }
+      throw new Error(`No mock response configured for URL: ${url}`)
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const config: RuntimeConfig = {
+      api: {
+        saveProfile: { method: 'POST', endpoint: '/api/profile' },
+        logActivity: { method: 'POST', endpoint: '/api/log' },
+      },
+      initialPage: 'home',
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'form',
+              id: 'profileForm',
+              submitAction: {
+                type: 'executeOperation',
+                operationName: 'saveProfile',
+              },
+              onSuccess: [
+                { type: 'executeOperation', operationName: 'logActivity' },
+                { type: 'openModal', modalId: 'success-modal' },
+              ],
+              children: [
+                {
+                  type: 'input',
+                  props: { fieldId: 'name', label: 'Name', defaultValue: 'Ada' },
+                },
+                {
+                  type: 'button',
+                  props: { label: 'Submit' },
+                },
+              ],
+            },
+            {
+              type: 'modal',
+              id: 'success-modal',
+              children: [{ type: 'heading', props: { level: 2, text: 'Saved!' } }],
+            },
+          ],
+        },
+      ],
+    }
+
+    render(<MultiOpFormFixture config={config} />)
+
+    await waitFor(() => expect(screen.getByLabelText('Name')).toHaveValue('Ada'))
+    fireEvent.click(screen.getByRole('button', { name: 'Submit' }))
+
+    await waitFor(() => {
+      const state = readRuntimeStateSnapshot('runtime-state')
+      expect(state.queries.saveProfile?.status).toBe('success')
+      expect(state.queries.logActivity?.status).toBe('loading')
+    })
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+
+    resolveLogActivity?.(
+      new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    )
+
+    await waitFor(() => expect(screen.getByRole('dialog')).toBeInTheDocument())
+  })
 })

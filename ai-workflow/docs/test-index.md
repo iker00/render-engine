@@ -227,6 +227,7 @@ Ficheros de apoyo, no son tests: `config-validation/helpers.ts`, `dev-runtime/lu
 - `runtime-table-processing.test.ts` — filtrado, ordenación y procesamiento local de tablas
 - `runtime-tokens-execute-refresh.test.ts` — `executeTokenRefresh`: éxito, extracción por `responsePath`, errores de red/HTTP y `errorCondition`
 - `runtime-tokens-scheduler.test.tsx` — `useRuntimeTokenScheduler`: primer ciclo, reintento inmediato, cleanup y múltiples tokens independientes
+- `runtime-ui-action-executor-sequencing.test.ts` — secuenciación por finalización de `runRuntimeUiActionLifecycleList`/`runActionOutcomeWithLifecycle`: espera de cada entrada `onSuccess`/`onError` antes de la siguiente
 - `runtime-ui-actions.test.tsx` — ejecución de acciones UI (clicks, submit) y delegación al executor compartido
 
 ---

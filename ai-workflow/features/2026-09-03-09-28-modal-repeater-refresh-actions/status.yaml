@@ -9,7 +9,7 @@ artifacts:
   notes: optional
 implementation:
   ready: true
-  completed_task_ids: []
+  completed_task_ids: [T1]
   in_progress_task_id: null
 validation:
   tests_green: false
