@@ -205,6 +205,144 @@ describe('modal inside repeater template', () => {
   })
 })
 
+function makeConfigWithModalHeading(): RuntimeConfig {
+  return {
+    api: {},
+    initialPage: 'home',
+    pages: [
+      {
+        id: 'home',
+        layout: [
+          {
+            type: 'repeater',
+            props: {
+              items: { source: 'queries.users.data.results', key: 'id' },
+              template: [
+                {
+                  type: 'button',
+                  props: {
+                    label: 'Open {{item.name}}',
+                    action: { type: 'openModal', modalId: 'row-modal' },
+                  },
+                },
+                {
+                  type: 'modal',
+                  id: 'row-modal',
+                  children: [{ type: 'heading', props: { level: 2, text: '{{item.name}}' } }],
+                },
+              ],
+            },
+          },
+        ],
+      },
+    ],
+  }
+}
+
+function renderWithModalHeadingItems(items: Array<{ id: string; name: string }>) {
+  const config = makeConfigWithModalHeading()
+
+  return render(
+    <RuntimeStateProvider config={config}>
+      <QuerySetter queryName="users" data={{ results: items }} />
+      <RuntimePage />
+    </RuntimeStateProvider>,
+  )
+}
+
+describe('collection refresh preserves an open modal outside its own iteration (D3)', () => {
+  it('keeps the modal open with the same dialog DOM node when an unrelated row is removed', () => {
+    const { rerender } = renderWithModalHeadingItems([
+      { id: '1', name: 'Alice' },
+      { id: '2', name: 'Bob' },
+      { id: '3', name: 'Carol' },
+    ])
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open Bob' }))
+    const dialogBeforeRefresh = screen.getByRole('dialog')
+
+    rerender(
+      <RuntimeStateProvider config={makeConfigWithModalHeading()}>
+        <QuerySetter
+          queryName="users"
+          data={{
+            results: [
+              { id: '1', name: 'Alice' },
+              { id: '2', name: 'Bobby' },
+            ],
+          }}
+        />
+        <RuntimePage />
+      </RuntimeStateProvider>,
+    )
+
+    const dialogAfterRefresh = screen.getByRole('dialog')
+    expect(dialogAfterRefresh).toBe(dialogBeforeRefresh)
+    expect(within(dialogAfterRefresh).getByText('Bobby')).toBeInTheDocument()
+  })
+
+  it('keeps the modal open with the same dialog DOM node when a new row is added', () => {
+    const { rerender } = renderWithModalHeadingItems([
+      { id: '1', name: 'Alice' },
+      { id: '2', name: 'Bob' },
+    ])
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open Bob' }))
+    const dialogBeforeRefresh = screen.getByRole('dialog')
+
+    rerender(
+      <RuntimeStateProvider config={makeConfigWithModalHeading()}>
+        <QuerySetter
+          queryName="users"
+          data={{
+            results: [
+              { id: '1', name: 'Alice' },
+              { id: '2', name: 'Bobby' },
+              { id: '3', name: 'Carol' },
+            ],
+          }}
+        />
+        <RuntimePage />
+      </RuntimeStateProvider>,
+    )
+
+    const dialogAfterRefresh = screen.getByRole('dialog')
+    expect(dialogAfterRefresh).toBe(dialogBeforeRefresh)
+    expect(within(dialogAfterRefresh).getByText('Bobby')).toBeInTheDocument()
+  })
+
+  it('keeps the modal open with the same dialog DOM node when rows are reordered', () => {
+    const { rerender } = renderWithModalHeadingItems([
+      { id: '1', name: 'Alice' },
+      { id: '2', name: 'Bob' },
+      { id: '3', name: 'Carol' },
+    ])
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open Bob' }))
+    const dialogBeforeRefresh = screen.getByRole('dialog')
+
+    rerender(
+      <RuntimeStateProvider config={makeConfigWithModalHeading()}>
+        <QuerySetter
+          queryName="users"
+          data={{
+            results: [
+              { id: '3', name: 'Carol' },
+              { id: '2', name: 'Bobby' },
+              { id: '1', name: 'Alice' },
+            ],
+          }}
+        />
+        <RuntimePage />
+      </RuntimeStateProvider>,
+    )
+
+    const dialogAfterRefresh = screen.getByRole('dialog')
+    expect(dialogAfterRefresh).toBe(dialogBeforeRefresh)
+    expect(within(dialogAfterRefresh).getByText('Bobby')).toBeInTheDocument()
+  })
+})
+
 function makeConfigWithPageLevelModal(): RuntimeConfig {
   return {
     api: {

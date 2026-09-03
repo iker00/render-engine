@@ -112,12 +112,12 @@ export function RepeaterNode({ node, path }: RepeaterNodeProps) {
 
   return (
     <RepeaterNodeContent
-      key={paginationStateKey}
       node={node}
       iterations={iterations}
       pageSize={pageSize}
       paginationControlsVariant={paginationControlsVariant}
       parentGridColumns={parentGridColumns}
+      paginationStateKey={paginationStateKey}
     />
   )
 }
@@ -128,6 +128,7 @@ interface RepeaterNodeContentProps {
   pageSize?: number
   paginationControlsVariant: RuntimeCollectionPaginationControlsVariant
   parentGridColumns?: RuntimeResponsiveLayoutValue | null
+  paginationStateKey: string
 }
 
 function RepeaterNodeContent({
@@ -136,9 +137,22 @@ function RepeaterNodeContent({
   pageSize,
   paginationControlsVariant,
   parentGridColumns,
+  paginationStateKey,
 }: RepeaterNodeContentProps) {
   const [activePage, setActivePage] = useState(1)
   const [scrollVisibleCount, setScrollVisibleCount] = useState(pageSize ?? 0)
+  const [previousPaginationStateKey, setPreviousPaginationStateKey] = useState(paginationStateKey)
+
+  // Reset pagination when the derived signal (controls variant + pageSize + iteration keys)
+  // changes, without remounting the subtree: preserves local state (e.g. an open modal) of
+  // iterations unaffected by the refresh (D3). Adjusted during render rather than in an effect,
+  // per https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes.
+  if (paginationStateKey !== previousPaginationStateKey) {
+    setPreviousPaginationStateKey(paginationStateKey)
+    setActivePage(1)
+    setScrollVisibleCount(pageSize ?? 0)
+  }
+
   const paginationModel = useMemo(
     () => (pageSize === undefined ? null : createCollectionPaginationModel(iterations, pageSize)),
     [iterations, pageSize],
