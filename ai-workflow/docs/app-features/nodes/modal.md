@@ -31,6 +31,7 @@
 - La regla global "solo un modal abierto a la vez" sigue aplicándose entre todas las iteraciones: abrir el modal de la fila 3 cierra cualquier modal de otra fila que estuviera abierto.
 - Las referencias `item.*` dentro de los `children` del modal resuelven el item de su iteración.
 - `props.defaultOpen: true` **no es soportado** cuando el modal se declara dentro de `repeater.props.template`.
+- `openModal`/`closeModal` disparado desde un `form` (u otro nodo) dentro de `repeater.props.template` que apunta a un modal declarado a nivel de página (fuera de cualquier `repeater`) abre/cierra correctamente ese modal de página, con independencia de la fila del repeater desde la que se disparó la acción: la key de iteración de la fila disparadora no se propaga al modal de página.
 
 ## Validación específica
 - Si `modal.id` se repite en cualquier página o en la misma página, el config completo se rechaza antes del render.

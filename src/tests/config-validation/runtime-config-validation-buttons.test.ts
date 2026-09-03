@@ -4598,6 +4598,185 @@ describe('validateRuntimeConfig — button.props.action.onSuccess/onError target
 
     expect(result.status).toBe('ready')
   })
+
+  // T4: cross-repeater modal target validation
+
+  function createModalNode(overrides: Record<string, unknown> = {}) {
+    return {
+      type: 'modal',
+      id: 'my-modal',
+      children: [],
+      ...overrides,
+    }
+  }
+
+  it('rejects onSuccess openModal targeting a modal that belongs to a sibling repeater', () => {
+    const result = validateRuntimeConfig({
+      api: {
+        searchUsers: { method: 'GET', endpoint: '/api/users' },
+      },
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'repeater',
+              props: {
+                items: { source: 'queries.listA.data', key: 'id' },
+                template: [
+                  {
+                    type: 'button',
+                    props: {
+                      label: 'Load users',
+                      action: {
+                        type: 'executeOperation',
+                        operationName: 'searchUsers',
+                        onSuccess: [{ type: 'openModal', modalId: 'modalInRepeaterB' }],
+                      },
+                    },
+                  },
+                ],
+              },
+            },
+            {
+              type: 'repeater',
+              props: {
+                items: { source: 'queries.listB.data', key: 'id' },
+                template: [createModalNode({ id: 'modalInRepeaterB' })],
+              },
+            },
+          ],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(result.status).toBe('error')
+    if (result.status !== 'error') throw new Error('Expected error')
+    expect(result.error.message).toContain('layout[0].props.template[0].props.action.onSuccess[0].modalId')
+    expect(result.error.message).toContain('modal "modalInRepeaterB" belongs to a different repeater.')
+  })
+
+  it('rejects onError closeModal targeting a modal that belongs to a sibling repeater', () => {
+    const result = validateRuntimeConfig({
+      api: {
+        searchUsers: { method: 'GET', endpoint: '/api/users' },
+      },
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'repeater',
+              props: {
+                items: { source: 'queries.listA.data', key: 'id' },
+                template: [
+                  {
+                    type: 'button',
+                    props: {
+                      label: 'Load users',
+                      action: {
+                        type: 'executeOperation',
+                        operationName: 'searchUsers',
+                        onError: [{ type: 'closeModal', modalId: 'modalInRepeaterB' }],
+                      },
+                    },
+                  },
+                ],
+              },
+            },
+            {
+              type: 'repeater',
+              props: {
+                items: { source: 'queries.listB.data', key: 'id' },
+                template: [createModalNode({ id: 'modalInRepeaterB' })],
+              },
+            },
+          ],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(result.status).toBe('error')
+    if (result.status !== 'error') throw new Error('Expected error')
+    expect(result.error.message).toContain('layout[0].props.template[0].props.action.onError[0].modalId')
+    expect(result.error.message).toContain('modal "modalInRepeaterB" belongs to a different repeater.')
+  })
+
+  it('accepts onSuccess openModal targeting a modal declared in the same repeater (regression)', () => {
+    const result = validateRuntimeConfig({
+      api: {
+        searchUsers: { method: 'GET', endpoint: '/api/users' },
+      },
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'repeater',
+              props: {
+                items: { source: 'queries.listA.data', key: 'id' },
+                template: [
+                  createModalNode({ id: 'sameRepeaterModal' }),
+                  {
+                    type: 'button',
+                    props: {
+                      label: 'Load users',
+                      action: {
+                        type: 'executeOperation',
+                        operationName: 'searchUsers',
+                        onSuccess: [{ type: 'openModal', modalId: 'sameRepeaterModal' }],
+                      },
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(result.status).toBe('ready')
+  })
+
+  it('accepts onSuccess openModal from outside any repeater targeting a modal declared inside a repeater (inert, out of scope)', () => {
+    const result = validateRuntimeConfig({
+      api: {
+        searchUsers: { method: 'GET', endpoint: '/api/users' },
+      },
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'repeater',
+              props: {
+                items: { source: 'queries.listA.data', key: 'id' },
+                template: [createModalNode({ id: 'rep-modal' })],
+              },
+            },
+            {
+              type: 'button',
+              props: {
+                label: 'Load users',
+                action: {
+                  type: 'executeOperation',
+                  operationName: 'searchUsers',
+                  onSuccess: [{ type: 'openModal', modalId: 'rep-modal' }],
+                },
+              },
+            },
+          ],
+        },
+      ],
+      initialPage: 'home',
+    })
+
+    expect(result.status).toBe('ready')
+  })
 })
 
 // T1: button.props.action.type "downloadOperation" and link.props.action.type "downloadOperation"

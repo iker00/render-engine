@@ -33,7 +33,7 @@ export function executeRuntimeUiAction(
   action: RuntimeUiAction,
   handlers: RuntimeUiActionHandlers,
   options?: { state?: RuntimeState; iterationContext?: RuntimeIterationContext },
-) {
+): Promise<unknown> | void {
   switch (action.type) {
     case 'navigateTo':
       handlers.navigateToPage(action.pageId, action.params, {
@@ -44,7 +44,7 @@ export function executeRuntimeUiAction(
       handlers.goBackPage()
       return
     case 'executeOperation':
-      void handlers.executeQueryOperation(action.operationName, {
+      return handlers.executeQueryOperation(action.operationName, {
         requestParams: {
           query: action.query,
           body: action.body,
@@ -52,22 +52,27 @@ export function executeRuntimeUiAction(
         },
         iterationContext: options?.iterationContext,
       })
-      return
-    case 'executeOperations':
+    case 'executeOperations': {
+      const pendingOperations: Promise<unknown>[] = []
+
       for (const entry of action.operations) {
         if (options?.state && !matchesVisibilityRule(entry.when, options.state, options.iterationContext)) {
           continue
         }
-        void handlers.executeQueryOperation(entry.operationName, {
-          requestParams: {
-            query: entry.query,
-            body: entry.body,
-            headers: entry.headers,
-          },
-          iterationContext: options?.iterationContext,
-        })
+        pendingOperations.push(
+          handlers.executeQueryOperation(entry.operationName, {
+            requestParams: {
+              query: entry.query,
+              body: entry.body,
+              headers: entry.headers,
+            },
+            iterationContext: options?.iterationContext,
+          }),
+        )
       }
-      return
+
+      return Promise.all(pendingOperations)
+    }
     case 'openModal':
       handlers.openModal(action.modalId, { iterationContext: options?.iterationContext })
       return
@@ -102,20 +107,28 @@ export async function runActionOutcomeWithLifecycle<TResult extends { status: st
   const result = await execute()
 
   if (result.status === 'success') {
-    runRuntimeUiActionLifecycleList(onSuccess, handlers, readState, iterationContext)
+    await runRuntimeUiActionLifecycleList(onSuccess, handlers, readState, iterationContext)
   } else if (result.status === 'error') {
-    runRuntimeUiActionLifecycleList(onError, handlers, readState, iterationContext)
+    await runRuntimeUiActionLifecycleList(onError, handlers, readState, iterationContext)
   }
 
   return result
 }
 
-export function runRuntimeUiActionLifecycleList(
+/**
+ * Runs a lifecycle action list (`onSuccess`/`onError`) sequentially: each entry's
+ * asynchronous work (`executeOperation`, `executeOperations`) is awaited before the
+ * next entry in the list starts. This lets a later entry's `when` observe state
+ * produced by an earlier entry of the same list (e.g. `queries.<op>.status`/`.data`
+ * after that operation has resolved). Synchronous entries (`navigateTo`, `goBack`,
+ * `resetForm`, `openModal`, `closeModal`) don't introduce any wait of their own.
+ */
+export async function runRuntimeUiActionLifecycleList(
   actions: RuntimeUiActionListEntry[] | undefined,
   handlers: RuntimeUiActionHandlers,
   readState: () => RuntimeState,
   iterationContext?: RuntimeIterationContext,
-) {
+): Promise<void> {
   if (!actions || actions.length === 0) {
     return
   }
@@ -129,7 +142,7 @@ export function runRuntimeUiActionLifecycleList(
 
     // Strip 'when' before passing to executor since RuntimeUiAction doesn't have 'when'
     const { when: _when, ...baseAction } = action as RuntimeUiActionListEntry & { when?: unknown }
-    executeRuntimeUiAction(baseAction as Parameters<typeof executeRuntimeUiAction>[0], handlers, {
+    await executeRuntimeUiAction(baseAction as Parameters<typeof executeRuntimeUiAction>[0], handlers, {
       state: snapshot,
       iterationContext,
     })

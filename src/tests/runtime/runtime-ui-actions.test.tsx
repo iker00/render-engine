@@ -111,9 +111,10 @@ describe('executeRuntimeUiAction', () => {
     expect(handlers.resetForm).not.toHaveBeenCalled()
   })
 
-  it('maps executeOperation to executeQueryOperation without awaiting in the caller surface', () => {
+  it('maps executeOperation to executeQueryOperation and returns its promise without awaiting it internally', () => {
     const handlers = createHandlers()
-    handlers.executeQueryOperation.mockResolvedValue(undefined)
+    const operationPromise = Promise.resolve(undefined)
+    handlers.executeQueryOperation.mockReturnValue(operationPromise)
 
     const result = runtimeUiActionExecutor.executeRuntimeUiAction(
       {
@@ -132,7 +133,10 @@ describe('executeRuntimeUiAction', () => {
       handlers,
     )
 
-    expect(result).toBeUndefined()
+    // The executor returns the very same promise instead of awaiting or wrapping it, so a
+    // caller building a lifecycle list (e.g. `runRuntimeUiActionLifecycleList`) can sequence
+    // on it while a fire-and-forget caller can keep discarding the return value as before.
+    expect(result).toBe(operationPromise)
     expect(handlers.executeQueryOperation).toHaveBeenCalledWith('searchUsers', {
       requestParams: {
         query: {

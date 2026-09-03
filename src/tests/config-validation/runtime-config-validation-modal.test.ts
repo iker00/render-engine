@@ -441,6 +441,182 @@ describe('validateRuntimeConfig — modal cross-validation', () => {
     )
     expect(result.status).toBe('ready')
   })
+
+  it('rejects openModal cross-repeater when target modal belongs to a sibling repeater', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithLayout([
+        {
+          type: 'repeater',
+          props: {
+            items: { source: 'queries.list.data', key: 'id' },
+            template: [
+              {
+                type: 'button',
+                props: { label: 'Open', action: { type: 'openModal', modalId: 'modalInRepeaterB' } },
+              },
+            ],
+          },
+        },
+        {
+          type: 'repeater',
+          props: {
+            items: { source: 'queries.other.data', key: 'id' },
+            template: [createModalNode({ id: 'modalInRepeaterB' })],
+          },
+        },
+      ]),
+    )
+    expect(result).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message: `Page "home" has an invalid layout at "layout[0].props.template[0].props.action.modalId": modal "modalInRepeaterB" belongs to a different repeater.
+  → repeater[0] > button("Open")
+  Node: {"type":"button","props":{"label":"Open"}}`,
+      },
+    })
+  })
+
+  it('rejects closeModal cross-repeater when target modal belongs to a sibling repeater', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithLayout([
+        {
+          type: 'repeater',
+          props: {
+            items: { source: 'queries.list.data', key: 'id' },
+            template: [
+              {
+                type: 'button',
+                props: { label: 'Close', action: { type: 'closeModal', modalId: 'modalInRepeaterB' } },
+              },
+            ],
+          },
+        },
+        {
+          type: 'repeater',
+          props: {
+            items: { source: 'queries.other.data', key: 'id' },
+            template: [createModalNode({ id: 'modalInRepeaterB' })],
+          },
+        },
+      ]),
+    )
+    expect(result).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message: `Page "home" has an invalid layout at "layout[0].props.template[0].props.action.modalId": modal "modalInRepeaterB" belongs to a different repeater.
+  → repeater[0] > button("Close")
+  Node: {"type":"button","props":{"label":"Close"}}`,
+      },
+    })
+  })
+
+  it('accepts openModal within the same repeater when the target modal is nested via an intermediate container', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithLayout([
+        {
+          type: 'repeater',
+          props: {
+            items: { source: 'queries.list.data', key: 'id' },
+            template: [
+              createModalNode({ id: 'inner-modal' }),
+              {
+                type: 'container',
+                children: [
+                  {
+                    type: 'button',
+                    props: { label: 'Open', action: { type: 'openModal', modalId: 'inner-modal' } },
+                  },
+                ],
+              },
+            ],
+          },
+        },
+      ]),
+    )
+    expect(result.status).toBe('ready')
+  })
+
+  it('accepts openModal from inside a repeater targeting a page-level modal', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithLayout([
+        createModalNode({ id: 'page-modal' }),
+        {
+          type: 'repeater',
+          props: {
+            items: { source: 'queries.list.data', key: 'id' },
+            template: [
+              {
+                type: 'button',
+                props: { label: 'Open', action: { type: 'openModal', modalId: 'page-modal' } },
+              },
+            ],
+          },
+        },
+      ]),
+    )
+    expect(result.status).toBe('ready')
+  })
+
+  it('accepts openModal from outside any repeater targeting a modal declared inside a repeater', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithLayout([
+        {
+          type: 'repeater',
+          props: {
+            items: { source: 'queries.list.data', key: 'id' },
+            template: [createModalNode({ id: 'rep-modal' })],
+          },
+        },
+        {
+          type: 'button',
+          props: { label: 'Open', action: { type: 'openModal', modalId: 'rep-modal' } },
+        },
+      ]),
+    )
+    expect(result.status).toBe('ready')
+  })
+
+  it('rejects openModal cross-repeater when the target modal belongs to an ancestor repeater outside the nearest one', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithLayout([
+        {
+          type: 'repeater',
+          props: {
+            items: { source: 'queries.outer.data', key: 'id' },
+            template: [
+              createModalNode({ id: 'outer-modal' }),
+              {
+                type: 'repeater',
+                props: {
+                  items: { source: 'queries.inner.data', key: 'id' },
+                  template: [
+                    {
+                      type: 'button',
+                      props: { label: 'Open', action: { type: 'openModal', modalId: 'outer-modal' } },
+                    },
+                  ],
+                },
+              },
+            ],
+          },
+        },
+      ]),
+    )
+    expect(result).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message: `Page "home" has an invalid layout at "layout[0].props.template[1].props.template[0].props.action.modalId": modal "outer-modal" belongs to a different repeater.
+  → repeater[0] > repeater[1] > button("Open")
+  Node: {"type":"button","props":{"label":"Open"}}`,
+      },
+    })
+  })
 })
 
 // ─── Second-pass breadcrumb enrichment tests ─────────────────────────────────

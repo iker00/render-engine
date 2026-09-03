@@ -1,8 +1,13 @@
+import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import type { RuntimeConfig } from '../../config/runtime-config'
 import { createRuntimeState, runtimeStateReducer } from '../../runtime/runtime-state/runtime-state-reducer'
 import { selectActiveModal, isModalOpen } from '../../runtime/runtime-state/runtime-state-selectors'
+import { RuntimeStateProvider } from '../../runtime/runtime-state/runtime-state-provider'
+import { useRuntimeStateActions } from '../../runtime/runtime-state/use-runtime-state'
 import type { RuntimeIterationContext } from '../../runtime/runtime-references/runtime-reference-resolver'
+import { RuntimeStateSnapshot } from './helpers'
+import { readRuntimeStateSnapshot } from './read-runtime-state-snapshot'
 
 const testConfig: RuntimeConfig = {
   api: {},
@@ -121,5 +126,101 @@ describe('RuntimeIterationContext includes key', () => {
     const ctx: RuntimeIterationContext = { item: { id: 1, name: 'Ada' }, key: 'row-1' }
     expect(ctx.key).toBe('row-1')
     expect(ctx.item).toEqual({ id: 1, name: 'Ada' })
+  })
+})
+
+function ModalTriggerActionsFixture({ modalId }: { modalId: string }) {
+  const { openModal, closeModal } = useRuntimeStateActions()
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => openModal(modalId, { iterationContext: { key: 'row-3', item: {} } })}
+      >
+        Trigger open
+      </button>
+      <button
+        type="button"
+        onClick={() => closeModal(modalId, { iterationContext: { key: 'row-3', item: {} } })}
+      >
+        Trigger close
+      </button>
+    </>
+  )
+}
+
+describe('openModal/closeModal dispatch iterationKey by modal ownership', () => {
+  const pageLevelModalConfig: RuntimeConfig = {
+    api: {},
+    initialPage: 'home',
+    pages: [
+      {
+        id: 'home',
+        layout: [{ type: 'modal', id: 'pageModal', children: [] }],
+      },
+    ],
+  }
+
+  const repeaterModalConfig: RuntimeConfig = {
+    api: {},
+    initialPage: 'home',
+    pages: [
+      {
+        id: 'home',
+        layout: [
+          {
+            type: 'repeater',
+            props: {
+              items: { source: 'queries.users.data.results', key: 'id' },
+              template: [{ type: 'modal', id: 'rowModal', children: [] }],
+            },
+          },
+        ],
+      },
+    ],
+  }
+
+  it('openModal on a page-level modal dispatches iterationKey: undefined even when the trigger has an iterationContext', () => {
+    render(
+      <RuntimeStateProvider config={pageLevelModalConfig}>
+        <ModalTriggerActionsFixture modalId="pageModal" />
+        <RuntimeStateSnapshot testId="runtime-state" />
+      </RuntimeStateProvider>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Trigger open' }))
+
+    const state = readRuntimeStateSnapshot('runtime-state')
+    expect(selectActiveModal(state)).toEqual({ activeModalId: 'pageModal', activeIterationKey: null })
+  })
+
+  it('closeModal on a page-level modal dispatches iterationKey: undefined even when the trigger has an iterationContext', () => {
+    render(
+      <RuntimeStateProvider config={pageLevelModalConfig}>
+        <ModalTriggerActionsFixture modalId="pageModal" />
+        <RuntimeStateSnapshot testId="runtime-state" />
+      </RuntimeStateProvider>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Trigger open' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Trigger close' }))
+
+    const state = readRuntimeStateSnapshot('runtime-state')
+    expect(selectActiveModal(state)).toEqual({ activeModalId: null, activeIterationKey: null })
+  })
+
+  it('openModal on a modal inside the same repeater as the trigger still dispatches the trigger iterationKey', () => {
+    render(
+      <RuntimeStateProvider config={repeaterModalConfig}>
+        <ModalTriggerActionsFixture modalId="rowModal" />
+        <RuntimeStateSnapshot testId="runtime-state" />
+      </RuntimeStateProvider>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Trigger open' }))
+
+    const state = readRuntimeStateSnapshot('runtime-state')
+    expect(selectActiveModal(state)).toEqual({ activeModalId: 'rowModal', activeIterationKey: 'row-3' })
   })
 })

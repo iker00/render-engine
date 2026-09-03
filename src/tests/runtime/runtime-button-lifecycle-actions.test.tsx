@@ -119,6 +119,79 @@ describe('ButtonNode direct execution with onSuccess/onError lifecycle', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2)
   })
 
+  it('does not fire the second onSuccess executeOperation network call until the first one resolves', async () => {
+    let resolveChainedOne: ((response: Response) => void) | null = null
+    const fetchMock = vi.fn<typeof fetch>().mockImplementation((input) => {
+      const url = String(input)
+      if (url.includes('/api/main')) {
+        return Promise.resolve(jsonResponse({ ok: true }))
+      }
+      if (url.includes('/api/chained-one')) {
+        return new Promise<Response>((resolve) => {
+          resolveChainedOne = resolve
+        })
+      }
+      if (url.includes('/api/chained-two')) {
+        return Promise.resolve(jsonResponse({ ok: true }))
+      }
+      throw new Error(`No mock response configured for URL: ${url}`)
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const config: RuntimeConfig = {
+      api: {
+        mainOp: { method: 'POST', endpoint: '/api/main' },
+        chainedOneOp: { method: 'POST', endpoint: '/api/chained-one' },
+        chainedTwoOp: { method: 'POST', endpoint: '/api/chained-two' },
+      },
+      initialPage: 'home',
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'button',
+              props: {
+                label: 'Run',
+                action: {
+                  type: 'executeOperation',
+                  operationName: 'mainOp',
+                  onSuccess: [
+                    { type: 'executeOperation', operationName: 'chainedOneOp' },
+                    { type: 'executeOperation', operationName: 'chainedTwoOp' },
+                  ],
+                },
+              },
+            },
+          ],
+        },
+      ],
+    }
+
+    render(<ButtonLifecycleFixture config={config} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Run' }))
+
+    await waitFor(() => {
+      const state = readRuntimeStateSnapshot('runtime-state')
+      expect(state.queries.mainOp?.status).toBe('success')
+      expect(state.queries.chainedOneOp?.status).toBe('loading')
+    })
+
+    // Only the main operation and the first onSuccess entry have been dispatched so far;
+    // the second entry is still waiting for the first one to resolve.
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(readRuntimeStateSnapshot('runtime-state').queries.chainedTwoOp).toBeUndefined()
+
+    resolveChainedOne?.(jsonResponse({ ok: true }))
+
+    await waitFor(() => {
+      const state = readRuntimeStateSnapshot('runtime-state')
+      expect(state.queries.chainedTwoOp?.status).toBe('success')
+    })
+
+    expect(fetchMock).toHaveBeenCalledTimes(3)
+  })
+
   it('opens a modal via onError when the button own operation fails', async () => {
     const fetchMock = createFetchMockByEndpoint({
       '/api/risky': jsonResponse({ error: 'failed' }, 500),

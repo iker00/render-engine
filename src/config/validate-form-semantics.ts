@@ -3,6 +3,7 @@ import { buttonRequiresFormAncestor, FORM_ALLOWED_DESCENDANT_TYPES, FORM_ONLY_LE
 import type { BreadcrumbSegment } from './validation-breadcrumb'
 import { buildBreadcrumbSegmentFromNode, enrichedInvalidLayoutFromNode } from './validation-breadcrumb'
 import { invalidLayout } from './runtime-config-validation-errors'
+import { computeModalRepeaterOwnership } from './runtime-modal-repeater-ownership'
 
 interface FormValidationContext {
   inForm: boolean
@@ -13,6 +14,8 @@ interface FormValidationContext {
   operationNames: ReadonlySet<string>
   pageIds: ReadonlySet<string>
   modalIds: ReadonlySet<string>
+  modalOwnership: ReadonlyMap<string, string | null>
+  currentRepeaterPath: string | null
   breadcrumb: BreadcrumbSegment[]
 }
 
@@ -23,6 +26,7 @@ export function validateFormSemantics(
   const operationNames = new Set(Object.keys(config.api))
   const pageIds = new Set(config.pages.map((page) => page.id))
   const modalIds = collectModalIds(config.pages.flatMap((page) => page.layout))
+  const modalOwnership = computeModalRepeaterOwnership(config.pages)
 
   for (const page of config.pages) {
     const error = validateFormNodesInCollection(page.layout, 'layout', page.id, {
@@ -34,6 +38,8 @@ export function validateFormSemantics(
       operationNames,
       pageIds,
       modalIds,
+      modalOwnership,
+      currentRepeaterPath: null,
       breadcrumb: [],
     })
 
@@ -123,6 +129,8 @@ function validateFormNodesInCollection(
           context.pageIds,
           context.operationNames,
           context.modalIds,
+          context.modalOwnership,
+          context.currentRepeaterPath,
         )
 
         if (onSuccessError) {
@@ -138,6 +146,8 @@ function validateFormNodesInCollection(
           context.pageIds,
           context.operationNames,
           context.modalIds,
+          context.modalOwnership,
+          context.currentRepeaterPath,
         )
 
         if (onErrorError) {
@@ -181,7 +191,12 @@ function validateFormNodesInCollection(
     }
 
     if (node.type === 'repeater') {
-      const templateError = validateFormNodesInCollection(node.props.template, `${nodePath}.props.template`, pageId, { ...context, breadcrumb: nodeBreadcrumb })
+      const repeaterPath = `${pageId}::${nodePath}`
+      const templateError = validateFormNodesInCollection(node.props.template, `${nodePath}.props.template`, pageId, {
+        ...context,
+        breadcrumb: nodeBreadcrumb,
+        currentRepeaterPath: repeaterPath,
+      })
 
       if (templateError) {
         return templateError
@@ -272,6 +287,8 @@ function validateFormNodesInCollection(
             context.pageIds,
             context.operationNames,
             context.modalIds,
+            context.modalOwnership,
+            context.currentRepeaterPath,
           )
 
           if (onSuccessError) {
@@ -287,6 +304,8 @@ function validateFormNodesInCollection(
             context.pageIds,
             context.operationNames,
             context.modalIds,
+            context.modalOwnership,
+            context.currentRepeaterPath,
           )
 
           if (onErrorError) {
@@ -424,6 +443,8 @@ export function validateActionListTargets(
   pageIds: ReadonlySet<string>,
   operationNames: ReadonlySet<string>,
   modalIds: ReadonlySet<string>,
+  modalOwnership: ReadonlyMap<string, string | null>,
+  currentRepeaterPath: string | null,
 ): { status: 'error'; error: RuntimeConfigError } | null {
   for (let index = 0; index < actions.length; index += 1) {
     const action = actions[index]
@@ -441,16 +462,20 @@ export function validateActionListTargets(
       )
     }
 
-    if (action.type === 'openModal' && !modalIds.has(action.modalId)) {
-      return invalidLayout(
-        `Page "${pageId}" has an invalid layout at "${actionPath}.modalId": unknown modal "${action.modalId}".`,
-      )
-    }
+    if (action.type === 'openModal' || action.type === 'closeModal') {
+      if (!modalIds.has(action.modalId)) {
+        return invalidLayout(
+          `Page "${pageId}" has an invalid layout at "${actionPath}.modalId": unknown modal "${action.modalId}".`,
+        )
+      }
 
-    if (action.type === 'closeModal' && !modalIds.has(action.modalId)) {
-      return invalidLayout(
-        `Page "${pageId}" has an invalid layout at "${actionPath}.modalId": unknown modal "${action.modalId}".`,
-      )
+      const owningRepeaterPath = modalOwnership.get(action.modalId) ?? null
+
+      if (currentRepeaterPath !== null && owningRepeaterPath !== null && owningRepeaterPath !== currentRepeaterPath) {
+        return invalidLayout(
+          `Page "${pageId}" has an invalid layout at "${actionPath}.modalId": modal "${action.modalId}" belongs to a different repeater.`,
+        )
+      }
     }
   }
 

@@ -3256,4 +3256,181 @@ describe('validateRuntimeConfig — second-pass form semantics include breadcrum
       expect(result.status).toBe('ready')
     })
   })
+
+  describe('submitAction.onSuccess/onError cross-repeater modal target validation (T4)', () => {
+    function createModalNode(overrides: Record<string, unknown> = {}) {
+      return {
+        type: 'modal',
+        id: 'my-modal',
+        children: [],
+        ...overrides,
+      }
+    }
+
+    it('rejects submitAction.onSuccess openModal targeting a modal that belongs to a sibling repeater', () => {
+      const result = validateRuntimeConfig({
+        api: {
+          submitUserForm: { method: 'POST', endpoint: '/api/forms' },
+        },
+        pages: [
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'repeater',
+                props: {
+                  items: { source: 'queries.listA.data', key: 'id' },
+                  template: [
+                    {
+                      type: 'form',
+                      id: 'user-form',
+                      submitAction: {
+                        type: 'executeOperation',
+                        operationName: 'submitUserForm',
+                        onSuccess: [{ type: 'openModal', modalId: 'modalInRepeaterB' }],
+                      },
+                      children: [],
+                    },
+                  ],
+                },
+              },
+              {
+                type: 'repeater',
+                props: {
+                  items: { source: 'queries.listB.data', key: 'id' },
+                  template: [createModalNode({ id: 'modalInRepeaterB' })],
+                },
+              },
+            ],
+          },
+        ],
+        initialPage: 'home',
+      })
+
+      expect(result.status).toBe('error')
+      if (result.status !== 'error') throw new Error('Expected error')
+      expect(result.error.message).toContain('layout[0].props.template[0].submitAction.onSuccess[0].modalId')
+      expect(result.error.message).toContain('modal "modalInRepeaterB" belongs to a different repeater.')
+    })
+
+    it('rejects submitAction.onError closeModal targeting a modal that belongs to a sibling repeater', () => {
+      const result = validateRuntimeConfig({
+        api: {
+          submitUserForm: { method: 'POST', endpoint: '/api/forms' },
+        },
+        pages: [
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'repeater',
+                props: {
+                  items: { source: 'queries.listA.data', key: 'id' },
+                  template: [
+                    {
+                      type: 'form',
+                      id: 'user-form',
+                      submitAction: {
+                        type: 'executeOperation',
+                        operationName: 'submitUserForm',
+                        onError: [{ type: 'closeModal', modalId: 'modalInRepeaterB' }],
+                      },
+                      children: [],
+                    },
+                  ],
+                },
+              },
+              {
+                type: 'repeater',
+                props: {
+                  items: { source: 'queries.listB.data', key: 'id' },
+                  template: [createModalNode({ id: 'modalInRepeaterB' })],
+                },
+              },
+            ],
+          },
+        ],
+        initialPage: 'home',
+      })
+
+      expect(result.status).toBe('error')
+      if (result.status !== 'error') throw new Error('Expected error')
+      expect(result.error.message).toContain('layout[0].props.template[0].submitAction.onError[0].modalId')
+      expect(result.error.message).toContain('modal "modalInRepeaterB" belongs to a different repeater.')
+    })
+
+    it('accepts submitAction.onSuccess openModal targeting a modal declared in the same repeater (regression)', () => {
+      const result = validateRuntimeConfig({
+        api: {
+          submitUserForm: { method: 'POST', endpoint: '/api/forms' },
+        },
+        pages: [
+          {
+            id: 'home',
+            layout: [
+              {
+                type: 'repeater',
+                props: {
+                  items: { source: 'queries.listA.data', key: 'id' },
+                  template: [
+                    createModalNode({ id: 'sameRepeaterModal' }),
+                    {
+                      type: 'form',
+                      id: 'user-form',
+                      submitAction: {
+                        type: 'executeOperation',
+                        operationName: 'submitUserForm',
+                        onSuccess: [{ type: 'openModal', modalId: 'sameRepeaterModal' }],
+                      },
+                      children: [],
+                    },
+                  ],
+                },
+              },
+            ],
+          },
+        ],
+        initialPage: 'home',
+      })
+
+      expect(result.status).toBe('ready')
+    })
+
+    it('accepts submitAction.onSuccess openModal from inside a repeater targeting a page-level modal', () => {
+      const result = validateRuntimeConfig({
+        api: {
+          submitUserForm: { method: 'POST', endpoint: '/api/forms' },
+        },
+        pages: [
+          {
+            id: 'home',
+            layout: [
+              createModalNode({ id: 'page-modal' }),
+              {
+                type: 'repeater',
+                props: {
+                  items: { source: 'queries.listA.data', key: 'id' },
+                  template: [
+                    {
+                      type: 'form',
+                      id: 'user-form',
+                      submitAction: {
+                        type: 'executeOperation',
+                        operationName: 'submitUserForm',
+                        onSuccess: [{ type: 'openModal', modalId: 'page-modal' }],
+                      },
+                      children: [],
+                    },
+                  ],
+                },
+              },
+            ],
+          },
+        ],
+        initialPage: 'home',
+      })
+
+      expect(result.status).toBe('ready')
+    })
+  })
 })
