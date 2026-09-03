@@ -24,6 +24,7 @@ import { validateTokensConfig } from './validate-tokens-config'
 import { validateShellConfig } from './validate-shell'
 import type { BreadcrumbSegment } from './validation-breadcrumb'
 import { buildBreadcrumbSegmentFromNode, enrichedInvalidLayoutFromNode } from './validation-breadcrumb'
+import { computeModalRepeaterOwnership } from './runtime-modal-repeater-ownership'
 
 export function validateRuntimeConfig(rawConfig: unknown): RuntimeConfigValidationResult {
   // Extract and validate the optional translations block before the shell schema strips it
@@ -273,8 +274,10 @@ function validateModalReferences(
     if (error) return error
   }
 
+  const modalOwnership = computeModalRepeaterOwnership(config.pages)
+
   for (const page of config.pages) {
-    const error = checkModalRefs(page.layout, 'layout', page.id, seenModalIds, false, [])
+    const error = checkModalRefs(page.layout, 'layout', page.id, seenModalIds, modalOwnership, null, [])
     if (error) return error
   }
 
@@ -348,7 +351,8 @@ function checkModalRefs(
   path: string,
   pageId: string,
   modalIds: Map<string, string>,
-  insideRepeaterTemplate: boolean,
+  modalOwnership: Map<string, string | null>,
+  currentRepeaterPath: string | null,
   breadcrumb: BreadcrumbSegment[],
 ): { status: 'error'; error: RuntimeConfigError } | null {
   for (let i = 0; i < nodes.length; i += 1) {
@@ -357,22 +361,33 @@ function checkModalRefs(
     const nodeSegment = buildBreadcrumbSegmentFromNode(node, i)
     const nodeBreadcrumb = [...breadcrumb, nodeSegment]
 
-    const fallbackError = checkModalRefsInFallbacks(node, nodePath, pageId, modalIds, insideRepeaterTemplate, nodeBreadcrumb)
+    const fallbackError = checkModalRefsInFallbacks(node, nodePath, pageId, modalIds, modalOwnership, currentRepeaterPath, nodeBreadcrumb)
     if (fallbackError) return fallbackError
 
     if (node.type === 'button' && node.props.action) {
       const { action } = node.props
-      if ((action.type === 'openModal' || action.type === 'closeModal') && !modalIds.has(action.modalId)) {
-        return enrichedInvalidLayoutFromNode(
-          `Page "${pageId}" has an invalid layout at "${nodePath}.props.action.modalId": unknown modal "${action.modalId}".`,
-          nodeBreadcrumb,
-          node,
-        )
+      if (action.type === 'openModal' || action.type === 'closeModal') {
+        if (!modalIds.has(action.modalId)) {
+          return enrichedInvalidLayoutFromNode(
+            `Page "${pageId}" has an invalid layout at "${nodePath}.props.action.modalId": unknown modal "${action.modalId}".`,
+            nodeBreadcrumb,
+            node,
+          )
+        }
+
+        const owningRepeaterPath = modalOwnership.get(action.modalId) ?? null
+        if (currentRepeaterPath !== null && owningRepeaterPath !== null && owningRepeaterPath !== currentRepeaterPath) {
+          return enrichedInvalidLayoutFromNode(
+            `Page "${pageId}" has an invalid layout at "${nodePath}.props.action.modalId": modal "${action.modalId}" belongs to a different repeater.`,
+            nodeBreadcrumb,
+            node,
+          )
+        }
       }
     }
 
     if (node.type === 'modal') {
-      if (insideRepeaterTemplate && node.props?.defaultOpen === true) {
+      if (currentRepeaterPath !== null && node.props?.defaultOpen === true) {
         return enrichedInvalidLayoutFromNode(
           `Page "${pageId}" has an invalid layout at "${nodePath}.props.defaultOpen": modal defaultOpen is not supported inside a repeater template.`,
           nodeBreadcrumb,
@@ -381,14 +396,14 @@ function checkModalRefs(
       }
 
       if (node.children) {
-        const error = checkModalRefs(node.children, `${nodePath}.children`, pageId, modalIds, insideRepeaterTemplate, nodeBreadcrumb)
+        const error = checkModalRefs(node.children, `${nodePath}.children`, pageId, modalIds, modalOwnership, currentRepeaterPath, nodeBreadcrumb)
         if (error) return error
       }
     } else if ((node.type === 'container' || node.type === 'form') && node.children) {
-      const error = checkModalRefs(node.children, `${nodePath}.children`, pageId, modalIds, insideRepeaterTemplate, nodeBreadcrumb)
+      const error = checkModalRefs(node.children, `${nodePath}.children`, pageId, modalIds, modalOwnership, currentRepeaterPath, nodeBreadcrumb)
       if (error) return error
     } else if (node.type === 'repeater') {
-      const error = checkModalRefs(node.props.template, `${nodePath}.props.template`, pageId, modalIds, true, nodeBreadcrumb)
+      const error = checkModalRefs(node.props.template, `${nodePath}.props.template`, pageId, modalIds, modalOwnership, `${pageId}::${nodePath}`, nodeBreadcrumb)
       if (error) return error
     }
   }
@@ -401,7 +416,8 @@ function checkModalRefsInFallbacks(
   nodePath: string,
   pageId: string,
   modalIds: Map<string, string>,
-  insideRepeaterTemplate: boolean,
+  modalOwnership: Map<string, string | null>,
+  currentRepeaterPath: string | null,
   breadcrumb: BreadcrumbSegment[],
 ): { status: 'error'; error: RuntimeConfigError } | null {
   if (!node.queryStateFeedback?.states) return null
@@ -414,7 +430,8 @@ function checkModalRefsInFallbacks(
       `${nodePath}.queryStateFeedback.states.${stateName}.fallback`,
       pageId,
       modalIds,
-      insideRepeaterTemplate,
+      modalOwnership,
+      currentRepeaterPath,
       breadcrumb,
     )
     if (error) return error
