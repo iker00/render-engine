@@ -2,6 +2,8 @@ import type { MouseEvent, ReactNode } from 'react'
 import { useDroppable } from '@dnd-kit/core'
 import type { LayoutNode } from '../config/runtime-config'
 import type { RuntimeIterationContext } from './runtime-references/runtime-reference-resolver'
+import type { RuntimeInstanceScope } from './runtime-references/runtime-instance-scope'
+import { EMPTY_INSTANCE_SCOPE } from './runtime-references/runtime-instance-scope'
 import type { LayoutNodePath } from './layout-node-path'
 import { LayoutNodeRenderer } from './layout-node-renderer'
 import { useLayoutEditModeContext } from './use-layout-edit-mode-context'
@@ -14,6 +16,13 @@ import { hasChildren, isEmptyPlaceholderCandidate, type EmptyPlaceholderNodeType
 export interface LayoutRendererProps {
   nodes: readonly LayoutNode[]
   iterationContext?: RuntimeIterationContext
+  /**
+   * Cadena de scope ambiente (T02 / feature reusable-node-groups): viaja junto a
+   * `iterationContext` sin sustituirlo. Cuando está ausente, los descendientes la reciben
+   * como `EMPTY_INSTANCE_SCOPE`. Sin consumidores todavía; `repeater` es quien la construye
+   * empujando un token `repeater` por iteración (T03/T04/T05/T12 la consumirán).
+   */
+  scopeChain?: RuntimeInstanceScope
   path?: LayoutNodePath
   buildChildPath?: (index: number) => LayoutNodePath
   /**
@@ -36,11 +45,13 @@ export interface LayoutRendererProps {
 export function LayoutRenderer({
   nodes,
   iterationContext,
+  scopeChain,
   path = [],
   buildChildPath,
   parentTabItemIndex,
   parentStepItemIndex,
 }: LayoutRendererProps) {
+  const resolvedScopeChain = scopeChain ?? EMPTY_INSTANCE_SCOPE
   const editModeContext = useLayoutEditModeContext()
   const { parentGridColumns } = useRuntimeLayoutContext()
   const resolveChildPath = buildChildPath ?? ((index: number) => [...path, { field: 'children' as const, index }])
@@ -87,13 +98,19 @@ export function LayoutRenderer({
         key={getLayoutNodeKey(node, index)}
         node={node}
         iterationContext={iterationContext}
+        scopeChain={resolvedScopeChain}
         path={childPath}
         renderedChildren={
           hasChildren(node) ? (
             activeEditModeContext !== null && isEmptyPlaceholderCandidate(node) ? (
               <EmptyContainerPlaceholder nodeType={node.type} path={childPath} editModeContext={activeEditModeContext} />
             ) : (
-              <LayoutRenderer nodes={node.children ?? []} iterationContext={iterationContext} path={childPath} />
+              <LayoutRenderer
+                nodes={node.children ?? []}
+                iterationContext={iterationContext}
+                scopeChain={resolvedScopeChain}
+                path={childPath}
+              />
             )
           ) : undefined
         }

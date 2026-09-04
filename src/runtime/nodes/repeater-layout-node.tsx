@@ -25,10 +25,18 @@ import { useRuntimeState, useRuntimeStateActions } from '../runtime-state/use-ru
 import { selectActiveModal } from '../runtime-state/runtime-state-selectors'
 import { useLayoutEditModeContext } from '../use-layout-edit-mode-context'
 import type { LayoutNodePath } from '../layout-node-path'
+import type { RuntimeInstanceScope } from '../runtime-references/runtime-instance-scope'
+import { EMPTY_INSTANCE_SCOPE, pushRepeaterScopeToken } from '../runtime-references/runtime-instance-scope'
 
 interface RepeaterNodeProps {
   node: RepeaterLayoutNode
   path?: LayoutNodePath
+  /**
+   * Cadena de scope ambiente recibida del ancestro (T02 / feature reusable-node-groups).
+   * `repeater` es el único constructor de cadena hoy: empuja un token `repeater` con la key
+   * de cada iteración antes de propagarla a `props.template`.
+   */
+  scopeChain?: RuntimeInstanceScope
 }
 
 const EDIT_MODE_ITERATION_KEY = '__edit-mode-instance__'
@@ -40,7 +48,8 @@ interface RepeaterIteration {
   itemIndex: number
 }
 
-export function RepeaterNode({ node, path }: RepeaterNodeProps) {
+export function RepeaterNode({ node, path, scopeChain }: RepeaterNodeProps) {
+  const resolvedScopeChain = scopeChain ?? EMPTY_INSTANCE_SCOPE
   const state = useRuntimeState()
   const { closeModal } = useRuntimeStateActions()
   const { parentGridColumns } = useRuntimeLayoutContext()
@@ -85,6 +94,7 @@ export function RepeaterNode({ node, path }: RepeaterNodeProps) {
       <LayoutRenderer
         nodes={node.props.template}
         iterationContext={editModeIterationContext}
+        scopeChain={pushRepeaterScopeToken(resolvedScopeChain, EDIT_MODE_ITERATION_KEY)}
         path={basePath}
         buildChildPath={(index) => [...basePath, { field: 'template', index }]}
       />
@@ -118,6 +128,7 @@ export function RepeaterNode({ node, path }: RepeaterNodeProps) {
       paginationControlsVariant={paginationControlsVariant}
       parentGridColumns={parentGridColumns}
       paginationStateKey={paginationStateKey}
+      scopeChain={resolvedScopeChain}
     />
   )
 }
@@ -129,6 +140,7 @@ interface RepeaterNodeContentProps {
   paginationControlsVariant: RuntimeCollectionPaginationControlsVariant
   parentGridColumns?: RuntimeResponsiveLayoutValue | null
   paginationStateKey: string
+  scopeChain: RuntimeInstanceScope
 }
 
 function RepeaterNodeContent({
@@ -138,6 +150,7 @@ function RepeaterNodeContent({
   paginationControlsVariant,
   parentGridColumns,
   paginationStateKey,
+  scopeChain,
 }: RepeaterNodeContentProps) {
   const [activePage, setActivePage] = useState(1)
   const [scrollVisibleCount, setScrollVisibleCount] = useState(pageSize ?? 0)
@@ -176,7 +189,14 @@ function RepeaterNodeContent({
       itemIndex: iteration.itemIndex,
     }
 
-    return <LayoutRenderer key={iteration.key} nodes={node.props.template} iterationContext={iterationContext} />
+    return (
+      <LayoutRenderer
+        key={iteration.key}
+        nodes={node.props.template}
+        iterationContext={iterationContext}
+        scopeChain={pushRepeaterScopeToken(scopeChain, iteration.key)}
+      />
+    )
   })
 
   const gridStyling =
