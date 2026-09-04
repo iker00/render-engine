@@ -21,6 +21,8 @@ import {
 import { CollectionPaginationControls } from './collection-pagination-controls'
 import type { RuntimeIterationContext } from '../runtime-references/runtime-reference-resolver'
 import { resolveRuntimeReference } from '../runtime-references/runtime-reference-resolver'
+import { parseCollectionPipelineSource } from '../../config/runtime-collection-pipeline-syntax'
+import { evaluateCollectionPipeline } from '../runtime-references/runtime-collection-pipeline'
 import { useRuntimeState, useRuntimeStateActions } from '../runtime-state/use-runtime-state'
 import { selectActiveModal } from '../runtime-state/runtime-state-selectors'
 import { useLayoutEditModeContext } from '../use-layout-edit-mode-context'
@@ -285,10 +287,27 @@ interface RepeaterSourceItems {
 }
 
 function resolveRepeaterSourceItems(source: string, state: ReturnType<typeof useRuntimeState>): RepeaterSourceItems {
-  const result = resolveRuntimeReference(source, state)
+  const parsedSource = parseCollectionPipelineSource(source)
+
+  if (parsedSource.status === 'malformed') {
+    return { entries: [] }
+  }
+
+  const result = resolveRuntimeReference(parsedSource.baseReference, state)
 
   if (result.status !== 'resolved') {
     return { entries: [] }
+  }
+
+  if (parsedSource.status === 'ok') {
+    // A declared pipeline requires an array base reference: dictionary iteration (D3) is no
+    // longer reachable once a pipeline is declared, so a plain-object base degrades to [].
+    if (!Array.isArray(result.value)) {
+      return { entries: [] }
+    }
+
+    const pipelineItems = evaluateCollectionPipeline(result.value, parsedSource.stages, state)
+    return { entries: pipelineItems.map((value) => ({ value })) }
   }
 
   if (Array.isArray(result.value)) {

@@ -15,6 +15,7 @@ implementation:
     - T3
     - T4
     - T5
+    - T6
   in_progress_task_id: null
 validation:
   tests_green: false
