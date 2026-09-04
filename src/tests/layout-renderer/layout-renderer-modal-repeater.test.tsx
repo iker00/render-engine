@@ -421,6 +421,137 @@ function renderPageLevelModalFixture() {
   )
 }
 
+// `repeater.props.items.source` is limited by contract to `queries.{queryName}.data(.*)` (never
+// `item.*`), so a "nested repeater" can't source its own inner collection from the outer item —
+// both repeaters below source independently from `queries.*`. This still reproduces the bug this
+// task fixes: the *same* inner row key ("1") repeats identically under every outer group
+// iteration, so the two `nested-modal` instances (group-a/row-1 and group-b/row-1) only stay
+// distinguishable if the store keys them by the *full* scope chain instead of just the innermost
+// repeater key.
+function makeConfigWithNestedRepeaters(): RuntimeConfig {
+  return {
+    api: {},
+    initialPage: 'home',
+    pages: [
+      {
+        id: 'home',
+        layout: [
+          {
+            type: 'repeater',
+            props: {
+              items: { source: 'queries.groups.data.results', key: 'id' },
+              template: [
+                {
+                  type: 'repeater',
+                  props: {
+                    items: { source: 'queries.rows.data.results', key: 'id' },
+                    template: [
+                      {
+                        type: 'button',
+                        props: {
+                          label: 'Open {{item.label}}',
+                          action: { type: 'openModal', modalId: 'nested-modal' },
+                        },
+                      },
+                      {
+                        type: 'modal',
+                        id: 'nested-modal',
+                        children: [
+                          { type: 'heading', props: { level: 2, text: '{{item.label}}' } },
+                          {
+                            type: 'button',
+                            props: {
+                              label: 'Close nested modal',
+                              action: { type: 'closeModal', modalId: 'nested-modal' },
+                            },
+                          },
+                        ],
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    ],
+  }
+}
+
+function renderWithNestedGroupsAndRows(groups: Array<{ id: string }>, rows: Array<{ id: string; label: string }>) {
+  const config = makeConfigWithNestedRepeaters()
+
+  return render(
+    <RuntimeStateProvider config={config}>
+      <QuerySetter queryName="groups" data={{ results: groups }} />
+      <QuerySetter queryName="rows" data={{ results: rows }} />
+      <RuntimePage />
+    </RuntimeStateProvider>,
+  )
+}
+
+describe('modal inside two nested repeaters sharing the same modal.id', () => {
+  it('opens exactly one instance even when the innermost repeater key collides across two outer iterations', () => {
+    renderWithNestedGroupsAndRows(
+      [{ id: 'group-a' }, { id: 'group-b' }],
+      [{ id: '1', label: 'Row 1' }],
+    )
+
+    const openButtons = screen.getAllByRole('button', { name: 'Open Row 1' })
+    expect(openButtons).toHaveLength(2)
+
+    fireEvent.click(openButtons[0])
+
+    expect(screen.getAllByTestId('modal-panel')).toHaveLength(1)
+  })
+
+  it('opening the (group-b, row-1) instance closes the previously open (group-a, row-1) instance (global one-at-a-time) without leaving two panels open', () => {
+    renderWithNestedGroupsAndRows(
+      [{ id: 'group-a' }, { id: 'group-b' }],
+      [{ id: '1', label: 'Row 1' }],
+    )
+
+    const openButtons = screen.getAllByRole('button', { name: 'Open Row 1' })
+    fireEvent.click(openButtons[0])
+    expect(screen.getAllByTestId('modal-panel')).toHaveLength(1)
+
+    fireEvent.click(openButtons[1])
+    expect(screen.getAllByTestId('modal-panel')).toHaveLength(1)
+  })
+
+  it('a close button inside the nested template closes the open (group, row) instance without leaving any panel open', () => {
+    renderWithNestedGroupsAndRows(
+      [{ id: 'group-a' }, { id: 'group-b' }],
+      [{ id: '1', label: 'Row 1' }],
+    )
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'Open Row 1' })[0])
+    expect(screen.getByTestId('modal-panel')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Close nested modal' }))
+    expect(screen.queryByTestId('modal-panel')).not.toBeInTheDocument()
+  })
+
+  it('distinguishes two different rows within the same outer group', () => {
+    renderWithNestedGroupsAndRows(
+      [{ id: 'group-a' }],
+      [
+        { id: '1', label: 'Row 1' },
+        { id: '2', label: 'Row 2' },
+      ],
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open Row 1' }))
+    expect(within(screen.getByTestId('modal-panel')).getByText('Row 1')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open Row 2' }))
+    const panels = screen.getAllByTestId('modal-panel')
+    expect(panels).toHaveLength(1)
+    expect(within(panels[0]).getByText('Row 2')).toBeInTheDocument()
+  })
+})
+
 describe('page-level modal targeted by openModal from inside repeater.props.template', () => {
   it('opens the page-level modal visually after a form submit triggered from a repeater row', async () => {
     stubSuccessfulSubmitFetch()
@@ -464,5 +595,67 @@ describe('page-level modal targeted by openModal from inside repeater.props.temp
     })
     fireEvent.click(screen.getByRole('button', { name: 'Close page modal from outside' }))
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+})
+
+function makeConfigWithPageLevelModalInsideNestedRepeaters(): RuntimeConfig {
+  return {
+    api: {},
+    initialPage: 'home',
+    pages: [
+      {
+        id: 'home',
+        layout: [
+          {
+            type: 'modal',
+            id: 'pageModal',
+            children: [{ type: 'heading', props: { level: 2, text: 'Page modal' } }],
+          },
+          {
+            type: 'repeater',
+            props: {
+              items: { source: 'queries.groups.data.results', key: 'id' },
+              template: [
+                {
+                  type: 'repeater',
+                  props: {
+                    items: { source: 'queries.rows.data.results', key: 'id' },
+                    template: [
+                      {
+                        type: 'button',
+                        props: {
+                          label: 'Open page modal from {{item.label}}',
+                          action: { type: 'openModal', modalId: 'pageModal' },
+                        },
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    ],
+  }
+}
+
+describe('page-level modal targeted by openModal from inside two nested repeaters', () => {
+  it('opens the single global instance regardless of the nested (group, row) that triggered it', () => {
+    const config = makeConfigWithPageLevelModalInsideNestedRepeaters()
+
+    render(
+      <RuntimeStateProvider config={config}>
+        <QuerySetter queryName="groups" data={{ results: [{ id: 'group-a' }, { id: 'group-b' }] }} />
+        <QuerySetter queryName="rows" data={{ results: [{ id: '1', label: 'Row 1' }] }} />
+        <RuntimePage />
+      </RuntimeStateProvider>,
+    )
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'Open page modal from Row 1' })[1])
+
+    const panels = screen.getAllByTestId('modal-panel')
+    expect(panels).toHaveLength(1)
+    expect(within(panels[0]).getByText('Page modal')).toBeInTheDocument()
   })
 })

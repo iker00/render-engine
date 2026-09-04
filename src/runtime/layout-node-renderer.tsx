@@ -134,7 +134,7 @@ export function LayoutNodeRenderer({
     }
     case 'button': {
       const ButtonNode = NodeComponents.button
-      renderedNode = <ButtonNode node={node} iterationContext={iterationContext} />
+      renderedNode = <ButtonNode node={node} iterationContext={iterationContext} scopeChain={scopeChain} />
       break
     }
     case 'link': {
@@ -144,7 +144,7 @@ export function LayoutNodeRenderer({
     }
     case 'modal': {
       const ModalNode = NodeComponents.modal
-      renderedNode = <ModalNode node={node} iterationContext={iterationContext}>{renderedChildren}</ModalNode>
+      renderedNode = <ModalNode node={node} scopeChain={scopeChain}>{renderedChildren}</ModalNode>
       break
     }
     case 'form': {

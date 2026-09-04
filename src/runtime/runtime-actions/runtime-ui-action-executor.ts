@@ -6,6 +6,7 @@ import type {
 } from '../../config/runtime-config'
 import type { RuntimeApiDownloadResult } from '../../queries/runtime-api-download-types'
 import type { RuntimeIterationContext } from '../runtime-references/runtime-reference-resolver'
+import type { RuntimeInstanceScope } from '../runtime-references/runtime-instance-scope'
 import { matchesVisibilityRule } from '../runtime-layout-visibility'
 import type { RuntimeState } from '../runtime-state/runtime-state-types'
 
@@ -24,15 +25,15 @@ export interface RuntimeUiActionHandlers {
     params?: NavigateToRuntimeUiAction['params'],
     options?: { iterationContext?: RuntimeIterationContext },
   ) => void
-  openModal: (modalId: string, options?: { iterationContext?: RuntimeIterationContext }) => void
-  closeModal: (modalId: string, options?: { iterationContext?: RuntimeIterationContext }) => void
+  openModal: (modalId: string, options?: { scopeChain?: RuntimeInstanceScope }) => void
+  closeModal: (modalId: string, options?: { scopeChain?: RuntimeInstanceScope }) => void
   resetForm: (formId: string) => void
 }
 
 export function executeRuntimeUiAction(
   action: RuntimeUiAction,
   handlers: RuntimeUiActionHandlers,
-  options?: { state?: RuntimeState; iterationContext?: RuntimeIterationContext },
+  options?: { state?: RuntimeState; iterationContext?: RuntimeIterationContext; scopeChain?: RuntimeInstanceScope },
 ): Promise<unknown> | void {
   switch (action.type) {
     case 'navigateTo':
@@ -74,10 +75,10 @@ export function executeRuntimeUiAction(
       return Promise.all(pendingOperations)
     }
     case 'openModal':
-      handlers.openModal(action.modalId, { iterationContext: options?.iterationContext })
+      handlers.openModal(action.modalId, { scopeChain: options?.scopeChain })
       return
     case 'closeModal':
-      handlers.closeModal(action.modalId, { iterationContext: options?.iterationContext })
+      handlers.closeModal(action.modalId, { scopeChain: options?.scopeChain })
       return
     case 'resetForm':
       handlers.resetForm(action.formId)
@@ -103,13 +104,14 @@ export async function runActionOutcomeWithLifecycle<TResult extends { status: st
   handlers: RuntimeUiActionHandlers,
   readState: () => RuntimeState,
   iterationContext?: RuntimeIterationContext,
+  scopeChain?: RuntimeInstanceScope,
 ): Promise<TResult> {
   const result = await execute()
 
   if (result.status === 'success') {
-    await runRuntimeUiActionLifecycleList(onSuccess, handlers, readState, iterationContext)
+    await runRuntimeUiActionLifecycleList(onSuccess, handlers, readState, iterationContext, scopeChain)
   } else if (result.status === 'error') {
-    await runRuntimeUiActionLifecycleList(onError, handlers, readState, iterationContext)
+    await runRuntimeUiActionLifecycleList(onError, handlers, readState, iterationContext, scopeChain)
   }
 
   return result
@@ -128,6 +130,7 @@ export async function runRuntimeUiActionLifecycleList(
   handlers: RuntimeUiActionHandlers,
   readState: () => RuntimeState,
   iterationContext?: RuntimeIterationContext,
+  scopeChain?: RuntimeInstanceScope,
 ): Promise<void> {
   if (!actions || actions.length === 0) {
     return
@@ -145,6 +148,7 @@ export async function runRuntimeUiActionLifecycleList(
     await executeRuntimeUiAction(baseAction as Parameters<typeof executeRuntimeUiAction>[0], handlers, {
       state: snapshot,
       iterationContext,
+      scopeChain,
     })
   }
 }

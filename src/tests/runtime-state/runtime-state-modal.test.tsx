@@ -6,6 +6,7 @@ import { selectActiveModal, isModalOpen } from '../../runtime/runtime-state/runt
 import { RuntimeStateProvider } from '../../runtime/runtime-state/runtime-state-provider'
 import { useRuntimeStateActions } from '../../runtime/runtime-state/use-runtime-state'
 import type { RuntimeIterationContext } from '../../runtime/runtime-references/runtime-reference-resolver'
+import type { RuntimeInstanceScope } from '../../runtime/runtime-references/runtime-instance-scope'
 import { RuntimeStateSnapshot } from './helpers'
 import { readRuntimeStateSnapshot } from './read-runtime-state-snapshot'
 
@@ -112,11 +113,11 @@ describe('modal reducer and selectors', () => {
     expect(isModalOpen(opened, 'other')).toBe(false)
   })
 
-  it('isModalOpen distinguishes instances by iterationKey for the same modalId', () => {
+  it('isModalOpen distinguishes instances by scope chain for the same modalId', () => {
     const state = createRuntimeState(testConfig)
     const opened = runtimeStateReducer(state, { type: 'modal/open', payload: { modalId: 'card', iterationKey: 'i1' } })
-    expect(isModalOpen(opened, 'card', 'i1')).toBe(true)
-    expect(isModalOpen(opened, 'card', 'i2')).toBe(false)
+    expect(isModalOpen(opened, 'card', [{ kind: 'repeater', key: 'i1' }])).toBe(true)
+    expect(isModalOpen(opened, 'card', [{ kind: 'repeater', key: 'i2' }])).toBe(false)
     expect(isModalOpen(opened, 'card')).toBe(false)
   })
 })
@@ -129,28 +130,22 @@ describe('RuntimeIterationContext includes key', () => {
   })
 })
 
-function ModalTriggerActionsFixture({ modalId }: { modalId: string }) {
+function ModalTriggerActionsFixture({ modalId, scopeChain }: { modalId: string; scopeChain: RuntimeInstanceScope }) {
   const { openModal, closeModal } = useRuntimeStateActions()
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => openModal(modalId, { iterationContext: { key: 'row-3', item: {} } })}
-      >
+      <button type="button" onClick={() => openModal(modalId, { scopeChain })}>
         Trigger open
       </button>
-      <button
-        type="button"
-        onClick={() => closeModal(modalId, { iterationContext: { key: 'row-3', item: {} } })}
-      >
+      <button type="button" onClick={() => closeModal(modalId, { scopeChain })}>
         Trigger close
       </button>
     </>
   )
 }
 
-describe('openModal/closeModal dispatch iterationKey by modal ownership', () => {
+describe('openModal/closeModal dispatch the effective scope key by modal ownership', () => {
   const pageLevelModalConfig: RuntimeConfig = {
     api: {},
     initialPage: 'home',
@@ -181,10 +176,16 @@ describe('openModal/closeModal dispatch iterationKey by modal ownership', () => 
     ],
   }
 
-  it('openModal on a page-level modal dispatches iterationKey: undefined even when the trigger has an iterationContext', () => {
+  const triggerScope: RuntimeInstanceScope = [{ kind: 'repeater', key: 'row-3' }]
+  const nestedTriggerScope: RuntimeInstanceScope = [
+    { kind: 'repeater', key: 'group-a' },
+    { kind: 'repeater', key: 'row-1' },
+  ]
+
+  it('openModal on a page-level modal dispatches iterationKey: undefined even when the trigger has a scope chain', () => {
     render(
       <RuntimeStateProvider config={pageLevelModalConfig}>
-        <ModalTriggerActionsFixture modalId="pageModal" />
+        <ModalTriggerActionsFixture modalId="pageModal" scopeChain={triggerScope} />
         <RuntimeStateSnapshot testId="runtime-state" />
       </RuntimeStateProvider>,
     )
@@ -195,10 +196,10 @@ describe('openModal/closeModal dispatch iterationKey by modal ownership', () => 
     expect(selectActiveModal(state)).toEqual({ activeModalId: 'pageModal', activeIterationKey: null })
   })
 
-  it('closeModal on a page-level modal dispatches iterationKey: undefined even when the trigger has an iterationContext', () => {
+  it('closeModal on a page-level modal dispatches iterationKey: undefined even when the trigger has a scope chain', () => {
     render(
       <RuntimeStateProvider config={pageLevelModalConfig}>
-        <ModalTriggerActionsFixture modalId="pageModal" />
+        <ModalTriggerActionsFixture modalId="pageModal" scopeChain={triggerScope} />
         <RuntimeStateSnapshot testId="runtime-state" />
       </RuntimeStateProvider>,
     )
@@ -210,10 +211,10 @@ describe('openModal/closeModal dispatch iterationKey by modal ownership', () => 
     expect(selectActiveModal(state)).toEqual({ activeModalId: null, activeIterationKey: null })
   })
 
-  it('openModal on a modal inside the same repeater as the trigger still dispatches the trigger iterationKey', () => {
+  it('openModal on a modal inside the same repeater as the trigger still dispatches the trigger scope key (single repeater token, cero regresión)', () => {
     render(
       <RuntimeStateProvider config={repeaterModalConfig}>
-        <ModalTriggerActionsFixture modalId="rowModal" />
+        <ModalTriggerActionsFixture modalId="rowModal" scopeChain={triggerScope} />
         <RuntimeStateSnapshot testId="runtime-state" />
       </RuntimeStateProvider>,
     )
@@ -222,5 +223,32 @@ describe('openModal/closeModal dispatch iterationKey by modal ownership', () => 
 
     const state = readRuntimeStateSnapshot('runtime-state')
     expect(selectActiveModal(state)).toEqual({ activeModalId: 'rowModal', activeIterationKey: 'row-3' })
+    expect(isModalOpen(state, 'rowModal', triggerScope)).toBe(true)
+  })
+
+  it('openModal on a modal inside two nested repeaters derives a distinct scope key from the full chain', () => {
+    render(
+      <RuntimeStateProvider config={repeaterModalConfig}>
+        <ModalTriggerActionsFixture modalId="rowModal" scopeChain={nestedTriggerScope} />
+        <RuntimeStateSnapshot testId="runtime-state" />
+      </RuntimeStateProvider>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Trigger open' }))
+
+    const state = readRuntimeStateSnapshot('runtime-state')
+    expect(isModalOpen(state, 'rowModal', nestedTriggerScope)).toBe(true)
+    expect(
+      isModalOpen(state, 'rowModal', [
+        { kind: 'repeater', key: 'group-a' },
+        { kind: 'repeater', key: 'row-2' },
+      ]),
+    ).toBe(false)
+    expect(
+      isModalOpen(state, 'rowModal', [
+        { kind: 'repeater', key: 'group-b' },
+        { kind: 'repeater', key: 'row-1' },
+      ]),
+    ).toBe(false)
   })
 })

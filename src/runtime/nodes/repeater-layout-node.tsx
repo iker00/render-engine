@@ -22,7 +22,7 @@ import { CollectionPaginationControls } from './collection-pagination-controls'
 import type { RuntimeIterationContext } from '../runtime-references/runtime-reference-resolver'
 import { resolveRuntimeReference } from '../runtime-references/runtime-reference-resolver'
 import { useRuntimeState, useRuntimeStateActions } from '../runtime-state/use-runtime-state'
-import { selectActiveModal } from '../runtime-state/runtime-state-selectors'
+import { isComposedModalScopeKey, selectActiveModal } from '../runtime-state/runtime-state-selectors'
 import { useLayoutEditModeContext } from '../use-layout-edit-mode-context'
 import type { LayoutNodePath } from '../layout-node-path'
 import type { RuntimeInstanceScope } from '../runtime-references/runtime-instance-scope'
@@ -75,10 +75,14 @@ export function RepeaterNode({ node, path, scopeChain }: RepeaterNodeProps) {
     if (isEditMode) return
     if (!activeModal.activeModalId || !activeModal.activeIterationKey) return
     if (!templateModalIds.has(activeModal.activeModalId)) return
+    // A composed (nested-repeater) scope key belongs to a chain deeper than this repeater's own
+    // single level can resolve (see `isComposedModalScopeKey`): leave that instance alone instead
+    // of mismatching it against this repeater's bare iteration keys and force-closing it.
+    if (isComposedModalScopeKey(activeModal.activeIterationKey)) return
     const iterationKeys = new Set(iterations.map((iter) => iter.key))
     if (!iterationKeys.has(activeModal.activeIterationKey)) {
       closeModal(activeModal.activeModalId, {
-        iterationContext: { item: null, key: activeModal.activeIterationKey, itemIndex: -1 },
+        scopeChain: [{ kind: 'repeater', key: activeModal.activeIterationKey }],
       })
     }
   }, [isEditMode, iterations, activeModal, closeModal, templateModalIds])

@@ -13,6 +13,8 @@ import {
   resolveRuntimeValueWithOptions,
   type RuntimeIterationContext,
 } from '../runtime-references/runtime-reference-resolver'
+import type { RuntimeInstanceScope } from '../runtime-references/runtime-instance-scope'
+import { EMPTY_INSTANCE_SCOPE } from '../runtime-references/runtime-instance-scope'
 import { matchesVisibilityRule } from '../runtime-layout-visibility'
 import { runDownloadAction } from '../runtime-actions/runtime-download-action'
 import {
@@ -29,6 +31,7 @@ import { SwitchControl } from './switch-control'
 interface ButtonNodeProps {
   node: ButtonLayoutNode
   iterationContext?: RuntimeIterationContext
+  scopeChain?: RuntimeInstanceScope
 }
 
 /**
@@ -46,7 +49,8 @@ function resolveButtonSwitchChecked(
   return resolvedValue.status === 'resolved' && typeof resolvedValue.value === 'boolean' ? resolvedValue.value : false
 }
 
-export function ButtonNode({ node, iterationContext }: ButtonNodeProps) {
+export function ButtonNode({ node, iterationContext, scopeChain }: ButtonNodeProps) {
+  const resolvedScopeChain = scopeChain ?? EMPTY_INSTANCE_SCOPE
   const state = useRuntimeState()
   const {
     executeQueryOperation,
@@ -119,6 +123,7 @@ export function ButtonNode({ node, iterationContext }: ButtonNodeProps) {
         buildHandlers(),
         readRuntimeState,
         iterationContext,
+        resolvedScopeChain,
       )
 
       return
@@ -141,6 +146,7 @@ export function ButtonNode({ node, iterationContext }: ButtonNodeProps) {
       buildHandlers(),
       readRuntimeState,
       iterationContext,
+      resolvedScopeChain,
     )
   }
 
@@ -162,6 +168,7 @@ export function ButtonNode({ node, iterationContext }: ButtonNodeProps) {
         buildHandlers(),
         readRuntimeState,
         iterationContext,
+        resolvedScopeChain,
       )
     } finally {
       setIsDownloading(false)
@@ -186,7 +193,7 @@ export function ButtonNode({ node, iterationContext }: ButtonNodeProps) {
       return
     }
 
-    executeRuntimeUiAction(action, buildHandlers(), { iterationContext })
+    executeRuntimeUiAction(action, buildHandlers(), { iterationContext, scopeChain: resolvedScopeChain })
   }
 
   function handleSwitchClick() {
@@ -206,7 +213,7 @@ export function ButtonNode({ node, iterationContext }: ButtonNodeProps) {
       return
     }
 
-    executeRuntimeUiAction(action, buildHandlers(), { iterationContext })
+    executeRuntimeUiAction(action, buildHandlers(), { iterationContext, scopeChain: resolvedScopeChain })
   }
 
   if (declaredVariant === 'switch') {
