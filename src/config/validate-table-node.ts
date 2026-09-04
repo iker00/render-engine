@@ -412,7 +412,7 @@ function validateTableDynamicRows(
     )
   }
 
-  const sourceResult = validateCollectionSource(rawRows.source, `${path}.source`, pageId, { allowItemReference: true })
+  const sourceResult = validateCollectionSource(rawRows.source, `${path}.source`, pageId, { allowItemReference: true, allowPipeline: true })
 
   if (sourceResult.status === 'error') {
     return enrichErrorResult(sourceResult, breadcrumb, rawNode)

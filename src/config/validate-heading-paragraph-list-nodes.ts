@@ -228,7 +228,7 @@ export function validateListItems(
   }
 
   if (hasSource) {
-    const sourceResult = validateCollectionSource(rawItems.source, `${path}.source`, pageId, { allowItemReference: true })
+    const sourceResult = validateCollectionSource(rawItems.source, `${path}.source`, pageId, { allowItemReference: true, allowPipeline: true })
 
     if (sourceResult.status === 'error') {
       return enrichErrorResult(sourceResult, breadcrumb, rawNode)

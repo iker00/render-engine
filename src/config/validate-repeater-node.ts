@@ -105,7 +105,7 @@ export function validateRepeaterNode(
     return enrichErrorResult(visibilityResult, breadcrumb, rawNode)
   }
 
-  const itemsSourceResult = validateCollectionSource(parseResult.data.props.items.source, `${path}.props.items.source`, pageId)
+  const itemsSourceResult = validateCollectionSource(parseResult.data.props.items.source, `${path}.props.items.source`, pageId, { allowPipeline: true })
 
   if (itemsSourceResult.status === 'error') {
     return enrichErrorResult(itemsSourceResult, breadcrumb, rawNode)

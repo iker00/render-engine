@@ -13,6 +13,7 @@ export function validateSelectItemsContract(
   pageId: string,
   breadcrumb: BreadcrumbSegment[] = [],
   rawNode?: Record<string, unknown>,
+  options: { allowPipeline?: boolean } = {},
 ): { status: 'ready'; items: SelectLayoutNode['props']['items'] } | { status: 'error'; error: RuntimeConfigError } {
   const parseResult = selectItemsSchema.safeParse(rawItems)
 
@@ -50,7 +51,10 @@ export function validateSelectItemsContract(
     }
   }
 
-  const sourceResult = validateCollectionSource(items.source, `${path}.source`, pageId, { allowItemReference: true })
+  const sourceResult = validateCollectionSource(items.source, `${path}.source`, pageId, {
+    allowItemReference: true,
+    allowPipeline: options.allowPipeline,
+  })
 
   if (sourceResult.status === 'error') {
     return enrichErrorResult(sourceResult, breadcrumb, rawNode)
