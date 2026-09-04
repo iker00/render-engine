@@ -12,6 +12,7 @@ implementation:
   completed_task_ids:
     - T1
     - T2
+    - T3
   in_progress_task_id: null
 validation:
   tests_green: false
