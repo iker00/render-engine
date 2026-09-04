@@ -183,6 +183,7 @@ Ficheros de apoyo, no son tests: `config-validation/helpers.ts`, `dev-runtime/lu
 - `runtime-button-lifecycle-actions.test.tsx` — `onSuccess`/`onError` de `button.props.action` tras `executeOperation`/`executeOperations`: encadenado, `when`, error de negocio, `item.*` en repeater y botón auxiliar dentro de form
 - `runtime-button-navigation.test.tsx` — navegación declarativa desde botones
 - `runtime-collection-pagination.test.ts` — paginación local de colecciones
+- `runtime-collection-pipeline-syntax.test.ts` — parser neutral de sintaxis del pipeline de colecciones (`orderby`/`filter`/`slice`) sobre `raw` string, sin resolución de referencias
 - `runtime-download-action.test.ts` — `resolveDownloadFilename` (prioridad Content-Disposition → filename dinámico → fallback) y `runDownloadAction` (invocación del handler inyectado, disparo del blob y estados success/error/skipped)
 - `runtime-file-base64-encoder.test.ts` — codificador puro de ficheros a base64 con shape `{name,size,mime,data}`
 - `runtime-file-input-hook.test.tsx` — nodo `FileInputNode`: selección, validaciones cliente, revocación de object URLs y previews
