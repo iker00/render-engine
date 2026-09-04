@@ -104,6 +104,7 @@ Ficheros de apoyo, no son tests: `config-validation/helpers.ts`, `dev-runtime/lu
 - `layout-renderer-basic-nodes.test.tsx` — ordenación raíz, layout vacío, listas estáticas/dinámicas/objeto, comportamiento leaf y clases Tailwind
 - `layout-renderer-button-styles.test.tsx` — nodo button: variantes solid/outline/ghost/link con tokens semánticos, fullWidth y submit implícito dentro de form
 - `layout-renderer-buttons-text.test.tsx` — nodos button y link, navegación declarativa, interpolación de texto y referencias dinámicas
+- `layout-renderer-collection-pipeline-shared.test.tsx` — integración del pipeline de colecciones (`orderby`/`filter`/`slice`) en `resolveCollectionSourceItems` compartido por `list`, `select`, `radioGroup` y `checkboxGroup`: regresión sin pipeline, reactividad de argumentos dinámicos y degradación (`baseReference` no-array, source malformado)
 - `layout-renderer-container.test.tsx` — container: direction, gap, columns, variant y align/justify/wrap
 - `layout-renderer-divider.test.tsx` — nodo divider: variantes solid/dashed/dotted/invisible, visibility, layout.span, repetición y ausencia de children
 - `layout-renderer-edit-mode-placeholders.test.tsx` — placeholders seleccionables de container/form/link vacíos en modo edición y ausencia total en producción

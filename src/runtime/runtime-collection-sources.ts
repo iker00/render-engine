@@ -10,11 +10,13 @@ import type {
 import type { MapMarkerSource } from '../config/runtime-config-types'
 import type { RuntimeReferenceSurface } from './runtime-references/runtime-reference-diagnostics'
 import { hasRuntimeTemplateDelimiter } from '../config/runtime-reference-syntax'
+import { parseCollectionPipelineSource } from '../config/runtime-collection-pipeline-syntax'
 import type { RuntimeIterationContext } from './runtime-references/runtime-reference-resolver'
 import {
   resolveRuntimeReference,
   resolveRuntimeVisibleValue,
 } from './runtime-references/runtime-reference-resolver'
+import { evaluateCollectionPipeline } from './runtime-references/runtime-collection-pipeline'
 import type { RuntimeState } from './runtime-state/runtime-state-types'
 
 interface ResolvedCollectionSource {
@@ -69,7 +71,13 @@ export function resolveCollectionSourceItems(
   state: RuntimeState,
   options: { iterationContext?: RuntimeIterationContext } = {},
 ) {
-  const result = resolveRuntimeReference(source, state, {
+  const parsedSource = parseCollectionPipelineSource(source)
+
+  if (parsedSource.status === 'malformed') {
+    return []
+  }
+
+  const result = resolveRuntimeReference(parsedSource.baseReference, state, {
     iterationContext: options.iterationContext,
   })
 
@@ -77,7 +85,11 @@ export function resolveCollectionSourceItems(
     return []
   }
 
-  return result.value
+  if (parsedSource.status === 'no-pipeline') {
+    return result.value
+  }
+
+  return evaluateCollectionPipeline(result.value, parsedSource.stages, state)
 }
 
 export interface ResolvedMapMarkerSourceItem {
