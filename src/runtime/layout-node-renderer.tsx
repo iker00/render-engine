@@ -184,7 +184,9 @@ export function LayoutNodeRenderer({
     }
     case 'accordion': {
       const AccordionNode = NodeComponents.accordion
-      renderedNode = <AccordionNode node={node} iterationContext={iterationContext} path={path} />
+      renderedNode = (
+        <AccordionNode node={node} iterationContext={iterationContext} path={path} scopeChain={scopeChain} />
+      )
       break
     }
     case 'badge': {
