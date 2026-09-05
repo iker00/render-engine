@@ -1,12 +1,14 @@
 import type { RuntimeState } from '../runtime-state/runtime-state-types'
 import {
+  getFormFieldValue,
   selectCurrentPageParams,
   selectFormFieldState,
-  selectFormFieldValue,
   selectNestedQueryDataValue,
   selectQueryState,
   selectQueryReferenceValue,
 } from '../runtime-state/runtime-state-selectors'
+import { deriveScopedStateKey, EMPTY_INSTANCE_SCOPE } from './runtime-instance-scope'
+import type { RuntimeInstanceScope } from './runtime-instance-scope'
 import {
   reportRuntimeFormatterChainDiagnostic,
   reportRuntimeReferenceDiagnostic,
@@ -34,6 +36,12 @@ interface ResolveRuntimeReferenceOptions {
   iterationContext?: RuntimeIterationContext
   switchNextValue?: boolean
   localPlaceholders?: Record<string, string>
+  /**
+   * Cadena de scope ambiente (T05 / feature reusable-node-groups) usada para resolver
+   * `forms.{formId}.{fieldId}` contra la clave efectiva de store de la instancia en curso.
+   * Ausente equivale a `EMPTY_INSTANCE_SCOPE` (cero regresión fuera de todo repeater/group).
+   */
+  scope?: RuntimeInstanceScope
 }
 
 const RUNTIME_TEMPLATE_PLACEHOLDER_DETECTOR = /\{\{[\s\S]*?\}\}/
@@ -365,9 +373,10 @@ function resolveSupportedReferenceValue(
 
   if (reference.namespace === 'forms') {
     const [formId, fieldId] = reference.path
-    const fieldState = selectFormFieldState(state, formId, fieldId)
+    const scope = options.scope ?? EMPTY_INSTANCE_SCOPE
+    const scopedFieldState = selectFormFieldState(state, deriveScopedStateKey(formId, scope), fieldId)
 
-    if (fieldState === null) {
+    if (scopedFieldState === null) {
       return {
         found: false,
       } as const
@@ -375,7 +384,7 @@ function resolveSupportedReferenceValue(
 
     return {
       found: true,
-      value: selectFormFieldValue(state, formId, fieldId),
+      value: getFormFieldValue(state, formId, fieldId, scope),
     } as const
   }
 

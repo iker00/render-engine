@@ -7,6 +7,7 @@ import {
   resolveRuntimeTextReference,
   resolveRuntimeVisibleValue,
 } from '../../runtime/runtime-references/runtime-reference-resolver'
+import { pushRepeaterScopeToken } from '../../runtime/runtime-references/runtime-instance-scope'
 import type { RuntimeState } from '../../runtime/runtime-state/runtime-state-types'
 
 const runtimeState: RuntimeState = {
@@ -2248,6 +2249,63 @@ describe('Runtime reference resolution', () => {
           'heading.props.text',
         ),
       ).toBe('3')
+    })
+  })
+
+  describe('T05 forms.* resolution under a scope chain (feature reusable-node-groups)', () => {
+    const iteration1Scope = pushRepeaterScopeToken([], '1')
+    const iteration2Scope = pushRepeaterScopeToken([], '2')
+
+    const scopedFormsState: RuntimeState = {
+      ...runtimeState,
+      forms: {
+        'row-form::r:1': {
+          name: { value: 'Iteration one', error: null, touched: true, dirty: true, defaultValue: '' },
+        },
+        'row-form::r:2': {
+          name: { value: 'Iteration two', error: null, touched: false, dirty: false, defaultValue: '' },
+        },
+      },
+    }
+
+    it('resolves forms.{formId}.{fieldId} against the effective scoped key when a scope is provided', () => {
+      expect(
+        resolveRuntimeReference('forms.row-form.name', scopedFormsState, { scope: iteration1Scope }),
+      ).toEqual({
+        status: 'resolved',
+        value: 'Iteration one',
+        reference: parseRuntimeReference('forms.row-form.name'),
+      })
+
+      expect(
+        resolveRuntimeReference('forms.row-form.name', scopedFormsState, { scope: iteration2Scope }),
+      ).toEqual({
+        status: 'resolved',
+        value: 'Iteration two',
+        reference: parseRuntimeReference('forms.row-form.name'),
+      })
+    })
+
+    it('degrades to missing when the same reference is resolved without the matching scope', () => {
+      expect(resolveRuntimeReference('forms.row-form.name', scopedFormsState)).toEqual({
+        status: 'missing',
+        reference: parseRuntimeReference('forms.row-form.name'),
+      })
+
+      expect(
+        resolveRuntimeReference('forms.row-form.name', scopedFormsState, { scope: [] }),
+      ).toEqual({
+        status: 'missing',
+        reference: parseRuntimeReference('forms.row-form.name'),
+      })
+    })
+
+    it('keeps resolving forms.* by its literal id when no scope chain applies (cero regresión)', () => {
+      expect(resolveRuntimeReference('forms.userSearch.name', runtimeState, { scope: [] })).toEqual({
+        status: 'resolved',
+        value: 'Grace',
+        reference: parseRuntimeReference('forms.userSearch.name'),
+      })
     })
   })
 })

@@ -149,7 +149,11 @@ export function LayoutNodeRenderer({
     }
     case 'form': {
       const FormNode = NodeComponents.form
-      renderedNode = <FormNode node={node} iterationContext={iterationContext}>{renderedChildren}</FormNode>
+      renderedNode = (
+        <FormNode node={node} iterationContext={iterationContext} scopeChain={scopeChain}>
+          {renderedChildren}
+        </FormNode>
+      )
       break
     }
     case 'input': {

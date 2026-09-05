@@ -27,7 +27,7 @@ export interface RuntimeUiActionHandlers {
   ) => void
   openModal: (modalId: string, options?: { scopeChain?: RuntimeInstanceScope }) => void
   closeModal: (modalId: string, options?: { scopeChain?: RuntimeInstanceScope }) => void
-  resetForm: (formId: string) => void
+  resetForm: (formId: string, options?: { scopeChain?: RuntimeInstanceScope }) => void
 }
 
 export function executeRuntimeUiAction(
@@ -81,7 +81,7 @@ export function executeRuntimeUiAction(
       handlers.closeModal(action.modalId, { scopeChain: options?.scopeChain })
       return
     case 'resetForm':
-      handlers.resetForm(action.formId)
+      handlers.resetForm(action.formId, { scopeChain: options?.scopeChain })
       return
   }
 }

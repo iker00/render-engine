@@ -6,6 +6,7 @@ import {
   type RuntimeIterationContext,
 } from '../runtime-references/runtime-reference-resolver'
 import { useOptionalFormContext } from '../use-optional-form-context'
+import { deriveScopedStateKey, EMPTY_INSTANCE_SCOPE } from '../runtime-references/runtime-instance-scope'
 import { useRuntimeState, useRuntimeStateActions } from '../runtime-state/use-runtime-state'
 import { selectFormFieldState } from '../runtime-state/runtime-state-selectors'
 import { evaluateFileManagerBatch } from '../runtime-form-validations'
@@ -40,14 +41,15 @@ export function FileInputNode({ node }: FileInputNodeProps) {
   const { setFormFieldValue, setFormFieldError } = useRuntimeStateActions()
 
   const { fieldId } = node.props
-  const fieldState = formContext ? selectFormFieldState(state, formContext.formId, fieldId) : undefined
+  const scopeKey = formContext ? deriveScopedStateKey(formContext.formId, formContext.scopeChain ?? EMPTY_INSTANCE_SCOPE) : undefined
+  const fieldState = scopeKey !== undefined ? selectFormFieldState(state, scopeKey, fieldId) : undefined
   const currentFiles = Array.isArray(fieldState?.value) ? (fieldState.value as File[]) : []
 
   if (!formContext) {
     return null
   }
 
-  const { formId } = formContext
+  const { formId, scopeChain } = formContext
   const { label, multiple, capture, validations } = node.props
   const tooltip = node.props.tooltip !== undefined
     ? resolveRuntimeTextReference(node.props.tooltip, state, 'fileInput.props.tooltip', {})
@@ -76,12 +78,12 @@ export function FileInputNode({ node }: FileInputNodeProps) {
       ? [...currentFiles, ...result.acceptedFiles]
       : result.acceptedFiles.slice(0, 1)
 
-    setFormFieldValue(formId, fieldId, nextFiles)
+    setFormFieldValue(formId, fieldId, nextFiles, { scopeChain })
 
     if (result.rejection !== undefined) {
-      setFormFieldError(formId, fieldId, result.rejection.message)
+      setFormFieldError(formId, fieldId, result.rejection.message, { scopeChain })
     } else {
-      setFormFieldError(formId, fieldId, null)
+      setFormFieldError(formId, fieldId, null, { scopeChain })
     }
 
     // Reset the native input so the same file can be re-selected if needed
@@ -90,7 +92,7 @@ export function FileInputNode({ node }: FileInputNodeProps) {
 
   function handleRemove(file: File) {
     const nextFiles = currentFiles.filter((f) => f !== file)
-    setFormFieldValue(formId, fieldId, nextFiles)
+    setFormFieldValue(formId, fieldId, nextFiles, { scopeChain })
   }
 
   const inputId = `${formId}-${fieldId}`

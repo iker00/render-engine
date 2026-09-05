@@ -87,6 +87,41 @@ function QueryDrivenFormLifecycleFixture() {
   )
 }
 
+function RepeaterRowsFixture() {
+  const { initializeQuery, setQuerySuccess } = useRuntimeStateActions()
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => {
+          initializeQuery('rows')
+          setQuerySuccess('rows', [
+            { id: 'row-1', name: 'Alice' },
+            { id: 'row-2', name: 'Bob' },
+          ])
+        }}
+      >
+        Seed both rows
+      </button>
+      <button type="button" onClick={() => setQuerySuccess('rows', [{ id: 'row-2', name: 'Bob' }])}>
+        Drop row-1
+      </button>
+      <button
+        type="button"
+        onClick={() =>
+          setQuerySuccess('rows', [
+            { id: 'row-1', name: 'Alice' },
+            { id: 'row-2', name: 'Bob' },
+          ])
+        }
+      >
+        Restore row-1
+      </button>
+    </>
+  )
+}
+
 describe('Runtime shared state store', () => {
   it('cleans declarative form state on unmount and reinitializes defaults on the next mount by default', async () => {
     const config: RuntimeConfig = {
@@ -601,5 +636,65 @@ describe('Runtime shared state store', () => {
 
     await waitFor(() => expect(screen.getByLabelText('Nickname')).toHaveValue('Architect'))
     expect(screen.getByTestId('runtime-state')).toHaveTextContent('"nickname":{"value":"Architect"')
+  })
+
+  it('preserves persistOnUnmount state per iteration when one iteration unmounts and remounts inside a repeater (T05, feature reusable-node-groups)', async () => {
+    const config: RuntimeConfig = {
+      api: {},
+      initialPage: 'home',
+      pages: [
+        {
+          id: 'home',
+          layout: [
+            {
+              type: 'repeater',
+              props: {
+                items: { source: 'queries.rows.data', key: 'id' },
+                template: [
+                  {
+                    type: 'form',
+                    id: 'row-form',
+                    persistOnUnmount: true,
+                    children: [
+                      {
+                        type: 'input',
+                        props: { fieldId: 'name', label: 'Row name', defaultValue: 'item.name' },
+                      },
+                    ],
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      ],
+    }
+
+    render(
+      <RuntimeStateProvider config={config}>
+        <RepeaterRowsFixture />
+        <RuntimePage />
+        <RuntimeStateSnapshot testId="runtime-state" />
+      </RuntimeStateProvider>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Seed both rows' }))
+    await waitFor(() => expect(screen.getAllByLabelText('Row name')).toHaveLength(2))
+
+    const [firstInput, secondInput] = screen.getAllByLabelText('Row name')
+    fireEvent.change(firstInput, { target: { value: 'Alice edited' } })
+    fireEvent.change(secondInput, { target: { value: 'Bob edited' } })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Drop row-1' }))
+    await waitFor(() => expect(screen.getAllByLabelText('Row name')).toHaveLength(1))
+    // row-2 keeps its own edited value while row-1's iteration is unmounted.
+    expect(screen.getByLabelText('Row name')).toHaveValue('Bob edited')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Restore row-1' }))
+    await waitFor(() => expect(screen.getAllByLabelText('Row name')).toHaveLength(2))
+
+    const [restoredFirstInput, restoredSecondInput] = screen.getAllByLabelText('Row name')
+    expect(restoredFirstInput).toHaveValue('Alice edited')
+    expect(restoredSecondInput).toHaveValue('Bob edited')
   })
 })

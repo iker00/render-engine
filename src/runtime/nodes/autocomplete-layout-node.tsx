@@ -11,6 +11,7 @@ import {
   resolveAutocompleteCollectionItems,
   type ResolvedSelectCollectionItem,
 } from '../runtime-collection-sources'
+import { deriveScopedStateKey, EMPTY_INSTANCE_SCOPE } from '../runtime-references/runtime-instance-scope'
 import {
   getFieldControlClassName,
   getFieldErrorClassName,
@@ -86,7 +87,8 @@ export function AutocompleteNode({ node, iterationContext }: AutocompleteNodePro
 
   const formId = formContext.formId
   const fieldId = node.props.fieldId
-  const fieldState = selectFormFieldState(state, formId, fieldId)
+  const scopeKey = deriveScopedStateKey(formId, formContext.scopeChain ?? EMPTY_INSTANCE_SCOPE)
+  const fieldState = selectFormFieldState(state, scopeKey, fieldId)
   const fieldDefinition = resolveAutocompleteFieldDefinition(node, state, iterationContext)
   const label = resolveRuntimeTextReference(node.props.label, state, 'autocomplete.props.label', { iterationContext })
   const tooltip = node.props.tooltip !== undefined
@@ -142,11 +144,12 @@ export function AutocompleteNode({ node, iterationContext }: AutocompleteNodePro
       fieldId,
       getValidationErrorForEditedField({
         fieldDefinition,
-        formId,
+        formId: scopeKey,
         state,
         nextValue,
         iterationContext,
       }),
+      { scopeChain: formContext.scopeChain },
     )
   }
 
@@ -155,7 +158,7 @@ export function AutocompleteNode({ node, iterationContext }: AutocompleteNodePro
       const nextValues = selectedValues.includes(item.value) ? selectedValues : [...selectedValues, item.value]
 
       if (nextValues !== selectedValues) {
-        setFormFieldValue(formId, fieldId, nextValues)
+        setFormFieldValue(formId, fieldId, nextValues, { scopeChain: formContext.scopeChain })
       }
 
       resetSearchTextAfterConfirmation()
@@ -164,7 +167,7 @@ export function AutocompleteNode({ node, iterationContext }: AutocompleteNodePro
       return
     }
 
-    setFormFieldValue(formId, fieldId, item.value)
+    setFormFieldValue(formId, fieldId, item.value, { scopeChain: formContext.scopeChain })
     resetSearchTextAfterConfirmation()
     setIsOpen(false)
     setHighlightedIndex(null)
@@ -198,13 +201,13 @@ export function AutocompleteNode({ node, iterationContext }: AutocompleteNodePro
     const matchingItem = fullCatalogItems.find((item) => item.value === searchText || item.label === searchText)
 
     if (matchingItem) {
-      setFormFieldValue(formId, fieldId, matchingItem.value)
+      setFormFieldValue(formId, fieldId, matchingItem.value, { scopeChain: formContext.scopeChain })
       resetSearchTextAfterConfirmation()
       revalidateIfNeeded(matchingItem.value)
       return
     }
 
-    setFormFieldValue(formId, fieldId, '')
+    setFormFieldValue(formId, fieldId, '', { scopeChain: formContext.scopeChain })
     resetSearchTextAfterConfirmation()
     revalidateIfNeeded('')
   }
@@ -254,7 +257,7 @@ export function AutocompleteNode({ node, iterationContext }: AutocompleteNodePro
           return
         }
 
-        setFormFieldValue(formId, fieldId, '')
+        setFormFieldValue(formId, fieldId, '', { scopeChain: formContext.scopeChain })
         resetSearchTextAfterConfirmation()
         revalidateIfNeeded('')
         return
@@ -315,7 +318,7 @@ export function AutocompleteNode({ node, iterationContext }: AutocompleteNodePro
         // even with allowFreeText:false so the search operation's own query/body can reference
         // it directly (design.md, decisión 3). blur/Enter still apply T6's cleanup below.
         if (!isMultiple && (allowFreeText || queryName !== null)) {
-          setFormFieldValue(formId, fieldId, nextText)
+          setFormFieldValue(formId, fieldId, nextText, { scopeChain: formContext.scopeChain })
         }
       }}
       onFocus={() => setIsOpen(true)}
@@ -346,7 +349,7 @@ export function AutocompleteNode({ node, iterationContext }: AutocompleteNodePro
                   type="button"
                   className="cursor-pointer"
                   aria-label={`Quitar ${resolveLabelForValue(itemValue)}`}
-                  onClick={() => setFormFieldValue(formId, fieldId, selectedValues.filter((entry) => entry !== itemValue))}
+                  onClick={() => setFormFieldValue(formId, fieldId, selectedValues.filter((entry) => entry !== itemValue), { scopeChain: formContext.scopeChain })}
                 >
                   ×
                 </button>

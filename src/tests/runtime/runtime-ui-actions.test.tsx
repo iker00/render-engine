@@ -167,7 +167,7 @@ describe('executeRuntimeUiAction', () => {
       handlers,
     )
 
-    expect(handlers.resetForm).toHaveBeenCalledWith('search-form')
+    expect(handlers.resetForm).toHaveBeenCalledWith('search-form', { scopeChain: undefined })
     expect(handlers.navigateToPage).not.toHaveBeenCalled()
     expect(handlers.goBackPage).not.toHaveBeenCalled()
     expect(handlers.executeQueryOperation).not.toHaveBeenCalled()
@@ -245,6 +245,22 @@ describe('executeRuntimeUiAction', () => {
     )
 
     expect(handlers.closeModal).toHaveBeenCalledWith('my-modal', { scopeChain })
+  })
+
+  it('propagates scopeChain to resetForm (T05, feature reusable-node-groups)', () => {
+    const handlers = createHandlers()
+    const scopeChain = [{ kind: 'repeater' as const, key: 'row-3' }]
+
+    runtimeUiActionExecutor.executeRuntimeUiAction(
+      {
+        type: 'resetForm',
+        formId: 'search-form',
+      },
+      handlers,
+      { scopeChain },
+    )
+
+    expect(handlers.resetForm).toHaveBeenCalledWith('search-form', { scopeChain })
   })
 
   it('calls executeQueryOperation once per entry when executeOperations has two entries in the same tick', () => {

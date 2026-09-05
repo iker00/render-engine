@@ -1,5 +1,6 @@
 import type { RuntimeConfig } from '../../config/runtime-config'
 import { deriveQueryVisibleState } from '../runtime-query-state-feedback'
+import { deriveScopedStateKey, EMPTY_INSTANCE_SCOPE } from '../runtime-references/runtime-instance-scope'
 import type { RuntimeInstanceScope } from '../runtime-references/runtime-instance-scope'
 import type { RuntimeState } from './runtime-state-types'
 
@@ -49,6 +50,33 @@ export function selectFormFieldState(state: RuntimeState, formId: string, fieldI
 
 export function selectFormFieldValue(state: RuntimeState, formId: string, fieldId: string) {
   return selectFormFieldState(state, formId, fieldId)?.value
+}
+
+/**
+ * Scope-chain-aware form field value lookup (T05 / feature reusable-node-groups): composes the
+ * effective store key from `formId` + `scope` before delegating to the raw, scope-agnostic
+ * `selectFormFieldValue`. An empty scope produces the exact same key as before (`formId`
+ * literal), so callers that never pass a scope keep reading the same value (cero regresión).
+ */
+export function getFormFieldValue(
+  state: RuntimeState,
+  formId: string,
+  fieldId: string,
+  scope: RuntimeInstanceScope = EMPTY_INSTANCE_SCOPE,
+): unknown {
+  return selectFormFieldValue(state, deriveScopedStateKey(formId, scope), fieldId)
+}
+
+/**
+ * Scope-chain-aware form field error lookup (T05), mirroring `getFormFieldValue`.
+ */
+export function getFormFieldError(
+  state: RuntimeState,
+  formId: string,
+  fieldId: string,
+  scope: RuntimeInstanceScope = EMPTY_INSTANCE_SCOPE,
+): string | null {
+  return selectFormFieldState(state, deriveScopedStateKey(formId, scope), fieldId)?.error ?? null
 }
 
 export function selectQueryState(state: RuntimeState, queryName: string) {

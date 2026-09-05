@@ -4,6 +4,7 @@ import {
   resolveRuntimeTextReference,
   type RuntimeIterationContext,
 } from '../runtime-references/runtime-reference-resolver'
+import { deriveScopedStateKey, EMPTY_INSTANCE_SCOPE } from '../runtime-references/runtime-instance-scope'
 import { resolveResolvedFormFieldDefinition } from './resolve-form-field-definition'
 import {
   getFieldControlClassName,
@@ -30,7 +31,8 @@ export function TextareaNode({ node, iterationContext }: TextareaNodeProps) {
     return null
   }
 
-  const fieldState = selectFormFieldState(state, formContext.formId, node.props.fieldId)
+  const scopeKey = deriveScopedStateKey(formContext.formId, formContext.scopeChain ?? EMPTY_INSTANCE_SCOPE)
+  const fieldState = selectFormFieldState(state, scopeKey, node.props.fieldId)
   const fieldDefinition = resolveResolvedFormFieldDefinition(node, state, iterationContext)
   const label = resolveRuntimeTextReference(node.props.label, state, 'textarea.props.label', { iterationContext })
   const tooltip = node.props.tooltip !== undefined
@@ -59,7 +61,7 @@ export function TextareaNode({ node, iterationContext }: TextareaNodeProps) {
         value={value}
         onChange={(event) => {
           const nextValue = event.currentTarget.value
-          setFormFieldValue(formContext.formId, node.props.fieldId, nextValue)
+          setFormFieldValue(formContext.formId, node.props.fieldId, nextValue, { scopeChain: formContext.scopeChain })
 
           if (error) {
             setFormFieldError(
@@ -67,11 +69,12 @@ export function TextareaNode({ node, iterationContext }: TextareaNodeProps) {
               node.props.fieldId,
               getValidationErrorForEditedField({
                 fieldDefinition,
-                formId: formContext.formId,
+                formId: scopeKey,
                 state,
                 nextValue,
                 iterationContext,
               }),
+              { scopeChain: formContext.scopeChain },
             )
           }
         }}
