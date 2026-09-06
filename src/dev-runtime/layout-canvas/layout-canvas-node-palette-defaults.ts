@@ -169,6 +169,14 @@ export function buildDefaultNodeInstance(type: LayoutNodeType): LayoutNode {
         },
       }
 
+    // `group`/`slot` are structurally part of `LayoutNodeType` (T06) but excluded from
+    // `getSupportedNodeTypesCatalog()` — the palette never drags one of these in, so this branch
+    // is unreachable in practice. Wiring a real default instance (which needs an existing
+    // `groups.*` entry to reference) is T15's responsibility.
+    case 'group':
+    case 'slot':
+      throw new Error(`buildDefaultNodeInstance: node type "${type}" is not yet insertable from the palette`)
+
     default: {
       const exhaustiveCheck: never = type
       throw new Error(`buildDefaultNodeInstance: unsupported node type "${String(exhaustiveCheck)}"`)

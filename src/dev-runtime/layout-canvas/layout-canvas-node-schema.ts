@@ -17,6 +17,7 @@ import {
   fileManagerNodeSchema,
   formNodeSchema,
   galleryNodeSchema,
+  groupInstanceNodeSchema,
   headingNodeSchema,
   hiddenNodeSchema,
   imageNodeSchema,
@@ -30,6 +31,7 @@ import {
   repeaterNodeSchema,
   selectNodeSchema,
   skeletonNodeSchema,
+  slotNodeSchema,
   statNodeSchema,
   stepsNodeSchema,
   supportedNodeTypes,
@@ -38,6 +40,12 @@ import {
   textareaNodeSchema,
   toggleNodeSchema,
 } from '../../config/runtime-config-zod'
+
+// `group`/`slot` are structurally part of the catalog (`supportedNodeTypes`, T06) but are not yet
+// wired into the visual editor — palette insertion, default instance and property panel support
+// for reusable node groups is T15's responsibility. Excluded here so the palette and drag-id
+// parsing keep listing exactly the node types users can already insert (regression-free).
+const NODE_TYPES_NOT_YET_INSERTABLE_FROM_PALETTE: ReadonlySet<LayoutNodeType> = new Set(['group', 'slot'])
 
 const nodeSchemaByType: Record<LayoutNodeType, z.ZodType> = {
   container: containerNodeSchema,
@@ -71,6 +79,8 @@ const nodeSchemaByType: Record<LayoutNodeType, z.ZodType> = {
   map: mapNodeSchema,
   gallery: galleryNodeSchema,
   autocomplete: autocompleteNodeSchema,
+  group: groupInstanceNodeSchema,
+  slot: slotNodeSchema,
 }
 
 const cachedSchemaByType = new Map<LayoutNodeType, Record<string, unknown>>()
@@ -95,5 +105,5 @@ export function getNodeTypeJsonSchema(type: LayoutNodeType): Record<string, unkn
 }
 
 export function getSupportedNodeTypesCatalog(): LayoutNodeType[] {
-  return [...supportedNodeTypes]
+  return supportedNodeTypes.filter((type) => !NODE_TYPES_NOT_YET_INSERTABLE_FROM_PALETTE.has(type))
 }

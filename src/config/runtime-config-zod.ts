@@ -33,6 +33,8 @@ export const supportedNodeTypes = [
   'map',
   'gallery',
   'autocomplete',
+  'group',
+  'slot',
 ] as const
 
 export const tableCellAllowedNodeTypes = ['image', 'list', 'button', 'container', 'heading', 'paragraph', 'link'] as const
@@ -50,7 +52,7 @@ export const supportedCollectionPaginationControlsVariants = ['previousNext', 'n
 export const supportedResponsiveBreakpoints = ['base', 'sm', 'md', 'lg', 'xl', '2xl'] as const
 export const supportedModalSizeValues = ['sm', 'md', 'lg'] as const
 
-const nonEmptyStringSchema = z.string().refine((value) => value.trim().length > 0)
+export const nonEmptyStringSchema = z.string().refine((value) => value.trim().length > 0)
 const nodeIdSchema = nonEmptyStringSchema
 const runtimeConfigValueSchema = z.union([z.string(), z.number(), z.boolean(), z.null()])
 const formFieldDefaultValueSchema = z.union([runtimeConfigValueSchema, z.array(z.unknown())])
@@ -990,6 +992,54 @@ export const hiddenNodeSchema = z
         value: z.union([z.string(), z.number(), z.boolean()]),
       })
       .strip(),
+  })
+  .strip()
+
+// `params[]` must contain non-empty strings with no duplicates within the same group — a purely
+// local, structural rule. Cross-checking these names against `props.params` on `group` instance
+// nodes belongs to T08.
+export const runtimeGroupParamsSchema = z.array(nonEmptyStringSchema).superRefine((params, ctx) => {
+  const seenParams = new Set<string>()
+  params.forEach((param, index) => {
+    if (seenParams.has(param)) {
+      ctx.addIssue({ code: 'custom', path: [index], message: `Duplicate group param "${param}".` })
+      return
+    }
+    seenParams.add(param)
+  })
+})
+
+// `template` is kept as `z.array(z.unknown())` here; `runtime-config-root-zod.ts` overrides it
+// with the recursive layout node union, the same pattern used for `repeater.props.template`.
+export const runtimeGroupEntrySchema = z
+  .object({
+    params: runtimeGroupParamsSchema,
+    template: z.array(z.unknown()),
+  })
+  .strip()
+
+export const runtimeGroupsConfigSchema = z.record(nonEmptyStringSchema, runtimeGroupEntrySchema)
+
+export const groupInstanceNodeSchema = z
+  .object({
+    type: z.literal('group'),
+    id: nodeIdSchema.optional(),
+    queryStateFeedback: queryStateFeedbackSchema.optional(),
+    visibility: visibilitySchema.optional(),
+    layout: layoutNodeLayoutSchema.optional(),
+    props: z
+      .object({
+        groupId: nonEmptyStringSchema,
+        params: z.record(z.string(), z.unknown()),
+      })
+      .strip(),
+    children: z.array(z.unknown()).optional(),
+  })
+  .strip()
+
+export const slotNodeSchema = z
+  .object({
+    type: z.literal('slot'),
   })
   .strip()
 

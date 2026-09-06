@@ -38,6 +38,11 @@ const NODE_TYPE_LABELS: Record<LayoutNodeType, string> = {
   map: 'Mapa',
   gallery: 'Galería',
   autocomplete: 'Autocompletar',
+  // Not yet listed by `getSupportedNodeTypesCatalog()` (T15 wires palette insertion for reusable
+  // node groups); present here only so this exhaustive label map keeps compiling against the
+  // full `LayoutNodeType` union.
+  group: 'Grupo reutilizable',
+  slot: 'Slot',
 }
 
 interface LayoutCanvasNodePaletteEntryProps {
