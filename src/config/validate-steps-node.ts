@@ -2,7 +2,8 @@ import type { LayoutNodeCollection, LayoutNodeFeedbackFields, RuntimeConfigError
 import { stepsNodeSchema } from './runtime-config-zod'
 import type { BreadcrumbSegment } from './validation-breadcrumb'
 import { enrichedInvalidLayout, enrichErrorResult } from './validation-breadcrumb'
-import { validateLayoutCollection, validateQueryStateFeedback } from './validate-layout-nodes-core'
+import type { LayoutValidationCtx } from './validate-layout-nodes-core'
+import { defaultLayoutValidationCtx, validateLayoutCollection, validateQueryStateFeedback } from './validate-layout-nodes-core'
 import { mapLayoutNodeIssue } from './validate-layout-issue-mapping'
 import { mapQueryStateFeedbackIssue, mapVisibilityIssue, validateVisibility } from './validate-actions-visibility'
 import { formatPathSegment, isRecord } from './validate-node-shared-helpers'
@@ -12,6 +13,7 @@ export function validateStepsNode(
   path: string,
   pageId: string,
   breadcrumb: BreadcrumbSegment[] = [],
+  ctx: LayoutValidationCtx = defaultLayoutValidationCtx,
 ): { status: 'ready'; node: StepsLayoutNode } | { status: 'error'; error: RuntimeConfigError } {
   const parseResult = stepsNodeSchema.safeParse(rawNode)
 
@@ -111,7 +113,7 @@ export function validateStepsNode(
     let children: LayoutNodeCollection | undefined
 
     if (rawItem.children !== undefined) {
-      const childrenResult = validateLayoutCollection(rawItem.children, `${path}.props.items[${index}].children`, pageId, stepBreadcrumb)
+      const childrenResult = validateLayoutCollection(rawItem.children, `${path}.props.items[${index}].children`, pageId, stepBreadcrumb, ctx)
 
       if (childrenResult.status === 'error') return childrenResult
 

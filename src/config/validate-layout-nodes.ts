@@ -1,4 +1,5 @@
-export { validateLayoutCollection, validateLayoutNode, validateQueryStateFeedback } from './validate-layout-nodes-core'
+export { validateLayoutCollection, validateLayoutNode, validateQueryStateFeedback, defaultLayoutValidationCtx } from './validate-layout-nodes-core'
+export type { LayoutValidationCtx } from './validate-layout-nodes-core'
 export { mapLeafNodeIssue, mapLayoutNodeIssue } from './validate-layout-issue-mapping'
 export { mapCollectionPaginationIssue } from './validate-repeater-node'
 export { validateLinkNode } from './validate-link-node'

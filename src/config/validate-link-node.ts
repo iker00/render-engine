@@ -8,7 +8,8 @@ import type {
 import { linkNodeSchema } from './runtime-config-zod'
 import type { BreadcrumbSegment } from './validation-breadcrumb'
 import { enrichedInvalidLayout, enrichErrorResult } from './validation-breadcrumb'
-import { validateLayoutCollection, validateQueryStateFeedback } from './validate-layout-nodes-core'
+import type { LayoutValidationCtx } from './validate-layout-nodes-core'
+import { defaultLayoutValidationCtx, validateLayoutCollection, validateQueryStateFeedback } from './validate-layout-nodes-core'
 import { mapLayoutNodeIssue } from './validate-layout-issue-mapping'
 import {
   mapQueryStateFeedbackIssue,
@@ -25,6 +26,7 @@ export function validateLinkNode(
   path: string,
   pageId: string,
   breadcrumb: BreadcrumbSegment[] = [],
+  ctx: LayoutValidationCtx = defaultLayoutValidationCtx,
 ): { status: 'ready'; node: LinkLayoutNode } | { status: 'error'; error: RuntimeConfigError } {
   const parseResult = linkNodeSchema.safeParse(rawNode)
 
@@ -134,7 +136,7 @@ export function validateLinkNode(
     }
 
     // Full validation of children
-    const childrenResult = validateLayoutCollection(parseResult.data.children!, `${path}.children`, pageId, breadcrumb)
+    const childrenResult = validateLayoutCollection(parseResult.data.children!, `${path}.children`, pageId, breadcrumb, ctx)
 
     if (childrenResult.status === 'error') {
       return childrenResult

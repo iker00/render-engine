@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { runtimeConfigRootSchema } from '../../config/runtime-config-root-zod'
 import { groupInstanceNodeSchema, slotNodeSchema, supportedNodeTypes } from '../../config/runtime-config-zod'
+import { validateLayoutCollection } from '../../config/validate-layout-nodes'
+import { validateRuntimeConfig } from '../../config/runtime-config'
 import { createConfigWithApi, createConfigWithLayout } from './helpers'
 
 function createConfigWithGroups(groups: unknown) {
@@ -114,5 +116,85 @@ describe('slotNodeSchema — slot node shape', () => {
   it('accepts a slot node embedded in the root layout (regression at config level)', () => {
     const result = runtimeConfigRootSchema.safeParse(createConfigWithLayout([{ type: 'slot' }]))
     expect(result.success).toBe(true)
+  })
+})
+
+describe('validateLayoutNode — insideGroupTemplate context', () => {
+  it('rejects a top-level slot node in pages[].layout (outside a group template) as unsupported-node-type', () => {
+    const result = validateRuntimeConfig(createConfigWithLayout([{ type: 'slot' }]))
+
+    expect(result.status).toBe('error')
+    if (result.status === 'error') {
+      expect(result.error.code).toBe('unsupported-node-type')
+      expect(result.error.message).toContain('layout[0]')
+    }
+  })
+
+  it('rejects a slot node nested inside a normal container.children (not a group template)', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithLayout([{ type: 'container', children: [{ type: 'slot' }] }]),
+    )
+
+    expect(result.status).toBe('error')
+    if (result.status === 'error') {
+      expect(result.error.code).toBe('unsupported-node-type')
+      expect(result.error.message).toContain('layout[0].children[0]')
+    }
+  })
+
+  it('rejects a slot node nested inside a normal repeater.props.template (not a group template)', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithLayout([
+        {
+          type: 'repeater',
+          props: {
+            items: { source: 'queries.posts.data', key: 'id' },
+            template: [{ type: 'slot' }],
+          },
+        },
+      ]),
+    )
+
+    expect(result.status).toBe('error')
+    if (result.status === 'error') {
+      expect(result.error.code).toBe('unsupported-node-type')
+      expect(result.error.message).toContain('layout[0].props.template[0]')
+    }
+  })
+
+  it('rejects a group node nested directly inside a group template with invalid-layout and a canonical path', () => {
+    const result = validateLayoutCollection(
+      [{ type: 'group', props: { groupId: 'x', params: {} } }],
+      'groups.card.template',
+      'card',
+      undefined,
+      { insideGroupTemplate: true },
+    )
+
+    expect(result.status).toBe('error')
+    if (result.status === 'error') {
+      expect(result.error.code).toBe('invalid-layout')
+      expect(result.error.message).toContain('groups.card.template[0]')
+    }
+  })
+
+  it('accepts a slot node inside a group template, including nested at depth inside a container', () => {
+    const result = validateLayoutCollection(
+      [
+        { type: 'slot' },
+        { type: 'container', children: [{ type: 'slot' }] },
+      ],
+      'groups.card.template',
+      'card',
+      undefined,
+      { insideGroupTemplate: true },
+    )
+
+    expect(result.status).toBe('ready')
+    if (result.status === 'ready') {
+      expect(result.nodes[0]).toEqual({ type: 'slot' })
+      const containerNode = result.nodes[1] as { children?: unknown[] }
+      expect(containerNode.children?.[0]).toEqual({ type: 'slot' })
+    }
   })
 })

@@ -2,7 +2,8 @@ import type { AccordionLayoutNode, LayoutNodeCollection, LayoutNodeFeedbackField
 import { accordionNodeSchema } from './runtime-config-zod'
 import type { BreadcrumbSegment } from './validation-breadcrumb'
 import { enrichedInvalidLayout, enrichErrorResult } from './validation-breadcrumb'
-import { validateLayoutCollection, validateQueryStateFeedback } from './validate-layout-nodes-core'
+import type { LayoutValidationCtx } from './validate-layout-nodes-core'
+import { defaultLayoutValidationCtx, validateLayoutCollection, validateQueryStateFeedback } from './validate-layout-nodes-core'
 import { mapLayoutNodeIssue } from './validate-layout-issue-mapping'
 import { mapQueryStateFeedbackIssue, mapVisibilityIssue, validateVisibility } from './validate-actions-visibility'
 
@@ -11,6 +12,7 @@ export function validateAccordionNode(
   path: string,
   pageId: string,
   breadcrumb: BreadcrumbSegment[] = [],
+  ctx: LayoutValidationCtx = defaultLayoutValidationCtx,
 ): { status: 'ready'; node: AccordionLayoutNode } | { status: 'error'; error: RuntimeConfigError } {
   const parseResult = accordionNodeSchema.safeParse(rawNode)
 
@@ -70,7 +72,7 @@ export function validateAccordionNode(
   let children: LayoutNodeCollection | undefined
 
   if (parseResult.data.children !== undefined) {
-    const childrenResult = validateLayoutCollection(parseResult.data.children, `${path}.children`, pageId, breadcrumb)
+    const childrenResult = validateLayoutCollection(parseResult.data.children, `${path}.children`, pageId, breadcrumb, ctx)
 
     if (childrenResult.status === 'error') return childrenResult
 

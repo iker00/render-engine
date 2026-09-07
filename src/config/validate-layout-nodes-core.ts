@@ -8,12 +8,14 @@ import type {
   QueryStateFeedbackRule,
   QueryStateFeedbackVisibleState,
   RuntimeConfigError,
+  RuntimeGroupInstanceNode,
 } from './runtime-config-types'
-import { supportedNodeTypes } from './runtime-config-zod'
+import { groupInstanceNodeSchema, supportedNodeTypes } from './runtime-config-zod'
 import { invalidLayout, unsupportedNodeType } from './runtime-config-validation-errors'
 import type { BreadcrumbSegment } from './validation-breadcrumb'
-import { buildBreadcrumbSegment, enrichedInvalidLayout } from './validation-breadcrumb'
+import { buildBreadcrumbSegment, enrichedInvalidLayout, enrichErrorResult } from './validation-breadcrumb'
 import { isRecord } from './validate-node-shared-helpers'
+import { validateVisibility } from './validate-actions-visibility'
 import { validateContainerNode } from './validate-container-node'
 import { validateRepeaterNode } from './validate-repeater-node'
 import { validateHeadingNode, validateParagraphNode, validateListNode } from './validate-heading-paragraph-list-nodes'
@@ -46,11 +48,24 @@ import { validateMapNode } from './validate-map-node'
 import { validateGalleryNode } from './validate-gallery-node'
 import { validateAutocompleteNode } from './validate-autocomplete-node'
 
+// Context threaded through the recursive layout validator. `insideGroupTemplate` tracks whether
+// the current structural position is inside `groups.{groupId}.template`: it flips which of the
+// reserved catalog entries (`slot`/`group`) are valid discriminants at that position. It must be
+// forwarded unchanged into every node-type validator that itself recurses into a `LayoutNode[]`
+// collection (container/repeater/form/modal/tabs/steps/accordion/link), so a `slot` nested at any
+// structural depth inside a group template is still recognized as being inside that template.
+export interface LayoutValidationCtx {
+  insideGroupTemplate: boolean
+}
+
+export const defaultLayoutValidationCtx: LayoutValidationCtx = { insideGroupTemplate: false }
+
 export function validateLayoutCollection(
   rawNodes: unknown,
   path: string,
   pageId: string,
   breadcrumb: BreadcrumbSegment[] = [],
+  ctx: LayoutValidationCtx = defaultLayoutValidationCtx,
 ): { status: 'ready'; nodes: LayoutNodeCollection } | { status: 'error'; error: RuntimeConfigError } {
   if (!Array.isArray(rawNodes)) {
     return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}".`)
@@ -64,7 +79,7 @@ export function validateLayoutCollection(
       ? buildBreadcrumbSegment(rawItem, index)
       : { label: `[${index}]` }
     const nodeBreadcrumb = [...breadcrumb, segment]
-    const nodeResult = validateLayoutNode(rawItem, `${path}[${index}]`, pageId, nodeBreadcrumb)
+    const nodeResult = validateLayoutNode(rawItem, `${path}[${index}]`, pageId, nodeBreadcrumb, ctx)
 
     if (nodeResult.status === 'error') {
       return nodeResult
@@ -84,6 +99,7 @@ export function validateLayoutNode(
   path: string,
   pageId: string,
   breadcrumb: BreadcrumbSegment[] = [],
+  ctx: LayoutValidationCtx = defaultLayoutValidationCtx,
 ): { status: 'ready'; node: LayoutNode } | { status: 'error'; error: RuntimeConfigError } {
   if (!isRecord(rawNode)) {
     return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}".`, breadcrumb, {} as Record<string, unknown>)
@@ -93,15 +109,30 @@ export function validateLayoutNode(
     return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}.type".`, breadcrumb, rawNode)
   }
 
+  // `slot` is only a valid discriminant inside a group template; everywhere else it is rejected
+  // the same way an unrecognized type would be, even though it is part of `supportedNodeTypes`.
+  if (rawNode.type === 'slot' && !ctx.insideGroupTemplate) {
+    return unsupportedNodeType(pageId, path, rawNode.type)
+  }
+
+  // Nested `group` instances inside a group template are out of scope for v1 (no group nesting).
+  if (rawNode.type === 'group' && ctx.insideGroupTemplate) {
+    return enrichedInvalidLayout(
+      `Page "${pageId}" has an invalid layout at "${path}": nested "group" nodes are not supported inside a group template.`,
+      breadcrumb,
+      rawNode,
+    )
+  }
+
   if (!supportedNodeTypes.includes(rawNode.type as LayoutNodeType)) {
     return unsupportedNodeType(pageId, path, rawNode.type)
   }
 
   switch (rawNode.type) {
     case 'container':
-      return validateContainerNode(rawNode, path, pageId, breadcrumb)
+      return validateContainerNode(rawNode, path, pageId, breadcrumb, ctx)
     case 'repeater':
-      return validateRepeaterNode(rawNode, path, pageId, breadcrumb)
+      return validateRepeaterNode(rawNode, path, pageId, breadcrumb, ctx)
     case 'heading':
       return validateHeadingNode(rawNode, path, pageId, breadcrumb)
     case 'paragraph':
@@ -115,9 +146,9 @@ export function validateLayoutNode(
     case 'button':
       return validateButtonNode(rawNode, path, pageId, breadcrumb)
     case 'link':
-      return validateLinkNode(rawNode, path, pageId, breadcrumb)
+      return validateLinkNode(rawNode, path, pageId, breadcrumb, ctx)
     case 'form':
-      return validateFormNode(rawNode, path, pageId, breadcrumb)
+      return validateFormNode(rawNode, path, pageId, breadcrumb, ctx)
     case 'input':
       return validateInputNode(rawNode, path, pageId, breadcrumb)
     case 'textarea':
@@ -129,13 +160,13 @@ export function validateLayoutNode(
     case 'checkboxGroup':
       return validateCheckboxGroupNode(rawNode, path, pageId, breadcrumb)
     case 'modal':
-      return validateModalNode(rawNode, path, pageId, breadcrumb)
+      return validateModalNode(rawNode, path, pageId, breadcrumb, ctx)
     case 'tabs':
-      return validateTabsNode(rawNode, path, pageId, breadcrumb)
+      return validateTabsNode(rawNode, path, pageId, breadcrumb, ctx)
     case 'steps':
-      return validateStepsNode(rawNode, path, pageId, breadcrumb)
+      return validateStepsNode(rawNode, path, pageId, breadcrumb, ctx)
     case 'accordion':
-      return validateAccordionNode(rawNode, path, pageId, breadcrumb)
+      return validateAccordionNode(rawNode, path, pageId, breadcrumb, ctx)
     case 'badge':
       return validateBadgeNode(rawNode, path, pageId, breadcrumb)
     case 'alert':
@@ -160,9 +191,75 @@ export function validateLayoutNode(
       return validateGalleryNode(rawNode, path, pageId, breadcrumb)
     case 'autocomplete':
       return validateAutocompleteNode(rawNode, path, pageId, breadcrumb)
+    case 'slot':
+      return { status: 'ready', node: { type: 'slot' } }
+    case 'group':
+      return validateGroupInstanceNode(rawNode, path, pageId, breadcrumb, ctx)
   }
 
   return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}.type".`, breadcrumb, rawNode)
+}
+
+function validateGroupInstanceNode(
+  rawNode: Record<string, unknown>,
+  path: string,
+  pageId: string,
+  breadcrumb: BreadcrumbSegment[],
+  ctx: LayoutValidationCtx,
+): { status: 'ready'; node: RuntimeGroupInstanceNode } | { status: 'error'; error: RuntimeConfigError } {
+  const parseResult = groupInstanceNodeSchema.safeParse(rawNode)
+
+  if (!parseResult.success) {
+    return enrichedInvalidLayout(`Page "${pageId}" has an invalid layout at "${path}".`, breadcrumb, rawNode)
+  }
+
+  const feedbackResult = validateQueryStateFeedback(
+    parseResult.data.queryStateFeedback as LayoutNodeFeedbackFields['queryStateFeedback'],
+    `${path}.queryStateFeedback`,
+    pageId,
+    breadcrumb,
+  )
+
+  if (feedbackResult.status === 'error') {
+    return feedbackResult
+  }
+
+  const visibilityResult = validateVisibility(
+    parseResult.data.visibility as LayoutNodeFeedbackFields['visibility'],
+    `${path}.visibility`,
+    pageId,
+  )
+
+  if (visibilityResult.status === 'error') {
+    return enrichErrorResult(visibilityResult, breadcrumb, rawNode)
+  }
+
+  let children: LayoutNodeCollection | undefined
+
+  if (parseResult.data.children !== undefined) {
+    // `children` on a `group` instance is the content passed into the group's `slot`, not the
+    // group's own template — it is validated with a fresh (non-template) context.
+    const childrenResult = validateLayoutCollection(parseResult.data.children, `${path}.children`, pageId, breadcrumb, ctx)
+
+    if (childrenResult.status === 'error') {
+      return childrenResult
+    }
+
+    children = childrenResult.nodes
+  }
+
+  return {
+    status: 'ready',
+    node: {
+      type: 'group',
+      id: parseResult.data.id,
+      queryStateFeedback: feedbackResult.queryStateFeedback,
+      visibility: visibilityResult.visibility,
+      layout: parseResult.data.layout,
+      props: parseResult.data.props,
+      children,
+    },
+  }
 }
 
 export function validateQueryStateFeedback(
