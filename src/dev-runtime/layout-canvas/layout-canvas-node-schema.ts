@@ -41,11 +41,14 @@ import {
   toggleNodeSchema,
 } from '../../config/runtime-config-zod'
 
-// `group`/`slot` are structurally part of the catalog (`supportedNodeTypes`, T06) but are not yet
-// wired into the visual editor — palette insertion, default instance and property panel support
-// for reusable node groups is T15's responsibility. Excluded here so the palette and drag-id
-// parsing keep listing exactly the node types users can already insert (regression-free).
-const NODE_TYPES_NOT_YET_INSERTABLE_FROM_PALETTE: ReadonlySet<LayoutNodeType> = new Set(['group', 'slot'])
+// `slot` is structurally part of the catalog (`supportedNodeTypes`, T06) but is not wired into
+// the visual editor: it only ever makes sense inside a group's own `template` (edited by T14's
+// `DevEditorGroupsCanvas`, which reuses this same catalog), and `group` templates never nest
+// another `group`/reuse the generic default-instance flow for `slot` — authoring a template's
+// `slot` placement stays a Monaco-only edit. `group` itself is insertable (T15): see
+// `layout-canvas-node-palette-defaults.ts`'s `group` case for why its placeholder instance
+// (`groupId: ''`) is always valid to insert.
+const NODE_TYPES_NOT_YET_INSERTABLE_FROM_PALETTE: ReadonlySet<LayoutNodeType> = new Set(['slot'])
 
 const nodeSchemaByType: Record<LayoutNodeType, z.ZodType> = {
   container: containerNodeSchema,

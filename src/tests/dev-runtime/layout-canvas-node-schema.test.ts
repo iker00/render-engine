@@ -221,13 +221,17 @@ describe('getNodeTypeJsonSchema', () => {
 })
 
 describe('getSupportedNodeTypesCatalog', () => {
-  it('returns the full node type catalog (31 types)', () => {
+  // 32 (T15, feature reusable-node-groups): "group" joined the catalog — see this task's own
+  // comment on `NODE_TYPES_NOT_YET_INSERTABLE_FROM_PALETTE` for why "slot" alone stays excluded.
+  it('returns the full node type catalog (32 types)', () => {
     const catalog = getSupportedNodeTypesCatalog()
-    expect(catalog).toHaveLength(31)
+    expect(catalog).toHaveLength(32)
     expect(catalog).toContain('container')
     expect(catalog).toContain('button')
     expect(catalog).toContain('hidden')
     expect(catalog).toContain('fileManager')
     expect(catalog).toContain('steps')
+    expect(catalog).toContain('group')
+    expect(catalog).not.toContain('slot')
   })
 })

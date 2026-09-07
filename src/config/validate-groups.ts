@@ -127,6 +127,16 @@ function checkGroupInstance(
   groups: RuntimeGroupsConfig,
   breadcrumb: BreadcrumbSegment[],
 ): { status: 'error'; error: RuntimeConfigError } | null {
+  // `''` is the dev canvas's deliberate "not yet selected" draft state (T15, feature
+  // reusable-node-groups — see `groupInstanceNodeSchema`'s own comment): a freshly palette-
+  // inserted `group` instance always starts this way, before the user picks a real group from
+  // the properties panel. Skipping id/params cross-checks here (instead of erroring "unknown
+  // group id \"\"") is what lets that placeholder commit successfully; `GroupLayoutNode` already
+  // renders nothing for it at runtime.
+  if (node.props.groupId === '') {
+    return null
+  }
+
   const groupDefinition = groups[node.props.groupId]
 
   if (!groupDefinition) {
@@ -198,7 +208,13 @@ function getNestedLayoutCollections(
   }
 }
 
-function countSlotsInCollection(nodes: LayoutNodeCollection): number {
+// Exported for reuse by the dev canvas's drop-validity engine (T15,
+// `src/dev-runtime/layout-canvas/layout-drop-validity.ts`): dropping into a `group` instance's
+// `children` is only a valid target when the referenced group's `template` declares a `slot`,
+// the same "at least one slot" fact this function already computes for `checkGroupInstance`
+// below. Not a new rule of its own — just the existing recursive slot count made available
+// outside this module instead of duplicated.
+export function countSlotsInCollection(nodes: LayoutNodeCollection): number {
   return nodes.reduce((total, node) => total + countSlotsInNode(node), 0)
 }
 

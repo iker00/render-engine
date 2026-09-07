@@ -292,6 +292,7 @@ export function DevEditorLayer({
       targetTabItemIndex,
       targetStepItemIndex,
       draggedNodeType,
+      groups: config.groups,
     })
     if (!isStructurallyValid) return
 
@@ -365,7 +366,7 @@ export function DevEditorLayer({
               useDraggable/useDroppable inside layout-node-renderer.tsx/layout-renderer.tsx are
               already gated on editModeContext !== null, so nothing drags in Visual mode even
               though the DndContext itself is present. */}
-          <LayoutCanvasDndContext pageLayout={activePageLayout} onDropAttempt={handleDropAttempt}>
+          <LayoutCanvasDndContext pageLayout={activePageLayout} groups={config.groups} onDropAttempt={handleDropAttempt}>
             <LayoutEditModeProvider
               value={
                 mode === 'editor'
@@ -381,6 +382,7 @@ export function DevEditorLayer({
           {mode === 'editor' && (
             <FloatingSelectionOverlay
               pageLayout={activePageLayout}
+              groups={config.groups}
               selectedPath={selectedPath}
               onSelectNode={handleSelectNode}
               onCommitNodeUpdate={onCommitNodeUpdate}

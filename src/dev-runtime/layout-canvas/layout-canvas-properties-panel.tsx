@@ -8,6 +8,7 @@ import type {
   RuntimeResponsiveBreakpoint,
   RuntimeResponsiveLayoutValue,
 } from '../../config/runtime-config'
+import type { RuntimeGroupsConfig } from '../../config/runtime-config-types'
 import { serializeLayoutNodePath, type LayoutNodePath } from '../../runtime/layout-node-path'
 import { CommitRejectionBanner } from '../commit-rejection-banner'
 import { commitLayoutSpan } from './commit-layout-span'
@@ -18,6 +19,7 @@ import { NodePanelTabBar } from './node-panel-tab-bar'
 import { resolveNodePanelTabs, type NodePanelTabKey } from './node-panel-tabs'
 import { ContainerColumnsModePropertyField } from './property-fields/container-columns-mode-property-field'
 import { GalleryOriginModePropertyField } from './property-fields/gallery-origin-mode-property-field'
+import { GroupInstancePropertyField } from './property-fields/group-instance-property-field'
 import { LayoutSpanWidgetContext, type LayoutSpanRowRejection } from './property-fields/layout-span-widget-context'
 import { LinkContentModePropertyField } from './property-fields/link-content-mode-property-field'
 import { PropertyFieldDispatcher } from './property-fields/property-field-dispatcher'
@@ -59,6 +61,12 @@ export interface LayoutCanvasPropertiesPanelProps {
   // (and only ever invoked) when `pageLayout` is also passed, since the breadcrumb itself doesn't
   // render otherwise.
   onSelectAncestor?: (path: LayoutNodePath) => void
+  // T15 (feature reusable-node-groups): root `groups` block, needed only by the `group`
+  // instance's special block (`GroupInstancePropertyField`) to list existing group ids and
+  // resolve the chosen group's declared params. Optional — every other node type ignores it, and
+  // callers with no notion of a real `groups` block (e.g. `ShellActionsListEditor`, which only
+  // ever renders `button`/`link` nodes) simply don't pass it.
+  groups?: RuntimeGroupsConfig
 }
 
 // Stable no-op passed to `LayoutCanvasBreadcrumb`'s required `onSelectNode` when the panel
@@ -77,6 +85,9 @@ const NOOP_SELECT_ANCESTOR = (_path: LayoutNodePath): void => {}
 // (D4), for the same reason — `headers`/`rows`/`columns` must commit as one coordinated mutation.
 // Feature 2026-08-25-14-49-gallery-node adds `galleryOriginMode`: the `gallery` "Origen" widget
 // (Estático/Dinámico) also commits the entire node, for the same reason as `containerColumnsMode`.
+// T15 adds `groupInstance`: the `group` node's "groupId + params" special block (D above) also
+// commits the entire node, for the same reason as `containerColumnsMode`/`galleryOriginMode` —
+// changing `groupId` must reset `params`/`children` in the same commit, not a per-subsection patch.
 type PendingRejectionKey =
   | NodePanelTabKey
   | 'submitAction'
@@ -84,6 +95,7 @@ type PendingRejectionKey =
   | 'tableRows'
   | 'repeaterGrid'
   | 'galleryOriginMode'
+  | 'groupInstance'
 
 // T9 (bug fix): `commitCanvasMutation` validates the *entire* config before applying a panel
 // commit (see dev-runtime.tsx). Switching a discriminated-union variant (T5) or adding a new
@@ -317,6 +329,23 @@ function resolveRepeaterPropsSchema(propsSchema: Record<string, unknown>): Recor
 }
 
 /**
+ * Omits `groupId` and `params` from `group.props`'s generated schema unconditionally (T15): the
+ * dedicated `GroupInstancePropertyField` special block above is these two keys' only editing
+ * surface — declaring them again in the generic dispatcher would show a bare-string `groupId`
+ * input (no options list, no reset-on-change of `params`/`children`) and an open key-value editor
+ * for `params` instead of one text field per param the chosen group actually declares. Same
+ * "generic dispatcher stops iterating these keys for this node type" precedent as
+ * `resolveTablePropsSchema` below.
+ */
+function resolveGroupInstancePropsSchema(propsSchema: Record<string, unknown>): Record<string, unknown> {
+  const properties = propsSchema.properties
+  if (!isPlainObject(properties)) return propsSchema
+
+  const { groupId: _groupId, params: _params, ...restProperties } = properties
+  return { ...propsSchema, properties: restProperties }
+}
+
+/**
  * Omits `headers`, `rows` and `columns` from `table.props`'s generated schema unconditionally
  * (T9, 0138, D4): the dedicated `TableRowsPropertyField` widget above is these three keys' only
  * editing surface, since they must commit together as one coordinated mutation — declaring them
@@ -526,6 +555,7 @@ export function LayoutCanvasPropertiesPanel({
   pageLayout,
   onClose,
   onSelectAncestor,
+  groups,
 }: LayoutCanvasPropertiesPanelProps) {
   // FR4/FR5, criterion 5: `hidden` is the only node type with no `id` field at all (same
   // detection `layout-canvas-breadcrumb.tsx`'s `buildBreadcrumbLabel` uses); every other node
@@ -693,6 +723,31 @@ export function LayoutCanvasPropertiesPanel({
               </div>
             )
           })()}
+        {node.type === 'group' &&
+          (() => {
+            const pendingRejection = pendingRejections.groupInstance
+            const displayedNode = pendingRejection ? (pendingRejection.value as typeof node) : node
+
+            return (
+              <div className="flex flex-col gap-2">
+                <GroupInstancePropertyField
+                  label="Grupo"
+                  node={displayedNode}
+                  groups={groups}
+                  onChange={(nextNode) => {
+                    const result = onCommitNodeUpdate(path, () => nextNode)
+                    recordCommitResult('groupInstance', nextNode, result)
+                  }}
+                />
+                {pendingRejection && (
+                  <CommitRejectionBanner
+                    dataTestId="layout-canvas-properties-panel-groupInstance-error"
+                    error={pendingRejection.error}
+                  />
+                )}
+              </div>
+            )
+          })()}
         {node.type === 'form' &&
           submitActionSchema &&
           (() => {
@@ -821,6 +876,9 @@ export function LayoutCanvasPropertiesPanel({
     }
     if (key === 'props' && node.type === 'gallery' && effectiveSchema) {
       effectiveSchema = resolveGalleryPropsSchema(effectiveSchema, currentValue)
+    }
+    if (key === 'props' && node.type === 'group' && effectiveSchema) {
+      effectiveSchema = resolveGroupInstancePropsSchema(effectiveSchema)
     }
     if (key === 'props' && CHOICE_LIKE_NODE_TYPES.has(node.type) && effectiveSchema) {
       effectiveSchema = resolveChoiceLikePropsSchema(effectiveSchema)

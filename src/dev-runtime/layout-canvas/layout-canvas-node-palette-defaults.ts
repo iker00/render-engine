@@ -169,11 +169,20 @@ export function buildDefaultNodeInstance(type: LayoutNodeType): LayoutNode {
         },
       }
 
-    // `group`/`slot` are structurally part of `LayoutNodeType` (T06) but excluded from
-    // `getSupportedNodeTypesCatalog()` — the palette never drags one of these in, so this branch
-    // is unreachable in practice. Wiring a real default instance (which needs an existing
-    // `groups.*` entry to reference) is T15's responsibility.
+    // T15 (feature reusable-node-groups): `groupId: ''` is a deliberate draft placeholder, not
+    // an oversight — `groupInstanceNodeSchema` accepts an empty `groupId` and `checkGroupInstance`
+    // (`validate-groups.ts`) skips its cross-checks specifically for `''`, so this inserts
+    // validly even though no real `groups.*` entry is referenced yet (`GroupLayoutNode`,
+    // `src/runtime/nodes/group-layout-node.tsx`, degrades to `null` at render time until the user
+    // picks one from the properties panel). Unlike every other case above, this stays context-free on
+    // purpose: `buildDefaultNodeInstance` has no `config.groups` to auto-pick a "sensible" real id
+    // from, and picking one would be arbitrary anyway.
     case 'group':
+      return { type: 'group', props: { groupId: '', params: {} } }
+
+    // `slot` is structurally part of `LayoutNodeType` (T06) but excluded from
+    // `getSupportedNodeTypesCatalog()` (see that function's own comment) — the palette never
+    // drags one of these in, so this branch is unreachable in practice.
     case 'slot':
       throw new Error(`buildDefaultNodeInstance: node type "${type}" is not yet insertable from the palette`)
 

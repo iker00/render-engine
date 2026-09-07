@@ -1,9 +1,16 @@
 import type { LayoutNode } from '../../config/runtime-config'
+import type { RuntimeGroupsConfig } from '../../config/runtime-config-types'
 import { getNodeAtPath, type LayoutNodePath } from '../../runtime/layout-node-path'
 import { LayoutCanvasPropertiesPanel } from '../layout-canvas/layout-canvas-properties-panel'
 
 export interface FloatingSelectionOverlayProps {
   pageLayout: readonly LayoutNode[]
+  // T15 (feature reusable-node-groups): forwarded to `LayoutCanvasPropertiesPanel` so the
+  // `group` instance widget can list existing group ids. Optional — omitted by callers with no
+  // real `groups` block (e.g. `DevEditorGroupsCanvas`'s own template canvas, where a `group`
+  // instance can never legitimately be selected — see `validate-groups.ts`'s
+  // `insideGroupTemplate` rejection).
+  groups?: RuntimeGroupsConfig
   selectedPath: LayoutNodePath | null
   onSelectNode: (path: LayoutNodePath | null) => void
   onCommitNodeUpdate: (path: LayoutNodePath, updater: (node: LayoutNode) => LayoutNode) => void
@@ -40,6 +47,7 @@ const CONTENT_CLASSES = 'min-h-0 flex-1 overflow-y-auto'
  */
 export function FloatingSelectionOverlay({
   pageLayout,
+  groups,
   selectedPath,
   onSelectNode,
   onCommitNodeUpdate,
@@ -58,6 +66,7 @@ export function FloatingSelectionOverlay({
           node={selectedNode}
           path={selectedPath}
           pageLayout={pageLayout}
+          groups={groups}
           onCommitNodeUpdate={onCommitNodeUpdate}
           onDeleteNode={onDeleteNode}
           onClose={() => onSelectNode(null)}

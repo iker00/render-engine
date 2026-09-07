@@ -1020,6 +1020,14 @@ export const runtimeGroupEntrySchema = z
 
 export const runtimeGroupsConfigSchema = z.record(nonEmptyStringSchema, runtimeGroupEntrySchema)
 
+// `groupId` deliberately accepts `''` (unlike every other id-like field on this schema, which
+// uses `nonEmptyStringSchema`): the dev canvas (T15, feature reusable-node-groups) inserts a
+// bare `group` instance from the palette before the user has picked a real group, the same way
+// other palette placeholders start out under-configured (e.g. `select`'s `items: []`). `''` is
+// treated as a deliberate "not yet selected" draft state, not a malformed reference — the
+// runtime's `GroupLayoutNode` already renders nothing for any `groupId` that doesn't resolve
+// against `config.groups` (including `''`), and `checkGroupInstance` (`validate-groups.ts`)
+// skips its unknown-id/params cross-checks specifically for `''` for the same reason.
 export const groupInstanceNodeSchema = z
   .object({
     type: z.literal('group'),
@@ -1029,7 +1037,7 @@ export const groupInstanceNodeSchema = z
     layout: layoutNodeLayoutSchema.optional(),
     props: z
       .object({
-        groupId: nonEmptyStringSchema,
+        groupId: z.string(),
         params: z.record(z.string(), z.unknown()),
       })
       .strip(),
