@@ -28,6 +28,7 @@ El escape literal con `\` permite mostrar una referencia completa tal cual, por 
 - `queries.{queryName}.error.message`
 - `queries.{queryName}.error.code`
 - `queries.{queryName}.data.{segmentosAnidados}`
+- `group.{paramName}`
 - `t.{key}`
 - `tokens.{tokenId}.value`
 - `switch.next`
@@ -149,3 +150,13 @@ Las superficies de `query`, `body`, `params` y otras no listadas siguen fuera de
 - Un `switch.next` en cualquier otra superficie —`props.checked` del mismo botón, `visibility.reference`, la `action` de otro nodo, o un `button` cuyo `variant` no es `switch`— es rechazado en bootstrap, no degradado en runtime.
 - Se resuelve como campo hermano de `iterationContext` en las opciones que ya transporta el pipeline de referencias (no forma parte de `RuntimeIterationContext`, que es conceptual y funcionalmente el contexto de iteración de `repeater`/`table`), por lo que convive sin conflicto con `item.*`/`row.*` en el mismo `body`/`query`/`headers` cuando el `button` vive dentro de un `repeater`.
 - Con `checked` literal fijo (sin referencia dinámica), `switch.next` sigue resolviendo la negación de ese literal en cada click; como `checked` nunca cambia por sí solo, todos los clicks sucesivos envían el mismo valor negado.
+
+## Frontera específica de `group.*`
+- `group.{paramName}` resuelve, dentro del `template` de una definición de grupo, el valor pasado en `props.params.{paramName}` por la instancia `group` que está expandiéndose en ese momento.
+- `group.{paramName}` es válido cuando el consumidor vive dentro del `template` declarado en un `groups.{groupId}`.
+- `group.*` solo admite un segmento dinámico tras el namespace. `group.param.extra` (dos segmentos) no se reconoce como referencia válida.
+- Variantes como `group`, `group.{paramName}.extra` u otras formas con múltiples segmentos son rutas inválidas.
+- `group.*` puede usarse en las mismas superficies donde hoy es utilizable `item.*` dentro de un `repeater`: referencias completas e interpolación parcial en strings visibles, `api.query`, `api.body`, `api.headers`, `button.props.action.query`/`body`/`headers`, `form.submitAction.query`/`body`/`headers`, `defaultValue` de campos, `visibility.reference`, y orígenes de colección (`repeater.props.items.source`, `list.props.items.source`, etc.), siempre que se encuentre dentro del contexto del template del grupo.
+- Fuera del `template` de una definición de grupo, `group.*` no forma parte del contrato soportado y degrada a string vacío en superficies textuales.
+- Un `group` instanciado dentro de `repeater.props.template` puede usar `item.*` en sus `props.params` e `children` del mismo modo que cualquier otro nodo dentro del template; ambos namespaces coexisten sin conflicto, resolviendo cada uno desde su contexto correspondiente (iteración del `repeater` e iteración del `group`, respectivamente).
+- `group.*` tiene precedencia sobre cualquier propiedad literal de ese nombre dentro del valor del parámetro, de forma análoga a la precedencia de `item.$key` y `item.$index`.

@@ -13,9 +13,10 @@ Los conceptos transversales (`visibility`, `queryStateFeedback`, referencias din
 | Nodo | Cuándo leer la ficha |
 |---|---|
 | [container.md](./container.md) | Layouts con `direction`, `gap`, `columns` fijo o responsive, `variant: card`, `align`, `justify`, `wrap`, `layout.span`. |
-| [repeater.md](./repeater.md) | Repetición de subárbol por item de colección, `props.items.source`, `props.items.key`, paginación local con variantes `previousNext`/`numbered`/`scroll`, modo grid propio (`props.columns`/`gap`/`align`/`justify`). |
+| [repeater.md](./repeater.md) | Repetición de subárbol por item de colección, `props.items.source`, `props.items.key`, paginación local con variantes `previousNext`/`numbered`/`scroll`, modo grid propio (`props.columns`/`gap`/`align`/`justify`). Combinación con `group`. |
 | [tabs.md](./tabs.md) | Paneles navegables por pestañas, `props.items` (label + children + visibilidad por item), `props.orientation` (`horizontal\|vertical`), `props.defaultTab`, estado local del tab activo, selección automática de primer tab visible. |
 | [accordion.md](./accordion.md) | Sección colapsable con cabecera interactiva, `props.label`, `props.defaultOpen`, `props.groupId` para coordinación de grupos, children libres, accesibilidad ARIA. |
+| [group.md](./group.md) | Instancia de subárbol reutilizable declarado en el bloque raíz `groups`, `props.groupId`, `props.params` para valores parametrizados, `children` como contenido del `slot` del template, independencia de instancias, combinación con `repeater` e `item.*`. |
 
 ## Nodos hoja visibles
 
@@ -65,10 +66,12 @@ Los conceptos transversales (`visibility`, `queryStateFeedback`, referencias din
 - `heading`, `paragraph`, `list`, `image`, `table`, `button`, `badge`, `alert`, `stat` y `divider` son nodos hoja; si reciben `children`, esos datos no pasan al resultado normalizado.
 - `link` acepta `children` como alternativa a `props.label`: ambos campos son mutuamente excluyentes y obligatorio declarar uno.
 - `repeater` rechaza `children` y solo admite repetición a través de `props.template`.
+- `group` acepta `children` opcionalmente como contenido del `slot` del template instanciado.
+- `slot` es un nodo reservado sin `props`, `children`, `visibility`, `queryStateFeedback` ni `layout.span`; solo válido dentro de un `groups.{groupId}.template` como marcador único.
 - `input`, `textarea`, `select`, `radioGroup`, `checkboxGroup`, `toggle`, `hidden` y `autocomplete` solo son válidos como descendientes de un `form`.
-- `steps` también solo es válido como descendiente de un `form`, a pesar de ser un nodo estructural (con `props.items[i].children`) y no un nodo hoja de campo — a diferencia de `tabs` y `accordion`, que sí son válidos fuera de `form`.
+- `steps` también solo es válido como descendiente de un `form`, a pesar de ser un nodo estructural (con `props.items[i].children`) y no un nodo hoja de campo — a diferencia de `tabs`, `accordion` y `group`, que sí son válidos fuera de `form`.
 - `button` sin `action` solo es válido como descendiente de un `form` (actúa como submit implícito).
 - `hidden` no soporta `visibility`, `queryStateFeedback` ni `layout.span`; si declara `visibility` o `queryStateFeedback`, el config se rechaza.
-- Cualquier nodo soportado (excepto `hidden`) puede declarar `node.layout.span`, `node.visibility` y `node.queryStateFeedback` siguiendo las reglas transversales documentadas en [`../references/`](../references/index.md).
+- Cualquier nodo soportado (excepto `hidden` y `slot`) puede declarar `node.layout.span`, `node.visibility` y `node.queryStateFeedback` siguiendo las reglas transversales documentadas en [`../references/`](../references/index.md).
 - Cualquier nodo soportado puede combinar `queryStateFeedback` y `visibility`; si ambos existen, el runtime resuelve primero `queryStateFeedback` y solo evalúa `visibility` cuando la rama principal sigue visible.
 - `props.required` deja de formar parte del contrato soportado; la obligatoriedad solo se declara desde `props.validations.required`.

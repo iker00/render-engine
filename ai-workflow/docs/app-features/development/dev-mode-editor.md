@@ -5,7 +5,7 @@
 # Editor de configuración en vivo (dev mode)
 
 ## Objetivo
-Permitir editar el JSON de configuración directamente en el navegador durante el desarrollo, validarlo con el mismo validador del runtime y aplicarlo para ver el resultado al instante, sin recargar la página ni depender de backend. Junto al editor de texto Monaco, una **barra de herramientas flotante** persistente ofrece también un editor visual del árbol `layout` de la página activa mediante manipulación directa sobre el propio preview real renderizado — no un árbol duplicado, sino el mismo contenido que ve el usuario — con controles para cambiar de página, seleccionar modo Visual/Editor, abrir la paleta de nodos y acceder a Monaco (ver [[#Barra flotante]] y [[#Editor visual del layout]]). La barra incluye también un botón "Guardar" (con atajo Ctrl+S/Cmd+S) que persiste el config activo hacia un backend externo (ver [[#Botón Guardar]]), y cinco secciones de dominio con panel de formulario dedicado en vez de canvas: `Shell` (ver [[#Sección Shell (dominio de configuración)]]), `Api` (ver [[#Sección Api (dominio de configuración)]]) con CRUD de operaciones del bloque `api` y de entradas de `preloads` globales/de página, `Traducciones` (ver [[#Sección Traducciones (dominio de configuración)]]), esta última con gestión manual del bloque `translations` y sincronización de solo lectura con un proveedor externo de gestión de textos, `Páginas` (ver [[#Sección Páginas (dominio de configuración)]]) para alta/baja de páginas, edición de `title` y designación de `initialPage`, y `Tokens` (ver [[#Sección Tokens (dominio de configuración)]]) para alta/baja de tokens del bloque `tokens`, edición de su `value` y gestión de su sub-bloque `refresh`.
+Permitir editar el JSON de configuración directamente en el navegador durante el desarrollo, validarlo con el mismo validador del runtime y aplicarlo para ver el resultado al instante, sin recargar la página ni depender de backend. Junto al editor de texto Monaco, una **barra de herramientas flotante** persistente ofrece también un editor visual del árbol `layout` de la página activa mediante manipulación directa sobre el propio preview real renderizado — no un árbol duplicado, sino el mismo contenido que ve el usuario — con controles para cambiar de página, seleccionar modo Visual/Editor, abrir la paleta de nodos y acceder a Monaco (ver [[#Barra flotante]] y [[#Editor visual del layout]]). La barra incluye también un botón "Guardar" (con atajo Ctrl+S/Cmd+S) que persiste el config activo hacia un backend externo (ver [[#Botón Guardar]]), y seis secciones de dominio con panel de formulario dedicado en vez de canvas: `Shell` (ver [[#Sección Shell (dominio de configuración)]]), `Api` (ver [[#Sección Api (dominio de configuración)]]) con CRUD de operaciones del bloque `api` y de entradas de `preloads` globales/de página, `Grupos` (ver [[#Sección Grupos (dominio de configuración)]]) con CRUD de definiciones de grupos reutilizables y edición de sus templates, `Traducciones` (ver [[#Sección Traducciones (dominio de configuración)]]), esta última con gestión manual del bloque `translations` y sincronización de solo lectura con un proveedor externo de gestión de textos, `Páginas` (ver [[#Sección Páginas (dominio de configuración)]]) para alta/baja de páginas, edición de `title` y designación de `initialPage`, y `Tokens` (ver [[#Sección Tokens (dominio de configuración)]]) para alta/baja de tokens del bloque `tokens`, edición de su `value` y gestión de su sub-bloque `refresh`.
 
 ## Activación
 El editor solo existe si el host monta `<DevRuntime />` desde `src/dev-runtime/dev-runtime.tsx`. La decisión se toma en el bootstrap (`main.tsx`) y responde a dos condiciones:
@@ -24,7 +24,7 @@ En producción sin el atributo, `main.tsx` monta `<App />` directamente y Monaco
 Una barra de herramientas persistente permanece siempre visible en la base central de la pantalla mientras `DevRuntime` esté montado, independientemente de la página activa del runtime y del modo vigente. Contiene (de izquierda a derecha):
 
 1. **Selector de página**: dropdown que lista todas las páginas disponibles en `config.pages`. Cambiar la selección navega el runtime a esa página (con el mismo mecanismo que una navegación interna por hash), en cualquiera de los dos modos. Al navegar, se limpia cualquier nodo seleccionado en modo Editor.
-2. **Selector de pestaña de dominio**: seis botones, en este orden: `Layout`, `Api`, `Páginas`, `Tokens`, `Traducciones`, `Shell`. Los seis son funcionales. Ver [Sección Shell (dominio de configuración)](#sección-shell-dominio-de-configuración), [Sección Api (dominio de configuración)](#sección-api-dominio-de-configuración), [Sección Traducciones (dominio de configuración)](#sección-traducciones-dominio-de-configuración), [Sección Páginas (dominio de configuración)](#sección-páginas-dominio-de-configuración) y [Sección Tokens (dominio de configuración)](#sección-tokens-dominio-de-configuración) para el comportamiento de cada una.
+2. **Selector de pestaña de dominio**: siete botones, en este orden: `Layout`, `Api`, `Grupos`, `Páginas`, `Tokens`, `Traducciones`, `Shell`. Los siete son funcionales. Ver [Sección Shell (dominio de configuración)](#sección-shell-dominio-de-configuración), [Sección Api (dominio de configuración)](#sección-api-dominio-de-configuración), [Sección Grupos (dominio de configuración)](#sección-grupos-dominio-de-configuración), [Sección Traducciones (dominio de configuración)](#sección-traducciones-dominio-de-configuración), [Sección Páginas (dominio de configuración)](#sección-páginas-dominio-de-configuración) y [Sección Tokens (dominio de configuración)](#sección-tokens-dominio-de-configuración) para el comportamiento de cada una.
 3. **Botón "Añadir elemento"**: abre la paleta flotante de nodos (ver sección [[#Paleta flotante de nodos]]), desde la que se puede arrastrar un nodo hasta el contenido para insertarlo. Su estado (abierto/cerrado) se refleja visualmente en la barra.
 4. **Botón de acceso a Monaco** (icono `{}`): abre el panel flotante de Monaco (ver sección [[#Panel flotante de Monaco]]). Su estado se refleja visualmente en la barra.
 5. **Toggle Visual/Editor**: dos botones (`Visual`, `Editor`) que controlan el modo. Al arrancar, el modo por defecto es `Visual`. Solo pueden estar activos alternativamente. El toggle modifica el comportamiento del árbol renderizado sin necesidad de recarga (ver [[#Modo Visual]] y [[#Modo Editor]]).
@@ -846,6 +846,83 @@ Un commit exitoso desde cualquiera de las tres superficies activa la misma guard
 - Sin autocorrección de una referencia rota (`operationName` de un preload apuntando a una operación borrada): el
   comportamiento de validación ante esa referencia se mantiene igual que antes de esta sección.
 - Sin deshacer/rehacer ni confirmación modal en el borrado de una operación o de una entrada de preload.
+
+## Sección Grupos (dominio de configuración)
+
+### Objetivo y alcance
+Panel de formulario dedicado (`GroupsConfigPanel`), accesible seleccionando `Grupos` en el selector de pestaña de dominio
+de la barra flotante — mismo tipo de sección que `Shell` y `Api`: sin selección de nodo, breadcrumb ni panel de propiedades
+por nodo, sustituye por completo el área de canvas. Cubre CRUD completo de las definiciones de grupos reutilizables declaradas
+en el bloque raíz `groups` (ver [[../nodes/group.md]]), incluyendo alta/baja/renombrado de `groupId`, declaración de parámetros
+(`params`) y edición del `template` del grupo mediante una interfaz de paleta de nodos y panel de propiedades, similar a la que
+existe para editar el `layout` de una página. Toda mutación confirmada desde este panel pasa por el mismo pipeline
+commit/validación/patch de clave raíz que ya usan `Layout`, `Shell`, `Api` y `Traducciones`.
+
+### Gestión de grupos
+- **Listado**: una entrada por `groupId` ya declarado en `groups`, mostrando su clave y un botón "Borrar grupo" (sin confirmación).
+  Con `groups` vacío o sin declarar, el panel muestra `"Sin grupos definidos."` en vez de lista.
+- **Alta de grupo**: formulario "Añadir grupo" con un campo de `groupId` (requerido, no vacío, único dentro de `groups`). Una
+  `groupId` vacía o ya existente se rechaza con un aviso local antes de intentar ningún commit. El grupo se crea con `params: []`
+  y `template: []` (sin parámetros ni contenido).
+- **Renombrado de grupo**: a diferencia de `Api` y `Traducciones`, el `groupId` es editable post-creación — cambiar la clave en
+  el campo de identidad del grupo seleccionado revalida la unicidad y commitea el cambio si es válido. Una `groupId` nueva vacía
+  o ya existente se rechaza con aviso local. Las instancias `group` que referencian ese `groupId` en el layout de las páginas se
+  actualizan automáticamente al renombrar.
+- **Borrado de grupo**: botón "Borrar grupo" elimina la entrada completa de `groups`. Sin validación cruzada de referencias desde
+  el `layout` de las páginas (instancias `group` con `props.groupId` apuntando a ese grupo borrado) — el runtime ya rechaza en
+  bootstrap una instancia con `groupId` inexistente. Borrar el último grupo deja `groups` como objeto vacío `{}`, sin eliminar la
+  clave raíz.
+
+### Edición del template
+Cada grupo dispone de una interfaz de edición visual del `template` que reutiliza el mismo mecanismo de paleta de nodos + panel de
+propiedades que el `Layout` de una página, pero renderizado sobre una representación aislada del grupo (con valores mock para sus
+`group.*`, ya que en modo definición no hay una instancia real con `params` concretos).
+- **Navegar al editor del template**: seleccionar un grupo de la lista de la izquierda muestra en el área central el canvas de
+  edición del template, con el nombre de la paleta actualizado para indicar el grupo activo (por ejemplo "Paleta para Grupo: card").
+- **Paleta de nodos**: accesible desde el botón "Añadir elemento", lista el catálogo completo de tipos de nodo soportados. Arrastrar
+  un nodo hasta el canvas del template lo inserta como nuevo nodo con valores por defecto, igual que en la edición de `Layout` de
+  página.
+- **Panel de propiedades**: al seleccionar un nodo en el template, aparece el panel de propiedades del nodo en el borde derecho con
+  las pestañas `Props`, `Diseño`, `Visibilidad` y `Queries`, idéntico al que existe para `Layout`. Los valores `group.*` se resuelven
+  como referencias simuladas durante la edición — si el grupo declara `params: ["title", "color"]`, el panel de propiedades es consciente
+  de ello y permite usar `{{group.title}}` o `group.color` en superficies que admiten referencias.
+- **Arrastre y borrado**: el mismo comportamiento que en `Layout`: arrastrar un nodo existente lo reordena o reanida; arrastrar desde
+  la paleta lo inserta; con un nodo seleccionado, un botón en el panel borra ese nodo y su subárbol.
+- **Nodo slot**: si el template del grupo contiene un nodo `slot`, aparece como un nodo seleccionable más en el canvas (con una
+  representación visual distintiva), pero **no es editable**: el nodo `slot` carece de props y sus campos de identidad están deshabilitados
+  en el panel de propiedades. Solo se puede borrar (que lo quita del template, permitiendo así que el grupo se use sin contenido pasado desde
+  la instancia).
+- **Declaración de parámetros**: un campo de entrada de texto libre dentro del grupo (fuera del canvas), separado, permite editar los
+  nombres de parámetros (`params`), uno por línea, sin espacios ni duplicados. Actualizar ese campo valida y commitea la nueva lista.
+  Cambiar los `params` no resetea los valores de referencia `group.*` ya presentes en el template (un `params` anterior ["title"]
+  con referencias a `{{group.title}}` en el template: si se edita a ["name", "title"], la referencia `{{group.title}}` sigue siendo válida,
+  y se puede ahora además usar `{{group.name}}`; si se edita a ["name"] sin "title", la referencia `{{group.title}}` ya no se considera
+  válida y degrada a string vacío en las superficies de render, aunque la declaración textual en el JSON siga ahí).
+
+### Pipeline de commit
+Dos tipos de commit independientes, ambos con el mismo criterio de validar antes de aplicar y de no tocar ninguna otra clave:
+- **Mutaciones de grupo (alta/borrado/renombrado)**: parchean únicamente la clave raíz `groups` sobre el último texto crudo válido
+  conocido — mismo patrón exacto que el commit de `Shell`/`Api`.
+- **Edición del `template`/`params` de un grupo**: reutiliza el mismo mecanismo de parcheo que el canvas de `Layout` para sustituir solo
+  el sub-objeto concreto `groups.{groupId}` dentro de `groups`, dejando intacto el resto de grupos y el resto del documento.
+
+Un commit exitoso desde cualquier superficie activa la misma guardia de cambios aplicados que el resto del editor.
+
+### Reglas de destino de drop (paleta → canvas)
+Las mismas reglas que aplican en `Layout`:
+- Un nodo `group` no puede contener otro nodo `group` anidado dentro de su template — intentar arrastrarlo rechaza el drop.
+- Un nodo `slot` solo puede insertarse una única vez en el template — tras la primera inserción, el drag-and-drop de `slot` desde
+  la paleta o la duplicación por arrastre de un nodo `slot` existente se rechazan.
+- Otras restricciones estructurales (por ejemplo, campos de formulario solo válidos dentro de `form`) se validan antes de commitar,
+  igual que en `Layout`.
+
+### Fuera de alcance de la sección Grupos
+- Sin edición visual de `params` mediante widgets específicos — los parámetros se declaran como texto libre, uno por línea.
+- Sin sugerencias contextuales de `{{group.paramName}}` en el panel de propiedades — el usuario debe escribir las referencias con
+  la sintaxis correcta manualmente.
+- Sin sincronización automática de uso de `group.*` dentro del template cuando cambian los `params` — cambiar `params` no añade ni
+  quita referencias automáticamente.
+- Sin deshacer/rehacer ni confirmación modal en el borrado de un grupo.
 
 ## Sección Traducciones (dominio de configuración)
 
