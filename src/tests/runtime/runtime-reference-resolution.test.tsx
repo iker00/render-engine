@@ -2308,4 +2308,89 @@ describe('Runtime reference resolution', () => {
       })
     })
   })
+
+  describe('T10 group.* resolution against ambient group context (feature reusable-node-groups)', () => {
+    it('resolves group.{paramName} against the provided groupContext', () => {
+      expect(
+        resolveRuntimeReference('group.title', runtimeState, {
+          groupContext: { paramValues: { title: 'Hola' } },
+        }),
+      ).toEqual({
+        status: 'resolved',
+        value: 'Hola',
+        reference: parseRuntimeReference('group.title'),
+      })
+    })
+
+    it('degrades group.{paramName} to an empty string in text surfaces when no groupContext is provided', () => {
+      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+      expect(resolveRuntimeReference('group.title', runtimeState)).toEqual({
+        status: 'missing',
+        reference: parseRuntimeReference('group.title'),
+      })
+
+      expect(resolveRuntimeVisibleValue('group.title', runtimeState, 'heading.props.text')).toBe('')
+
+      consoleWarnSpy.mockRestore()
+    })
+
+    it('degrades group.{paramName} to an empty string when groupContext does not provide that paramName', () => {
+      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+      expect(
+        resolveRuntimeReference('group.title', runtimeState, { groupContext: { paramValues: {} } }),
+      ).toEqual({
+        status: 'missing',
+        reference: parseRuntimeReference('group.title'),
+      })
+
+      expect(
+        resolveRuntimeVisibleValue('group.title', runtimeState, 'heading.props.text', {
+          groupContext: { paramValues: {} },
+        }),
+      ).toBe('')
+
+      consoleWarnSpy.mockRestore()
+    })
+
+    it('interpolates group.{paramName} as a partial placeholder within a larger visible string', () => {
+      expect(
+        resolveRuntimeVisibleValue('Hola {{group.title}}', runtimeState, 'heading.props.text', {
+          groupContext: { paramValues: { title: 'Hola' } },
+        }),
+      ).toBe('Hola Hola')
+    })
+
+    it('resolves params.*, item.* and group.* independently within the same interpolated string', () => {
+      const stateWithSectionParam: RuntimeState = {
+        ...runtimeState,
+        navigation: {
+          currentPageId: 'details',
+          history: [{ entryId: 0, pageId: 'details', params: { section: 'Overview' } }],
+          currentEntryIndex: 0,
+          lastError: null,
+        },
+        pageEntry: {
+          entryId: 0,
+          pageId: 'details',
+          params: { section: 'Overview' },
+          preloadNames: [],
+          status: 'idle',
+        },
+      }
+
+      expect(
+        resolveRuntimeVisibleValue(
+          '{{params.section}} — {{item.name}} — {{group.title}}',
+          stateWithSectionParam,
+          'heading.props.text',
+          {
+            iterationContext: { item: { name: 'Widget' } },
+            groupContext: { paramValues: { title: 'Group title' } },
+          },
+        ),
+      ).toBe('Overview — Widget — Group title')
+    })
+  })
 })

@@ -18,6 +18,7 @@ import { hasFormatterSyntax, parseFormatterPlaceholder } from './runtime-formatt
 import { applyFormatterChain, findFirstFailingFormatterName } from './runtime-formatter-registry'
 import { parseRuntimeReference } from '../../config/runtime-reference-syntax'
 import type {
+  RuntimeGroupContext,
   RuntimeReferenceResolutionResult,
   RuntimeTokenErrorResolution,
 } from './runtime-reference-types'
@@ -42,6 +43,13 @@ interface ResolveRuntimeReferenceOptions {
    * Ausente equivale a `EMPTY_INSTANCE_SCOPE` (cero regresión fuera de todo repeater/group).
    */
   scope?: RuntimeInstanceScope
+  /**
+   * Contexto de grupo ambiente (T10 / feature reusable-node-groups) usado para resolver
+   * `group.{paramName}` contra los `paramValues` de la instancia de grupo en curso. Ausente o
+   * `null` degrada `group.*` al mismo criterio de "no encontrado" que el resto de referencias
+   * sin dato. Puramente de render: no accede al store global.
+   */
+  groupContext?: RuntimeGroupContext
 }
 
 const RUNTIME_TEMPLATE_PLACEHOLDER_DETECTOR = /\{\{[\s\S]*?\}\}/
@@ -401,6 +409,22 @@ function resolveSupportedReferenceValue(
     return {
       found: true,
       value: params[paramName],
+    } as const
+  }
+
+  if (reference.namespace === 'group') {
+    const [paramName] = reference.path
+    const groupContext = options.groupContext
+
+    if (!groupContext || !Object.hasOwn(groupContext.paramValues, paramName)) {
+      return {
+        found: false,
+      } as const
+    }
+
+    return {
+      found: true,
+      value: groupContext.paramValues[paramName],
     } as const
   }
 
