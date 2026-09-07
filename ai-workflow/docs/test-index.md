@@ -104,6 +104,8 @@ Ficheros de apoyo, no son tests: `config-validation/helpers.ts`, `dev-runtime/lu
 - `layout-renderer-basic-nodes.test.tsx` — ordenación raíz, layout vacío, listas estáticas/dinámicas/objeto, comportamiento leaf y clases Tailwind
 - `layout-renderer-button-styles.test.tsx` — nodo button: variantes solid/outline/ghost/link con tokens semánticos, fullWidth y submit implícito dentro de form
 - `layout-renderer-buttons-text.test.tsx` — nodos button y link, navegación declarativa, interpolación de texto y referencias dinámicas
+- `layout-renderer-collection-pipeline-shared.test.tsx` — integración del pipeline de colecciones (`orderby`/`filter`/`slice`) en `resolveCollectionSourceItems` compartido por `list`, `select`, `radioGroup` y `checkboxGroup`: regresión sin pipeline, reactividad de argumentos dinámicos y degradación (`baseReference` no-array, source malformado)
+- `layout-renderer-collection-pipeline-table.test.tsx` — integración del pipeline de colecciones en `table.props.rows.source`: regresión sin pipeline, filtro/orden declarativo aplicado antes de filtros/orden nativos de columna, combinación `AND` con filtro nativo, orden por defecto por `orderby` mientras ninguna columna `sortable` está activa, retorno al orden declarativo al ciclar la ordenación nativa al tercer estado, y `slice` declarativo como pool sobre el que opera la paginación local
 - `layout-renderer-container.test.tsx` — container: direction, gap, columns, variant y align/justify/wrap
 - `layout-renderer-divider.test.tsx` — nodo divider: variantes solid/dashed/dotted/invisible, visibility, layout.span, repetición y ausencia de children
 - `layout-renderer-edit-mode-placeholders.test.tsx` — placeholders seleccionables de container/form/link vacíos en modo edición y ausencia total en producción
@@ -183,6 +185,8 @@ Ficheros de apoyo, no son tests: `config-validation/helpers.ts`, `dev-runtime/lu
 - `runtime-button-lifecycle-actions.test.tsx` — `onSuccess`/`onError` de `button.props.action` tras `executeOperation`/`executeOperations`: encadenado, `when`, error de negocio, `item.*` en repeater y botón auxiliar dentro de form
 - `runtime-button-navigation.test.tsx` — navegación declarativa desde botones
 - `runtime-collection-pagination.test.ts` — paginación local de colecciones
+- `runtime-collection-pipeline-syntax.test.ts` — parser neutral de sintaxis del pipeline de colecciones (`orderby`/`filter`/`slice`) sobre `raw` string, sin resolución de referencias
+- `runtime-collection-pipeline.test.ts` — evaluador `evaluateCollectionPipeline`: aplicación en orden de `orderby`/`filter`/`slice` sobre un array ya resuelto, resolución de argumentos dinámicos sin `iterationContext` y degradación silenciosa (valor ausente, path inexistente, tipo incompatible)
 - `runtime-download-action.test.ts` — `resolveDownloadFilename` (prioridad Content-Disposition → filename dinámico → fallback) y `runDownloadAction` (invocación del handler inyectado, disparo del blob y estados success/error/skipped)
 - `runtime-file-base64-encoder.test.ts` — codificador puro de ficheros a base64 con shape `{name,size,mime,data}`
 - `runtime-file-input-hook.test.tsx` — nodo `FileInputNode`: selección, validaciones cliente, revocación de object URLs y previews

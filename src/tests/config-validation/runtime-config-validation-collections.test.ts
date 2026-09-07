@@ -4,6 +4,7 @@ import {
   createConfigWithPages,
   createConfigWithLayout,
   createConfigWithFormLayout,
+  createRepeaterNode,
 } from './helpers'
 
 describe('validateRuntimeConfig', () => {
@@ -1027,6 +1028,337 @@ describe('validateRuntimeConfig', () => {
         }),
       )
       expect(result.status).toBe('error')
+    })
+  })
+
+  describe('collection pipeline source (allowPipeline opt-in)', () => {
+    const invalidSourceMessage =
+      'collection sources must use queries.{queryName}.data, queries.{queryName}.data.* or item.*.'
+
+    function expectInvalidSourceAt(result: ReturnType<typeof validateRuntimeConfig>, path: string) {
+      expect(result).toEqual({
+        status: 'error',
+        error: {
+          code: 'invalid-layout',
+          displayMode: 'development-only',
+          message: expect.stringContaining(`"${path}": ${invalidSourceMessage}`),
+        },
+      })
+    }
+
+    const malformedPipelineCases: Array<[string, string]> = [
+      ['unknown operation name', 'sort:price,asc'],
+      ['invalid orderby dir', 'orderby:title,up'],
+      ['wrong number of filter args', 'filter:status,eq'],
+      ['unknown filter operator', 'filter:status,unknown-op,"x"'],
+      ['list literal outside filter:in', 'filter:role,eq,["a","b"]'],
+      ['malformed list literal', 'filter:role,in,['],
+    ]
+
+    describe('repeater.props.items.source', () => {
+      it('keeps accepting a source without a pipeline (regression)', () => {
+        const result = validateRuntimeConfig(
+          createConfigWithLayout([
+            createRepeaterNode({ props: { items: { source: 'queries.posts.data', key: 'id' }, template: [] } }),
+          ]),
+        )
+        expect(result.status).toBe('ready')
+      })
+
+      it('accepts a well-formed pipeline', () => {
+        const result = validateRuntimeConfig(
+          createConfigWithLayout([
+            createRepeaterNode({
+              props: {
+                items: { source: 'queries.posts.data | orderby:title,asc | slice:0,10', key: 'id' },
+                template: [],
+              },
+            }),
+          ]),
+        )
+        expect(result.status).toBe('ready')
+        if (result.status === 'ready') {
+          expect(result.page.layout[0]).toMatchObject({
+            props: { items: { source: 'queries.posts.data | orderby:title,asc | slice:0,10' } },
+          })
+        }
+      })
+
+      it('rejects an invalid baseReference even with a well-formed pipeline', () => {
+        const result = validateRuntimeConfig(
+          createConfigWithLayout([
+            createRepeaterNode({
+              props: {
+                items: { source: 'params.something | orderby:x,asc', key: 'id' },
+                template: [],
+              },
+            }),
+          ]),
+        )
+        expectInvalidSourceAt(result, 'layout[0].props.items.source')
+      })
+
+      it.each(malformedPipelineCases)('rejects a malformed pipeline stage: %s', (_label, stage) => {
+        const result = validateRuntimeConfig(
+          createConfigWithLayout([
+            createRepeaterNode({
+              props: {
+                items: { source: `queries.posts.data | ${stage}`, key: 'id' },
+                template: [],
+              },
+            }),
+          ]),
+        )
+        expectInvalidSourceAt(result, 'layout[0].props.items.source')
+      })
+    })
+
+    describe('list.props.items.source', () => {
+      it('accepts a well-formed pipeline', () => {
+        const result = validateRuntimeConfig(
+          createConfigWithLayout([
+            {
+              type: 'list',
+              props: {
+                items: { source: 'queries.products.data | orderby:price,desc | slice:0,10', itemType: 'scalar' },
+              },
+            },
+          ]),
+        )
+        expect(result.status).toBe('ready')
+      })
+
+      it('rejects an invalid baseReference even with a well-formed pipeline', () => {
+        const result = validateRuntimeConfig(
+          createConfigWithLayout([
+            {
+              type: 'list',
+              props: {
+                items: { source: 'params.something | orderby:x,asc', itemType: 'scalar' },
+              },
+            },
+          ]),
+        )
+        expectInvalidSourceAt(result, 'layout[0].props.items.source')
+      })
+
+      it('rejects a malformed pipeline stage', () => {
+        const result = validateRuntimeConfig(
+          createConfigWithLayout([
+            {
+              type: 'list',
+              props: {
+                items: { source: 'queries.products.data | sort:price,asc', itemType: 'scalar' },
+              },
+            },
+          ]),
+        )
+        expectInvalidSourceAt(result, 'layout[0].props.items.source')
+      })
+    })
+
+    describe('table.props.rows.source (dynamic mode)', () => {
+      it('accepts a well-formed pipeline', () => {
+        const result = validateRuntimeConfig(
+          createConfigWithLayout([
+            {
+              type: 'table',
+              props: {
+                headers: ['Name', 'Role'],
+                rows: {
+                  source: 'queries.users.data.items | orderby:name,asc | slice:0,5',
+                  cells: ['item.name', 'item.role'],
+                },
+              },
+            },
+          ]),
+        )
+        expect(result.status).toBe('ready')
+      })
+
+      it('rejects an invalid baseReference even with a well-formed pipeline', () => {
+        const result = validateRuntimeConfig(
+          createConfigWithLayout([
+            {
+              type: 'table',
+              props: {
+                headers: ['Name', 'Role'],
+                rows: {
+                  source: 'params.something | orderby:x,asc',
+                  cells: ['item.name', 'item.role'],
+                },
+              },
+            },
+          ]),
+        )
+        expectInvalidSourceAt(result, 'layout[0].props.rows.source')
+      })
+
+      it('rejects a malformed pipeline stage', () => {
+        const result = validateRuntimeConfig(
+          createConfigWithLayout([
+            {
+              type: 'table',
+              props: {
+                headers: ['Name', 'Role'],
+                rows: {
+                  source: 'queries.users.data.items | filter:status,eq',
+                  cells: ['item.name', 'item.role'],
+                },
+              },
+            },
+          ]),
+        )
+        expectInvalidSourceAt(result, 'layout[0].props.rows.source')
+      })
+    })
+
+    describe('select/radioGroup/checkboxGroup props.items.source', () => {
+      it.each(['select', 'radioGroup', 'checkboxGroup'] as const)(
+        'accepts a well-formed pipeline in %s',
+        (nodeType) => {
+          const result = validateRuntimeConfig(
+            createConfigWithFormLayout({
+              children: [
+                {
+                  type: nodeType,
+                  props: {
+                    fieldId: 'role',
+                    label: 'Role',
+                    items: { source: 'queries.roles.data | orderby:name,asc', itemType: 'scalar' },
+                  },
+                },
+              ],
+            }),
+          )
+          expect(result.status).toBe('ready')
+        },
+      )
+
+      it('rejects an invalid baseReference even with a well-formed pipeline', () => {
+        const result = validateRuntimeConfig(
+          createConfigWithFormLayout({
+            children: [
+              {
+                type: 'select',
+                props: {
+                  fieldId: 'role',
+                  label: 'Role',
+                  items: { source: 'params.something | orderby:x,asc', itemType: 'scalar' },
+                },
+              },
+            ],
+          }),
+        )
+        expectInvalidSourceAt(result, 'layout[0].children[0].props.items.source')
+      })
+
+      it('rejects a malformed pipeline stage', () => {
+        const result = validateRuntimeConfig(
+          createConfigWithFormLayout({
+            children: [
+              {
+                type: 'select',
+                props: {
+                  fieldId: 'role',
+                  label: 'Role',
+                  items: { source: 'queries.roles.data | orderby:name,up', itemType: 'scalar' },
+                },
+              },
+            ],
+          }),
+        )
+        expectInvalidSourceAt(result, 'layout[0].children[0].props.items.source')
+      })
+
+      it.each([
+        ['quoted scalar literal', 'filter:status,eq,"pending"'],
+        ['numeric literal', 'filter:price,gt,10'],
+        ['forms reference', 'filter:status,eq,forms.searchForm.status'],
+        ['params reference', 'filter:status,eq,params.status'],
+        ['queries reference', 'filter:status,eq,queries.filters.data.status'],
+        ['item reference', 'filter:status,eq,item.currentStatus'],
+        ['row reference', 'filter:status,eq,row.currentStatus'],
+        ['list literal with in', 'filter:role,in,["admin","editor"]'],
+        ['list reference with in', 'filter:role,in,forms.filters.selectedRoles'],
+      ])('accepts a filter stage argument shape: %s', (_label, stage) => {
+        const result = validateRuntimeConfig(
+          createConfigWithFormLayout({
+            children: [
+              {
+                type: 'select',
+                props: {
+                  fieldId: 'role',
+                  label: 'Role',
+                  items: { source: `queries.roles.data | ${stage}`, itemType: 'scalar' },
+                },
+              },
+            ],
+          }),
+        )
+        expect(result.status).toBe('ready')
+      })
+    })
+
+    describe('surfaces outside pipeline scope (gallery, map, autocomplete)', () => {
+      it('rejects a pipeline in gallery props.source.source', () => {
+        const result = validateRuntimeConfig(
+          createConfigWithLayout([
+            {
+              type: 'gallery',
+              props: {
+                source: {
+                  source: 'queries.photos.data | orderby:name,asc',
+                  key: 'id',
+                  alt: 'name',
+                  mode: 'src',
+                  src: 'url',
+                },
+                display: { mode: 'paginated', pagination: { pageSize: 4 } },
+              },
+            },
+          ]),
+        )
+        expectInvalidSourceAt(result, 'layout[0].props.source.source')
+      })
+
+      it('rejects a pipeline in map props.markerSources[].source', () => {
+        const result = validateRuntimeConfig(
+          createConfigWithLayout([
+            {
+              type: 'map',
+              props: {
+                markerSources: [
+                  {
+                    source: 'queries.posts.data | orderby:name,asc',
+                    position: { lat: 'coords.lat', lng: 'coords.lng' },
+                    label: 'name',
+                  },
+                ],
+              },
+            },
+          ]),
+        )
+        expectInvalidSourceAt(result, 'layout[0].props.markerSources[0].source')
+      })
+
+      it('rejects a pipeline in autocomplete props.items.source', () => {
+        const result = validateRuntimeConfig(
+          createConfigWithFormLayout({
+            children: [
+              {
+                type: 'autocomplete',
+                props: {
+                  fieldId: 'city',
+                  label: 'City',
+                  items: { source: 'queries.searchCities.data | orderby:name,asc', itemType: 'scalar' },
+                },
+              },
+            ],
+          }),
+        )
+        expectInvalidSourceAt(result, 'layout[0].children[0].props.items.source')
+      })
     })
   })
 

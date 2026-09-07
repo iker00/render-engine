@@ -227,7 +227,7 @@ export function validateSelectNode(
     return enrichErrorResult(visibilityResult, breadcrumb, rawNode)
   }
 
-  const itemsResult = validateSelectItemsContract(parseResult.data.props.items, `${path}.props.items`, pageId, breadcrumb, rawNode)
+  const itemsResult = validateSelectItemsContract(parseResult.data.props.items, `${path}.props.items`, pageId, breadcrumb, rawNode, { allowPipeline: true })
 
   if (itemsResult.status === 'error') {
     return itemsResult
@@ -331,7 +331,7 @@ export function validateRadioGroupNode(
     return enrichErrorResult(visibilityResult, breadcrumb, rawNode)
   }
 
-  const itemsResult = validateSelectItemsContract(parseResult.data.props.items, `${path}.props.items`, pageId, breadcrumb, rawNode)
+  const itemsResult = validateSelectItemsContract(parseResult.data.props.items, `${path}.props.items`, pageId, breadcrumb, rawNode, { allowPipeline: true })
 
   if (itemsResult.status === 'error') {
     return itemsResult
@@ -426,7 +426,7 @@ export function validateCheckboxGroupNode(
     return enrichErrorResult(visibilityResult, breadcrumb, rawNode)
   }
 
-  const itemsResult = validateSelectItemsContract(parseResult.data.props.items, `${path}.props.items`, pageId, breadcrumb, rawNode)
+  const itemsResult = validateSelectItemsContract(parseResult.data.props.items, `${path}.props.items`, pageId, breadcrumb, rawNode, { allowPipeline: true })
 
   if (itemsResult.status === 'error') {
     return itemsResult

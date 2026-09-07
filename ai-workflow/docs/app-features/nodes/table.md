@@ -1,6 +1,6 @@
 > Cuándo leer: estructura de `table`, `headers`, `rows` (manual o dinámico), `columns` con filtros y ordenación local, paginación local, render accesible.
 > Tamaño: largo.
-> Relacionados: [[../queries/state-model.md]], [[../references/dynamic-strings.md]], [[repeater.md]], [[link.md]], [[../development/dev-mode-editor.md]].
+> Relacionados: [[../queries/state-model.md]], [[../references/dynamic-strings.md]], [[../references/collection-pipeline.md]], [[repeater.md]], [[link.md]], [[../development/dev-mode-editor.md]].
 
 # `table`
 
@@ -13,7 +13,7 @@
   - `sortable`: opcional y válido solo como `true`.
 - `props.rows`: obligatorio y exclusivo entre:
   - modo manual: `Array<Array<string | number | boolean | NodeObject>>`
-  - modo dinámico: `{ source: 'queries.{queryName}.data' | 'queries.{queryName}.data.*' | 'item.*', cells: (string | NodeObject)[] }`
+  - modo dinámico: `{ source: 'queries.{queryName}.data' | 'queries.{queryName}.data.*' | 'item.*' [| pipeline], cells: (string | NodeObject)[] }` — el `source` puede opcionalmente incluir un pipeline declarativo (ver [[../references/collection-pipeline.md]]) para filtrar, ordenar o recortar las filas antes de aplicar los filtros/ordenación nativos de columna.
 - Celdas-nodo (objetos con `type` y `props`):
   - tipos permitidos: `image`, `list`, `button`, `container`, `heading`, `paragraph`, `link`. Un `link` como celda tiene el mismo contrato que fuera de tabla (`props.href`/`props.action`, `props.label`/`children` — ver [[link.md]]), sin restricciones adicionales por estar dentro de una celda; en modo dinámico accede a `row.*` de su fila igual que cualquier otra celda-nodo.
   - `container` en celda puede declarar `children` solo con nodos del mismo subconjunto permitido, incluido otro `container` anidado.
@@ -54,7 +54,10 @@
 - Cambiar filtros, ordenación, página numerada, anterior/siguiente o ventana `scroll` de una `table` solo modifica estado local de esa instancia; no ejecuta red, no limpia `queries.*`, no modifica `pageEntry`, formularios ni navegación, y no comparte estado con otras tablas aunque lean la misma query.
 
 ## Pipeline de procesamiento
-- Los filtros, la ordenación y la paginación de `table` son siempre locales: operan sobre las filas ya resueltas y los valores visibles finales, en el orden filas -> filtros -> ordenación -> paginación, sin ejecutar operaciones remotas ni modificar `queries.*`.
+- Cuando `props.rows.source` declara un pipeline, este se aplica primero (Fase A), transformando la colección de filas resuelta mediante filtros, ordenación y recorte declarativos.
+- Los filtros, la ordenación y la paginación nativos de `table` se aplican después (Fase B) sobre las filas resultantes del pipeline declarativo: orden es Fase A (pipeline) → Fase B (filtros de columna → ordenación de columna → paginación local), sin ejecutar operaciones remotas ni modificar `queries.*`.
+- El `filter` declarativo se combina en `AND` con los filtros nativos de columna: ambos aplican simultáneamente sobre las filas.
+- El `orderby` declarativo fija el orden inicial de entrada a Fase B. Si ninguna columna `sortable` tiene un orden activo, las filas se muestran en el orden fijado por el `orderby` declarativo. Al activar el orden de una columna `sortable`, ese orden nativo reemplaza el orden visible. Al desactivar (ciclar al tercer estado "sin ordenación"), las filas vuelven al orden ya fijado por el `orderby` declarativo sin requerir ningún mecanismo adicional.
 - Celdas-nodo del mismo modo que celdas string se procesan dentro del pipeline local; una celda `NodeObject` renderizada en una página resulta en el nodo embebido montado en el DOM solo para esa página visible, desmontándose al cambiar de página.
 
 ## Degradación
@@ -81,6 +84,7 @@
 - `table` ya acepta:
   - celdas ricas con nodos `image`, `list`, `button`, `container`, `heading`, `paragraph` (feature 0049) y `link` (feature 0138).
   - filtros por columna, ordenación local de una sola columna, paginación local.
+  - pipeline declarativo en `props.rows.source` para filtrar, ordenar y recortar filas sin backend antes de aplicar filtros/ordenación nativos de columna.
   - contexto `row.*` (dato de la fila actual) en celdas-nodo y celdas string en modo dinámico, y `row.$index` (posición 1-based dentro de la vista visible) en celdas-nodo y celdas string en ambos modos; cuando la `table` vive dentro de un `repeater`, `item.*` del `repeater` ancestro sigue disponible en sus celdas sin ser sombreado por `row` (feature table-row-references).
   - en el editor de desarrollo, selección y edición visual de celdas-nodo en modo Editor (breadcrumb, panel de propiedades, `container` anidado seleccionable a cualquier profundidad) y un widget dedicado para alta/baja/tipo de filas, columnas y celdas, incluidos `filterable`/`sortable`/`filterPlaceholder` por columna, sin depender de Monaco (feature 0138; checks de ordenación/filtro añadidos por feature dev-editor-table-column-filter-sort-toggles — ver [[../development/dev-mode-editor.md#selección-de-celdas-nodo-y-widget-de-filascolumnas-de-table-modo-editor]]).
 - Siguen fuera de contrato: procesamiento remoto, cursores, totales de servidor, filtros globales, filtros por tipo/rango/operador, multiselección de filtros, ordenación múltiple, comparadores configurables, selector de tamaño de página, salto directo, selección de filas, edición inline, agrupación, virtualización, y nodos de formulario o `modal` como contenido de celda.

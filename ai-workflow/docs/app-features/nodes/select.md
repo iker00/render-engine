@@ -1,6 +1,6 @@
 > Cuándo leer: nodo `select`, selección simple o múltiple, shapes de `items` manuales o dinámicos, semántica de valor efectivo cuando cambia la colección, valor de sustitución en submit para selección vacía.
 > Tamaño: medio.
-> Relacionados: [[choice-groups.md]], [[../forms/defaults.md]], [[../forms/validation-rules.md]], [[../forms/submit.md]], [[../references/dynamic-strings.md]].
+> Relacionados: [[choice-groups.md]], [[../forms/defaults.md]], [[../forms/validation-rules.md]], [[../forms/submit.md]], [[../references/dynamic-strings.md]], [[../references/collection-pipeline.md]].
 
 # `select`
 
@@ -22,7 +22,7 @@
 Contrato cerrado a exactamente tres shapes; cualquier otro shape rechaza el config completo en bootstrap con `code: invalid-layout` y ruta exacta al `props.items` del nodo.
 - **manual literal**: array de `{ label, value }`, con `value` homogéneo `string` o `number` dentro del mismo campo.
 - **manual escalar**: `{ values: Array<string | number> }`.
-- **dinámico unificado**: `{ source: 'queries.{queryName}.data' | 'queries.{queryName}.data.*' | 'item.*', itemType: 'scalar' | 'object', label?, value? }`, donde `itemType` es obligatorio:
+- **dinámico unificado**: `{ source: 'queries.{queryName}.data' | 'queries.{queryName}.data.*' | 'item.*' [| pipeline], itemType: 'scalar' | 'object', label?, value? }`, donde `itemType` es obligatorio. El `source` puede incluir opcionalmente un pipeline declarativo (ver [[../references/collection-pipeline.md]]) para filtrar, ordenar o recortar los items antes de presentarlos:
   - `itemType: 'scalar'`: ni `label` ni `value` pueden declararse.
   - `itemType: 'object'`: `label` y `value` son obligatorios y aceptan ruta relativa histórica o interpolación parcial con `{{...}}`.
 

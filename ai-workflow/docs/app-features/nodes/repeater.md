@@ -1,11 +1,11 @@
 > Cuándo leer: estructura de `repeater`, `props.items.source`, `props.items.key`, `props.template`, iteración sobre array y objeto plano, paginación local con variantes `previousNext`/`numbered`/`scroll`, modo grid propio (`props.columns`/`gap`/`align`/`justify`), comportamiento dentro de `pageEntry`.
 > Tamaño: medio.
-> Relacionados: [[../queries/state-model.md]], [[../references/reference-resolution.md]], [[container.md]].
+> Relacionados: [[../queries/state-model.md]], [[../references/reference-resolution.md]], [[../references/collection-pipeline.md]], [[container.md]].
 
 # `repeater`
 
 ## Contrato (`props`)
-- `props.items.source`: obligatorio y limitado a `queries.{queryName}.data` o `queries.{queryName}.data.*`.
+- `props.items.source`: obligatorio y limitado a `queries.{queryName}.data` o `queries.{queryName}.data.*`, opcionalmente seguido de un pipeline declarativo (ver [[../references/collection-pipeline.md]]) para filtrar, ordenar o recortar la colección sin backend.
 - `props.items.key`: obligatorio; ruta relativa no vacía al item actual (por ejemplo `id` o `meta.slug`), el literal reservado `"$key"` para usar la clave del diccionario cuando la fuente es objeto plano, o el literal reservado `"$index"` para usar el índice numérico de iteración (0, 1, 2…) como React key.
 - `props.pagination`: opcional; cuando existe activa paginación local en cliente con el shape cerrado de v1.
 - `props.pagination.enabled`: obligatorio y exactamente `true`.
@@ -26,7 +26,8 @@ El repeater detecta automáticamente si la fuente resuelta es array u objeto pla
 - **Cualquier otro valor** (`null`, `undefined`, número, string, `{}`): cero iteraciones de forma silenciosa, sin diagnóstico específico.
 
 ## Reglas de render
-- `repeater.props.items.source` solo admite `queries.{queryName}.data` o `queries.{queryName}.data.*`.
+- `repeater.props.items.source` solo admite `queries.{queryName}.data` o `queries.{queryName}.data.*`, opcionalmente con pipeline declarativo.
+- Cuando se declara un pipeline, se aplica sobre la fuente resuelta como colección array (no se aplica a iteración por objeto plano). El resultado es siempre un array que sustituye a la rama "Array" de detección de shape.
 - `repeater.props.items.key` exige una ruta relativa no vacía al item actual, o los literales reservados `"$key"` y `"$index"`.
 - `repeater.props.pagination` puede activar paginación local en cliente con variantes cerradas de controles.
 - `repeater.props.template` reutiliza una colección `LayoutNode[]` sin `children`.
@@ -96,4 +97,4 @@ El repeater detecta automáticamente si la fuente resuelta es array u objeto pla
 - El `layout.span` del nodo raíz de `props.template` se sigue clampando contra las columnas propias del `repeater` (`props.columns`), no contra las del ancestro, con independencia de si el propio `repeater` declara o no `layout.span`.
 
 ## Límites del nodo
-- `repeater` ya puede expandir un subárbol completo por item de una colección remota y aplicar paginación local opcional con `props.pagination`, pero sigue fuera de alcance cualquier DSL de templates, filtros cliente, ordenación, paginación remota o fuentes de colección ajenas a `queries.*`.
+- `repeater` ya puede expandir un subárbol completo por item de una colección remota, aplicar paginación local opcional con `props.pagination`, y filtrar/ordenar/recortar la colección mediante pipeline declarativo en `props.items.source` sin backend. Sigue fuera de alcance cualquier DSL de templates, paginación remota o fuentes de colección ajenas a `queries.*`.

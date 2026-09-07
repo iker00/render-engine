@@ -1,22 +1,42 @@
 import type { RuntimeConfigError } from './runtime-config-types'
 import { isNonEmptyString, isValidCollectionPathSegment } from './validate-node-shared-helpers'
 import { parseRuntimeReference } from './runtime-reference-syntax'
+import { parseCollectionPipelineSource } from './runtime-collection-pipeline-syntax'
 import { invalidLayout } from './runtime-config-validation-errors'
 
 export function validateCollectionSource(
   rawSource: unknown,
   path: string,
   pageId: string,
-  options: { allowItemReference?: boolean } = {},
+  options: { allowItemReference?: boolean; allowPipeline?: boolean } = {},
 ): { status: 'ready'; source: string } | { status: 'error'; error: RuntimeConfigError } {
   if (!isNonEmptyString(rawSource)) {
     return invalidLayout(`Page "${pageId}" has an invalid layout at "${path}".`)
   }
 
-  if (!isValidCollectionSourceReference(rawSource, options)) {
-    return invalidLayout(
-      `Page "${pageId}" has an invalid layout at "${path}": collection sources must use queries.{queryName}.data, queries.{queryName}.data.* or item.*.`,
-    )
+  const invalidSourceError = invalidLayout(
+    `Page "${pageId}" has an invalid layout at "${path}": collection sources must use queries.{queryName}.data, queries.{queryName}.data.* or item.*.`,
+  )
+
+  if (!options.allowPipeline) {
+    if (!isValidCollectionSourceReference(rawSource, options)) {
+      return invalidSourceError
+    }
+
+    return {
+      status: 'ready',
+      source: rawSource,
+    }
+  }
+
+  const parsedPipeline = parseCollectionPipelineSource(rawSource)
+
+  if (parsedPipeline.status === 'malformed') {
+    return invalidSourceError
+  }
+
+  if (!isValidCollectionSourceReference(parsedPipeline.baseReference, options)) {
+    return invalidSourceError
   }
 
   return {
