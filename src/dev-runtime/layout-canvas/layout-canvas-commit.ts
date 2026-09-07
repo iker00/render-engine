@@ -17,6 +17,26 @@ import type {
 export type CommitCanvasMutationResult = { status: 'applied' } | { status: 'rejected'; error: RuntimeConfigError }
 
 /**
+ * Alias for `CommitCanvasMutationResult` used by the target-generalized commit pipeline below
+ * (`commitLayoutMutation`, `dev-runtime.tsx`, T13). Same shape, kept as a separate name only so
+ * callers of the generalized signature don't have to reference the page-specific
+ * `CommitCanvasMutationResult` name for a result that is no longer page-only.
+ */
+export type CommitResult = CommitCanvasMutationResult
+
+/**
+ * The editable root a canvas commit patches into (T13, 0139-reusable-node-groups). Today the
+ * dev-editor canvas always edits `pages[activePageId].layout`; a `group-template` target lets the
+ * same canvas edit `groups[groupId].template` instead, for authoring a reusable group's contents.
+ */
+export type LayoutCanvasTarget =
+  | { kind: 'page-layout'; pageId: string }
+  | { kind: 'group-template'; groupId: string }
+
+/** A canvas mutation function: takes the current layout tree at a target root, returns the next one. */
+export type LayoutTreeMutation = (layout: LayoutNode[]) => LayoutNode[]
+
+/**
  * Builds a candidate RuntimeConfig with the layout of `activePageId` replaced by
  * `mutate(currentLayout)`. Every other page, plus `api`/`initialPage`/`tokens`/
  * `translations`, is carried over unchanged. Never mutates `currentConfig`.
@@ -172,6 +192,92 @@ export function patchRawConfigTextWithLayout(
   })
 
   return patchRootKey(rawConfigText, 'pages', nextPages)
+}
+
+/**
+ * Resolves the layout tree a `LayoutCanvasTarget` currently points at. Returns `[]` (never
+ * throws) when the target's `pageId`/`groupId` no longer exists in `config` — the same
+ * degradation the canvas already applies when the active page disappears from the config (see
+ * `activePageLayout` in `dev-editor-layer.tsx`), generalized to the `group-template` variant.
+ * Used both for reading (rendering the canvas against a target) and, indirectly, for building the
+ * mutated layout a commit patches in.
+ */
+export function resolveLayoutForTarget(config: RuntimeConfig, target: LayoutCanvasTarget): LayoutNode[] {
+  if (target.kind === 'page-layout') {
+    return config.pages.find((page) => page.id === target.pageId)?.layout ?? []
+  }
+  return config.groups?.[target.groupId]?.template ?? []
+}
+
+/**
+ * Whether `target` currently resolves to an existing page or group in `config`. Unlike
+ * `resolveLayoutForTarget` (which degrades to `[]` for read/display purposes), this is used to
+ * gate a *write*: `commitLayoutMutation` (`dev-runtime.tsx`) rejects a commit against a
+ * stale/removed target instead of silently no-op-applying it.
+ */
+export function layoutCanvasTargetExists(config: RuntimeConfig, target: LayoutCanvasTarget): boolean {
+  if (target.kind === 'page-layout') {
+    return config.pages.some((page) => page.id === target.pageId)
+  }
+  return config.groups !== undefined && Object.hasOwn(config.groups, target.groupId)
+}
+
+/**
+ * Target-generalized sibling of `buildCommitCandidateConfig`: builds a candidate `RuntimeConfig`
+ * with the layout at `target` replaced by `mutate(currentLayout)`. For `page-layout` this
+ * delegates to `buildCommitCandidateConfig` unchanged (zero regression for the existing
+ * pipeline). For `group-template` it replaces `groups[groupId].template` and carries every other
+ * root key, and every other group, over unchanged. Returns `currentConfig` as-is (no-op) when the
+ * target's group doesn't exist — callers gate that case with `layoutCanvasTargetExists` before
+ * relying on this to build a meaningful candidate. Never mutates `currentConfig`.
+ */
+export function buildCommitCandidateConfigForTarget(
+  currentConfig: RuntimeConfig,
+  target: LayoutCanvasTarget,
+  mutate: LayoutTreeMutation,
+): RuntimeConfig {
+  if (target.kind === 'page-layout') {
+    return buildCommitCandidateConfig(currentConfig, target.pageId, mutate)
+  }
+
+  const currentGroup = currentConfig.groups?.[target.groupId]
+  if (!currentGroup) return currentConfig
+
+  return {
+    ...currentConfig,
+    groups: {
+      ...currentConfig.groups,
+      [target.groupId]: { ...currentGroup, template: mutate(currentGroup.template) },
+    },
+  }
+}
+
+/**
+ * Target-generalized sibling of `patchRawConfigTextWithLayout`. For `page-layout` this delegates
+ * to `patchRawConfigTextWithLayout` unchanged. For `group-template` it patches only
+ * `groups[groupId].template` inside `rawConfigText`, leaving `params` (and every other group,
+ * plus every other root key) exactly as it was in the raw text.
+ */
+export function patchRawConfigTextForTarget(
+  rawConfigText: string,
+  target: LayoutCanvasTarget,
+  mutatedLayout: readonly LayoutNode[],
+): string {
+  if (target.kind === 'page-layout') {
+    return patchRawConfigTextWithLayout(rawConfigText, target.pageId, mutatedLayout)
+  }
+
+  const rawConfigObject = JSON.parse(rawConfigText) as Record<string, unknown>
+  const rawGroups: Record<string, unknown> = isRecord(rawConfigObject.groups) ? rawConfigObject.groups : {}
+  const rawGroupValue = rawGroups[target.groupId]
+  const rawGroup: Record<string, unknown> = isRecord(rawGroupValue) ? rawGroupValue : {}
+
+  const nextGroups = {
+    ...rawGroups,
+    [target.groupId]: { ...rawGroup, template: denormalizeFormNodesForSerialization(mutatedLayout) },
+  }
+
+  return patchRootKey(rawConfigText, 'groups', nextGroups)
 }
 
 /**

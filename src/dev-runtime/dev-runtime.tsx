@@ -39,14 +39,19 @@ import type { DevRuntimeStateBridgeHandle } from './dev-runtime-state-bridge'
 import { migrateRuntimeStateAcrossConfig } from './dev-runtime-state-migration'
 import type { RuntimeConfigError } from '../config/runtime-config'
 import {
-  buildCommitCandidateConfig,
+  buildCommitCandidateConfigForTarget,
   denormalizeFormNodesForSerialization,
   denormalizePreloadsForSerialization,
-  patchRawConfigTextWithLayout,
+  layoutCanvasTargetExists,
+  patchRawConfigTextForTarget,
   patchRawConfigTextWithPagePreloads,
   patchRawConfigTextWithPages,
   patchRootKey,
+  resolveLayoutForTarget,
   type CommitCanvasMutationResult,
+  type CommitResult,
+  type LayoutCanvasTarget,
+  type LayoutTreeMutation,
 } from './layout-canvas/layout-canvas-commit'
 import { replaceNodeAt } from './layout-tree-mutations'
 import { DevEditorLayer } from './floating-toolbar/dev-editor-layer'
@@ -56,7 +61,7 @@ import { resolveEndpointOperation } from './endpoints-config/resolve-endpoint-op
 import { createPlatagesSaveConfigProvider } from './endpoints-config/save-config-provider'
 import type { RuntimeEndpointsConfig } from './endpoints-config/runtime-endpoints-config-schema'
 
-export type { CommitCanvasMutationResult }
+export type { CommitCanvasMutationResult, CommitResult, LayoutCanvasTarget, LayoutTreeMutation }
 
 interface DevRuntimeProps {
   rootElement?: HTMLElement | null
@@ -130,6 +135,7 @@ interface DevRuntimeReadyProps {
 
 export interface DevRuntimeReadyHandle {
   commitCanvasMutation: (mutate: (pageLayout: LayoutNode[]) => LayoutNode[]) => CommitCanvasMutationResult
+  commitLayoutMutation: (target: LayoutCanvasTarget, patch: LayoutTreeMutation) => CommitResult
 }
 
 // Save-config request state (design.md D8), independent from the parse/validation error state
@@ -431,18 +437,31 @@ export function DevRuntimeReady({
     })
   }
 
-  function commitCanvasMutation(
-    mutate: (pageLayout: LayoutNode[]) => LayoutNode[],
-  ): CommitCanvasMutationResult {
-    // The edited page is the really-navigated one (design.md 0103, Decisión 2), not a local
-    // canvas selector — read it from the bridge at commit time, same pattern already used
-    // below to read `prevState` before migrating. Falls back to `initialPage` if the bridge
-    // isn't mounted yet, matching the rest of the bootstrap code's degradation criteria.
-    const activePageId = bridgeRef.current?.getLatestState().navigation.currentPageId ?? currentConfig.initialPage
+  // Generalized canvas commit pipeline (T13, 0139-reusable-node-groups): patches the layout tree
+  // at `target` — `pages[pageId].layout` or `groups[groupId].template` — instead of always
+  // assuming the active page. `commitCanvasMutation` below is the page-layout-only entry point
+  // most of the canvas still uses; it resolves `target` itself and delegates here.
+  function commitLayoutMutation(target: LayoutCanvasTarget, patch: LayoutTreeMutation): CommitResult {
+    // Reject a commit against a target that no longer resolves (e.g. a stale page/group removed
+    // from the config since the canvas last read it) instead of silently no-op-applying it —
+    // `resolveLayoutForTarget` degrades to `[]` for read/display, but a write needs an explicit
+    // signal so the caller can surface the rejection instead of pretending nothing happened.
+    if (!layoutCanvasTargetExists(currentConfig, target)) {
+      return {
+        status: 'rejected',
+        error: {
+          code: 'invalid-layout',
+          displayMode: 'development-only',
+          message:
+            target.kind === 'page-layout'
+              ? `Cannot commit: page "${target.pageId}" no longer exists in the config.`
+              : `Cannot commit: group "${target.groupId}" no longer exists in the config.`,
+        },
+      }
+    }
 
-    const candidateConfig = buildCommitCandidateConfig(currentConfig, activePageId, mutate)
-    const mutatedPage = candidateConfig.pages.find((page) => page.id === activePageId)
-    const mutatedLayout = mutatedPage ? mutatedPage.layout : []
+    const candidateConfig = buildCommitCandidateConfigForTarget(currentConfig, target, patch)
+    const mutatedLayout = resolveLayoutForTarget(candidateConfig, target)
 
     // Validate the patched raw text (mirroring handleApply), not the in-memory
     // candidate built from currentConfig directly. currentConfig always holds the
@@ -454,7 +473,7 @@ export function DevRuntimeReady({
     // node"). Patching onto lastValidConfigText keeps every untouched part of the
     // document — including other pages' preloads and forms — in the raw shape the
     // validator expects, exactly like a manual "Aplicar".
-    const nextText = patchRawConfigTextWithLayout(lastValidConfigText, activePageId, mutatedLayout)
+    const nextText = patchRawConfigTextForTarget(lastValidConfigText, target, mutatedLayout)
 
     const parsed: unknown = JSON.parse(nextText)
     const validation = validateRuntimeConfig(parsed)
@@ -485,6 +504,17 @@ export function DevRuntimeReady({
     })
 
     return { status: 'applied' }
+  }
+
+  function commitCanvasMutation(
+    mutate: (pageLayout: LayoutNode[]) => LayoutNode[],
+  ): CommitCanvasMutationResult {
+    // The edited page is the really-navigated one (design.md 0103, Decisión 2), not a local
+    // canvas selector — read it from the bridge at commit time, same pattern already used
+    // below to read `prevState` before migrating. Falls back to `initialPage` if the bridge
+    // isn't mounted yet, matching the rest of the bootstrap code's degradation criteria.
+    const activePageId = bridgeRef.current?.getLatestState().navigation.currentPageId ?? currentConfig.initialPage
+    return commitLayoutMutation({ kind: 'page-layout', pageId: activePageId }, mutate)
   }
 
   // Same pipeline as `commitCanvasMutation`, generalized for the `shell` root key instead of a
@@ -827,7 +857,7 @@ export function DevRuntimeReady({
     return { status: 'applied' }
   }
 
-  useImperativeHandle(ref, () => ({ commitCanvasMutation }))
+  useImperativeHandle(ref, () => ({ commitCanvasMutation, commitLayoutMutation }))
 
   // LayoutCanvasPropertiesPanel edits a single node by path; replaceNodeAt (T3)
   // rebuilds the page's node tree around that edit, and commitCanvasMutation
