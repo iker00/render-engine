@@ -61,15 +61,24 @@ export const FORM_ALLOWED_DESCENDANT_TYPES: ReadonlySet<LayoutNodeType> = new Se
 /**
  * Node types whose `children` collection is interpreted directly at the node's root.
  * Reuses the same contract already enforced by production rendering:
- * `hasChildren()` in `src/runtime/layout-renderer.tsx` for container/form/modal/link,
+ * `hasChildren()` in `src/runtime/layout-node-children.ts` for container/form/modal/link/group,
  * and `src/runtime/nodes/accordion-layout-node.tsx` for accordion.
  *
  * `tabs` is intentionally excluded: it does not accept children at its root, only
  * per-tab via `props.items[i].children`. `repeater` is intentionally excluded: it
- * only accepts `props.template`.
+ * only accepts `props.template`. `group.children` is the slot content (feature
+ * reusable-node-groups, T12) — only valid when `groups[groupId].template` declares a `slot`,
+ * enforced by config validation, not by this predicate.
  */
 export function nodeTypeAcceptsChildren(type: LayoutNodeType): boolean {
-  return type === 'container' || type === 'form' || type === 'modal' || type === 'link' || type === 'accordion'
+  return (
+    type === 'container' ||
+    type === 'form' ||
+    type === 'modal' ||
+    type === 'link' ||
+    type === 'accordion' ||
+    type === 'group'
+  )
 }
 
 /**

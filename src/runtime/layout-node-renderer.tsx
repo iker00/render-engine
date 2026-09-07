@@ -258,6 +258,20 @@ export function LayoutNodeRenderer({
       renderedNode = <AutocompleteNode node={node} iterationContext={iterationContext} />
       break
     }
+    case 'group': {
+      const GroupNode = NodeComponents.group
+      renderedNode = (
+        <GroupNode node={node} iterationContext={iterationContext} scopeChain={scopeChain}>
+          {renderedChildren}
+        </GroupNode>
+      )
+      break
+    }
+    case 'slot': {
+      const SlotNode = NodeComponents.slot
+      renderedNode = <SlotNode node={node} />
+      break
+    }
   }
 
   renderedNode = <LazyNode>{renderedNode}</LazyNode>
