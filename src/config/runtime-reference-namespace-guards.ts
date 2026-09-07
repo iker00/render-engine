@@ -11,6 +11,22 @@ export function isTokensReference(value: string): boolean {
 }
 
 /**
+ * Parses a `group.{paramName}` reference into its `paramName`, or returns `null` when the
+ * given string is not a valid `group.*` reference. Neutral parsing only: it does not check
+ * whether `paramName` is declared by any `groups` entry, nor whether the reference sits inside
+ * a group template — those cross-checks are resolved elsewhere (validate-groups.ts, runtime).
+ */
+export function parseGroupReference(value: string): { paramName: string } | null {
+  const parsed = parseRuntimeReference(value)
+
+  if (parsed.kind === 'reference' && parsed.status === 'supported' && parsed.namespace === 'group') {
+    return { paramName: parsed.path[0] }
+  }
+
+  return null
+}
+
+/**
  * Returns true if any `{{...}}` placeholder in the given template string
  * contains a `tokens.*` reference.
  */

@@ -43,7 +43,7 @@ import { parseRuntimeReference } from './runtime-reference-syntax'
 import { isTokensReference } from './runtime-reference-namespace-guards'
 
 const collectionPathSegmentPattern = /^[A-Za-z0-9_-]+$/
-const whenParamsReferencePattern = /^params\.[A-Za-z0-9_-]+$/
+const whenParamsReferencePattern = /^(params|group)\.[A-Za-z0-9_-]+$/
 const visibilityComparisonOperators = new Set<RuntimeVisibilityOperator>(['equals', 'notEquals', 'greaterThan', 'lessThan', 'arrayContains'])
 const visibilityScalarOperators = new Set<RuntimeVisibilityOperator>(['equals', 'notEquals'])
 const visibilityTruthinessOperators = new Set<RuntimeVisibilityOperator>(['isTruthy', 'isFalsy'])
@@ -986,7 +986,7 @@ export function validateWhenCondition(
 type VisibilityConditionScope = 'visibility' | 'when'
 
 const visibilityReferenceCatalogMessage =
-  'params.{paramName}, item, item.*, forms.{formId}.{fieldId}, queries.{queryName}, queries.{queryName}.data, queries.{queryName}.data.*, queries.{queryName}.status, queries.{queryName}.error, queries.{queryName}.error.message or queries.{queryName}.error.code'
+  'params.{paramName}, group.{paramName}, item, item.*, forms.{formId}.{fieldId}, queries.{queryName}, queries.{queryName}.data, queries.{queryName}.data.*, queries.{queryName}.status, queries.{queryName}.error, queries.{queryName}.error.message or queries.{queryName}.error.code'
 
 function validateVisibilityGroupConditions(
   group: RuntimeVisibilityGroup,
