@@ -12,6 +12,7 @@ import { validateRuntimeConfig } from '../config/runtime-config'
 import type { LayoutNode } from '../config/runtime-config'
 import type {
   RuntimeApiConfig,
+  RuntimeGroupsConfig,
   RuntimePreloadConfig,
   RuntimePageConfig,
   RuntimeTokensConfig,
@@ -693,6 +694,56 @@ export function DevRuntimeReady({
     return { status: 'applied' }
   }
 
+  // Same pipeline as `commitTokensMutation`, generalized for the `groups` root key (0139-T14):
+  // mutate the in-memory value, patch only that key onto the last-known-valid raw text via
+  // `patchRootKey`, validate the patched text, and apply it. `currentConfig.groups` is optional
+  // (like `tokens`), so `mutate` always receives an object, falling back to `{}` when no `groups`
+  // block exists yet. Every group's `template` can itself contain `form` nodes with the same
+  // raw/normalized `onSuccess`/`onError` divergence `commitShellMutation` guards against for
+  // `shell.header.actions` — `denormalizeFormNodesForSerialization` is applied per group so an
+  // untouched group's template (e.g. a plain `add-param`/`remove-param`/rename that never mutated
+  // that group) keeps re-validating correctly.
+  function commitGroupsMutation(
+    mutate: (groups: RuntimeGroupsConfig) => RuntimeGroupsConfig,
+  ): CommitCanvasMutationResult {
+    const mutatedGroups = mutate(currentConfig.groups ?? {})
+    const rawMutatedGroups = Object.fromEntries(
+      Object.entries(mutatedGroups).map(([groupId, group]) => [
+        groupId,
+        { ...group, template: denormalizeFormNodesForSerialization(group.template) },
+      ]),
+    )
+
+    const nextText = patchRootKey(lastValidConfigText, 'groups', rawMutatedGroups)
+
+    const parsed: unknown = JSON.parse(nextText)
+    const validation = validateRuntimeConfig(parsed)
+    if (validation.status === 'error') {
+      return { status: 'rejected', error: validation.error }
+    }
+
+    const prevState = bridgeRef.current?.getLatestState()
+    const nextState = prevState
+      ? migrateRuntimeStateAcrossConfig(prevState, currentConfig, validation.config, { dataValues })
+      : undefined
+
+    if (nextState && bridgeRef.current) {
+      bridgeRef.current.dispatchAndSyncState({ type: 'runtime/reset', payload: { state: nextState } })
+    }
+
+    flushSync(() => {
+      setCurrentConfig(validation.config)
+      setEditorBuffer(nextText)
+      setLastValidConfigText(nextText)
+      setHasPendingChanges(false)
+      setHasAppliedChanges(true)
+      setParseError(null)
+      setValidationError(null)
+    })
+
+    return { status: 'applied' }
+  }
+
   // Same pipeline as `commitApiMutation`, generalized for the root `preloads` key (0132-T7).
   // `preloads` is an array, not an object like `shell` — the "no empty residual block" criterion
   // `commitShellSectionToggle` applies via `Object.keys(next).length === 0 ? undefined : next`
@@ -944,6 +995,8 @@ export function DevRuntimeReady({
       onCommitPagePreloadsMutation={commitPagePreloadsMutation}
       onCommitPagesMutation={commitPagesMutation}
       onCommitInitialPageMutation={commitInitialPageMutation}
+      onCommitGroupsMutation={commitGroupsMutation}
+      onCommitLayoutMutation={commitLayoutMutation}
       endpointsConfig={endpointsConfig}
       saveResolution={endpointResolutions.save}
       searchResolution={endpointResolutions.search}

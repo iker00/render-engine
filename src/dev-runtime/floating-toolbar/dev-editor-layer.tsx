@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import type { LayoutNode, LayoutNodeType, RuntimeConfigError } from '../../config/runtime-config'
 import type {
   RuntimeApiConfig,
+  RuntimeGroupsConfig,
   RuntimePageConfig,
   RuntimePreloadConfig,
   RuntimeTokensConfig,
@@ -24,10 +25,16 @@ import {
   EMPTY_DYNAMIC_TABLE_CELL_TEXT_VALUE,
   EMPTY_TABLE_CELL_TEXT_VALUE,
 } from '../layout-canvas/layout-canvas-node-palette-defaults'
-import type { CommitCanvasMutationResult } from '../layout-canvas/layout-canvas-commit'
+import type {
+  CommitCanvasMutationResult,
+  CommitResult,
+  LayoutCanvasTarget,
+  LayoutTreeMutation,
+} from '../layout-canvas/layout-canvas-commit'
 import type { ResolvedEndpointOperation } from '../endpoints-config/resolve-endpoint-operation'
 import type { RuntimeEndpointsConfig } from '../endpoints-config/runtime-endpoints-config-schema'
 import { ApiConfigPanel } from '../api-config-panel/api-config-panel'
+import { GroupsConfigPanel } from '../groups-config-panel/groups-config-panel'
 import { PagesConfigPanel } from '../pages-config-panel/pages-config-panel'
 import { ShellConfigPanel } from '../shell-config-panel/shell-config-panel'
 import { TokensConfigPanel } from '../tokens-config-panel/tokens-config-panel'
@@ -90,6 +97,13 @@ interface DevEditorLayerProps {
     mutate: (pages: RuntimePageConfig[]) => RuntimePageConfig[],
   ) => CommitCanvasMutationResult
   onCommitInitialPageMutation: (mutate: (initialPage: string) => string) => CommitCanvasMutationResult
+  onCommitGroupsMutation: (
+    mutate: (groups: RuntimeGroupsConfig) => RuntimeGroupsConfig,
+  ) => CommitCanvasMutationResult
+  // T13's target-generalized canvas commit (0139-reusable-node-groups), threaded through so the
+  // "Grupos" tab (T14) can retarget the same canvas machinery at `groups[groupId].template`
+  // instead of the active page's `layout`.
+  onCommitLayoutMutation: (target: LayoutCanvasTarget, patch: LayoutTreeMutation) => CommitResult
   // T6 (0131): all computed once by DevRuntimeReady (T5/D7) and threaded through here unchanged —
   // this component never recalculates a resolution nor tracks its own save state.
   endpointsConfig: RuntimeEndpointsConfig | undefined
@@ -133,6 +147,8 @@ export function DevEditorLayer({
   onCommitPagePreloadsMutation,
   onCommitPagesMutation,
   onCommitInitialPageMutation,
+  onCommitGroupsMutation,
+  onCommitLayoutMutation,
   endpointsConfig,
   saveResolution,
   searchResolution,
@@ -258,7 +274,8 @@ export function DevEditorLayer({
       domain === 'translations' ||
       domain === 'api' ||
       domain === 'pages' ||
-      domain === 'tokens'
+      domain === 'tokens' ||
+      domain === 'groups'
     ) {
       setSelectedPath(null)
       setHoveredPath(null)
@@ -397,12 +414,18 @@ export function DevEditorLayer({
           onCommitPagesMutation={onCommitPagesMutation}
           onCommitInitialPageMutation={onCommitInitialPageMutation}
         />
-      ) : (
+      ) : activeDomain === 'tokens' ? (
         <TokensConfigPanel
           config={config}
           tokens={config.tokens}
           api={config.api}
           onCommitTokensMutation={onCommitTokensMutation}
+        />
+      ) : (
+        <GroupsConfigPanel
+          config={config}
+          onCommitGroupsMutation={onCommitGroupsMutation}
+          onCommitLayoutMutation={onCommitLayoutMutation}
         />
       )}
 
