@@ -24,6 +24,7 @@ import { RadioGroupNode } from './radio-group-layout-node'
 import { RepeaterNode } from './repeater-layout-node'
 import { SelectNode } from './select-layout-node'
 import { SkeletonNode } from './skeleton-layout-node'
+import { SlotLayoutNode } from './slot-layout-node'
 import { StatNode } from './stat-layout-node'
 import { StepsNode } from './steps-layout-node'
 import { TableNode } from './table-layout-node'
@@ -63,6 +64,7 @@ const eagerMap = {
   repeater: RepeaterNode as AnyComponent,
   select: SelectNode as AnyComponent,
   skeleton: SkeletonNode as AnyComponent,
+  slot: SlotLayoutNode as AnyComponent,
   stat: StatNode as AnyComponent,
   steps: StepsNode as AnyComponent,
   table: TableNode as AnyComponent,
@@ -109,6 +111,7 @@ const lazyMap = {
   repeater: React.lazy(() => import('./repeater-layout-node').then((m) => ({ default: m.RepeaterNode }))),
   select: React.lazy(() => import('./select-layout-node').then((m) => ({ default: m.SelectNode }))),
   skeleton: React.lazy(() => import('./skeleton-layout-node').then((m) => ({ default: m.SkeletonNode }))),
+  slot: React.lazy(() => import('./slot-layout-node').then((m) => ({ default: m.SlotLayoutNode }))),
   stat: React.lazy(() => import('./stat-layout-node').then((m) => ({ default: m.StatNode }))),
   steps: React.lazy(() => import('./steps-layout-node').then((m) => ({ default: m.StepsNode }))),
   table: React.lazy(() => import('./table-layout-node').then((m) => ({ default: m.TableNode }))),
