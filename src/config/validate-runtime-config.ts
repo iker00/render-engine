@@ -22,6 +22,7 @@ import { validateFileInputSemantics } from './validate-file-input-nodes'
 import { validateTranslations } from './validate-translations'
 import { validateTokensConfig } from './validate-tokens-config'
 import { validateShellConfig } from './validate-shell'
+import { validateGroupsConfig } from './validate-groups'
 import type { BreadcrumbSegment } from './validation-breadcrumb'
 import { buildBreadcrumbSegmentFromNode, enrichedInvalidLayoutFromNode } from './validation-breadcrumb'
 import { computeModalRepeaterOwnership } from './runtime-modal-repeater-ownership'
@@ -241,6 +242,16 @@ export function validateRuntimeConfig(rawConfig: unknown): RuntimeConfigValidati
 
   if (modalRefsError) {
     return modalRefsError
+  }
+
+  const groupsResult = validateGroupsConfig(rawConfig, config.pages)
+
+  if (groupsResult.status === 'error') {
+    return groupsResult
+  }
+
+  if (groupsResult.groups !== undefined) {
+    config.groups = groupsResult.groups
   }
 
   const shellResult = validateShellConfig(
