@@ -1,6 +1,6 @@
 > Cuándo leer: nodos `radioGroup` y `checkboxGroup`, semántica de opciones compartida con `select`, `optionLayout: vertical | inline`, comportamiento dentro de `repeater`.
 > Tamaño: medio.
-> Relacionados: [[select.md]], [[../forms/validation-rules.md]], [[../forms/defaults.md]].
+> Relacionados: [[select.md]], [[../forms/validation-rules.md]], [[../forms/defaults.md]], [[../references/collection-pipeline.md]].
 
 # `radioGroup` y `checkboxGroup`
 

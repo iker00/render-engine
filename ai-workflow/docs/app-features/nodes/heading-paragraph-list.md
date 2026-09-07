@@ -1,6 +1,6 @@
 > Cuándo leer: nodos visuales simples `heading`, `paragraph` y `list` — props y shapes admitidos para items.
 > Tamaño: corto.
-> Relacionados: [[../references/dynamic-strings.md]].
+> Relacionados: [[../references/dynamic-strings.md]], [[../references/collection-pipeline.md]].
 
 # `heading`, `paragraph`, `list`
 
@@ -23,9 +23,9 @@
   - shape histórico: array de strings.
   - shape manual escalar: `{ values: Array<string> }`.
   - shape manual objeto: `{ values: Array<object>, itemText: string }`.
-  - shape dinámico escalar: `{ source: 'queries.{queryName}.data' | 'queries.{queryName}.data.*' | 'item.*', itemType: 'scalar' }`.
-  - shape dinámico objeto: `{ source: 'queries.{queryName}.data' | 'queries.{queryName}.data.*' | 'item.*', itemText: string }`.
-- `list.props` soporta `items` como array histórico de strings o como origen declarativo manual/dinámico de colecciones escalares u objeto; los strings visibles directos y `itemText` pueden interpolar placeholders.
+  - shape dinámico escalar: `{ source: 'queries.{queryName}.data' | 'queries.{queryName}.data.*' | 'item.*' [| pipeline], itemType: 'scalar' }`.
+  - shape dinámico objeto: `{ source: 'queries.{queryName}.data' | 'queries.{queryName}.data.*' | 'item.*' [| pipeline], itemText: string }`.
+- `list.props` soporta `items` como array histórico de strings o como origen declarativo manual/dinámico de colecciones escalares u objeto. El `source` dinámico puede incluir opcionalmente un pipeline declarativo (ver [[../references/collection-pipeline.md]]) para filtrar, ordenar o recortar items. Los strings visibles directos y `itemText` pueden interpolar placeholders.
 
 ## Estilo común
 - `heading`, `paragraph`, `list`, `image` y `table` usan clases base estables de `Tailwind` para mantener jerarquía, legibilidad y la baseline institucional compacta del runtime.
