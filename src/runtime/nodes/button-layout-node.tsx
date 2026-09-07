@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useContext, useState } from 'react'
 import type {
   ButtonColor,
   ButtonLayoutNode,
@@ -13,6 +13,9 @@ import {
   resolveRuntimeValueWithOptions,
   type RuntimeIterationContext,
 } from '../runtime-references/runtime-reference-resolver'
+import type { RuntimeInstanceScope } from '../runtime-references/runtime-instance-scope'
+import { EMPTY_INSTANCE_SCOPE } from '../runtime-references/runtime-instance-scope'
+import { RuntimeGroupContextProvider } from '../runtime-references/runtime-group-context'
 import { matchesVisibilityRule } from '../runtime-layout-visibility'
 import { runDownloadAction } from '../runtime-actions/runtime-download-action'
 import {
@@ -29,6 +32,7 @@ import { SwitchControl } from './switch-control'
 interface ButtonNodeProps {
   node: ButtonLayoutNode
   iterationContext?: RuntimeIterationContext
+  scopeChain?: RuntimeInstanceScope
 }
 
 /**
@@ -46,7 +50,8 @@ function resolveButtonSwitchChecked(
   return resolvedValue.status === 'resolved' && typeof resolvedValue.value === 'boolean' ? resolvedValue.value : false
 }
 
-export function ButtonNode({ node, iterationContext }: ButtonNodeProps) {
+export function ButtonNode({ node, iterationContext, scopeChain }: ButtonNodeProps) {
+  const resolvedScopeChain = scopeChain ?? EMPTY_INSTANCE_SCOPE
   const state = useRuntimeState()
   const {
     executeQueryOperation,
@@ -67,7 +72,13 @@ export function ButtonNode({ node, iterationContext }: ButtonNodeProps) {
   const variant: Exclude<ButtonVariant, 'switch'> = declaredVariant === 'switch' ? 'solid' : declaredVariant
   const fullWidth = node.props.fullWidth ?? false
   const className = getButtonVariantClassName(color, variant, fullWidth)
-  const label = resolveRuntimeTextReference(node.props.label, state, 'button.props.label', { iterationContext })
+  // `group.*` (T12 / feature reusable-node-groups): see paragraph-layout-node.tsx for why this
+  // reads via React context instead of prop drilling.
+  const groupContext = useContext(RuntimeGroupContextProvider)
+  const label = resolveRuntimeTextReference(node.props.label, state, 'button.props.label', {
+    iterationContext,
+    groupContext,
+  })
 
   const iconRight = node.props.iconPosition === 'right'
 
@@ -119,6 +130,7 @@ export function ButtonNode({ node, iterationContext }: ButtonNodeProps) {
         buildHandlers(),
         readRuntimeState,
         iterationContext,
+        resolvedScopeChain,
       )
 
       return
@@ -141,6 +153,7 @@ export function ButtonNode({ node, iterationContext }: ButtonNodeProps) {
       buildHandlers(),
       readRuntimeState,
       iterationContext,
+      resolvedScopeChain,
     )
   }
 
@@ -162,6 +175,7 @@ export function ButtonNode({ node, iterationContext }: ButtonNodeProps) {
         buildHandlers(),
         readRuntimeState,
         iterationContext,
+        resolvedScopeChain,
       )
     } finally {
       setIsDownloading(false)
@@ -186,7 +200,7 @@ export function ButtonNode({ node, iterationContext }: ButtonNodeProps) {
       return
     }
 
-    executeRuntimeUiAction(action, buildHandlers(), { iterationContext })
+    executeRuntimeUiAction(action, buildHandlers(), { iterationContext, scopeChain: resolvedScopeChain })
   }
 
   function handleSwitchClick() {
@@ -206,7 +220,7 @@ export function ButtonNode({ node, iterationContext }: ButtonNodeProps) {
       return
     }
 
-    executeRuntimeUiAction(action, buildHandlers(), { iterationContext })
+    executeRuntimeUiAction(action, buildHandlers(), { iterationContext, scopeChain: resolvedScopeChain })
   }
 
   if (declaredVariant === 'switch') {

@@ -4,11 +4,14 @@ import type { FormLayoutNode } from '../../config/runtime-config'
 import { FormContextProvider } from '../form-context'
 import { isLayoutNodeVisible, matchesVisibilityRule } from '../runtime-layout-visibility'
 import type { RuntimeIterationContext } from '../runtime-references/runtime-reference-resolver'
+import type { RuntimeInstanceScope } from '../runtime-references/runtime-instance-scope'
+import { deriveScopedStateKey, EMPTY_INSTANCE_SCOPE } from '../runtime-references/runtime-instance-scope'
 import { getFormNodeClassName } from '../runtime-node-styling'
 import { normalizeChoiceFieldValue } from '../runtime-collection-sources'
 import { type ResolvedFormFieldDefinition, validateFormFields } from '../runtime-form-validations'
 import { useRuntimeState, useRuntimeStateActions } from '../runtime-state/use-runtime-state'
 import { selectFormFieldState } from '../runtime-state/runtime-state-selectors'
+import type { RuntimeState } from '../runtime-state/runtime-state-types'
 import {
   runActionOutcomeWithLifecycle,
   type RuntimeUiActionHandlers,
@@ -31,9 +34,17 @@ interface FormNodeProps {
   node: FormLayoutNode
   children?: ReactNode
   iterationContext?: RuntimeIterationContext
+  scopeChain?: RuntimeInstanceScope
 }
 
-export function FormNode({ node, children, iterationContext }: FormNodeProps) {
+export function FormNode({ node, children, iterationContext, scopeChain }: FormNodeProps) {
+  const resolvedScopeChain = scopeChain ?? EMPTY_INSTANCE_SCOPE
+  // Effective store key (T05 / feature reusable-node-groups): `node.id` composed with the
+  // ambient scope chain. Outside every repeater/group this equals `node.id` literally (cero
+  // regresión); `node.id` itself keeps flowing to `FormContextProvider`, hiddenFormFields and
+  // fileInputSources below, since those are matched against the literal `forms.{formId}.*`
+  // references authored in config, not against the store key.
+  const scopeKey = deriveScopedStateKey(node.id, resolvedScopeChain)
   const state = useRuntimeState()
   const {
     executeQueryOperation,
@@ -67,7 +78,7 @@ export function FormNode({ node, children, iterationContext }: FormNodeProps) {
             return false
           }
 
-          const fieldState = selectFormFieldState(state, node.id, fieldDefinition.fieldId)
+          const fieldState = selectFormFieldState(state, scopeKey, fieldDefinition.fieldId)
 
           if (fieldState === null) {
             return true
@@ -80,7 +91,7 @@ export function FormNode({ node, children, iterationContext }: FormNodeProps) {
           return shouldRefreshPristineFieldDefault(fieldState, fieldDefinition)
         },
       ),
-    [fieldDefinitions, iterationContext, node.id, state],
+    [fieldDefinitions, iterationContext, scopeKey, state],
   )
 
   const hiddenFieldDefs = useMemo(
@@ -90,9 +101,9 @@ export function FormNode({ node, children, iterationContext }: FormNodeProps) {
   const hiddenFieldsNeedingInitialization = useMemo(
     () =>
       hiddenFieldDefs.filter(
-        (def) => selectFormFieldState(state, node.id, def.fieldId) === null,
+        (def) => selectFormFieldState(state, scopeKey, def.fieldId) === null,
       ),
-    [hiddenFieldDefs, node.id, state],
+    [hiddenFieldDefs, scopeKey, state],
   )
 
   useEffect(() => {
@@ -115,8 +126,9 @@ export function FormNode({ node, children, iterationContext }: FormNodeProps) {
     initializeForm(
       node.id,
       Object.fromEntries(allEntries),
+      { scopeChain: resolvedScopeChain },
     )
-  }, [fieldsNeedingInitialization, hiddenFieldsNeedingInitialization, initializeForm, node.id])
+  }, [fieldsNeedingInitialization, hiddenFieldsNeedingInitialization, initializeForm, node.id, resolvedScopeChain])
 
   useEffect(() => {
     if (node.persistOnUnmount) {
@@ -130,10 +142,10 @@ export function FormNode({ node, children, iterationContext }: FormNodeProps) {
 
     return () => {
       if (readRuntimeState().pageEntry.entryId !== mountedPageEntryId) {
-        removeForm(node.id)
+        removeForm(node.id, { scopeChain: resolvedScopeChain })
       }
     }
-  }, [node.id, node.persistOnUnmount, readRuntimeState, removeForm])
+  }, [node.id, node.persistOnUnmount, readRuntimeState, removeForm, resolvedScopeChain])
 
   useEffect(() => {
     for (const fieldDefinition of fieldDefinitions) {
@@ -141,7 +153,7 @@ export function FormNode({ node, children, iterationContext }: FormNodeProps) {
         continue
       }
 
-      const fieldState = selectFormFieldState(state, node.id, fieldDefinition.fieldId)
+      const fieldState = selectFormFieldState(state, scopeKey, fieldDefinition.fieldId)
 
       if (fieldState === null) {
         continue
@@ -154,10 +166,10 @@ export function FormNode({ node, children, iterationContext }: FormNodeProps) {
       })
 
       if (!areFieldValuesEqual(fieldState.value, normalizedValue)) {
-        setFormFieldValue(node.id, fieldDefinition.fieldId, normalizedValue)
+        setFormFieldValue(node.id, fieldDefinition.fieldId, normalizedValue, { scopeChain: resolvedScopeChain })
       }
     }
-  }, [fieldDefinitions, iterationContext, node.id, setFormFieldValue, state])
+  }, [fieldDefinitions, iterationContext, node.id, resolvedScopeChain, scopeKey, setFormFieldValue, state])
 
   function buildHandlers(): RuntimeUiActionHandlers {
     return {
@@ -182,7 +194,7 @@ export function FormNode({ node, children, iterationContext }: FormNodeProps) {
     )
     const visibleMissingFieldDefinitions = visibleFieldDefinitions.filter(
       (fieldDefinition) =>
-        selectFormFieldState(snapshotState, node.id, fieldDefinition.fieldId) === null,
+        selectFormFieldState(snapshotState, scopeKey, fieldDefinition.fieldId) === null,
     )
 
     if (visibleMissingFieldDefinitions.length > 0) {
@@ -196,11 +208,12 @@ export function FormNode({ node, children, iterationContext }: FormNodeProps) {
             },
           ]),
         ),
+        { scopeChain: resolvedScopeChain },
       )
     }
 
     const validationResult = validateFormFields({
-      formId: node.id,
+      formId: scopeKey,
       fieldDefinitions: visibleFieldDefinitions,
       state: snapshotState,
       iterationContext,
@@ -212,6 +225,7 @@ export function FormNode({ node, children, iterationContext }: FormNodeProps) {
     for (const [fieldId, error] of Object.entries(validationResult.errorsByFieldId)) {
       setFormFieldError(node.id, fieldId, error, {
         defaultValue: defaultValuesByFieldId[fieldId],
+        scopeChain: resolvedScopeChain,
       })
     }
 
@@ -233,14 +247,18 @@ export function FormNode({ node, children, iterationContext }: FormNodeProps) {
         ? { formId: node.id, valuesByFieldId: emptySubmitValueByFieldId }
         : undefined
 
-    const fileInputSources = buildFileInputSources(node.id, visibleFieldDefinitions, snapshotState)
+    const fileInputSources = buildFileInputSources(node.id, scopeKey, visibleFieldDefinitions, snapshotState)
 
     const submitAction = node.submitAction
 
     if (submitAction.type === 'executeOperations') {
       const outcome = await runActionOutcomeWithLifecycle(
         async () => {
-          const submitSnapshotState = readRuntimeState()
+          // The own form's fields are remapped from `scopeKey` back onto `node.id` (T05) so
+          // that `submitAction.operations[].{query,body,headers}` — authored against the
+          // literal `forms.{node.id}.{fieldId}` reference — resolves this iteration's values
+          // instead of accidentally reading a sibling iteration stored under the same raw id.
+          const submitSnapshotState = withFormScopedForSubmit(readRuntimeState(), node.id, scopeKey)
           const filteredOperations = submitAction.operations.filter((entry) =>
             matchesVisibilityRule(entry.when, submitSnapshotState, iterationContext),
           )
@@ -271,10 +289,11 @@ export function FormNode({ node, children, iterationContext }: FormNodeProps) {
         buildHandlers(),
         readRuntimeState,
         iterationContext,
+        resolvedScopeChain,
       )
 
       if (outcome.status === 'success' && node.resetOnSuccess) {
-        resetForm(node.id)
+        resetForm(node.id, { scopeChain: resolvedScopeChain })
       }
 
       return
@@ -284,7 +303,7 @@ export function FormNode({ node, children, iterationContext }: FormNodeProps) {
     const outcome = await runActionOutcomeWithLifecycle(
       () =>
         executeQueryOperation(submitAction.operationName, {
-          snapshotState: readRuntimeState(),
+          snapshotState: withFormScopedForSubmit(readRuntimeState(), node.id, scopeKey),
           requestParams: {
             query: submitAction.query,
             body: submitAction.body,
@@ -300,20 +319,43 @@ export function FormNode({ node, children, iterationContext }: FormNodeProps) {
       buildHandlers(),
       readRuntimeState,
       iterationContext,
+      resolvedScopeChain,
     )
 
     if (outcome.status === 'success' && node.resetOnSuccess) {
-      resetForm(node.id)
+      resetForm(node.id, { scopeChain: resolvedScopeChain })
     }
   }
 
   return (
-    <FormContextProvider value={{ formId: node.id }}>
+    <FormContextProvider value={{ formId: node.id, scopeChain: resolvedScopeChain }}>
       <form className={getFormNodeClassName()} data-layout-node="form" noValidate onSubmit={(event) => void handleSubmit(event)}>
         {children}
       </form>
     </FormContextProvider>
   )
+}
+
+/**
+ * Remaps `state.forms[formId]` (the raw, literal id authored in config) onto the current
+ * iteration's scoped entry (`state.forms[scopeKey]`) so that request-body/header resolvers in
+ * `src/queries/` — which resolve `forms.{formId}.{fieldId}` against the full `state` without any
+ * scope awareness — see this iteration's own field values under the id they already reference
+ * (T05 / feature reusable-node-groups). A no-op outside every repeater/group, where
+ * `scopeKey === formId` (cero regresión).
+ */
+function withFormScopedForSubmit(state: RuntimeState, formId: string, scopeKey: string): RuntimeState {
+  if (scopeKey === formId) {
+    return state
+  }
+
+  return {
+    ...state,
+    forms: {
+      ...state.forms,
+      [formId]: state.forms[scopeKey] ?? {},
+    },
+  }
 }
 
 /**
@@ -325,6 +367,7 @@ export function FormNode({ node, children, iterationContext }: FormNodeProps) {
  */
 function buildFileInputSources(
   formId: string,
+  scopeKey: string,
   visibleFieldDefinitions: ResolvedFormFieldDefinition[],
   state: ReturnType<typeof useRuntimeState>,
 ): RuntimeApiFileInputSources | undefined {
@@ -333,7 +376,7 @@ function buildFileInputSources(
   for (const fieldDefinition of visibleFieldDefinitions) {
     if (fieldDefinition.type !== 'fileInput') continue
 
-    const fieldState = selectFormFieldState(state, formId, fieldDefinition.fieldId)
+    const fieldState = selectFormFieldState(state, scopeKey, fieldDefinition.fieldId)
     const value = fieldState?.value ?? fieldDefinition.defaultValue
 
     if (!Array.isArray(value)) continue

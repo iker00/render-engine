@@ -1,4 +1,5 @@
 import type { LayoutNode, LayoutNodeType } from '../../config/runtime-config'
+import type { RuntimeGroupsConfig } from '../../config/runtime-config-types'
 import {
   FORM_ALLOWED_DESCENDANT_TYPES,
   FORM_ONLY_LEAF_NODE_TYPES,
@@ -7,6 +8,7 @@ import {
   buttonRequiresFormAncestor,
   nodeTypeAcceptsChildren,
 } from '../../config/layout-placement-rules'
+import { countSlotsInCollection } from '../../config/validate-groups'
 import { getNodeAtPath, type LayoutNodePath } from '../../runtime/layout-node-path'
 import { isSameOrDescendantPath } from '../layout-tree-mutations'
 
@@ -19,6 +21,17 @@ export interface IsValidDropTargetOptions {
    * real path always takes priority over a declared type.
    */
   draggedNodeType?: LayoutNodeType
+  /**
+   * The root `groups` block (T15, feature reusable-node-groups), needed only to resolve whether
+   * a `group` instance's `children` (its slot content) is a valid drop target — see the
+   * `targetParentNode.type === 'group'` check below. Omitted by callers that never edit a page's
+   * real layout against a real `groups` block (e.g. `DevEditorGroupsCanvas`'s own template
+   * canvas, where a `group` instance can never legitimately appear as a target — see
+   * `validate-groups.ts`'s `insideGroupTemplate` rejection); when omitted, that check simply
+   * never finds a matching group definition and rejects the drop, the same fail-closed default
+   * every other omitted option in this function already has.
+   */
+  groups?: RuntimeGroupsConfig
 }
 
 /**
@@ -131,6 +144,17 @@ export function isValidDropTarget(
 
   if (targetParentNode !== null && targetParentNode.type === 'link' && !LINK_ALLOWED_CHILD_TYPES.has(draggedNode.type)) {
     return false
+  }
+
+  // T15: a `group` instance's `children` is its slot content — only meaningful (and only ever
+  // validly committable, per `checkGroupInstance` in `validate-groups.ts`) when the referenced
+  // group's own `template` declares a `slot` node. `nodeTypeAcceptsChildren('group')` above
+  // already lets `group` through the generic "does this type accept children" gate; this narrows
+  // it further, the same way the modal/link closed-catalogue checks above narrow their own gate.
+  if (targetParentNode !== null && targetParentNode.type === 'group') {
+    const groupDefinition = options?.groups?.[targetParentNode.props.groupId]
+    const templateDeclaresSlot = groupDefinition !== undefined && countSlotsInCollection(groupDefinition.template) > 0
+    if (!templateDeclaresSlot) return false
   }
 
   const targetHasFormAncestor = hasFormAncestor(pageLayout, targetParentPath, targetParentNode)

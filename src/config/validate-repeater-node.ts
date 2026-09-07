@@ -7,7 +7,8 @@ import type {
 import { repeaterNodeSchema } from './runtime-config-zod'
 import type { BreadcrumbSegment } from './validation-breadcrumb'
 import { enrichedInvalidLayout, enrichErrorResult } from './validation-breadcrumb'
-import { validateLayoutCollection, validateQueryStateFeedback } from './validate-layout-nodes-core'
+import type { LayoutValidationCtx } from './validate-layout-nodes-core'
+import { defaultLayoutValidationCtx, validateLayoutCollection, validateQueryStateFeedback } from './validate-layout-nodes-core'
 import { mapGridLayoutIssue, mapLayoutNodeIssue } from './validate-layout-issue-mapping'
 import { mapQueryStateFeedbackIssue, mapVisibilityIssue, validateVisibility } from './validate-actions-visibility'
 import { validateCollectionSource } from './validate-collection-source'
@@ -18,6 +19,7 @@ export function validateRepeaterNode(
   path: string,
   pageId: string,
   breadcrumb: BreadcrumbSegment[] = [],
+  ctx: LayoutValidationCtx = defaultLayoutValidationCtx,
 ): { status: 'ready'; node: RepeaterLayoutNode } | { status: 'error'; error: RuntimeConfigError } {
   const parseResult = repeaterNodeSchema.safeParse(rawNode)
 
@@ -117,7 +119,7 @@ export function validateRepeaterNode(
       breadcrumb, rawNode)
   }
 
-  const templateResult = validateLayoutCollection(parseResult.data.props.template, `${path}.props.template`, pageId, breadcrumb)
+  const templateResult = validateLayoutCollection(parseResult.data.props.template, `${path}.props.template`, pageId, breadcrumb, ctx)
 
   if (templateResult.status === 'error') {
     return templateResult

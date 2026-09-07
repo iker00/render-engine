@@ -12,12 +12,15 @@ import { RuntimeStateProvider } from '../../runtime/runtime-state/runtime-state-
 import { useRuntimeState, useRuntimeStateActions } from '../../runtime/runtime-state/use-runtime-state'
 import { RuntimePage } from '../../runtime/runtime-page'
 import {
+  getFormFieldError,
+  getFormFieldValue,
   selectFormFieldValue,
   selectNestedQueryDataValue,
   selectPageEntryState,
   selectQueryVisibleState,
   selectQueryReferenceValue,
 } from '../../runtime/runtime-state/runtime-state-selectors'
+import { pushRepeaterScopeToken } from '../../runtime/runtime-references/runtime-instance-scope'
 
 afterEach(() => {
   window.history.replaceState(null, '', window.location.pathname + window.location.search)
@@ -505,6 +508,46 @@ describe('Runtime shared state store', () => {
     expect(selectQueryVisibleState(snapshot, 'missingQuery')).toBe('idle')
     expect(selectPageEntryState(snapshot)).toBe(snapshot.pageEntry)
     expect(snapshot.pageEntry.params).toEqual({ userId: '42' })
+  })
+
+  it('getFormFieldValue/getFormFieldError compose the effective scoped key before reading the field (T05, feature reusable-node-groups)', () => {
+    const scope = pushRepeaterScopeToken([], 'row-1')
+    const snapshot = {
+      navigation: {
+        currentPageId: 'home',
+        history: [{ entryId: 0, pageId: 'home', params: {} }],
+        lastError: null,
+      },
+      forms: {
+        userSearch: {
+          name: { value: 'Grace', error: null, touched: true, dirty: true, defaultValue: 'Ada' },
+        },
+        'userSearch::r:row-1': {
+          name: { value: 'Scoped Grace', error: 'Required', touched: true, dirty: true, defaultValue: '' },
+        },
+      },
+      queries: {},
+      pageEntry: {
+        entryId: 0,
+        pageId: 'home',
+        params: {},
+        preloadNames: [],
+        status: 'idle' as const,
+      },
+    }
+
+    // Cero regresión: without a scope (or an empty one), the effective key is the literal formId.
+    expect(getFormFieldValue(snapshot, 'userSearch', 'name')).toBe('Grace')
+    expect(getFormFieldError(snapshot, 'userSearch', 'name')).toBeNull()
+
+    // With a non-empty scope, the effective key is composed and reads the scoped entry instead.
+    expect(getFormFieldValue(snapshot, 'userSearch', 'name', scope)).toBe('Scoped Grace')
+    expect(getFormFieldError(snapshot, 'userSearch', 'name', scope)).toBe('Required')
+
+    // A scope that has no matching stored entry degrades to "not found" rather than falling back
+    // to the unscoped one.
+    expect(getFormFieldValue(snapshot, 'userSearch', 'email', scope)).toBeUndefined()
+    expect(getFormFieldError(snapshot, 'userSearch', 'email', scope)).toBeNull()
   })
 
   it.each([

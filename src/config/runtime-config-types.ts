@@ -30,6 +30,8 @@ export type LayoutNodeType =
   | 'map'
   | 'gallery'
   | 'autocomplete'
+  | 'group'
+  | 'slot'
 export type RuntimeApiMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
 export type RuntimeApiQueryValue = string | number | boolean
 export type RuntimeApiQuery = Record<string, RuntimeApiQueryValue>
@@ -889,6 +891,33 @@ export interface FileManagerLayoutNode extends LayoutNodeFeedbackFields, LayoutN
   }
 }
 
+export interface RuntimeGroupConfig {
+  params: string[]
+  template: LayoutNode[]
+}
+
+export type RuntimeGroupsConfig = Record<string, RuntimeGroupConfig>
+
+export interface RuntimeGroupInstanceNodeProps {
+  groupId: string
+  params: Record<string, unknown>
+}
+
+export interface RuntimeGroupInstanceNode extends LayoutNodeFeedbackFields, LayoutNodeLayoutFields {
+  type: 'group'
+  id?: string
+  props: RuntimeGroupInstanceNodeProps
+  children?: LayoutNode[]
+}
+
+// Extends the same baseline mixins as every other `LayoutNode` member so generic infrastructure
+// (visibility/queryStateFeedback resolution in `layout-node-renderer.tsx`, applied uniformly to
+// every node regardless of type) keeps type-checking without special-casing `slot`. Functionally
+// inert today: `slotNodeSchema` strips these keys, so a `slot` node never actually carries them.
+export interface RuntimeSlotNode extends LayoutNodeFeedbackFields, LayoutNodeLayoutFields {
+  type: 'slot'
+}
+
 export type LayoutNode =
   | ContainerLayoutNode
   | RepeaterLayoutNode
@@ -921,6 +950,8 @@ export type LayoutNode =
   | MapLayoutNode
   | GalleryLayoutNode
   | AutocompleteLayoutNode
+  | RuntimeGroupInstanceNode
+  | RuntimeSlotNode
 
 export type LayoutNodeCollection = LayoutNode[]
 
@@ -1006,6 +1037,7 @@ export interface RuntimeConfig {
   translations?: RuntimeTranslationsConfig
   tokens?: RuntimeTokensConfig
   shell?: ShellConfig
+  groups?: RuntimeGroupsConfig
 }
 
 export interface RuntimeConfigError {

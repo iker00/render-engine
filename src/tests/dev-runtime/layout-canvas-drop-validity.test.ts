@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { LayoutNode } from '../../config/runtime-config'
+import type { RuntimeGroupsConfig } from '../../config/runtime-config-types'
 import { isValidDropTarget } from '../../dev-runtime/layout-canvas/layout-drop-validity'
 import type { LayoutNodePath } from '../../runtime/layout-node-path'
 
@@ -37,6 +38,10 @@ function modal(id: string, children: LayoutNode[] = []): LayoutNode {
 
 function link(children: LayoutNode[] = []): LayoutNode {
   return { type: 'link', props: { href: '#' }, children } as LayoutNode
+}
+
+function groupInstance(groupId: string, children: LayoutNode[] = []): LayoutNode {
+  return { type: 'group', props: { groupId, params: {} }, children } as LayoutNode
 }
 
 function tabs(items: { label: string; children?: LayoutNode[] }[]): LayoutNode {
@@ -391,5 +396,54 @@ describe('isValidDropTarget: palette-originated drag (T15, additional cases)', (
 
   it('accepts a synthetic container dragged to the root layout ([]) — draggedPath: null with targetParentPath: [] does not trigger the step-9 cycle check', () => {
     expect(isValidDropTarget(PAGE_LAYOUT, null, [], 0, { draggedNodeType: 'container' })).toBe(true)
+  })
+})
+
+// T15 (feature reusable-node-groups): a `group` instance's `children` is its slot content — only
+// a valid drop destination when the referenced group's own `template` declares a `slot`. Local
+// fixtures (not the shared PAGE_LAYOUT above) since this is the only describe block exercising
+// `options.groups`.
+describe('isValidDropTarget: group instance children require the referenced template to declare a slot (T15)', () => {
+  const GROUPS_WITH_SLOT: RuntimeGroupsConfig = {
+    withSlot: { params: [], template: [{ type: 'container', children: [{ type: 'slot' }] }] },
+  }
+  const GROUPS_WITHOUT_SLOT: RuntimeGroupsConfig = {
+    noSlot: { params: [], template: [heading('Static template content')] },
+  }
+
+  const GROUP_LAYOUT: LayoutNode[] = [groupInstance('withSlot'), groupInstance('noSlot'), groupInstance('missing')]
+  const GROUP_WITH_SLOT_PATH: LayoutNodePath = [{ field: 'children', index: 0 }]
+  const GROUP_WITHOUT_SLOT_PATH: LayoutNodePath = [{ field: 'children', index: 1 }]
+  const GROUP_UNKNOWN_ID_PATH: LayoutNodePath = [{ field: 'children', index: 2 }]
+
+  it('accepts a heading dragged into a group instance whose referenced template declares a slot', () => {
+    expect(
+      isValidDropTarget(GROUP_LAYOUT, null, GROUP_WITH_SLOT_PATH, 0, {
+        draggedNodeType: 'heading',
+        groups: GROUPS_WITH_SLOT,
+      }),
+    ).toBe(true)
+  })
+
+  it('rejects a heading dragged into a group instance whose referenced template declares no slot', () => {
+    expect(
+      isValidDropTarget(GROUP_LAYOUT, null, GROUP_WITHOUT_SLOT_PATH, 0, {
+        draggedNodeType: 'heading',
+        groups: GROUPS_WITHOUT_SLOT,
+      }),
+    ).toBe(false)
+  })
+
+  it('rejects a drop into a group instance whose groupId does not resolve against options.groups', () => {
+    expect(
+      isValidDropTarget(GROUP_LAYOUT, null, GROUP_UNKNOWN_ID_PATH, 0, {
+        draggedNodeType: 'heading',
+        groups: GROUPS_WITH_SLOT,
+      }),
+    ).toBe(false)
+  })
+
+  it('rejects a drop into any group instance children when options.groups is omitted entirely (fail-closed default)', () => {
+    expect(isValidDropTarget(GROUP_LAYOUT, null, GROUP_WITH_SLOT_PATH, 0, { draggedNodeType: 'heading' })).toBe(false)
   })
 })

@@ -96,5 +96,10 @@ El repeater detecta automáticamente si la fuente resuelta es array u objeto pla
 - Un `repeater` con `props.columns` (modo grid propio) sí es elegible para `layout.span`: el wrapper de grid del propio `repeater` recibe `col-span-*`, clampado contra las columnas del grid ancestro más cercano (`container` o `repeater` padre en modo grid), igual que cualquier otro nodo de una sola caja.
 - El `layout.span` del nodo raíz de `props.template` se sigue clampando contra las columnas propias del `repeater` (`props.columns`), no contra las del ancestro, con independencia de si el propio `repeater` declara o no `layout.span`.
 
+## Combinación con `group`
+- Un nodo `group` es simplemente un nodo más dentro de `repeater.props.template`; sus `props.params` pueden referenciar `item.*` de la iteración igual que cualquier otro prop consumidor de referencias.
+- Cada iteración resuelve su `props.params` e `children` del `group` de forma independiente contra su propio `item.*`.
+- Véase [[group.md#Combinación-con-repeater]] para el contrato completo de esta combinación.
+
 ## Límites del nodo
 - `repeater` ya puede expandir un subárbol completo por item de una colección remota, aplicar paginación local opcional con `props.pagination`, y filtrar/ordenar/recortar la colección mediante pipeline declarativo en `props.items.source` sin backend. Sigue fuera de alcance cualquier DSL de templates, paginación remota o fuentes de colección ajenas a `queries.*`.

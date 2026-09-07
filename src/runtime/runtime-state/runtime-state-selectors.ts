@@ -1,5 +1,7 @@
 import type { RuntimeConfig } from '../../config/runtime-config'
 import { deriveQueryVisibleState } from '../runtime-query-state-feedback'
+import { deriveScopedStateKey, EMPTY_INSTANCE_SCOPE } from '../runtime-references/runtime-instance-scope'
+import type { RuntimeInstanceScope } from '../runtime-references/runtime-instance-scope'
 import type { RuntimeState } from './runtime-state-types'
 
 export function selectNavigationState(state: RuntimeState) {
@@ -48,6 +50,33 @@ export function selectFormFieldState(state: RuntimeState, formId: string, fieldI
 
 export function selectFormFieldValue(state: RuntimeState, formId: string, fieldId: string) {
   return selectFormFieldState(state, formId, fieldId)?.value
+}
+
+/**
+ * Scope-chain-aware form field value lookup (T05 / feature reusable-node-groups): composes the
+ * effective store key from `formId` + `scope` before delegating to the raw, scope-agnostic
+ * `selectFormFieldValue`. An empty scope produces the exact same key as before (`formId`
+ * literal), so callers that never pass a scope keep reading the same value (cero regresión).
+ */
+export function getFormFieldValue(
+  state: RuntimeState,
+  formId: string,
+  fieldId: string,
+  scope: RuntimeInstanceScope = EMPTY_INSTANCE_SCOPE,
+): unknown {
+  return selectFormFieldValue(state, deriveScopedStateKey(formId, scope), fieldId)
+}
+
+/**
+ * Scope-chain-aware form field error lookup (T05), mirroring `getFormFieldValue`.
+ */
+export function getFormFieldError(
+  state: RuntimeState,
+  formId: string,
+  fieldId: string,
+  scope: RuntimeInstanceScope = EMPTY_INSTANCE_SCOPE,
+): string | null {
+  return selectFormFieldState(state, deriveScopedStateKey(formId, scope), fieldId)?.error ?? null
 }
 
 export function selectQueryState(state: RuntimeState, queryName: string) {
@@ -143,13 +172,47 @@ export function selectActiveModal(state: RuntimeState) {
   return state.modal ?? { activeModalId: null, activeIterationKey: null }
 }
 
-export function isModalOpen(state: RuntimeState, modalId: string, iterationKey?: string): boolean {
+export function isModalOpen(state: RuntimeState, modalId: string, scope: RuntimeInstanceScope = []): boolean {
   const modal = state.modal
   if (modal == null) return false
-  return (
-    modal.activeModalId === modalId &&
-    modal.activeIterationKey === (iterationKey ?? null)
-  )
+  return modal.activeModalId === modalId && modal.activeIterationKey === deriveModalScopeIterationKey(scope)
+}
+
+/**
+ * Collapses a `RuntimeInstanceScope` into the flat string stored as `RuntimeModalState.activeIterationKey`.
+ *
+ * A 0-token scope (page-level modal) yields `null`, and a 1-token scope yields the bare
+ * repeater key — exactly the pre-existing single-level representation, so `openModal`/`closeModal`
+ * keep dispatching the same effective store key as before for those two cases (cero regresión).
+ * A scope with 2+ tokens (nested repeaters) composes every ancestor token into a single unique
+ * string so that iterations that share the same innermost key (e.g. two different outer groups
+ * both containing an inner row keyed "1") never collide.
+ */
+export function deriveModalScopeIterationKey(scope: RuntimeInstanceScope): string | null {
+  if (scope.length === 0) {
+    return null
+  }
+
+  if (scope.length === 1) {
+    const [token] = scope
+    return token.kind === 'repeater' ? token.key : token.token
+  }
+
+  return scope.map((token) => (token.kind === 'repeater' ? `r:${token.key}` : `g:${token.token}`)).join('::')
+}
+
+const MODAL_SCOPE_KEY_SEGMENT_SEPARATOR = '::'
+
+/**
+ * True when `iterationKey` was derived from a scope chain with 2+ tokens (nested repeaters).
+ *
+ * A single `repeater` only ever knows its *own* bare iteration keys, so it can only safely
+ * compare its D3 auto-close-on-refresh check (see `RepeaterNode`) against a 1-token scope key
+ * (cero regresión). A composed key belongs to a chain this repeater alone can't resolve; it
+ * should leave that instance alone rather than mismatch it and force-close it.
+ */
+export function isComposedModalScopeKey(iterationKey: string): boolean {
+  return iterationKey.includes(MODAL_SCOPE_KEY_SEGMENT_SEPARATOR)
 }
 
 function isArrayIndexSegment(segment: string) {

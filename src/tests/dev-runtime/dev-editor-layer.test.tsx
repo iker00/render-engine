@@ -8,6 +8,7 @@ import {
   patchRawConfigTextWithPages,
   patchRootKey,
   type CommitCanvasMutationResult,
+  type CommitResult,
 } from '../../dev-runtime/layout-canvas/layout-canvas-commit'
 import { DevEditorLayer } from '../../dev-runtime/floating-toolbar/dev-editor-layer'
 import type {
@@ -75,6 +76,7 @@ const NOOP_MONACO = {
 }
 
 const noopCommitCanvasMutation = (): CommitCanvasMutationResult => ({ status: 'applied' })
+const noopCommitLayoutMutation = (): CommitResult => ({ status: 'applied' })
 
 // T6 (0131): default resolution for every test in this file that doesn't specifically exercise
 // the save-config pipeline — matches `resolveEndpointOperation`'s own shape for an operation with
@@ -141,6 +143,8 @@ interface HarnessProps {
   onCommitPagePreloadsMutation?: (mutate: (preloads: never) => never) => CommitCanvasMutationResult
   onCommitPagesMutation?: (mutate: (pages: RuntimePageConfig[]) => RuntimePageConfig[]) => CommitCanvasMutationResult
   onCommitInitialPageMutation?: (mutate: (initialPage: string) => string) => CommitCanvasMutationResult
+  onCommitGroupsMutation?: (mutate: (groups: never) => never) => CommitCanvasMutationResult
+  onCommitLayoutMutation?: (...args: never[]) => CommitResult
   onMonacoOpenChangeSpy?: (open: boolean) => void
   initialMonacoOpen?: boolean
   endpointsConfig?: RuntimeEndpointsConfig
@@ -165,6 +169,8 @@ function DevEditorLayerHarness({
   onCommitPagePreloadsMutation = noopCommitCanvasMutation,
   onCommitPagesMutation = noopCommitCanvasMutation,
   onCommitInitialPageMutation = noopCommitCanvasMutation,
+  onCommitGroupsMutation = noopCommitCanvasMutation,
+  onCommitLayoutMutation = noopCommitLayoutMutation,
   onMonacoOpenChangeSpy,
   initialMonacoOpen = false,
   endpointsConfig,
@@ -205,6 +211,8 @@ function DevEditorLayerHarness({
         onCommitPagePreloadsMutation={onCommitPagePreloadsMutation}
         onCommitPagesMutation={onCommitPagesMutation}
         onCommitInitialPageMutation={onCommitInitialPageMutation}
+        onCommitGroupsMutation={onCommitGroupsMutation}
+        onCommitLayoutMutation={onCommitLayoutMutation}
         endpointsConfig={endpointsConfig}
         saveResolution={saveResolution}
         searchResolution={searchResolution}

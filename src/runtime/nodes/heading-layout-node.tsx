@@ -1,8 +1,9 @@
-import { createElement } from 'react'
+import { createElement, useContext } from 'react'
 import type { HeadingLayoutNode } from '../../config/runtime-config'
 import type { RuntimeIterationContext } from '../runtime-references/runtime-reference-resolver'
 import { useRuntimeState } from '../runtime-state/use-runtime-state'
 import { resolveRuntimeTextReference } from '../runtime-references/runtime-reference-resolver'
+import { RuntimeGroupContextProvider } from '../runtime-references/runtime-group-context'
 import { getHeadingNodeClassName, getHeadingTag } from '../runtime-node-styling'
 import { IconNode } from './icon-node'
 
@@ -13,7 +14,13 @@ interface HeadingNodeProps {
 
 export function HeadingNode({ node, iterationContext }: HeadingNodeProps) {
   const state = useRuntimeState()
-  const text = resolveRuntimeTextReference(node.props.text, state, 'heading.props.text', { iterationContext })
+  // `group.*` (T12 / feature reusable-node-groups): see paragraph-layout-node.tsx for why this
+  // reads via React context instead of prop drilling.
+  const groupContext = useContext(RuntimeGroupContextProvider)
+  const text = resolveRuntimeTextReference(node.props.text, state, 'heading.props.text', {
+    iterationContext,
+    groupContext,
+  })
   // The heading level maps to a plain host tag ('h1'..'h6'), not a component — built with
   // createElement (not JSX's `<Tag>` shorthand) so the React Compiler doesn't mistake this
   // dynamic-but-stable host tag for a component being freshly declared on every render.

@@ -17,6 +17,8 @@ import {
 } from '../runtime-navigation/browser-hash-navigation'
 import type { RuntimeIterationContext } from '../runtime-references/runtime-reference-resolver'
 import { resolveRuntimeValueWithOptions } from '../runtime-references/runtime-reference-resolver'
+import type { RuntimeInstanceScope } from '../runtime-references/runtime-instance-scope'
+import { deriveScopedStateKey, EMPTY_INSTANCE_SCOPE } from '../runtime-references/runtime-instance-scope'
 import { useLayoutEditModeContext } from '../use-layout-edit-mode-context'
 import { RuntimeStateContext } from './runtime-state-context'
 import {
@@ -24,7 +26,11 @@ import {
   executeInlineQueryOperationWithSnapshot,
   executeQueryOperationWithSnapshot,
 } from './runtime-state-query-execution'
-import { selectCurrentNavigationEntry, selectCurrentPage } from './runtime-state-selectors'
+import {
+  deriveModalScopeIterationKey,
+  selectCurrentNavigationEntry,
+  selectCurrentPage,
+} from './runtime-state-selectors'
 import type {
   RuntimeFormFieldDefinition,
   RuntimePageParams,
@@ -137,11 +143,15 @@ export function useRuntimeStateActions() {
   }, [editModeContext, getLatestState])
 
   const initializeForm = useCallback(
-    (formId: string, fields: Record<string, RuntimeFormFieldDefinition>) => {
+    (
+      formId: string,
+      fields: Record<string, RuntimeFormFieldDefinition>,
+      options?: { scopeChain?: RuntimeInstanceScope },
+    ) => {
       dispatchAndSyncState({
         type: 'forms/initialize',
         payload: {
-          formId,
+          formId: deriveScopedStateKey(formId, options?.scopeChain ?? EMPTY_INSTANCE_SCOPE),
           fields,
         },
       })
@@ -150,11 +160,11 @@ export function useRuntimeStateActions() {
   )
 
   const setFormFieldValue = useCallback(
-    (formId: string, fieldId: string, value: unknown) => {
+    (formId: string, fieldId: string, value: unknown, options?: { scopeChain?: RuntimeInstanceScope }) => {
       dispatchAndSyncState({
         type: 'forms/set-value',
         payload: {
-          formId,
+          formId: deriveScopedStateKey(formId, options?.scopeChain ?? EMPTY_INSTANCE_SCOPE),
           fieldId,
           value,
         },
@@ -164,11 +174,16 @@ export function useRuntimeStateActions() {
   )
 
   const setFormFieldError = useCallback(
-    (formId: string, fieldId: string, error: string | null, options?: { defaultValue?: unknown }) => {
+    (
+      formId: string,
+      fieldId: string,
+      error: string | null,
+      options?: { defaultValue?: unknown; scopeChain?: RuntimeInstanceScope },
+    ) => {
       dispatchAndSyncState({
         type: 'forms/set-error',
         payload: {
-          formId,
+          formId: deriveScopedStateKey(formId, options?.scopeChain ?? EMPTY_INSTANCE_SCOPE),
           fieldId,
           error,
           defaultValue: options?.defaultValue,
@@ -179,18 +194,19 @@ export function useRuntimeStateActions() {
   )
 
   const openModal = useCallback(
-    (modalId: string, options?: { iterationContext?: RuntimeIterationContext }) => {
+    (modalId: string, options?: { scopeChain?: RuntimeInstanceScope }) => {
       if (editModeContext !== null && editModeContext.active) {
         return
       }
 
       const isPageLevelModal = modalOwnership.get(modalId) === null
+      const scope = isPageLevelModal ? EMPTY_INSTANCE_SCOPE : options?.scopeChain ?? EMPTY_INSTANCE_SCOPE
 
       dispatchAndSyncState({
         type: 'modal/open',
         payload: {
           modalId,
-          iterationKey: isPageLevelModal ? undefined : options?.iterationContext?.key,
+          iterationKey: deriveModalScopeIterationKey(scope) ?? undefined,
         },
       })
     },
@@ -198,18 +214,19 @@ export function useRuntimeStateActions() {
   )
 
   const closeModal = useCallback(
-    (modalId: string, options?: { iterationContext?: RuntimeIterationContext }) => {
+    (modalId: string, options?: { scopeChain?: RuntimeInstanceScope }) => {
       if (editModeContext !== null && editModeContext.active) {
         return
       }
 
       const isPageLevelModal = modalOwnership.get(modalId) === null
+      const scope = isPageLevelModal ? EMPTY_INSTANCE_SCOPE : options?.scopeChain ?? EMPTY_INSTANCE_SCOPE
 
       dispatchAndSyncState({
         type: 'modal/close',
         payload: {
           modalId,
-          iterationKey: isPageLevelModal ? undefined : options?.iterationContext?.key,
+          iterationKey: deriveModalScopeIterationKey(scope) ?? undefined,
         },
       })
     },
@@ -217,7 +234,7 @@ export function useRuntimeStateActions() {
   )
 
   const resetForm = useCallback(
-    (formId: string) => {
+    (formId: string, options?: { scopeChain?: RuntimeInstanceScope }) => {
       if (editModeContext !== null && editModeContext.active) {
         return
       }
@@ -225,7 +242,7 @@ export function useRuntimeStateActions() {
       dispatchAndSyncState({
         type: 'forms/reset',
         payload: {
-          formId,
+          formId: deriveScopedStateKey(formId, options?.scopeChain ?? EMPTY_INSTANCE_SCOPE),
         },
       })
     },
@@ -233,11 +250,11 @@ export function useRuntimeStateActions() {
   )
 
   const removeForm = useCallback(
-    (formId: string) => {
+    (formId: string, options?: { scopeChain?: RuntimeInstanceScope }) => {
       dispatchAndSyncState({
         type: 'forms/remove',
         payload: {
-          formId,
+          formId: deriveScopedStateKey(formId, options?.scopeChain ?? EMPTY_INSTANCE_SCOPE),
         },
       })
     },

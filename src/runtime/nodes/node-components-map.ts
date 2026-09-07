@@ -11,6 +11,7 @@ import { FileInputNode } from './file-input-layout-node'
 import { FileManagerNode } from './file-manager-layout-node'
 import { FormNode } from './form-layout-node'
 import { GalleryNode } from './gallery-layout-node'
+import { GroupLayoutNode } from './group-layout-node'
 import { HiddenNode } from './hidden-layout-node'
 import { HeadingNode } from './heading-layout-node'
 import { ImageNode } from './image-layout-node'
@@ -24,6 +25,7 @@ import { RadioGroupNode } from './radio-group-layout-node'
 import { RepeaterNode } from './repeater-layout-node'
 import { SelectNode } from './select-layout-node'
 import { SkeletonNode } from './skeleton-layout-node'
+import { SlotLayoutNode } from './slot-layout-node'
 import { StatNode } from './stat-layout-node'
 import { StepsNode } from './steps-layout-node'
 import { TableNode } from './table-layout-node'
@@ -50,6 +52,7 @@ const eagerMap = {
   fileManager: FileManagerNode as AnyComponent,
   form: FormNode as AnyComponent,
   gallery: GalleryNode as AnyComponent,
+  group: GroupLayoutNode as AnyComponent,
   heading: HeadingNode as AnyComponent,
   hidden: HiddenNode as AnyComponent,
   image: ImageNode as AnyComponent,
@@ -63,6 +66,7 @@ const eagerMap = {
   repeater: RepeaterNode as AnyComponent,
   select: SelectNode as AnyComponent,
   skeleton: SkeletonNode as AnyComponent,
+  slot: SlotLayoutNode as AnyComponent,
   stat: StatNode as AnyComponent,
   steps: StepsNode as AnyComponent,
   table: TableNode as AnyComponent,
@@ -94,6 +98,7 @@ const lazyMap = {
   ),
   form: React.lazy(() => import('./form-layout-node').then((m) => ({ default: m.FormNode }))),
   gallery: React.lazy(() => import('./gallery-layout-node').then((m) => ({ default: m.GalleryNode }))),
+  group: React.lazy(() => import('./group-layout-node').then((m) => ({ default: m.GroupLayoutNode }))),
   heading: React.lazy(() => import('./heading-layout-node').then((m) => ({ default: m.HeadingNode }))),
   hidden: React.lazy(() => import('./hidden-layout-node').then((m) => ({ default: m.HiddenNode }))),
   image: React.lazy(() => import('./image-layout-node').then((m) => ({ default: m.ImageNode }))),
@@ -109,6 +114,7 @@ const lazyMap = {
   repeater: React.lazy(() => import('./repeater-layout-node').then((m) => ({ default: m.RepeaterNode }))),
   select: React.lazy(() => import('./select-layout-node').then((m) => ({ default: m.SelectNode }))),
   skeleton: React.lazy(() => import('./skeleton-layout-node').then((m) => ({ default: m.SkeletonNode }))),
+  slot: React.lazy(() => import('./slot-layout-node').then((m) => ({ default: m.SlotLayoutNode }))),
   stat: React.lazy(() => import('./stat-layout-node').then((m) => ({ default: m.StatNode }))),
   steps: React.lazy(() => import('./steps-layout-node').then((m) => ({ default: m.StepsNode }))),
   table: React.lazy(() => import('./table-layout-node').then((m) => ({ default: m.TableNode }))),

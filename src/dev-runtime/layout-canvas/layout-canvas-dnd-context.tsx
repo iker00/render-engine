@@ -10,6 +10,7 @@ import {
   type DragOverEvent,
 } from '@dnd-kit/core'
 import type { LayoutNode, LayoutNodeType } from '../../config/runtime-config'
+import type { RuntimeGroupsConfig } from '../../config/runtime-config-types'
 import { deserializeLayoutNodePath, parseDropZoneId, type LayoutNodePath } from '../../runtime/layout-node-path'
 import { isValidDropTarget } from './layout-drop-validity'
 import { parsePaletteDragId } from './layout-canvas-palette-drag-id'
@@ -87,6 +88,13 @@ interface LayoutCanvasDndContextProps {
    * Defaults to an empty tree for callers that don't need it.
    */
   pageLayout?: readonly LayoutNode[]
+  /**
+   * Root `groups` block (T15, feature reusable-node-groups), forwarded to `isValidDropTarget`
+   * so the live drag-over indicator correctly marks a `group` instance's `children` invalid
+   * unless its referenced group declares a `slot`. Optional — omitted by callers with no notion
+   * of a real `groups` block (e.g. `DevEditorGroupsCanvas`'s own template canvas).
+   */
+  groups?: RuntimeGroupsConfig
   /** Invoked with the raw drop intent on a successful drag release over a known zone. */
   onDropAttempt: (attempt: LayoutCanvasDropAttempt) => void
   /** Optional: live feedback while dragging (e.g. highlighting a candidate target in T14+). */
@@ -104,6 +112,7 @@ interface LayoutCanvasDndContextProps {
 export function LayoutCanvasDndContext({
   children,
   pageLayout = EMPTY_PAGE_LAYOUT,
+  groups,
   onDropAttempt,
   onDragOverAttempt,
 }: LayoutCanvasDndContextProps) {
@@ -157,6 +166,7 @@ export function LayoutCanvasDndContext({
       targetTabItemIndex: attempt.targetTabItemIndex,
       targetStepItemIndex: attempt.targetStepItemIndex,
       draggedNodeType: attempt.draggedNodeType,
+      groups,
     })
     markDropTargetIndicator(String(event.over.id), valid)
   }

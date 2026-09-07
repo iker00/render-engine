@@ -4,6 +4,7 @@ import {
   resolveRuntimeTextReference,
   type RuntimeIterationContext,
 } from '../runtime-references/runtime-reference-resolver'
+import { deriveScopedStateKey, EMPTY_INSTANCE_SCOPE } from '../runtime-references/runtime-instance-scope'
 import { resolveToggleFieldDefinition } from './resolve-form-field-definition'
 import {
   getFieldWrapperClassName,
@@ -30,7 +31,8 @@ export function ToggleNode({ node, iterationContext }: ToggleNodeProps) {
     return null
   }
 
-  const fieldState = selectFormFieldState(state, formContext.formId, node.props.fieldId)
+  const scopeKey = deriveScopedStateKey(formContext.formId, formContext.scopeChain ?? EMPTY_INSTANCE_SCOPE)
+  const fieldState = selectFormFieldState(state, scopeKey, node.props.fieldId)
   const fieldDefinition = resolveToggleFieldDefinition(node, state, iterationContext)
   const label = resolveRuntimeTextReference(node.props.label, state, 'toggle.props.label', { iterationContext })
   const tooltip = node.props.tooltip !== undefined
@@ -50,18 +52,19 @@ export function ToggleNode({ node, iterationContext }: ToggleNodeProps) {
 
   function handleClick() {
     const nextValue = !value
-    setFormFieldValue(formContext!.formId, node.props.fieldId, nextValue)
+    setFormFieldValue(formContext!.formId, node.props.fieldId, nextValue, { scopeChain: formContext!.scopeChain })
     if (error) {
       setFormFieldError(
         formContext!.formId,
         node.props.fieldId,
         getValidationErrorForEditedField({
           fieldDefinition,
-          formId: formContext!.formId,
+          formId: scopeKey,
           state,
           nextValue,
           iterationContext,
         }),
+        { scopeChain: formContext!.scopeChain },
       )
     }
   }

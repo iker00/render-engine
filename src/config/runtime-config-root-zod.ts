@@ -10,21 +10,25 @@ import {
   fileInputNodeSchema,
   fileManagerNodeSchema,
   formNodeSchema,
+  groupInstanceNodeSchema,
   headingNodeSchema,
   imageNodeSchema,
   inputNodeSchema,
   linkNodeSchema,
   listNodeSchema,
   modalNodeSchema,
+  nonEmptyStringSchema,
   paragraphNodeSchema,
   radioGroupNodeSchema,
   repeaterNodeSchema,
   runtimeApiOperationShellSchema,
+  runtimeGroupEntrySchema,
   runtimeTokensConfigSchema,
   runtimeTranslationsSchema,
   selectNodeSchema,
   shellSchema,
   skeletonNodeSchema,
+  slotNodeSchema,
   statNodeSchema,
   stepsNodeSchema,
   tabsNodeSchema,
@@ -65,6 +69,8 @@ const layoutNodeSchema: z.ZodType<unknown> = z.lazy(() =>
     fileInputNodeSchema,
     toggleNodeSchema,
     hiddenNodeSchema,
+    groupInstanceNodeLooseSchema,
+    slotNodeSchema,
   ]),
 )
 
@@ -127,6 +133,19 @@ const accordionNodeLooseSchema = accordionNodeSchema.extend({
   children: z.array(layoutNodeSchema).optional(),
 })
 
+const groupInstanceNodeLooseSchema = groupInstanceNodeSchema.extend({
+  children: z.array(layoutNodeSchema).optional(),
+})
+
+// `groups.{groupId}.template` is overridden the same way `repeater.props.template` is: the
+// structural shape (`params`, `template: array`) is defined once in `runtime-config-zod.ts`, and
+// `template` is widened here to accept the recursive layout node union.
+const runtimeGroupEntryLooseSchema = runtimeGroupEntrySchema.extend({
+  template: z.array(layoutNodeSchema),
+})
+
+const runtimeGroupsConfigLooseSchema = z.record(nonEmptyStringSchema, runtimeGroupEntryLooseSchema)
+
 // repeater.props.template is overridden directly; items/pagination keep the original shape
 const repeaterNodeLooseSchema = repeaterNodeSchema.extend({
   props: z
@@ -155,5 +174,6 @@ export const runtimeConfigRootSchema = z
     translations: runtimeTranslationsSchema.optional(),
     tokens: runtimeTokensConfigSchema.optional(),
     shell: shellSchema.optional(),
+    groups: runtimeGroupsConfigLooseSchema.optional(),
   })
   .strip()

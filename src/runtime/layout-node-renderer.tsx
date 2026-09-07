@@ -2,6 +2,8 @@ import type { MouseEvent, ReactNode } from 'react'
 import { useDraggable } from '@dnd-kit/core'
 import type { LayoutNode } from '../config/runtime-config'
 import type { RuntimeIterationContext } from './runtime-references/runtime-reference-resolver'
+import type { RuntimeInstanceScope } from './runtime-references/runtime-instance-scope'
+import { EMPTY_INSTANCE_SCOPE } from './runtime-references/runtime-instance-scope'
 import type { LayoutNodePath } from './layout-node-path'
 import { resolveLayoutNodeVisibility } from './runtime-layout-visibility'
 import { useRuntimeLayoutContext } from './use-runtime-layout-context'
@@ -35,10 +37,23 @@ export interface LayoutNodeRendererProps {
   node: LayoutNode
   renderedChildren?: ReactNode
   iterationContext?: RuntimeIterationContext
+  /**
+   * Cadena de scope ambiente (T02 / feature reusable-node-groups): viaja junto a
+   * `iterationContext` sin sustituirlo. Ausente equivale a `EMPTY_INSTANCE_SCOPE`. Hoy solo
+   * `repeater` la consume, para construir la cadena de sus iteraciones (T03/T04/T05/T12
+   * añadirán más consumidores).
+   */
+  scopeChain?: RuntimeInstanceScope
   path?: LayoutNodePath
 }
 
-export function LayoutNodeRenderer({ node, renderedChildren, iterationContext, path = [] }: LayoutNodeRendererProps) {
+export function LayoutNodeRenderer({
+  node,
+  renderedChildren,
+  iterationContext,
+  scopeChain = EMPTY_INSTANCE_SCOPE,
+  path = [],
+}: LayoutNodeRendererProps) {
   const state = useRuntimeState()
   const { parentGridColumns } = useRuntimeLayoutContext()
   const editModeContext = useLayoutEditModeContext()
@@ -64,7 +79,9 @@ export function LayoutNodeRenderer({ node, renderedChildren, iterationContext, p
   }
 
   if (resolvedVisibility.mode === 'fallback') {
-    const fallbackContent = <LayoutRenderer nodes={resolvedVisibility.fallback} iterationContext={iterationContext} />
+    const fallbackContent = (
+      <LayoutRenderer nodes={resolvedVisibility.fallback} iterationContext={iterationContext} scopeChain={scopeChain} />
+    )
 
     if (resolvedVisibility.visibleState === 'loading') {
       return <div role="status">{fallbackContent}</div>
@@ -87,7 +104,7 @@ export function LayoutNodeRenderer({ node, renderedChildren, iterationContext, p
     }
     case 'repeater': {
       const RepeaterNode = NodeComponents.repeater
-      renderedNode = <RepeaterNode node={node} path={path} />
+      renderedNode = <RepeaterNode node={node} path={path} scopeChain={scopeChain} />
       break
     }
     case 'heading': {
@@ -117,7 +134,7 @@ export function LayoutNodeRenderer({ node, renderedChildren, iterationContext, p
     }
     case 'button': {
       const ButtonNode = NodeComponents.button
-      renderedNode = <ButtonNode node={node} iterationContext={iterationContext} />
+      renderedNode = <ButtonNode node={node} iterationContext={iterationContext} scopeChain={scopeChain} />
       break
     }
     case 'link': {
@@ -127,12 +144,16 @@ export function LayoutNodeRenderer({ node, renderedChildren, iterationContext, p
     }
     case 'modal': {
       const ModalNode = NodeComponents.modal
-      renderedNode = <ModalNode node={node} iterationContext={iterationContext}>{renderedChildren}</ModalNode>
+      renderedNode = <ModalNode node={node} scopeChain={scopeChain}>{renderedChildren}</ModalNode>
       break
     }
     case 'form': {
       const FormNode = NodeComponents.form
-      renderedNode = <FormNode node={node} iterationContext={iterationContext}>{renderedChildren}</FormNode>
+      renderedNode = (
+        <FormNode node={node} iterationContext={iterationContext} scopeChain={scopeChain}>
+          {renderedChildren}
+        </FormNode>
+      )
       break
     }
     case 'input': {
@@ -167,7 +188,9 @@ export function LayoutNodeRenderer({ node, renderedChildren, iterationContext, p
     }
     case 'accordion': {
       const AccordionNode = NodeComponents.accordion
-      renderedNode = <AccordionNode node={node} iterationContext={iterationContext} path={path} />
+      renderedNode = (
+        <AccordionNode node={node} iterationContext={iterationContext} path={path} scopeChain={scopeChain} />
+      )
       break
     }
     case 'badge': {
@@ -233,6 +256,20 @@ export function LayoutNodeRenderer({ node, renderedChildren, iterationContext, p
     case 'autocomplete': {
       const AutocompleteNode = NodeComponents.autocomplete
       renderedNode = <AutocompleteNode node={node} iterationContext={iterationContext} />
+      break
+    }
+    case 'group': {
+      const GroupNode = NodeComponents.group
+      renderedNode = (
+        <GroupNode node={node} iterationContext={iterationContext} scopeChain={scopeChain}>
+          {renderedChildren}
+        </GroupNode>
+      )
+      break
+    }
+    case 'slot': {
+      const SlotNode = NodeComponents.slot
+      renderedNode = <SlotNode node={node} />
       break
     }
   }

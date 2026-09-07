@@ -23,11 +23,15 @@ export function HiddenNode({ node, iterationContext }: HiddenNodeProps) {
     const resolvedValue = resolveRuntimeValueWithOptions(node.props.value, state, { iterationContext })
     const value = resolvedValue.status === 'resolved' ? resolvedValue.value : node.props.value
 
-    initializeForm(formContext.formId, {
-      [node.props.fieldId]: {
-        defaultValue: value,
+    initializeForm(
+      formContext.formId,
+      {
+        [node.props.fieldId]: {
+          defaultValue: value,
+        },
       },
-    })
+      { scopeChain: formContext.scopeChain },
+    )
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 

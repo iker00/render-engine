@@ -2,6 +2,8 @@ import { useId, useState } from 'react'
 import type { AccordionLayoutNode } from '../../config/runtime-config'
 import type { RuntimeIterationContext } from '../runtime-references/runtime-reference-resolver'
 import { resolveRuntimeTextReference } from '../runtime-references/runtime-reference-resolver'
+import type { RuntimeInstanceScope } from '../runtime-references/runtime-instance-scope'
+import { EMPTY_INSTANCE_SCOPE } from '../runtime-references/runtime-instance-scope'
 import { useRuntimeState } from '../runtime-state/use-runtime-state'
 import { LayoutRenderer } from '../layout-renderer'
 import { useAccordionGroup } from '../use-accordion-group'
@@ -19,9 +21,16 @@ interface AccordionNodeProps {
   node: AccordionLayoutNode
   iterationContext?: RuntimeIterationContext
   path?: LayoutNodePath
+  /**
+   * Cadena de scope ambiente (T04 / feature reusable-node-groups): aísla la coordinación por
+   * `props.groupId` por cadena de scope, para que dos accordions con el mismo `groupId` en
+   * iteraciones distintas de un `repeater` no se coordinen entre sí.
+   */
+  scopeChain?: RuntimeInstanceScope
 }
 
-export function AccordionNode({ node, iterationContext, path }: AccordionNodeProps) {
+export function AccordionNode({ node, iterationContext, path, scopeChain }: AccordionNodeProps) {
+  const resolvedScopeChain = scopeChain ?? EMPTY_INSTANCE_SCOPE
   const state = useRuntimeState()
   const { label, defaultOpen = false, groupId } = node.props
   const instanceId = useId()
@@ -37,7 +46,7 @@ export function AccordionNode({ node, iterationContext, path }: AccordionNodePro
     }
 
     if (defaultOpen) {
-      return claimDefaultOpen(groupId, instanceId)
+      return claimDefaultOpen(groupId, instanceId, resolvedScopeChain)
     }
 
     return false
@@ -48,7 +57,7 @@ export function AccordionNode({ node, iterationContext, path }: AccordionNodePro
   // (tracking the previous active instance id in state) instead of an effect: the guard below
   // only reacts once per actual change of the group's active instance, so it cannot loop, and
   // it skips re-running on renders unrelated to this accordion's group membership.
-  const activeGroupInstanceId = groupId ? getActiveInstanceId(groupId) : null
+  const activeGroupInstanceId = groupId ? getActiveInstanceId(groupId, resolvedScopeChain) : null
   const [prevActiveGroupInstanceId, setPrevActiveGroupInstanceId] = useState(activeGroupInstanceId)
   if (groupId && activeGroupInstanceId !== prevActiveGroupInstanceId) {
     setPrevActiveGroupInstanceId(activeGroupInstanceId)
@@ -74,11 +83,11 @@ export function AccordionNode({ node, iterationContext, path }: AccordionNodePro
   const handleToggle = () => {
     if (groupId) {
       if (isOpen) {
-        closeInGroup(groupId)
+        closeInGroup(groupId, resolvedScopeChain)
         setIsOpen(false)
         setIsClosing(true)
       } else {
-        openInGroup(groupId, instanceId)
+        openInGroup(groupId, instanceId, resolvedScopeChain)
         setIsOpen(true)
         setIsClosing(false)
       }

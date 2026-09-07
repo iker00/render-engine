@@ -4,6 +4,7 @@ import type { ButtonLayoutNode, RuntimeUiAction } from '../../config/runtime-con
 import { FormContextProvider } from '../../runtime/form-context'
 import { ButtonNode } from '../../runtime/nodes/button-layout-node'
 import * as runtimeUiActionExecutor from '../../runtime/runtime-actions/runtime-ui-action-executor'
+import { EMPTY_INSTANCE_SCOPE } from '../../runtime/runtime-references/runtime-instance-scope'
 
 const useRuntimeStateActionsMock = vi.fn()
 const runtimeStateMock = {
@@ -166,7 +167,7 @@ describe('executeRuntimeUiAction', () => {
       handlers,
     )
 
-    expect(handlers.resetForm).toHaveBeenCalledWith('search-form')
+    expect(handlers.resetForm).toHaveBeenCalledWith('search-form', { scopeChain: undefined })
     expect(handlers.navigateToPage).not.toHaveBeenCalled()
     expect(handlers.goBackPage).not.toHaveBeenCalled()
     expect(handlers.executeQueryOperation).not.toHaveBeenCalled()
@@ -184,7 +185,7 @@ describe('executeRuntimeUiAction', () => {
     )
 
     expect(handlers.openModal).toHaveBeenCalledWith('my-modal', {
-      iterationContext: undefined,
+      scopeChain: undefined,
     })
     expect(handlers.closeModal).not.toHaveBeenCalled()
     expect(handlers.navigateToPage).not.toHaveBeenCalled()
@@ -205,7 +206,7 @@ describe('executeRuntimeUiAction', () => {
     )
 
     expect(handlers.closeModal).toHaveBeenCalledWith('my-modal', {
-      iterationContext: undefined,
+      scopeChain: undefined,
     })
     expect(handlers.openModal).not.toHaveBeenCalled()
     expect(handlers.navigateToPage).not.toHaveBeenCalled()
@@ -214,9 +215,9 @@ describe('executeRuntimeUiAction', () => {
     expect(handlers.resetForm).not.toHaveBeenCalled()
   })
 
-  it('propagates iterationContext to openModal', () => {
+  it('propagates scopeChain to openModal', () => {
     const handlers = createHandlers()
-    const iterationContext = { item: { id: 'row-1' }, key: 'row-1', itemIndex: 0 }
+    const scopeChain = [{ kind: 'repeater' as const, key: 'row-1' }]
 
     runtimeUiActionExecutor.executeRuntimeUiAction(
       {
@@ -224,15 +225,15 @@ describe('executeRuntimeUiAction', () => {
         modalId: 'my-modal',
       },
       handlers,
-      { iterationContext },
+      { scopeChain },
     )
 
-    expect(handlers.openModal).toHaveBeenCalledWith('my-modal', { iterationContext })
+    expect(handlers.openModal).toHaveBeenCalledWith('my-modal', { scopeChain })
   })
 
-  it('propagates iterationContext to closeModal', () => {
+  it('propagates scopeChain to closeModal', () => {
     const handlers = createHandlers()
-    const iterationContext = { item: { id: 'row-2' }, key: 'row-2', itemIndex: 0 }
+    const scopeChain = [{ kind: 'repeater' as const, key: 'row-2' }]
 
     runtimeUiActionExecutor.executeRuntimeUiAction(
       {
@@ -240,10 +241,26 @@ describe('executeRuntimeUiAction', () => {
         modalId: 'my-modal',
       },
       handlers,
-      { iterationContext },
+      { scopeChain },
     )
 
-    expect(handlers.closeModal).toHaveBeenCalledWith('my-modal', { iterationContext })
+    expect(handlers.closeModal).toHaveBeenCalledWith('my-modal', { scopeChain })
+  })
+
+  it('propagates scopeChain to resetForm (T05, feature reusable-node-groups)', () => {
+    const handlers = createHandlers()
+    const scopeChain = [{ kind: 'repeater' as const, key: 'row-3' }]
+
+    runtimeUiActionExecutor.executeRuntimeUiAction(
+      {
+        type: 'resetForm',
+        formId: 'search-form',
+      },
+      handlers,
+      { scopeChain },
+    )
+
+    expect(handlers.resetForm).toHaveBeenCalledWith('search-form', { scopeChain })
   })
 
   it('calls executeQueryOperation once per entry when executeOperations has two entries in the same tick', () => {
@@ -510,6 +527,7 @@ describe('ButtonNode', () => {
       runtimeHandlers,
       {
         iterationContext: undefined,
+        scopeChain: EMPTY_INSTANCE_SCOPE,
       },
     )
   })

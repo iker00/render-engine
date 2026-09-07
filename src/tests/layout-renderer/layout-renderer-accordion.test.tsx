@@ -504,7 +504,7 @@ describe('AccordionNode — inside repeater (T-04)', () => {
     expect(screen.queryByText('Desc 2')).not.toBeInTheDocument()
   })
 
-  it('accordions with groupId in repeater template: opening one iteration collapses another in the same group', () => {
+  it('accordions with groupId in repeater template: opening one iteration does NOT collapse another iteration in the same nominal group (T04, scope-chain isolation)', () => {
     const page: RuntimePageConfig = {
       id: 'home',
       layout: [
@@ -537,7 +537,7 @@ describe('AccordionNode — inside repeater (T-04)', () => {
       },
     })
 
-    const { container } = renderRuntimePageWithState(page, state)
+    renderRuntimePageWithState(page, state)
 
     const [firstBtn, secondBtn] = screen.getAllByRole('button')
 
@@ -546,18 +546,109 @@ describe('AccordionNode — inside repeater (T-04)', () => {
     expect(screen.getByText('Desc 1')).toBeInTheDocument()
     expect(screen.queryByText('Desc 2')).not.toBeInTheDocument()
 
-    // Open the second — first starts close animation
+    // Open the second — each repeater iteration is a distinct scope chain, so the first
+    // stays open instead of animating closed.
     fireEvent.click(secondBtn)
     expect(screen.getByText('Desc 2')).toBeInTheDocument()
+    expect(screen.getByText('Desc 1')).toBeInTheDocument()
+  })
 
-    // Simulate animation completion on closing body
+  it('two accordions with the same groupId as siblings within the same repeater iteration still coordinate (same effective scope)', () => {
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [
+        {
+          type: 'repeater',
+          props: {
+            items: { source: 'queries.list.data', key: 'id' },
+            template: [
+              {
+                type: 'accordion',
+                props: { label: 'item.title', groupId: 'grupo-hermanos', defaultOpen: true },
+                children: [{ type: 'paragraph', props: { text: 'item.first' } }],
+              },
+              {
+                type: 'accordion',
+                props: { label: 'item.titleTwo', groupId: 'grupo-hermanos' },
+                children: [{ type: 'paragraph', props: { text: 'item.second' } }],
+              },
+            ],
+          },
+        },
+      ],
+    }
+
+    const state = createRuntimePageState(page, {
+      list: {
+        status: 'success',
+        data: [{ id: '1', title: 'Uno', titleTwo: 'Dos', first: 'Primero', second: 'Segundo' }],
+        requestedAt: 0,
+        resolvedAt: 0,
+        error: null,
+      },
+    })
+
+    const { container } = renderRuntimePageWithState(page, state)
+
+    expect(screen.getByText('Primero')).toBeInTheDocument()
+    expect(screen.queryByText('Segundo')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Dos' }))
+
+    expect(screen.getByText('Segundo')).toBeInTheDocument()
+
     const bodies = container.querySelectorAll('[data-layout-node="accordion-body"]')
-    const closingBody = Array.from(bodies).find((b) =>
-      b.classList.contains('animate-accordion-close'),
-    )
+    const closingBody = Array.from(bodies).find((b) => b.classList.contains('animate-accordion-close'))
     if (closingBody) fireEvent.animationEnd(closingBody)
 
-    expect(screen.queryByText('Desc 1')).not.toBeInTheDocument()
+    expect(screen.queryByText('Primero')).not.toBeInTheDocument()
+  })
+
+  it('an accordion with groupId inside a repeater template does NOT coordinate with an accordion with the same groupId outside the repeater (distinct scope chains)', () => {
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [
+        {
+          type: 'accordion',
+          props: { label: 'Fuera del repeater', groupId: 'grupo-mixto', defaultOpen: true },
+          children: [{ type: 'paragraph', props: { text: 'Cuerpo fuera' } }],
+        },
+        {
+          type: 'repeater',
+          props: {
+            items: { source: 'queries.list.data', key: 'id' },
+            template: [
+              {
+                type: 'accordion',
+                props: { label: 'item.title', groupId: 'grupo-mixto', defaultOpen: false },
+                children: [{ type: 'paragraph', props: { text: 'item.description' } }],
+              },
+            ],
+          },
+        },
+      ],
+    }
+
+    const state = createRuntimePageState(page, {
+      list: {
+        status: 'success',
+        data: [{ id: '1', title: 'Fila 1', description: 'Desc 1' }],
+        requestedAt: 0,
+        resolvedAt: 0,
+        error: null,
+      },
+    })
+
+    renderRuntimePageWithState(page, state)
+
+    expect(screen.getByText('Cuerpo fuera')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Fila 1' }))
+
+    // Opening the repeater instance must not close the page-level accordion in the same
+    // nominal group, because they live in different scope chains.
+    expect(screen.getByText('Desc 1')).toBeInTheDocument()
+    expect(screen.getByText('Cuerpo fuera')).toBeInTheDocument()
   })
 })
 

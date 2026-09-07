@@ -29,7 +29,7 @@ import { isRecord, formatPathSegment } from './validate-node-shared-helpers'
 // (e.g. `sidebar`) appears — see design decision 4.
 
 const collectionPathSegmentPattern = /^[A-Za-z0-9_-]+$/
-const paramsReferencePattern = /^params\.[A-Za-z0-9_-]+$/
+const paramsReferencePattern = /^(params|group)\.[A-Za-z0-9_-]+$/
 const visibilityComparisonOperators = new Set<RuntimeVisibilityOperator>(['equals', 'notEquals', 'greaterThan', 'lessThan', 'arrayContains'])
 const visibilityScalarOperators = new Set<RuntimeVisibilityOperator>(['equals', 'notEquals'])
 const visibilityTruthinessOperators = new Set<RuntimeVisibilityOperator>(['isTruthy', 'isFalsy'])
@@ -256,7 +256,7 @@ function validateShellVisibilityCondition(
     }
 
     return invalidLayout(
-      `Shell configuration is invalid at "${conditionPath}.reference": visibility references must use params.{paramName}, forms.{formId}.{fieldId} or queries.{queryName}(.data|.status|.error).`,
+      `Shell configuration is invalid at "${conditionPath}.reference": visibility references must use params.{paramName}, group.{paramName}, forms.{formId}.{fieldId} or queries.{queryName}(.data|.status|.error).`,
     )
   }
 

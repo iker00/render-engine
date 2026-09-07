@@ -1,11 +1,11 @@
-import { LayoutTemplate, Plug, StickyNote, KeyRound, Languages, PanelTop, Braces, Plus, SquarePen, Save } from 'lucide-react'
+import { LayoutTemplate, Plug, StickyNote, KeyRound, Languages, PanelTop, Blocks, Braces, Plus, SquarePen, Save } from 'lucide-react'
 import type {
   EndpointOperationUnavailableReason,
   ResolvedEndpointOperation,
 } from '../endpoints-config/resolve-endpoint-operation'
 
 export type ToolbarMode = 'visual' | 'editor'
-export type ToolbarDomain = 'layout' | 'api' | 'shell' | 'translations' | 'pages' | 'tokens'
+export type ToolbarDomain = 'layout' | 'api' | 'shell' | 'translations' | 'pages' | 'tokens' | 'groups'
 
 // T6 (0131): save-config request state, owned by DevRuntimeReady (T5) and received here already
 // computed — this component never tracks its own save state.
@@ -95,6 +95,7 @@ export function DevEditorFloatingToolbar({
   const isTranslationsActive = activeDomain === 'translations'
   const isPagesActive = activeDomain === 'pages'
   const isTokensActive = activeDomain === 'tokens'
+  const isGroupsActive = activeDomain === 'groups'
 
   const isSaveUnavailable = saveResolution.status === 'unavailable'
   const isSaving = saveState === 'loading'
@@ -179,6 +180,15 @@ export function DevEditorFloatingToolbar({
           onClick={() => onDomainSelected('shell')}
         >
           <PanelTop size={14} /> Shell
+        </button>
+        <button
+          type="button"
+          data-testid="dev-editor-toolbar-domain-groups"
+          className={buttonClasses({ pressed: isGroupsActive })}
+          aria-pressed={isGroupsActive}
+          onClick={() => onDomainSelected('groups')}
+        >
+          <Blocks size={14} /> Grupos
         </button>
       </div>
 

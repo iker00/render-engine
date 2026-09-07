@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef } from 'react'
 import type { ReactNode } from 'react'
 import type { ModalLayoutNode } from '../../config/runtime-config'
-import type { RuntimeIterationContext } from '../runtime-references/runtime-reference-resolver'
+import type { RuntimeInstanceScope } from '../runtime-references/runtime-instance-scope'
+import { EMPTY_INSTANCE_SCOPE } from '../runtime-references/runtime-instance-scope'
 import { getModalOverlayClassName, getModalPanelClassName } from '../runtime-node-styling'
 import { isModalOpen } from '../runtime-state/runtime-state-selectors'
 import { useRuntimeState, useRuntimeStateActions } from '../runtime-state/use-runtime-state'
@@ -10,16 +11,16 @@ import { useLayoutEditModeContext } from '../use-layout-edit-mode-context'
 interface ModalNodeProps {
   node: ModalLayoutNode
   children?: ReactNode
-  iterationContext?: RuntimeIterationContext
+  scopeChain?: RuntimeInstanceScope
 }
 
-export function ModalNode({ node, children, iterationContext }: ModalNodeProps) {
+export function ModalNode({ node, children, scopeChain }: ModalNodeProps) {
+  const resolvedScopeChain = scopeChain ?? EMPTY_INSTANCE_SCOPE
   const state = useRuntimeState()
   const { openModal, closeModal } = useRuntimeStateActions()
   const editModeContext = useLayoutEditModeContext()
   const isEditMode = editModeContext !== null && editModeContext.active
-  const iterationKey = iterationContext?.key
-  const open = isEditMode || isModalOpen(state, node.id, iterationKey)
+  const open = isEditMode || isModalOpen(state, node.id, resolvedScopeChain)
   const defaultOpen = node.props?.defaultOpen ?? false
   const pageEntryId = state.pageEntry.entryId
   const lastAutoOpenedEntryIdRef = useRef<number | null>(null)
@@ -31,8 +32,8 @@ export function ModalNode({ node, children, iterationContext }: ModalNodeProps) 
     if (!defaultOpen) return
     if (lastAutoOpenedEntryIdRef.current === pageEntryId) return
     lastAutoOpenedEntryIdRef.current = pageEntryId
-    openModal(node.id, { iterationContext })
-  }, [isEditMode, defaultOpen, pageEntryId, node.id, openModal, iterationContext])
+    openModal(node.id, { scopeChain: resolvedScopeChain })
+  }, [isEditMode, defaultOpen, pageEntryId, node.id, openModal, resolvedScopeChain])
 
   useEffect(() => {
     if (isEditMode) return
@@ -47,8 +48,8 @@ export function ModalNode({ node, children, iterationContext }: ModalNodeProps) 
   }, [isEditMode, open])
 
   const handleClose = useCallback(() => {
-    closeModal(node.id, { iterationContext })
-  }, [closeModal, node.id, iterationContext])
+    closeModal(node.id, { scopeChain: resolvedScopeChain })
+  }, [closeModal, node.id, resolvedScopeChain])
 
   const handleOverlayClick = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {

@@ -10,7 +10,8 @@ import type {
 import { formNodeSchema } from './runtime-config-zod'
 import type { BreadcrumbSegment } from './validation-breadcrumb'
 import { enrichedInvalidLayout, enrichErrorResult } from './validation-breadcrumb'
-import { validateLayoutCollection, validateQueryStateFeedback } from './validate-layout-nodes-core'
+import type { LayoutValidationCtx } from './validate-layout-nodes-core'
+import { defaultLayoutValidationCtx, validateLayoutCollection, validateQueryStateFeedback } from './validate-layout-nodes-core'
 import { mapLayoutNodeIssue } from './validate-layout-issue-mapping'
 import { mapQueryStateFeedbackIssue, mapVisibilityIssue, validateFormSubmitAction, validateVisibility } from './validate-actions-visibility'
 import { formatPathSegment } from './validate-node-shared-helpers'
@@ -20,6 +21,7 @@ export function validateFormNode(
   path: string,
   pageId: string,
   breadcrumb: BreadcrumbSegment[] = [],
+  ctx: LayoutValidationCtx = defaultLayoutValidationCtx,
 ): { status: 'ready'; node: FormLayoutNode } | { status: 'error'; error: RuntimeConfigError } {
   const parseResult = formNodeSchema.safeParse(rawNode)
 
@@ -107,7 +109,7 @@ export function validateFormNode(
   }
 
   if (parseResult.data.children !== undefined) {
-    const childrenResult = validateLayoutCollection(parseResult.data.children, `${path}.children`, pageId, breadcrumb)
+    const childrenResult = validateLayoutCollection(parseResult.data.children, `${path}.children`, pageId, breadcrumb, ctx)
 
     if (childrenResult.status === 'error') {
       return childrenResult

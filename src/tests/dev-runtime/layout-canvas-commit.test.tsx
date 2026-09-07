@@ -33,6 +33,7 @@ import {
 import {
   DevRuntimeReady,
   type CommitCanvasMutationResult,
+  type CommitResult,
   type DevRuntimeReadyHandle,
 } from '../../dev-runtime/dev-runtime'
 import { triggerActiveConfigHmrApplyForTests } from '../../dev-runtime/dev-runtime-hmr-bridge'
@@ -600,6 +601,94 @@ describe('commitCanvasMutation via DevRuntimeReady', () => {
 
     const editorText = (screen.getByTestId('monaco-editor-mock') as HTMLTextAreaElement).value
     expect(JSON.parse(editorText).pages[0].title).toBe('applied-title')
+  })
+
+  it('is a page-layout commit under the hood: commitLayoutMutation with a page-layout target patches pages[pageId].layout exactly like commitCanvasMutation (regression zero)', async () => {
+    const config = { api: {}, pages: [{ id: 'home', layout: [heading('Original')] }], initialPage: 'home' }
+    const ref = createRef<DevRuntimeReadyHandle>()
+    const { initialConfig, initialConfigText } = buildReadyProps(config)
+    render(<DevRuntimeReady ref={ref} initialConfig={initialConfig} initialConfigText={initialConfigText} />)
+
+    let result: CommitResult | undefined
+    act(() => {
+      result = ref.current?.commitLayoutMutation({ kind: 'page-layout', pageId: 'home' }, (layout) => [
+        ...layout,
+        heading('Added by target commit'),
+      ])
+    })
+
+    expect(result).toEqual({ status: 'applied' })
+    expect(screen.getByText('Added by target commit')).toBeInTheDocument()
+
+    openDrawer()
+    const parsed = JSON.parse(await getMonacoValue())
+    expect(parsed.pages[0].layout).toEqual([heading('Original'), heading('Added by target commit')])
+    expect(parsed.groups).toBeUndefined()
+  })
+
+  it('with a group-template target, patches groups.card.template without touching any other branch of the config', async () => {
+    const config = {
+      api: {},
+      pages: [{ id: 'home', layout: [heading('Original')] }],
+      initialPage: 'home',
+      groups: {
+        card: { params: ['title'], template: [heading('Card original')] },
+      },
+    }
+    const ref = createRef<DevRuntimeReadyHandle>()
+    const { initialConfig, initialConfigText } = buildReadyProps(config)
+    render(<DevRuntimeReady ref={ref} initialConfig={initialConfig} initialConfigText={initialConfigText} />)
+
+    let result: CommitResult | undefined
+    act(() => {
+      result = ref.current?.commitLayoutMutation({ kind: 'group-template', groupId: 'card' }, (layout) => [
+        ...layout,
+        heading('Added to card'),
+      ])
+    })
+
+    expect(result).toEqual({ status: 'applied' })
+
+    openDrawer()
+    const parsed = JSON.parse(await getMonacoValue())
+    expect(parsed.groups.card).toEqual({
+      params: ['title'],
+      template: [heading('Card original'), heading('Added to card')],
+    })
+    expect(parsed.pages[0].layout).toEqual([heading('Original')])
+  })
+
+  it('rejects a commit against a group-template target whose groupId does not exist, with the same "no aplica, no rompe" semantics as a missing page target', async () => {
+    const config = { api: {}, pages: [{ id: 'home', layout: [heading('Original')] }], initialPage: 'home' }
+    const ref = createRef<DevRuntimeReadyHandle>()
+    const { initialConfig, initialConfigText } = buildReadyProps(config)
+    render(<DevRuntimeReady ref={ref} initialConfig={initialConfig} initialConfigText={initialConfigText} />)
+
+    let groupResult: CommitResult | undefined
+    act(() => {
+      groupResult = ref.current?.commitLayoutMutation({ kind: 'group-template', groupId: 'missing' }, (layout) => [
+        ...layout,
+        heading('Should not apply'),
+      ])
+    })
+    expect(groupResult?.status).toBe('rejected')
+
+    let pageResult: CommitResult | undefined
+    act(() => {
+      pageResult = ref.current?.commitLayoutMutation({ kind: 'page-layout', pageId: 'missing' }, (layout) => [
+        ...layout,
+        heading('Should not apply either'),
+      ])
+    })
+    expect(pageResult?.status).toBe('rejected')
+
+    expect(screen.queryByText('Should not apply')).not.toBeInTheDocument()
+    expect(screen.queryByText('Should not apply either')).not.toBeInTheDocument()
+    expect(screen.getByText('Original')).toBeInTheDocument()
+
+    openDrawer()
+    const editorText = await getMonacoValue()
+    expect(editorText).toBe(initialConfigText)
   })
 
   it('updates lastValidConfigText unconditionally on a valid HMR apply, even while editorBuffer keeps a pending edit', async () => {

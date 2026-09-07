@@ -7,7 +7,8 @@ import type {
 import { containerNodeSchema } from './runtime-config-zod'
 import type { BreadcrumbSegment } from './validation-breadcrumb'
 import { enrichedInvalidLayout, enrichErrorResult } from './validation-breadcrumb'
-import { validateLayoutCollection, validateQueryStateFeedback } from './validate-layout-nodes-core'
+import type { LayoutValidationCtx } from './validate-layout-nodes-core'
+import { defaultLayoutValidationCtx, validateLayoutCollection, validateQueryStateFeedback } from './validate-layout-nodes-core'
 import { mapGridLayoutIssue, mapLayoutNodeIssue } from './validate-layout-issue-mapping'
 import { mapQueryStateFeedbackIssue, mapVisibilityIssue, validateVisibility } from './validate-actions-visibility'
 
@@ -16,6 +17,7 @@ export function validateContainerNode(
   path: string,
   pageId: string,
   breadcrumb: BreadcrumbSegment[] = [],
+  ctx: LayoutValidationCtx = defaultLayoutValidationCtx,
 ): { status: 'ready'; node: ContainerLayoutNode } | { status: 'error'; error: RuntimeConfigError } {
   const parseResult = containerNodeSchema.safeParse(rawNode)
 
@@ -106,7 +108,7 @@ export function validateContainerNode(
   let children: LayoutNodeCollection | undefined
 
   if (parseResult.data.children !== undefined) {
-    const childrenResult = validateLayoutCollection(parseResult.data.children, `${path}.children`, pageId, breadcrumb)
+    const childrenResult = validateLayoutCollection(parseResult.data.children, `${path}.children`, pageId, breadcrumb, ctx)
 
     if (childrenResult.status === 'error') {
       return childrenResult

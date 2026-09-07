@@ -3,7 +3,13 @@ import type { LayoutNode, LayoutNodeCollection } from '../config/runtime-config'
 export type EmptyPlaceholderNodeType = 'container' | 'form' | 'link'
 
 export function hasChildren(node: LayoutNode): node is Extract<LayoutNode, { children?: LayoutNodeCollection }> {
-  return node.type === 'container' || node.type === 'form' || node.type === 'modal' || node.type === 'link'
+  return (
+    node.type === 'container' ||
+    node.type === 'form' ||
+    node.type === 'modal' ||
+    node.type === 'link' ||
+    node.type === 'group'
+  )
 }
 
 export function isEmptyPlaceholderCandidate(

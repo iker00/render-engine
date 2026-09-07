@@ -7,6 +7,7 @@ import {
   resolveRuntimeTextReference,
   resolveRuntimeVisibleValue,
 } from '../../runtime/runtime-references/runtime-reference-resolver'
+import { pushRepeaterScopeToken } from '../../runtime/runtime-references/runtime-instance-scope'
 import type { RuntimeState } from '../../runtime/runtime-state/runtime-state-types'
 
 const runtimeState: RuntimeState = {
@@ -2248,6 +2249,148 @@ describe('Runtime reference resolution', () => {
           'heading.props.text',
         ),
       ).toBe('3')
+    })
+  })
+
+  describe('T05 forms.* resolution under a scope chain (feature reusable-node-groups)', () => {
+    const iteration1Scope = pushRepeaterScopeToken([], '1')
+    const iteration2Scope = pushRepeaterScopeToken([], '2')
+
+    const scopedFormsState: RuntimeState = {
+      ...runtimeState,
+      forms: {
+        'row-form::r:1': {
+          name: { value: 'Iteration one', error: null, touched: true, dirty: true, defaultValue: '' },
+        },
+        'row-form::r:2': {
+          name: { value: 'Iteration two', error: null, touched: false, dirty: false, defaultValue: '' },
+        },
+      },
+    }
+
+    it('resolves forms.{formId}.{fieldId} against the effective scoped key when a scope is provided', () => {
+      expect(
+        resolveRuntimeReference('forms.row-form.name', scopedFormsState, { scope: iteration1Scope }),
+      ).toEqual({
+        status: 'resolved',
+        value: 'Iteration one',
+        reference: parseRuntimeReference('forms.row-form.name'),
+      })
+
+      expect(
+        resolveRuntimeReference('forms.row-form.name', scopedFormsState, { scope: iteration2Scope }),
+      ).toEqual({
+        status: 'resolved',
+        value: 'Iteration two',
+        reference: parseRuntimeReference('forms.row-form.name'),
+      })
+    })
+
+    it('degrades to missing when the same reference is resolved without the matching scope', () => {
+      expect(resolveRuntimeReference('forms.row-form.name', scopedFormsState)).toEqual({
+        status: 'missing',
+        reference: parseRuntimeReference('forms.row-form.name'),
+      })
+
+      expect(
+        resolveRuntimeReference('forms.row-form.name', scopedFormsState, { scope: [] }),
+      ).toEqual({
+        status: 'missing',
+        reference: parseRuntimeReference('forms.row-form.name'),
+      })
+    })
+
+    it('keeps resolving forms.* by its literal id when no scope chain applies (cero regresión)', () => {
+      expect(resolveRuntimeReference('forms.userSearch.name', runtimeState, { scope: [] })).toEqual({
+        status: 'resolved',
+        value: 'Grace',
+        reference: parseRuntimeReference('forms.userSearch.name'),
+      })
+    })
+  })
+
+  describe('T10 group.* resolution against ambient group context (feature reusable-node-groups)', () => {
+    it('resolves group.{paramName} against the provided groupContext', () => {
+      expect(
+        resolveRuntimeReference('group.title', runtimeState, {
+          groupContext: { paramValues: { title: 'Hola' } },
+        }),
+      ).toEqual({
+        status: 'resolved',
+        value: 'Hola',
+        reference: parseRuntimeReference('group.title'),
+      })
+    })
+
+    it('degrades group.{paramName} to an empty string in text surfaces when no groupContext is provided', () => {
+      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+      expect(resolveRuntimeReference('group.title', runtimeState)).toEqual({
+        status: 'missing',
+        reference: parseRuntimeReference('group.title'),
+      })
+
+      expect(resolveRuntimeVisibleValue('group.title', runtimeState, 'heading.props.text')).toBe('')
+
+      consoleWarnSpy.mockRestore()
+    })
+
+    it('degrades group.{paramName} to an empty string when groupContext does not provide that paramName', () => {
+      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+      expect(
+        resolveRuntimeReference('group.title', runtimeState, { groupContext: { paramValues: {} } }),
+      ).toEqual({
+        status: 'missing',
+        reference: parseRuntimeReference('group.title'),
+      })
+
+      expect(
+        resolveRuntimeVisibleValue('group.title', runtimeState, 'heading.props.text', {
+          groupContext: { paramValues: {} },
+        }),
+      ).toBe('')
+
+      consoleWarnSpy.mockRestore()
+    })
+
+    it('interpolates group.{paramName} as a partial placeholder within a larger visible string', () => {
+      expect(
+        resolveRuntimeVisibleValue('Hola {{group.title}}', runtimeState, 'heading.props.text', {
+          groupContext: { paramValues: { title: 'Hola' } },
+        }),
+      ).toBe('Hola Hola')
+    })
+
+    it('resolves params.*, item.* and group.* independently within the same interpolated string', () => {
+      const stateWithSectionParam: RuntimeState = {
+        ...runtimeState,
+        navigation: {
+          currentPageId: 'details',
+          history: [{ entryId: 0, pageId: 'details', params: { section: 'Overview' } }],
+          currentEntryIndex: 0,
+          lastError: null,
+        },
+        pageEntry: {
+          entryId: 0,
+          pageId: 'details',
+          params: { section: 'Overview' },
+          preloadNames: [],
+          status: 'idle',
+        },
+      }
+
+      expect(
+        resolveRuntimeVisibleValue(
+          '{{params.section}} — {{item.name}} — {{group.title}}',
+          stateWithSectionParam,
+          'heading.props.text',
+          {
+            iterationContext: { item: { name: 'Widget' } },
+            groupContext: { paramValues: { title: 'Group title' } },
+          },
+        ),
+      ).toBe('Overview — Widget — Group title')
     })
   })
 })

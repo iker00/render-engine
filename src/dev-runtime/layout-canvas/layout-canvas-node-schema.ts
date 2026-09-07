@@ -17,6 +17,7 @@ import {
   fileManagerNodeSchema,
   formNodeSchema,
   galleryNodeSchema,
+  groupInstanceNodeSchema,
   headingNodeSchema,
   hiddenNodeSchema,
   imageNodeSchema,
@@ -30,6 +31,7 @@ import {
   repeaterNodeSchema,
   selectNodeSchema,
   skeletonNodeSchema,
+  slotNodeSchema,
   statNodeSchema,
   stepsNodeSchema,
   supportedNodeTypes,
@@ -38,6 +40,15 @@ import {
   textareaNodeSchema,
   toggleNodeSchema,
 } from '../../config/runtime-config-zod'
+
+// `slot` is structurally part of the catalog (`supportedNodeTypes`, T06) but is not wired into
+// the visual editor: it only ever makes sense inside a group's own `template` (edited by T14's
+// `DevEditorGroupsCanvas`, which reuses this same catalog), and `group` templates never nest
+// another `group`/reuse the generic default-instance flow for `slot` — authoring a template's
+// `slot` placement stays a Monaco-only edit. `group` itself is insertable (T15): see
+// `layout-canvas-node-palette-defaults.ts`'s `group` case for why its placeholder instance
+// (`groupId: ''`) is always valid to insert.
+const NODE_TYPES_NOT_YET_INSERTABLE_FROM_PALETTE: ReadonlySet<LayoutNodeType> = new Set(['slot'])
 
 const nodeSchemaByType: Record<LayoutNodeType, z.ZodType> = {
   container: containerNodeSchema,
@@ -71,6 +82,8 @@ const nodeSchemaByType: Record<LayoutNodeType, z.ZodType> = {
   map: mapNodeSchema,
   gallery: galleryNodeSchema,
   autocomplete: autocompleteNodeSchema,
+  group: groupInstanceNodeSchema,
+  slot: slotNodeSchema,
 }
 
 const cachedSchemaByType = new Map<LayoutNodeType, Record<string, unknown>>()
@@ -95,5 +108,5 @@ export function getNodeTypeJsonSchema(type: LayoutNodeType): Record<string, unkn
 }
 
 export function getSupportedNodeTypesCatalog(): LayoutNodeType[] {
-  return [...supportedNodeTypes]
+  return supportedNodeTypes.filter((type) => !NODE_TYPES_NOT_YET_INSERTABLE_FROM_PALETTE.has(type))
 }
