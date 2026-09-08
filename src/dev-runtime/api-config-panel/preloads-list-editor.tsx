@@ -5,7 +5,7 @@ import { CommitRejectionBanner } from '../commit-rejection-banner'
 import type { CommitCanvasMutationResult } from '../layout-canvas/layout-canvas-commit'
 import { PreloadEntryFieldsEditor } from './preload-entry-fields-editor'
 
-export type PreloadEntryField = 'operationName' | 'query' | 'headers' | 'body'
+export type PreloadEntryField = 'operationName' | 'query' | 'headers' | 'body' | 'blocking'
 
 export type PreloadPendingEntry = { value: unknown; error: RuntimeConfigError }
 export type PreloadPendingRejections = Partial<Record<string, PreloadPendingEntry>>
@@ -43,7 +43,10 @@ export interface PreloadsListEditorProps {
  * parallel implementation for either section.
  *
  * Delegates each entry's own fields (operationName + requestParams) to
- * `PreloadEntryFieldsEditor`. Editing `when` is out of scope (spec.md).
+ * `PreloadEntryFieldsEditor`. `blocking` is a sibling of `when`, not a `requestParams` field, so
+ * it's edited here directly via a checkbox next to "Borrar precarga" rather than delegated.
+ * Unchecking it omits the key entirely instead of writing `blocking: false`, keeping the config
+ * minimal (absent is equivalent to `false`). Editing `when` is out of scope (spec.md).
  */
 export function PreloadsListEditor({ preloads, operationCatalog, onCommitPreloads }: PreloadsListEditorProps) {
   const entries = preloads ?? []
@@ -105,6 +108,11 @@ export function PreloadsListEditor({ preloads, operationCatalog, onCommitPreload
       return current.map((entry, entryIndex) => {
         if (entryIndex !== index) return entry
         if (field === 'operationName') return { ...entry, operationName: nextValue as string }
+        if (field === 'blocking') {
+          if (nextValue) return { ...entry, blocking: true }
+          const { blocking: _blocking, ...rest } = entry
+          return rest
+        }
         return { ...entry, requestParams: { ...entry.requestParams, [field]: nextValue } }
       })
     })
@@ -119,9 +127,22 @@ export function PreloadsListEditor({ preloads, operationCatalog, onCommitPreload
         <p className="text-xs text-gray-500">Sin precargas configuradas.</p>
       ) : (
         <ul className="flex flex-col gap-3">
-          {entries.map((entry, index) => (
+          {entries.map((entry, index) => {
+            const blockingPending = pendingRejections[preloadEntryFieldRejectionKey(index, 'blocking')]
+            const displayedBlocking = blockingPending ? Boolean(blockingPending.value) : Boolean(entry.blocking)
+
+            return (
             <li key={index} className="flex flex-col gap-2 rounded border border-gray-200 bg-gray-50 p-2">
-              <div className="flex items-center justify-end">
+              <div className="flex items-center justify-between">
+                <label className="flex items-center gap-1.5 text-xs text-gray-700">
+                  <input
+                    type="checkbox"
+                    checked={displayedBlocking}
+                    onChange={(event) => handleCommitEntryField(index, 'blocking', event.target.checked)}
+                    aria-label={`Bloqueante precarga ${index + 1}`}
+                  />
+                  Bloqueante
+                </label>
                 <button
                   type="button"
                   onClick={() => handleDeleteEntry(index)}
@@ -131,6 +152,12 @@ export function PreloadsListEditor({ preloads, operationCatalog, onCommitPreload
                   Borrar precarga
                 </button>
               </div>
+              {blockingPending && (
+                <CommitRejectionBanner
+                  dataTestId={`preload-entry-${index}-blocking-error`}
+                  error={blockingPending.error}
+                />
+              )}
               <PreloadEntryFieldsEditor
                 index={index}
                 entry={entry}
@@ -139,7 +166,8 @@ export function PreloadsListEditor({ preloads, operationCatalog, onCommitPreload
                 onCommitField={(field, nextValue) => handleCommitEntryField(index, field, nextValue)}
               />
             </li>
-          ))}
+            )
+          })}
         </ul>
       )}
 

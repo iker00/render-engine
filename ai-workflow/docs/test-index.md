@@ -180,6 +180,7 @@ Ficheros de apoyo, no son tests: `config-validation/helpers.ts`, `dev-runtime/lu
 - `runtime-api-retry.test.ts` — primitiva pura `runRuntimeApiRequestWithRetries` y política de reintentos acotados
 - `runtime-api-token-refresh-failed.test.ts` — propagación de `token-refresh-failed` desde resolvers hasta el builder cuando un token está en error
 - `runtime-autocomplete-collection.test.ts` — `resolveAutocompleteCollectionItems` (los tres shapes de items, incluido `item.*`) y `filterAutocompleteSuggestions` (gate por minChars, substring case-insensitive)
+- `runtime-blocking-loading-indicator.test.tsx` — `RuntimeBlockingLoadingIndicator`: rol `status`, texto accesible, clase de tema global e idempotencia entre renders
 - `runtime-browser-hash-navigation.test.ts` — sincronización de navegación con el hash del navegador
 - `runtime-button-download-action.test.tsx` — `button` con `action.type: downloadOperation`: disparo de descarga con `onSuccess`/`onError`, estado `disabled` durante la petición (incluido guard contra doble click), reflejo en `queries.{operationName}`, independencia entre instancias que comparten `operationName` y resolución de `item.*` en repeater
 - `runtime-button-lifecycle-actions.test.tsx` — `onSuccess`/`onError` de `button.props.action` tras `executeOperation`/`executeOperations`: encadenado, `when`, error de negocio, `item.*` en repeater y botón auxiliar dentro de form
@@ -223,6 +224,7 @@ Ficheros de apoyo, no son tests: `config-validation/helpers.ts`, `dev-runtime/lu
 - `runtime-page-document-title.test.tsx` — efecto de `document.title` por página: inicial, navegación, formato y renders adicionales
 - `runtime-page-entry-preloads.test.tsx` — precarga de operaciones al entrar en página
 - `runtime-plan-page-preloads.test.ts` — funciones puras de planificación de `pages[].preloads` (agregado, plan, snapshot, firmas)
+- `runtime-preload-blocking-gate.test.ts` — primitivas puras del gate de bloqueo por precarga: `deriveBlockingPreloadNames` y `isPreloadGateBlocked`
 - `runtime-reference-resolution.test.tsx` — resolución de referencias declarativas `forms.*`, `queries.*`, `item.*`, `params.*`
 - `runtime-scroll-restoration.test.tsx` — `RuntimeScrollRestorationEffect`: scroll-to-top en push y restauración de posición en pop
 - `runtime-search-trigger.test.tsx` — `useAutocompleteSearchTrigger`: gate por minChars, debounce a 300ms, requestParams/iterationContext, `lastFiredRequestSignature` y cleanup al desmontar

@@ -32,6 +32,7 @@
 - La misma política se reaplica también cuando `goBack` reactiva una entrada histórica con `preloads`.
 - La unidad observable de reentrada es `pageEntry`, que refleja `entryId`, `pageId`, `params`, `preloadNames` y el estado agregado `idle | loading | success | error`.
 - La misma entrada de página no relanza sus `preloads` por mero rerender del provider, pero sí puede reevaluarlos y relanzar solo los afectados si cambia la firma efectiva de alguno de ellos dentro de esa entrada visible.
+- **Bloqueo de precargas y navegación**: la navegación por hash y la actualización de URL ocurren de inmediato sin esperas. Si la página de destino tiene precargas marcadas `blocking: true`, la actualización del contenido visible se retrasa hasta que todas resuelvan, pero el hash ya habrá cambiado en la URL y en el navegador.
 
 ## Relación con futuras iteraciones
 - El modelo actual ya separa `pages` e `initialPage`, resuelve la entrada visible desde una convención simple de hash y mantiene una traza interna mínima, de modo que futuras acciones declarativas podrán reutilizar ese mismo estado sin rehacer el contrato base.

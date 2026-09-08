@@ -1,8 +1,9 @@
 import { useLayoutEffect, useState } from 'react'
 import type { RuntimeConfigResult } from './bootstrap/read-runtime-config'
 import type { RuntimeDataValuesError } from './bootstrap/read-runtime-data-values'
-import type { ShellScrollBehavior } from '../config/runtime-config-types'
-import { RuntimePage } from '../runtime/runtime-page'
+import type { RuntimePreloadConfig, ShellScrollBehavior } from '../config/runtime-config-types'
+import { RuntimeBlockingLoadingIndicator } from '../runtime/runtime-blocking-loading-indicator'
+import { deriveBlockingPreloadNames, isPreloadGateBlocked } from '../runtime/runtime-global-preloads'
 import {
   getAppShellClassName,
   getAppShellContentClassName,
@@ -16,8 +17,32 @@ import {
   getAppShellBodyClassName,
   getAppShellBodyContentClassName,
 } from '../runtime/runtime-node-styling-app-shell-sidebar'
+import { RuntimePage } from '../runtime/runtime-page'
 import { AppShellHeader, AppShellSidebar } from '../runtime/runtime-shell'
 import { RuntimeStateProvider } from '../runtime/runtime-state/runtime-state-provider'
+import { useRuntimeState } from '../runtime/runtime-state/use-runtime-state'
+
+interface AppMountRuntimePageGateProps {
+  rootPreloads: RuntimePreloadConfig[]
+}
+
+// Gates the initial mount of `RuntimePage` behind any `blocking: true` preload declared in the
+// root `preloads` block (T05). Latches once lifted (success or error), mirroring the page-level
+// gate in `runtime-page.tsx`: adjusting state directly during render, guarded by a condition that
+// becomes false as soon as it runs, so it cannot cascade into an infinite render loop.
+function AppMountRuntimePageGate({ rootPreloads }: AppMountRuntimePageGateProps) {
+  const state = useRuntimeState()
+  const [gateLifted, setGateLifted] = useState(false)
+
+  const blockingPreloadNames = deriveBlockingPreloadNames(rootPreloads)
+  const isGateBlocking = !gateLifted && isPreloadGateBlocked(blockingPreloadNames, state.queries)
+
+  if (!isGateBlocking && !gateLifted) {
+    setGateLifted(true)
+  }
+
+  return isGateBlocking ? <RuntimeBlockingLoadingIndicator /> : <RuntimePage />
+}
 
 interface AppShellProps {
   isDevelopment: boolean
@@ -117,12 +142,12 @@ export function AppShell({ isDevelopment, runtimeConfig, dataValues, dataValuesE
                   stickyTopPx={headerHeightPx}
                 />
                 <div className={contentWrapperClassName}>
-                  <RuntimePage />
+                  <AppMountRuntimePageGate rootPreloads={runtimeConfig.config.preloads ?? []} />
                 </div>
               </div>
             ) : (
               <div className={pageContentClassName} data-testid="runtime-page-content">
-                <RuntimePage />
+                <AppMountRuntimePageGate rootPreloads={runtimeConfig.config.preloads ?? []} />
               </div>
             )}
           </RuntimeStateProvider>

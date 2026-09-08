@@ -70,6 +70,7 @@ export interface RuntimePreloadConfig {
   operationName: string
   requestParams: RuntimeApiRequestParams
   when?: RuntimeWhenCondition
+  blocking?: boolean
 }
 
 export type RuntimeApiConfig = Record<string, RuntimeApiOperation>

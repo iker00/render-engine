@@ -498,6 +498,56 @@ describe('ApiConfigPanel', () => {
       ])
     })
 
+    it('shows the blocking checkbox unchecked by default and toggling it on commits blocking: true, preserving the rest of the entry', () => {
+      const existing: RuntimePreloadConfig[] = [{ operationName: 'loadUsers', requestParams: { query: { q: '1' } } }]
+      const onCommitGlobalPreloadsMutation = vi.fn(noopCommit)
+      renderPanel(apiWithOperations, undefined, { globalPreloads: existing, onCommitGlobalPreloadsMutation })
+      openPreloadsTab()
+
+      const checkbox = globalSection().getByRole('checkbox', { name: 'Bloqueante precarga 1' })
+      expect(checkbox).not.toBeChecked()
+
+      fireEvent.click(checkbox)
+
+      expect(onCommitGlobalPreloadsMutation).toHaveBeenCalledTimes(1)
+      const mutate = onCommitGlobalPreloadsMutation.mock.calls[0][0]
+      expect(mutate(existing)).toEqual([
+        { operationName: 'loadUsers', requestParams: { query: { q: '1' } }, blocking: true },
+      ])
+    })
+
+    it('shows the blocking checkbox checked when the entry already has blocking: true, and toggling it off commits the entry without the blocking key', () => {
+      const existing: RuntimePreloadConfig[] = [{ operationName: 'loadUsers', requestParams: {}, blocking: true }]
+      const onCommitPagePreloadsMutation = vi.fn(noopCommit)
+      renderPanel(apiWithOperations, undefined, { pagePreloads: existing, onCommitPagePreloadsMutation })
+      openPreloadsTab()
+
+      const checkbox = pageSection().getByRole('checkbox', { name: 'Bloqueante precarga 1' })
+      expect(checkbox).toBeChecked()
+
+      fireEvent.click(checkbox)
+
+      expect(onCommitPagePreloadsMutation).toHaveBeenCalledTimes(1)
+      const mutate = onCommitPagePreloadsMutation.mock.calls[0][0]
+      expect(mutate(existing)).toEqual([{ operationName: 'loadUsers', requestParams: {} }])
+    })
+
+    it('shows CommitRejectionBanner scoped to the blocking field when its commit is rejected, keeping the attempted value displayed like other fields', () => {
+      const rejectionError = makeRejectionError('bloqueante rechazado')
+      const onCommitGlobalPreloadsMutation = vi.fn(
+        (): CommitCanvasMutationResult => ({ status: 'rejected', error: rejectionError }),
+      )
+      const existing: RuntimePreloadConfig[] = [{ operationName: 'loadUsers', requestParams: {} }]
+      renderPanel(apiWithOperations, undefined, { globalPreloads: existing, onCommitGlobalPreloadsMutation })
+      openPreloadsTab()
+
+      fireEvent.click(globalSection().getByRole('checkbox', { name: 'Bloqueante precarga 1' }))
+
+      const banner = globalSection().getByTestId('preload-entry-0-blocking-error')
+      expect(banner).toHaveTextContent(rejectionError.message)
+      expect(globalSection().getByRole('checkbox', { name: 'Bloqueante precarga 1' })).toBeChecked()
+    })
+
     it('discards a half-filled add draft in the page section when the active page changes, without affecting the global section', () => {
       const onCommitGlobalPreloadsMutation = vi.fn(noopCommit)
       const onCommitPagePreloadsMutation = vi.fn(noopCommit)

@@ -57,22 +57,19 @@ function validatePreloadEntries(
 
     const entries = Object.entries(rawPreload)
 
-    if (entries.length === 0 || entries.length > 2) {
+    if (entries.length === 0 || entries.length > 3) {
       return invalidPreloadEntry(pathPrefix, messageLabel, preloadIndex)
     }
 
-    if (entries.length === 2 && !entries.some(([key]) => key === 'when')) {
+    const operationEntries = entries.filter(([key]) => key !== 'when' && key !== 'blocking')
+
+    if (operationEntries.length !== 1) {
       return invalidPreloadEntry(pathPrefix, messageLabel, preloadIndex)
     }
 
-    const operationEntry = entries.find(([key]) => key !== 'when')
-
-    if (!operationEntry) {
-      return invalidPreloadEntry(pathPrefix, messageLabel, preloadIndex)
-    }
-
-    const [operationName, rawRequestParams] = operationEntry
+    const [operationName, rawRequestParams] = operationEntries[0]
     const rawWhen = rawPreload['when']
+    const rawBlocking = rawPreload['blocking']
 
     if (operationName.trim().length === 0) {
       return invalidPreloadEntry(pathPrefix, messageLabel, preloadIndex)
@@ -140,6 +137,16 @@ function validatePreloadEntries(
       }
 
       preloadConfig.when = whenResult.when
+    }
+
+    if (rawBlocking !== undefined) {
+      const blockingPath = `${pathPrefix}[${preloadIndex}].blocking`
+
+      if (typeof rawBlocking !== 'boolean') {
+        return invalidLayout(`${messageLabel} "${blockingPath}" must be a boolean.`)
+      }
+
+      preloadConfig.blocking = rawBlocking
     }
 
     preloads.push(preloadConfig)

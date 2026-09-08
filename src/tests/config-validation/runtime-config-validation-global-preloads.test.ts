@@ -207,4 +207,41 @@ describe('validateRuntimeConfig — root preloads block', () => {
     expect(blankKeyResult.error.code).toBe('invalid-layout')
     expect(blankKeyResult.error.message).toContain('preloads[0]')
   })
+
+  // T1: blocking flag in the root preloads block
+  describe('blocking flag', () => {
+    it('accepts a root preload entry with blocking: true and exposes it normalized', () => {
+      const result = validateRuntimeConfig({
+        api: baseApi,
+        pages: [{ id: 'home', layout: [] }],
+        initialPage: 'home',
+        preloads: [{ getCatalog: {}, blocking: true }],
+      })
+
+      expect(result.status).toBe('ready')
+      if (result.status !== 'ready') throw new Error('Expected ready')
+      expect(result.config.preloads).toEqual([
+        {
+          operationName: 'getCatalog',
+          requestParams: {},
+          blocking: true,
+        },
+      ])
+    })
+
+    it('rejects a root preload entry with a non-boolean blocking value', () => {
+      const result = validateRuntimeConfig({
+        api: baseApi,
+        pages: [{ id: 'home', layout: [] }],
+        initialPage: 'home',
+        preloads: [{ getCatalog: {}, blocking: 'yes' }],
+      })
+
+      expect(result.status).toBe('error')
+      if (result.status !== 'error') throw new Error('Expected error')
+      expect(result.error.code).toBe('invalid-layout')
+      expect(result.error.message).toContain('preloads[0].blocking')
+      expect(result.error.message.startsWith('The runtime config has an invalid layout at')).toBe(true)
+    })
+  })
 })
