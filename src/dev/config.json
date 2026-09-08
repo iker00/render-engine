@@ -69,6 +69,34 @@
                 "type": "navigateTo",
                 "pageId": "buttons"
               }
+            },
+            {
+              "label": "Grupos",
+              "action": {
+                "type": "navigateTo",
+                "pageId": "group-node"
+              }
+            },
+            {
+              "label": "Mapa",
+              "action": {
+                "type": "navigateTo",
+                "pageId": "map-node"
+              }
+            },
+            {
+              "label": "Galeria",
+              "action": {
+                "type": "navigateTo",
+                "pageId": "gallery-node"
+              }
+            },
+            {
+              "label": "Graficos",
+              "action": {
+                "type": "navigateTo",
+                "pageId": "chart-node"
+              }
             }
           ]
         },
@@ -95,6 +123,20 @@
               "action": {
                 "type": "navigateTo",
                 "pageId": "shell"
+              }
+            },
+            {
+              "label": "Pipeline de colecciones",
+              "action": {
+                "type": "navigateTo",
+                "pageId": "collection-pipeline"
+              }
+            },
+            {
+              "label": "Editor en vivo",
+              "action": {
+                "type": "navigateTo",
+                "pageId": "dev-mode-editor"
               }
             }
           ]
@@ -186,6 +228,38 @@
                 "type": "navigateTo",
                 "pageId": "links"
               }
+            },
+            {
+              "label": "Grupos (group)",
+              "icon": "component",
+              "action": {
+                "type": "navigateTo",
+                "pageId": "group-node"
+              }
+            },
+            {
+              "label": "Mapa (map)",
+              "icon": "map",
+              "action": {
+                "type": "navigateTo",
+                "pageId": "map-node"
+              }
+            },
+            {
+              "label": "Galeria (gallery)",
+              "icon": "images",
+              "action": {
+                "type": "navigateTo",
+                "pageId": "gallery-node"
+              }
+            },
+            {
+              "label": "Graficos (chart)",
+              "icon": "chart-column",
+              "action": {
+                "type": "navigateTo",
+                "pageId": "chart-node"
+              }
             }
           ]
         },
@@ -215,6 +289,22 @@
               "action": {
                 "type": "navigateTo",
                 "pageId": "form-submit"
+              }
+            },
+            {
+              "label": "Steps (wizard)",
+              "icon": "list-ordered",
+              "action": {
+                "type": "navigateTo",
+                "pageId": "steps-node"
+              }
+            },
+            {
+              "label": "Autocomplete",
+              "icon": "search",
+              "action": {
+                "type": "navigateTo",
+                "pageId": "autocomplete-node"
               }
             }
           ]
@@ -337,6 +427,46 @@
               "action": {
                 "type": "navigateTo",
                 "pageId": "shell"
+              }
+            },
+            {
+              "label": "Pipeline de colecciones",
+              "icon": "filter",
+              "action": {
+                "type": "navigateTo",
+                "pageId": "collection-pipeline"
+              }
+            },
+            {
+              "label": "Estructura del JSON",
+              "icon": "file-json",
+              "action": {
+                "type": "navigateTo",
+                "pageId": "config-structure"
+              }
+            },
+            {
+              "label": "Errores y limites de v1",
+              "icon": "triangle-alert",
+              "action": {
+                "type": "navigateTo",
+                "pageId": "runtime-limits"
+              }
+            },
+            {
+              "label": "Configuracion local de desarrollo",
+              "icon": "terminal",
+              "action": {
+                "type": "navigateTo",
+                "pageId": "local-development"
+              }
+            },
+            {
+              "label": "Editor en vivo (dev mode)",
+              "icon": "pencil-ruler",
+              "action": {
+                "type": "navigateTo",
+                "pageId": "dev-mode-editor"
               }
             }
           ]
@@ -482,6 +612,58 @@
                   "pageId": "links"
                 }
               }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Grupos reutilizables (group)",
+                "variant": "outline",
+                "color": "primary",
+                "fullWidth": true,
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "group-node"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Mapa (map)",
+                "variant": "outline",
+                "color": "primary",
+                "fullWidth": true,
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "map-node"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Galeria (gallery)",
+                "variant": "outline",
+                "color": "primary",
+                "fullWidth": true,
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "gallery-node"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Graficos (chart)",
+                "variant": "outline",
+                "color": "primary",
+                "fullWidth": true,
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "chart-node"
+                }
+              }
             }
           ]
         },
@@ -545,6 +727,32 @@
                 "action": {
                   "type": "navigateTo",
                   "pageId": "form-submit"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Steps (wizard)",
+                "variant": "outline",
+                "color": "success",
+                "fullWidth": true,
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "steps-node"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Autocomplete",
+                "variant": "outline",
+                "color": "success",
+                "fullWidth": true,
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "autocomplete-node"
                 }
               }
             }
@@ -766,6 +974,71 @@
                 "action": {
                   "type": "navigateTo",
                   "pageId": "shell"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Pipeline de colecciones",
+                "variant": "outline",
+                "color": "info",
+                "fullWidth": true,
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "collection-pipeline"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Estructura del JSON",
+                "variant": "outline",
+                "color": "info",
+                "fullWidth": true,
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "config-structure"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Errores y limites de v1",
+                "variant": "outline",
+                "color": "info",
+                "fullWidth": true,
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "runtime-limits"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Configuracion local de desarrollo",
+                "variant": "outline",
+                "color": "info",
+                "fullWidth": true,
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "local-development"
+                }
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Editor en vivo (dev mode)",
+                "variant": "outline",
+                "color": "info",
+                "fullWidth": true,
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "dev-mode-editor"
                 }
               }
             }
@@ -5321,6 +5594,567 @@
       ]
     },
     {
+      "id": "steps-node",
+      "layout": [
+        {
+          "type": "container",
+          "props": {
+            "direction": "row",
+            "justify": "between",
+            "align": "center"
+          },
+          "children": [
+            {
+              "type": "heading",
+              "props": {
+                "text": "Nodo steps (wizard)",
+                "level": 1
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Volver al inicio",
+                "variant": "ghost",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "home"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "divider"
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Wizard horizontal basico",
+            "level": 2
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "steps solo es valido dentro de form. props.items es una lista de { label, children }. \"Siguiente\" valida solo los campos visibles del paso activo con el mismo motor de validaciones de campo; si falla, el paso no avanza. \"Atras\" es siempre libre. El nodo genera automaticamente los botones de navegacion: el autor no declara button sueltos para eso."
+          }
+        },
+        {
+          "type": "container",
+          "props": {
+            "variant": "card",
+            "gap": "sm"
+          },
+          "children": [
+            {
+              "type": "paragraph",
+              "props": {
+                "text": "{ \"type\": \"steps\", \"props\": { \"variant\": \"horizontal\", \"items\": [ { \"label\": \"Datos personales\", \"children\": [...] }, { \"label\": \"Direccion\", \"children\": [...] }, { \"label\": \"Confirmacion\", \"children\": [...] } ] } }"
+              }
+            },
+            {
+              "type": "divider",
+              "props": {
+                "variant": "dashed"
+              }
+            },
+            {
+              "type": "form",
+              "id": "wizardDemo",
+              "children": [
+                {
+                  "type": "steps",
+                  "props": {
+                    "variant": "horizontal",
+                    "items": [
+                      {
+                        "label": "Datos personales",
+                        "children": [
+                          {
+                            "type": "input",
+                            "props": {
+                              "fieldId": "wizName",
+                              "label": "Nombre",
+                              "validations": {
+                                "required": true
+                              }
+                            }
+                          },
+                          {
+                            "type": "input",
+                            "props": {
+                              "fieldId": "wizEmail",
+                              "label": "Email",
+                              "inputType": "email",
+                              "validations": {
+                                "required": true,
+                                "email": true
+                              }
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "label": "Direccion",
+                        "children": [
+                          {
+                            "type": "input",
+                            "props": {
+                              "fieldId": "wizCity",
+                              "label": "Ciudad",
+                              "validations": {
+                                "required": true
+                              }
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "label": "Confirmacion",
+                        "children": [
+                          {
+                            "type": "paragraph",
+                            "props": {
+                              "text": "Revisa los datos introducidos en los pasos anteriores antes de enviar."
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                }
+              ],
+              "submitAction": {
+                "type": "executeOperation",
+                "operationName": "createPost",
+                "body": {
+                  "title": "forms.wizardDemo.wizName"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "divider",
+          "props": {
+            "variant": "dashed"
+          }
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Variantes visuales",
+            "level": 2
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "horizontal (default): indicador numerado en fila, con scroll horizontal si no cabe. vertical: indicador en columna a la izquierda del panel. progress: sin indicador clicable, solo texto \"Paso X de Y\" y el boton Atras."
+          }
+        },
+        {
+          "type": "container",
+          "props": {
+            "variant": "card",
+            "gap": "sm"
+          },
+          "children": [
+            {
+              "type": "paragraph",
+              "props": {
+                "text": "{ \"type\": \"steps\", \"props\": { \"variant\": \"vertical\", \"items\": [ ... ] } }"
+              }
+            },
+            {
+              "type": "divider",
+              "props": {
+                "variant": "dashed"
+              }
+            },
+            {
+              "type": "form",
+              "id": "wizardVerticalDemo",
+              "children": [
+                {
+                  "type": "steps",
+                  "props": {
+                    "variant": "vertical",
+                    "items": [
+                      {
+                        "label": "Cuenta",
+                        "children": [
+                          {
+                            "type": "input",
+                            "props": {
+                              "fieldId": "wv1",
+                              "label": "Usuario",
+                              "validations": {
+                                "required": true
+                              }
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "label": "Preferencias",
+                        "children": [
+                          {
+                            "type": "input",
+                            "props": {
+                              "fieldId": "wv2",
+                              "label": "Idioma"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "divider",
+          "props": {
+            "variant": "dashed"
+          }
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Gating de avance con onNext",
+            "level": 2
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "Cualquier item puede declarar onNext: { operationName, query?, body?, headers? }, una operacion de api.* que gatea el avance. Se evalua solo si la validacion de campos del paso ya paso. Mientras esta en curso, el boton que lo disparo queda disabled con aria-busy. Un error de onNext muestra el mensaje bajo el panel con role=alert sin avanzar; un reintento exitoso lo sustituye."
+          }
+        },
+        {
+          "type": "container",
+          "props": {
+            "variant": "card",
+            "gap": "sm"
+          },
+          "children": [
+            {
+              "type": "paragraph",
+              "props": {
+                "text": "{ \"label\": \"Datos de facturacion\", \"children\": [...], \"onNext\": { \"operationName\": \"validateBillingData\", \"body\": { \"nif\": \"forms.wizardDemo.nif\" } } }"
+              }
+            }
+          ]
+        },
+        {
+          "type": "divider",
+          "props": {
+            "variant": "dashed"
+          }
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Limites",
+            "level": 2
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "No se puede saltar directamente a un paso todavia no visitado. Sin generacion dinamica de pasos desde una coleccion. Sin persistencia del paso activo entre navegacion de pagina o pageEntry: al remontar el form, steps siempre arranca en el primer paso. Sin soporte en el editor visual."
+          }
+        }
+      ]
+    },
+    {
+      "id": "autocomplete-node",
+      "layout": [
+        {
+          "type": "container",
+          "props": {
+            "direction": "row",
+            "justify": "between",
+            "align": "center"
+          },
+          "children": [
+            {
+              "type": "heading",
+              "props": {
+                "text": "Nodo autocomplete",
+                "level": 1
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Volver al inicio",
+                "variant": "ghost",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "home"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "divider"
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Seleccion simple (catalogo manual)",
+            "level": 2
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "autocomplete solo es valido dentro de form. Comparte con select los mismos tres shapes de props.items (manual literal, manual escalar, dinamico). Con shape estatico, el filtrado ocurre en cliente por substring case-insensitive sobre el label, a partir de props.minChars caracteres escritos."
+          }
+        },
+        {
+          "type": "container",
+          "props": {
+            "variant": "card",
+            "gap": "sm"
+          },
+          "children": [
+            {
+              "type": "paragraph",
+              "props": {
+                "text": "{\"type\": \"autocomplete\", \"props\": {\"fieldId\": \"countryAc\", \"label\": \"Pais\", \"placeholder\": \"Escribe para buscar...\", \"minChars\": 1, \"items\": [{\"label\": \"Espana\", \"value\": \"es\"}, {\"label\": \"Francia\", \"value\": \"fr\"}, {\"label\": \"Italia\", \"value\": \"it\"}, {\"label\": \"Portugal\", \"value\": \"pt\"}, {\"label\": \"Alemania\", \"value\": \"de\"}], \"validations\": {\"required\": true}}}"
+              }
+            },
+            {
+              "type": "divider",
+              "props": {
+                "variant": "dashed"
+              }
+            },
+            {
+              "type": "form",
+              "id": "autocompleteDemo",
+              "children": [
+                {
+                  "type": "autocomplete",
+                  "props": {
+                    "fieldId": "countryAc",
+                    "label": "Pais",
+                    "placeholder": "Escribe para buscar...",
+                    "minChars": 1,
+                    "items": [
+                      {
+                        "label": "Espana",
+                        "value": "es"
+                      },
+                      {
+                        "label": "Francia",
+                        "value": "fr"
+                      },
+                      {
+                        "label": "Italia",
+                        "value": "it"
+                      },
+                      {
+                        "label": "Portugal",
+                        "value": "pt"
+                      },
+                      {
+                        "label": "Alemania",
+                        "value": "de"
+                      }
+                    ],
+                    "validations": {
+                      "required": true
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "divider",
+          "props": {
+            "variant": "dashed"
+          }
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Seleccion multiple con chips",
+            "level": 2
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "props.multiple: true cambia el valor efectivo a una coleccion ordenada mostrada como chips. Cada chip se quita con un boton propio; una opcion ya seleccionada no vuelve a aparecer entre las sugerencias."
+          }
+        },
+        {
+          "type": "container",
+          "props": {
+            "variant": "card",
+            "gap": "sm"
+          },
+          "children": [
+            {
+              "type": "form",
+              "id": "autocompleteMultiDemo",
+              "children": [
+                {
+                  "type": "autocomplete",
+                  "props": {
+                    "fieldId": "countriesAc",
+                    "label": "Paises visitados",
+                    "multiple": true,
+                    "minChars": 0,
+                    "items": [
+                      {
+                        "label": "Espana",
+                        "value": "es"
+                      },
+                      {
+                        "label": "Francia",
+                        "value": "fr"
+                      },
+                      {
+                        "label": "Italia",
+                        "value": "it"
+                      },
+                      {
+                        "label": "Portugal",
+                        "value": "pt"
+                      },
+                      {
+                        "label": "Alemania",
+                        "value": "de"
+                      }
+                    ],
+                    "validations": {
+                      "minSelections": 1,
+                      "maxSelections": 3
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "divider",
+          "props": {
+            "variant": "dashed"
+          }
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Texto libre (allowFreeText)",
+            "level": 2
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "Con allowFreeText: true en seleccion simple, el valor efectivo es el texto tal cual se escribe, actualizado en vivo; elegir una sugerencia sustituye el texto por el value de esa opcion. Sin allowFreeText, un texto que no coincide con ninguna opcion al perder foco deja el campo vacio."
+          }
+        },
+        {
+          "type": "container",
+          "props": {
+            "variant": "card",
+            "gap": "sm"
+          },
+          "children": [
+            {
+              "type": "form",
+              "id": "autocompleteFreeDemo",
+              "children": [
+                {
+                  "type": "autocomplete",
+                  "props": {
+                    "fieldId": "freeTagAc",
+                    "label": "Etiqueta (texto libre permitido)",
+                    "allowFreeText": true,
+                    "minChars": 0,
+                    "items": {
+                      "values": [
+                        "urgente",
+                        "revisar",
+                        "bloqueado",
+                        "en curso"
+                      ]
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "divider",
+          "props": {
+            "variant": "dashed"
+          }
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Origen dinamico",
+            "level": 2
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "Con source: 'queries.{queryName}.data'/'.data.*', escribir dispara la operacion asociada (debounce fijo de 300ms) y las sugerencias se leen de queries.{queryName}.data con la misma proyeccion label/value que select. En seleccion simple el texto en curso vive en forms.{formId}.{fieldId}; en multiple se envia via requestParams bajo props.searchParamName (default 'search')."
+          }
+        },
+        {
+          "type": "container",
+          "props": {
+            "variant": "card",
+            "gap": "sm"
+          },
+          "children": [
+            {
+              "type": "paragraph",
+              "props": {
+                "text": "{\"type\": \"autocomplete\", \"props\": {\"fieldId\": \"userAc\", \"label\": \"Usuario\", \"minChars\": 2, \"items\": {\"source\": \"queries.searchUsers.data\", \"itemType\": \"object\", \"label\": \"name\", \"value\": \"id\"}}}"
+              }
+            }
+          ]
+        },
+        {
+          "type": "divider",
+          "props": {
+            "variant": "dashed"
+          }
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Limites",
+            "level": 2
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "Sin modo standalone fuera de form. Sin props.emptySubmitValue. Sin resaltado del texto coincidente en las sugerencias. Sin paginacion o scroll infinito de resultados dinamicos. Sin widget dedicado en el editor visual."
+          }
+        }
+      ]
+    },
+    {
       "id": "decorative-nodes",
       "layout": [
         {
@@ -9185,6 +10019,550 @@
       ]
     },
     {
+      "id": "group-node",
+      "layout": [
+        {
+          "type": "container",
+          "props": {
+            "direction": "row",
+            "justify": "between",
+            "align": "center"
+          },
+          "children": [
+            {
+              "type": "heading",
+              "props": {
+                "text": "Nodo group (subarboles reutilizables)",
+                "level": 1
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Volver al inicio",
+                "variant": "ghost",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "home"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "divider"
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Definicion en el bloque raiz groups",
+            "level": 2
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "Cada entrada de groups declara groupId (clave), params (nombres de parametro) y template (arbol de nodos, con un unico nodo slot opcional como punto de insercion). Esta app de documentacion declara el grupo userCard usado en esta pagina."
+          }
+        },
+        {
+          "type": "container",
+          "props": {
+            "variant": "card",
+            "gap": "sm"
+          },
+          "children": [
+            {
+              "type": "paragraph",
+              "props": {
+                "text": "{\"groups\": {\"userCard\": {\"params\": [\"name\", \"role\"], \"template\": [{\"type\": \"container\", \"props\": {\"variant\": \"card\"}, \"children\": [{\"type\": \"heading\", \"props\": {\"text\": \"{{group.name}}\", \"level\": 3}}, {\"type\": \"badge\", \"props\": {\"label\": \"{{group.role}}\", \"color\": \"primary\"}}, {\"type\": \"slot\"}]}]}}}"
+              }
+            }
+          ]
+        },
+        {
+          "type": "divider",
+          "props": {
+            "variant": "dashed"
+          }
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Instancias con distintos parametros",
+            "level": 2
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "Cada instancia { type: group, props: { groupId, params } } expande el template sustituyendo group.name y group.role por los valores de props.params. Dos instancias del mismo groupId son independientes entre si."
+          }
+        },
+        {
+          "type": "container",
+          "props": {
+            "variant": "card",
+            "gap": "sm"
+          },
+          "children": [
+            {
+              "type": "paragraph",
+              "props": {
+                "text": "{ \"type\": \"group\", \"props\": { \"groupId\": \"userCard\", \"params\": { \"name\": \"Ana Garcia\", \"role\": \"Administradora\" } } }"
+              }
+            },
+            {
+              "type": "divider",
+              "props": {
+                "variant": "dashed"
+              }
+            },
+            {
+              "type": "container",
+              "props": {
+                "columns": {
+                  "base": 1,
+                  "sm": 2
+                },
+                "gap": "sm"
+              },
+              "children": [
+                {
+                  "type": "group",
+                  "props": {
+                    "groupId": "userCard",
+                    "params": {
+                      "name": "Ana Garcia",
+                      "role": "Administradora"
+                    }
+                  }
+                },
+                {
+                  "type": "group",
+                  "props": {
+                    "groupId": "userCard",
+                    "params": {
+                      "name": "Carlos Lopez",
+                      "role": "Editor"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "divider",
+          "props": {
+            "variant": "dashed"
+          }
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "children como contenido del slot",
+            "level": 2
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "El children de una instancia se inserta en el nodo slot del template. Una instancia sin children sobre un grupo con slot deja el slot vacio."
+          }
+        },
+        {
+          "type": "container",
+          "props": {
+            "variant": "card",
+            "gap": "sm"
+          },
+          "children": [
+            {
+              "type": "group",
+              "props": {
+                "groupId": "userCard",
+                "params": {
+                  "name": "Maria Ruiz",
+                  "role": "Soporte"
+                }
+              },
+              "children": [
+                {
+                  "type": "paragraph",
+                  "props": {
+                    "text": "Contenido extra pasado como children: disponible desde el 2019, turno de tarde."
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "divider",
+          "props": {
+            "variant": "dashed"
+          }
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Combinacion con repeater",
+            "level": 2
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "Un group instanciado dentro de repeater.props.template puede recibir item.* como valor de props.params, y su children tambien puede usar item.* del mismo repeater ancestro. Cada iteracion resuelve su instancia de forma independiente."
+          }
+        },
+        {
+          "type": "container",
+          "props": {
+            "variant": "card",
+            "gap": "sm"
+          },
+          "children": [
+            {
+              "type": "paragraph",
+              "props": {
+                "text": "{ \"type\": \"repeater\", \"props\": { \"items\": { \"source\": \"queries.fetchUsers.data\", \"key\": \"id\" } }, \"template\": [ { \"type\": \"group\", \"props\": { \"groupId\": \"userCard\", \"params\": { \"name\": \"item.name\", \"role\": \"item.company.name\" } } } ] }"
+              }
+            }
+          ]
+        },
+        {
+          "type": "divider",
+          "props": {
+            "variant": "dashed"
+          }
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Limites",
+            "level": 2
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "Sin anidamiento de grupos (un template no puede contener otro group). Un grupo solo admite un slot. No existen valores por defecto para params: props.params debe cubrir exactamente los nombres declarados. group no es valido dentro de shell.header ni shell.sidebar."
+          }
+        }
+      ]
+    },
+    {
+      "id": "collection-pipeline",
+      "layout": [
+        {
+          "type": "container",
+          "props": {
+            "direction": "row",
+            "justify": "between",
+            "align": "center"
+          },
+          "children": [
+            {
+              "type": "heading",
+              "props": {
+                "text": "Pipeline de colecciones (orderby, filter, slice)",
+                "level": 1
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Volver al inicio",
+                "variant": "ghost",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "home"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "divider"
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Sintaxis general",
+            "level": 2
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "Disponible en superficies de origen de colecciones (repeater.props.items.source, table.props.rows.source, select/radioGroup/checkboxGroup.props.items.source): referencia | operacion:arg1,arg2 | operacion:arg1,arg2. Sin pipe, el comportamiento es identico al actual. Operaciones disponibles: orderby:path,dir — filter:path,operador,valor — slice:start,end."
+          }
+        },
+        {
+          "type": "divider",
+          "props": {
+            "variant": "dashed"
+          }
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "orderby: ordenar",
+            "level": 2
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "orderby:path,dir ordena por el valor en path (asc o desc). Valores inexistentes o incompatibles se tratan como minimo estable."
+          }
+        },
+        {
+          "type": "container",
+          "props": {
+            "variant": "card",
+            "gap": "sm"
+          },
+          "children": [
+            {
+              "type": "paragraph",
+              "props": {
+                "text": "{ \"type\": \"repeater\", \"props\": { \"items\": { \"source\": \"queries.fetchUsers.data | orderby:name,asc\", \"key\": \"id\" } }, \"template\": [...] } }"
+              }
+            },
+            {
+              "type": "divider",
+              "props": {
+                "variant": "dashed"
+              }
+            },
+            {
+              "type": "repeater",
+              "props": {
+                "items": {
+                  "source": "queries.fetchUsers.data | orderby:name,asc",
+                  "key": "id"
+                },
+                "columns": 1,
+                "gap": "xs",
+                "template": [
+                  {
+                    "type": "paragraph",
+                    "props": {
+                      "text": "{{item.name}}"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "type": "divider",
+          "props": {
+            "variant": "dashed"
+          }
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "filter: filtrar",
+            "level": 2
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "filter:path,operador,valor conserva solo los items que cumplen la comparacion. Operadores: eq, ne, gt, lt, gte, lte, contains, in. valor admite literal escalar, referencia dinamica (forms.*/params.*/queries.*) o, solo con in, una lista literal o dinamica."
+          }
+        },
+        {
+          "type": "container",
+          "props": {
+            "variant": "card",
+            "gap": "sm"
+          },
+          "children": [
+            {
+              "type": "paragraph",
+              "props": {
+                "text": "\"queries.fetchPosts.data | filter:userId,eq,1\""
+              }
+            },
+            {
+              "type": "divider",
+              "props": {
+                "variant": "dashed"
+              }
+            },
+            {
+              "type": "table",
+              "props": {
+                "headers": [
+                  "Id",
+                  "Titulo"
+                ],
+                "rows": {
+                  "source": "queries.fetchPosts.data | filter:userId,eq,1",
+                  "cells": [
+                    "item.id",
+                    "item.title"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "divider",
+          "props": {
+            "variant": "dashed"
+          }
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "slice: recortar",
+            "level": 2
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "slice:start,end recorta con la misma semantica que Array.prototype.slice (indices negativos cuentan desde el final, indices fuera de rango se clampean sin error). Se combina con orderby para top-N."
+          }
+        },
+        {
+          "type": "container",
+          "props": {
+            "variant": "card",
+            "gap": "sm"
+          },
+          "children": [
+            {
+              "type": "paragraph",
+              "props": {
+                "text": "\"queries.fetchPosts.data | orderby:id,desc | slice:0,3\""
+              }
+            },
+            {
+              "type": "divider",
+              "props": {
+                "variant": "dashed"
+              }
+            },
+            {
+              "type": "repeater",
+              "props": {
+                "items": {
+                  "source": "queries.fetchPosts.data | orderby:id,desc | slice:0,3",
+                  "key": "id"
+                },
+                "columns": 1,
+                "gap": "xs",
+                "template": [
+                  {
+                    "type": "paragraph",
+                    "props": {
+                      "text": "#{{item.id}} — {{item.title}}"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "type": "divider",
+          "props": {
+            "variant": "dashed"
+          }
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Filtro reactivo con referencia a formulario",
+            "level": 2
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "Cuando el argumento de un filter es una referencia dinamica (forms.*/params.*/queries.*), el pipeline se reevalua automaticamente al cambiar esa referencia. Si el valor aun no esta resuelto, ese filter no se aplica y el resto del pipeline sigue evaluandose."
+          }
+        },
+        {
+          "type": "container",
+          "props": {
+            "variant": "card",
+            "gap": "sm"
+          },
+          "children": [
+            {
+              "type": "form",
+              "id": "pipelineFilterDemo",
+              "children": [
+                {
+                  "type": "input",
+                  "props": {
+                    "fieldId": "search",
+                    "label": "Buscar por titulo",
+                    "placeholder": "Escribe para filtrar..."
+                  }
+                }
+              ]
+            },
+            {
+              "type": "divider",
+              "props": {
+                "variant": "dashed"
+              }
+            },
+            {
+              "type": "repeater",
+              "props": {
+                "items": {
+                  "source": "queries.fetchPosts.data | filter:title,contains,forms.pipelineFilterDemo.search | slice:0,5",
+                  "key": "id"
+                },
+                "columns": 1,
+                "gap": "xs",
+                "template": [
+                  {
+                    "type": "paragraph",
+                    "props": {
+                      "text": "{{item.title}}"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "type": "divider",
+          "props": {
+            "variant": "dashed"
+          }
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Limites",
+            "level": 2
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "El pipeline opera siempre en cliente sobre datos ya resueltos: no dispara red ni pagina en servidor. No amplia que referencias base son validas por superficie. Sin ordenacion multi-criterio en una sola operacion (se encadenan varias orderby). En table.props.rows.source, el pipeline declarativo se resuelve primero y alimenta el pipeline nativo de columna (filtros/orden/paginacion) de table."
+          }
+        }
+      ]
+    },
+    {
       "id": "file-manager",
       "layout": [
         {
@@ -9654,6 +11032,823 @@
                 "Config completo rechazado"
               ]
             ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "map-node",
+      "layout": [
+        {
+          "type": "container",
+          "props": {
+            "direction": "row",
+            "justify": "between",
+            "align": "center"
+          },
+          "children": [
+            {
+              "type": "heading",
+              "props": {
+                "text": "Nodo map",
+                "level": 1
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Volver al inicio",
+                "variant": "ghost",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "home"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "divider"
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Marcadores estaticos",
+            "level": 2
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "props.markers es una lista de { lat, lng, label }. Sin props.center/zoom/height declarados, el mapa usa Pamplona como centro por defecto, zoom 13 y altura md."
+          }
+        },
+        {
+          "type": "container",
+          "props": {
+            "variant": "card",
+            "gap": "sm"
+          },
+          "children": [
+            {
+              "type": "paragraph",
+              "props": {
+                "text": "{\"type\": \"map\", \"props\": {\"zoom\": 14, \"height\": \"md\", \"markers\": [{\"lat\": 42.818779, \"lng\": -1.643927, \"label\": \"Plaza del Castillo\"}, {\"lat\": 42.822361, \"lng\": -1.641771, \"label\": \"Catedral de Santa Maria la Real\"}, {\"lat\": 42.816419, \"lng\": -1.646736, \"label\": \"Ciudadela de Pamplona\"}]}}"
+              }
+            },
+            {
+              "type": "divider",
+              "props": {
+                "variant": "dashed"
+              }
+            },
+            {
+              "type": "map",
+              "props": {
+                "zoom": 14,
+                "height": "md",
+                "markers": [
+                  {
+                    "lat": 42.818779,
+                    "lng": -1.643927,
+                    "label": "Plaza del Castillo"
+                  },
+                  {
+                    "lat": 42.822361,
+                    "lng": -1.641771,
+                    "label": "Catedral de Santa Maria la Real"
+                  },
+                  {
+                    "lat": 42.816419,
+                    "lng": -1.646736,
+                    "label": "Ciudadela de Pamplona"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "type": "divider",
+          "props": {
+            "variant": "dashed"
+          }
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Marcadores dinamicos (markerSources)",
+            "level": 2
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "props.markerSources deriva marcadores de una coleccion queries.*. Esta app de documentacion precarga queries.locations1.data y queries.burladaLocations.data (ver src/dev/data-values.json) con forma { lat, lng, label } ya compatible con position.lat/position.lng. Cuando markerSources esta declarado, prevalece sobre markers. Sin color explicito, cada fuente toma el siguiente color de la paleta ciclica de seis."
+          }
+        },
+        {
+          "type": "container",
+          "props": {
+            "variant": "card",
+            "gap": "sm"
+          },
+          "children": [
+            {
+              "type": "paragraph",
+              "props": {
+                "text": "{\"type\": \"map\", \"props\": {\"zoom\": 13, \"height\": \"lg\", \"markerSources\": [{\"source\": \"queries.locations1.data\", \"position\": {\"lat\": \"lat\", \"lng\": \"lng\"}, \"label\": \"label\", \"color\": \"primary\"}, {\"source\": \"queries.burladaLocations.data\", \"position\": {\"lat\": \"lat\", \"lng\": \"lng\"}, \"label\": \"label\", \"color\": \"success\"}]}}"
+              }
+            },
+            {
+              "type": "divider",
+              "props": {
+                "variant": "dashed"
+              }
+            },
+            {
+              "type": "map",
+              "props": {
+                "zoom": 13,
+                "height": "lg",
+                "markerSources": [
+                  {
+                    "source": "queries.locations1.data",
+                    "position": {
+                      "lat": "lat",
+                      "lng": "lng"
+                    },
+                    "label": "label",
+                    "color": "primary"
+                  },
+                  {
+                    "source": "queries.burladaLocations.data",
+                    "position": {
+                      "lat": "lat",
+                      "lng": "lng"
+                    },
+                    "label": "label",
+                    "color": "success"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "type": "divider",
+          "props": {
+            "variant": "dashed"
+          }
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Limites",
+            "level": 2
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "Sin clustering de marcadores, sin calculo de rutas ni geolocalizacion del usuario. Pulsar un marcador solo abre su popup: no dispara ninguna accion del catalogo. Sin edicion visual desde el editor de desarrollo."
+          }
+        }
+      ]
+    },
+    {
+      "id": "gallery-node",
+      "layout": [
+        {
+          "type": "container",
+          "props": {
+            "direction": "row",
+            "justify": "between",
+            "align": "center"
+          },
+          "children": [
+            {
+              "type": "heading",
+              "props": {
+                "text": "Nodo gallery",
+                "level": 1
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Volver al inicio",
+                "variant": "ghost",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "home"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "divider"
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Origen estatico, vista paginada",
+            "level": 2
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "props.images es una lista literal de { src, alt }. display.mode: paginated usa display.pagination.pageSize y el mismo modelo de controles (previousNext/numbered/scroll) que repeater/table."
+          }
+        },
+        {
+          "type": "container",
+          "props": {
+            "variant": "card",
+            "gap": "sm"
+          },
+          "children": [
+            {
+              "type": "paragraph",
+              "props": {
+                "text": "{\"type\": \"gallery\", \"props\": {\"images\": [{\"src\": \"https://picsum.photos/seed/gallery-1/600/400\", \"alt\": \"Paisaje de montana\"}, {\"src\": \"https://picsum.photos/seed/gallery-2/600/400\", \"alt\": \"Calle de ciudad\"}, {\"src\": \"https://picsum.photos/seed/gallery-3/600/400\", \"alt\": \"Playa al atardecer\"}, {\"src\": \"https://picsum.photos/seed/gallery-4/600/400\", \"alt\": \"Bosque en otono\"}, {\"src\": \"https://picsum.photos/seed/gallery-5/600/400\", \"alt\": \"Puente sobre el rio\"}], \"display\": {\"mode\": \"paginated\", \"pagination\": {\"pageSize\": 2, \"controls\": {\"variant\": \"numbered\"}}}}}"
+              }
+            },
+            {
+              "type": "divider",
+              "props": {
+                "variant": "dashed"
+              }
+            },
+            {
+              "type": "gallery",
+              "props": {
+                "images": [
+                  {
+                    "src": "https://picsum.photos/seed/gallery-1/600/400",
+                    "alt": "Paisaje de montana"
+                  },
+                  {
+                    "src": "https://picsum.photos/seed/gallery-2/600/400",
+                    "alt": "Calle de ciudad"
+                  },
+                  {
+                    "src": "https://picsum.photos/seed/gallery-3/600/400",
+                    "alt": "Playa al atardecer"
+                  },
+                  {
+                    "src": "https://picsum.photos/seed/gallery-4/600/400",
+                    "alt": "Bosque en otono"
+                  },
+                  {
+                    "src": "https://picsum.photos/seed/gallery-5/600/400",
+                    "alt": "Puente sobre el rio"
+                  }
+                ],
+                "display": {
+                  "mode": "paginated",
+                  "pagination": {
+                    "pageSize": 2,
+                    "controls": {
+                      "variant": "numbered"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "divider",
+          "props": {
+            "variant": "dashed"
+          }
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Vista carrusel",
+            "level": 2
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "display.mode: carousel usa embla-carousel-react. display.visibleCount fija cuantas fotos se ven a la vez (1 a 3), display.loop activa bucle y display.autoplay.enabled con intervalMs activa avance automatico."
+          }
+        },
+        {
+          "type": "container",
+          "props": {
+            "variant": "card",
+            "gap": "sm"
+          },
+          "children": [
+            {
+              "type": "paragraph",
+              "props": {
+                "text": "{\"type\": \"gallery\", \"props\": {\"images\": [{\"src\": \"https://picsum.photos/seed/gallery-1/600/400\", \"alt\": \"Paisaje de montana\"}, {\"src\": \"https://picsum.photos/seed/gallery-2/600/400\", \"alt\": \"Calle de ciudad\"}, {\"src\": \"https://picsum.photos/seed/gallery-3/600/400\", \"alt\": \"Playa al atardecer\"}, {\"src\": \"https://picsum.photos/seed/gallery-4/600/400\", \"alt\": \"Bosque en otono\"}, {\"src\": \"https://picsum.photos/seed/gallery-5/600/400\", \"alt\": \"Puente sobre el rio\"}], \"display\": {\"mode\": \"carousel\", \"visibleCount\": 3, \"loop\": true}}}"
+              }
+            },
+            {
+              "type": "divider",
+              "props": {
+                "variant": "dashed"
+              }
+            },
+            {
+              "type": "gallery",
+              "props": {
+                "images": [
+                  {
+                    "src": "https://picsum.photos/seed/gallery-1/600/400",
+                    "alt": "Paisaje de montana"
+                  },
+                  {
+                    "src": "https://picsum.photos/seed/gallery-2/600/400",
+                    "alt": "Calle de ciudad"
+                  },
+                  {
+                    "src": "https://picsum.photos/seed/gallery-3/600/400",
+                    "alt": "Playa al atardecer"
+                  },
+                  {
+                    "src": "https://picsum.photos/seed/gallery-4/600/400",
+                    "alt": "Bosque en otono"
+                  },
+                  {
+                    "src": "https://picsum.photos/seed/gallery-5/600/400",
+                    "alt": "Puente sobre el rio"
+                  }
+                ],
+                "display": {
+                  "mode": "carousel",
+                  "visibleCount": 3,
+                  "loop": true
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "divider",
+          "props": {
+            "variant": "dashed"
+          }
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Origen dinamico (source)",
+            "level": 2
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "props.source deriva las fotos de una coleccion queries.*/item.*, con un submodo por foto: mode: 'src' (ruta relativa o interpolacion) o mode: 'fetch' (peticion HTTP autenticada por foto, mismo contrato que image.props.fetch). key admite \"$index\", una ruta relativa, o \"$key\" (solo valido sobre la variante diccionario de una coleccion; en gallery siempre resuelve a null y deja la galeria sin fotos)."
+          }
+        },
+        {
+          "type": "container",
+          "props": {
+            "variant": "card",
+            "gap": "sm"
+          },
+          "children": [
+            {
+              "type": "paragraph",
+              "props": {
+                "text": "{\"type\": \"gallery\", \"props\": {\"source\": {\"source\": \"queries.fetchPhotos.data\", \"key\": \"$index\", \"alt\": \"title\", \"mode\": \"src\", \"src\": \"url\"}, \"display\": {\"mode\": \"paginated\", \"pagination\": {\"pageSize\": 6}}}}"
+              }
+            }
+          ]
+        },
+        {
+          "type": "divider",
+          "props": {
+            "variant": "dashed"
+          }
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Limites",
+            "level": 2
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "Sin foco atrapado ni navegacion por flechas de teclado en el lightbox (solo cierre con Esc). No se puede desactivar el lightbox por instancia. Sin zoom ni gestos tactiles avanzados. La paginacion del modo paginated es siempre local en cliente."
+          }
+        }
+      ]
+    },
+    {
+      "id": "chart-node",
+      "layout": [
+        {
+          "type": "container",
+          "props": {
+            "direction": "row",
+            "justify": "between",
+            "align": "center"
+          },
+          "children": [
+            {
+              "type": "heading",
+              "props": {
+                "text": "Nodo chart",
+                "level": 1
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Volver al inicio",
+                "variant": "ghost",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "home"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "divider"
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Grafico de barras (bar)",
+            "level": 2
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "Variantes categoricas (bar, line, area, pie, donut) usan props.data: [{ category, value }]. props.label alimenta la leyenda, props.xAxisLabel/yAxisLabel los titulos de eje. El tooltip siempre esta activo."
+          }
+        },
+        {
+          "type": "container",
+          "props": {
+            "variant": "card",
+            "gap": "sm"
+          },
+          "children": [
+            {
+              "type": "paragraph",
+              "props": {
+                "text": "{\"type\": \"chart\", \"props\": {\"variant\": \"bar\", \"data\": [{\"category\": \"Ene\", \"value\": 320}, {\"category\": \"Feb\", \"value\": 450}, {\"category\": \"Mar\", \"value\": 280}, {\"category\": \"Abr\", \"value\": 510}, {\"category\": \"May\", \"value\": 390}], \"color\": \"primary\", \"label\": \"Ventas\", \"xAxisLabel\": \"Mes\", \"yAxisLabel\": \"Unidades\"}}"
+              }
+            },
+            {
+              "type": "divider",
+              "props": {
+                "variant": "dashed"
+              }
+            },
+            {
+              "type": "chart",
+              "props": {
+                "variant": "bar",
+                "data": [
+                  {
+                    "category": "Ene",
+                    "value": 320
+                  },
+                  {
+                    "category": "Feb",
+                    "value": 450
+                  },
+                  {
+                    "category": "Mar",
+                    "value": 280
+                  },
+                  {
+                    "category": "Abr",
+                    "value": 510
+                  },
+                  {
+                    "category": "May",
+                    "value": 390
+                  }
+                ],
+                "color": "primary",
+                "label": "Ventas",
+                "xAxisLabel": "Mes",
+                "yAxisLabel": "Unidades"
+              }
+            }
+          ]
+        },
+        {
+          "type": "divider",
+          "props": {
+            "variant": "dashed"
+          }
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Linea y area",
+            "level": 2
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "Mismo shape de datos categorico que bar. line y area comparten props.color/label/xAxisLabel/yAxisLabel."
+          }
+        },
+        {
+          "type": "container",
+          "props": {
+            "variant": "card",
+            "gap": "sm"
+          },
+          "children": [
+            {
+              "type": "container",
+              "props": {
+                "columns": {
+                  "base": 1,
+                  "md": 2
+                },
+                "gap": "sm"
+              },
+              "children": [
+                {
+                  "type": "chart",
+                  "props": {
+                    "variant": "line",
+                    "data": [
+                      {
+                        "category": "Ene",
+                        "value": 320
+                      },
+                      {
+                        "category": "Feb",
+                        "value": 450
+                      },
+                      {
+                        "category": "Mar",
+                        "value": 280
+                      },
+                      {
+                        "category": "Abr",
+                        "value": 510
+                      },
+                      {
+                        "category": "May",
+                        "value": 390
+                      }
+                    ],
+                    "color": "info",
+                    "label": "Ventas"
+                  }
+                },
+                {
+                  "type": "chart",
+                  "props": {
+                    "variant": "area",
+                    "data": [
+                      {
+                        "category": "Ene",
+                        "value": 320
+                      },
+                      {
+                        "category": "Feb",
+                        "value": 450
+                      },
+                      {
+                        "category": "Mar",
+                        "value": 280
+                      },
+                      {
+                        "category": "Abr",
+                        "value": 510
+                      },
+                      {
+                        "category": "May",
+                        "value": 390
+                      }
+                    ],
+                    "color": "success",
+                    "label": "Ventas"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "divider",
+          "props": {
+            "variant": "dashed"
+          }
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Pie y donut",
+            "level": 2
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "pie y donut rechazan label/xAxisLabel/yAxisLabel en validacion (no aplican). Cada porcion toma un color de la paleta ciclica de seis; leyenda y tooltip siempre visibles mostrando category y value."
+          }
+        },
+        {
+          "type": "container",
+          "props": {
+            "variant": "card",
+            "gap": "sm"
+          },
+          "children": [
+            {
+              "type": "container",
+              "props": {
+                "columns": {
+                  "base": 1,
+                  "md": 2
+                },
+                "gap": "sm"
+              },
+              "children": [
+                {
+                  "type": "chart",
+                  "props": {
+                    "variant": "pie",
+                    "data": [
+                      {
+                        "category": "Admin",
+                        "value": 8
+                      },
+                      {
+                        "category": "Editor",
+                        "value": 24
+                      },
+                      {
+                        "category": "Lector",
+                        "value": 63
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "chart",
+                  "props": {
+                    "variant": "donut",
+                    "data": [
+                      {
+                        "category": "Admin",
+                        "value": 8
+                      },
+                      {
+                        "category": "Editor",
+                        "value": 24
+                      },
+                      {
+                        "category": "Lector",
+                        "value": 63
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "divider",
+          "props": {
+            "variant": "dashed"
+          }
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Scatter",
+            "level": 2
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "La variante numerica scatter usa props.data: [{ x, y }] en vez de category/value."
+          }
+        },
+        {
+          "type": "container",
+          "props": {
+            "variant": "card",
+            "gap": "sm"
+          },
+          "children": [
+            {
+              "type": "paragraph",
+              "props": {
+                "text": "{\"type\": \"chart\", \"props\": {\"variant\": \"scatter\", \"data\": [{\"x\": 10, \"y\": 30}, {\"x\": 25, \"y\": 45}, {\"x\": 40, \"y\": 20}, {\"x\": 55, \"y\": 60}, {\"x\": 70, \"y\": 38}], \"color\": \"warning\", \"xAxisLabel\": \"X\", \"yAxisLabel\": \"Y\"}}"
+              }
+            },
+            {
+              "type": "divider",
+              "props": {
+                "variant": "dashed"
+              }
+            },
+            {
+              "type": "chart",
+              "props": {
+                "variant": "scatter",
+                "data": [
+                  {
+                    "x": 10,
+                    "y": 30
+                  },
+                  {
+                    "x": 25,
+                    "y": 45
+                  },
+                  {
+                    "x": 40,
+                    "y": 20
+                  },
+                  {
+                    "x": 55,
+                    "y": 60
+                  },
+                  {
+                    "x": 70,
+                    "y": 38
+                  }
+                ],
+                "color": "warning",
+                "xAxisLabel": "X",
+                "yAxisLabel": "Y"
+              }
+            }
+          ]
+        },
+        {
+          "type": "divider",
+          "props": {
+            "variant": "dashed"
+          }
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Origen dinamico (source)",
+            "level": 2
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "props.source deriva los puntos de una coleccion queries.*: categoryPath/valuePath en variantes categoricas, xPath/yPath en scatter. Prevalece sobre props.data si ambos estuvieran declarados (rechazado en validacion: solo uno de los dos es valido)."
+          }
+        },
+        {
+          "type": "container",
+          "props": {
+            "variant": "card",
+            "gap": "sm"
+          },
+          "children": [
+            {
+              "type": "paragraph",
+              "props": {
+                "text": "{\"type\": \"chart\", \"props\": {\"variant\": \"bar\", \"source\": {\"source\": \"queries.fetchOrders.data\", \"categoryPath\": \"status\", \"valuePath\": \"total\"}}}"
+              }
+            }
+          ]
+        },
+        {
+          "type": "divider",
+          "props": {
+            "variant": "dashed"
+          }
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Limites",
+            "level": 2
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "Sin varias series superpuestas o agrupadas en la misma instancia. Sin interactividad mas alla de tooltip/leyenda (no se puede clicar un punto para disparar una accion). Sin animaciones configurables, zoom, brushing ni exportacion de imagen/CSV."
           }
         }
       ]
@@ -10463,6 +12658,721 @@
           }
         }
       ]
+    },
+    {
+      "id": "config-structure",
+      "layout": [
+        {
+          "type": "container",
+          "props": {
+            "direction": "row",
+            "justify": "between",
+            "align": "center"
+          },
+          "children": [
+            {
+              "type": "heading",
+              "props": {
+                "text": "Estructura del JSON (bloques raiz)",
+                "level": 1
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Volver al inicio",
+                "variant": "ghost",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "home"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "divider"
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Bloques raiz obligatorios",
+            "level": 2
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "La configuracion parte de tres bloques principales, todos requeridos:"
+          }
+        },
+        {
+          "type": "table",
+          "props": {
+            "headers": [
+              "Bloque",
+              "Descripcion"
+            ],
+            "rows": [
+              [
+                "api",
+                "Catalogo declarativo de operaciones remotas nombradas"
+              ],
+              [
+                "pages",
+                "Array de paginas declaradas"
+              ],
+              [
+                "initialPage",
+                "Identificador de la pagina de entrada"
+              ]
+            ]
+          }
+        },
+        {
+          "type": "divider",
+          "props": {
+            "variant": "dashed"
+          }
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Bloques raiz opcionales",
+            "level": 2
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "Hermanos de api/pages/initialPage, todos opcionales. Esta misma app de documentacion los usa todos:"
+          }
+        },
+        {
+          "type": "table",
+          "props": {
+            "headers": [
+              "Bloque",
+              "Descripcion"
+            ],
+            "rows": [
+              [
+                "translations",
+                "Catalogo de traducciones por idioma"
+              ],
+              [
+                "tokens",
+                "Catalogo de tokens de autenticacion nombrados con refresco opcional"
+              ],
+              [
+                "preloads",
+                "Precargas globales de aplicacion, disparo unico por carga"
+              ],
+              [
+                "groups",
+                "Catalogo de subarboles de nodos reutilizables (ver nodo group)"
+              ],
+              [
+                "shell",
+                "Chrome compartido entre paginas: header, sidebar y scrollBehavior"
+              ]
+            ]
+          }
+        },
+        {
+          "type": "divider",
+          "props": {
+            "variant": "dashed"
+          }
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Modelo de pagina",
+            "level": 2
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "Cada entrada de pages declara:"
+          }
+        },
+        {
+          "type": "table",
+          "props": {
+            "headers": [
+              "Campo",
+              "Requerido",
+              "Descripcion"
+            ],
+            "rows": [
+              [
+                "id",
+                "si",
+                "String no vacio y unico dentro de pages"
+              ],
+              [
+                "layout",
+                "si",
+                "Array ordenado de nodos"
+              ],
+              [
+                "preloads",
+                "no",
+                "Array de precargas especificas de la pagina"
+              ],
+              [
+                "title",
+                "no",
+                "Controla document.title mientras la pagina esta activa"
+              ]
+            ]
+          }
+        },
+        {
+          "type": "divider",
+          "props": {
+            "variant": "dashed"
+          }
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Shape general del layout",
+            "level": 2
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "layout ya no usa un nodo raiz artificial: es un array que puede empezar directamente con varios bloques hermanos, y su orden define el orden visible. Cada elemento sigue un shape homogeneo: type (obligatorio), id (opcional), props (segun el tipo), layout (span y demas metadatos transversales), visibility, queryStateFeedback y children (solo interpretado por container, form, modal, link, accordion y group)."
+          }
+        },
+        {
+          "type": "divider",
+          "props": {
+            "variant": "dashed"
+          }
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Shape de preloads (compartido)",
+            "level": 2
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "pages[].preloads y el bloque raiz preloads comparten el mismo shape de entrada: un objeto con exactamente una clave (el operationName), cuyo valor es {} o un objeto con query/body/headers/blocking. blocking (default false) retrasa el render hasta que esa precarga resuelva. El bloque raiz es mas restrictivo: no admite when ni referencias item.*."
+          }
+        },
+        {
+          "type": "container",
+          "props": {
+            "variant": "card",
+            "gap": "sm"
+          },
+          "children": [
+            {
+              "type": "paragraph",
+              "props": {
+                "text": "{\"preloads\": [{\"fetchUsers\": {}}, {\"fetchTodos\": {\"blocking\": true}}]}"
+              }
+            }
+          ]
+        },
+        {
+          "type": "divider",
+          "props": {
+            "variant": "dashed"
+          }
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Resolucion inicial",
+            "level": 2
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "El runtime valida toda la configuracion antes de renderizar. Tras validar pages, resuelve la pagina cuyo id coincide con initialPage; si no existe, el arranque falla con un error explicito."
+          }
+        }
+      ]
+    },
+    {
+      "id": "runtime-limits",
+      "layout": [
+        {
+          "type": "container",
+          "props": {
+            "direction": "row",
+            "justify": "between",
+            "align": "center"
+          },
+          "children": [
+            {
+              "type": "heading",
+              "props": {
+                "text": "Comportamiento ante errores y limites de v1",
+                "level": 1
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Volver al inicio",
+                "variant": "ghost",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "home"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "divider"
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Errores de configuracion",
+            "level": 2
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "Si initialPage no coincide con ninguna pagina declarada, o un boton navigateTo apunta a una pagina inexistente, el runtime rechaza el config antes del render con una ruta diagnostica exacta. Un layout invalido o un nodo no soportado muestra, en desarrollo, un error diagnostico con la ruta afectada."
+          }
+        },
+        {
+          "type": "container",
+          "props": {
+            "variant": "card",
+            "gap": "sm"
+          },
+          "children": [
+            {
+              "type": "alert",
+              "props": {
+                "type": "warning",
+                "message": "En produccion, los errores marcados como development-only degradan a una superficie vacia en vez de mostrar un mensaje generico o inventar contenido."
+              }
+            }
+          ]
+        },
+        {
+          "type": "divider",
+          "props": {
+            "variant": "dashed"
+          }
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Errores de navegacion y de carga de chunks",
+            "level": 2
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "Si el navegador entra con un hash invalido o un slug de pagina inexistente, el runtime degrada a initialPage y reescribe la URL a #/. Si la descarga de un chunk de nodo falla (red, timeout), una error boundary que envuelve ese nodo muestra un indicador role=alert contenido en su posicion, sin propagar el fallo al resto del runtime; los reintentos automaticos no estan soportados, hace falta recargar."
+          }
+        },
+        {
+          "type": "divider",
+          "props": {
+            "variant": "dashed"
+          }
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Limites transversales de v1",
+            "level": 2
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "Fuera de alcance intencionado en esta version:"
+          }
+        },
+        {
+          "type": "table",
+          "props": {
+            "headers": [
+              "Area",
+              "Limite"
+            ],
+            "rows": [
+              [
+                "Acciones y eventos",
+                "Una sola operacion por trigger; sin secuencias, branching ni callbacks declarativos por exito/error"
+              ],
+              [
+                "Visibility",
+                "Solo una condicion (o grupo and/or sin anidar) por nodo, sin fallback ni expresiones arbitrarias"
+              ],
+              [
+                "Routing",
+                "Hash routing simple; sin router general por pathname ni subrutas"
+              ],
+              [
+                "Theming",
+                "Sin personalizacion visual declarativa desde JSON; solo tokens CSS globales"
+              ],
+              [
+                "Paginacion",
+                "Solo local en cliente; sin cursor, virtualizacion ni filtros/orden remotos"
+              ],
+              [
+                "Interpolacion",
+                "Sin condicionales, i18n avanzado ni escape propio de los delimitadores {{ }}"
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "local-development",
+      "layout": [
+        {
+          "type": "container",
+          "props": {
+            "direction": "row",
+            "justify": "between",
+            "align": "center"
+          },
+          "children": [
+            {
+              "type": "heading",
+              "props": {
+                "text": "Configuracion local de desarrollo",
+                "level": 1
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Volver al inicio",
+                "variant": "ghost",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "home"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "divider"
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Prioridad de carga en desarrollo",
+            "level": 2
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "El runtime prioriza el atributo data-config del elemento raiz cuando el host lo aporta; sin el, usa src/dev/config.json como respaldo versionado (el config que ya estas viendo). El mismo patron aplica a data-values (respaldo src/dev/data-values.json) y a data-endpoints-config (respaldo src/dev/endpoints-config.json). Un atributo data-lang declara el idioma activo para translations.* (default 'es')."
+          }
+        },
+        {
+          "type": "divider",
+          "props": {
+            "variant": "dashed"
+          }
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Pre-carga de datos con data-values",
+            "level": 2
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "src/dev/data-values.json es un objeto plano { queryName: data }. Cada entrada se carga en queries.{queryName} con estado success antes del primer render, sin necesidad de que exista una operacion con ese nombre en api. Los marcadores dinamicos del nodo map en esta app de documentacion (locations1, burladaLocations) se cargan asi. Una vez que se ejecuta una operacion real con el mismo nombre, el dato pre-cargado se reemplaza por el resultado real."
+          }
+        },
+        {
+          "type": "container",
+          "props": {
+            "variant": "card",
+            "gap": "sm"
+          },
+          "children": [
+            {
+              "type": "paragraph",
+              "props": {
+                "text": "{\"locations1\": [{\"lat\": 42.818779, \"lng\": -1.643927, \"label\": \"Plaza del Castillo\"}], \"userPermissions\": [{\"code\": \"1-1\"}]}"
+              }
+            }
+          ]
+        },
+        {
+          "type": "divider",
+          "props": {
+            "variant": "dashed"
+          }
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Config de endpoints externos",
+            "level": 2
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "Bloque independiente del config activo que declara los endpoints que consume el editor de desarrollo: el boton Guardar y las acciones de la seccion Traducciones. Shape: baseUrl comun y operations con hasta tres claves opcionales por separado (searchTexts, getTranslationsBatch, saveConfig). tokenId referencia un token ya declarado en tokens.* del config activo — no es una interpolacion nueva, solo un lookup para resolver el header Authorization. Un JSON invalido o ausente se trata como no declarado, sin bloquear el arranque del resto del editor."
+          }
+        },
+        {
+          "type": "container",
+          "props": {
+            "variant": "card",
+            "gap": "sm"
+          },
+          "children": [
+            {
+              "type": "paragraph",
+              "props": {
+                "text": "{\"baseUrl\": \"https://backend.example.com\", \"operations\": {\"saveConfig\": {\"path\": \"/configs/save\", \"tokenId\": \"sessionToken\", \"idGestion\": 1, \"idSeccion\": 2, \"idObjetoOcurrencia\": 3}}}"
+              }
+            }
+          ]
+        },
+        {
+          "type": "divider",
+          "props": {
+            "variant": "dashed"
+          }
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Limites",
+            "level": 2
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "No sustituye la integracion real con backend. Sin herramientas avanzadas de inspeccion o exportacion del config. La config de endpoints externos no tiene panel de edicion propio: se declara solo via atributo de host o fichero local."
+          }
+        }
+      ]
+    },
+    {
+      "id": "dev-mode-editor",
+      "layout": [
+        {
+          "type": "container",
+          "props": {
+            "direction": "row",
+            "justify": "between",
+            "align": "center"
+          },
+          "children": [
+            {
+              "type": "heading",
+              "props": {
+                "text": "Editor de configuracion en vivo (dev mode)",
+                "level": 1
+              }
+            },
+            {
+              "type": "button",
+              "props": {
+                "label": "Volver al inicio",
+                "variant": "ghost",
+                "action": {
+                  "type": "navigateTo",
+                  "pageId": "home"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "divider"
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Activacion y barra flotante",
+            "level": 2
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "El editor solo existe si el host monta DevRuntime: siempre en desarrollo (import.meta.env.DEV), o en produccion si el elemento raiz declara data-enable-dev-mode. Una barra de herramientas flotante persistente (visible en esta misma app mientras se navega) ofrece: selector de pagina, siete pestanas de dominio (Layout, Api, Grupos, Paginas, Tokens, Traducciones, Shell), boton para anadir nodos desde una paleta, acceso al panel Monaco, el toggle Visual/Editor, y el boton Guardar."
+          }
+        },
+        {
+          "type": "divider",
+          "props": {
+            "variant": "dashed"
+          }
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Modo Visual vs. modo Editor",
+            "level": 2
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "Modo Visual (por defecto): el contenido se comporta igual que en produccion, sin overlays de seleccion. Modo Editor: click sobre un nodo lo selecciona (identificado por un path estructural), hover lo resalta; aparece un panel de propiedades con pestanas Props/Diseno/Visibilidad/Queries generadas desde el schema Zod del nodo, mas un breadcrumb de ancestros clicable. En modo Editor las acciones declarativas (navigateTo, executeOperation, submit de formularios) quedan suprimidas: la unica via de cambio es el canvas o el panel de propiedades."
+          }
+        },
+        {
+          "type": "divider",
+          "props": {
+            "variant": "dashed"
+          }
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Pestanas de dominio",
+            "level": 2
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "Ademas de Layout (el canvas de arrastrar y soltar sobre el arbol real), seis pestanas abren un panel de formulario dedicado en vez de canvas:"
+          }
+        },
+        {
+          "type": "table",
+          "props": {
+            "headers": [
+              "Pestana",
+              "Que edita"
+            ],
+            "rows": [
+              [
+                "Api",
+                "CRUD de operaciones del bloque api y de entradas de preloads globales/de pagina"
+              ],
+              [
+                "Grupos",
+                "CRUD de definiciones de groups y edicion de sus templates"
+              ],
+              [
+                "Paginas",
+                "Alta/baja de paginas, edicion de title, designacion de initialPage"
+              ],
+              [
+                "Tokens",
+                "Alta/baja de tokens, edicion de value y del sub-bloque refresh"
+              ],
+              [
+                "Traducciones",
+                "Gestion manual de translations y sincronizacion de solo lectura con un proveedor externo"
+              ],
+              [
+                "Shell",
+                "Edicion de shell.header y shell.sidebar"
+              ]
+            ]
+          }
+        },
+        {
+          "type": "divider",
+          "props": {
+            "variant": "dashed"
+          }
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Panel Monaco, autocompletado y boton Guardar",
+            "level": 2
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "El panel Monaco ofrece autocompletado JSON Schema derivado del schema Zod raiz. La accion Aplicar parsea y valida el JSON con el mismo validador del runtime antes de re-renderizar. El boton Guardar (con atajo Ctrl+S/Cmd+S) persiste el config activo ya aplicado hacia un backend externo declarado en la config de endpoints; queda deshabilitado si esa operacion no esta declarada o su tokenId no resuelve. Al aplicar un cambio (boton, HMR al editar config.json en disco, o edicion visual) se preserva el estado compatible: formularios y queries cuyos id siguen existiendo, navegacion si la pagina activa sigue en pages, translations y tokens reconstruidos desde el nuevo config."
+          }
+        },
+        {
+          "type": "divider",
+          "props": {
+            "variant": "dashed"
+          }
+        },
+        {
+          "type": "heading",
+          "props": {
+            "text": "Limites",
+            "level": 2
+          }
+        },
+        {
+          "type": "paragraph",
+          "props": {
+            "text": "El editor solo existe montado por DevRuntime (desarrollo, o produccion con data-enable-dev-mode explicito). La guardia de cambios aplicados solo intercepta descargas reales de la pagina (recargar, cerrar pestana), no la navegacion interna por hash. No persiste en localStorage/sessionStorage: recargar sin guardar pierde los cambios de la sesion."
+          }
+        }
+      ]
     }
-  ]
+  ],
+  "groups": {
+    "userCard": {
+      "params": [
+        "name",
+        "role"
+      ],
+      "template": [
+        {
+          "type": "container",
+          "props": {
+            "variant": "card",
+            "gap": "sm"
+          },
+          "children": [
+            {
+              "type": "heading",
+              "props": {
+                "text": "{{group.name}}",
+                "level": 3
+              }
+            },
+            {
+              "type": "badge",
+              "props": {
+                "label": "{{group.role}}",
+                "color": "primary"
+              }
+            },
+            {
+              "type": "slot"
+            }
+          ]
+        }
+      ]
+    }
+  }
 }
