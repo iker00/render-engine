@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { chartNodeSchema } from '../../config/runtime-config-zod'
+import { validateRuntimeConfig } from '../../config/runtime-config'
+import { createConfigWithLayout } from './helpers'
 
 // T01 of feature chart-node: `chartNodeSchema` is not yet wired into the layout dispatcher
 // (`validate-layout-nodes-core.ts`) or the recursive root union (`runtime-config-root-zod.ts`) —
@@ -224,6 +226,308 @@ describe('chartNodeSchema — shape rejection', () => {
     expect(result.success).toBe(false)
     if (!result.success) {
       expect(result.error.issues[0].path).toEqual(['props', 'yAxisLabel'])
+    }
+  })
+})
+
+// T02 of feature chart-node: `validateChartNode` wires `chartNodeSchema` into the layout
+// dispatcher and adds the cross-field rules (D2) that the shape-only schema above cannot express
+// on its own (family-per-variant match, data/source mutual exclusion, pie/donut prop rejection,
+// collection source/projection path validation). These tests exercise the full pipeline through
+// `validateRuntimeConfig`, the same way `runtime-config-validation-gallery.test.ts` and
+// `runtime-config-validation-map.test.ts` do for their own dispatcher-integrated node validators.
+describe('validateRuntimeConfig — chart node: data/source mutual exclusion', () => {
+  it('rejects a chart without data or source declared', () => {
+    const result = validateRuntimeConfig(createConfigWithLayout([createChartNode({ props: { variant: 'bar' } })]))
+    expect(result.status).toBe('error')
+    if (result.status === 'error') {
+      expect(result.error.message).toContain('at "layout[0].props"')
+    }
+  })
+
+  it('rejects a chart that declares both data and source at once', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithLayout([
+        createChartNode({
+          props: {
+            variant: 'bar',
+            data: [{ category: 'a', value: 1 }],
+            source: { source: 'queries.stats.data', category: 'label', value: 'total' },
+          },
+        }),
+      ]),
+    )
+    expect(result.status).toBe('error')
+    if (result.status === 'error') {
+      expect(result.error.message).toContain('at "layout[0].props"')
+    }
+  })
+})
+
+describe('validateRuntimeConfig — chart node: family-per-variant match', () => {
+  it('accepts variant "scatter" with a numeric data point', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithLayout([createChartNode({ props: { variant: 'scatter', data: [{ x: 1, y: 2 }] } })]),
+    )
+    expect(result.status).toBe('ready')
+  })
+
+  it('rejects variant "scatter" with a categorical data point (family mismatch)', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithLayout([createChartNode({ props: { variant: 'scatter', data: [{ category: 'a', value: 1 }] } })]),
+    )
+    expect(result.status).toBe('error')
+    if (result.status === 'error') {
+      expect(result.error.message).toContain('props.data[0]')
+    }
+  })
+
+  it('accepts variant "bar" with a categorical data point', () => {
+    const result = validateRuntimeConfig(createConfigWithLayout([createChartNode()]))
+    expect(result.status).toBe('ready')
+  })
+
+  it('rejects variant "bar" with a numeric data point (family mismatch)', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithLayout([createChartNode({ props: { variant: 'bar', data: [{ x: 1, y: 2 }] } })]),
+    )
+    expect(result.status).toBe('error')
+    if (result.status === 'error') {
+      expect(result.error.message).toContain('props.data[0]')
+    }
+  })
+
+  it('accepts variant "scatter" with a numeric source', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithLayout([
+        createChartNode({
+          props: { variant: 'scatter', data: undefined, source: { source: 'queries.stats.data', x: 'a', y: 'b' } },
+        }),
+      ]),
+    )
+    expect(result.status).toBe('ready')
+  })
+
+  it('rejects variant "scatter" with a categorical source (family mismatch)', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithLayout([
+        createChartNode({
+          props: {
+            variant: 'scatter',
+            data: undefined,
+            source: { source: 'queries.stats.data', category: 'label', value: 'total' },
+          },
+        }),
+      ]),
+    )
+    expect(result.status).toBe('error')
+    if (result.status === 'error') {
+      expect(result.error.message).toContain('at "layout[0].props.source"')
+    }
+  })
+})
+
+describe('validateRuntimeConfig — chart node: pie/donut reject color/label/axis labels', () => {
+  it('rejects props.color when variant is "pie"', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithLayout([
+        createChartNode({ props: { variant: 'pie', data: [{ category: 'a', value: 1 }], color: 'primary' } }),
+      ]),
+    )
+    expect(result.status).toBe('error')
+    if (result.status === 'error') {
+      expect(result.error.message).toContain('at "layout[0].props.color"')
+    }
+  })
+
+  it('rejects props.label when variant is "donut"', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithLayout([
+        createChartNode({ props: { variant: 'donut', data: [{ category: 'a', value: 1 }], label: 'Distribución' } }),
+      ]),
+    )
+    expect(result.status).toBe('error')
+    if (result.status === 'error') {
+      expect(result.error.message).toContain('at "layout[0].props.label"')
+    }
+  })
+
+  it('rejects props.xAxisLabel when variant is "pie"', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithLayout([
+        createChartNode({ props: { variant: 'pie', data: [{ category: 'a', value: 1 }], xAxisLabel: 'Categoría' } }),
+      ]),
+    )
+    expect(result.status).toBe('error')
+    if (result.status === 'error') {
+      expect(result.error.message).toContain('at "layout[0].props.xAxisLabel"')
+    }
+  })
+
+  it('rejects props.yAxisLabel when variant is "pie"', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithLayout([
+        createChartNode({ props: { variant: 'pie', data: [{ category: 'a', value: 1 }], yAxisLabel: 'Valor' } }),
+      ]),
+    )
+    expect(result.status).toBe('error')
+    if (result.status === 'error') {
+      expect(result.error.message).toContain('at "layout[0].props.yAxisLabel"')
+    }
+  })
+
+  it('accepts color/label/xAxisLabel/yAxisLabel declared together when variant is "bar"', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithLayout([
+        createChartNode({
+          props: {
+            variant: 'bar',
+            data: [{ category: 'a', value: 1 }],
+            color: 'primary',
+            label: 'Ventas',
+            xAxisLabel: 'Mes',
+            yAxisLabel: 'Total',
+          },
+        }),
+      ]),
+    )
+    expect(result.status).toBe('ready')
+  })
+})
+
+describe('validateRuntimeConfig — chart node: source.source pattern (validateCollectionSource)', () => {
+  it('rejects source.source outside the queries.{queryName}.data(.*) pattern', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithLayout([
+        createChartNode({
+          props: {
+            variant: 'bar',
+            data: undefined,
+            source: { source: 'stats', category: 'label', value: 'total' },
+          },
+        }),
+      ]),
+    )
+    expect(result.status).toBe('error')
+    if (result.status === 'error') {
+      expect(result.error.message).toContain('props.source.source')
+    }
+  })
+})
+
+describe('validateRuntimeConfig — chart node: source.category/value/x/y projection paths', () => {
+  it('accepts source.category as an interpolation "{{item.name}}"', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithLayout([
+        createChartNode({
+          props: {
+            variant: 'bar',
+            data: undefined,
+            source: { source: 'queries.stats.data', category: '{{item.name}}', value: 'total' },
+          },
+        }),
+      ]),
+    )
+    expect(result.status).toBe('ready')
+  })
+
+  it('rejects source.category when empty', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithLayout([
+        createChartNode({
+          props: {
+            variant: 'bar',
+            data: undefined,
+            source: { source: 'queries.stats.data', category: '', value: 'total' },
+          },
+        }),
+      ]),
+    )
+    expect(result.status).toBe('error')
+    if (result.status === 'error') {
+      expect(result.error.message).toContain('at "layout[0].props.source.category"')
+    }
+  })
+
+  it('rejects source.value declared as an interpolation "{{...}}" instead of a pure relative path', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithLayout([
+        createChartNode({
+          props: {
+            variant: 'bar',
+            data: undefined,
+            source: { source: 'queries.stats.data', category: 'label', value: '{{item.total}}' },
+          },
+        }),
+      ]),
+    )
+    expect(result.status).toBe('error')
+    if (result.status === 'error') {
+      expect(result.error.message).toContain('at "layout[0].props.source.value"')
+    }
+  })
+
+  it('rejects source.value as an empty relative path', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithLayout([
+        createChartNode({
+          props: {
+            variant: 'bar',
+            data: undefined,
+            source: { source: 'queries.stats.data', category: 'label', value: '' },
+          },
+        }),
+      ]),
+    )
+    expect(result.status).toBe('error')
+    if (result.status === 'error') {
+      expect(result.error.message).toContain('at "layout[0].props.source.value"')
+    }
+  })
+
+  it('rejects source.x declared as an interpolation "{{...}}" instead of a pure relative path', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithLayout([
+        createChartNode({
+          props: {
+            variant: 'scatter',
+            data: undefined,
+            source: { source: 'queries.stats.data', x: '{{item.x}}', y: 'b' },
+          },
+        }),
+      ]),
+    )
+    expect(result.status).toBe('error')
+    if (result.status === 'error') {
+      expect(result.error.message).toContain('at "layout[0].props.source.x"')
+    }
+  })
+
+  it('rejects source.y as an empty relative path', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithLayout([
+        createChartNode({
+          props: {
+            variant: 'scatter',
+            data: undefined,
+            source: { source: 'queries.stats.data', x: 'a', y: '' },
+          },
+        }),
+      ]),
+    )
+    expect(result.status).toBe('error')
+    if (result.status === 'error') {
+      expect(result.error.message).toContain('at "layout[0].props.source.y"')
+    }
+  })
+})
+
+describe('validateRuntimeConfig — chart node: children rejection', () => {
+  it('rejects a chart with children declared as an empty array', () => {
+    const result = validateRuntimeConfig(createConfigWithLayout([createChartNode({ children: [] })]))
+    expect(result.status).toBe('error')
+    if (result.status === 'error') {
+      expect(result.error.message).toContain('at "layout[0].children"')
     }
   })
 })
