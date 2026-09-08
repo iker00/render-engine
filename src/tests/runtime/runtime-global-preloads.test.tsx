@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { StrictMode } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { App } from '../../app/App'
 import type { RuntimeConfig } from '../../config/runtime-config'
 import { RuntimePage } from '../../runtime/runtime-page'
 import { RuntimeStateProvider } from '../../runtime/runtime-state/runtime-state-provider'
@@ -372,5 +373,185 @@ describe('useRuntimeGlobalPreloads', () => {
 
     await waitFor(() => expect(readRuntimeStateSnapshot().queries.getCatalog.status).toBe('success'))
     expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('AppShell — app-mount blocking gate (root preloads, T05)', () => {
+  // Devconfig-shaped raw fixtures (not `RuntimeConfig`, the post-validation type): the root
+  // `preloads` block accepts the shorthand `{ [operationName]: requestParamsOverrides }` form,
+  // normalized by `validateRuntimeConfig` into `{ operationName, requestParams }` — see
+  // `runtime-config-validation-global-preloads.test.ts`. `App`/`AppShell` run that validation, so
+  // fixtures here must use the raw shorthand rather than the already-normalized `RuntimeConfig`
+  // shape used by the `RuntimeStateProvider`-only tests above.
+  const rootBlockingApi = {
+    getCatalog: { method: 'GET' as const, endpoint: '/api/catalog' },
+    getStats: { method: 'GET' as const, endpoint: '/api/stats' },
+  }
+
+  const rootBlockingConfig = {
+    api: rootBlockingApi,
+    initialPage: 'home',
+    preloads: [{ getCatalog: {}, blocking: true }, { getStats: {} }],
+    shell: {
+      header: { title: 'Acme' },
+      sidebar: { items: [{ label: 'Home', action: { type: 'navigateTo', pageId: 'home' } }] },
+    },
+    pages: [
+      {
+        id: 'home',
+        layout: [
+          { type: 'paragraph', props: { text: 'Home layout rendered' } },
+          {
+            type: 'button',
+            props: {
+              label: 'Rerun blocking op',
+              action: { type: 'executeOperation', operationName: 'getCatalog' },
+            },
+          },
+        ],
+      },
+    ],
+  }
+
+  function renderRootBlockingApp(config: unknown = rootBlockingConfig) {
+    return render(<App devConfigOverride={config} isDevelopment rootElement={document.createElement('div')} />)
+  }
+
+  it('mounts the header and sidebar but shows the app-mount indicator instead of RuntimePage while a root blocking preload is loading', () => {
+    let resolveCatalog!: (response: Response) => void
+    const fetchMock = vi.fn((url: string) => {
+      if (url === '/api/catalog') {
+        return new Promise<Response>((resolve) => {
+          resolveCatalog = resolve
+        })
+      }
+      return Promise.resolve(createJsonResponse({ items: [] }))
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    renderRootBlockingApp()
+
+    expect(screen.getByTestId('app-shell-header')).toBeInTheDocument()
+    expect(screen.getByTestId('app-shell-sidebar')).toBeInTheDocument()
+    expect(screen.getByTestId('runtime-blocking-loading-indicator')).toBeInTheDocument()
+    expect(screen.getByRole('status')).toBeInTheDocument()
+    expect(screen.queryByTestId('runtime-page')).not.toBeInTheDocument()
+
+    // Prevent the deferred fetch from leaking into later tests.
+    resolveCatalog(createJsonResponse({ items: ['a'] }))
+  })
+
+  it('mounts RuntimePage and removes the app-mount indicator once the root blocking preload succeeds', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(createJsonResponse({ items: ['a'] }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    renderRootBlockingApp()
+
+    await waitFor(() => expect(screen.getByTestId('runtime-page')).toBeInTheDocument())
+    expect(screen.queryByTestId('runtime-blocking-loading-indicator')).not.toBeInTheDocument()
+    expect(screen.getByText('Home layout rendered')).toBeInTheDocument()
+  })
+
+  it('lifts the app-mount gate and mounts RuntimePage when the root blocking preload exhausts retries as error', async () => {
+    const fetchMock = vi.fn((url: string) => {
+      if (url === '/api/catalog') {
+        return Promise.resolve(new Response(null, { status: 500 }))
+      }
+      return Promise.resolve(createJsonResponse({ items: [] }))
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    renderRootBlockingApp()
+
+    await waitFor(() => expect(screen.getByTestId('runtime-page')).toBeInTheDocument())
+    expect(screen.queryByTestId('runtime-blocking-loading-indicator')).not.toBeInTheDocument()
+    expect(screen.getByText('Home layout rendered')).toBeInTheDocument()
+  })
+
+  it('never blocks RuntimePage when the root preloads block declares no blocking entry', () => {
+    const fetchMock = vi.fn(() => new Promise<Response>(() => {}))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const config = {
+      ...rootBlockingConfig,
+      preloads: [{ getCatalog: {} }],
+    }
+
+    renderRootBlockingApp(config)
+
+    expect(screen.getByTestId('runtime-page')).toBeInTheDocument()
+    expect(screen.queryByTestId('runtime-blocking-loading-indicator')).not.toBeInTheDocument()
+  })
+
+  it('mounts RuntimePage immediately when config has no root preloads block, unaffected by the app-mount gate', () => {
+    const fetchMock = vi.fn().mockResolvedValue(createJsonResponse({}))
+    vi.stubGlobal('fetch', fetchMock)
+
+    renderRootBlockingApp(noPreloadsConfig)
+
+    expect(screen.getByTestId('runtime-page')).toBeInTheDocument()
+    expect(screen.queryByTestId('runtime-blocking-loading-indicator')).not.toBeInTheDocument()
+  })
+
+  it('latches: once lifted, forcing the root blocking query back to loading does not unmount RuntimePage again', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(createJsonResponse({ items: ['a'] }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    renderRootBlockingApp()
+
+    await waitFor(() => expect(screen.getByTestId('runtime-page')).toBeInTheDocument())
+
+    const fetchCallsBeforeRerun = fetchMock.mock.calls.length
+    fireEvent.click(screen.getByRole('button', { name: 'Rerun blocking op' }))
+    await waitFor(() => expect(fetchMock.mock.calls.length).toBeGreaterThan(fetchCallsBeforeRerun))
+
+    expect(screen.getByTestId('runtime-page')).toBeInTheDocument()
+    expect(screen.queryByTestId('runtime-blocking-loading-indicator')).not.toBeInTheDocument()
+  })
+
+  it('coexists with the page-level gate (T04): the root gate blocks RuntimePage from mounting, then hands off to the page gate for its own blocking preload', async () => {
+    let resolveRoot!: (response: Response) => void
+    let resolvePage!: (response: Response) => void
+    const fetchMock = vi.fn((url: string) => {
+      if (url === '/api/root-blocking') {
+        return new Promise<Response>((resolve) => {
+          resolveRoot = resolve
+        })
+      }
+      return new Promise<Response>((resolve) => {
+        resolvePage = resolve
+      })
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const config = {
+      api: {
+        rootBlocking: { method: 'GET', endpoint: '/api/root-blocking' },
+        pageBlocking: { method: 'GET', endpoint: '/api/page-blocking' },
+      },
+      initialPage: 'home',
+      preloads: [{ rootBlocking: {}, blocking: true }],
+      pages: [
+        {
+          id: 'home',
+          preloads: [{ pageBlocking: {}, blocking: true }],
+          layout: [{ type: 'paragraph', props: { text: 'Home layout rendered' } }],
+        },
+      ],
+    }
+
+    renderRootBlockingApp(config)
+
+    expect(screen.queryByTestId('runtime-page')).not.toBeInTheDocument()
+
+    resolveRoot(createJsonResponse({ items: [] }))
+    await waitFor(() => expect(screen.getByTestId('runtime-page')).toBeInTheDocument())
+
+    expect(screen.getByTestId('runtime-blocking-loading-indicator')).toBeInTheDocument()
+    expect(screen.queryByText('Home layout rendered')).not.toBeInTheDocument()
+
+    resolvePage(createJsonResponse({ items: [] }))
+    await waitFor(() => expect(screen.getByText('Home layout rendered')).toBeInTheDocument())
+    expect(screen.queryByTestId('runtime-blocking-loading-indicator')).not.toBeInTheDocument()
   })
 })
