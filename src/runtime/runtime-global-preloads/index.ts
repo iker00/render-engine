@@ -13,3 +13,4 @@ export {
 export type { PlannedPreloadBatch, PlannedPreloadReloadItem } from './plan-page-preloads'
 export { useRuntimeGlobalPreloads } from './use-runtime-global-preloads'
 export type { UseRuntimeGlobalPreloadsOptions } from './use-runtime-global-preloads'
+export { deriveBlockingPreloadNames, isPreloadGateBlocked } from './preload-blocking-gate'
