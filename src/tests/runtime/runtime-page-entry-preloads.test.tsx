@@ -1871,6 +1871,327 @@ describe('Runtime page entry preloads — header interpolation (T2 integration)'
   })
 })
 
+describe('Runtime page entry preloads — blocking gate (T04)', () => {
+  const blockingGateConfig: RuntimeConfig = {
+    api: {
+      blockingSearch: { method: 'GET', endpoint: '/api/blocking' },
+      sideStats: { method: 'GET', endpoint: '/api/side' },
+    },
+    initialPage: 'landing',
+    pages: [
+      { id: 'landing', layout: [] },
+      {
+        id: 'dashboard',
+        preloads: [
+          { operationName: 'blockingSearch', requestParams: {}, blocking: true },
+          { operationName: 'sideStats', requestParams: {} },
+        ],
+        layout: [
+          {
+            type: 'paragraph',
+            props: { text: 'Dashboard layout rendered' },
+          },
+          {
+            type: 'paragraph',
+            queryStateFeedback: {
+              query: 'blockingSearch',
+              states: {
+                error: {
+                  mode: 'fallback',
+                  fallback: [{ type: 'paragraph', props: { text: 'Blocking search failed' } }],
+                },
+              },
+            },
+            props: { text: 'Blocking search ready' },
+          },
+          {
+            type: 'paragraph',
+            queryStateFeedback: {
+              query: 'sideStats',
+              states: {
+                loading: {
+                  mode: 'fallback',
+                  fallback: [{ type: 'paragraph', props: { text: 'Side stats loading' } }],
+                },
+                error: {
+                  mode: 'fallback',
+                  fallback: [{ type: 'paragraph', props: { text: 'Side stats failed' } }],
+                },
+              },
+            },
+            props: { text: 'Side stats ready' },
+          },
+        ],
+      },
+    ],
+  }
+
+  function ForceQueryLoadingHarness({ queryName }: { queryName: string }) {
+    const { setQueryLoading } = useRuntimeStateActions()
+
+    return (
+      <button type="button" onClick={() => setQueryLoading(queryName)}>
+        {`Force ${queryName} loading`}
+      </button>
+    )
+  }
+
+  function renderBlockingGateHarness(config: RuntimeConfig = blockingGateConfig) {
+    return render(
+      <RuntimeStateProvider config={config}>
+        <NavigationFixtureForConfig config={config} />
+        <ForceQueryLoadingHarness queryName="blockingSearch" />
+        <RuntimeStateSnapshot />
+        <RuntimePage />
+      </RuntimeStateProvider>,
+    )
+  }
+
+  it('mounts the section immediately but shows the blocking indicator instead of the layout while the blocking preload is loading', async () => {
+    let resolveBlocking: ((response: Response) => void) | null = null
+    const fetchMock = vi.fn((url: string) => {
+      if (url === '/api/blocking') {
+        return new Promise<Response>((resolve) => {
+          resolveBlocking = resolve
+        })
+      }
+
+      return Promise.resolve(createJsonResponse({ ok: true }))
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    renderBlockingGateHarness()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Go to dashboard' }))
+
+    await waitFor(() => expect(readRuntimeState().pageEntry.status).toBe('loading'))
+
+    expect(screen.getByTestId('runtime-page')).toBeInTheDocument()
+    expect(screen.getByTestId('runtime-blocking-loading-indicator')).toBeInTheDocument()
+    expect(screen.getByRole('status')).toBeInTheDocument()
+    expect(screen.queryByText('Dashboard layout rendered')).not.toBeInTheDocument()
+
+    resolveBlocking?.(createJsonResponse({ ok: true }))
+    await waitFor(() => expect(readRuntimeState().pageEntry.status).toBe('success'))
+  })
+
+  it('lifts the gate and renders the layout once the blocking preload succeeds', async () => {
+    const fetchMock = vi.fn(() => Promise.resolve(createJsonResponse({ ok: true })))
+    vi.stubGlobal('fetch', fetchMock)
+
+    renderBlockingGateHarness()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Go to dashboard' }))
+
+    await waitFor(() => expect(readRuntimeState().pageEntry.status).toBe('success'))
+
+    expect(screen.getByText('Dashboard layout rendered')).toBeInTheDocument()
+    expect(screen.queryByTestId('runtime-blocking-loading-indicator')).not.toBeInTheDocument()
+  })
+
+  it('lifts the gate and renders the layout when the blocking preload settles as error, reflecting its own feedback', async () => {
+    const fetchMock = vi.fn((url: string) => {
+      if (url === '/api/blocking') {
+        return Promise.resolve(createJsonResponse({ message: 'Boom' }, 500))
+      }
+
+      return Promise.resolve(createJsonResponse({ ok: true }))
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    renderBlockingGateHarness()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Go to dashboard' }))
+
+    await waitFor(() => expect(readRuntimeState().pageEntry.status).toBe('error'))
+
+    expect(screen.getByText('Dashboard layout rendered')).toBeInTheDocument()
+    expect(screen.queryByTestId('runtime-blocking-loading-indicator')).not.toBeInTheDocument()
+    expect(screen.getByText('Blocking search failed')).toBeInTheDocument()
+    expect(screen.queryByText('Blocking search ready')).not.toBeInTheDocument()
+  })
+
+  it('does not delay the non-blocking preload of the same batch: it reflects its own feedback once the gate lifts', async () => {
+    let resolveBlocking: ((response: Response) => void) | null = null
+    let resolveSideStats: ((response: Response) => void) | null = null
+    const fetchMock = vi.fn((url: string) => {
+      if (url === '/api/blocking') {
+        return new Promise<Response>((resolve) => {
+          resolveBlocking = resolve
+        })
+      }
+
+      return new Promise<Response>((resolve) => {
+        resolveSideStats = resolve
+      })
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    renderBlockingGateHarness()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Go to dashboard' }))
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2))
+    // Gate still blocked: neither the layout nor the non-blocking node's own feedback is visible yet.
+    expect(screen.getByTestId('runtime-blocking-loading-indicator')).toBeInTheDocument()
+    expect(screen.queryByText('Side stats loading')).not.toBeInTheDocument()
+
+    resolveBlocking?.(createJsonResponse({ ok: true }))
+    await waitFor(() => expect(screen.queryByTestId('runtime-blocking-loading-indicator')).not.toBeInTheDocument())
+
+    // Gate lifted: the non-blocking preload's own feedback is visible while it is still loading in parallel.
+    expect(screen.getByText('Side stats loading')).toBeInTheDocument()
+
+    resolveSideStats?.(createJsonResponse({ message: 'Boom' }, 500))
+    await waitFor(() => expect(screen.getByText('Side stats failed')).toBeInTheDocument())
+  })
+
+  it('renders the layout immediately for a page without any blocking preload', async () => {
+    let resolveUsers: ((response: Response) => void) | null = null
+    const fetchMock = vi.fn(() => new Promise<Response>((resolve) => {
+      resolveUsers = resolve
+    }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    renderRuntimePageWithPreloads({
+      api: {
+        searchUsers: { method: 'GET', endpoint: '/api/users' },
+      },
+      initialPage: 'home',
+      pages: [
+        {
+          id: 'home',
+          preloads: [{ operationName: 'searchUsers', requestParams: {} }],
+          layout: [{ type: 'paragraph', props: { text: 'Home layout rendered' } }],
+        },
+      ],
+    })
+
+    await waitFor(() => expect(readRuntimeState().pageEntry.status).toBe('loading'))
+
+    expect(screen.getByText('Home layout rendered')).toBeInTheDocument()
+    expect(screen.queryByTestId('runtime-blocking-loading-indicator')).not.toBeInTheDocument()
+
+    resolveUsers?.(createJsonResponse({ results: ['Ada'] }))
+    await waitFor(() => expect(readRuntimeState().pageEntry.status).toBe('success'))
+  })
+
+  it('renders the layout immediately when the only blocking preload is skipped by its when condition', async () => {
+    const fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+
+    const config: RuntimeConfig = {
+      api: {
+        blockingSearch: { method: 'GET', endpoint: '/api/blocking' },
+      },
+      initialPage: 'landing',
+      pages: [
+        { id: 'landing', layout: [] },
+        {
+          id: 'conditional',
+          preloads: [
+            {
+              operationName: 'blockingSearch',
+              requestParams: {},
+              blocking: true,
+              when: { reference: 'params.userId', operator: 'isTruthy' },
+            },
+          ],
+          layout: [{ type: 'paragraph', props: { text: 'Conditional layout rendered' } }],
+        },
+      ],
+    }
+
+    render(
+      <RuntimeStateProvider config={config}>
+        <NavigationFixtureForConfig config={config} />
+        <RuntimeStateSnapshot />
+        <RuntimePage />
+      </RuntimeStateProvider>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Go to conditional' }))
+
+    await waitFor(() => expect(readRuntimeState().pageEntry.pageId).toBe('conditional'))
+
+    expect(readRuntimeState().pageEntry.status).toBe('idle')
+    expect(screen.getByText('Conditional layout rendered')).toBeInTheDocument()
+    expect(screen.queryByTestId('runtime-blocking-loading-indicator')).not.toBeInTheDocument()
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('renders the layout immediately on reentry when the blocking signature is already success in queries', async () => {
+    const fetchMock = vi.fn(() => Promise.resolve(createJsonResponse({ ok: true })))
+    vi.stubGlobal('fetch', fetchMock)
+
+    renderBlockingGateHarness()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Go to dashboard' }))
+    await waitFor(() => expect(readRuntimeState().pageEntry.status).toBe('success'))
+
+    fireEvent.click(screen.getByRole('button', { name: 'Go to landing' }))
+    await waitFor(() => expect(readRuntimeState().pageEntry.pageId).toBe('landing'))
+
+    fetchMock.mockClear()
+    fireEvent.click(screen.getByRole('button', { name: 'Go to dashboard' }))
+
+    await waitFor(() => expect(readRuntimeState().pageEntry.pageId).toBe('dashboard'))
+    // Same effective request signature: the preload is not relaunched, so status settles as success
+    // immediately without ever exposing a "loading" aggregate for this entry.
+    expect(readRuntimeState().pageEntry.status).toBe('success')
+    expect(screen.getByText('Dashboard layout rendered')).toBeInTheDocument()
+    expect(screen.queryByTestId('runtime-blocking-loading-indicator')).not.toBeInTheDocument()
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('keeps the layout visible once the gate has lifted for an entry even if the blocking query returns to loading', async () => {
+    const fetchMock = vi.fn(() => Promise.resolve(createJsonResponse({ ok: true })))
+    vi.stubGlobal('fetch', fetchMock)
+
+    renderBlockingGateHarness()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Go to dashboard' }))
+    await waitFor(() => expect(readRuntimeState().pageEntry.status).toBe('success'))
+
+    expect(screen.getByText('Dashboard layout rendered')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Force blockingSearch loading' }))
+
+    await waitFor(() => expect(readRuntimeState().queries.blockingSearch.status).toBe('loading'))
+
+    expect(screen.getByText('Dashboard layout rendered')).toBeInTheDocument()
+    expect(screen.queryByTestId('runtime-blocking-loading-indicator')).not.toBeInTheDocument()
+  })
+
+  it('keeps the same section DOM node mounted across the blocking-to-lifted transition', async () => {
+    let resolveBlocking: ((response: Response) => void) | null = null
+    const fetchMock = vi.fn((url: string) => {
+      if (url === '/api/blocking') {
+        return new Promise<Response>((resolve) => {
+          resolveBlocking = resolve
+        })
+      }
+
+      return Promise.resolve(createJsonResponse({ ok: true }))
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    renderBlockingGateHarness()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Go to dashboard' }))
+
+    await waitFor(() => expect(screen.getByTestId('runtime-blocking-loading-indicator')).toBeInTheDocument())
+    const sectionBeforeGateLift = screen.getByTestId('runtime-page')
+
+    resolveBlocking?.(createJsonResponse({ ok: true }))
+
+    await waitFor(() => expect(readRuntimeState().pageEntry.status).toBe('success'))
+    const sectionAfterGateLift = screen.getByTestId('runtime-page')
+
+    expect(sectionAfterGateLift).toBe(sectionBeforeGateLift)
+  })
+})
+
 function NavigationFixtureForConfig({ config }: { config: RuntimeConfig }) {
   const { navigateToPage } = useRuntimeStateActions()
   const pageIds = config.pages.map((page) => page.id)
