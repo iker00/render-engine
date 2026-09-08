@@ -23,6 +23,7 @@ import { validateTranslations } from './validate-translations'
 import { validateTokensConfig } from './validate-tokens-config'
 import { validateShellConfig } from './validate-shell'
 import { validateGroupsConfig } from './validate-groups'
+import { validateRowVisibilityScope } from './validate-row-visibility-scope'
 import type { BreadcrumbSegment } from './validation-breadcrumb'
 import { buildBreadcrumbSegmentFromNode, enrichedInvalidLayoutFromNode } from './validation-breadcrumb'
 import { computeModalRepeaterOwnership } from './runtime-modal-repeater-ownership'
@@ -242,6 +243,12 @@ export function validateRuntimeConfig(rawConfig: unknown): RuntimeConfigValidati
 
   if (modalRefsError) {
     return modalRefsError
+  }
+
+  const rowVisibilityScopeError = validateRowVisibilityScope(config)
+
+  if (rowVisibilityScopeError) {
+    return rowVisibilityScopeError
   }
 
   const groupsResult = validateGroupsConfig(rawConfig, config.pages)
