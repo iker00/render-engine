@@ -1012,4 +1012,145 @@ describe('validateRuntimeConfig', () => {
       expect(result.error.message).toContain('pages[0].preloads[0].when.conditions[0].reference')
     })
   })
+
+  // T1: blocking flag in pages[].preloads entries
+  describe('preloads blocking flag', () => {
+    it('accepts a preload entry with blocking: true and exposes it normalized', () => {
+      const result = validateRuntimeConfig({
+        api: {},
+        pages: [
+          {
+            id: 'home',
+            preloads: [{ searchUsers: {}, blocking: true }],
+            layout: [],
+          },
+        ],
+        initialPage: 'home',
+      })
+
+      expect(result.status).toBe('ready')
+      if (result.status !== 'ready') throw new Error('Expected ready')
+      expect(result.config.pages[0].preloads?.[0]).toEqual({
+        operationName: 'searchUsers',
+        requestParams: {},
+        blocking: true,
+      })
+    })
+
+    it('accepts a preload entry with blocking: false and exposes it normalized', () => {
+      const result = validateRuntimeConfig({
+        api: {},
+        pages: [
+          {
+            id: 'home',
+            preloads: [{ searchUsers: {}, blocking: false }],
+            layout: [],
+          },
+        ],
+        initialPage: 'home',
+      })
+
+      expect(result.status).toBe('ready')
+      if (result.status !== 'ready') throw new Error('Expected ready')
+      expect(result.config.pages[0].preloads?.[0]).toEqual({
+        operationName: 'searchUsers',
+        requestParams: {},
+        blocking: false,
+      })
+    })
+
+    it('accepts a preload entry without blocking and omits the key from the normalized config', () => {
+      const result = validateRuntimeConfig({
+        api: {},
+        pages: [
+          {
+            id: 'home',
+            preloads: [{ searchUsers: {} }],
+            layout: [],
+          },
+        ],
+        initialPage: 'home',
+      })
+
+      expect(result.status).toBe('ready')
+      if (result.status !== 'ready') throw new Error('Expected ready')
+      expect(Object.prototype.hasOwnProperty.call(result.config.pages[0].preloads?.[0] ?? {}, 'blocking')).toBe(false)
+    })
+
+    it.each([
+      ['string', 'yes'],
+      ['number', 1],
+      ['null', null],
+      ['object', { foo: 'bar' }],
+    ])('rejects a preload entry with a non-boolean blocking value (%s)', (_label, invalidValue) => {
+      const result = validateRuntimeConfig({
+        api: {},
+        pages: [
+          {
+            id: 'home',
+            preloads: [{ searchUsers: {}, blocking: invalidValue }],
+            layout: [],
+          },
+        ],
+        initialPage: 'home',
+      })
+
+      expect(result.status).toBe('error')
+      if (result.status !== 'error') throw new Error('Expected error')
+      expect(result.error.message).toContain('pages[0].preloads[0].blocking')
+      expect(result.error.message.startsWith('The page at')).toBe(true)
+    })
+
+    it('accepts the combination of getX, when and blocking together and exposes both keys normalized', () => {
+      const result = validateRuntimeConfig({
+        api: {},
+        pages: [
+          {
+            id: 'home',
+            preloads: [
+              {
+                searchUsers: {},
+                when: { reference: 'params.userId', operator: 'isTruthy' },
+                blocking: true,
+              },
+            ],
+            layout: [],
+          },
+        ],
+        initialPage: 'home',
+      })
+
+      expect(result.status).toBe('ready')
+      if (result.status !== 'ready') throw new Error('Expected ready')
+      expect(result.config.pages[0].preloads?.[0]).toEqual({
+        operationName: 'searchUsers',
+        requestParams: {},
+        when: { reference: 'params.userId', operator: 'isTruthy' },
+        blocking: true,
+      })
+    })
+
+    it('still rejects a preload entry with an extra key distinct from "when" and "blocking"', () => {
+      const result = validateRuntimeConfig({
+        api: {},
+        pages: [
+          {
+            id: 'home',
+            preloads: [{ searchUsers: {}, foo: 'not-allowed' }],
+            layout: [],
+          },
+        ],
+        initialPage: 'home',
+      })
+
+      expect(result).toEqual({
+        status: 'error',
+        error: {
+          code: 'invalid-layout',
+          displayMode: 'development-only',
+          message: 'The page at "pages[0].preloads[0]" must be an object with exactly one non-empty operationName key.',
+        },
+      })
+    })
+  })
 })
