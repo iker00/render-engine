@@ -31,9 +31,10 @@ La página ya no depende de `description` fuera del árbol `layout`.
 ## Shape de `preloads`
 `pages[].preloads` y el bloque raíz `preloads` comparten el mismo shape de entrada:
 - cada entrada debe ser un objeto con exactamente una clave no vacía cuyo nombre actúa como `operationName`
-- el valor de esa clave debe ser `{}` o un objeto con `query`, `body` y/o `headers`
+- el valor de esa clave debe ser `{}` o un objeto con `query`, `body`, `headers` y/o `blocking`
 - `query`, `body` y `headers` reutilizan exactamente el mismo contrato de `RuntimeApiRequestParams` ya soportado por `executeOperation`
-- el runtime normaliza internamente cada entrada a `{ operationName, requestParams }`
+- `blocking` es un campo booleano opcional (default `false`) que indica si el render debe bloquearse hasta que esta preload resuelva
+- el runtime normaliza internamente cada entrada a `{ operationName, requestParams, blocking? }`
 - dentro de un mismo bloque (una página o el bloque raíz) no se admite repetir el mismo `operationName`, aunque las requests declaradas fueran distintas
 - el shape histórico `preloads: ["loadUsers"]` ya no forma parte del contrato soportado y se rechaza antes del render
 
@@ -41,6 +42,7 @@ El bloque raíz `preloads` es más restrictivo que `pages[].preloads`:
 - no admite `when`; una entrada con `when` se rechaza en bootstrap con ruta exacta `preloads[i].when`
 - no admite referencias `item.*` en `query`/`body`/`headers` (no existe contexto de iteración a nivel de arranque de aplicación)
 - cada `operationName` referenciado debe existir en el catálogo `api`, igual que en `pages[].preloads`
+- sí admite `blocking`, con la misma semántica que en `pages[].preloads`: si al menos una preload tiene `blocking: true`, el render inicial se retrasa
 - ausencia del bloque o `preloads: []` se comportan exactamente igual que no declararlo
 
 ## Shape general del `layout`
