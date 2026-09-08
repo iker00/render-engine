@@ -13,8 +13,8 @@ implementation:
   in_progress_task_id: null
   # 2026-09-08: revisado por review-implementation-plan (sub-agente), 3 refinamientos aplicados a tasks.md (T02, T06, T07) y ready confirmado.
 validation:
-  tests_green: false
-  coverage_gate_passed: false
+  tests_green: true
+  coverage_gate_passed: true
 documentation:
   ready: false
   done: false
