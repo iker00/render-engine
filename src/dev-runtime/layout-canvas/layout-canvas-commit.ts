@@ -281,17 +281,21 @@ export function patchRawConfigTextForTarget(
 }
 
 /**
- * Converts the normalized `RuntimePreloadConfig[]` shape (`{ operationName, requestParams,
- * when? }`, the shape `validateRuntimeConfig` produces and `ApiConfigPanel`/`PreloadsListEditor`
+ * Converts the normalized `RuntimePreloadConfig[]` shape (`{ operationName, requestParams, when?,
+ * blocking? }`, the shape `validateRuntimeConfig` produces and `ApiConfigPanel`/`PreloadsListEditor`
  * edit in memory) back into the raw shape `validatePreloadEntries`
  * (`src/config/validate-preloads.ts`) actually accepts on input: one object per entry whose only
- * key (besides an optional sibling `when`) *is* the operation name, with `requestParams` as that
- * key's value — e.g. `{ "loadUsers": { "query": { "page": "2" } } }`. Serializing the normalized
- * shape as-is (`{ "operationName": "loadUsers", "requestParams": {...} }`) is a 2-key object
- * without `when`, which `validatePreloadEntries` rejects as "must be an object with exactly one
- * non-empty operationName key" — this is the raw/normalized divergence `preloads` has of its own,
- * on top of (not replacing) the `layout`-specific one `denormalizeFormNodesForSerialization`
- * already guards against.
+ * key (besides the optional sibling keys `when`/`blocking`) *is* the operation name, with
+ * `requestParams` as that key's value — e.g. `{ "loadUsers": { "query": { "page": "2" } } }`.
+ * Serializing the normalized shape as-is (`{ "operationName": "loadUsers", "requestParams": {...} }`)
+ * is a 2-key object without `when`/`blocking`, which `validatePreloadEntries` rejects as "must be an
+ * object with exactly one non-empty operationName key" — this is the raw/normalized divergence
+ * `preloads` has of its own, on top of (not replacing) the `layout`-specific one
+ * `denormalizeFormNodesForSerialization` already guards against. Any sibling key added to the
+ * normalized shape has to be mirrored here, or its commit round-trips through
+ * `validateRuntimeConfig` and comes back silently stripped (this happened once already: `blocking`
+ * was added to the raw/normalized shapes in T01 but not here, so toggling the `PreloadsListEditor`
+ * checkbox appeared to do nothing).
  */
 export function denormalizePreloadsForSerialization(
   preloads: readonly RuntimePreloadConfig[],
@@ -300,6 +304,9 @@ export function denormalizePreloadsForSerialization(
     const entry: Record<string, unknown> = { [preload.operationName]: preload.requestParams }
     if (preload.when !== undefined) {
       entry.when = preload.when
+    }
+    if (preload.blocking !== undefined) {
+      entry.blocking = preload.blocking
     }
     return entry
   })

@@ -271,6 +271,19 @@ describe('denormalizePreloadsForSerialization', () => {
 
     expect(result).toEqual([{ a: { query: { x: '1' } } }, { b: { headers: { y: '2' } } }])
   })
+
+  it('carries `blocking` as a sibling key when present, and omits it entirely when absent — regression for the checkbox commit being silently dropped on round-trip', () => {
+    const withBlocking = denormalizePreloadsForSerialization([
+      { operationName: 'loadUsers', requestParams: {}, blocking: true },
+    ])
+    expect(withBlocking).toEqual([{ loadUsers: {}, blocking: true }])
+
+    const withoutBlocking = denormalizePreloadsForSerialization([
+      { operationName: 'loadUsers', requestParams: {} },
+    ])
+    expect(withoutBlocking).toEqual([{ loadUsers: {} }])
+    expect('blocking' in (withoutBlocking[0] as object)).toBe(false)
+  })
 })
 
 describe('patchRawConfigTextWithPagePreloads', () => {
