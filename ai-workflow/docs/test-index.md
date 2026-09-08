@@ -185,6 +185,7 @@ Ficheros de apoyo, no son tests: `config-validation/helpers.ts`, `dev-runtime/lu
 - `runtime-button-download-action.test.tsx` — `button` con `action.type: downloadOperation`: disparo de descarga con `onSuccess`/`onError`, estado `disabled` durante la petición (incluido guard contra doble click), reflejo en `queries.{operationName}`, independencia entre instancias que comparten `operationName` y resolución de `item.*` en repeater
 - `runtime-button-lifecycle-actions.test.tsx` — `onSuccess`/`onError` de `button.props.action` tras `executeOperation`/`executeOperations`: encadenado, `when`, error de negocio, `item.*` en repeater y botón auxiliar dentro de form
 - `runtime-button-navigation.test.tsx` — navegación declarativa desde botones
+- `runtime-chart-collection-sources.test.ts` — `resolveChartCategoricalPoints`/`resolveChartNumericPoints`: resolución de colección dinámica a puntos categóricos/numéricos, degradación silenciosa ante `category`/`value`/`x`/`y` inválidos, y `category` por interpolación
 - `runtime-collection-pagination.test.ts` — paginación local de colecciones
 - `runtime-collection-pipeline-syntax.test.ts` — parser neutral de sintaxis del pipeline de colecciones (`orderby`/`filter`/`slice`) sobre `raw` string, sin resolución de referencias
 - `runtime-collection-pipeline.test.ts` — evaluador `evaluateCollectionPipeline`: aplicación en orden de `orderby`/`filter`/`slice` sobre un array ya resuelto, resolución de argumentos dinámicos sin `iterationContext` y degradación silenciosa (valor ausente, path inexistente, tipo incompatible)

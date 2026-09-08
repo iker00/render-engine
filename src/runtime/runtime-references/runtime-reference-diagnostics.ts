@@ -59,6 +59,7 @@ export type RuntimeReferenceSurface =
   | 'shell.sidebar.item.label'
   | 'shell.sidebar.item.href'
   | 'map.props.markerSources.label'
+  | 'chart.props.source.category'
   | 'gallery.props.images.src'
   | 'gallery.props.images.alt'
   | 'button.props.action.filename'

@@ -7,7 +7,11 @@ import type {
   SelectLayoutNodeItems,
   SelectManualScalarItemsSource,
 } from '../config/runtime-config'
-import type { MapMarkerSource } from '../config/runtime-config-types'
+import type {
+  ChartCategoricalDynamicSource,
+  ChartNumericDynamicSource,
+  MapMarkerSource,
+} from '../config/runtime-config-types'
 import type { RuntimeReferenceSurface } from './runtime-references/runtime-reference-diagnostics'
 import { hasRuntimeTemplateDelimiter } from '../config/runtime-reference-syntax'
 import { parseCollectionPipelineSource } from '../config/runtime-collection-pipeline-syntax'
@@ -176,6 +180,105 @@ function resolveMapMarkerLabel(item: unknown, label: string, state: RuntimeState
   }
 
   return normalizeCollectionItemPathText(item, label)
+}
+
+export interface ResolvedChartCategoricalPoint {
+  category: string
+  value: number
+}
+
+export function resolveChartCategoricalPoints(
+  source: ChartCategoricalDynamicSource,
+  state: RuntimeState,
+  options: { iterationContext?: RuntimeIterationContext } = {},
+): ResolvedChartCategoricalPoint[] {
+  const collectionItems = resolveCollectionSourceItems(source.source, state, options)
+  const points: ResolvedChartCategoricalPoint[] = []
+
+  for (let index = 0; index < collectionItems.length; index += 1) {
+    const item = collectionItems[index]
+    const itemPath = `${source.source}[${index}]`
+
+    const category = resolveChartCategoricalLabel(item, source.category, state, index)
+
+    if (category === null) {
+      continue
+    }
+
+    const value = resolveChartNumericField(item, source.value, itemPath)
+
+    if (value === null) {
+      continue
+    }
+
+    points.push({ category, value })
+  }
+
+  return points
+}
+
+function resolveChartCategoricalLabel(item: unknown, category: string, state: RuntimeState, index: number) {
+  if (hasRuntimeTemplateDelimiter(category)) {
+    return resolveInterpolatedCollectionString(category, state, 'chart.props.source.category', {
+      iterationContext: {
+        item,
+        key: String(index),
+        itemIndex: index,
+      },
+    })
+  }
+
+  return normalizeCollectionItemPathText(item, category)
+}
+
+export interface ResolvedChartNumericPoint {
+  x: number
+  y: number
+}
+
+export function resolveChartNumericPoints(
+  source: ChartNumericDynamicSource,
+  state: RuntimeState,
+  options: { iterationContext?: RuntimeIterationContext } = {},
+): ResolvedChartNumericPoint[] {
+  const collectionItems = resolveCollectionSourceItems(source.source, state, options)
+  const points: ResolvedChartNumericPoint[] = []
+
+  for (let index = 0; index < collectionItems.length; index += 1) {
+    const item = collectionItems[index]
+    const itemPath = `${source.source}[${index}]`
+
+    const x = resolveChartNumericField(item, source.x, itemPath)
+
+    if (x === null) {
+      continue
+    }
+
+    const y = resolveChartNumericField(item, source.y, itemPath)
+
+    if (y === null) {
+      continue
+    }
+
+    points.push({ x, y })
+  }
+
+  return points
+}
+
+function resolveChartNumericField(item: unknown, path: string, itemPath: string): number | null {
+  const resolvedValue = resolveCollectionItemPath(item, path)
+
+  if (!resolvedValue.found || typeof resolvedValue.value !== 'number' || !Number.isFinite(resolvedValue.value)) {
+    reportCollectionItemDiagnostic({
+      itemPath,
+      surface: 'chart.props.source',
+      projectionPath: path,
+    })
+    return null
+  }
+
+  return resolvedValue.value
 }
 
 export function resolveListCollectionItemsWithOptions(
@@ -572,7 +675,7 @@ function reportCollectionItemDiagnostic({
   projectionPath,
 }: {
   itemPath: string
-  surface: 'list.props.items' | ChoiceCollectionSurface | 'map.props.markerSources'
+  surface: 'list.props.items' | ChoiceCollectionSurface | 'map.props.markerSources' | 'chart.props.source'
   projectionPath: string
 }) {
   if (!import.meta.env.DEV) {
