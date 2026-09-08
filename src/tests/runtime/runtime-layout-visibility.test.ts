@@ -1370,4 +1370,129 @@ describe('Runtime layout visibility', () => {
       ).toBe(false)
     })
   })
+
+  describe('row.* references', () => {
+    it('matches a simple condition against iterationContext.row', () => {
+      const visibility = {
+        reference: 'row.status',
+        operator: 'equals',
+        value: 'active',
+      } satisfies RuntimeVisibilityConfig
+
+      expect(
+        matchesVisibilityRule(visibility, runtimeState, { row: { status: 'active' }, rowIndex: 1 }),
+      ).toBe(true)
+    })
+
+    it('does not match the same condition when iterationContext.row has a different value', () => {
+      const visibility = {
+        reference: 'row.status',
+        operator: 'equals',
+        value: 'active',
+      } satisfies RuntimeVisibilityConfig
+
+      expect(
+        matchesVisibilityRule(visibility, runtimeState, { row: { status: 'archived' }, rowIndex: 1 }),
+      ).toBe(false)
+    })
+
+    it('degrades row.* to an absent reference when iterationContext is undefined, matching the item.* precedent', () => {
+      expect(
+        matchesVisibilityRule(
+          { reference: 'row.status', operator: 'equals', value: 'active' },
+          runtimeState,
+        ),
+      ).toBe(false)
+
+      expect(
+        matchesVisibilityRule(
+          { reference: 'row.status', operator: 'isFalsy' },
+          runtimeState,
+        ),
+      ).toBe(true)
+    })
+
+    it('matches row.$index against iterationContext.rowIndex', () => {
+      const visibility = {
+        reference: 'row.$index',
+        operator: 'lessThan',
+        value: 4,
+      } satisfies RuntimeVisibilityConfig
+
+      expect(matchesVisibilityRule(visibility, runtimeState, { row: {}, rowIndex: 3 })).toBe(true)
+    })
+
+    it('combines row.* with forms.* in an and group', () => {
+      const stateWithActiveFilter: RuntimeState = {
+        ...runtimeState,
+        forms: {
+          ...runtimeState.forms,
+          filters: {
+            active: {
+              value: true,
+              error: null,
+              touched: true,
+              dirty: true,
+              defaultValue: false,
+            },
+          },
+        },
+      }
+
+      expect(
+        matchesVisibilityRule(
+          {
+            operator: 'and',
+            conditions: [
+              { reference: 'row.status', operator: 'equals', value: 'active' },
+              { reference: 'forms.filters.active', operator: 'isTruthy' },
+            ],
+          },
+          stateWithActiveFilter,
+          { row: { status: 'active' } },
+        ),
+      ).toBe(true)
+    })
+
+    it('combines row.* with queries.* in an or group', () => {
+      expect(
+        matchesVisibilityRule(
+          {
+            operator: 'or',
+            conditions: [
+              { reference: 'row.priority', operator: 'greaterThan', value: 3 },
+              { reference: 'queries.overrideVisible.data', operator: 'isTruthy' },
+            ],
+          },
+          runtimeState,
+          { row: { priority: 5 } },
+        ),
+      ).toBe(true)
+    })
+
+    it('resolves row.* and item.* independently from a mixed iterationContext without mutual shadowing', () => {
+      const mixedIterationContext = {
+        item: { name: 'Repeater item' },
+        itemIndex: 0,
+        row: { name: 'Row data' },
+        rowIndex: 2,
+      }
+
+      expect(
+        matchesVisibilityRule(
+          { reference: 'row.name', operator: 'equals', value: 'Row data' },
+          runtimeState,
+          mixedIterationContext,
+        ),
+      ).toBe(true)
+
+      expect(
+        matchesVisibilityRule(
+          { reference: 'item.name', operator: 'equals', value: 'Repeater item' },
+          runtimeState,
+          mixedIterationContext,
+        ),
+      ).toBe(true)
+    })
+  })
 })
