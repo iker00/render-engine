@@ -271,6 +271,7 @@ Ficheros de apoyo, no son tests: `config-validation/helpers.ts`, `dev-runtime/lu
 - `layout-canvas-properties-panel-commit-feedback.test.tsx` — feedback de commit rechazado del panel de propiedades y persistencia del valor introducido
 - `layout-canvas-properties-panel.test.tsx` — panel de propiedades del nodo seleccionado con sus widgets y subsecciones
 - `layout-canvas-properties-panel-gallery.test.tsx` — panel de propiedades end-to-end para `gallery`: selector Origen (Estático/Dinámico) y widget de `props.source` en modo dinámico, con visibilidad condicional de los campos generados por el dispatcher
+- `layout-canvas-property-field-chart-origin-mode.test.tsx` — widget aislado `ChartOriginModePropertyField`: detección de modo por `props.data`/`props.source`, alternancia Estático/Dinámico con plantilla mínima por familia (categórica/numérica) según `variant`, sin restaurar el valor descartado, e idempotencia
 - `layout-canvas-property-field-choice-items.test.tsx` — editor de items de elección con modos manual literal, escalar y dinámico
 - `layout-canvas-property-field-color-swatch.test.tsx` — widget aislado de muestras de color con roving tabindex y flechas
 - `layout-canvas-property-field-container-columns-mode.test.tsx` — widget del modo del container que alterna Grid/Columnas preservando el resto de props
