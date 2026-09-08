@@ -20,6 +20,9 @@ const FORBIDDEN_NODE_MARKERS = [
   'Límite de ficheros alcanzado',
   // map node marker: Leaflet's root DOM class, only present if its CSS was bundled
   'leaflet-container',
+  // chart node marker: Recharts' root wrapper DOM class, string literal that survives
+  // minification (same rationale as 'leaflet-container' above)
+  'recharts-wrapper',
 ]
 
 /**

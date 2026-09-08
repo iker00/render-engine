@@ -243,6 +243,11 @@ export function LayoutNodeRenderer({
       renderedNode = <MapNode node={node} iterationContext={iterationContext} />
       break
     }
+    case 'chart': {
+      const ChartNode = NodeComponents.chart
+      renderedNode = <ChartNode node={node} iterationContext={iterationContext} />
+      break
+    }
     case 'steps': {
       const StepsNode = NodeComponents.steps
       renderedNode = <StepsNode node={node} iterationContext={iterationContext} path={path} />

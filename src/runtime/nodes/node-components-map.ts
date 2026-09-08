@@ -4,6 +4,7 @@ import { AlertNode } from './alert-layout-node'
 import { AutocompleteNode } from './autocomplete-layout-node'
 import { BadgeNode } from './badge-layout-node'
 import { ButtonNode } from './button-layout-node'
+import { ChartNode } from './chart-layout-node'
 import { CheckboxGroupNode } from './checkbox-group-layout-node'
 import { ContainerNode } from './container-layout-node'
 import { DividerNode } from './divider-layout-node'
@@ -45,6 +46,7 @@ const eagerMap = {
   autocomplete: AutocompleteNode as AnyComponent,
   badge: BadgeNode as AnyComponent,
   button: ButtonNode as AnyComponent,
+  chart: ChartNode as AnyComponent,
   checkboxGroup: CheckboxGroupNode as AnyComponent,
   container: ContainerNode as AnyComponent,
   divider: DividerNode as AnyComponent,
@@ -85,6 +87,7 @@ const lazyMap = {
   ),
   badge: React.lazy(() => import('./badge-layout-node').then((m) => ({ default: m.BadgeNode }))),
   button: React.lazy(() => import('./button-layout-node').then((m) => ({ default: m.ButtonNode }))),
+  chart: React.lazy(() => import('./chart-layout-node').then((m) => ({ default: m.ChartNode }))),
   checkboxGroup: React.lazy(() =>
     import('./checkbox-group-layout-node').then((m) => ({ default: m.CheckboxGroupNode })),
   ),
