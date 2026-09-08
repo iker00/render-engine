@@ -10,6 +10,7 @@ import {
   autocompleteNodeSchema,
   badgeNodeSchema,
   buttonNodeSchema,
+  chartNodeSchema,
   checkboxGroupNodeSchema,
   containerNodeSchema,
   dividerNodeSchema,
@@ -48,7 +49,10 @@ import {
 // `slot` placement stays a Monaco-only edit. `group` itself is insertable (T15): see
 // `layout-canvas-node-palette-defaults.ts`'s `group` case for why its placeholder instance
 // (`groupId: ''`) is always valid to insert.
-const NODE_TYPES_NOT_YET_INSERTABLE_FROM_PALETTE: ReadonlySet<LayoutNodeType> = new Set(['slot'])
+// `chart` is structurally part of the catalog (T01 of feature chart-node) but the editor
+// integration (properties panel widgets, palette insertion) is out of scope for that task — it
+// is wired in by a later task of the same feature.
+const NODE_TYPES_NOT_YET_INSERTABLE_FROM_PALETTE: ReadonlySet<LayoutNodeType> = new Set(['slot', 'chart'])
 
 const nodeSchemaByType: Record<LayoutNodeType, z.ZodType> = {
   container: containerNodeSchema,
@@ -82,6 +86,7 @@ const nodeSchemaByType: Record<LayoutNodeType, z.ZodType> = {
   map: mapNodeSchema,
   gallery: galleryNodeSchema,
   autocomplete: autocompleteNodeSchema,
+  chart: chartNodeSchema,
   group: groupInstanceNodeSchema,
   slot: slotNodeSchema,
 }

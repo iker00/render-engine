@@ -186,6 +186,12 @@ export function buildDefaultNodeInstance(type: LayoutNodeType): LayoutNode {
     case 'slot':
       throw new Error(`buildDefaultNodeInstance: node type "${type}" is not yet insertable from the palette`)
 
+    // `chart` is structurally part of `LayoutNodeType` (T01 of feature chart-node) but also
+    // excluded from `getSupportedNodeTypesCatalog()` until a later task of that feature wires up
+    // its palette/properties-panel integration — unreachable in practice for the same reason.
+    case 'chart':
+      throw new Error(`buildDefaultNodeInstance: node type "${type}" is not yet insertable from the palette`)
+
     default: {
       const exhaustiveCheck: never = type
       throw new Error(`buildDefaultNodeInstance: unsupported node type "${String(exhaustiveCheck)}"`)

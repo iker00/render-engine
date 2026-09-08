@@ -57,6 +57,7 @@ Ficheros de apoyo, no son tests: `config-validation/helpers.ts`, `dev-runtime/lu
 - `runtime-config-validation-badge.test.ts` — validación del nodo `badge`: props label/variant/color, transversales y rechazo de shape inválido (leaf)
 - `runtime-config-validation-button-styles.test.ts` — esquema y normalización de `button` en color, variant y fullWidth (constantes y validación cruzada)
 - `runtime-config-validation-buttons.test.ts` — botones y acciones (navigateTo, goBack, executeOperation, resetForm), `onSuccess`/`onError` de `executeOperation`/`executeOperations` con validación de targets, y validación del nodo `link`
+- `runtime-config-validation-chart.test.ts` — esquema `Zod` del nodo `chart` (`chartNodeSchema`): aceptación/rechazo de shape estructural de `props.variant`/`data`/`source`/`color`/`height`/labels y `children`, sin cross-checks por variante
 - `runtime-config-validation-collections.test.ts` — contrato de fuentes de colección multi-valor
 - `runtime-config-validation-containers.test.ts` — contrato de layout de contenedores
 - `runtime-config-validation-divider.test.ts` — validación del nodo `divider`: variantes, transversales, placement y rechazos de shape
