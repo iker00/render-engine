@@ -408,3 +408,75 @@ describe('drag insert desde la paleta (FR8)', () => {
     expect(afterNodePaths).toEqual(beforeNodePaths)
   })
 })
+
+// T05 (feature chart-node): `chart` joins the generic palette/drop-target/properties-panel
+// machinery exercised by the rest of this file — no chart-specific wiring, just the same catalog
+// entry, `buildDefaultNodeInstance` default and generic drop-validity rules as every other leaf
+// node type.
+describe('drag insert de chart desde la paleta (T05, feature chart-node)', () => {
+  it('arrastrar chart desde la paleta hasta dentro de un container vacío lo inserta con el default de la paleta (variant bar, un punto categórico) y el árbol resultante pasa validateRuntimeConfig', async () => {
+    renderCanvas({
+      api: {},
+      initialPage: 'home',
+      pages: [{ id: 'home', layout: [container([])] }],
+    })
+
+    paletteDragEnd('chart', { parentPath: [{ field: 'children', index: 0 }], index: 0 })
+
+    const { parsed } = await getMonacoJson()
+    const containerNode = (
+      parsed.pages as Array<{
+        layout: Array<{ children: Array<{ type: string; props: { variant: string; data: unknown } }> }>
+      }>
+    )[0].layout[0]
+
+    expect(containerNode.children).toHaveLength(1)
+    expect(containerNode.children[0].type).toBe('chart')
+    expect(containerNode.children[0].props.variant).toBe('bar')
+    expect(containerNode.children[0].props.data).toEqual([{ category: 'Ejemplo', value: 1 }])
+    expect(validateRuntimeConfig(parsed).status).toBe('ready')
+  })
+
+  it('arrastrar chart desde la paleta dentro de un nodo hoja (heading) no inserta nada (destino inválido, misma regla genérica que el resto de tipos)', async () => {
+    const { initialConfigText } = renderCanvas({
+      api: {},
+      initialPage: 'home',
+      pages: [{ id: 'home', layout: [container([heading('Plain')])] }],
+    })
+
+    paletteDragEnd('chart', {
+      parentPath: [
+        { field: 'children', index: 0 },
+        { field: 'children', index: 0 },
+      ],
+      index: 0,
+    })
+
+    const { text } = await getMonacoJson()
+    expect(text).toBe(initialConfigText)
+  })
+
+  it('seleccionar el chart recién insertado en modo Editor muestra las pestañas Props/Diseño/Visibilidad/Queries generadas por el dispatcher genérico', async () => {
+    const { container: root } = renderCanvas({
+      api: {},
+      initialPage: 'home',
+      pages: [{ id: 'home', layout: [{ type: 'container', props: { columns: 2 }, children: [] }] }],
+    })
+
+    paletteDragEnd('chart', { parentPath: [{ field: 'children', index: 0 }], index: 0 })
+
+    const chartPath: LayoutNodePath = [
+      { field: 'children', index: 0 },
+      { field: 'children', index: 0 },
+    ]
+    const wrapper = root.querySelector(`[data-node-path="${serializeLayoutNodePath(chartPath)}"]`)
+    expect(wrapper).not.toBeNull()
+    fireEvent.click(wrapper as Element)
+
+    const tablist = await screen.findByRole('tablist')
+    const tabNames = within(tablist)
+      .getAllByRole('tab')
+      .map((tab) => tab.textContent)
+    expect(tabNames).toEqual(['Props', 'Diseño', 'Visibilidad', 'Queries'])
+  })
+})

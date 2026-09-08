@@ -169,6 +169,15 @@ export function buildDefaultNodeInstance(type: LayoutNodeType): LayoutNode {
         },
       }
 
+    // Minimum shape that passes `validateChartNode` without further user action: `bar` is a
+    // categorical variant, and its single static data point satisfies the `data`/`source`
+    // mutual-exclusion check while matching that variant's `{ category, value }` family.
+    case 'chart':
+      return {
+        type: 'chart',
+        props: { variant: 'bar', data: [{ category: 'Ejemplo', value: 1 }] },
+      }
+
     // T15 (feature reusable-node-groups): `groupId: ''` is a deliberate draft placeholder, not
     // an oversight — `groupInstanceNodeSchema` accepts an empty `groupId` and `checkGroupInstance`
     // (`validate-groups.ts`) skips its cross-checks specifically for `''`, so this inserts
@@ -184,12 +193,6 @@ export function buildDefaultNodeInstance(type: LayoutNodeType): LayoutNode {
     // `getSupportedNodeTypesCatalog()` (see that function's own comment) — the palette never
     // drags one of these in, so this branch is unreachable in practice.
     case 'slot':
-      throw new Error(`buildDefaultNodeInstance: node type "${type}" is not yet insertable from the palette`)
-
-    // `chart` is structurally part of `LayoutNodeType` (T01 of feature chart-node) but also
-    // excluded from `getSupportedNodeTypesCatalog()` until a later task of that feature wires up
-    // its palette/properties-panel integration — unreachable in practice for the same reason.
-    case 'chart':
       throw new Error(`buildDefaultNodeInstance: node type "${type}" is not yet insertable from the palette`)
 
     default: {

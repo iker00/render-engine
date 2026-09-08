@@ -9,7 +9,7 @@ artifacts:
   notes: optional
 implementation:
   ready: true
-  completed_task_ids: [T01, T02, T03, T04]
+  completed_task_ids: [T01, T02, T03, T04, T05]
   in_progress_task_id: null
   # 2026-09-08: revisado por review-implementation-plan (sub-agente), 3 refinamientos aplicados a tasks.md (T02, T06, T07) y ready confirmado.
 validation:
