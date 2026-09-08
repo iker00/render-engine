@@ -522,6 +522,90 @@ describe('validateRuntimeConfig — chart node: source.category/value/x/y projec
   })
 })
 
+describe('validateRuntimeConfig — chart node: source.source collection pipeline (allowPipeline)', () => {
+  const invalidSourceMessage = 'collection sources must use queries.{queryName}.data, queries.{queryName}.data.* or item.*.'
+
+  function expectInvalidSourceAt(result: ReturnType<typeof validateRuntimeConfig>, path: string) {
+    expect(result).toEqual({
+      status: 'error',
+      error: {
+        code: 'invalid-layout',
+        displayMode: 'development-only',
+        message: expect.stringContaining(`"${path}": ${invalidSourceMessage}`),
+      },
+    })
+  }
+
+  it('accepts a well-formed pipeline on a categorical source', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithLayout([
+        createChartNode({
+          props: {
+            variant: 'bar',
+            data: undefined,
+            source: {
+              source: 'queries.stats.data | orderby:total,desc | slice:0,10',
+              category: 'label',
+              value: 'total',
+            },
+          },
+        }),
+      ]),
+    )
+    expect(result.status).toBe('ready')
+    if (result.status === 'ready') {
+      expect(result.page.layout[0]).toMatchObject({
+        props: { source: { source: 'queries.stats.data | orderby:total,desc | slice:0,10' } },
+      })
+    }
+  })
+
+  it('accepts a well-formed pipeline on a numeric source', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithLayout([
+        createChartNode({
+          props: {
+            variant: 'scatter',
+            data: undefined,
+            source: { source: 'queries.stats.data | orderby:x,asc', x: 'a', y: 'b' },
+          },
+        }),
+      ]),
+    )
+    expect(result.status).toBe('ready')
+  })
+
+  it('rejects an invalid baseReference even with a well-formed pipeline', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithLayout([
+        createChartNode({
+          props: {
+            variant: 'bar',
+            data: undefined,
+            source: { source: 'params.something | orderby:x,asc', category: 'label', value: 'total' },
+          },
+        }),
+      ]),
+    )
+    expectInvalidSourceAt(result, 'layout[0].props.source.source')
+  })
+
+  it('rejects a malformed pipeline stage', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithLayout([
+        createChartNode({
+          props: {
+            variant: 'bar',
+            data: undefined,
+            source: { source: 'queries.stats.data | sort:total,asc', category: 'label', value: 'total' },
+          },
+        }),
+      ]),
+    )
+    expectInvalidSourceAt(result, 'layout[0].props.source.source')
+  })
+})
+
 describe('validateRuntimeConfig — chart node: children rejection', () => {
   it('rejects a chart with children declared as an empty array', () => {
     const result = validateRuntimeConfig(createConfigWithLayout([createChartNode({ children: [] })]))

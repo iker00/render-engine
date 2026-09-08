@@ -123,7 +123,7 @@ export function validateChartNode(
   if (hasSource) {
     const source = props.source!
 
-    const sourceResult = validateCollectionSource(source.source, `${path}.props.source.source`, pageId)
+    const sourceResult = validateCollectionSource(source.source, `${path}.props.source.source`, pageId, { allowPipeline: true })
 
     if (sourceResult.status === 'error') {
       return enrichErrorResult(sourceResult, breadcrumb, rawNode)

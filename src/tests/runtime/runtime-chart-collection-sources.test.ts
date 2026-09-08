@@ -214,6 +214,16 @@ describe('resolveChartCategoricalPoints', () => {
     expect(runtimeState.queries.q.data).toEqual(originalData)
     expect(firstResult).toEqual(secondResult)
   })
+
+  it('applies an orderby + slice pipeline suffix on source.source before projecting points', () => {
+    const source: ChartCategoricalDynamicSource = {
+      source: 'queries.q.data | orderby:total,desc | slice:0,1',
+      category: 'label',
+      value: 'total',
+    }
+
+    expect(resolveChartCategoricalPoints(source, runtimeState)).toEqual([{ category: 'A', value: 10 }])
+  })
 })
 
 describe('resolveChartNumericPoints', () => {
@@ -289,5 +299,15 @@ describe('resolveChartNumericPoints', () => {
 
     expect(runtimeState.queries.numeric.data).toEqual(originalData)
     expect(firstResult).toEqual(secondResult)
+  })
+
+  it('applies an orderby + slice pipeline suffix on source.source before projecting points', () => {
+    const source: ChartNumericDynamicSource = {
+      source: 'queries.numeric.data | orderby:a,desc | slice:0,1',
+      x: 'a',
+      y: 'b',
+    }
+
+    expect(resolveChartNumericPoints(source, runtimeState)).toEqual([{ x: 3, y: 4 }])
   })
 })
