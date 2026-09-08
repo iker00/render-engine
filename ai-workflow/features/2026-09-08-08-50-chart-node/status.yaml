@@ -1,4 +1,4 @@
-phase: planning
+phase: complete
 risk_level: medium
 requires_design: true
 blocked_by: []
@@ -16,6 +16,7 @@ validation:
   tests_green: true
   coverage_gate_passed: true
 documentation:
-  ready: false
-  done: false
-feature_status: planned
+  ready: true
+  done: true
+  # 2026-09-08: actualización documental completada — nueva ficha nodes/chart.md, entrada en nodes/index.md, sección en development/dev-mode-editor.md, current-state.md actualizado con última feature de catálogo de nodos.
+feature_status: completed

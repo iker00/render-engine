@@ -242,6 +242,20 @@ El dispatcher se apoya para esto en un hook `x-widget`: si el fragmento de schem
 
 Mientras el origen activo es "Dinámico", el campo `props.source` se edita con un widget propio (`GalleryDynamicSourcePropertyField`), enganchado vía el mismo hook `x-widget` que [`choice-items`](#widget-dedicado-para-propsitems-de-select-radiogroup-y-checkboxgroup) bajo la clave `'gallery-dynamic-source'`: `source`/`key`/`alt` se editan como texto libre; un sub-selector `mode` (`src`/`fetch`, con las etiquetas técnicas sin traducir, mismo criterio que `itemType` de `choice-items`) alterna entre un campo `src` de texto libre y, en `fetch`, un campo `idField` opcional más el editor genérico de `image.props.fetch` (reutilizado tal cual desde su propio schema Zod vía `toJSONSchema`, sin duplicar su definición). Cambiar `mode` reconstruye solo los campos propios de `src`/`fetch`/`idField` (`source`/`key`/`alt` sobreviven sin cambios). El panel de propiedades condiciona además, en el schema efectivo de `props` que llega al dispatcher genérico, qué de `images`/`source` se muestra según el origen activo (`resolveGalleryPropsSchema`, mismo precedente que `resolveTablePropsSchema` para ocultar la clave inactiva).
 
+### Selector de origen y widget dedicado para `props` de `chart`
+`chart.props` tiene dos orígenes mutuamente excluyentes (`data` estático / `source` dinámico) y un selector de tipo de gráfico (`variant`) al principio de la pestaña `Props`. El panel muestra ambos selectores como opciones prioritarias antes que el resto de campos generados por el dispatcher:
+
+- **Selector "Tipo de gráfico"** (`ChartVariantPropertyField`, segmented o `<select>` según decisión de UX explícita): elige entre seis valores `bar | line | area | pie | donut | scatter`. Cambiar de tipo reconstruye los campos de datos incompatibles entre formas categóricas (`bar`/`line`/`area`/`pie`/`donut`) y numérica (`scatter`) — un cambio de `bar` a `scatter` reinicia los datos con una plantilla válida de forma numérica; un cambio de `bar` a `line` conserva los datos ya declarados porque ambos son categóricos.
+- **Selector "Origen"** (`ChartOriginModePropertyField`, segmentos tipo "Modo" de `container`): alterna entre "Estático" y "Dinámico" con la misma semántica que `gallery`:
+  - El modo activo se detecta por presencia de `props.data` → "Estático"; ausencia → "Dinámico".
+  - **"Estático" → "Dinámico"**: retira `props.data`, siembra una plantilla mínima válida según la forma de la variante activa. Para categóricas: `{ source: 'queries.query.data', categoryPath: 'category', valuePath: 'value' }`; para `scatter`: `{ source: 'queries.query.data', xPath: 'x', yPath: 'y' }`.
+  - **"Dinámico" → "Estático"**: retira `props.source`, siembra `data: []` (vacío según forma activa).
+  - `props.height`, `props.color`, `props.label`, `props.xAxisLabel`, `props.yAxisLabel` sobreviven sin cambios en ambos sentidos.
+
+Mientras el origen activo es "Dinámico", el bloque `props.source` se edita con campos de texto para `source`, `categoryPath`/`valuePath` (en categóricas) o `xPath`/`yPath` (en `scatter`), reutilizando el dispatcher genérico del schema Zod. El panel condiciona el schema efectivo de `props` según la variante activa: campos `categoryPath`/`valuePath` son visibles solo en categóricas; `xPath`/`yPath` solo en `scatter` (mismo patrón que `resolveTablePropsSchema`/`resolveGalleryPropsSchema`).
+
+Campos de texto `props.label`, `props.xAxisLabel`, `props.yAxisLabel` son visibles solo en variantes categóricas y `scatter`, nunca en `pie`/`donut` (su validación los rechaza — el panel no los ofrece siquiera).
+
 ### Widget dedicado para `layout.span` (columnas por breakpoint)
 `layout.span` (entero plano o mapa responsive por breakpoint) se edita en la subsección `Layout` con un widget dedicado (`LayoutSpanPropertyField`, registrado en el mismo `WIDGET_REGISTRY` del dispatcher bajo `'layout-span'`) en vez del campo numérico/mapa genérico, reutilizando el mismo hook `x-widget` que `choice-items`.
 
