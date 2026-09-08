@@ -1674,4 +1674,220 @@ describe('validateRuntimeConfig', () => {
       expect(result.status).toBe('ready')
     })
   })
+
+  describe('row.* references in visibility shape', () => {
+    // These cases validate shape only (isValidVisibilityReference), not scope: the node is not
+    // inside a `table` cell here. T2 introduces the "row.* only inside a table cell" restriction.
+    it('accepts row.{segment} as a valid visibility reference shape outside a table cell', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithLayout([
+          {
+            type: 'heading',
+            visibility: {
+              reference: 'row.status',
+              operator: 'equals',
+              value: 'active',
+            },
+            props: { text: 'Welcome', level: 1 },
+          },
+        ]),
+      )
+      expect(result.status).toBe('ready')
+    })
+
+    it('accepts bare row (no segments) with isTruthy as a valid visibility reference shape', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithLayout([
+          {
+            type: 'heading',
+            visibility: {
+              reference: 'row',
+              operator: 'isTruthy',
+            },
+            props: { text: 'Welcome', level: 1 },
+          },
+        ]),
+      )
+      expect(result.status).toBe('ready')
+    })
+
+    it('accepts row with nested segments (row.meta.author.name) as a valid visibility reference shape', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithLayout([
+          {
+            type: 'heading',
+            visibility: {
+              reference: 'row.meta.author.name',
+              operator: 'equals',
+              value: 'Ada',
+            },
+            props: { text: 'Welcome', level: 1 },
+          },
+        ]),
+      )
+      expect(result.status).toBe('ready')
+    })
+
+    it('accepts row with a numeric segment (row.tags.0) as a valid visibility reference shape', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithLayout([
+          {
+            type: 'heading',
+            visibility: {
+              reference: 'row.tags.0',
+              operator: 'equals',
+              value: 'x',
+            },
+            props: { text: 'Welcome', level: 1 },
+          },
+        ]),
+      )
+      expect(result.status).toBe('ready')
+    })
+
+    it('accepts row.$index as a valid visibility reference shape', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithLayout([
+          {
+            type: 'heading',
+            visibility: {
+              reference: 'row.$index',
+              operator: 'lessThan',
+              value: 4,
+            },
+            props: { text: 'Welcome', level: 1 },
+          },
+        ]),
+      )
+      expect(result.status).toBe('ready')
+    })
+
+    it('rejects row.$index.algo (extra segment after the synthetic $index) at visibility.reference', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithLayout([
+          {
+            type: 'heading',
+            visibility: {
+              reference: 'row.$index.algo',
+              operator: 'isTruthy',
+            },
+            props: { text: 'Welcome', level: 1 },
+          },
+        ]),
+      )
+      expect(result.status).toBe('error')
+      if (result.status !== 'error') throw new Error('Expected error')
+      expect(result.error.message).toContain('layout[0].visibility.reference')
+    })
+
+    it('rejects row.algo.$index ($index not in the exact synthetic position) at visibility.reference', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithLayout([
+          {
+            type: 'heading',
+            visibility: {
+              reference: 'row.algo.$index',
+              operator: 'isTruthy',
+            },
+            props: { text: 'Welcome', level: 1 },
+          },
+        ]),
+      )
+      expect(result.status).toBe('error')
+      if (result.status !== 'error') throw new Error('Expected error')
+      expect(result.error.message).toContain('layout[0].visibility.reference')
+    })
+
+    it('rejects row.$key (no such synthetic segment for row) at visibility.reference', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithLayout([
+          {
+            type: 'heading',
+            visibility: {
+              reference: 'row.$key',
+              operator: 'isTruthy',
+            },
+            props: { text: 'Welcome', level: 1 },
+          },
+        ]),
+      )
+      expect(result.status).toBe('error')
+      if (result.status !== 'error') throw new Error('Expected error')
+      expect(result.error.message).toContain('layout[0].visibility.reference')
+    })
+
+    it('rejects row.$other (unrecognized synthetic segment) at visibility.reference', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithLayout([
+          {
+            type: 'heading',
+            visibility: {
+              reference: 'row.$other',
+              operator: 'isTruthy',
+            },
+            props: { text: 'Welcome', level: 1 },
+          },
+        ]),
+      )
+      expect(result.status).toBe('error')
+      if (result.status !== 'error') throw new Error('Expected error')
+      expect(result.error.message).toContain('layout[0].visibility.reference')
+    })
+
+    it('accepts a composed group (operator "and") with a row.* condition alongside a forms.* condition', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithLayout([
+          {
+            type: 'heading',
+            visibility: {
+              operator: 'and',
+              conditions: [
+                { reference: 'row.status', operator: 'equals', value: 'active' },
+                { reference: 'forms.filters.active', operator: 'isTruthy' },
+              ],
+            },
+            props: { text: 'Welcome', level: 1 },
+          },
+        ]),
+      )
+      expect(result.status).toBe('ready')
+    })
+
+    it('accepts a composed group (operator "or") with a row.* condition alongside a forms.* condition', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithLayout([
+          {
+            type: 'heading',
+            visibility: {
+              operator: 'or',
+              conditions: [
+                { reference: 'row.status', operator: 'equals', value: 'active' },
+                { reference: 'forms.filters.active', operator: 'isTruthy' },
+              ],
+            },
+            props: { text: 'Welcome', level: 1 },
+          },
+        ]),
+      )
+      expect(result.status).toBe('ready')
+    })
+
+    it('rejects a composed group whose single condition is row.$key.* (invalid shape) with the exact conditions path', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithLayout([
+          {
+            type: 'heading',
+            visibility: {
+              operator: 'and',
+              conditions: [{ reference: 'row.$key.name', operator: 'isTruthy' }],
+            },
+            props: { text: 'Welcome', level: 1 },
+          },
+        ]),
+      )
+      expect(result.status).toBe('error')
+      if (result.status !== 'error') throw new Error('Expected error')
+      expect(result.error.message).toContain('layout[0].visibility.conditions[0].reference')
+    })
+  })
 })
