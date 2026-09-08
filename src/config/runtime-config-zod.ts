@@ -33,6 +33,7 @@ export const supportedNodeTypes = [
   'map',
   'gallery',
   'autocomplete',
+  'chart',
   'group',
   'slot',
 ] as const
@@ -1178,6 +1179,71 @@ export const galleryNodeSchema = z
         display: z.discriminatedUnion('mode', [galleryPaginatedDisplaySchema, galleryCarouselDisplaySchema]),
       })
       .strict(),
+    children: z.never().optional(),
+  })
+  .strip()
+
+export const supportedChartVariants = ['bar', 'line', 'area', 'pie', 'donut', 'scatter'] as const
+export const supportedChartHeights = ['sm', 'md', 'lg', 'xl'] as const
+export const supportedChartColors = ['neutral', 'primary', 'success', 'warning', 'danger', 'info'] as const
+
+const chartStaticCategoricalPointSchema = z
+  .object({
+    category: z.string(),
+    value: z.number(),
+  })
+  .strict()
+
+const chartStaticNumericPointSchema = z
+  .object({
+    x: z.number(),
+    y: z.number(),
+  })
+  .strict()
+
+const chartCategoricalDynamicSourceSchema = z
+  .object({
+    source: nonEmptyStringSchema,
+    category: nonEmptyStringSchema,
+    value: nonEmptyStringSchema,
+  })
+  .strict()
+
+const chartNumericDynamicSourceSchema = z
+  .object({
+    source: nonEmptyStringSchema,
+    x: nonEmptyStringSchema,
+    y: nonEmptyStringSchema,
+  })
+  .strict()
+
+// Shape-only union of both point/source families (categorical vs. numeric): this schema does not
+// know yet which family matches `props.variant` — that cross-check, along with the `data` xor
+// `source` exclusion, is enforced imperatively by T02's `validateChartNode`.
+const chartPropsSchema = z
+  .object({
+    variant: z.enum(supportedChartVariants),
+    data: z.array(z.union([chartStaticCategoricalPointSchema, chartStaticNumericPointSchema])).optional(),
+    source: z.union([chartCategoricalDynamicSourceSchema, chartNumericDynamicSourceSchema]).optional(),
+    color: z.enum(supportedChartColors).optional(),
+    label: z.string().optional(),
+    xAxisLabel: z.string().optional(),
+    yAxisLabel: z.string().optional(),
+    height: z.enum(supportedChartHeights).optional(),
+  })
+  .strip()
+
+// Not annotated as `z.ZodType<ChartLayoutNode>`: `queryStateFeedbackSchema.states.*.fallback` is
+// typed as `z.array(z.unknown())` at this shared-schema layer (widened to the recursive
+// `LayoutNode[]` union only by `runtime-config-root-zod.ts`, the same pattern every other node
+// schema in this file already follows — none of them carry that explicit annotation either).
+export const chartNodeSchema = z
+  .object({
+    type: z.literal('chart'),
+    queryStateFeedback: queryStateFeedbackSchema.optional(),
+    visibility: visibilitySchema.optional(),
+    layout: layoutNodeLayoutSchema.optional(),
+    props: chartPropsSchema,
     children: z.never().optional(),
   })
   .strip()

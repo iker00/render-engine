@@ -30,6 +30,7 @@ export type LayoutNodeType =
   | 'map'
   | 'gallery'
   | 'autocomplete'
+  | 'chart'
   | 'group'
   | 'slot'
 export type RuntimeApiMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
@@ -695,6 +696,49 @@ export interface GalleryLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeL
   children?: never
 }
 
+export type ChartVariant = 'bar' | 'line' | 'area' | 'pie' | 'donut' | 'scatter'
+export type ChartHeight = 'sm' | 'md' | 'lg' | 'xl'
+export type ChartColor = 'neutral' | 'primary' | 'success' | 'warning' | 'danger' | 'info'
+
+export interface ChartStaticCategoricalPoint {
+  category: string
+  value: number
+}
+
+export interface ChartStaticNumericPoint {
+  x: number
+  y: number
+}
+
+export interface ChartCategoricalDynamicSource {
+  source: string
+  category: string
+  value: string
+}
+
+export interface ChartNumericDynamicSource {
+  source: string
+  x: string
+  y: string
+}
+
+// Shape-only contract (T01 of feature chart-node): `data`/`source` accept either point family
+// (categorical or numeric) without cross-checking them against `props.variant`. Cross-field rules
+// (`data` xor `source`, family-per-variant match) are enforced imperatively in T02.
+export interface ChartLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayoutFields {
+  type: 'chart'
+  props: {
+    variant: ChartVariant
+    data?: Array<ChartStaticCategoricalPoint | ChartStaticNumericPoint>
+    source?: ChartCategoricalDynamicSource | ChartNumericDynamicSource
+    color?: ChartColor
+    label?: string
+    xAxisLabel?: string
+    yAxisLabel?: string
+    height?: ChartHeight
+  }
+}
+
 export interface NavigateToRuntimeUiAction {
   type: 'navigateTo'
   pageId: string
@@ -951,6 +995,7 @@ export type LayoutNode =
   | MapLayoutNode
   | GalleryLayoutNode
   | AutocompleteLayoutNode
+  | ChartLayoutNode
   | RuntimeGroupInstanceNode
   | RuntimeSlotNode
 

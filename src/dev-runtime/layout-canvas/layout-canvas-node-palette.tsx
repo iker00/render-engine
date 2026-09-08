@@ -38,6 +38,7 @@ const NODE_TYPE_LABELS: Record<LayoutNodeType, string> = {
   map: 'Mapa',
   gallery: 'Galería',
   autocomplete: 'Autocompletar',
+  chart: 'Gráfico',
   group: 'Grupo reutilizable',
   // `slot` is not listed by `getSupportedNodeTypesCatalog()` (see that function's own comment —
   // only meaningful inside a group's own template, authored via Monaco); present here only so

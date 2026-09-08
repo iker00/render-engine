@@ -46,6 +46,7 @@ import {
 import { validateHiddenNode } from './validate-hidden-node'
 import { validateMapNode } from './validate-map-node'
 import { validateGalleryNode } from './validate-gallery-node'
+import { validateChartNode } from './validate-chart-node'
 import { validateAutocompleteNode } from './validate-autocomplete-node'
 
 // Context threaded through the recursive layout validator. `insideGroupTemplate` tracks whether
@@ -189,6 +190,8 @@ export function validateLayoutNode(
       return validateMapNode(rawNode, path, pageId, breadcrumb)
     case 'gallery':
       return validateGalleryNode(rawNode, path, pageId, breadcrumb)
+    case 'chart':
+      return validateChartNode(rawNode, path, pageId, breadcrumb)
     case 'autocomplete':
       return validateAutocompleteNode(rawNode, path, pageId, breadcrumb)
     case 'slot':

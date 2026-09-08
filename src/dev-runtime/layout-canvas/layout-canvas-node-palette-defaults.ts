@@ -169,6 +169,15 @@ export function buildDefaultNodeInstance(type: LayoutNodeType): LayoutNode {
         },
       }
 
+    // Minimum shape that passes `validateChartNode` without further user action: `bar` is a
+    // categorical variant, and its single static data point satisfies the `data`/`source`
+    // mutual-exclusion check while matching that variant's `{ category, value }` family.
+    case 'chart':
+      return {
+        type: 'chart',
+        props: { variant: 'bar', data: [{ category: 'Ejemplo', value: 1 }] },
+      }
+
     // T15 (feature reusable-node-groups): `groupId: ''` is a deliberate draft placeholder, not
     // an oversight — `groupInstanceNodeSchema` accepts an empty `groupId` and `checkGroupInstance`
     // (`validate-groups.ts`) skips its cross-checks specifically for `''`, so this inserts

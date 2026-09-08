@@ -57,6 +57,7 @@ Ficheros de apoyo, no son tests: `config-validation/helpers.ts`, `dev-runtime/lu
 - `runtime-config-validation-badge.test.ts` — validación del nodo `badge`: props label/variant/color, transversales y rechazo de shape inválido (leaf)
 - `runtime-config-validation-button-styles.test.ts` — esquema y normalización de `button` en color, variant y fullWidth (constantes y validación cruzada)
 - `runtime-config-validation-buttons.test.ts` — botones y acciones (navigateTo, goBack, executeOperation, resetForm), `onSuccess`/`onError` de `executeOperation`/`executeOperations` con validación de targets, y validación del nodo `link`
+- `runtime-config-validation-chart.test.ts` — esquema `Zod` del nodo `chart` (`chartNodeSchema`): aceptación/rechazo de shape estructural de `props.variant`/`data`/`source`/`color`/`height`/labels y `children`, sin cross-checks por variante
 - `runtime-config-validation-collections.test.ts` — contrato de fuentes de colección multi-valor
 - `runtime-config-validation-containers.test.ts` — contrato de layout de contenedores
 - `runtime-config-validation-divider.test.ts` — validación del nodo `divider`: variantes, transversales, placement y rechazos de shape
@@ -185,6 +186,7 @@ Ficheros de apoyo, no son tests: `config-validation/helpers.ts`, `dev-runtime/lu
 - `runtime-button-download-action.test.tsx` — `button` con `action.type: downloadOperation`: disparo de descarga con `onSuccess`/`onError`, estado `disabled` durante la petición (incluido guard contra doble click), reflejo en `queries.{operationName}`, independencia entre instancias que comparten `operationName` y resolución de `item.*` en repeater
 - `runtime-button-lifecycle-actions.test.tsx` — `onSuccess`/`onError` de `button.props.action` tras `executeOperation`/`executeOperations`: encadenado, `when`, error de negocio, `item.*` en repeater y botón auxiliar dentro de form
 - `runtime-button-navigation.test.tsx` — navegación declarativa desde botones
+- `runtime-chart-collection-sources.test.ts` — `resolveChartCategoricalPoints`/`resolveChartNumericPoints`: resolución de colección dinámica a puntos categóricos/numéricos, degradación silenciosa ante `category`/`value`/`x`/`y` inválidos, y `category` por interpolación
 - `runtime-collection-pagination.test.ts` — paginación local de colecciones
 - `runtime-collection-pipeline-syntax.test.ts` — parser neutral de sintaxis del pipeline de colecciones (`orderby`/`filter`/`slice`) sobre `raw` string, sin resolución de referencias
 - `runtime-collection-pipeline.test.ts` — evaluador `evaluateCollectionPipeline`: aplicación en orden de `orderby`/`filter`/`slice` sobre un array ya resuelto, resolución de argumentos dinámicos sin `iterationContext` y degradación silenciosa (valor ausente, path inexistente, tipo incompatible)
@@ -271,6 +273,7 @@ Ficheros de apoyo, no son tests: `config-validation/helpers.ts`, `dev-runtime/lu
 - `layout-canvas-properties-panel-commit-feedback.test.tsx` — feedback de commit rechazado del panel de propiedades y persistencia del valor introducido
 - `layout-canvas-properties-panel.test.tsx` — panel de propiedades del nodo seleccionado con sus widgets y subsecciones
 - `layout-canvas-properties-panel-gallery.test.tsx` — panel de propiedades end-to-end para `gallery`: selector Origen (Estático/Dinámico) y widget de `props.source` en modo dinámico, con visibilidad condicional de los campos generados por el dispatcher
+- `layout-canvas-property-field-chart-origin-mode.test.tsx` — widget aislado `ChartOriginModePropertyField`: detección de modo por `props.data`/`props.source`, alternancia Estático/Dinámico con plantilla mínima por familia (categórica/numérica) según `variant`, sin restaurar el valor descartado, e idempotencia
 - `layout-canvas-property-field-choice-items.test.tsx` — editor de items de elección con modos manual literal, escalar y dinámico
 - `layout-canvas-property-field-color-swatch.test.tsx` — widget aislado de muestras de color con roving tabindex y flechas
 - `layout-canvas-property-field-container-columns-mode.test.tsx` — widget del modo del container que alterna Grid/Columnas preservando el resto de props

@@ -221,17 +221,40 @@ describe('getNodeTypeJsonSchema', () => {
 })
 
 describe('getSupportedNodeTypesCatalog', () => {
-  // 32 (T15, feature reusable-node-groups): "group" joined the catalog — see this task's own
-  // comment on `NODE_TYPES_NOT_YET_INSERTABLE_FROM_PALETTE` for why "slot" alone stays excluded.
-  it('returns the full node type catalog (32 types)', () => {
+  // 33 (T05, feature chart-node): "chart" joined the catalog — see this task's own comment on
+  // `NODE_TYPES_NOT_YET_INSERTABLE_FROM_PALETTE` for why "slot" alone stays excluded.
+  it('returns the full node type catalog (33 types)', () => {
     const catalog = getSupportedNodeTypesCatalog()
-    expect(catalog).toHaveLength(32)
+    expect(catalog).toHaveLength(33)
     expect(catalog).toContain('container')
     expect(catalog).toContain('button')
     expect(catalog).toContain('hidden')
     expect(catalog).toContain('fileManager')
     expect(catalog).toContain('steps')
     expect(catalog).toContain('group')
+    expect(catalog).toContain('chart')
     expect(catalog).not.toContain('slot')
+  })
+})
+
+// T05 (feature chart-node): chart is registered in `nodeSchemaByType` the same way every other
+// catalog type is — this is a smoke check that its derived JSON Schema exposes the same shape of
+// entry (a `props` sub-schema reflecting `chartNodeSchema`) rather than something bespoke.
+describe('getNodeTypeJsonSchema for chart (T05, feature chart-node)', () => {
+  it('reflects chartNodeSchema props (variant/data/source/color/height)', () => {
+    const schema = getNodeTypeJsonSchema('chart')
+    expect(schema).toBeDefined()
+    expect(typeof schema).toBe('object')
+
+    const properties = schema.properties as Record<string, unknown>
+    const propsSchema = properties['props'] as { properties?: Record<string, unknown> }
+    expect(propsSchema).toBeDefined()
+
+    const propProperties = propsSchema.properties ?? {}
+    expect(propProperties['variant']).toBeDefined()
+    expect(propProperties['data']).toBeDefined()
+    expect(propProperties['source']).toBeDefined()
+    expect(propProperties['color']).toBeDefined()
+    expect(propProperties['height']).toBeDefined()
   })
 })

@@ -34,6 +34,14 @@ describe('FloatingNodePalette (T6, FR4)', () => {
     }
   })
 
+  // T05 (feature chart-node): chart joined the catalog with a readable label, same wiring as
+  // every other palette entry — no chart-specific rendering path.
+  it('la entrada "chart" tiene la etiqueta legible "Gráfico"', () => {
+    render(<FloatingNodePalette open={true} onClose={() => {}} />)
+
+    expect(screen.getByTestId('layout-canvas-palette-item-chart')).toHaveTextContent('Gráfico')
+  })
+
   it('el botón "Cerrar" invoca onClose', () => {
     const onClose = vi.fn()
     render(<FloatingNodePalette open={true} onClose={onClose} />)

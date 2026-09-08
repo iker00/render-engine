@@ -17,12 +17,14 @@ import type { CommitCanvasMutationResult } from './layout-canvas-commit'
 import { getNodeTypeJsonSchema } from './layout-canvas-node-schema'
 import { NodePanelTabBar } from './node-panel-tab-bar'
 import { resolveNodePanelTabs, type NodePanelTabKey } from './node-panel-tabs'
+import { ChartOriginModePropertyField } from './property-fields/chart-origin-mode-property-field'
 import { ContainerColumnsModePropertyField } from './property-fields/container-columns-mode-property-field'
 import { GalleryOriginModePropertyField } from './property-fields/gallery-origin-mode-property-field'
 import { GroupInstancePropertyField } from './property-fields/group-instance-property-field'
 import { LayoutSpanWidgetContext, type LayoutSpanRowRejection } from './property-fields/layout-span-widget-context'
 import { LinkContentModePropertyField } from './property-fields/link-content-mode-property-field'
 import { PropertyFieldDispatcher } from './property-fields/property-field-dispatcher'
+import { PropertyFieldRow } from './property-fields/property-field-row'
 import { resolveUnionBranch } from './property-fields/property-field-schema-resolution'
 import {
   buildInitialQueryStateFeedbackFallbackCache,
@@ -88,6 +90,10 @@ const NOOP_SELECT_ANCESTOR = (_path: LayoutNodePath): void => {}
 // T15 adds `groupInstance`: the `group` node's "groupId + params" special block (D above) also
 // commits the entire node, for the same reason as `containerColumnsMode`/`galleryOriginMode` —
 // changing `groupId` must reset `params`/`children` in the same commit, not a per-subsection patch.
+// T07 (feature chart-node) adds `chartVariant`/`chartOriginMode`: the `chart` node's "Tipo de
+// chart" and "Origen" special blocks each commit the entire node too, for the same reason —
+// changing `variant` must reset `data`/`source` together (`buildChartNodeForVariant`), and
+// changing origin must reset `data`/`source` together (`ChartOriginModePropertyField`, T06).
 type PendingRejectionKey =
   | NodePanelTabKey
   | 'submitAction'
@@ -96,6 +102,8 @@ type PendingRejectionKey =
   | 'repeaterGrid'
   | 'galleryOriginMode'
   | 'groupInstance'
+  | 'chartVariant'
+  | 'chartOriginMode'
 
 // T9 (bug fix): `commitCanvasMutation` validates the *entire* config before applying a panel
 // commit (see dev-runtime.tsx). Switching a discriminated-union variant (T5) or adding a new
@@ -181,6 +189,76 @@ function withSubmitActionField(node: FormNode, nextValue: unknown): FormNode {
     onSuccess: onSuccess as FormNode['onSuccess'],
     onError: onError as FormNode['onError'],
   }
+}
+
+type ChartNode = Extract<LayoutNode, { type: 'chart' }>
+type ChartVariant = ChartNode['props']['variant']
+
+// T07 (feature chart-node): the six variants split into two point families — categorical
+// (`bar`/`line`/`area`/`pie`/`donut`, x axis is a discrete category) and numeric (`scatter`, both
+// axes are numbers). Crossing families requires reseeding `data`/`source` with a shape-correct
+// template; staying within a family never touches them. `CHART_PIE_LIKE_VARIANTS` is the other
+// axis of variation `buildChartNodeForVariant` cares about: `pie`/`donut` have no axes at all, so
+// `color`/`label`/`xAxisLabel`/`yAxisLabel` (all meaningless there) are dropped on entry.
+const CHART_VARIANTS: readonly ChartVariant[] = ['bar', 'line', 'area', 'pie', 'donut', 'scatter']
+const CHART_NUMERIC_VARIANTS: ReadonlySet<ChartVariant> = new Set(['scatter'])
+const CHART_PIE_LIKE_VARIANTS: ReadonlySet<ChartVariant> = new Set(['pie', 'donut'])
+
+function isChartNumericVariant(variant: ChartVariant): boolean {
+  return CHART_NUMERIC_VARIANTS.has(variant)
+}
+
+// Same minimal templates `ChartOriginModePropertyField` (T06) seeds when toggling origin — kept in
+// sync by hand (both files are the only two producers of a fresh `chart.props.data`/`.source`
+// value): a categorical/numeric static array of one point, or a categorical/numeric dynamic source
+// object referencing a made-up `queries.query.data` collection.
+const CHART_CATEGORICAL_STATIC_TEMPLATE: ChartNode['props']['data'] = [{ category: 'Ejemplo', value: 1 }]
+const CHART_NUMERIC_STATIC_TEMPLATE: ChartNode['props']['data'] = [{ x: 0, y: 0 }]
+const CHART_CATEGORICAL_DYNAMIC_TEMPLATE: ChartNode['props']['source'] = {
+  source: 'queries.query.data',
+  category: 'category',
+  value: 'value',
+}
+const CHART_NUMERIC_DYNAMIC_TEMPLATE: ChartNode['props']['source'] = { source: 'queries.query.data', x: 'x', y: 'y' }
+
+// Drops whichever origin key is currently active (`source` in dynamic mode, `data` in static mode)
+// and reseeds it with the family-correct template for `nextVariant` — only called when the family
+// actually changed (see `buildChartNodeForVariant` below).
+function resetChartOriginTemplate(props: ChartNode['props'], nextVariant: ChartVariant): ChartNode['props'] {
+  const isDynamic = 'source' in props
+  if (isDynamic) {
+    const { source: _source, ...rest } = props
+    return { ...rest, source: isChartNumericVariant(nextVariant) ? CHART_NUMERIC_DYNAMIC_TEMPLATE : CHART_CATEGORICAL_DYNAMIC_TEMPLATE }
+  }
+  const { data: _data, ...rest } = props
+  return { ...rest, data: isChartNumericVariant(nextVariant) ? CHART_NUMERIC_STATIC_TEMPLATE : CHART_CATEGORICAL_STATIC_TEMPLATE }
+}
+
+// `pie`/`donut` have no axes/series label to speak of — drops all four unconditionally. Leaving
+// `pie`/`donut` towards a variant that does support them never re-seeds these keys (they stay
+// absent until the user declares them again): this function is only ever called when *entering*
+// `pie`/`donut`, never on the way out.
+function dropChartAxisLabelFields(props: ChartNode['props']): ChartNode['props'] {
+  const { color: _color, label: _label, xAxisLabel: _xAxisLabel, yAxisLabel: _yAxisLabel, ...rest } = props
+  return rest
+}
+
+/**
+ * Rebuilds the `chart` node's `props` for a new `variant` picked from the "Tipo de chart" special
+ * block below (T07, D5). `data`/`source` pass through untouched when the point family
+ * (categorical vs. numeric) stays the same; crossing families resets whichever origin is active
+ * with the matching minimal template (`resetChartOriginTemplate`). Entering `pie`/`donut`
+ * additionally drops the four axis/series label props (`dropChartAxisLabelFields`); `height`
+ * always survives untouched, it has no relationship to `variant`.
+ */
+function buildChartNodeForVariant(node: ChartNode, nextVariant: ChartVariant): ChartNode {
+  const familyChanged = isChartNumericVariant(node.props.variant) !== isChartNumericVariant(nextVariant)
+  const propsAfterOriginReset = familyChanged ? resetChartOriginTemplate(node.props, nextVariant) : node.props
+  const propsWithVariant = { ...propsAfterOriginReset, variant: nextVariant }
+
+  const nextProps = CHART_PIE_LIKE_VARIANTS.has(nextVariant) ? dropChartAxisLabelFields(propsWithVariant) : propsWithVariant
+
+  return { ...node, props: nextProps }
 }
 
 // D6 (0108): the node types whose `props.items` is the closed choice-items contract (T1) —
@@ -396,6 +474,70 @@ function resolveGalleryPropsSchema(propsSchema: Record<string, unknown>, propsVa
 }
 
 /**
+ * Omits `variant` from `chart.props`'s generated schema unconditionally (T07): the dedicated
+ * "Tipo de chart" special block above is `variant`'s only editing surface — changing it must
+ * reconstruct `data`/`source` together with the new value (`buildChartNodeForVariant`), which a
+ * generic per-field patch through the dispatcher can't express. Same "generic dispatcher stops
+ * iterating this key for this node type" precedent `resolveGroupInstancePropsSchema` above already
+ * establishes for `group.props.groupId`/`params`.
+ */
+function resolveChartVariantPropsSchema(propsSchema: Record<string, unknown>): Record<string, unknown> {
+  const properties = propsSchema.properties
+  if (!isPlainObject(properties) || !('variant' in properties)) return propsSchema
+
+  const { variant: _variant, ...restProperties } = properties
+  return { ...propsSchema, properties: restProperties }
+}
+
+// D5 (T07, feature chart-node): excludes `color`/`label`/`xAxisLabel`/`yAxisLabel` from
+// `chart.props`'s generated schema when the active `variant` is `pie`/`donut` — those axis/series
+// labels have no meaning on a chart with no axes. Pure function of `(schema, propsValue)`, keyed
+// purely off `props.variant`; the other half of `resolveChartPropsSchema`'s composition below.
+function resolveChartPropsSchemaByVariant(propsSchema: Record<string, unknown>, propsValue: unknown): Record<string, unknown> {
+  const properties = propsSchema.properties
+  if (!isPlainObject(properties)) return propsSchema
+  const variant = isPlainObject(propsValue) ? propsValue.variant : undefined
+  if (variant !== 'pie' && variant !== 'donut') return propsSchema
+
+  const { color: _color, label: _label, xAxisLabel: _xAxisLabel, yAxisLabel: _yAxisLabel, ...restProperties } = properties
+  return { ...propsSchema, properties: restProperties }
+}
+
+// D5 (T07, feature chart-node): excludes whichever origin key (`source` in static mode, `data` in
+// dynamic mode) isn't active from `chart.props`'s generated schema — same "generic dispatcher
+// stops iterating this key for this node type" precedent `resolveGalleryPropsSchema` above already
+// establishes for `gallery.props.images`/`source`, and the same detection criterion (`props.data`
+// presence, not `props.source`).
+function resolveChartPropsSchemaByOrigin(propsSchema: Record<string, unknown>, propsValue: unknown): Record<string, unknown> {
+  const properties = propsSchema.properties
+  if (!isPlainObject(properties) || (!('data' in properties) && !('source' in properties))) return propsSchema
+
+  const isStatic = isPlainObject(propsValue) && propsValue.data !== undefined
+  const { data: dataSchema, source: sourceSchema, ...restProperties } = properties
+
+  const nextProperties: Record<string, unknown> = { ...restProperties }
+  if (isStatic && dataSchema) {
+    nextProperties.data = dataSchema
+  }
+  if (!isStatic && sourceSchema) {
+    nextProperties.source = sourceSchema
+  }
+
+  return { ...propsSchema, properties: nextProperties }
+}
+
+/**
+ * Composes the two `chart.props`-specific schema conditionings above (T07, D5): first excludes the
+ * axis/series label fields when the active `variant` has no axes (`resolveChartPropsSchemaByVariant`),
+ * then excludes whichever origin key isn't active (`resolveChartPropsSchemaByOrigin`). Each
+ * conditioning is a separate pure function so either can be tested and reasoned about in isolation;
+ * this function only composes them in that fixed order.
+ */
+export function resolveChartPropsSchema(propsSchema: Record<string, unknown>, propsValue: unknown): Record<string, unknown> {
+  return resolveChartPropsSchemaByOrigin(resolveChartPropsSchemaByVariant(propsSchema, propsValue), propsValue)
+}
+
+/**
  * Replaces the generated sub-schema of `layout.span` (integer | responsive per-breakpoint map,
  * T4's `layout.span` union) with the `{ 'x-widget': 'layout-span' }` sentinel the dispatcher's
  * `x-widget` hook resolves to `LayoutSpanPropertyField` (T2, 0127). Same pattern as
@@ -568,6 +710,10 @@ export function LayoutCanvasPropertiesPanel({
     node.type === 'form' && isPlainObject(schemaProperties.submitAction) ? (schemaProperties.submitAction as Record<string, unknown>) : undefined
 
   const idPrefix = useId()
+  // T07 (feature chart-node): the "Tipo de chart" special block's `<select>` needs a stable id for
+  // `PropertyFieldRow`'s `htmlFor`, called unconditionally (React hook rules) even though the
+  // block itself only ever renders for a `chart` node.
+  const chartVariantSelectId = useId()
   const tabs = resolveNodePanelTabs(node, { pageLayout, path })
 
   const [pendingRejections, setPendingRejections] = useState<PendingRejections>({})
@@ -718,6 +864,56 @@ export function LayoutCanvasPropertiesPanel({
                   <CommitRejectionBanner
                     dataTestId="layout-canvas-properties-panel-galleryOriginMode-error"
                     error={pendingRejection.error}
+                  />
+                )}
+              </div>
+            )
+          })()}
+        {node.type === 'chart' &&
+          (() => {
+            const variantPendingRejection = pendingRejections.chartVariant
+            const originPendingRejection = pendingRejections.chartOriginMode
+            const displayedVariantNode = variantPendingRejection ? (variantPendingRejection.value as typeof node) : node
+            const displayedOriginNode = originPendingRejection ? (originPendingRejection.value as typeof node) : node
+
+            return (
+              <div className="flex flex-col gap-2">
+                <PropertyFieldRow htmlFor={chartVariantSelectId} label="Tipo de chart">
+                  <select
+                    id={chartVariantSelectId}
+                    value={displayedVariantNode.props.variant}
+                    onChange={(event) => {
+                      const nextNode = buildChartNodeForVariant(displayedVariantNode, event.target.value as ChartVariant)
+                      const result = onCommitNodeUpdate(path, () => nextNode)
+                      recordCommitResult('chartVariant', nextNode, result)
+                    }}
+                    className="w-full rounded-md border border-gray-300 bg-white px-2 py-1 text-sm text-gray-900 focus:border-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-400"
+                  >
+                    {CHART_VARIANTS.map((variant) => (
+                      <option key={variant} value={variant}>
+                        {variant}
+                      </option>
+                    ))}
+                  </select>
+                </PropertyFieldRow>
+                {variantPendingRejection && (
+                  <CommitRejectionBanner
+                    dataTestId="layout-canvas-properties-panel-chartVariant-error"
+                    error={variantPendingRejection.error}
+                  />
+                )}
+                <ChartOriginModePropertyField
+                  label="Origen"
+                  node={displayedOriginNode}
+                  onChange={(nextNode) => {
+                    const result = onCommitNodeUpdate(path, () => nextNode)
+                    recordCommitResult('chartOriginMode', nextNode, result)
+                  }}
+                />
+                {originPendingRejection && (
+                  <CommitRejectionBanner
+                    dataTestId="layout-canvas-properties-panel-chartOriginMode-error"
+                    error={originPendingRejection.error}
                   />
                 )}
               </div>
@@ -876,6 +1072,9 @@ export function LayoutCanvasPropertiesPanel({
     }
     if (key === 'props' && node.type === 'gallery' && effectiveSchema) {
       effectiveSchema = resolveGalleryPropsSchema(effectiveSchema, currentValue)
+    }
+    if (key === 'props' && node.type === 'chart' && effectiveSchema) {
+      effectiveSchema = resolveChartVariantPropsSchema(resolveChartPropsSchema(effectiveSchema, currentValue))
     }
     if (key === 'props' && node.type === 'group' && effectiveSchema) {
       effectiveSchema = resolveGroupInstancePropsSchema(effectiveSchema)

@@ -10,6 +10,7 @@ import {
   autocompleteNodeSchema,
   badgeNodeSchema,
   buttonNodeSchema,
+  chartNodeSchema,
   checkboxGroupNodeSchema,
   containerNodeSchema,
   dividerNodeSchema,
@@ -82,6 +83,7 @@ const nodeSchemaByType: Record<LayoutNodeType, z.ZodType> = {
   map: mapNodeSchema,
   gallery: galleryNodeSchema,
   autocomplete: autocompleteNodeSchema,
+  chart: chartNodeSchema,
   group: groupInstanceNodeSchema,
   slot: slotNodeSchema,
 }
