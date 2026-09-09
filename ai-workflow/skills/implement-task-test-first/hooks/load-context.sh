@@ -1,8 +1,12 @@
 #!/usr/bin/env bash
 # Hook SubagentStart para el subagente `implement-task`.
 #
-# Concatena el contexto compartido de la pasada —standards del proyecto y docs
-# estables— en un único fichero y le pasa al subagente SU RUTA, no su contenido.
+# Deja preparados dos ficheros y le pasa al subagente SUS RUTAS, no su contenido:
+#
+#   .subagent-context.md  standards del proyecto y docs estables concatenados
+#   .subagent-task.md     bloque literal de la tarea en curso, extraído de
+#                         tasks.md con extract-task.sh a partir de
+#                         status.yaml de la feature activa
 #
 # Por qué la ruta y no el texto: Claude Code trunca la salida de un hook a partir
 # de ~10KB y descarga el resto a disco, así que inyectar ~60KB por
@@ -24,7 +28,9 @@ script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 repo_root="${CLAUDE_PROJECT_DIR:-$(cd "$script_dir/../../../.." && pwd)}"
 standards_dir="$repo_root/ai-workflow/standards"
 docs_dir="$repo_root/ai-workflow/docs"
-output_path="$repo_root/.subagent-context.md"
+scripts_dir="$repo_root/ai-workflow/scripts"
+context_path="$repo_root/.subagent-context.md"
+task_path="$repo_root/.subagent-task.md"
 
 emit() {
   jq -n --arg ctx "$1" \
@@ -60,19 +66,53 @@ emit_file() {
     doc_file="$docs_dir/$name"
     [[ -f "$doc_file" ]] && emit_file "$doc_file"
   done
-} > "$output_path" 2>/dev/null || emit "AVISO: no se pudo escribir $output_path. $fallback"
+} > "$context_path" 2>/dev/null || emit "AVISO: no se pudo escribir $context_path. $fallback"
 
-[[ -s "$output_path" ]] || emit "AVISO: el contexto compartido salió vacío. $fallback"
+[[ -s "$context_path" ]] || emit "AVISO: el contexto compartido salió vacío. $fallback"
 
-lines=$(wc -l <"$output_path" | tr -d ' ')
-kb=$(( ($(wc -c <"$output_path") + 1023) / 1024 ))
+lines=$(wc -l <"$context_path" | tr -d ' ')
+kb=$(( ($(wc -c <"$context_path") + 1023) / 1024 ))
+
+# Tarea en curso
+rm -f "$task_path"
+task_note=""
+if feature_dir=$("$scripts_dir/active-feature.sh" "$repo_root" 2>&1); then
+  if block=$("$scripts_dir/extract-task.sh" "$feature_dir" 2>&1); then
+    printf '%s\n' "$block" > "$task_path"
+    task_id=$(sed -nE 's/^## (T[0-9]+).*/\1/p' "$task_path" | head -1)
+    task_note="TAREA EN CURSO
+
+- task_id: ${task_id}
+- feature_path: ${feature_dir#$repo_root/}
+
+Tu bloque de tarea, extraído literal de tasks.md, está en:
+
+    ${task_path}
+
+Léelo con \`Read\` justo después del contexto compartido. No abras tasks.md."
+  else
+    task_note="TAREA EN CURSO: NO DISPONIBLE
+
+No se ha podido extraer el bloque de la tarea de ${feature_dir#$repo_root/}: ${block}
+
+Devuelve status \"blocked\" con ese motivo en blocker_reason, sin implementar nada."
+  fi
+else
+  task_note="TAREA EN CURSO: NO DISPONIBLE
+
+No se ha podido determinar la feature activa: ${feature_dir}
+
+Devuelve status \"blocked\" con ese motivo en blocker_reason, sin implementar nada."
+fi
 
 emit "CONTEXTO COMPARTIDO DE LA PASADA
 
 Antes de hacer nada más, lee este fichero con \`Read\`:
 
-    ${output_path}
+    ${context_path}
 
 Contiene los standards del proyecto y las docs estables (conventions, architecture, test-index) concatenados: ${kb}KB, ${lines} líneas. Entra entero en una sola llamada a \`Read\` — no lo trocees ni uses \`offset\`/\`limit\`.
 
-Una vez leído, no vuelvas a abrir esos ficheros por separado: ya los tienes."
+Una vez leído, no vuelvas a abrir esos ficheros por separado: ya los tienes.
+
+${task_note}"

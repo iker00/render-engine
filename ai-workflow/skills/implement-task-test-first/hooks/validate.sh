@@ -5,6 +5,7 @@
 #   1. pnpm lint
 #   2. pnpm exec tsc --noEmit -p tsconfig.app.json
 #   3. pnpm exec tsc --noEmit -p tsconfig.node.json
+#   4. ai-workflow/scripts/check-test-index.sh, solo si la tarea tocó src/tests/
 #
 # Si algo falla, devuelve {"decision":"block","reason":...} con el error concreto:
 # Claude Code impide que el subagente termine y le entrega ese motivo, así que
@@ -58,6 +59,9 @@ run_check() {
 run_check "Lint" pnpm lint
 run_check "Tipos (app)" pnpm exec tsc --noEmit -p tsconfig.app.json
 run_check "Tipos (node)" pnpm exec tsc --noEmit -p tsconfig.node.json
+if git status --porcelain -- src/tests | grep -q .; then
+  run_check "Índice de tests" "$repo_root/ai-workflow/scripts/check-test-index.sh"
+fi
 
 if [[ -z "$failures" ]]; then
   rm -f "$counter_file"
