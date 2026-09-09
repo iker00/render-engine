@@ -13,7 +13,7 @@
 - `props.color`: opcional, enum cerrado de seis valores semánticos: `neutral | primary | success | warning | danger | info`, default `primary`.
 - `props.variant`: opcional, enum cerrado de cinco variantes visuales: `solid | outline | ghost | link | switch`, default `solid`.
 - `props.fullWidth`: opcional, boolean que, cuando es `true`, hace que el botón ocupe el 100% del ancho del contenedor padre, default `false`.
-- `props.checked`: boolean literal o referencia dinámica completa (misma frontera que `defaultValue` de campos de formulario: `item.*`, `queries.*`, `forms.*`, `params.*`). Obligatorio cuando `props.variant: 'switch'`; no válido (config rechazado) en cualquier otro `variant`.
+- `props.checked`: boolean literal o referencia dinámica completa (misma frontera que `defaultValue` de campos de formulario: `item.*`, `row.*`, `queries.*`, `forms.*`, `params.*`). Obligatorio cuando `props.variant: 'switch'`; no válido (config rechazado) en cualquier otro `variant`.
 - `props.labelVisible`: boolean opcional, default `true`. Solo válido cuando `props.variant: 'switch'`; no válido (config rechazado) en cualquier otro `variant`. Cuando es `false`, `label` deja de renderizarse como texto visible y pasa a usarse como `aria-label` del control.
 - `props.icon`/`props.iconPosition` no son válidos cuando `props.variant: 'switch'` (config rechazado): la variante switch no admite icono.
 
