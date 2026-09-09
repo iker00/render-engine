@@ -2,7 +2,7 @@
 name: generate-implementation-plan
 description: Genera el plan técnico de implementación para una feature de este proyecto una vez exista la spec funcional. Úsala para solicitudes de escritura de `tasks.md`, incluyendo el impacto en código, el contrato de tests por tarea y la documentación afectada.
 model: claude-opus-4-7
-allowed-tools: Read, Write, Edit, Agent
+allowed-tools: Read, Write, Edit, Bash, Agent
 ---
 
 # Generar plan de implementación
@@ -46,17 +46,18 @@ Antes de planificar, comprobar:
 Si el gate falla, detenerse y explicitar qué falta. Si lo bloqueante es el design, recomendar invocar `generate-feature-design` antes de volver a esta skill.
 
 ## Qué debe incluir `tasks.md`
-Cada tarea debe incluir como mínimo, usando una estructura estable:
-- ID
-- objetivo
-- fuera de alcance
-- dependencias
-- interfaces (sub-bloque estable; ver más abajo)
-- impacto esperado en archivos
-- tests (sub-bloque estable; ver más abajo)
-- documentación afectada
-- criterios de finalización
-- cierre de implementación
+Cada tarea es una sección de nivel 2 con encabezado `## T<n> — <título>`, con `T<n>` correlativo desde `T1` y escrito idéntico en `status.yaml`. `tasks.md` puede tener otras secciones de nivel 2 (orden de ejecución, siguiente tarea), pero ninguna que empiece por `## T<dígito>` sin ser una tarea. Dentro de cada tarea, estos bloques de nivel 3 con estos títulos exactos y en este orden:
+- `### Objetivo`
+- `### Fuera de alcance`
+- `### Dependencias`
+- `### Interfaces` (sub-bloque estable; ver más abajo)
+- `### Impacto esperado en archivos`
+- `### Tests` (sub-bloque estable; ver más abajo)
+- `### Documentación afectada`
+- `### Criterios de finalización`
+- `### Cierre de implementación`
+
+`ai-workflow/scripts/check-tasks.sh <carpeta-de-la-feature>` comprueba esta estructura y que los IDs de `status.yaml` existen; debe pasar antes de cerrar el plan.
 
 Los criterios de finalización describen un único estado:
 - cierre de implementación: código y tests de la tarea completos y validados
@@ -89,7 +90,7 @@ Si una tarea no consume ni produce ninguna firma reutilizable por otra tarea, el
 La firma declarada en `Produce` de una tarea y la firma declarada en `Consume` de cada tarea que la usa deben coincidir literalmente (mismo nombre, misma forma de parámetros, mismo tipo de retorno). Un desajuste de nombre o firma entre tareas es un error de planificación, no un detalle a resolver en implementación.
 
 ### Sub-bloque `tests` de cada tarea
-El contrato de verificación de cada tarea vive dentro de la propia tarea. Debe incluir cuatro subsecciones estables, en este orden:
+El contrato de verificación de cada tarea vive dentro de la propia tarea. Debe incluir cuatro sub-bloques de nivel 4 (`#### Ficheros de test`, `#### Comportamiento cubierto`, `#### Comandos durante la implementación`, `#### Restricciones`), en este orden:
 
 - **Ficheros de test**: lista de rutas `src/tests/<área>/<módulo>-<área>.test.ts(x)` con su rol explícito: `(nuevo)` si lo crea esta tarea o `(ampliación)` si ya existe y se añaden casos. Cuando un fichero aparece en varias tareas, cada tarea declara su rol y delimita qué casos aporta.
 - **Comportamiento cubierto**: lista en bullets de los comportamientos observables que validan los tests de esta tarea. Cada bullet debe ser lo bastante específico para que el subagente de implementación pueda traducirlo a un test concreto sin reinterpretar.
@@ -137,14 +138,14 @@ Si una tarea no requiere tests propios (refactor puro, doc-only), el sub-bloque 
 ## Encadenado con review
 Al cerrar la planificación con `artifacts.tasks: ready`, lanzar automáticamente una revisión del plan usando un sub-agente con contexto limpio:
 
-- usar la herramienta `Agent` con `subagent_type: general-purpose`
-- el prompt del sub-agente debe ser corto y autosuficiente: identidad (ruta absoluta a la carpeta de la feature recién planificada) e instrucción de leer y aplicar literalmente el contrato en `ai-workflow/skills/review-implementation-plan/SKILL.md` en su modo sub-agente
-- la salida esperada del sub-agente es la que ya define ese contrato: veredicto explícito (`aprobado` o `requiere refinamiento`), refinamientos numerados si aplica, y estado sugerido para `implementation.ready` y `blocked_by`
-- el agente principal debe aplicar los refinamientos propuestos antes de cerrar la fase de planificación y reflejar el veredicto en `status.yaml`
+- usar la herramienta `Agent` con `subagent_type: review-plan`; el prompt es únicamente la ruta absoluta a la carpeta de la feature recién planificada
+- la salida esperada del sub-agente es la que define `review-implementation-plan` para su modo sub-agente: veredicto explícito (`aprobado` o `requiere refinamiento`), refinamientos numerados si aplica, y estado sugerido para `implementation.ready` y `blocked_by`
+- aplicar los refinamientos propuestos antes de cerrar la fase de planificación y reflejar el veredicto en `status.yaml`; si tras aplicarlos el veredicto sigue siendo `requiere refinamiento`, relanzar la revisión una vez más como máximo
 
 El usuario puede invocar `review-implementation-plan` manualmente si quiere un segundo pase tras refinamientos.
 
 ## Terminado cuando
+- `ai-workflow/scripts/check-tasks.sh` pasa sobre la carpeta de la feature
 - `tasks.md` es accionable tarea por tarea
 - `tasks.md` funciona como contrato de ejecución y no como lista orientativa
 - cada tarea sigue una estructura estable y fácil de revisar
