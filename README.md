@@ -18,7 +18,8 @@ El proyecto actúa como runtime de UI configurable:
 - [`ai-workflow/docs/conventions.md`](ai-workflow/docs/conventions.md): convenciones de implementación
 - [`ai-workflow/docs/current-state.md`](ai-workflow/docs/current-state.md): estado vigente del proyecto
 - [`ai-workflow/docs/onboarding.md`](ai-workflow/docs/onboarding.md): arranque local previsto
-- [`ai-workflow/docs/workflow.md`](ai-workflow/docs/workflow.md): workflow guiado por specs
+- [`ai-workflow/rules/workflow-router.md`](ai-workflow/rules/workflow-router.md): fases del workflow guiado por specs, encadenado de skills y gates
+- [`ai-workflow/rules/status-yaml.md`](ai-workflow/rules/status-yaml.md): artefactos de una feature y reglas de `status.yaml`
 - [`ai-workflow/features/index.md`](ai-workflow/features/index.md): índice de features planificadas
 
 ## Bootstrap local

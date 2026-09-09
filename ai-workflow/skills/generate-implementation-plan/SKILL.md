@@ -15,7 +15,6 @@ La calidad del plan debe ser suficientemente alta como para que dos agentes comp
 
 ## Leer siempre
 Lee en un único turno (varias llamadas Read en el mismo mensaje) todos los ficheros fijos; los marcados «si existe...» no rompen el paralelismo:
-- `ai-workflow/docs/workflow.md`
 - `ai-workflow/features/YYYY-MM-DD-HH-MM-feature-name/spec.md`
 - `ai-workflow/features/YYYY-MM-DD-HH-MM-feature-name/status.yaml`
 - `ai-workflow/features/YYYY-MM-DD-HH-MM-feature-name/design.md` si existe o si `status.yaml` marca `requires_design: true`
@@ -119,15 +118,8 @@ Si una tarea no requiere tests propios (refactor puro, doc-only), el sub-bloque 
 - Preferir tareas que puedan completarse de principio a fin en una sola pasada de implementación.
 - Dejar claro cuál es la siguiente tarea que debería escogerse.
 - Respetar el gate de workflow: no dejar la feature lista para implementación si falta algún artefacto requerido por `status.yaml`.
-- Si `status.yaml` no existe, crearlo usando `ai-workflow/templates/status.yaml`.
-- Si durante la planificación se descubre que el riesgo o la complejidad técnica justifican un `design.md` que no existía, no escribirlo aquí: marcar `requires_design: true`, dejar `artifacts.design: missing`, detener la planificación y redirigir a `generate-feature-design`.
-- Si `design.md` no aplica, mantener `artifacts.design: not_required` en `status.yaml`.
-- Actualizar `status.yaml` al terminar para reflejar:
-  - `phase: planning` o `phase: implementation`
-  - `artifacts.tasks: ready`
-  - `artifacts.design: ready | not_required`
-  - `implementation.ready: true` solo si se cumplen todos los gates de entrada a implementación
-  - `feature_status: planned` cuando el contrato de ejecución ya sea usable
+- Si durante la planificación se descubre que el riesgo o la complejidad técnica justifican un `design.md` que no existía, no escribirlo aquí: detener la planificación y redirigir a `generate-feature-design`.
+- Actualizar `status.yaml` al terminar.
 
 ## Restricciones
 - No implementar código.
@@ -148,9 +140,7 @@ Al cerrar la planificación con `artifacts.tasks: ready`, lanzar automáticament
 - usar la herramienta `Agent` con `subagent_type: general-purpose`
 - el prompt del sub-agente debe ser corto y autosuficiente: identidad (ruta absoluta a la carpeta de la feature recién planificada) e instrucción de leer y aplicar literalmente el contrato en `ai-workflow/skills/review-implementation-plan/SKILL.md` en su modo sub-agente
 - la salida esperada del sub-agente es la que ya define ese contrato: veredicto explícito (`aprobado` o `requiere refinamiento`), refinamientos numerados si aplica, y estado sugerido para `implementation.ready` y `blocked_by`
-- el agente principal debe aplicar los refinamientos propuestos antes de cerrar la fase de planificación
-- si el sub-agente no detecta problemas, marcar `implementation.ready: true` en `status.yaml`
-- si el sub-agente detecta huecos bloqueantes, dejar `implementation.ready: false` y registrar los huecos en `blocked_by`
+- el agente principal debe aplicar los refinamientos propuestos antes de cerrar la fase de planificación y reflejar el veredicto en `status.yaml`
 
 El usuario puede invocar `review-implementation-plan` manualmente si quiere un segundo pase tras refinamientos.
 

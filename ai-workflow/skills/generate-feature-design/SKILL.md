@@ -23,7 +23,6 @@ Si `requires_design` es `false` o `artifacts.design` ya es `ready`, esta skill n
 
 ## Leer siempre
 Lee en un único turno (varias llamadas Read en el mismo mensaje) todos los ficheros fijos; los marcados «si existe»/«si ya existe» no rompen el paralelismo:
-- `ai-workflow/docs/workflow.md`
 - `ai-workflow/features/YYYY-MM-DD-HH-MM-feature-name/spec.md`
 - `ai-workflow/features/YYYY-MM-DD-HH-MM-feature-name/status.yaml`
 - `ai-workflow/features/YYYY-MM-DD-HH-MM-feature-name/design.md` si ya existe
@@ -92,12 +91,7 @@ Si no quedan decisiones técnicas bloqueantes, no hagas preguntas y genera el de
 - Resolver por cuenta propia solo decisiones técnicas menores que no condicionen la planificación.
 - Cuando varias estrategias razonables compitan, mencionar la alternativa descartada brevemente para que la decisión sea revisable.
 - Tratar preguntas abiertas residuales como excepcionales: solo riesgos reales o dependencias externas no resolubles ahora.
-- Tras cerrar el design, actualizar `status.yaml` para reflejar:
-  - `phase: planning`
-  - `artifacts.design: ready`
-  - `requires_design: true` se mantiene
-  - `risk_level` ajustado si el design lo modifica
-  - `blocked_by` actualizado si el design destapó dependencias bloqueantes
+- Tras cerrar el design, actualizar `status.yaml`.
 - Indicar explícitamente en la respuesta final que el siguiente paso es `generate-implementation-plan`.
 
 ## Restricciones
@@ -106,12 +100,11 @@ Si no quedan decisiones técnicas bloqueantes, no hagas preguntas y genera el de
 - No modificar `spec.md` salvo para reflejar una preguntas abierta que el design resolvió.
 - No convertir el design en una repetición de la spec.
 - No dejar decisiones implícitas dentro de prosa larga; cada decisión debe quedar identificable.
-- No marcar `artifacts.design: ready` si quedan preguntas técnicas bloqueantes sin resolver.
 
 ## Terminado cuando
 - `design.md` cubre contexto técnico, decisiones, trade-offs y riesgos relevantes
 - las decisiones quedan explícitas y revisables sin reinterpretación
 - las preguntas abiertas finales son solo riesgos residuales o dependencias externas
-- `status.yaml` refleja `artifacts.design: ready` y `phase: planning`
+- `status.yaml` refleja el cierre del design
 - el siguiente paso del flujo queda explícito como `generate-implementation-plan`
 - la planificación posterior puede trocear el trabajo sin reabrir decisiones técnicas

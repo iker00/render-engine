@@ -7,7 +7,6 @@ No sustituye a los artefactos obligatorios de cada fase ni a los indices especia
 
 ## Documentos transversales
 - `context.md`: marco breve de producto, stack, restricciones globales y propiedad de datos. Leer en exploracion, spec y cuando el contrato de ejecucion no baste para entender el comportamiento esperado.
-- `workflow.md`: fases, artefactos, gates, estado estructurado y reglas de mantenimiento del workflow. Leer siempre que una skill coordine exploracion, spec, design, planning, implementation o documentation.
 - `architecture.md`: organizacion tecnica estable, limites de capas y decisiones arquitectonicas vigentes. Leer cuando se planifique, revise o implemente un cambio con impacto tecnico no trivial.
 - `conventions.md`: convenciones repetibles de implementacion y mantenimiento documental. Leer cuando se escriban planes, se implemente codigo o se cierre documentacion.
 - `current-state.md`: inventario de capacidades vigentes y limites actuales. Leer solo cuando haga falta confirmar si algo ya esta implementado, documentar estado estable o resolver dudas de alcance actual.

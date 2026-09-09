@@ -19,7 +19,6 @@ En ambos casos el contrato de la revisión es el mismo. La única diferencia es 
 
 ## Leer siempre
 Lee en un único turno (varias llamadas Read en el mismo mensaje) todos los ficheros fijos; el marcado «si existe...» no rompe el paralelismo:
-- `ai-workflow/docs/workflow.md`
 - `ai-workflow/features/YYYY-MM-DD-HH-MM-feature-name/spec.md`
 - `ai-workflow/features/YYYY-MM-DD-HH-MM-feature-name/tasks.md`
 - `ai-workflow/features/YYYY-MM-DD-HH-MM-feature-name/status.yaml`
@@ -73,13 +72,9 @@ No implementar código.
 - Si una tarea es demasiado grande para un cambio seguro, dividirla.
 - Si el sub-bloque `Interfaces` de una tarea tiene una firma en `Consume` que no coincide literalmente con ningún `Produce` de una tarea previa (o coincide con una firma distinta), marcar refinamiento y devolver el control a `generate-implementation-plan`. No reescribir el sub-bloque desde esta skill.
 - Si el sub-bloque `tests` de una tarea falta o no es lo bastante literal para que un subagente con contexto limpio pueda implementarlo sin reinterpretar, marcar refinamiento y devolver el control a `generate-implementation-plan`. No reescribir el sub-bloque desde esta skill.
-- Si el riesgo o la complejidad justifican `design.md` y no existe, marcar `requires_design: true` y `artifacts.design: missing` en `status.yaml`, dejar `implementation.ready: false` y redirigir a `generate-feature-design`. No escribir `design.md` desde esta skill.
-- Si el plan ya es suficientemente bueno, dejarlo explícito y marcar en `status.yaml` que la implementación está habilitada.
-- Actualizar `status.yaml` al terminar para reflejar:
-  - `phase: planning`
-  - `blocked_by` si existen huecos reales
-  - `implementation.ready: true | false`
-  - `feature_status: planned` solo si el plan queda listo
+- Si el riesgo o la complejidad justifican `design.md` y no existe, redirigir a `generate-feature-design`. No escribir `design.md` desde esta skill.
+- Si el plan ya es suficientemente bueno, dejarlo explícito.
+- Actualizar `status.yaml` al terminar.
 
 ## Salida esperada en modo sub-agente
 Cuando esta skill se invoca desde `generate-implementation-plan` como sub-agente, la respuesta final debe estructurarse para que el agente principal pueda actuar sin reinterpretar:

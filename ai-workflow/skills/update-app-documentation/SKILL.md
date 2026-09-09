@@ -129,11 +129,7 @@ Antes de empezar, comprobar que ninguna de las condiciones de "Cuándo NO usar e
   implementación y tests.
 - No convertir `README.md` en historial acumulado.
 - Si el gate documental no se cumple, detenerse y explicar qué estado de `status.yaml` impide documentar.
-- Al terminar, actualizar `status.yaml` como mínimo con:
-    - `documentation.ready: true` cuando la implementación ya estaba lista para documentarse
-    - `documentation.done: true` cuando la pasada documental queda cerrada
-    - `phase: complete` cuando la feature quede cerrada en esta pasada documental
-    - `feature_status: completed` cuando ya no quede trabajo pendiente dentro del alcance acordado
+- Al terminar, actualizar `status.yaml`.
 
 ## Commit final
 

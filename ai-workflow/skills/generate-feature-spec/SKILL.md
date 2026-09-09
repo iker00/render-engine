@@ -27,7 +27,6 @@ Esta skill debe comportarse como la fase de alineamiento de un flujo guiado por 
 
 ## Leer siempre
 Lee en un único turno (varias llamadas Read en el mismo mensaje) todos los ficheros fijos, junto con los aplicables de "Leer si aplica"; los marcados «si existe»/«si ya existe» no rompen el paralelismo:
-- `ai-workflow/docs/workflow.md`
 - `ai-workflow/docs/context.md`
 - `ai-workflow/docs/current-state.md` si existe
 - `ai-workflow/features/YYYY-MM-DD-HH-MM-feature-name/status.yaml` si existe
@@ -122,15 +121,8 @@ directamente sin pedir confirmación:
 - Preferir comportamiento concreto y revisable frente a descripciones vagas de la feature.
 - Si la petición entra en conflicto con restricciones existentes del proyecto, reflejar el conflicto con claridad en la spec.
 - Si la spec necesita referenciar estado vigente, usar `ai-workflow/docs/current-state.md`; si necesita histórico reciente, usar `ai-workflow/features/index.md`. No ampliar `README.md` para ese propósito.
-- Si no existe `status.yaml`, crearlo usando `ai-workflow/templates/status.yaml`.
 - No escribir `design.md` desde esta skill. Si la feature necesita decisiones técnicas explícitas antes de planificar (arquitectura, estrategia de cambio, trade-offs no triviales), marcar `requires_design: true` y delegar en `generate-feature-design`.
-- Tras cerrar la spec, actualizar `status.yaml` como mínimo para reflejar:
-  - `phase: spec`, o `phase: design` si `requires_design: true`, o `phase: planning` si no requiere design
-  - `artifacts.spec: ready` cuando la spec ya esté lista
-  - `artifacts.design: not_required` cuando la feature no requiera design, o `missing` cuando sí lo requiera y aún no exista
-  - `feature_status: drafting` o `planned` según corresponda
-  - `requires_design` con la decisión final tras cerrar la spec
-  - `risk_level` con una valoración razonada `low | medium | high`
+- Tras cerrar la spec, actualizar `status.yaml`.
 - Si la feature sigue siendo demasiado ambigua para escribir una buena spec, detenerse y explicitar qué decisiones de producto faltan antes de comprometer la spec.
 
 ## Nivel de calidad esperado

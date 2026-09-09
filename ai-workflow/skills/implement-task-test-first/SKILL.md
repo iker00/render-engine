@@ -13,7 +13,6 @@ El orquestador no implementa código por sí mismo. El contrato del subagente vi
 
 ## Leer siempre (orquestador)
 Lo mínimo para decidir qué tarea toca y mantener el estado, en un único turno (varias llamadas Read en el mismo mensaje):
-- `ai-workflow/docs/workflow.md`
 - `ai-workflow/features/YYYY-MM-DD-HH-MM-feature-name/tasks.md`
 - `ai-workflow/features/YYYY-MM-DD-HH-MM-feature-name/status.yaml`
 
@@ -65,26 +64,21 @@ Consecuencias para el orquestador:
 
 ## Flujo del orquestador
 1. Seleccionar la primera tarea pendiente de `tasks.md` que no esté en `implementation.completed_task_ids` y que entre en el alcance solicitado por el usuario. Si no queda ninguna tarea pendiente en alcance, saltar al paso 8.
-2. Resetear en `status.yaml` los flags de validación de la pasada anterior:
-   - `validation.tests_green: false`
-   - `validation.coverage_gate_passed: false`
-3. Marcar la tarea seleccionada en `status.yaml`:
-   - `implementation.in_progress_task_id: <ID>`
+2. Actualizar `status.yaml` para el arranque de la pasada.
+3. Marcar en `status.yaml` la tarea seleccionada como en curso.
 4. Lanzar un subagente para esa tarea con la herramienta `Agent` (ver "Lanzamiento del subagente").
 5. Recibir el texto final del subagente y parsearlo como JSON. Tolerar `\`\`\`json` y `\`\`\`` envolventes si el subagente los añade. Si el JSON no se puede parsear o falta algún campo obligatorio, tratarlo como `status: "failed"` con `blocker_reason` describiendo el problema de protocolo y continuar por la rama de fallo del paso 6.
 6. Según el `status` devuelto:
-   - `completed`: actualizar `status.yaml` (mover el ID de `in_progress_task_id` a `completed_task_ids`, limpiar `in_progress_task_id`) y, después de actualizarlo, hacer **un único commit con todo lo de esta tarea** — código, tests y la propia actualización de `status.yaml` — usando el `commit_message` que trae el JSON del subagente:
+   - `completed`: actualizar `status.yaml` con la tarea cerrada y, después de actualizarlo, hacer **un único commit con todo lo de esta tarea** — código, tests y la propia actualización de `status.yaml` — usando el `commit_message` que trae el JSON del subagente:
      ```
      git add -A
      git commit -m "<commit_message del subagente>"
      ```
      El subagente nunca ejecuta git por su cuenta; el commit lo hace siempre el orquestador, aquí, después de recibir `status: "completed"` y actualizar `status.yaml`. `git add -A` es seguro en este punto porque no queda nada suelto de fases anteriores (el commit de planificación ya recogió `spec.md`/`design.md`/`tasks.md`/el `status.yaml` inicial antes de la primera tarea). Pasar a la siguiente tarea.
-   - `blocked` o `failed`: detener la pasada, dejar la tarea en `in_progress_task_id`, registrar el motivo en `status.yaml.blocked_by` y saltar al paso 8. No commitear en este caso: los cambios (incluido el `status.yaml` con el bloqueo) quedan sin commitear para que el usuario decida cómo seguir.
+   - `blocked` o `failed`: detener la pasada, registrar el bloqueo en `status.yaml` y saltar al paso 8. No commitear en este caso: los cambios (incluido el `status.yaml` con el bloqueo) quedan sin commitear para que el usuario decida cómo seguir.
 7. Repetir desde el paso 1.
 8. Ejecutar la validación final de cobertura del proyecto (`pnpm test`). Si no se implementó ninguna tarea en esta pasada (gate fallido o bloqueo temprano sin código nuevo), se puede omitir y dejar los flags de validación en `false`.
-9. Actualizar `status.yaml`:
-   - `validation.tests_green: true | false`
-   - `validation.coverage_gate_passed: true | false`
+9. Actualizar `status.yaml` con el resultado de la validación.
 10. Emitir la respuesta final con dos checklists (tareas implementadas en la pasada y tareas pendientes de la feature) y las notas documentales agregadas que devolvieron los subagentes.
 
 ## Lanzamiento del subagente
@@ -116,7 +110,6 @@ Consecuencias para el orquestador:
 - Lanzar un único subagente por tarea. No agrupar tareas en un mismo subagente aunque compartan ficheros.
 - No avanzar a la siguiente tarea si la anterior devolvió `blocked` o `failed`.
 - `tasks.md` es solo lectura durante la implementación; el orquestador no lo modifica. El estado de la pasada vive únicamente en `status.yaml`, y solo el orquestador lo escribe.
-- No reutilizar `validation.tests_green: true` o `validation.coverage_gate_passed: true` de pasadas anteriores como si siguieran siendo válidos tras nuevos cambios.
 - Ejecutar la validación de cobertura una sola vez al final de la pasada, no por tarea.
 - No ejecutar `pnpm lint` ni `tsc --noEmit` por tarea: ya lo hace el hook `SubagentStop` del subagente.
 - Tratar `tasks.md` como contrato de ejecución, no como guía orientativa.
