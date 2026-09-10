@@ -1122,6 +1122,11 @@ function isValidVisibilityReference(reference: string): boolean {
     return parsedReference.kind === 'reference' && parsedReference.status === 'supported'
   }
 
+  if (reference === 'row' || reference.startsWith('row.')) {
+    const parsedReference = parseRuntimeReference(reference, { allowRowReference: true })
+    return parsedReference.kind === 'reference' && parsedReference.status === 'supported'
+  }
+
   if (whenParamsReferencePattern.test(reference)) {
     return true
   }

@@ -31,6 +31,9 @@ Este mismo shape se reutiliza en otros contextos del runtime para declarar condi
 - `params.{paramName}`
 - `item`
 - `item.{segmentosAnidados}`
+- `row`
+- `row.{segmentosAnidados}`
+- `row.$index`
 - `forms.{formId}.{fieldId}`
 - `queries.{queryName}`
 - `queries.{queryName}.data`
@@ -82,7 +85,7 @@ Este mismo shape se reutiliza en otros contextos del runtime para declarar condi
 ## Validación de shape
 
 ### Condición simple
-- Si `visibility.reference` sale del alcance `params.{paramName}`, `item.*`, `forms.*` o `queries.*` soportado, el config completo se rechaza antes del render sobre la ruta exacta.
+- Si `visibility.reference` sale del alcance `params.{paramName}`, `item.*`, `row.*`, `forms.*` o `queries.*` soportado, el config completo se rechaza antes del render sobre la ruta exacta.
 - `params.{paramName}` requiere exactamente un segmento dinámico: `params.userId` es válido; `params`, `params.user.id` o formas sin segmento siguen siendo inválidas.
 - Si `visibility.operator` usa un valor fuera del catálogo soportado (`equals | notEquals | isTruthy | isFalsy | greaterThan | lessThan | arrayContains`), el config completo se rechaza antes del render.
 - Si `visibility.operator` es `isTruthy` o `isFalsy` y declara `value`, el config completo se rechaza antes del render.

@@ -113,11 +113,12 @@ Las superficies de `query`, `body`, `params` y otras no listadas siguen fuera de
 - Las mismas superficies donde aplica `item.*` e `item.$key` admiten también `item.$index`.
 
 ## Frontera específica de `row.*`
-- `row` e `row.*` son válidos dentro de las celdas de una `table` (celdas-nodo en modo dinámico, y celdas string manuales y dinámicas), como namespace propio del contexto de fila de la tabla — distinto de `item.*`, que dentro de esas mismas celdas solo puede referirse al `repeater` ancestro.
+- `row` e `row.*` son válidos dentro del subárbol de las celdas de una `table` (celdas-nodo en modo dinámico, y celdas string manuales y dinámicas), como namespace propio del contexto de fila de la tabla — distinto de `item.*`, que dentro de esas mismas celdas solo puede referirse al `repeater` ancestro.
 - `row`, `row.slug`, `row.meta.author.name` o `row.tags.0` son ejemplos válidos dentro de ese contexto, con la misma semántica de segmentos anidados que `item.*` (numérico como índice solo si el valor actual es array, clave literal si es objeto).
 - En modo dinámico, `row.*` navega el dato de la fila actual. En modo manual, `row.*` sin `.$index` no resuelve — no existe un dato subyacente que navegar, solo valores literales por celda (ver "Frontera específica de `row.$index`" para la excepción sintética).
 - Una `table` dinámica anidada dentro de un `repeater` puede combinar en el mismo string interpolado `item.algo` (del `repeater` ancestro) y `row.algo` (de la fila propia de la tabla) sin que uno sombree al otro.
-- Fuera de las celdas de una `table`, `row.*` no forma parte del contrato soportado aunque el shape del string siga siendo reconocible.
+- `row.*` puede usarse en `visibility.reference` de cualquier nodo dentro del subárbol de una celda-nodo de `table` dinámica, y en `button.props.checked` (cuando `variant: 'switch'`) de un `button` que es o vive dentro de una celda-nodo de `table`.
+- Fuera del subárbol de las celdas de una `table`, `row.*` no forma parte del contrato soportado aunque el shape del string siga siendo reconocible.
 
 ## Frontera específica de `row.$index`
 - `row.$index` es una referencia sintética soportada, distinta de la navegación genérica `row.{ruta}`. Expone un entero 1-based con la posición de la fila dentro de la vista actualmente visible de la `table` (tras aplicar filtros, ordenación y paginación local).

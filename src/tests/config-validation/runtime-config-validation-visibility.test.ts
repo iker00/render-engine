@@ -5,6 +5,7 @@ import {
   createConfigWithPages,
   createConfigWithLayout,
   createVisibilityRule,
+  createRepeaterNode,
 } from './helpers'
 
 describe('validateRuntimeConfig', () => {
@@ -1671,6 +1672,515 @@ describe('validateRuntimeConfig', () => {
         ],
         initialPage: 'home',
       })
+      expect(result.status).toBe('ready')
+    })
+  })
+
+  describe('row.* references in visibility shape', () => {
+    // These cases validate shape only (isValidVisibilityReference), not scope: the node is not
+    // inside a `table` cell here. T2 introduces the "row.* only inside a table cell" restriction
+    // (see 'row.* visibility scope' below); shape-invalid cases stay rejected here regardless of scope.
+    it('rejects row.$index.algo (extra segment after the synthetic $index) at visibility.reference', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithLayout([
+          {
+            type: 'heading',
+            visibility: {
+              reference: 'row.$index.algo',
+              operator: 'isTruthy',
+            },
+            props: { text: 'Welcome', level: 1 },
+          },
+        ]),
+      )
+      expect(result.status).toBe('error')
+      if (result.status !== 'error') throw new Error('Expected error')
+      expect(result.error.message).toContain('layout[0].visibility.reference')
+    })
+
+    it('rejects row.algo.$index ($index not in the exact synthetic position) at visibility.reference', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithLayout([
+          {
+            type: 'heading',
+            visibility: {
+              reference: 'row.algo.$index',
+              operator: 'isTruthy',
+            },
+            props: { text: 'Welcome', level: 1 },
+          },
+        ]),
+      )
+      expect(result.status).toBe('error')
+      if (result.status !== 'error') throw new Error('Expected error')
+      expect(result.error.message).toContain('layout[0].visibility.reference')
+    })
+
+    it('rejects row.$key (no such synthetic segment for row) at visibility.reference', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithLayout([
+          {
+            type: 'heading',
+            visibility: {
+              reference: 'row.$key',
+              operator: 'isTruthy',
+            },
+            props: { text: 'Welcome', level: 1 },
+          },
+        ]),
+      )
+      expect(result.status).toBe('error')
+      if (result.status !== 'error') throw new Error('Expected error')
+      expect(result.error.message).toContain('layout[0].visibility.reference')
+    })
+
+    it('rejects row.$other (unrecognized synthetic segment) at visibility.reference', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithLayout([
+          {
+            type: 'heading',
+            visibility: {
+              reference: 'row.$other',
+              operator: 'isTruthy',
+            },
+            props: { text: 'Welcome', level: 1 },
+          },
+        ]),
+      )
+      expect(result.status).toBe('error')
+      if (result.status !== 'error') throw new Error('Expected error')
+      expect(result.error.message).toContain('layout[0].visibility.reference')
+    })
+
+    it('rejects a composed group whose single condition is row.$key.* (invalid shape) with the exact conditions path', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithLayout([
+          {
+            type: 'heading',
+            visibility: {
+              operator: 'and',
+              conditions: [{ reference: 'row.$key.name', operator: 'isTruthy' }],
+            },
+            props: { text: 'Welcome', level: 1 },
+          },
+        ]),
+      )
+      expect(result.status).toBe('error')
+      if (result.status !== 'error') throw new Error('Expected error')
+      expect(result.error.message).toContain('layout[0].visibility.conditions[0].reference')
+    })
+  })
+
+  describe('row.* visibility scope', () => {
+    it('rejects a node with visibility row.* outside any table cell subtree with the exact message (moved from T1 shape acceptance)', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithLayout([
+          {
+            type: 'container',
+            children: [
+              {
+                type: 'heading',
+                visibility: { reference: 'row.status', operator: 'equals', value: 'active' },
+                props: { text: 'Welcome', level: 1 },
+              },
+            ],
+          },
+        ]),
+      )
+      expect(result).toEqual({
+        status: 'error',
+        error: {
+          code: 'invalid-layout',
+          displayMode: 'development-only',
+          message: `Page "home" has an invalid layout at "layout[0].children[0].visibility.reference": row.* references are only supported inside a table cell subtree.
+  → container[0] > heading("Welcome")
+  Node: {"type":"heading","props":{"text":"Welcome"}}`,
+        },
+      })
+    })
+
+    it('rejects bare row (no segments) with isTruthy outside any table cell (moved from T1 shape acceptance)', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithLayout([
+          {
+            type: 'heading',
+            visibility: { reference: 'row', operator: 'isTruthy' },
+            props: { text: 'Welcome', level: 1 },
+          },
+        ]),
+      )
+      expect(result.status).toBe('error')
+      if (result.status !== 'error') throw new Error('Expected error')
+      expect(result.error.message).toContain('layout[0].visibility.reference')
+      expect(result.error.message).toContain('row.* references are only supported inside a table cell subtree.')
+    })
+
+    it('rejects row with nested segments (row.meta.author.name) outside any table cell (moved from T1 shape acceptance)', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithLayout([
+          {
+            type: 'heading',
+            visibility: { reference: 'row.meta.author.name', operator: 'equals', value: 'Ada' },
+            props: { text: 'Welcome', level: 1 },
+          },
+        ]),
+      )
+      expect(result.status).toBe('error')
+      if (result.status !== 'error') throw new Error('Expected error')
+      expect(result.error.message).toContain('layout[0].visibility.reference')
+    })
+
+    it('rejects row with a numeric segment (row.tags.0) outside any table cell (moved from T1 shape acceptance)', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithLayout([
+          {
+            type: 'heading',
+            visibility: { reference: 'row.tags.0', operator: 'equals', value: 'x' },
+            props: { text: 'Welcome', level: 1 },
+          },
+        ]),
+      )
+      expect(result.status).toBe('error')
+      if (result.status !== 'error') throw new Error('Expected error')
+      expect(result.error.message).toContain('layout[0].visibility.reference')
+    })
+
+    it('rejects row.$index outside any table cell (moved from T1 shape acceptance)', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithLayout([
+          {
+            type: 'heading',
+            visibility: { reference: 'row.$index', operator: 'lessThan', value: 4 },
+            props: { text: 'Welcome', level: 1 },
+          },
+        ]),
+      )
+      expect(result.status).toBe('error')
+      if (result.status !== 'error') throw new Error('Expected error')
+      expect(result.error.message).toContain('layout[0].visibility.reference')
+    })
+
+    it('accepts visibility row.* on a dynamic table cell-node (table.props.rows.cells)', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithLayout([
+          {
+            type: 'table',
+            props: {
+              headers: ['Name', 'Status'],
+              rows: {
+                source: 'queries.users.data.results',
+                cells: [
+                  'row.name',
+                  {
+                    type: 'button',
+                    visibility: { reference: 'row.status', operator: 'equals', value: 'active' },
+                    props: { label: 'Ver' },
+                  },
+                ],
+              },
+            },
+          },
+        ]),
+      )
+      expect(result.status).toBe('ready')
+    })
+
+    it('accepts visibility row.* on a deeply nested node inside a table cell-node subtree (container > container > button)', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithLayout([
+          {
+            type: 'table',
+            props: {
+              headers: ['Name', 'Actions'],
+              rows: {
+                source: 'queries.users.data.results',
+                cells: [
+                  'row.name',
+                  {
+                    type: 'container',
+                    children: [
+                      {
+                        type: 'container',
+                        children: [
+                          {
+                            type: 'button',
+                            visibility: { reference: 'row.status', operator: 'equals', value: 'active' },
+                            props: { label: 'Ver' },
+                          },
+                        ],
+                      },
+                    ],
+                  },
+                ],
+              },
+            },
+          },
+        ]),
+      )
+      expect(result.status).toBe('ready')
+    })
+
+    it('accepts visibility row.$index on a manual table cell-node (table.props.rows[j][i])', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithLayout([
+          {
+            type: 'table',
+            props: {
+              headers: ['Name', 'Actions'],
+              rows: [
+                [
+                  'Ada',
+                  {
+                    type: 'button',
+                    visibility: { reference: 'row.$index', operator: 'lessThan', value: 3 },
+                    props: { label: 'Ver' },
+                  },
+                ],
+              ],
+            },
+          },
+        ]),
+      )
+      expect(result.status).toBe('ready')
+    })
+
+    it('does not evaluate visibility on primitive manual table cells, and still rejects a sibling node outside the table with row.*', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithLayout([
+          {
+            type: 'table',
+            props: {
+              headers: ['Name', 'Score'],
+              rows: [
+                ['Ada', 10],
+                ['Grace', 20],
+              ],
+            },
+          },
+          {
+            type: 'heading',
+            visibility: { reference: 'row.status', operator: 'equals', value: 'active' },
+            props: { text: 'Welcome', level: 1 },
+          },
+        ]),
+      )
+      expect(result.status).toBe('error')
+      if (result.status !== 'error') throw new Error('Expected error')
+      expect(result.error.message).toContain('layout[1].visibility.reference')
+    })
+
+    it('accepts visibility row.* on a table cell-node nested inside a repeater template (insideTableCell survives the repeater)', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithLayout([
+          createRepeaterNode({
+            props: {
+              items: { source: 'queries.posts.data', key: 'id' },
+              template: [
+                {
+                  type: 'table',
+                  props: {
+                    headers: ['Name', 'Status'],
+                    rows: {
+                      source: 'item.users',
+                      cells: [
+                        'row.name',
+                        {
+                          type: 'container',
+                          visibility: { reference: 'row.status', operator: 'equals', value: 'active' },
+                          children: [],
+                        },
+                      ],
+                    },
+                  },
+                },
+              ],
+            },
+          }),
+        ]),
+      )
+      expect(result.status).toBe('ready')
+    })
+
+    it('rejects visibility row.* on a node inside a repeater template but outside any table cell (insideTableCell stays false)', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithLayout([
+          createRepeaterNode({
+            props: {
+              items: { source: 'queries.posts.data', key: 'id' },
+              template: [
+                {
+                  type: 'heading',
+                  visibility: { reference: 'row.status', operator: 'equals', value: 'active' },
+                  props: { text: 'Item', level: 2 },
+                },
+              ],
+            },
+          }),
+        ]),
+      )
+      expect(result.status).toBe('error')
+      if (result.status !== 'error') throw new Error('Expected error')
+      expect(result.error.message).toContain('layout[0].props.template[0].visibility.reference')
+    })
+
+    it('rejects a composed group with row.* as the first condition outside a table cell, pointing at conditions[0].reference', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithLayout([
+          {
+            type: 'heading',
+            visibility: {
+              operator: 'and',
+              conditions: [
+                { reference: 'row.status', operator: 'equals', value: 'active' },
+                { reference: 'forms.filters.active', operator: 'isTruthy' },
+              ],
+            },
+            props: { text: 'Welcome', level: 1 },
+          },
+        ]),
+      )
+      expect(result.status).toBe('error')
+      if (result.status !== 'error') throw new Error('Expected error')
+      expect(result.error.message).toContain('layout[0].visibility.conditions[0].reference')
+      expect(result.error.message).toContain('row.* references are only supported inside a table cell subtree.')
+    })
+
+    it('rejects a composed group with row.* as the second condition outside a table cell, pointing at conditions[1].reference', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithLayout([
+          {
+            type: 'heading',
+            visibility: {
+              operator: 'and',
+              conditions: [
+                { reference: 'forms.filters.active', operator: 'isTruthy' },
+                { reference: 'row.status', operator: 'equals', value: 'active' },
+              ],
+            },
+            props: { text: 'Welcome', level: 1 },
+          },
+        ]),
+      )
+      expect(result.status).toBe('error')
+      if (result.status !== 'error') throw new Error('Expected error')
+      expect(result.error.message).toContain('layout[0].visibility.conditions[1].reference')
+    })
+
+    it('accepts a composed group inside a table cell-node with two row.* conditions', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithLayout([
+          {
+            type: 'table',
+            props: {
+              headers: ['Name', 'Flag'],
+              rows: {
+                source: 'queries.users.data.results',
+                cells: [
+                  'row.name',
+                  {
+                    type: 'container',
+                    visibility: {
+                      operator: 'and',
+                      conditions: [
+                        { reference: 'row.status', operator: 'equals', value: 'active' },
+                        { reference: 'row.priority', operator: 'greaterThan', value: 0 },
+                      ],
+                    },
+                    children: [],
+                  },
+                ],
+              },
+            },
+          },
+        ]),
+      )
+      expect(result.status).toBe('ready')
+    })
+
+    it('rejects table.visibility itself with row.* (a table is not inside its own cell subtree)', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithLayout([
+          {
+            type: 'table',
+            visibility: { reference: 'row.status', operator: 'equals', value: 'active' },
+            props: {
+              headers: ['Name'],
+              rows: [['Ada']],
+            },
+          },
+        ]),
+      )
+      expect(result.status).toBe('error')
+      if (result.status !== 'error') throw new Error('Expected error')
+      expect(result.error.message).toContain('layout[0].visibility.reference')
+      expect(result.error.message).toContain('row.* references are only supported inside a table cell subtree.')
+    })
+
+    it('rejects visibility row.* inside a queryStateFeedback fallback node outside any table cell', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithLayout([
+          {
+            type: 'heading',
+            queryStateFeedback: {
+              query: 'searchUsers',
+              states: {
+                error: {
+                  mode: 'fallback',
+                  fallback: [
+                    {
+                      type: 'paragraph',
+                      visibility: { reference: 'row.status', operator: 'equals', value: 'active' },
+                      props: { text: 'Fallback text' },
+                    },
+                  ],
+                },
+              },
+            },
+            props: { text: 'Welcome', level: 1 },
+          },
+        ]),
+      )
+      expect(result.status).toBe('error')
+      if (result.status !== 'error') throw new Error('Expected error')
+      expect(result.error.message).toContain('layout[0].queryStateFeedback.states.error.fallback[0].visibility.reference')
+    })
+
+    it('accepts visibility row.* inside a queryStateFeedback fallback node nested inside a table cell', () => {
+      const result = validateRuntimeConfig(
+        createConfigWithLayout([
+          {
+            type: 'table',
+            props: {
+              headers: ['Name', 'Status'],
+              rows: {
+                source: 'queries.users.data.results',
+                cells: [
+                  'row.name',
+                  {
+                    type: 'container',
+                    queryStateFeedback: {
+                      query: 'searchUsers',
+                      states: {
+                        error: {
+                          mode: 'fallback',
+                          fallback: [
+                            {
+                              type: 'paragraph',
+                              visibility: { reference: 'row.status', operator: 'equals', value: 'active' },
+                              props: { text: 'Fallback text' },
+                            },
+                          ],
+                        },
+                      },
+                    },
+                    children: [],
+                  },
+                ],
+              },
+            },
+          },
+        ]),
+      )
       expect(result.status).toBe('ready')
     })
   })
