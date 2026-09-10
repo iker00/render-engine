@@ -1,0 +1,17 @@
+# Ficheros de configuración cuya edición bloquea block-config-edit.sh.
+#
+# Un nombre o patrón glob por línea, comparado contra el nombre base del
+# fichero (sin ruta). Líneas en blanco y las que empiezan por # se ignoran.
+#
+# Esta lista es específica del stack del proyecto. Para adaptar el flujo a
+# otro stack, sustituye estas líneas por las suyas; el script no cambia.
+#
+# React + TypeScript + Vite + Vitest + ESLint (este proyecto):
+tsconfig.json
+tsconfig.*.json
+eslint.config.js
+vitest.config.ts
+
+# Laravel:               .env, phpunit.xml, composer.json
+# .NET Core:              *.csproj, appsettings.json
+# WordPress:              wp-config.php

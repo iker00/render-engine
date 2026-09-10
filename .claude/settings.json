@@ -3,6 +3,26 @@
     "bgIsolation": "none"
   },
   "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/ai-workflow/scripts/block-config-edit.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/ai-workflow/scripts/block-no-verify.sh"
+          }
+        ]
+      }
+    ],
     "SubagentStart": [
       {
         "matcher": "implement-task",
