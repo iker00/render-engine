@@ -940,4 +940,326 @@ describe('table rich cells', () => {
     expect(within(rows[0]).getAllByRole('cell').map((cell) => cell.textContent)).toEqual(['Ada', '1'])
     expect(within(rows[1]).getAllByRole('cell').map((cell) => cell.textContent)).toEqual(['Grace', '2'])
   })
+
+  describe('visibility with row.* in table cells', () => {
+    it('shows a cell-node child with visibility: row.status equals active only on matching rows', () => {
+      const activePage: RuntimePageConfig = {
+        id: 'rich-table-visibility-row-status',
+        layout: [
+          {
+            type: 'table',
+            props: {
+              headers: ['Name', 'Info'],
+              rows: {
+                source: 'queries.users.data.results',
+                cells: [
+                  'row.name',
+                  {
+                    type: 'container',
+                    props: {},
+                    children: [
+                      {
+                        type: 'paragraph',
+                        props: { text: 'Active only' },
+                        visibility: { reference: 'row.status', operator: 'equals', value: 'active' },
+                      },
+                    ],
+                  },
+                ],
+              },
+            },
+          },
+        ],
+      }
+
+      renderRuntimePageWithState(
+        activePage,
+        createRuntimePageState(activePage, {
+          users: {
+            status: 'success',
+            data: {
+              results: [
+                { name: 'Ada', status: 'active' },
+                { name: 'Grace', status: 'archived' },
+                { name: 'Lin', status: 'active' },
+              ],
+            },
+            error: null,
+          },
+        }),
+      )
+
+      const rows = getTableBodyRows(screen.getByRole('table'))
+      expect(rows).toHaveLength(3)
+      expect(within(rows[0]).queryByText('Active only')).toBeInTheDocument()
+      expect(within(rows[1]).queryByText('Active only')).not.toBeInTheDocument()
+      expect(within(rows[2]).queryByText('Active only')).toBeInTheDocument()
+    })
+
+    it('shows a cell-node with visibility: row.$index lessThan 3 only on the first two rows', () => {
+      const activePage: RuntimePageConfig = {
+        id: 'rich-table-visibility-row-index',
+        layout: [
+          {
+            type: 'table',
+            props: {
+              headers: ['Name', 'Info'],
+              rows: {
+                source: 'queries.users.data.results',
+                cells: [
+                  'row.name',
+                  {
+                    type: 'paragraph',
+                    props: { text: 'Early row' },
+                    visibility: { reference: 'row.$index', operator: 'lessThan', value: 3 },
+                  },
+                ],
+              },
+            },
+          },
+        ],
+      }
+
+      renderRuntimePageWithState(
+        activePage,
+        createRuntimePageState(activePage, {
+          users: {
+            status: 'success',
+            data: {
+              results: [{ name: 'Ada' }, { name: 'Grace' }, { name: 'Lin' }],
+            },
+            error: null,
+          },
+        }),
+      )
+
+      const rows = getTableBodyRows(screen.getByRole('table'))
+      expect(rows).toHaveLength(3)
+      expect(within(rows[0]).queryByText('Early row')).toBeInTheDocument()
+      expect(within(rows[1]).queryByText('Early row')).toBeInTheDocument()
+      expect(within(rows[2]).queryByText('Early row')).not.toBeInTheDocument()
+    })
+
+    it('recontabiliza row.$index de forma contigua tras aplicar un filtro por columna', () => {
+      const activePage: RuntimePageConfig = {
+        id: 'rich-table-visibility-row-index-filtered',
+        layout: [
+          {
+            type: 'table',
+            props: {
+              headers: ['Name', 'Info'],
+              columns: [{ id: 'Name', filterable: true }],
+              rows: {
+                source: 'queries.users.data.results',
+                cells: [
+                  'row.name',
+                  {
+                    type: 'paragraph',
+                    props: { text: 'First visible row' },
+                    visibility: { reference: 'row.$index', operator: 'equals', value: 1 },
+                  },
+                ],
+              },
+            },
+          },
+        ],
+      }
+
+      renderRuntimePageWithState(
+        activePage,
+        createRuntimePageState(activePage, {
+          users: {
+            status: 'success',
+            data: {
+              results: [{ name: 'Ada' }, { name: 'Grace' }, { name: 'Lin' }],
+            },
+            error: null,
+          },
+        }),
+      )
+
+      const table = screen.getByRole('table')
+
+      // Before filtering: only the first row ("Ada") shows the visibility-gated cell
+      const initialRows = getTableBodyRows(table)
+      expect(within(initialRows[0]).queryByText('First visible row')).toBeInTheDocument()
+      expect(within(initialRows[1]).queryByText('First visible row')).not.toBeInTheDocument()
+
+      // Filtering out "Ada" makes "Grace" the new first visible row: row.$index recounts to 1
+      fireEvent.change(screen.getByRole('searchbox', { name: 'Filtrar Name' }), { target: { value: 'grace' } })
+
+      const filteredRows = getTableBodyRows(table)
+      expect(filteredRows).toHaveLength(1)
+      expect(within(filteredRows[0]).getAllByRole('cell')[0]).toHaveTextContent('Grace')
+      expect(within(filteredRows[0]).queryByText('First visible row')).toBeInTheDocument()
+    })
+
+    it('composes row.* and item.* in an and group without mutual shadowing inside a table nested in a repeater', () => {
+      const activePage: RuntimePageConfig = {
+        id: 'repeater-table-row-and-item-visibility',
+        layout: [
+          {
+            type: 'repeater',
+            props: {
+              items: { source: 'queries.departments.data', key: 'id' },
+              template: [
+                {
+                  type: 'table',
+                  props: {
+                    headers: ['Name', 'Info'],
+                    rows: {
+                      source: 'item.members',
+                      cells: [
+                        '{{item.ownerName}} - {{row.name}}',
+                        {
+                          type: 'paragraph',
+                          props: { text: 'Editable' },
+                          visibility: {
+                            operator: 'and',
+                            conditions: [
+                              { reference: 'row.status', operator: 'equals', value: 'active' },
+                              { reference: 'item.canEdit', operator: 'isTruthy' },
+                            ],
+                          },
+                        },
+                      ],
+                    },
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      }
+
+      renderRuntimePageWithState(
+        activePage,
+        createRuntimePageState(activePage, {
+          departments: {
+            status: 'success',
+            data: [
+              {
+                id: 'dept-editable',
+                ownerName: 'Engineering',
+                canEdit: true,
+                members: [
+                  { name: 'Ada', status: 'active' },
+                  { name: 'Grace', status: 'archived' },
+                ],
+              },
+              {
+                id: 'dept-readonly',
+                ownerName: 'Sales',
+                canEdit: false,
+                members: [{ name: 'Lin', status: 'active' }],
+              },
+            ],
+            error: null,
+          },
+        }),
+      )
+
+      const tables = screen.getAllByRole('table')
+      expect(tables).toHaveLength(2)
+
+      const editableRows = getTableBodyRows(tables[0])
+      expect(within(editableRows[0]).queryByText('Editable')).toBeInTheDocument()
+      expect(within(editableRows[1]).queryByText('Editable')).not.toBeInTheDocument()
+
+      const readonlyRows = getTableBodyRows(tables[1])
+      expect(within(readonlyRows[0]).queryByText('Editable')).not.toBeInTheDocument()
+    })
+
+    it('keeps table.visibility working with a non-row reference, unaffected by row.* wiring (regression)', () => {
+      const activePage: RuntimePageConfig = {
+        id: 'rich-table-table-level-visibility',
+        layout: [
+          {
+            type: 'table',
+            props: {
+              headers: ['Name'],
+              rows: {
+                source: 'queries.users.data.results',
+                cells: ['row.name'],
+              },
+            },
+            visibility: { reference: 'queries.tableVisible.data', operator: 'isTruthy' },
+          },
+        ],
+      }
+
+      renderRuntimePageWithState(
+        activePage,
+        createRuntimePageState(activePage, {
+          users: {
+            status: 'success',
+            data: { results: [{ name: 'Ada' }] },
+            error: null,
+          },
+          tableVisible: {
+            status: 'success',
+            data: true,
+            error: null,
+          },
+        }),
+      )
+
+      expect(screen.getByRole('table')).toBeInTheDocument()
+    })
+
+    it('degrades row.* without .$index to absent in manual table mode: row.$index still works, row.<field> does not', () => {
+      const activePage: RuntimePageConfig = {
+        id: 'manual-table-visibility-row-degradation',
+        layout: [
+          {
+            type: 'table',
+            props: {
+              headers: ['Name', 'Index gated', 'Status gated'],
+              rows: [
+                [
+                  'Ada',
+                  {
+                    type: 'paragraph',
+                    props: { text: 'First row only' },
+                    visibility: { reference: 'row.$index', operator: 'equals', value: 1 },
+                  },
+                  {
+                    type: 'paragraph',
+                    props: { text: 'Active only' },
+                    visibility: { reference: 'row.status', operator: 'equals', value: 'active' },
+                  },
+                ],
+                [
+                  'Grace',
+                  {
+                    type: 'paragraph',
+                    props: { text: 'First row only' },
+                    visibility: { reference: 'row.$index', operator: 'equals', value: 1 },
+                  },
+                  {
+                    type: 'paragraph',
+                    props: { text: 'Active only' },
+                    visibility: { reference: 'row.status', operator: 'equals', value: 'active' },
+                  },
+                ],
+              ],
+            },
+          },
+        ],
+      }
+
+      renderRuntimePageWithState(activePage, createRuntimePageState(activePage, {}))
+
+      const rows = getTableBodyRows(screen.getByRole('table'))
+      expect(rows).toHaveLength(2)
+
+      // row.$index resolves from rowIndex, which is always populated (even in manual mode)
+      expect(within(rows[0]).queryByText('First row only')).toBeInTheDocument()
+      expect(within(rows[1]).queryByText('First row only')).not.toBeInTheDocument()
+
+      // row.status has no backing row item in manual mode: it degrades to absent, never matching equals
+      expect(within(rows[0]).queryByText('Active only')).not.toBeInTheDocument()
+      expect(within(rows[1]).queryByText('Active only')).not.toBeInTheDocument()
+    })
+  })
 })
