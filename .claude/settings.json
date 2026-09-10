@@ -43,6 +43,16 @@
             "timeout": 30
           }
         ]
+      },
+      {
+        "matcher": "implement-feature",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/ai-workflow/skills/implement-task-test-first/hooks/validate-coverage.sh",
+            "timeout": 600
+          }
+        ]
       }
     ]
   }

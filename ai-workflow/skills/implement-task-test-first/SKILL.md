@@ -58,7 +58,7 @@ Contrapartida asumida: cada subagente paga la lectura de sus dos ficheros. El pr
 Consecuencias para el orquestador:
 
 - Un subagente que devuelve `status: "completed"` implica lint y tipos en verde, salvo que agotara los reintentos.
-- Los tests **no** corren en el hook: la suite completa con cobertura se ejecuta una sola vez al cierre de la pasada (paso 8).
+- Los tests no corren en el hook por tarea: la suite completa con cobertura corre una sola vez, en el hook de cierre de este propio agente orquestador (`hooks/validate-coverage.sh`), que además escribe `validation.tests_green` y `validation.coverage_gate_passed` en `status.yaml`.
 - Cada tarea paga ~25s de validación. Es el coste de no arrastrar tareas rotas a la siguiente.
 - Si cambias los standards o las docs estables, el hook los recoge en el siguiente subagente sin que haya que regenerar nada. Cambiar el contrato del agente sí exige reabrir sesión.
 
@@ -77,9 +77,7 @@ Consecuencias para el orquestador:
      El subagente nunca ejecuta git por su cuenta; el commit lo hace siempre el orquestador, aquí, después de recibir `status: "completed"` y actualizar `status.yaml`. `git add -A` es seguro en este punto porque no queda nada suelto de fases anteriores (el commit de planificación ya recogió `spec.md`/`design.md`/`tasks.md`/el `status.yaml` inicial antes de la primera tarea). Pasar a la siguiente tarea.
    - `blocked` o `failed`: detener la pasada, registrar el bloqueo en `status.yaml` y saltar al paso 8. No commitear en este caso: los cambios (incluido el `status.yaml` con el bloqueo) quedan sin commitear para que el usuario decida cómo seguir.
 7. Repetir desde el paso 1.
-8. Ejecutar la validación final de cobertura del proyecto (`pnpm test`). Si no se implementó ninguna tarea en esta pasada (gate fallido o bloqueo temprano sin código nuevo), se puede omitir y dejar los flags de validación en `false`.
-9. Actualizar `status.yaml` con el resultado de la validación.
-10. Emitir la respuesta final con dos checklists (tareas implementadas en la pasada y tareas pendientes de la feature) y las notas documentales agregadas que devolvieron los subagentes.
+8. Emitir la respuesta final con dos checklists (tareas implementadas en la pasada y tareas pendientes de la feature) y las notas documentales agregadas que devolvieron los subagentes.
 
 ## Lanzamiento del subagente
 - Usar la herramienta `Agent` con `subagent_type: implement-task`.
@@ -102,7 +100,6 @@ Consecuencias para el orquestador:
 - Lanzar un único subagente por tarea. No agrupar tareas en un mismo subagente aunque compartan ficheros.
 - No avanzar a la siguiente tarea si la anterior devolvió `blocked` o `failed`.
 - `tasks.md` es solo lectura durante la implementación; el orquestador no lo modifica. El estado de la pasada vive únicamente en `status.yaml`, y solo el orquestador lo escribe.
-- Ejecutar la validación de cobertura una sola vez al final de la pasada, no por tarea.
 - No ejecutar `pnpm lint` ni `tsc --noEmit` por tarea: ya lo hace el hook `SubagentStop` del subagente.
 - Tratar `tasks.md` como contrato de ejecución, no como guía orientativa.
 - Si una tarea revela una discrepancia válida con la spec, señalarla en la respuesta final y dejar la actualización documental marcada para la skill posterior, sin desviarse en silencio.
@@ -117,7 +114,7 @@ Consecuencias para el orquestador:
 - el gate de implementación falla por artefacto, estado bloqueante o línea base del repo en rojo
 - un subagente devuelve `status: "blocked"` o `status: "failed"`
 - un subagente cierra tras agotar los reintentos de la validación automática (lint o tipos en rojo)
-- la validación final de cobertura rompe el umbral del proyecto al cierre de la pasada
+- el hook de cierre agota sus reintentos con la suite completa en rojo
 
 ## Terminado cuando
 - cada tarea ejecutada en la pasada está implementada y sus tests propios pasan
