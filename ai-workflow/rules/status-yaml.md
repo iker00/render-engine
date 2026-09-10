@@ -65,7 +65,7 @@ El riesgo influye en si hace falta `design.md`, en la profundidad del plan y en 
 ## Quién lo escribe
 
 - Es OBLIGATORIO desde que se cierra la primera versión de `spec.md`. Si no existe, crearlo desde `ai-workflow/templates/status.yaml`.
-- Lo escribe SOLO la skill de la fase activa. Durante la implementación, lo escribe ÚNICAMENTE el orquestador; el subagente de tarea NUNCA lo toca.
+- Lo escribe SOLO la skill de la fase activa. Durante la implementación, lo escribe ÚNICAMENTE el orquestador, salvo `validation.tests_green` y `validation.coverage_gate_passed`, que escribe el hook determinista de cierre de `implement-feature` tras ejecutar la suite completa; el subagente de tarea NUNCA toca `status.yaml`.
 - NUNCA marcar `implementation.ready: true` si falta algún artefacto requerido, hay bloqueos en `blocked_by` o alguna tarea de `tasks.md` no tiene su sub-bloque `tests`.
 
 Justificación: si dos agentes escriben el mismo estado, ninguno puede fiarse de él.
@@ -101,7 +101,7 @@ El cierre definitivo puede ocurrir dentro de la pasada documental. NO hace falta
 2. Antes de lanzar el subagente, `implementation.in_progress_task_id: <ID>`.
 3. Tarea `completed`: mover el ID a `completed_task_ids`, limpiar `in_progress_task_id` y commitear con la tarea.
 4. Tarea `blocked` o `failed`: dejar el ID en `in_progress_task_id`, registrar el motivo en `blocked_by`, NO commitear y detener la pasada.
-5. Al cerrar la pasada, ejecutar la validación completa y fijar `validation.*` con el resultado real.
+5. Al cerrar la pasada, el hook de cierre de `implement-feature` ejecuta la validación completa y fija `validation.*` con el resultado real; el orquestador no la ejecuta ni la escribe.
 
 NUNCA reutilizar `validation.tests_green: true` o `coverage_gate_passed: true` de una pasada anterior. Un `true` heredado tras nuevos cambios es un estado falso.
 

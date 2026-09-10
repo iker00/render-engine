@@ -25,7 +25,7 @@ Tu tarea es la que identifica el `task_id` del hook. Tu alcance:
 
 - Implementas únicamente esa tarea. Cualquier otra tarea de la feature queda fuera.
 - No modificas `tasks.md` ni `status.yaml`; lo hace el orquestador a partir de tu JSON.
-- No ejecutas `pnpm test` completo ni la validación de cobertura del proyecto; lo hace el orquestador al cierre de la pasada.
+- No ejecutas `pnpm test` completo ni la validación de cobertura del proyecto; solo tus tests propios.
 
 ## Ficheros a leer antes de implementar
 
