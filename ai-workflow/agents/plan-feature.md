@@ -2,7 +2,7 @@
 name: plan-feature
 description: Escribe tasks.md de una feature a partir de su spec y su design, lanza la revisión del plan y deja status.yaml listo para implementar. Úsalo cuando artifacts.spec sea ready, design sea ready o not_required y artifacts.tasks no sea ready.
 model: opus
-tools: Read, Grep, Glob, Write, Edit, Bash, Agent
+tools: Read, Grep, Glob, Write, Edit, Bash, Agent, TaskOutput
 skills:
   - generate-implementation-plan
 ---

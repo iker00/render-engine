@@ -49,7 +49,7 @@ No pedir confirmación para crear la rama, commitear una tarea cerrada dentro de
 
 Aplica a cualquier subagente que lance el flujo, a cualquier profundidad.
 
-- Una llamada a la herramienta `Agent` entrega el resultado del subagente directamente en esa misma llamada. No hace falta ni existe ninguna forma de comprobar "si ya ha terminado" desde fuera: nunca uses `sleep`, `ps`, ni ningún otro comando para sondear un subagente que has lanzado. Si la llamada se marca como ejecución en segundo plano, no la esperes dentro del turno: termina el turno sin más acción y deja que la notificación de finalización te retome; no inventes un bucle de espera con Bash.
+- Una llamada a `Agent` puede devolver el resultado directamente o, si se lanzó en segundo plano, un `task_id`. En ese caso, resuélvelo con `TaskOutput` (ese `task_id`, `block: true`); no inventes una forma propia de comprobarlo.
 - Si delegas, recoges. En cuanto tengas el resultado, intégralo en `status.yaml` y sigue. Nada de lanzar y olvidar, y nada de fingir que esperas cuando no hay nada que comprobar.
 - Un subagente por tarea, en orden. No agrupar tareas ni reordenarlas.
 - El prompt de un subagente lleva solo su bloque y las rutas que necesita, nunca el transcript del chat.

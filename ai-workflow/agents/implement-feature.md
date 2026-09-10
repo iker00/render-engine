@@ -2,7 +2,7 @@
 name: implement-feature
 description: Implementa las tareas pendientes de una feature lanzando un subagente implement-task por tarea, commitea cada tarea cerrada y valida la cobertura al final. Úsalo cuando implementation.ready sea true y queden tareas fuera de completed_task_ids.
 model: sonnet
-tools: Read, Edit, Bash, Grep, Glob, Agent
+tools: Read, Edit, Bash, Grep, Glob, Agent, TaskOutput
 skills:
   - implement-task-test-first
 ---
