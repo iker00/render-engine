@@ -15,7 +15,7 @@ Si cambia una fase, un gate humano, el orden entre fases o la skill responsable 
 | plan-feature-trivial (agente) | Escribir `tasks.md` de una sola tarea, sin lanzar review-plan | `plan_tier: trivial`, `artifacts.spec: ready`, y `artifacts.tasks` distinto de `ready` |
 | review-plan (agente) | Revisar `tasks.md` con contexto limpio | Lo lanza plan-feature; manual si el usuario pide un segundo pase o editó el plan a mano, también en trivial |
 | implement-feature (agente) | Un subagente por tarea, tests primero, commit por tarea | `implementation.ready: true` y quedan tareas fuera de `completed_task_ids` |
-| update-app-documentation | Actualizar `ai-workflow/docs/` y cerrar la feature | Sin tareas pendientes en alcance, `validation.tests_green: true` y `coverage_gate_passed: true`, `documentation.done: false`, y el usuario ha confirmado la implementación |
+| document-feature (agente) | Actualizar `ai-workflow/docs/` y cerrar la feature | Sin tareas pendientes en alcance, `validation.tests_green: true` y `coverage_gate_passed: true`, `documentation.done: false`, y el usuario ha confirmado la implementación |
 
 ## Uso inmediato, sin que el usuario lo pida
 
@@ -24,7 +24,7 @@ Si cambia una fase, un gate humano, el orden entre fases o la skill responsable 
 3. Spec aprobada por el usuario, con `phase: design` o `requires_design: true` sin design listo: generate-feature-design.
 4. Spec o design aprobados por el usuario, con `phase: planning` y `tasks.md` ausente o no listo: lanzar plan-feature-trivial si `plan_tier: trivial`, o plan-feature en cualquier otro caso, con la ruta de la feature.
 5. `status.yaml` con `implementation.ready: true` y tareas pendientes: lanzar el agente implement-feature con la ruta de la feature.
-6. Pasada de implementación cerrada con validación en verde y confirmada por el usuario: update-app-documentation.
+6. Pasada de implementación cerrada con validación en verde y confirmada por el usuario: lanzar el agente document-feature con la ruta de la feature.
 
 ## Encadenado
 
@@ -32,7 +32,7 @@ Si cambia una fase, un gate humano, el orden entre fases o la skill responsable 
 - Antes de invocar cualquier skill, lee `status.yaml` de la feature activa y no repitas una fase cuyo artefacto ya esté en `ready`.
 - La feature activa es la carpeta de `ai-workflow/features/` cuyo slug coincide con la rama `feature/<slug>` o `fix/<slug>`. Si no hay rama de feature, no hay feature activa y el primer paso es generate-feature-spec.
 - Una feature con `blocked_by` no vacío no avanza. Explica el bloqueo y espera.
-- Las fases conversacionales, exploración, spec y design, corren en el chat principal. Las demás corren fuera: planning y review en los agentes plan-feature o plan-feature-trivial y review-plan, lanzados con la ruta de la feature como único prompt; documentación en fork; implementación en el agente implement-feature, que lanza un subagente por tarea. El chat principal guarda solo la conversación y los veredictos.
+- Las fases conversacionales, exploración, spec y design, corren en el chat principal. Las demás corren fuera: planning y review en los agentes plan-feature o plan-feature-trivial y review-plan; documentación en el agente document-feature; los tres lanzados con la ruta de la feature como único prompt. La implementación corre en el agente implement-feature, que lanza un subagente por tarea. El chat principal guarda solo la conversación y los veredictos.
 
 ## Gates humanos
 
@@ -41,7 +41,7 @@ Son los únicos puntos donde se espera respuesta del usuario. Todo lo que hay en
 1. **Aclaración de spec o design.** Las preguntas numeradas con sugerencia que hacen generate-feature-spec y generate-feature-design.
 2. **Aprobación de spec o design.** Al cerrar generate-feature-spec, presentar el resumen de la spec y esperar confirmación antes de invocar generate-feature-design o el agente plan-feature. Si hay design, la misma pausa se repite al cerrar generate-feature-design, antes de plan-feature.
 3. **Aprobación del plan.** Presentar el resumen de tareas y esperar confirmación antes de lanzar implement-feature: el veredicto de review-plan si plan-feature lo lanzó, o la única tarea sin más si plan-feature-trivial la escribió sin revisión.
-4. **Revisión de la implementación.** Cuando implement-feature termina, presentar sus dos checklists (tareas implementadas y pendientes), los bloqueos si los hay, y esperar a que el usuario confirme que el código funciona y está bien implementado antes de invocar update-app-documentation.
+4. **Revisión de la implementación.** Cuando implement-feature termina, presentar sus dos checklists (tareas implementadas y pendientes), los bloqueos si los hay, y esperar a que el usuario confirme que el código funciona y está bien implementado antes de lanzar document-feature.
 
 No pedir confirmación para crear la rama, commitear una tarea cerrada dentro de la pasada de implementación, ejecutar tests, ni abrir el Merge Request al cerrar la documentación: el flujo ya lo define así.
 
