@@ -41,7 +41,11 @@ no_heredoc=$(awk '
 ' <<<"$command")
 
 # Fuera las cadenas entre comillas simples o dobles antes de mirar patrones.
-stripped=$(sed -E "s/'[^']*'//g; s/\"[^\"]*\"//g" <<<"$no_heredoc")
+# `-z` trata la entrada completa como un único bloque en vez de línea a
+# línea, para que una comilla que abre en una línea y cierra varias líneas
+# después (un `-m "mensaje\nde varias\nlíneas"`) se detecte como una cadena
+# completa y no como fragmentos sueltos sin cerrar.
+stripped=$(sed -z -E "s/'[^']*'//g; s/\"[^\"]*\"//g" <<<"$no_heredoc")
 
 if grep -qE '(^|[[:space:]])--no-verify([[:space:]]|$)' <<<"$stripped"; then
   echo "[block-no-verify] BLOQUEADO: --no-verify salta los hooks de git." >&2
