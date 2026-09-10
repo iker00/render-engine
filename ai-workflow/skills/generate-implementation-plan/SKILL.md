@@ -22,12 +22,12 @@ Lee en un único turno (varias llamadas Read en el mismo mensaje) todos los fich
 - `ai-workflow/docs/context.md`
 - `ai-workflow/docs/architecture.md`
 - `ai-workflow/docs/conventions.md`
-- `ai-workflow/docs/test-index.md`
 
 En otro turno, lee `ai-workflow/docs/app-features/index.md`; con su contenido, identifica las áreas relevantes y lee sus `index.md` en un único turno; con esas fichas, identifica los sub-documentos concretos para la feature (típicamente 1-3, rara vez más de 5) y léelos en un único turno final.
 
 ## Leer si aplica
 - `ai-workflow/docs/current-state.md` si hace falta confirmar el estado vigente o un límite actual.
+- Si una tarea crea un fichero de test nuevo, buscar en `src/tests/` para situarlo en su carpeta en vez de cargar `ai-workflow/docs/test-index.md` entero.
 - `ai-workflow/features/index.md` si hace falta contexto histórico o coordinación con otras features.
 - Archivos relevantes de `ai-workflow/examples/` si existen ejemplos reales aplicables al planificar una tarea concreta.
 
@@ -136,13 +136,15 @@ Si una tarea no requiere tests propios (refactor puro, doc-only), el sub-bloque 
 - No crear ni refinar `design.md`. Si el plan requiere decisiones técnicas que aún no existen, devolver el control a `generate-feature-design`.
 
 ## Encadenado con review
-Al cerrar la planificación con `artifacts.tasks: ready`, lanzar automáticamente una revisión del plan usando un sub-agente con contexto limpio:
+Si `status.yaml` marca `plan_tier: trivial`, omitir esta sección entera: no se lanza revisión. Releer la única tarea una vez, en frío, contra el gate de entrada a implementación antes de marcar `artifacts.tasks: ready`, y proceder directamente a la sección "Terminado cuando".
+
+En cualquier otro caso, al cerrar la planificación con `artifacts.tasks: ready`, lanzar automáticamente una revisión del plan usando un sub-agente con contexto limpio:
 
 - usar la herramienta `Agent` con `subagent_type: review-plan`; el prompt es únicamente la ruta absoluta a la carpeta de la feature recién planificada
 - la salida esperada del sub-agente es la que define `review-implementation-plan` para su modo sub-agente: veredicto explícito (`aprobado` o `requiere refinamiento`), refinamientos numerados si aplica, y estado sugerido para `implementation.ready` y `blocked_by`
 - aplicar los refinamientos propuestos antes de cerrar la fase de planificación y reflejar el veredicto en `status.yaml`; si tras aplicarlos el veredicto sigue siendo `requiere refinamiento`, relanzar la revisión una vez más como máximo
 
-El usuario puede invocar `review-implementation-plan` manualmente si quiere un segundo pase tras refinamientos.
+El usuario puede invocar `review-implementation-plan` manualmente si quiere un segundo pase tras refinamientos, también sobre un plan trivial.
 
 ## Terminado cuando
 - `ai-workflow/scripts/check-tasks.sh` pasa sobre la carpeta de la feature

@@ -13,6 +13,7 @@ paths:
 | `phase` | `spec`, `design`, `planning`, `implementation`, `documentation`, `complete`, `blocked` |
 | `risk_level` | `low`, `medium`, `high` |
 | `requires_design` | `true`, `false` |
+| `plan_tier` | `trivial`, `standard` |
 | `blocked_by` | lista de bloqueos reales; `[]` si no hay |
 | `artifacts.spec`, `artifacts.design`, `artifacts.tasks`, `artifacts.notes` | `missing`, `draft`, `ready`, `optional`, `not_required` |
 | `implementation.ready` | `true` solo si se cumplen todos los gates de entrada a implementación |
@@ -48,6 +49,10 @@ Cada feature vive en `ai-workflow/features/YYYY-MM-DD-HH-MM-feature-name/`. `art
 - varias estrategias técnicas razonables que puedan llevar a implementaciones divergentes
 
 Si no se cumple ninguna, `spec.md` y `tasks.md` bastan. NO crear `design.md` por reflejo; solo cuando reduzca ambigüedad o riesgo real.
+
+`plan_tier: trivial` cuando la feature se resuelve en una única tarea obvia, sin coordinación de interfaces entre tareas y sin ambigüedad de alcance. `requires_design: true` y `plan_tier: trivial` son incompatibles: si hace falta design, por definición no es trivial. Por defecto, `plan_tier: standard`.
+
+En trivial, la planificación no lanza una revisión con contexto limpio: quien escribe la única tarea es responsable de que esté bien antes de marcarla lista. Es un cambio deliberado de velocidad por segunda opinión, no un descuido.
 
 | `risk_level` | Significa |
 |--------------|-----------|

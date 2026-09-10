@@ -122,6 +122,7 @@ directamente sin pedir confirmación:
 - Si la petición entra en conflicto con restricciones existentes del proyecto, reflejar el conflicto con claridad en la spec.
 - Si la spec necesita referenciar estado vigente, usar `ai-workflow/docs/current-state.md`; si necesita histórico reciente, usar `ai-workflow/features/index.md`. No ampliar `README.md` para ese propósito.
 - No escribir `design.md` desde esta skill. Si la feature necesita decisiones técnicas explícitas antes de planificar (arquitectura, estrategia de cambio, trade-offs no triviales), marcar `requires_design: true` y delegar en `generate-feature-design`.
+- Al cerrar, decidir también `plan_tier`: `trivial` si la feature se resuelve en una única tarea obvia sin coordinación de interfaces entre tareas, `standard` en cualquier otro caso. Si `requires_design: true`, `plan_tier` es siempre `standard`.
 - Tras cerrar la spec, actualizar `status.yaml`.
 - Si la feature sigue siendo demasiado ambigua para escribir una buena spec, detenerse y explicitar qué decisiones de producto faltan antes de comprometer la spec.
 

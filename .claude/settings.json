@@ -35,7 +35,7 @@
         ]
       },
       {
-        "matcher": "plan-feature",
+        "matcher": "plan-feature|plan-feature-trivial",
         "hooks": [
           {
             "type": "command",
