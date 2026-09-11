@@ -48,8 +48,8 @@ Si el paso 2 falla, detenerse sin lanzar ningún subagente. La respuesta final d
 El orquestador **no** prepara contexto ni ejecuta validaciones por tarea. De eso se encargan la definición del agente y dos hooks registrados en `.claude/settings.json` con matcher `implement-task`:
 
 - **System prompt del agente**: `ai-workflow/agents/implement-task.md` contiene solo el contrato de implementación. Es un fichero escrito a mano; ningún script lo genera ni lo modifica.
-- **`SubagentStart` → `hooks/load-context.sh`**: concatena los standards del proyecto y las docs estables (`conventions.md`, `architecture.md`, `test-index.md`) en `.subagent-context.md`, extrae de `tasks.md` el bloque de `implementation.in_progress_task_id` de la feature activa en `.subagent-task.md` (ambos gitignored), y le pasa al subagente **las rutas**, no el contenido. El subagente los carga con dos llamadas a `Read`. Si no hay feature activa o tarea en curso, se lo dice y el subagente devuelve `blocked`.
-- **`SubagentStop` → `hooks/validate.sh`**: antes de dejar cerrar cada tarea ejecuta `pnpm lint`, `tsc --noEmit` sobre ambos tsconfig y, si la tarea tocó `src/tests/`, `check-test-index.sh`. Si algo falla, impide que el subagente termine y le devuelve el error para que lo corrija, con un máximo de 3 intentos.
+- **`SubagentStart` → `hooks/load-context.js`**: concatena los standards del proyecto y las docs estables (`conventions.md`, `architecture.md`, `test-index.md`) en `.subagent-context.md`, extrae de `tasks.md` el bloque de `implementation.in_progress_task_id` de la feature activa en `.subagent-task.md` (ambos gitignored), y le pasa al subagente **las rutas**, no el contenido. El subagente los carga con dos llamadas a `Read`. Si no hay feature activa o tarea en curso, se lo dice y el subagente devuelve `blocked`.
+- **`SubagentStop` → `hooks/validate.js`**: antes de dejar cerrar cada tarea ejecuta `pnpm lint`, `tsc --noEmit` sobre ambos tsconfig y, si la tarea tocó `src/tests/`, `check-test-index.js`. Si algo falla, impide que el subagente termine y le devuelve el error para que lo corrija, con un máximo de 3 intentos.
 
 Por qué la ruta y no el texto: Claude Code trunca la salida de un hook a partir de ~10KB y descarga el resto a disco, así que el contenido inyectado directamente llegaría como preview. La ruta ocupa ~460 bytes y el fichero (~60KB, ~870 líneas) entra entero en una sola lectura, por debajo del tope de `Read`.
 
@@ -58,7 +58,7 @@ Contrapartida asumida: cada subagente paga la lectura de sus dos ficheros. El pr
 Consecuencias para el orquestador:
 
 - Un subagente que devuelve `status: "completed"` implica lint y tipos en verde, salvo que agotara los reintentos.
-- Los tests no corren en el hook por tarea: la suite completa con cobertura corre una sola vez, en el hook de cierre de este propio agente orquestador (`hooks/validate-coverage.sh`), que además escribe `validation.tests_green` y `validation.coverage_gate_passed` en `status.yaml`.
+- Los tests no corren en el hook por tarea: la suite completa con cobertura corre una sola vez, en el hook de cierre de este propio agente orquestador (`hooks/validate-coverage.js`), que además escribe `validation.tests_green` y `validation.coverage_gate_passed` en `status.yaml`.
 - Cada tarea paga ~25s de validación. Es el coste de no arrastrar tareas rotas a la siguiente.
 - Si cambias los standards o las docs estables, el hook los recoge en el siguiente subagente sin que haya que regenerar nada. Cambiar el contrato del agente sí exige reabrir sesión.
 

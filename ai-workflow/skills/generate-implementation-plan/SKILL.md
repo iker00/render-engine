@@ -57,7 +57,7 @@ Cada tarea es una sección de nivel 2 con encabezado `## T<n> — <título>`, co
 - `### Criterios de finalización`
 - `### Cierre de implementación`
 
-`ai-workflow/scripts/check-tasks.sh <carpeta-de-la-feature>` comprueba esta estructura y que los IDs de `status.yaml` existen; debe pasar antes de cerrar el plan.
+`ai-workflow/scripts/check-tasks.js <carpeta-de-la-feature>` comprueba esta estructura y que los IDs de `status.yaml` existen; debe pasar antes de cerrar el plan.
 
 Los criterios de finalización describen un único estado:
 - cierre de implementación: código y tests de la tarea completos y validados
@@ -147,7 +147,7 @@ En cualquier otro caso, al cerrar la planificación con `artifacts.tasks: ready`
 El usuario puede invocar `review-implementation-plan` manualmente si quiere un segundo pase tras refinamientos, también sobre un plan trivial.
 
 ## Terminado cuando
-- `ai-workflow/scripts/check-tasks.sh` pasa sobre la carpeta de la feature
+- `ai-workflow/scripts/check-tasks.js` pasa sobre la carpeta de la feature
 - `tasks.md` es accionable tarea por tarea
 - `tasks.md` funciona como contrato de ejecución y no como lista orientativa
 - cada tarea sigue una estructura estable y fácil de revisar

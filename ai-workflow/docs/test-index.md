@@ -9,7 +9,7 @@ Para comprobar si un comportamiento ya tiene test, buscar en `src/tests/` direct
 cada uno contiene.
 
 Actualizar al añadir, dividir, mover o eliminar un fichero de test. El desfase se comprueba con
-`ai-workflow/scripts/check-test-index.sh`.
+`ai-workflow/scripts/check-test-index.js`.
 
 ## Estructura de carpetas
 

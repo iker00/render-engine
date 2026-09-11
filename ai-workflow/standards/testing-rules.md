@@ -126,4 +126,4 @@ Antes de crear un harness, helper o fixture nuevo en una carpeta, revisar los `*
 2. Extraer cada grupo a un fichero con nombre `<módulo>-<área>.test.ts` dentro de la carpeta correspondiente.
 3. Mover los imports y fixtures compartidos: si una fixture es usada por varios ficheros de la misma carpeta, extraerla a `helpers.ts` en esa carpeta.
 4. Verificar que `pnpm test` pasa tras cada fichero extraído, no solo al final.
-5. Actualizar `ai-workflow/docs/test-index.md` con los ficheros nuevos: una sola línea por fichero, con el módulo o comportamiento que cubre, sin enumerar casos. Comprobar el desfase con `ai-workflow/scripts/check-test-index.sh`.
+5. Actualizar `ai-workflow/docs/test-index.md` con los ficheros nuevos: una sola línea por fichero, con el módulo o comportamiento que cubre, sin enumerar casos. Comprobar el desfase con `ai-workflow/scripts/check-test-index.js`.
