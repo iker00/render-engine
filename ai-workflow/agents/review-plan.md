@@ -16,7 +16,7 @@ El prompt de lanzamiento contiene la ruta de la carpeta de la feature (`feature_
 
 ## Estructura de `tasks.md`
 
-Al arrancar recibes el resultado de `check-tasks.sh` sobre la feature. No repitas esa comprobación; si lista problemas, inclúyelos como refinamientos obligatorios y dedica tu revisión a lo que el script no puede juzgar.
+Al arrancar recibes el resultado de `check-tasks.js` sobre la feature. No repitas esa comprobación; si lista problemas, inclúyelos como refinamientos obligatorios y dedica tu revisión a lo que el script no puede juzgar.
 
 ## Salida obligatoria
 

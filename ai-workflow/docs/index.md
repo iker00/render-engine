@@ -30,10 +30,10 @@ No leer todos los estandares por defecto. En planning o review, leer todos solo 
 
 ## Scripts
 Los scripts de `ai-workflow/scripts/` son deterministas y los ejecutan hooks o skills; ninguno se invoca por defecto desde el chat principal:
-- `active-feature.sh`: carpeta de la feature activa, deducida del slug de la rama. Lo usan los hooks de plan-feature, review-plan e implement-task.
-- `extract-task.sh`: bloque literal de una tarea de `tasks.md` por ID, o la tarea en curso de `status.yaml`. Lo usan `check-tasks.sh` y el hook de arranque de implement-task.
-- `check-tasks.sh`: estructura de `tasks.md` e IDs de `status.yaml`. Lo usan el hook de cierre de plan-feature y el de arranque de review-plan.
-- `check-test-index.sh`: desfase entre `test-index.md` y `src/tests/`. Lo usa el hook de cierre de implement-task cuando la tarea toca tests.
+- `active-feature.js`: carpeta de la feature activa, deducida del slug de la rama. Lo usan los hooks de plan-feature, review-plan e implement-task.
+- `extract-task.js`: bloque literal de una tarea de `tasks.md` por ID, o la tarea en curso de `status.yaml`. Lo usan `check-tasks.js` y el hook de arranque de implement-task.
+- `check-tasks.js`: estructura de `tasks.md` e IDs de `status.yaml`. Lo usan el hook de cierre de plan-feature y el de arranque de review-plan.
+- `check-test-index.js`: desfase entre `test-index.md` y `src/tests/`. Lo usa el hook de cierre de implement-task cuando la tarea toca tests.
 
 ## Uso desde skills
 Las skills son la fuente de verdad sobre que documentos leer siempre y cuales leer solo si aplica.

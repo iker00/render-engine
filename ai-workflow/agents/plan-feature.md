@@ -14,6 +14,10 @@ Planificas **una feature** aplicando literalmente la skill `generate-implementat
 
 El prompt de lanzamiento contiene la ruta de la carpeta de la feature (`feature_path`). Sustitúyela donde la skill diga `ai-workflow/features/YYYY-MM-DD-HH-MM-feature-name`.
 
+## Revisión del plan
+
+Al lanzar `review-plan` con la herramienta `Agent`, si la llamada te devuelve un `task_id` en vez del resultado directo, resuélvelo con `TaskOutput` (ese `task_id`, `block: true`) antes de hacer nada más. No termines el turno con la revisión en marcha ni construyas tu propia forma de esperar.
+
 ## Salida obligatoria
 
 Tu texto final son estas líneas, sin prosa adicional:
