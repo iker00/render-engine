@@ -9,9 +9,13 @@
 // cobertura de miles de líneas para extraer dos booleanos.
 //
 // Si algo falla, devuelve {"decision":"block","reason":...} con un extracto
-// acotado. Si no se implementó ninguna tarea en la pasada (completed_task_ids
-// sigue vacío), no ejecuta nada: los flags ya están en false por el reset de
-// inicio de pasada (ver ai-workflow/rules/status-yaml.md).
+// acotado. No ejecuta nada si no se implementó ninguna tarea en la pasada
+// (completed_task_ids sigue vacío, los flags ya están en false por el reset
+// de inicio de pasada) ni si el orquestador solo se ha parado a esperar la
+// notificación de un subagente en marcha (in_progress_task_id distinto de
+// null): correr la suite completa ahí compite por recursos con ese
+// subagente y valida un working tree a medio modificar (ver
+// ai-workflow/rules/status-yaml.md).
 //
 // Reintentos acotados por `agent_id`, igual que validate.js, pero cada intento
 // aquí es mucho más caro (`pnpm test` completo, no un tsc incremental), así
@@ -62,6 +66,10 @@ function setFlag(statusFile, field, value) {
   const completedMatch = statusContent.match(/^[ \t]*completed_task_ids:[ \t]*\[(.*)\]/m);
   const completed = completedMatch ? completedMatch[1].replace(/\s/g, '') : '';
   if (!completed) process.exit(0); // nada implementado en esta pasada: los flags ya están en false
+
+  const inProgressMatch = statusContent.match(/^[ \t]*in_progress_task_id:[ \t]*([^\s#]+)/m);
+  const inProgress = inProgressMatch ? inProgressMatch[1] : 'null';
+  if (inProgress !== 'null') process.exit(0); // el orquestador se ha parado a esperar un subagente, no ha cerrado la pasada
 
   let output = '';
   let exitCode = 0;
