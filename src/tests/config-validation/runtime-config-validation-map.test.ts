@@ -157,6 +157,83 @@ describe('validateRuntimeConfig — map node: acceptance', () => {
     },
   )
 
+  it('accepts map without props.autoFitMarkers — normalized node leaves props.autoFitMarkers undefined and props.markers as []', () => {
+    const result = validateRuntimeConfig(createConfigWithLayout([createMapNode()]))
+    expect(result.status).toBe('ready')
+    if (result.status === 'ready') {
+      expect(result.page.layout[0]).toMatchObject({ props: { markers: [] } })
+      const node = result.page.layout[0] as { props?: { autoFitMarkers?: unknown } }
+      expect(node.props?.autoFitMarkers).toBeUndefined()
+    }
+  })
+
+  it('accepts map with props.autoFitMarkers: true and conserves it in the normalized node', () => {
+    const result = validateRuntimeConfig(createConfigWithLayout([createMapNode({ props: { autoFitMarkers: true } })]))
+    expect(result.status).toBe('ready')
+    if (result.status === 'ready') {
+      expect(result.page.layout[0]).toMatchObject({ props: { autoFitMarkers: true } })
+    }
+  })
+
+  it('accepts map with props.autoFitMarkers: false and conserves it in the normalized node (not discarded)', () => {
+    const result = validateRuntimeConfig(createConfigWithLayout([createMapNode({ props: { autoFitMarkers: false } })]))
+    expect(result.status).toBe('ready')
+    if (result.status === 'ready') {
+      expect(result.page.layout[0]).toMatchObject({ props: { autoFitMarkers: false } })
+    }
+  })
+
+  it('accepts map with props.autoFitMarkers: true declared alongside props.center and props.zoom, conserving all three', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithLayout([
+        createMapNode({ props: { autoFitMarkers: true, center: { lat: 42.8125, lng: -1.6458 }, zoom: 13 } }),
+      ]),
+    )
+    expect(result.status).toBe('ready')
+    if (result.status === 'ready') {
+      expect(result.page.layout[0]).toMatchObject({
+        props: { autoFitMarkers: true, center: { lat: 42.8125, lng: -1.6458 }, zoom: 13 },
+      })
+    }
+  })
+
+  it('accepts map with props.autoFitMarkers: true declared alongside props.markerSources and props.markers, conserving autoFitMarkers, normalizing markerSources and dropping markers', () => {
+    const result = validateRuntimeConfig(
+      createConfigWithLayout([
+        createMapNode({
+          props: {
+            autoFitMarkers: true,
+            markers: [{ lat: 0, lng: 0, label: 'Origen' }],
+            markerSources: [
+              {
+                source: 'queries.posts.data',
+                position: { lat: 'coords.lat', lng: 'coords.lng' },
+                label: 'name',
+              },
+            ],
+          },
+        }),
+      ]),
+    )
+    expect(result.status).toBe('ready')
+    if (result.status === 'ready') {
+      expect(result.page.layout[0]).toMatchObject({
+        props: {
+          autoFitMarkers: true,
+          markerSources: [
+            {
+              source: 'queries.posts.data',
+              position: { lat: 'coords.lat', lng: 'coords.lng' },
+              label: 'name',
+            },
+          ],
+        },
+      })
+      const node = result.page.layout[0] as { props?: { markers?: unknown } }
+      expect(node.props?.markers).toBeUndefined()
+    }
+  })
+
   it('accepts map with visibility, queryStateFeedback and layout.span declared', () => {
     const result = validateRuntimeConfig(
       createConfigWithLayout([
@@ -402,6 +479,14 @@ describe('validateRuntimeConfig — map node: rejection', () => {
     expect(result.status).toBe('error')
     if (result.status === 'error') {
       expect(result.error.message).toContain('visibility')
+    }
+  })
+
+  it('rejects map with props.autoFitMarkers not boolean — error contains props.autoFitMarkers', () => {
+    const result = validateRuntimeConfig(createConfigWithLayout([createMapNode({ props: { autoFitMarkers: 'true' } })]))
+    expect(result.status).toBe('error')
+    if (result.status === 'error') {
+      expect(result.error.message).toContain('props.autoFitMarkers')
     }
   })
 
