@@ -58,7 +58,7 @@ Contrapartida asumida: cada subagente paga la lectura de sus dos ficheros. El pr
 Consecuencias para el orquestador:
 
 - Un subagente que devuelve `status: "completed"` implica lint y tipos en verde, salvo que agotara los reintentos.
-- Los tests no corren en el hook por tarea: la suite completa con cobertura corre una sola vez, en el hook de cierre de este propio agente orquestador (`hooks/validate-coverage.js`), que además escribe `validation.tests_green` y `validation.coverage_gate_passed` en `status.yaml`.
+- El hook de cierre de este propio agente orquestador (`hooks/validate-coverage.js`) actualiza `validation.tests_green` y `validation.coverage_gate_passed` en `status.yaml` al terminar la pasada.
 - Cada tarea paga ~25s de validación. Es el coste de no arrastrar tareas rotas a la siguiente.
 - Si cambias los standards o las docs estables, el hook los recoge en el siguiente subagente sin que haya que regenerar nada. Cambiar el contrato del agente sí exige reabrir sesión.
 
@@ -100,7 +100,6 @@ Consecuencias para el orquestador:
 - Lanzar un único subagente por tarea. No agrupar tareas en un mismo subagente aunque compartan ficheros.
 - No avanzar a la siguiente tarea si la anterior devolvió `blocked` o `failed`.
 - `tasks.md` es solo lectura durante la implementación; el orquestador no lo modifica. El estado de la pasada vive únicamente en `status.yaml`, y solo el orquestador lo escribe.
-- No ejecutar `pnpm lint` ni `tsc --noEmit` por tarea: ya lo hace el hook `SubagentStop` del subagente.
 - Tratar `tasks.md` como contrato de ejecución, no como guía orientativa.
 - Si una tarea revela una discrepancia válida con la spec, señalarla en la respuesta final y dejar la actualización documental marcada para la skill posterior, sin desviarse en silencio.
 - La respuesta final debe incluir siempre:
@@ -114,11 +113,11 @@ Consecuencias para el orquestador:
 - el gate de implementación falla por artefacto, estado bloqueante o línea base del repo en rojo
 - un subagente devuelve `status: "blocked"` o `status: "failed"`
 - un subagente cierra tras agotar los reintentos de la validación automática (lint o tipos en rojo)
-- el hook de cierre agota sus reintentos con la suite completa en rojo
+- el hook de cierre agota sus reintentos con la validación final en rojo
 
 ## Terminado cuando
 - cada tarea ejecutada en la pasada está implementada y sus tests propios pasan
-- la validación final (`pnpm test`) mantiene el umbral de cobertura exigido por el proyecto
+- una vez implementadas todas las tareas de la pasada, la validación final mantiene el umbral de cobertura exigido por el proyecto
 - ninguna tarea posterior se empezó antes de cerrar correctamente la anterior
 - `status.yaml` refleja qué tareas se cerraron, cuál quedó en curso si la pasada se detuvo, y si `validation.tests_green` y `validation.coverage_gate_passed` quedaron en `true`
 - la respuesta final enumera en formato checklist las tareas implementadas en la pasada

@@ -23,8 +23,7 @@ documentos quedan afectados y actualizarlos sin reabrir la implementación.
 ## Uso de Bash
 
 Las únicas órdenes Bash aceptables en esta skill son las descritas en las secciones "Ejecutar siempre al arrancar" y
-"Commit final" de este documento. No ejecutar tests, builds, ni operaciones destructivas más allá de las allí
-documentadas.
+"Commit final" de este documento.
 
 ## Leer siempre
 
