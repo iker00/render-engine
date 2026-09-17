@@ -105,7 +105,7 @@ Ficheros de apoyo, no son tests: `config-validation/helpers.ts`, `dev-runtime/lu
 
 - `layout-node-renderer-edit-mode.test.tsx` — modelo de path (incluye tramos tabItem/stepItem, row/cells de tabla), threading en LayoutRenderer y wrapper de selección/hover bajo LayoutEditModeContext
 - `layout-renderer-accordion-edit-mode.test.tsx` — accordion en modo edición con cuerpo siempre presente, path de hijos y regresión de colapso en producción
-- `layout-renderer-address-picker.test.tsx` — nodo addressPicker: mapa clicable con marcador único que fija/mueve `synthetic.lat/lng` sin tocar el texto, campo de texto independiente (defaults, edición, submit), required/validación, props de mapa (center/zoom/height), independencia por iteración en repeater y registro dual en NodeComponents
+- `layout-renderer-address-picker.test.tsx` — nodo addressPicker: mapa clicable con marcador único que fija/mueve `synthetic.lat/lng` sin tocar el texto, campo de texto independiente (defaults, edición, submit), required/validación, props de mapa (center/zoom/height), independencia por iteración en repeater, registro dual en NodeComponents, disparo de `geocodeOperation` end-to-end (body con $lat/$lng, addressPath, loading, error inline, frescura ante clicks rápidos) y no omisión de $lat/$lng al ocultar el campo
 - `layout-renderer-autocomplete.test.tsx` — nodo autocomplete: filtrado por minChars, selección simple y múltiple (chips), navegación por teclado, ARIA, allowFreeText, submit/validación, transversales e integración en repeater
 - `layout-renderer-accordion.test.tsx` — nodo accordion: estado inicial, toggle, ARIA, interpolación de label, coordinación por groupId, transversales e integración en repeater
 - `layout-renderer-alert.test.tsx` — nodo alert: colores por tipo, icono, title/message, interpolación, transversales e integración con repeater y form
@@ -227,6 +227,7 @@ Ficheros de apoyo, no son tests: `config-validation/helpers.ts`, `dev-runtime/lu
 - `runtime-gallery-paginated-view.test.tsx` — `GalleryPaginatedView`: variantes previousNext/numbered/scroll y reset de posición al cambiar la colección
 - `runtime-gallery-photo-tile.test.tsx` — `GalleryPhotoTile`: split modo src/fetch, click de selección y degradación sin `<img>` mientras el fetch no resuelve
 - `runtime-gallery-photos.test.ts` — `resolveGalleryPhotos`: origen estático y dinámico, key ($index/$key/ruta relativa, duplicados), submodo src/fetch, idField (FR7) y degradación silenciosa por elemento
+- `runtime-geocode-trigger.test.tsx` — `useAddressGeocodeTrigger`: disparo por cambio de posición por valor, sin debounce, freshness por firma del último disparo pese a resoluciones fuera de orden, y estados loading/error
 - `runtime-global-preloads.test.tsx` — bloque raíz `preloads` end-to-end: fetch al montar, dedup, reintentos y regresión
 - `runtime-grid-drop-zone-rects.test.ts` — geometría pura de zonas de inserción overlay en containers grid
 - `runtime-icon-node.test.tsx` — `IconNode`: resolución Pascal/kebab, aplicación de `className` y degradación silenciosa

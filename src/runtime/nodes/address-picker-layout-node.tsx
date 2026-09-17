@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import type { LeafletMouseEvent } from 'leaflet'
 import { Marker, useMapEvents } from 'react-leaflet'
 import type { AddressPickerLayoutNode } from '../../config/runtime-config-types'
@@ -16,9 +17,48 @@ import {
 } from '../runtime-node-styling'
 import { getValidationErrorForEditedField } from '../runtime-form-validations'
 import { getMapMarkerIcon } from '../runtime-node-styling-map'
+import { useAddressGeocodeTrigger } from '../runtime-geocode-trigger'
 import { useRuntimeState, useRuntimeStateActions } from '../runtime-state/use-runtime-state'
-import { selectFormFieldState } from '../runtime-state/runtime-state-selectors'
+import { selectFormFieldState, selectQueryState } from '../runtime-state/runtime-state-selectors'
 import { MapShell } from './map-shell'
+
+// Local equivalent of the private path-navigation helpers duplicated across the runtime (see
+// `resolveCollectionItemPath` in `runtime-collection-sources.ts` and `resolveGalleryItemPath` in
+// `runtime-gallery-photos.ts`, neither exported for reuse outside their own module). Only a
+// string result counts as a resolved address: a number/boolean/object/array at `props.addressPath`
+// is treated the same as "not found" — the geocode response is out of coverage for this field.
+function resolveGeocodeAddressText(data: unknown, path: string): string | null {
+  const segments = path.split('.')
+  let currentValue: unknown = data
+
+  for (const segment of segments) {
+    if (segment.length === 0) {
+      return null
+    }
+
+    if (Array.isArray(currentValue)) {
+      if (!/^(0|[1-9]\d*)$/.test(segment)) {
+        return null
+      }
+
+      currentValue = currentValue[Number(segment)]
+
+      if (typeof currentValue === 'undefined') {
+        return null
+      }
+
+      continue
+    }
+
+    if (typeof currentValue !== 'object' || currentValue === null || !Object.hasOwn(currentValue, segment)) {
+      return null
+    }
+
+    currentValue = (currentValue as Record<string, unknown>)[segment]
+  }
+
+  return typeof currentValue === 'string' ? currentValue : null
+}
 
 interface AddressPickerNodeProps {
   node: AddressPickerLayoutNode
@@ -46,14 +86,56 @@ export function AddressPickerNode({ node, iterationContext }: AddressPickerNodeP
   const state = useRuntimeState()
   const { setFormFieldError, setFormFieldValue, setFormFieldSynthetic } = useRuntimeStateActions()
 
+  const scopeKey = formContext
+    ? deriveScopedStateKey(formContext.formId, formContext.scopeChain ?? EMPTY_INSTANCE_SCOPE)
+    : null
+  const fieldState = scopeKey !== null ? selectFormFieldState(state, scopeKey, node.props.fieldId) : null
+  const synthetic = fieldState?.synthetic
+  const lat = typeof synthetic?.lat === 'number' ? synthetic.lat : null
+  const lng = typeof synthetic?.lng === 'number' ? synthetic.lng : null
+  const position = lat !== null && lng !== null ? { lat, lng } : null
+
+  const geocodeQueryState = selectQueryState(state, node.props.geocodeOperation)
+  const { status: geocodeStatus, lastFiredRequestSignature: geocodeRequestSignature } = useAddressGeocodeTrigger({
+    operationName: node.props.geocodeOperation,
+    position,
+    iterationContext,
+  })
+  // A geocode result only counts if it is the response to the most recent fire from this very
+  // instance (T8, requisito 5) — the same freshness criterion already accepted for `autocomplete`.
+  const isGeocodeResultFresh =
+    geocodeRequestSignature !== null && geocodeQueryState?.requestSignature === geocodeRequestSignature
+  const geocodeAddressText =
+    isGeocodeResultFresh && geocodeQueryState?.status === 'success'
+      ? resolveGeocodeAddressText(geocodeQueryState.data, node.props.addressPath)
+      : null
+
+  // Writing a resolved address into the field is a reaction to state settling into a fresh
+  // success, not a user gesture — it belongs in an effect, not inline during render. Depending on
+  // the derived `isGeocodeResultFresh`/`status` (not on `formContext`/`geocodeQueryState` objects,
+  // which are recreated every render) keeps this from re-firing on unrelated renders once the
+  // text for this particular fresh result has already been applied.
+  useEffect(() => {
+    if (!formContext || !isGeocodeResultFresh || geocodeQueryState?.status !== 'success') {
+      return
+    }
+
+    if (geocodeAddressText === null) {
+      return
+    }
+
+    setFormFieldValue(formContext.formId, node.props.fieldId, geocodeAddressText, {
+      scopeChain: formContext.scopeChain,
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- formContext/setFormFieldValue/node.props se comparan por referencia como en runtime-search-trigger.ts; el efecto sólo debe reaccionar a que el resultado de geocodeOperation pase a success con una firma fresca
+  }, [isGeocodeResultFresh, geocodeQueryState?.status, geocodeAddressText])
+
   if (!formContext) {
     return null
   }
 
   const formId = formContext.formId
   const fieldId = node.props.fieldId
-  const scopeKey = deriveScopedStateKey(formId, formContext.scopeChain ?? EMPTY_INSTANCE_SCOPE)
-  const fieldState = selectFormFieldState(state, scopeKey, fieldId)
   const fieldDefinition = resolveResolvedFormFieldDefinition(node, state, iterationContext)
   const label = resolveRuntimeTextReference(node.props.label, state, 'addressPicker.props.label', {
     iterationContext,
@@ -65,16 +147,23 @@ export function AddressPickerNode({ node, iterationContext }: AddressPickerNodeP
       : typeof defaultValue === 'string'
         ? defaultValue
         : ''
-  const error = fieldState?.error ?? null
-  const synthetic = fieldState?.synthetic
-  const lat = typeof synthetic?.lat === 'number' ? synthetic.lat : null
-  const lng = typeof synthetic?.lng === 'number' ? synthetic.lng : null
+  const validationError = fieldState?.error ?? null
+  const isGeocoding = geocodeStatus === 'loading'
+  const geocodeErrorMessage = isGeocodeResultFresh
+    ? geocodeQueryState?.status === 'error'
+      ? (geocodeQueryState.error?.message ?? 'Could not resolve the address.')
+      : geocodeQueryState?.status === 'success' && geocodeAddressText === null
+        ? 'Could not resolve the address.'
+        : null
+    : null
+  const displayError = validationError ?? geocodeErrorMessage
 
   // Único punto de escritura de coordenadas del nodo (T7): el click del mapa las fija aquí. T8
-  // colgará el disparo de geocodificación de esta misma función y T9 le entregará las coordenadas
-  // de geolocalización; ningún otro camino debe escribir `synthetic.lat/lng`.
-  const applyMarkerPosition = (position: { lat: number; lng: number }) => {
-    setFormFieldSynthetic(formId, fieldId, position, { scopeChain: formContext.scopeChain })
+  // cuelga el disparo de geocodificación de esta misma función (vía `useAddressGeocodeTrigger`,
+  // reaccionando al cambio de `position`) y T9 le entregará las coordenadas de geolocalización;
+  // ningún otro camino debe escribir `synthetic.lat/lng`.
+  const applyMarkerPosition = (nextPosition: { lat: number; lng: number }) => {
+    setFormFieldSynthetic(formId, fieldId, nextPosition, { scopeChain: formContext.scopeChain })
   }
 
   const inputId = `${formId}-${fieldId}`
@@ -91,19 +180,21 @@ export function AddressPickerNode({ node, iterationContext }: AddressPickerNodeP
       <input
         id={inputId}
         type="text"
-        className={getFieldControlClassName(error !== null)}
-        aria-describedby={error !== null ? `${inputId}-error` : undefined}
+        className={getFieldControlClassName(displayError !== null)}
+        aria-describedby={displayError !== null ? `${inputId}-error` : undefined}
+        aria-busy={isGeocoding}
+        disabled={isGeocoding}
         value={value}
         onChange={(event) => {
           const nextValue = event.currentTarget.value
           setFormFieldValue(formId, fieldId, nextValue, { scopeChain: formContext.scopeChain })
-          if (error) {
+          if (validationError) {
             setFormFieldError(
               formId,
               fieldId,
               getValidationErrorForEditedField({
                 fieldDefinition,
-                formId: scopeKey,
+                formId: deriveScopedStateKey(formId, formContext.scopeChain ?? EMPTY_INSTANCE_SCOPE),
                 state,
                 nextValue,
                 iterationContext,
@@ -113,9 +204,14 @@ export function AddressPickerNode({ node, iterationContext }: AddressPickerNodeP
           }
         }}
       />
-      {error ? (
+      {isGeocoding ? (
+        <span role="status" className="sr-only">
+          Loading
+        </span>
+      ) : null}
+      {displayError ? (
         <span id={`${inputId}-error`} className={getFieldErrorClassName()}>
-          {error}
+          {displayError}
         </span>
       ) : null}
     </div>
