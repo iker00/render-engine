@@ -1,0 +1,21 @@
+phase: planning
+risk_level: medium
+requires_design: true
+plan_tier: standard
+blocked_by: []
+artifacts:
+  spec: ready
+  design: ready
+  tasks: ready
+  notes: optional
+implementation:
+  ready: true
+  completed_task_ids: []
+  in_progress_task_id: null
+validation:
+  tests_green: false
+  coverage_gate_passed: false
+documentation:
+  ready: false
+  done: false
+feature_status: planned
