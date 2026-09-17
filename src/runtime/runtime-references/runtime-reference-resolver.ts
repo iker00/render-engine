@@ -3,6 +3,7 @@ import {
   getFormFieldValue,
   selectCurrentPageParams,
   selectFormFieldState,
+  selectFormFieldSynthetic,
   selectNestedQueryDataValue,
   selectQueryState,
   selectQueryReferenceValue,
@@ -64,6 +65,7 @@ export function resolveRuntimeReference(
     allowItemReference: options.iterationContext !== undefined,
     allowRowReference: options.iterationContext !== undefined,
     allowSwitchNextReference: options.switchNextValue !== undefined,
+    allowFormCoordinateReference: true,
   })
 
   if (parsedReference.kind === 'literal') {
@@ -380,8 +382,27 @@ function resolveSupportedReferenceValue(
   }
 
   if (reference.namespace === 'forms') {
-    const [formId, fieldId] = reference.path
     const scope = options.scope ?? EMPTY_INSTANCE_SCOPE
+
+    if (reference.path.length === 3) {
+      const [formId, fieldId, coordinateSegment] = reference.path
+      const synthetic = selectFormFieldSynthetic(state, deriveScopedStateKey(formId, scope), fieldId)
+      const coordinateKey = coordinateSegment === '$lat' ? 'lat' : 'lng'
+      const coordinateValue = synthetic?.[coordinateKey]
+
+      if (typeof coordinateValue === 'number' && Number.isFinite(coordinateValue)) {
+        return {
+          found: true,
+          value: coordinateValue,
+        } as const
+      }
+
+      return {
+        found: false,
+      } as const
+    }
+
+    const [formId, fieldId] = reference.path
     const scopedFieldState = selectFormFieldState(state, deriveScopedStateKey(formId, scope), fieldId)
 
     if (scopedFieldState === null) {

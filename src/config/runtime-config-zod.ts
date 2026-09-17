@@ -33,6 +33,7 @@ export const supportedNodeTypes = [
   'map',
   'gallery',
   'autocomplete',
+  'addressPicker',
   'chart',
   'group',
   'slot',
@@ -1102,6 +1103,29 @@ export const mapNodeSchema = z
       })
       .strip()
       .optional(),
+    children: z.never().optional(),
+  })
+  .strip()
+
+// Reuses the same center/zoom/height contract as `map` (`mapCenterSchema`, `supportedMapHeights`)
+// and the same fieldId/label/tooltip/validations/defaultValue contract as every other form field
+// node (`formFieldNodePropsSchema`).
+export const addressPickerNodeSchema = z
+  .object({
+    type: z.literal('addressPicker'),
+    id: nodeIdSchema.optional(),
+    queryStateFeedback: queryStateFeedbackSchema.optional(),
+    visibility: visibilitySchema.optional(),
+    layout: layoutNodeLayoutSchema.optional(),
+    props: formFieldNodePropsSchema
+      .extend({
+        geocodeOperation: nonEmptyStringSchema,
+        addressPath: nonEmptyStringSchema,
+        center: mapCenterSchema.optional(),
+        zoom: z.number().int().finite().min(0).max(19).optional(),
+        height: z.enum(supportedMapHeights).optional(),
+      })
+      .strip(),
     children: z.never().optional(),
   })
   .strip()

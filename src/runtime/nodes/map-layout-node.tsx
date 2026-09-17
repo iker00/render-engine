@@ -1,14 +1,14 @@
-import 'leaflet/dist/leaflet.css'
 import { useState } from 'react'
-import { MapContainer, Marker, Popup, TileLayer } from 'react-leaflet'
+import { Marker, Popup } from 'react-leaflet'
 import type { ButtonColor } from '../../config/runtime-config'
-import type { MapHeight, MapLayoutNode } from '../../config/runtime-config-types'
+import type { MapLayoutNode } from '../../config/runtime-config-types'
 import type { RuntimeIterationContext } from '../runtime-references/runtime-reference-resolver'
 import { resolveMapMarkerSourceItems } from '../runtime-collection-sources'
 import type { MapInitialView } from '../runtime-map-auto-fit'
 import { resolveMapInitialView } from '../runtime-map-auto-fit'
-import { getMapHeightClassName, getMapMarkerIcon } from '../runtime-node-styling-map'
+import { getMapMarkerIcon } from '../runtime-node-styling-map'
 import { useRuntimeState } from '../runtime-state/use-runtime-state'
+import { MapShell } from './map-shell'
 
 interface MapNodeProps {
   node: MapLayoutNode
@@ -25,7 +25,6 @@ interface ResolvedMapMarker {
 
 const DEFAULT_MAP_CENTER = { lat: 42.8125, lng: -1.6458 }
 const DEFAULT_MAP_ZOOM = 13
-const DEFAULT_MAP_HEIGHT: MapHeight = 'md'
 
 const MAP_SOURCE_COLOR_CYCLE: ButtonColor[] = ['primary', 'success', 'warning', 'danger', 'info', 'neutral']
 
@@ -33,7 +32,6 @@ export function MapNode({ node, iterationContext }: MapNodeProps) {
   const state = useRuntimeState()
   const center = node.props?.center ?? DEFAULT_MAP_CENTER
   const zoom = node.props?.zoom ?? DEFAULT_MAP_ZOOM
-  const heightClassName = getMapHeightClassName(node.props?.height ?? DEFAULT_MAP_HEIGHT)
   const markerSources = node.props?.markerSources
 
   const resolvedMarkers: ResolvedMapMarker[] =
@@ -67,22 +65,16 @@ export function MapNode({ node, iterationContext }: MapNodeProps) {
     ),
   )
 
-  const viewProps =
-    initialView.mode === 'bounds'
-      ? { bounds: initialView.bounds }
-      : { center: [initialView.center.lat, initialView.center.lng] as [number, number], zoom: initialView.zoom }
+  const shellViewProps =
+    initialView.mode === 'bounds' ? { bounds: initialView.bounds } : { center: initialView.center, zoom: initialView.zoom }
 
   return (
-    <MapContainer {...viewProps} className={`w-full ${heightClassName}`}>
-      <TileLayer
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-      />
+    <MapShell {...shellViewProps} height={node.props?.height}>
       {resolvedMarkers.map((marker) => (
         <Marker key={marker.key} position={[marker.lat, marker.lng]} icon={getMapMarkerIcon(marker.color)}>
           <Popup>{marker.label}</Popup>
         </Marker>
       ))}
-    </MapContainer>
+    </MapShell>
   )
 }

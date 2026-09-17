@@ -61,7 +61,8 @@ export function collectResolvedFormFieldDefinitions(
       node.type === 'textarea' ||
       node.type === 'select' ||
       node.type === 'radioGroup' ||
-      node.type === 'checkboxGroup'
+      node.type === 'checkboxGroup' ||
+      node.type === 'addressPicker'
     ) {
       fields.push(resolveResolvedFormFieldDefinition(node, state, iterationContext))
     }
@@ -135,7 +136,8 @@ export function collectAllFormFieldIds(nodes: LayoutNodeCollection): string[] {
       node.type === 'fileInput' ||
       node.type === 'toggle' ||
       node.type === 'hidden' ||
-      node.type === 'autocomplete'
+      node.type === 'autocomplete' ||
+      node.type === 'addressPicker'
     ) {
       fieldIds.push(node.props.fieldId)
     }

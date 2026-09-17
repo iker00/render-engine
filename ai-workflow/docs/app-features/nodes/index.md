@@ -56,6 +56,7 @@ Los conceptos transversales (`visibility`, `queryStateFeedback`, referencias din
 | [hidden.md](./hidden.md) | `hidden` — campo sin render que aporta un valor fijo o dinámico al payload del submit, inicialización no lazy, no participa en validación ni en `visibility`. |
 | [file-input.md](./file-input.md) | Selector de ficheros dentro de formulario, preview inmediata, validaciones client-side, serialización JSON+base64 en submit como campo referenciable. |
 | [autocomplete.md](./autocomplete.md) | `autocomplete` — campo de texto con sugerencias filtradas (estáticas o dinámicas) para seleccionar uno o varios valores, texto libre opcional, disparo de búsqueda por tecleo con debounce, persistencia de selección frente a resultados de búsqueda cambiantes. |
+| [address-picker.md](./address-picker.md) | `address-picker` — campo de formulario que captura dirección postal con mapa interactivo, botón de geolocalización del navegador, geocodificación inversa automática y referencias sintéticas de coordenadas (`$lat`/`$lng`). |
 
 ## Nodos de gestión de ficheros
 

@@ -44,6 +44,10 @@ const NODE_TYPE_LABELS: Record<LayoutNodeType, string> = {
   // only meaningful inside a group's own template, authored via Monaco); present here only so
   // this exhaustive label map keeps compiling against the full `LayoutNodeType` union.
   slot: 'Slot',
+  // `addressPicker` (T1, feature address-picker-node) is not listed by
+  // `getSupportedNodeTypesCatalog()` either — dev editor support is out of scope for its initial
+  // entry; present here only so this exhaustive label map keeps compiling.
+  addressPicker: 'Selector de dirección',
 }
 
 interface LayoutCanvasNodePaletteEntryProps {

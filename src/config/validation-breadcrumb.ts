@@ -15,6 +15,7 @@ const fieldIdTypes = new Set([
   'toggle',
   'fileInput',
   'hidden',
+  'addressPicker',
 ])
 
 const labelTypes = new Set(['button', 'accordion', 'badge', 'link'])

@@ -218,6 +218,25 @@ export function runtimeStateReducer(stateIn: RuntimeState, action: RuntimeStateA
           },
         },
       }
+    case 'forms/set-synthetic': {
+      const existingField = state.forms[action.payload.formId]?.[action.payload.fieldId]
+      if (!existingField) {
+        return state
+      }
+      return {
+        ...state,
+        forms: {
+          ...state.forms,
+          [action.payload.formId]: {
+            ...state.forms[action.payload.formId],
+            [action.payload.fieldId]: {
+              ...existingField,
+              synthetic: { ...existingField.synthetic, ...action.payload.synthetic },
+            },
+          },
+        },
+      }
+    }
     case 'forms/reset':
       return {
         ...state,

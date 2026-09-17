@@ -2393,4 +2393,180 @@ describe('Runtime reference resolution', () => {
       ).toBe('Overview — Widget — Group title')
     })
   })
+
+  describe('forms.*.$lat / $lng synthetic references', () => {
+    const stateWithSynthetic: RuntimeState = {
+      ...runtimeState,
+      forms: {
+        contacto: {
+          direccion: {
+            value: 'Calle Mayor 1',
+            error: null,
+            touched: true,
+            dirty: true,
+            defaultValue: '',
+            synthetic: { lat: 42.81, lng: -1.64 },
+          },
+        },
+      },
+    }
+
+    const stateWithoutSynthetic: RuntimeState = {
+      ...runtimeState,
+      forms: {
+        contacto: {
+          direccion: { value: 'Calle Mayor 1', error: null, touched: false, dirty: false, defaultValue: '' },
+        },
+      },
+    }
+
+    const stateWithPartialSynthetic: RuntimeState = {
+      ...runtimeState,
+      forms: {
+        contacto: {
+          direccion: {
+            value: 'Calle Mayor 1',
+            error: null,
+            touched: false,
+            dirty: false,
+            defaultValue: '',
+            synthetic: { lat: 42.81 },
+          },
+        },
+      },
+    }
+
+    it('resolves $lat and $lng as numbers from the field synthetic metadata', () => {
+      expect(resolveRuntimeReference('forms.contacto.direccion.$lat', stateWithSynthetic)).toEqual({
+        status: 'resolved',
+        value: 42.81,
+        reference: parseRuntimeReference('forms.contacto.direccion.$lat', { allowFormCoordinateReference: true }),
+      })
+
+      expect(resolveRuntimeReference('forms.contacto.direccion.$lng', stateWithSynthetic)).toEqual({
+        status: 'resolved',
+        value: -1.64,
+        reference: parseRuntimeReference('forms.contacto.direccion.$lng', { allowFormCoordinateReference: true }),
+      })
+    })
+
+    it('keeps forms.{formId}.{fieldId} resolving to the field text value regardless of synthetic', () => {
+      expect(resolveRuntimeReference('forms.contacto.direccion', stateWithSynthetic)).toEqual({
+        status: 'resolved',
+        value: 'Calle Mayor 1',
+        reference: parseRuntimeReference('forms.contacto.direccion'),
+      })
+    })
+
+    it('treats $lat as missing when the field has no synthetic metadata', () => {
+      expect(resolveRuntimeReference('forms.contacto.direccion.$lat', stateWithoutSynthetic)).toEqual({
+        status: 'missing',
+        reference: parseRuntimeReference('forms.contacto.direccion.$lat', { allowFormCoordinateReference: true }),
+      })
+    })
+
+    it('resolves the present coordinate and treats the missing one as absent', () => {
+      expect(resolveRuntimeReference('forms.contacto.direccion.$lat', stateWithPartialSynthetic)).toEqual({
+        status: 'resolved',
+        value: 42.81,
+        reference: parseRuntimeReference('forms.contacto.direccion.$lat', { allowFormCoordinateReference: true }),
+      })
+
+      expect(resolveRuntimeReference('forms.contacto.direccion.$lng', stateWithPartialSynthetic)).toEqual({
+        status: 'missing',
+        reference: parseRuntimeReference('forms.contacto.direccion.$lng', { allowFormCoordinateReference: true }),
+      })
+    })
+
+    it('treats $lat as missing without throwing when formId or fieldId do not exist', () => {
+      expect(resolveRuntimeReference('forms.missingForm.direccion.$lat', stateWithSynthetic)).toEqual({
+        status: 'missing',
+        reference: parseRuntimeReference('forms.missingForm.direccion.$lat', { allowFormCoordinateReference: true }),
+      })
+
+      expect(resolveRuntimeReference('forms.contacto.missingField.$lat', stateWithSynthetic)).toEqual({
+        status: 'missing',
+        reference: parseRuntimeReference('forms.contacto.missingField.$lat', { allowFormCoordinateReference: true }),
+      })
+    })
+
+    it('treats a non-finite synthetic.lat as missing so no invalid value reaches a coordinate payload', () => {
+      const nonNumericVariants: unknown[] = ['42', NaN, null]
+
+      for (const lat of nonNumericVariants) {
+        const stateWithNonNumericLat: RuntimeState = {
+          ...runtimeState,
+          forms: {
+            contacto: {
+              direccion: {
+                value: 'Calle Mayor 1',
+                error: null,
+                touched: false,
+                dirty: false,
+                defaultValue: '',
+                synthetic: { lat },
+              },
+            },
+          },
+        }
+
+        expect(resolveRuntimeReference('forms.contacto.direccion.$lat', stateWithNonNumericLat)).toEqual({
+          status: 'missing',
+          reference: parseRuntimeReference('forms.contacto.direccion.$lat', { allowFormCoordinateReference: true }),
+        })
+      }
+    })
+
+    it('resolves $lat and $lng per instance scope inside a repeater', () => {
+      const iteration1Scope = pushRepeaterScopeToken([], '1')
+      const iteration2Scope = pushRepeaterScopeToken([], '2')
+
+      const scopedSyntheticState: RuntimeState = {
+        ...runtimeState,
+        forms: {
+          'contacto::r:1': {
+            direccion: {
+              value: 'Iteration one',
+              error: null,
+              touched: false,
+              dirty: false,
+              defaultValue: '',
+              synthetic: { lat: 1.1, lng: 2.2 },
+            },
+          },
+          'contacto::r:2': {
+            direccion: {
+              value: 'Iteration two',
+              error: null,
+              touched: false,
+              dirty: false,
+              defaultValue: '',
+              synthetic: { lat: 3.3, lng: 4.4 },
+            },
+          },
+        },
+      }
+
+      expect(
+        resolveRuntimeReference('forms.contacto.direccion.$lat', scopedSyntheticState, { scope: iteration1Scope }),
+      ).toEqual({
+        status: 'resolved',
+        value: 1.1,
+        reference: parseRuntimeReference('forms.contacto.direccion.$lat', { allowFormCoordinateReference: true }),
+      })
+
+      expect(
+        resolveRuntimeReference('forms.contacto.direccion.$lat', scopedSyntheticState, { scope: iteration2Scope }),
+      ).toEqual({
+        status: 'resolved',
+        value: 3.3,
+        reference: parseRuntimeReference('forms.contacto.direccion.$lat', { allowFormCoordinateReference: true }),
+      })
+
+      expect(resolveRuntimeReference('forms.contacto.direccion.$lat', scopedSyntheticState, { scope: [] })).toEqual({
+        status: 'missing',
+        reference: parseRuntimeReference('forms.contacto.direccion.$lat', { allowFormCoordinateReference: true }),
+      })
+    })
+  })
 })

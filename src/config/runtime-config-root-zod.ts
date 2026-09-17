@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import {
   accordionNodeSchema,
+  addressPickerNodeSchema,
   alertNodeSchema,
   autocompleteNodeSchema,
   badgeNodeSchema,
@@ -79,6 +80,7 @@ const layoutNodeSchema: z.ZodType<unknown> = z.lazy(() =>
     galleryNodeSchema,
     chartNodeSchema,
     autocompleteNodeSchema,
+    addressPickerNodeSchema,
   ]),
 )
 

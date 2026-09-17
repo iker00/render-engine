@@ -6,6 +6,7 @@ import { injectConditionGroupWidgetSentinel } from './property-fields/inject-con
 import { injectNavigateParamsWidgetSentinel } from './property-fields/inject-navigate-params-widget-sentinel'
 import {
   accordionNodeSchema,
+  addressPickerNodeSchema,
   alertNodeSchema,
   autocompleteNodeSchema,
   badgeNodeSchema,
@@ -49,7 +50,11 @@ import {
 // `slot` placement stays a Monaco-only edit. `group` itself is insertable (T15): see
 // `layout-canvas-node-palette-defaults.ts`'s `group` case for why its placeholder instance
 // (`groupId: ''`) is always valid to insert.
-const NODE_TYPES_NOT_YET_INSERTABLE_FROM_PALETTE: ReadonlySet<LayoutNodeType> = new Set(['slot'])
+// `addressPicker` (T1, feature address-picker-node) is structurally part of the catalog but dev
+// editor support (palette, properties panel, drop rules) is explicitly out of scope for its
+// initial entry — same deferral `map` had at launch. It stays here only so the exhaustive
+// `Record<LayoutNodeType, ...>` maps below keep compiling.
+const NODE_TYPES_NOT_YET_INSERTABLE_FROM_PALETTE: ReadonlySet<LayoutNodeType> = new Set(['slot', 'addressPicker'])
 
 const nodeSchemaByType: Record<LayoutNodeType, z.ZodType> = {
   container: containerNodeSchema,
@@ -83,6 +88,7 @@ const nodeSchemaByType: Record<LayoutNodeType, z.ZodType> = {
   map: mapNodeSchema,
   gallery: galleryNodeSchema,
   autocomplete: autocompleteNodeSchema,
+  addressPicker: addressPickerNodeSchema,
   chart: chartNodeSchema,
   group: groupInstanceNodeSchema,
   slot: slotNodeSchema,

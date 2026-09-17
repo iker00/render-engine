@@ -6,7 +6,7 @@
 
 Modelo declarativo de formularios, ciclo de vida del estado por instancia, valores por defecto, reglas de validación local y submit.
 
-Los detalles de cada nodo de formulario viven en [`../nodes/`](../nodes/index.md): [form](../nodes/form.md), [input](../nodes/input.md), [textarea](../nodes/textarea.md), [select](../nodes/select.md), [choice-groups](../nodes/choice-groups.md), [toggle](../nodes/toggle.md), [hidden](../nodes/hidden.md), [autocomplete](../nodes/autocomplete.md).
+Los detalles de cada nodo de formulario viven en [`../nodes/`](../nodes/index.md): [form](../nodes/form.md), [input](../nodes/input.md), [textarea](../nodes/textarea.md), [select](../nodes/select.md), [choice-groups](../nodes/choice-groups.md), [toggle](../nodes/toggle.md), [hidden](../nodes/hidden.md), [autocomplete](../nodes/autocomplete.md), [address-picker](../nodes/address-picker.md).
 
 ## Sub-documentos
 

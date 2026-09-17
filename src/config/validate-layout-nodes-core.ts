@@ -48,6 +48,7 @@ import { validateMapNode } from './validate-map-node'
 import { validateGalleryNode } from './validate-gallery-node'
 import { validateChartNode } from './validate-chart-node'
 import { validateAutocompleteNode } from './validate-autocomplete-node'
+import { validateAddressPickerNode } from './validate-address-picker-node'
 
 // Context threaded through the recursive layout validator. `insideGroupTemplate` tracks whether
 // the current structural position is inside `groups.{groupId}.template`: it flips which of the
@@ -194,6 +195,8 @@ export function validateLayoutNode(
       return validateChartNode(rawNode, path, pageId, breadcrumb)
     case 'autocomplete':
       return validateAutocompleteNode(rawNode, path, pageId, breadcrumb)
+    case 'addressPicker':
+      return validateAddressPickerNode(rawNode, path, pageId, breadcrumb)
     case 'slot':
       return { status: 'ready', node: { type: 'slot' } }
     case 'group':

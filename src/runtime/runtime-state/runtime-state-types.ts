@@ -28,6 +28,7 @@ export interface RuntimeFormFieldState {
   touched: boolean
   dirty: boolean
   defaultValue?: unknown
+  synthetic?: Record<string, unknown>
 }
 
 export interface RuntimeFormFieldDefinition {
@@ -120,6 +121,10 @@ export type RuntimeStateAction =
   | {
       type: 'forms/set-error'
       payload: { formId: string; fieldId: string; error: string | null; defaultValue?: unknown }
+    }
+  | {
+      type: 'forms/set-synthetic'
+      payload: { formId: string; fieldId: string; synthetic: Record<string, unknown> }
     }
   | { type: 'forms/reset'; payload: { formId: string } }
   | { type: 'forms/remove'; payload: { formId: string } }
