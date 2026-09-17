@@ -8,6 +8,7 @@ import type {
   TextareaLayoutNode,
   ToggleLayoutNode,
 } from '../../config/runtime-config'
+import type { AddressPickerLayoutNode } from '../../config/runtime-config-types'
 import { normalizeChoiceFieldValue } from '../runtime-collection-sources'
 import type { RuntimeIterationContext } from '../runtime-references/runtime-reference-resolver'
 import { resolveRuntimeValueWithOptions } from '../runtime-references/runtime-reference-resolver'
@@ -109,7 +110,13 @@ function coerceAutocompleteFieldShape(value: unknown, isMultiple: boolean, fallb
 }
 
 export function resolveResolvedFormFieldDefinition(
-  node: InputLayoutNode | TextareaLayoutNode | SelectLayoutNode | RadioGroupLayoutNode | CheckboxGroupLayoutNode,
+  node:
+    | InputLayoutNode
+    | TextareaLayoutNode
+    | SelectLayoutNode
+    | RadioGroupLayoutNode
+    | CheckboxGroupLayoutNode
+    | AddressPickerLayoutNode,
   state: ReturnType<typeof useRuntimeState>,
   iterationContext?: RuntimeIterationContext,
 ): ResolvedFormFieldDefinition {
@@ -127,7 +134,13 @@ export function resolveResolvedFormFieldDefinition(
 }
 
 function resolveFieldDefaultValue(
-  node: InputLayoutNode | TextareaLayoutNode | SelectLayoutNode | RadioGroupLayoutNode | CheckboxGroupLayoutNode,
+  node:
+    | InputLayoutNode
+    | TextareaLayoutNode
+    | SelectLayoutNode
+    | RadioGroupLayoutNode
+    | CheckboxGroupLayoutNode
+    | AddressPickerLayoutNode,
   state: ReturnType<typeof useRuntimeState>,
   iterationContext?: RuntimeIterationContext,
 ) {
@@ -170,7 +183,8 @@ function isMultipleChoiceFieldNode(
     | TextareaLayoutNode
     | SelectLayoutNode
     | CheckboxGroupLayoutNode
-    | RadioGroupLayoutNode,
+    | RadioGroupLayoutNode
+    | AddressPickerLayoutNode,
 ) {
   if ('multiple' in node && typeof node.multiple === 'boolean') {
     return node.multiple

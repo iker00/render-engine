@@ -1,5 +1,6 @@
 import React from 'react'
 import { AccordionNode } from './accordion-layout-node'
+import { AddressPickerNode } from './address-picker-layout-node'
 import { AlertNode } from './alert-layout-node'
 import { AutocompleteNode } from './autocomplete-layout-node'
 import { BadgeNode } from './badge-layout-node'
@@ -42,6 +43,7 @@ type AnyComponent = React.ComponentType<any>
 // elimination of the `import.meta.env.MODE === 'test'` condition.
 const eagerMap = {
   accordion: AccordionNode as AnyComponent,
+  addressPicker: AddressPickerNode as AnyComponent,
   alert: AlertNode as AnyComponent,
   autocomplete: AutocompleteNode as AnyComponent,
   badge: BadgeNode as AnyComponent,
@@ -81,6 +83,9 @@ const eagerMap = {
 // The .then() adapter converts the named export to the default export required by React.lazy().
 const lazyMap = {
   accordion: React.lazy(() => import('./accordion-layout-node').then((m) => ({ default: m.AccordionNode }))),
+  addressPicker: React.lazy(() =>
+    import('./address-picker-layout-node').then((m) => ({ default: m.AddressPickerNode })),
+  ),
   alert: React.lazy(() => import('./alert-layout-node').then((m) => ({ default: m.AlertNode }))),
   autocomplete: React.lazy(() =>
     import('./autocomplete-layout-node').then((m) => ({ default: m.AutocompleteNode })),

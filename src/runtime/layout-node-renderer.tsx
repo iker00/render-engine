@@ -263,6 +263,11 @@ export function LayoutNodeRenderer({
       renderedNode = <AutocompleteNode node={node} iterationContext={iterationContext} />
       break
     }
+    case 'addressPicker': {
+      const AddressPickerNode = NodeComponents.addressPicker
+      renderedNode = <AddressPickerNode node={node} iterationContext={iterationContext} />
+      break
+    }
     case 'group': {
       const GroupNode = NodeComponents.group
       renderedNode = (

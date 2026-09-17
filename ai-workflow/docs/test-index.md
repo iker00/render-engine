@@ -105,6 +105,7 @@ Ficheros de apoyo, no son tests: `config-validation/helpers.ts`, `dev-runtime/lu
 
 - `layout-node-renderer-edit-mode.test.tsx` — modelo de path (incluye tramos tabItem/stepItem, row/cells de tabla), threading en LayoutRenderer y wrapper de selección/hover bajo LayoutEditModeContext
 - `layout-renderer-accordion-edit-mode.test.tsx` — accordion en modo edición con cuerpo siempre presente, path de hijos y regresión de colapso en producción
+- `layout-renderer-address-picker.test.tsx` — nodo addressPicker: mapa clicable con marcador único que fija/mueve `synthetic.lat/lng` sin tocar el texto, campo de texto independiente (defaults, edición, submit), required/validación, props de mapa (center/zoom/height), independencia por iteración en repeater y registro dual en NodeComponents
 - `layout-renderer-autocomplete.test.tsx` — nodo autocomplete: filtrado por minChars, selección simple y múltiple (chips), navegación por teclado, ARIA, allowFreeText, submit/validación, transversales e integración en repeater
 - `layout-renderer-accordion.test.tsx` — nodo accordion: estado inicial, toggle, ARIA, interpolación de label, coordinación por groupId, transversales e integración en repeater
 - `layout-renderer-alert.test.tsx` — nodo alert: colores por tipo, icono, title/message, interpolación, transversales e integración con repeater y form
@@ -292,6 +293,8 @@ Ficheros de apoyo, no son tests: `config-validation/helpers.ts`, `dev-runtime/lu
 - `layout-canvas-grid-drop-zones.test.tsx` — overlay de zonas de inserción para containers en modo grid
 - `layout-canvas-node-schema.test.ts` — derivación cacheada de JSON Schema por tipo y catálogo de tipos soportados
 - `layout-canvas-palette-insert.test.tsx` — paleta e inserción por arrastre respetando reglas de destino
+- `layout-canvas-palette-insert-group.test.tsx` — inserción por arrastre del nodo `group` desde la paleta (FR8, T15) y su entrada arrastrable
+- `layout-canvas-properties-panel-chart.test.tsx` — `resolveChartPropsSchema` y bloques especiales del panel de propiedades para `chart` (tipo, origen y cobertura del dispatcher genérico)
 - `layout-canvas-properties-panel-commit-feedback.test.tsx` — feedback de commit rechazado del panel de propiedades y persistencia del valor introducido
 - `layout-canvas-properties-panel.test.tsx` — panel de propiedades del nodo seleccionado con sus widgets y subsecciones
 - `layout-canvas-properties-panel-gallery.test.tsx` — panel de propiedades end-to-end para `gallery`: selector Origen (Estático/Dinámico) y widget de `props.source` en modo dinámico, con visibilidad condicional de los campos generados por el dispatcher
@@ -302,6 +305,7 @@ Ficheros de apoyo, no son tests: `config-validation/helpers.ts`, `dev-runtime/lu
 - `layout-canvas-property-field-dispatcher.test.tsx` — dispatcher genérico de campos de propiedades y hook de widgets registrados
 - `layout-canvas-property-field-gallery-dynamic-source.test.tsx` — widget aislado `GalleryDynamicSourcePropertyField`: modos src/fetch, cambio de modo, `idField` (FR7) y degradación ante valor no reconocible
 - `layout-canvas-property-field-gallery-origin-mode.test.tsx` — widget aislado `GalleryOriginModePropertyField`: detección de modo, alternancia Estático/Dinámico (sin restaurar el valor descartado) e idempotencia
+- `layout-canvas-property-field-group-instance.test.tsx` — `GroupInstancePropertyField`: selector de `groupId`, siembra/reconstrucción de `props.params`/`children` y aviso de discrepancia de params
 - `layout-canvas-property-field-heading-level.test.tsx` — widget aislado del nivel de heading como radiogroup H1..H5
 - `layout-canvas-property-field-key-value.test.tsx` — editor clave-valor para mapas string a string con excepción de body y predicado de editabilidad por fila configurable
 - `layout-canvas-property-field-layout-span-occupancy-preview.test.tsx` — barra de vista previa de ocupación del span con clamp y leyenda
@@ -312,6 +316,7 @@ Ficheros de apoyo, no son tests: `config-validation/helpers.ts`, `dev-runtime/lu
 - `layout-canvas-property-field-table-rows.test.tsx` — widget aislado de filas y columnas de tabla en modo manual y dinámico
 - `layout-canvas-property-field-tabs-orientation.test.tsx` — widget aislado de la orientación de tabs como radiogroup horizontal/vertical
 - `layout-canvas-reorder-reinsert.test.tsx` — reordenar y reanidar nodos por arrastre end-to-end con seguimiento de selección
+- `layout-canvas-target-retarget.test.tsx` — resolución de layout por destino, existencia de destino y construcción/parcheo de config candidata para retargeting del canvas
 - `layout-tree-mutations.test.ts` — funciones puras de mutación del árbol por path, incluyendo tablas, tabs y steps
 - `navigate-params-property-field.test.tsx` — widget aislado de `navigateTo.params` con degradación a solo lectura para valores no-string
 - `node-panel-tab-bar.test.tsx` — barra de pestañas accesible del panel de nodo con roving tabindex y flechas circulares

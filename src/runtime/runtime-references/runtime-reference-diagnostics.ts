@@ -10,6 +10,7 @@ export type RuntimeReferenceSurface =
   | 'radioGroup.props.label'
   | 'checkboxGroup.props.label'
   | 'autocomplete.props.label'
+  | 'addressPicker.props.label'
   | 'list.props.items'
   | 'select.props.items.label'
   | 'select.props.items.value'
