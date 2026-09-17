@@ -20,6 +20,8 @@ El escape literal con `\` permite mostrar una referencia completa tal cual, por 
 - `row.{segmentosAnidados}`
 - `row.$index`
 - `forms.{formId}.{fieldId}`
+- `forms.{formId}.{fieldId}.$lat`
+- `forms.{formId}.{fieldId}.$lng`
 - `params.{paramName}`
 - `queries.{queryName}`
 - `queries.{queryName}.data`
@@ -161,3 +163,10 @@ Las superficies de `query`, `body`, `params` y otras no listadas siguen fuera de
 - Fuera del `template` de una definición de grupo, `group.*` no forma parte del contrato soportado y degrada a string vacío en superficies textuales.
 - Un `group` instanciado dentro de `repeater.props.template` puede usar `item.*` en sus `props.params` e `children` del mismo modo que cualquier otro nodo dentro del template; ambos namespaces coexisten sin conflicto, resolviendo cada uno desde su contexto correspondiente (iteración del `repeater` e iteración del `group`, respectivamente).
 - `group.*` tiene precedencia sobre cualquier propiedad literal de ese nombre dentro del valor del parámetro, de forma análoga a la precedencia de `item.$key` y `item.$index`.
+
+## Frontera específica de `forms.*.$lat` / `forms.*.$lng`
+- `forms.{formId}.{fieldId}.$lat` y `forms.{formId}.{fieldId}.$lng` son referencias sintéticas soportadas, distintas de la navegación genérica `forms.{formId}.{fieldId}`: exponen el metadato de coordenada `synthetic.lat`/`synthetic.lng` del registro de campo en el store de formularios, no su valor textual.
+- Se resuelven contra la misma clave de store efectiva que `forms.{formId}.{fieldId}` (misma resolución por cadena de scope de instancia, por ejemplo dentro de un `repeater`): dos scopes distintos resuelven coordenadas distintas.
+- `forms.{formId}.{fieldId}` sigue resolviendo el valor de texto del campo sin verse afectado por la presencia o ausencia de `synthetic`.
+- Degradan a dato ausente (mismo criterio que el resto de referencias bien formadas sin valor) cuando el campo no existe, `synthetic` no existe, la clave correspondiente no existe, o el valor no es un número finito (por ejemplo un string, `NaN` o `null`): nunca se propaga un valor no numérico.
+- En runtime, la resolución de estas dos formas está siempre activa cuando hay dato disponible; la frontera de qué superficies concretas admiten `$lat`/`$lng` en bootstrap se cierra en una tarea posterior de la misma feature y se documenta junto al nodo que las produce (`addressPicker`).
