@@ -15,6 +15,7 @@ export const FORM_ONLY_LEAF_NODE_TYPES: ReadonlySet<LayoutNodeType> = new Set([
   'toggle',
   'hidden',
   'autocomplete',
+  'addressPicker',
 ])
 
 /**
@@ -52,6 +53,7 @@ export const FORM_ALLOWED_DESCENDANT_TYPES: ReadonlySet<LayoutNodeType> = new Se
   'tabs',
   'steps',
   'autocomplete',
+  'addressPicker',
   'alert',
   'badge',
   'stat',

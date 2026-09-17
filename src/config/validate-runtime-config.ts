@@ -221,6 +221,12 @@ export function validateRuntimeConfig(rawConfig: unknown): RuntimeConfigValidati
     return formSemanticError
   }
 
+  const addressPickerGeocodeOperationError = validateAddressPickerGeocodeOperations(config, knownApiOperations)
+
+  if (addressPickerGeocodeOperationError) {
+    return addressPickerGeocodeOperationError
+  }
+
   const requestParamsError = validateExecutionRequestParams(config)
 
   if (requestParamsError) {
@@ -450,6 +456,79 @@ function checkModalRefsInFallbacks(
       modalIds,
       modalOwnership,
       currentRepeaterPath,
+      breadcrumb,
+    )
+    if (error) return error
+  }
+
+  return null
+}
+
+function validateAddressPickerGeocodeOperations(
+  config: RuntimeConfig,
+  operationNames: ReadonlySet<string>,
+): { status: 'error'; error: RuntimeConfigError } | null {
+  for (const page of config.pages) {
+    const error = findInvalidGeocodeOperation(page.layout, 'layout', page.id, operationNames, [])
+    if (error) return error
+  }
+
+  return null
+}
+
+function findInvalidGeocodeOperation(
+  nodes: LayoutNodeCollection,
+  path: string,
+  pageId: string,
+  operationNames: ReadonlySet<string>,
+  breadcrumb: BreadcrumbSegment[],
+): { status: 'error'; error: RuntimeConfigError } | null {
+  for (let i = 0; i < nodes.length; i += 1) {
+    const node = nodes[i]
+    const nodePath = `${path}[${i}]`
+    const nodeSegment = buildBreadcrumbSegmentFromNode(node, i)
+    const nodeBreadcrumb = [...breadcrumb, nodeSegment]
+
+    const fallbackError = findInvalidGeocodeOperationInFallbacks(node, nodePath, pageId, operationNames, nodeBreadcrumb)
+    if (fallbackError) return fallbackError
+
+    if (node.type === 'addressPicker' && !operationNames.has(node.props.geocodeOperation)) {
+      return enrichedInvalidLayoutFromNode(
+        `Page "${pageId}" has an invalid layout at "${nodePath}.props.geocodeOperation": unknown operation "${node.props.geocodeOperation}".`,
+        nodeBreadcrumb,
+        node,
+      )
+    }
+
+    if ((node.type === 'container' || node.type === 'form' || node.type === 'modal') && node.children) {
+      const error = findInvalidGeocodeOperation(node.children, `${nodePath}.children`, pageId, operationNames, nodeBreadcrumb)
+      if (error) return error
+    } else if (node.type === 'repeater') {
+      const error = findInvalidGeocodeOperation(node.props.template, `${nodePath}.props.template`, pageId, operationNames, nodeBreadcrumb)
+      if (error) return error
+    }
+  }
+
+  return null
+}
+
+function findInvalidGeocodeOperationInFallbacks(
+  node: LayoutNode,
+  nodePath: string,
+  pageId: string,
+  operationNames: ReadonlySet<string>,
+  breadcrumb: BreadcrumbSegment[],
+): { status: 'error'; error: RuntimeConfigError } | null {
+  if (!node.queryStateFeedback?.states) return null
+
+  for (const [stateName, rule] of Object.entries(node.queryStateFeedback.states)) {
+    if (!rule || rule.mode !== 'fallback') continue
+
+    const error = findInvalidGeocodeOperation(
+      [...rule.fallback],
+      `${nodePath}.queryStateFeedback.states.${stateName}.fallback`,
+      pageId,
+      operationNames,
       breadcrumb,
     )
     if (error) return error

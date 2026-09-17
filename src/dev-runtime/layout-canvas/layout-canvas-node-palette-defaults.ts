@@ -195,6 +195,13 @@ export function buildDefaultNodeInstance(type: LayoutNodeType): LayoutNode {
     case 'slot':
       throw new Error(`buildDefaultNodeInstance: node type "${type}" is not yet insertable from the palette`)
 
+    // `addressPicker` (T1, feature address-picker-node) is also excluded from
+    // `getSupportedNodeTypesCatalog()` — dev editor support (palette, properties panel, drop
+    // rules) is explicitly out of scope for its initial entry, same deferral `map` had at
+    // launch — so this branch is unreachable in practice.
+    case 'addressPicker':
+      throw new Error(`buildDefaultNodeInstance: node type "${type}" is not yet insertable from the palette`)
+
     default: {
       const exhaustiveCheck: never = type
       throw new Error(`buildDefaultNodeInstance: unsupported node type "${String(exhaustiveCheck)}"`)

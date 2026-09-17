@@ -39,10 +39,10 @@ describe('MODAL_ALLOWED_CHILD_TYPES / LINK_ALLOWED_CHILD_TYPES', () => {
 })
 
 describe('FORM_ONLY_LEAF_NODE_TYPES', () => {
-  it('contains exactly the nine form-only leaf node types', () => {
-    const expected = ['input', 'textarea', 'select', 'radioGroup', 'checkboxGroup', 'fileInput', 'toggle', 'hidden', 'autocomplete']
+  it('contains exactly the ten form-only leaf node types', () => {
+    const expected = ['input', 'textarea', 'select', 'radioGroup', 'checkboxGroup', 'fileInput', 'toggle', 'hidden', 'autocomplete', 'addressPicker']
 
-    expect(FORM_ONLY_LEAF_NODE_TYPES.size).toBe(9)
+    expect(FORM_ONLY_LEAF_NODE_TYPES.size).toBe(10)
     expect([...FORM_ONLY_LEAF_NODE_TYPES].sort()).toEqual([...expected].sort())
   })
 })
@@ -73,7 +73,7 @@ describe('FORM_ALLOWED_DESCENDANT_TYPES', () => {
     expect(FORM_ALLOWED_DESCENDANT_TYPES.has('modal')).toBe(false)
   })
 
-  it('accepts exactly the 23 types documented as valid form descendants', () => {
+  it('accepts exactly the 24 types documented as valid form descendants', () => {
     const expected = [
       'input',
       'textarea',
@@ -94,13 +94,14 @@ describe('FORM_ALLOWED_DESCENDANT_TYPES', () => {
       'tabs',
       'steps',
       'autocomplete',
+      'addressPicker',
       'alert',
       'badge',
       'stat',
       'skeleton',
     ]
 
-    expect(FORM_ALLOWED_DESCENDANT_TYPES.size).toBe(23)
+    expect(FORM_ALLOWED_DESCENDANT_TYPES.size).toBe(24)
 
     for (const type of expected) {
       expect(FORM_ALLOWED_DESCENDANT_TYPES.has(type as never)).toBe(true)

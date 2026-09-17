@@ -30,6 +30,7 @@ export type LayoutNodeType =
   | 'map'
   | 'gallery'
   | 'autocomplete'
+  | 'addressPicker'
   | 'chart'
   | 'group'
   | 'slot'
@@ -662,6 +663,19 @@ export interface MapLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayou
   children?: never
 }
 
+export interface AddressPickerLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayoutFields {
+  type: 'addressPicker'
+  id?: string
+  props: FormFieldLayoutNodeProps & {
+    geocodeOperation: string
+    addressPath: string
+    center?: { lat: number; lng: number }
+    zoom?: number
+    height?: MapHeight
+  }
+  children?: never
+}
+
 export interface GalleryStaticImage {
   src: string
   alt: string
@@ -995,6 +1009,7 @@ export type LayoutNode =
   | MapLayoutNode
   | GalleryLayoutNode
   | AutocompleteLayoutNode
+  | AddressPickerLayoutNode
   | ChartLayoutNode
   | RuntimeGroupInstanceNode
   | RuntimeSlotNode

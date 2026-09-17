@@ -34,6 +34,7 @@ type FormFieldValidationTarget =
   | { type: 'checkboxGroup' }
   | { type: 'toggle' }
   | { type: 'autocomplete'; multiple: boolean }
+  | { type: 'addressPicker' }
 
 export function validateFormFieldValidations(
   rawProps: unknown,
