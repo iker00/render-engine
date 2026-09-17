@@ -179,6 +179,7 @@ export function validateMapNode(
         height: props?.height,
         markers,
         markerSources: normalizedMarkerSources,
+        autoFitMarkers: props?.autoFitMarkers,
       },
     },
   }
