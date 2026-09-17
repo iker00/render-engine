@@ -193,6 +193,25 @@ export function useRuntimeStateActions() {
     [dispatchAndSyncState],
   )
 
+  const setFormFieldSynthetic = useCallback(
+    (
+      formId: string,
+      fieldId: string,
+      synthetic: Record<string, unknown>,
+      options?: { scopeChain?: RuntimeInstanceScope },
+    ) => {
+      dispatchAndSyncState({
+        type: 'forms/set-synthetic',
+        payload: {
+          formId: deriveScopedStateKey(formId, options?.scopeChain ?? EMPTY_INSTANCE_SCOPE),
+          fieldId,
+          synthetic,
+        },
+      })
+    },
+    [dispatchAndSyncState],
+  )
+
   const openModal = useCallback(
     (modalId: string, options?: { scopeChain?: RuntimeInstanceScope }) => {
       if (editModeContext !== null && editModeContext.active) {
@@ -436,6 +455,7 @@ export function useRuntimeStateActions() {
         })
       },
       setFormFieldError,
+      setFormFieldSynthetic,
       setFormFieldValue,
       setQueryError,
       setQueryLoading,
@@ -458,6 +478,7 @@ export function useRuntimeStateActions() {
       resetForm,
       resetQuery,
       setFormFieldError,
+      setFormFieldSynthetic,
       setFormFieldValue,
       setQueryError,
       setQueryLoading,

@@ -52,6 +52,14 @@ export function selectFormFieldValue(state: RuntimeState, formId: string, fieldI
   return selectFormFieldState(state, formId, fieldId)?.value
 }
 
+export function selectFormFieldSynthetic(
+  state: RuntimeState,
+  formId: string,
+  fieldId: string,
+): Record<string, unknown> | null {
+  return selectFormFieldState(state, formId, fieldId)?.synthetic ?? null
+}
+
 /**
  * Scope-chain-aware form field value lookup (T05 / feature reusable-node-groups): composes the
  * effective store key from `formId` + `scope` before delegating to the raw, scope-agnostic
