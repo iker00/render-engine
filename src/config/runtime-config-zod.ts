@@ -1099,6 +1099,7 @@ export const mapNodeSchema = z
         height: z.enum(supportedMapHeights).optional(),
         markers: z.array(mapStaticMarkerSchema).optional(),
         markerSources: z.array(mapMarkerSourceSchema).optional(),
+        autoFitMarkers: z.boolean().optional(),
       })
       .strip()
       .optional(),

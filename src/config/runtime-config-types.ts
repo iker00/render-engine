@@ -659,6 +659,7 @@ export interface MapLayoutNode extends LayoutNodeFeedbackFields, LayoutNodeLayou
     height?: MapHeight
     markers?: MapStaticMarker[]
     markerSources?: MapMarkerSource[]
+    autoFitMarkers?: boolean
   }
   children?: never
 }
