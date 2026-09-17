@@ -51,6 +51,9 @@ Ficheros de apoyo, no son tests: `config-validation/helpers.ts`, `dev-runtime/lu
 - `read-runtime-data-values.test.ts` — lectura de `dataset.values` del root con fallback a `devDataValues` y validación de shape del JSON
 - `runtime-config-root-zod.test.ts` — esquema Zod raíz de la config
 - `runtime-config-validation-accordion.test.ts` — validación del nodo `accordion`: props (label, defaultOpen, groupId), children, placement y transversales
+- `runtime-config-validation-address-picker-reference-syntax.test.ts` — sintaxis pura `forms.{formId}.{fieldId}.$lat`/`.$lng` en `parseRuntimeReference`, con y sin `allowFormCoordinateReference`, y regresión sobre otras referencias sintéticas y familias no afectadas
+- `runtime-config-validation-address-picker-references.test.ts` — frontera de bootstrap de `forms.*.$lat`/`$lng`: aceptación en superficies admitidas (`api`/`button`/`form` `query`/`body`/`operations`), rechazo semántico (form/field inexistente, campo no `addressPicker`) y de forma malformada, y rechazo en superficies no admitidas (`headers`, texto visible, `defaultValue`, `visibility.reference`, origen de colección)
+- `runtime-config-validation-address-picker.test.ts` — validación del nodo `addressPicker`: props (`fieldId`, `geocodeOperation` cross-check contra `api`, `addressPath`, `center`/`zoom`/`height`), placement form-only y unicidad de `fieldId`
 - `runtime-config-validation-alert.test.ts` — validación del nodo `alert`: aceptación con type/message/title/transversales y rechazo de shape inválido
 - `runtime-config-validation-api-operations.test.ts` — operaciones API: métodos, query/body/headers, extra keys, body trees
 - `runtime-config-validation-autocomplete.test.ts` — validación del nodo `autocomplete`: shapes de items, defaultValue por cardinalidad, allowFreeText, minChars, searchParamName, validations de cardinalidad y placement form-only
@@ -69,6 +72,9 @@ Ficheros de apoyo, no son tests: `config-validation/helpers.ts`, `dev-runtime/lu
 - `runtime-config-validation-forms-validations.test.ts` — formularios: aceptación y normalización de reglas de validación
 - `runtime-config-validation-gallery.test.ts` — validación del nodo `gallery`: aceptación (origen manual/dinámico, submodo src/fetch, idField, display paginado/carrusel, transversales) y rechazo (exclusiones mutuas, shapes inválidos)
 - `runtime-config-validation-global-preloads.test.ts` — bloque raíz `preloads`: aceptación, cross-check contra el catálogo `api` y rechazo de shapes inválidos
+- `runtime-config-validation-group-reference-syntax.test.ts` — sintaxis `group.{paramName}` en `parseRuntimeReference`/`parseGroupReference` y validación cruzada de referencias `group.*` contra `groups` declarados
+- `runtime-config-validation-groups-shape.test.ts` — shape Zod del bloque raíz `groups`, del nodo `group` y del nodo `slot`, y contexto `insideGroupTemplate` en `validateLayoutNode`
+- `runtime-config-validation-groups.test.ts` — `validateGroupsConfig`: conteo de slots por definición de grupo, validación cruzada de instancias `group` y detección recursiva de instancias anidadas
 - `runtime-config-validation-hidden.test.ts` — validación del nodo `hidden`: fieldId y value, props/rasgos prohibidos y unicidad en formulario
 - `runtime-config-validation-image-fetch.test.ts` — validación de nodo `image` con bloque `fetch`: url/alt/method/headers/body y coexistencia con contrato clásico src+alt
 - `runtime-config-validation-image-table.test.ts` — validación de nodos image y table (incluye subconjunto `link` permitido en celdas)
@@ -90,6 +96,7 @@ Ficheros de apoyo, no son tests: `config-validation/helpers.ts`, `dev-runtime/lu
 - `runtime-config-validation-tooltip.test.ts` — validación de `props.tooltip` en los siete field nodes: aceptación como string y rechazo de tipos inválidos
 - `runtime-config-validation-translations.test.ts` — bloque `translations`: aceptación de mapas por clave/idioma, normalización y rechazo de shapes inválidos
 - `runtime-config-validation-visibility.test.ts` — reglas de visibility: operadores, referencias (incluido `params.{paramName}`), valores y extra keys
+- `runtime-modal-repeater-ownership-config-validation.test.ts` — `computeModalRepeaterOwnership`: pertenencia de un modal al repeater ancestro más cercano, usada por el cross-check de `openModal`/`closeModal`
 - `validation-breadcrumb.test.ts` — construcción del breadcrumb legible y excerpts de nodo para enriquecer errores de validación
 
 ---
@@ -105,6 +112,8 @@ Ficheros de apoyo, no son tests: `config-validation/helpers.ts`, `dev-runtime/lu
 - `layout-renderer-basic-nodes.test.tsx` — ordenación raíz, layout vacío, listas estáticas/dinámicas/objeto, comportamiento leaf y clases Tailwind
 - `layout-renderer-button-styles.test.tsx` — nodo button: variantes solid/outline/ghost/link con tokens semánticos, fullWidth y submit implícito dentro de form
 - `layout-renderer-buttons-text.test.tsx` — nodos button y link, navegación declarativa, interpolación de texto y referencias dinámicas
+- `layout-renderer-chart.test.tsx` — nodo `chart`: datos estáticos por variante, origen dinámico (`props.source`), label como leyenda, títulos de eje, ausencia de eje/leyenda en pie/donut, color, height y transversales
+- `layout-renderer-collection-pipeline-repeater.test.tsx` — integración del pipeline de colecciones (`orderby`/`filter`/`slice`) en la fuente de `repeater`
 - `layout-renderer-collection-pipeline-shared.test.tsx` — integración del pipeline de colecciones (`orderby`/`filter`/`slice`) en `resolveCollectionSourceItems` compartido por `list`, `select`, `radioGroup` y `checkboxGroup`: regresión sin pipeline, reactividad de argumentos dinámicos y degradación (`baseReference` no-array, source malformado)
 - `layout-renderer-collection-pipeline-table.test.tsx` — integración del pipeline de colecciones en `table.props.rows.source`: regresión sin pipeline, filtro/orden declarativo aplicado antes de filtros/orden nativos de columna, combinación `AND` con filtro nativo, orden por defecto por `orderby` mientras ninguna columna `sortable` está activa, retorno al orden declarativo al ciclar la ordenación nativa al tercer estado, y `slice` declarativo como pool sobre el que opera la paginación local
 - `layout-renderer-container.test.tsx` — container: direction, gap, columns, variant y align/justify/wrap
@@ -118,6 +127,7 @@ Ficheros de apoyo, no son tests: `config-validation/helpers.ts`, `dev-runtime/lu
 - `layout-renderer-gallery.test.tsx` — nodo gallery: origen estático/dinámico (queries.*/item.* en repeater), exclusión mutua de origen, modo paginado, lightbox, degradación silenciosa por elemento en submodo src y fetch, transversales, colección vacía
 - `layout-renderer-gallery-carousel.test.tsx` — nodo gallery en modo carrusel end-to-end (visibleCount, autoplay, loop, navegación manual)
 - `layout-renderer-grid-spans.test.tsx` — layout.span, columnas responsive, clamping y fallbacks móvil
+- `layout-renderer-groups.test.tsx` — `GroupLayoutNode`: expansión de plantilla, contexto de grupo y scope-chain (feature reusable-node-groups)
 - `layout-renderer-hidden.test.tsx` — nodo hidden: sin DOM, value literal/dinámico, inicialización no lazy, inclusión en payload y uso en repeater
 - `layout-renderer-image-fetch.test.tsx` — nodo image con fetch: ciclo del blob, errores, revocación al desmontar, aislamiento e integración con repeater
 - `layout-renderer-map.test.tsx` — nodo map: centro/zoom/height por defecto y explícitos, marcadores estáticos y dinámicos (una y varias fuentes), color por ciclo vs explícito, degradación de coordenadas inválidas, popup sin acciones, transversales (layout.span/visibility/queryStateFeedback)
@@ -127,9 +137,12 @@ Ficheros de apoyo, no son tests: `config-validation/helpers.ts`, `dev-runtime/lu
 - `layout-renderer-modal.test.tsx` — render condicional del modal, apertura/cierre por botón/ESC/overlay, tamaños, defaultOpen, visibility y focus trap
 - `layout-renderer-repeater-basic.test.tsx` — iteraciones, orden de colección, resolución item.*, diagnósticos de key e item.$index
 - `layout-renderer-repeater-edit-mode.test.tsx` — repeater en modo edición: instancia única de props.template, sin controles de paginación y path con tramo template
+- `layout-renderer-repeater-grid.test.tsx` — wrapper grid del `repeater` con `props.columns` declarado, en producción y en modo edición
 - `layout-renderer-repeater-pagination.test.tsx` — controles previousNext, numbered, scroll y grid row del repeater
 - `layout-renderer-repeater-state.test.tsx` — resets por colección/pageSize, repeaters independientes, scalar items y queryStateFeedback con visibility
+- `layout-renderer-scope-chain-threading.test.tsx` — threading del `scopeChain` a través de `LayoutRenderer`/`LayoutNodeRenderer`/`repeater`
 - `layout-renderer-skeleton.test.tsx` — nodo skeleton: variantes rect/text/circle, animación, transversales y uso como fallback de queryStateFeedback
+- `layout-renderer-slot.test.tsx` — `SlotLayoutNode`: render del contenido de slot dentro de un `group`
 - `layout-renderer-stat.test.tsx` — nodo stat: variantes accent/tinted, paleta de colores, interpolación, transversales e integración en repeater y form
 - `layout-renderer-state-feedback.test.tsx` — queryStateFeedback en todos los estados y reglas de visibility
 - `layout-renderer-steps-edit-mode.test.tsx` — steps en modo edición: path con tramo stepItem por paso activo y regresión de navegación en producción
@@ -153,6 +166,8 @@ Ficheros de apoyo, no son tests: `config-validation/helpers.ts`, `dev-runtime/lu
 - `runtime-state-edit-mode-suppression.test.tsx` — supresión centralizada de navegación, operaciones y submit por `useRuntimeStateActions` bajo `LayoutEditModeProvider`
 - `runtime-state-form-lifecycle.test.tsx` — ciclo de vida del formulario: unmount/remount, `persistOnUnmount`, invalidación en page-entry y defaults dirigidos por query
 - `runtime-state-forms-queries.test.tsx` — form store y query state básicos: creación, actualización, reset, eliminación, selectors y defaults de feedback
+- `runtime-state-forms-scope-chain.test.tsx` — dominio `forms` del runtime keyed por scope-chain (T05, feature reusable-node-groups)
+- `runtime-state-forms-synthetic.test.tsx` — metadata sintética por campo del dominio `forms` en el reducer y facade `setFormFieldSynthetic` (scope-aware)
 - `runtime-state-global-preloads-init.test.tsx` — siembra inicial de `queries.*` desde el bloque raíz `preloads` con firma estable y sin sobrescribir `dataValues`
 - `runtime-state-i18n.test.tsx` — sub-estado `i18n` al crear el runtime state y su preservación frente a acciones del reducer
 - `runtime-state-modal.test.tsx` — estado del modal: apertura/cierre, regla uno a la vez, cierre por navegación o page-entry, identidad por iteración
@@ -196,6 +211,7 @@ Ficheros de apoyo, no son tests: `config-validation/helpers.ts`, `dev-runtime/lu
 - `runtime-file-manager-hook.test.tsx` — nodo `fileManager`: subida secuencial, validaciones, paginación, acciones Ver/Descargar/Eliminar y precarga
 - `runtime-file-manager-normalize-name.test.ts` — normalización de nombre de fichero (Windows, reservados, truncado, prefijo)
 - `runtime-file-manager-resolve-label.test.ts` — resolutor de labels del fileManager con interpolación de translations y placeholders locales
+- `runtime-form-steps-field-collection.test.tsx` — `collectResolvedFormFieldDefinitions` con tagging de `stepGroup`, e inicialización perezosa y submit de formularios con `steps`
 - `runtime-form-submit-autocomplete.test.tsx` — submit end-to-end de `autocomplete` simple y múltiple, incluida la omisión por campo oculto (`visibility`/`queryStateFeedback`)
 - `runtime-form-submit-empty-select-fallback.test.tsx` — submit end-to-end de select vacío con `emptySubmitValue` sin regresión sobre `required` ni `visibility`
 - `runtime-form-submit-file-input.test.tsx` — submit end-to-end de `fileInput` con serialización JSON+base64 y coexistencia con otros campos
@@ -214,12 +230,14 @@ Ficheros de apoyo, no son tests: `config-validation/helpers.ts`, `dev-runtime/lu
 - `runtime-grid-drop-zone-rects.test.ts` — geometría pura de zonas de inserción overlay en containers grid
 - `runtime-icon-node.test.tsx` — `IconNode`: resolución Pascal/kebab, aplicación de `className` y degradación silenciosa
 - `runtime-image-binary-fetch.test.ts` — `executeRuntimeBinaryFetch`: resolución de URL/headers/body y errores de red, HTTP y binario inválido
+- `runtime-instance-scope.test.ts` — helpers puros de `runtime-instance-scope` (derivación de clave de estado por scope-chain)
 - `runtime-layout-visibility.test.ts` — reglas de visibilidad por condición: operadores, referencias y semántica de ausencia
 - `runtime-lazy-node.test.tsx` — wrapper LazyNode con Suspense + error boundary y contención por instancia
 - `runtime-link-action-href.test.ts` — resolutor puro de `href` para acciones `navigateTo`/`goBack` sobre el hash del navegador
 - `runtime-link-download-action.test.tsx` — `link` con `action.type: downloadOperation`: disparo de descarga con `onSuccess`/`onError`, `aria-disabled` durante la petición (incluido guard contra doble click), ausencia de `href`, reflejo en `queries.{operationName}`, resolución de `item.*` en repeater y no regresión de `navigateTo`/`goBack`
 - `runtime-map-marker-sources.test.ts` — `resolveMapMarkerSourceItems`: resolución de colección dinámica a marcadores, degradación silenciosa ante posición inválida, label por interpolación o ruta relativa
 - `runtime-node-components-map.test.tsx` — mapa central de componentes de nodo: cobertura de claves y rama eager en tests
+- `runtime-node-styling-chart.test.ts` — helpers puros de estilo del nodo `chart`: clase de altura, color de serie, ciclo de colores de pie y catálogo de renderers por variante
 - `runtime-node-styling-gallery.test.ts` — helpers puros de estilo del nodo gallery: clases Tailwind de grid paginado, controles de paginación/carrusel/lightbox y placeholder vacío
 - `runtime-node-styling-map.test.ts` — helpers puros de estilo del nodo map: clase Tailwind de altura por variante y `divIcon` de marcador por color semántico
 - `runtime-node-styling.test.ts` — utilidades de estilo y clases Tailwind de nodos
@@ -232,6 +250,7 @@ Ficheros de apoyo, no son tests: `config-validation/helpers.ts`, `dev-runtime/lu
 - `runtime-search-trigger.test.tsx` — `useAutocompleteSearchTrigger`: gate por minChars, debounce a 300ms, requestParams/iterationContext, `lastFiredRequestSignature` y cleanup al desmontar
 - `runtime-shell-active-menu.test.ts` — función pura `computeActiveMenuItemIds` para marcar items activos del menú
 - `runtime-shell-active-sidebar.test.ts` — función pura `computeActiveSidebarItemIds` para marcar items activos y ancestros
+- `runtime-switch-control.test.tsx` — `SwitchControl`: render accesible y `checked` resuelto contra `row.*`
 - `runtime-table-processing.test.ts` — filtrado, ordenación y procesamiento local de tablas
 - `runtime-tokens-execute-refresh.test.ts` — `executeTokenRefresh`: éxito, extracción por `responsePath`, errores de red/HTTP y `errorCondition`
 - `runtime-tokens-scheduler.test.tsx` — `useRuntimeTokenScheduler`: primer ciclo, reintento inmediato, cleanup y múltiples tokens independientes
@@ -247,6 +266,7 @@ Ficheros de apoyo, no son tests: `config-validation/helpers.ts`, `dev-runtime/lu
 - `color-swatch-palette.test.ts` — catálogo puro de nombres semánticos y clases de las muestras de color
 - `condition-group-property-field.test.tsx` — widget aislado de condición/grupo de visibilidad con conmutación de forma y operadores
 - `dev-editor-floating-toolbar.test.tsx` — barra flotante del editor: selector de página, pestañas de dominio y toggles paleta/Monaco
+- `dev-editor-groups-canvas.test.tsx` — `DevEditorGroupsCanvas`: retargeting, contexto de grupo simulado y cambio de destino
 - `dev-editor-layer.test.tsx` — capa del editor: modos visual/editor, selección persistente y montaje de paneles flotantes
 - `dev-runtime-bundle.test.ts` — gate de producción que aísla el bundle del runtime de desarrollo
 - `dev-runtime-json-schema.test.ts` — generación del JSON Schema que alimenta al editor Monaco
@@ -258,6 +278,8 @@ Ficheros de apoyo, no son tests: `config-validation/helpers.ts`, `dev-runtime/lu
 - `floating-monaco-panel.test.tsx` — panel flotante que aloja Monaco con aplicar/copiar y errores de commit
 - `floating-node-palette.test.tsx` — panel flotante que aloja la paleta de nodos del canvas
 - `floating-selection-overlay.test.tsx` — overlay flotante con breadcrumb, propiedades y borrado del nodo seleccionado
+- `groups-config-panel-mutations.test.ts` — `applyGroupsMutation`/`commitGroupsMutation`: mutaciones puras y pipeline de commit del bloque `groups`
+- `groups-config-panel.test.tsx` — `GroupsConfigPanel` end-to-end: alta, listado, renombrado, params, borrado y selección/retargeting del canvas
 - `icon-picker-property-field.test.tsx` — cuadrícula paginada de selección de icono con filtro y teclado
 - `inject-condition-group-widget-sentinel.test.ts` — inyector del sentinel del widget de condición dentro del JSON Schema
 - `inject-navigate-params-widget-sentinel.test.ts` — inyector del sentinel del widget de `navigateTo.params` dentro del JSON Schema
