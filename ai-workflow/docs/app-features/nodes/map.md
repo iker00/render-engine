@@ -12,11 +12,12 @@ Nodo hoja que declara un mapa con centro, zoom y marcadores, renderizado sobre `
 
 | Prop | Tipo | Requerido | Descripción |
 |---|---|---|---|
-| `props.center` | `{ lat: number; lng: number }` | no | Centro inicial del mapa. `lat` en `[-90, 90]`, `lng` en `[-180, 180]`. |
-| `props.zoom` | `number` (entero) | no | Nivel de zoom inicial, entre `0` y `19` inclusive. |
+| `props.center` | `{ lat: number; lng: number }` | no | Centro inicial del mapa. `lat` en `[-90, 90]`, `lng` en `[-180, 180]`. Sin efecto si `props.autoFitMarkers: true`. |
+| `props.zoom` | `number` (entero) | no | Nivel de zoom inicial, entre `0` y `19` inclusive. Sin efecto si `props.autoFitMarkers: true` (salvo fallback con un único marcador o sin marcadores). |
 | `props.height` | `"sm" \| "md" \| "lg" \| "xl"` | no | Altura del contenedor del mapa. |
 | `props.markers` | `MapStaticMarker[]` | no | Marcadores estáticos. Se ignora si `props.markerSources` también está declarado. |
 | `props.markerSources` | `MapMarkerSource[]` | no | Marcadores derivados de una colección `queries.*`. Si está declarado, prevalece sobre `props.markers`. |
+| `props.autoFitMarkers` | `boolean` | no | Si es `true`, el mapa encuadra su vista inicial automáticamente para que todos los marcadores resueltos sean visibles. Ignorado si no hay marcadores. Ver "Ajuste automático de vista" abajo. |
 
 `props.markers[i]` (`MapStaticMarker`):
 
@@ -44,6 +45,7 @@ No admite `children` (nodo hoja): si el config declara `children` en un nodo `ma
 - Con `props.markers` declarado (incluido `[]`) y `props.markerSources` ausente: `markers` se conserva tal cual.
 - Con `props.markerSources` declarado (con o sin `props.markers` también declarado): se conserva `markerSources` con cada `source` ya normalizado por la misma validación de fuente de colección que usa `repeater`; `props.markers` queda `undefined` (se ignora), aunque el config lo hubiera declarado. `markerSources` prevalece siempre que esté presente.
 - `props.center`, `props.zoom` y `props.height` se copian tal cual si están presentes; esta tarea no aplica ningún valor por defecto (centro/zoom/altura por defecto se resuelven en el componente de render, no en la validación — mismo patrón que `divider` resolviendo su `variant` por defecto).
+- `props.autoFitMarkers` se copia tal cual si está presente. No interfiere con la normalización de otros props; su efecto (prioridad sobre `center`/`zoom`) se resuelve en el render, no en validación.
 
 ## Validación previa al render
 
@@ -56,6 +58,8 @@ No admite `children` (nodo hoja): si el config declara `children` en un nodo `ma
 - `props.markerSources[i].label` vacío o inválido (ni ruta relativa ni interpolación): `invalid-layout` sobre `{path}.props.markerSources[i].label`.
 - `props.markerSources[i].color` fuera de la paleta semántica de seis colores: `invalid-layout` sobre `{path}.props.markerSources[i].color`.
 - `props.markers` y `props.markerSources` declarados a la vez: **no se rechaza**; `markerSources` prevalece y `markers` se descarta en la normalización (ver "Normalización" arriba).
+- `props.autoFitMarkers` no es `boolean` (cuando está presente): `invalid-layout` sobre `{path}.props.autoFitMarkers`.
+- `props.autoFitMarkers: true` declarado a la vez que `props.center` y/o `props.zoom`: **no se rechaza**; el ajuste automático prevalece en render y `center`/`zoom` sirven como fallback (ver "Ajuste automático de vista" abajo).
 - `children` declarado: `invalid-layout` sobre `{path}.children`.
 - `visibility` y `queryStateFeedback` siguen el contrato transversal estándar.
 
@@ -68,10 +72,28 @@ No admite `children` (nodo hoja): si el config declara `children` en un nodo `ma
 - Resuelve `label` con interpolación `{{...}}` (usando el item como `iterationContext`) si contiene delimitadores, o como ruta relativa simple en caso contrario. Si `label` no resuelve a texto (ruta relativa ausente o no escalar), el item se omite igual que si la posición fuera inválida; la interpolación siempre produce un string (degrada a `''` igual que el resto de superficies de texto del runtime), por lo que nunca omite el marcador por esta vía.
 - Es una función pura: no muta la colección de entrada ni el estado; llamadas repetidas con el mismo estado devuelven resultados equivalentes.
 
+## Ajuste automático de vista (`props.autoFitMarkers`)
+
+Cuando `props.autoFitMarkers: true`, el mapa calcula su centro y zoom iniciales automáticamente a partir de los marcadores resueltos en el primer render. Este cálculo prevalece sobre `props.center` y `props.zoom` declarados.
+
+**Comportamiento según el número de marcadores resueltos:**
+
+- **Cero marcadores** (sin `props.markers` ni `props.markerSources`, o colección vacía): se usa `props.center` si está declarado, o si no el centro por defecto (Pamplona `{ lat: 42.8125, lng: -1.6458 }`) y zoom `13`.
+- **Un único marcador**: se centra el mapa en ese punto, usando `props.zoom` si está declarado o zoom `13` en caso contrario.
+- **Dos o más marcadores**: se calcula un encuadre rectangular que contiene a todos ellos, y se aplica ese encuadre como vista inicial (los marcadores quedan visibles sin excepción dentro del viewport, al máximo zoom que permite Leaflet en ese rango).
+- **Marcadores con coordenadas idénticas** (dos o más puntos con la misma `lat`/`lng`): se trata como el caso de un único marcador, centrando en ese punto con `props.zoom` si está declarado o `13` en caso contrario.
+
+**Reactividad:**
+
+- El ajuste se calcula una sola vez, en el primer render del nodo. Si `props.markerSources` resuelve nuevos items después de ese primer render (por ejemplo, porque una query estaba en curso), esos marcadores nuevos se renderizan en el mapa pero **no recalculan ni mueven** el centro/zoom. Este comportamiento es consistente con cómo funciona hoy la resolución de `center`/`zoom` manual.
+
 ## Render (`MapNode`, `src/runtime/nodes/map-layout-node.tsx`)
 
 - Valores por defecto cuando no se declaran: `center` = Pamplona (`{ lat: 42.8125, lng: -1.6458 }`), `zoom` = `13`, `height` = `md` (clase `h-80`, ver `getMapHeightClassName` en `runtime-node-styling-map.ts`).
-- Se renderiza `<MapContainer center={[lat,lng]} zoom={zoom} className="w-full {heightClass}">` con un `<TileLayer>` de OpenStreetMap (`https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png`).
+- **Resolución de la vista inicial**: 
+  - Si `props.autoFitMarkers: true`, se calcula mediante `resolveMapInitialView` (en `src/runtime/runtime-map-auto-fit.ts`) a partir de los marcadores resueltos y el fallback `{ center: props.center ?? Pamplona, zoom: props.zoom ?? 13 }` (ver sección "Ajuste automático de vista"). El resultado es una vista inicial en modo `center`/`zoom` o `bounds` (encuadre rectangular).
+  - Si `props.autoFitMarkers` no está presente o es `false`, la vista se aplica en modo `center`/`zoom` usando directamente `props.center` (o Pamplona) y `props.zoom` (o 13).
+- Se renderiza `<MapContainer>` aplicando la vista inicial (bien sea `center={[lat,lng]} zoom={zoom}` o `bounds={[[south,west],[north,east]]}`) junto con `className="w-full {heightClass}"` y un `<TileLayer>` de OpenStreetMap (`https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png`).
 - **Modo estático** (`props.markers` declarado, `props.markerSources` ausente): un `<Marker>` por entrada de `props.markers`, todos con icono de color fijo `primary` (`getMapMarkerIcon('primary')` en `runtime-node-styling-map.ts`) — una sola fuente de marcadores no necesita distinguir color.
 - **Modo dinámico** (`props.markerSources` declarado): un bloque de marcadores por cada `MapMarkerSource`, resuelto con `resolveMapMarkerSourceItems(source, state, { iterationContext })` (T2). El color efectivo de cada fuente es `source.color` si está declarado, o si no el siguiente de una paleta cíclica de seis colores semánticos en orden `['primary', 'success', 'warning', 'danger', 'info', 'neutral']` indexada por la posición de la fuente en `props.markerSources` (una fuente con `color` explícito no consume ni desplaza el ciclo de las demás).
 - Cada marcador (estático o dinámico) incluye un `<Popup>{label}</Popup>` hijo que se muestra al pulsar el marcador. No se declara ningún `eventHandlers`: pulsar un marcador solo abre su popup nativo de Leaflet, sin disparar ninguna acción del catálogo (navegación, apertura de modal, ejecución de operación).
