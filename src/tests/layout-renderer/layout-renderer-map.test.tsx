@@ -14,10 +14,11 @@ type AnyProps = Record<string, any>
 // jsdom does not implement, so it's replaced here with lightweight test doubles that
 // expose the relevant props as data-* attributes for assertions.
 vi.mock('react-leaflet', () => ({
-  MapContainer: ({ center, zoom, className, children }: AnyProps) => (
+  MapContainer: ({ center, zoom, bounds, className, children }: AnyProps) => (
     <div
       data-testid="map-container"
-      data-center={JSON.stringify(center)}
+      data-center={center ? JSON.stringify(center) : undefined}
+      data-bounds={bounds ? JSON.stringify(bounds) : undefined}
       data-zoom={zoom}
       className={className}
     >
@@ -481,5 +482,370 @@ describe('MapNode — transversal features (via LayoutNodeRenderer)', () => {
     const spanWrapper = container.querySelector('.col-span-4')
     expect(spanWrapper).toBeInTheDocument()
     expect(spanWrapper!.querySelector('[data-testid="map-container"]')).toBeInTheDocument()
+  })
+})
+
+describe('MapNode — automatic view adjustment (props.autoFitMarkers)', () => {
+  it('keeps the default center/zoom and no bounds when autoFitMarkers is not declared', () => {
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [
+        {
+          type: 'map',
+          props: {
+            markers: [
+              { lat: 1, lng: 2, label: 'A' },
+              { lat: 3, lng: 4, label: 'B' },
+            ],
+          },
+        },
+      ],
+    }
+    renderRuntimePage(page)
+    const mapContainer = screen.getByTestId('map-container')
+    expect(JSON.parse(mapContainer.dataset.center!)).toEqual([42.8125, -1.6458])
+    expect(mapContainer.dataset.zoom).toBe('13')
+    expect(mapContainer.dataset.bounds).toBeUndefined()
+  })
+
+  it('keeps the default center/zoom and no bounds when autoFitMarkers is false', () => {
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [
+        {
+          type: 'map',
+          props: {
+            autoFitMarkers: false,
+            markers: [
+              { lat: 1, lng: 2, label: 'A' },
+              { lat: 3, lng: 4, label: 'B' },
+            ],
+          },
+        },
+      ],
+    }
+    renderRuntimePage(page)
+    const mapContainer = screen.getByTestId('map-container')
+    expect(JSON.parse(mapContainer.dataset.center!)).toEqual([42.8125, -1.6458])
+    expect(mapContainer.dataset.zoom).toBe('13')
+    expect(mapContainer.dataset.bounds).toBeUndefined()
+  })
+
+  it('fits bounds to scattered markers and omits center when autoFitMarkers is true', () => {
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [
+        {
+          type: 'map',
+          props: {
+            autoFitMarkers: true,
+            markers: [
+              { lat: 1, lng: 2, label: 'Marker A' },
+              { lat: 5, lng: -3, label: 'Marker B' },
+            ],
+          },
+        },
+      ],
+    }
+    renderRuntimePage(page)
+    const mapContainer = screen.getByTestId('map-container')
+    expect(JSON.parse(mapContainer.dataset.bounds!)).toEqual([
+      [1, -3],
+      [5, 2],
+    ])
+    expect(mapContainer.dataset.center).toBeUndefined()
+    const markers = screen.getAllByTestId('marker')
+    expect(markers).toHaveLength(2)
+    expect(screen.getByText('Marker A')).toBeInTheDocument()
+    expect(screen.getByText('Marker B')).toBeInTheDocument()
+  })
+
+  it('fits bounds and ignores declared center/zoom when autoFitMarkers is true with several markers', () => {
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [
+        {
+          type: 'map',
+          props: {
+            autoFitMarkers: true,
+            center: { lat: 40.4168, lng: -3.7038 },
+            zoom: 9,
+            markers: [
+              { lat: 1, lng: 2, label: 'Marker A' },
+              { lat: 5, lng: -3, label: 'Marker B' },
+            ],
+          },
+        },
+      ],
+    }
+    renderRuntimePage(page)
+    const mapContainer = screen.getByTestId('map-container')
+    expect(JSON.parse(mapContainer.dataset.bounds!)).toEqual([
+      [1, -3],
+      [5, 2],
+    ])
+    expect(mapContainer.dataset.center).toBeUndefined()
+  })
+
+  it('centers on the single marker position with the declared zoom when autoFitMarkers is true', () => {
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [
+        {
+          type: 'map',
+          props: {
+            autoFitMarkers: true,
+            zoom: 7,
+            markers: [{ lat: 10, lng: 20, label: 'Only marker' }],
+          },
+        },
+      ],
+    }
+    renderRuntimePage(page)
+    const mapContainer = screen.getByTestId('map-container')
+    expect(JSON.parse(mapContainer.dataset.center!)).toEqual([10, 20])
+    expect(mapContainer.dataset.zoom).toBe('7')
+    expect(mapContainer.dataset.bounds).toBeUndefined()
+  })
+
+  it('centers on the single marker position with zoom 13 when props.zoom is not declared', () => {
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [
+        {
+          type: 'map',
+          props: {
+            autoFitMarkers: true,
+            markers: [{ lat: 10, lng: 20, label: 'Only marker' }],
+          },
+        },
+      ],
+    }
+    renderRuntimePage(page)
+    const mapContainer = screen.getByTestId('map-container')
+    expect(JSON.parse(mapContainer.dataset.center!)).toEqual([10, 20])
+    expect(mapContainer.dataset.zoom).toBe('13')
+  })
+
+  it('centers on the shared point and omits bounds when all markers share identical coordinates', () => {
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [
+        {
+          type: 'map',
+          props: {
+            autoFitMarkers: true,
+            markers: [
+              { lat: 10, lng: 20, label: 'Marker A' },
+              { lat: 10, lng: 20, label: 'Marker B' },
+            ],
+          },
+        },
+      ],
+    }
+    renderRuntimePage(page)
+    const mapContainer = screen.getByTestId('map-container')
+    expect(JSON.parse(mapContainer.dataset.center!)).toEqual([10, 20])
+    expect(mapContainer.dataset.bounds).toBeUndefined()
+  })
+
+  it('falls back to the declared center/zoom when autoFitMarkers is true and markers is empty', () => {
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [
+        {
+          type: 'map',
+          props: {
+            autoFitMarkers: true,
+            center: { lat: 40.4168, lng: -3.7038 },
+            zoom: 9,
+            markers: [],
+          },
+        },
+      ],
+    }
+    renderRuntimePage(page)
+    const mapContainer = screen.getByTestId('map-container')
+    expect(JSON.parse(mapContainer.dataset.center!)).toEqual([40.4168, -3.7038])
+    expect(mapContainer.dataset.zoom).toBe('9')
+    expect(mapContainer.dataset.bounds).toBeUndefined()
+  })
+
+  it('falls back to the default center/zoom when autoFitMarkers is true and there are no markers or markerSources', () => {
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [{ type: 'map', props: { autoFitMarkers: true } }],
+    }
+    renderRuntimePage(page)
+    const mapContainer = screen.getByTestId('map-container')
+    expect(JSON.parse(mapContainer.dataset.center!)).toEqual([42.8125, -1.6458])
+    expect(mapContainer.dataset.zoom).toBe('13')
+    expect(mapContainer.dataset.bounds).toBeUndefined()
+  })
+
+  it('fits bounds to the markerSources items already resolved on first render, ignoring declared center/zoom', () => {
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [
+        {
+          type: 'map',
+          props: {
+            autoFitMarkers: true,
+            center: { lat: 40.4168, lng: -3.7038 },
+            zoom: 9,
+            markerSources: [
+              { source: 'queries.venues.data', position: { lat: 'lat', lng: 'lng' }, label: 'name' },
+            ],
+          },
+        },
+      ],
+    }
+    const state = createRuntimePageState(page, {
+      venues: {
+        status: 'success',
+        data: [
+          { name: 'Venue A', lat: 1, lng: 2 },
+          { name: 'Venue B', lat: 5, lng: -3 },
+        ],
+        requestedAt: 0,
+        resolvedAt: 0,
+        error: null,
+      },
+    })
+    renderRuntimePageWithState(page, state)
+    const mapContainer = screen.getByTestId('map-container')
+    expect(JSON.parse(mapContainer.dataset.bounds!)).toEqual([
+      [1, -3],
+      [5, 2],
+    ])
+    expect(mapContainer.dataset.center).toBeUndefined()
+  })
+
+  it('falls back to the declared center/zoom when markerSources resolves an empty collection on first render', () => {
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [
+        {
+          type: 'map',
+          props: {
+            autoFitMarkers: true,
+            center: { lat: 40.4168, lng: -3.7038 },
+            zoom: 9,
+            markerSources: [
+              { source: 'queries.venues.data', position: { lat: 'lat', lng: 'lng' }, label: 'name' },
+            ],
+          },
+        },
+      ],
+    }
+    const state = createRuntimePageState(page, {
+      venues: {
+        status: 'success',
+        data: [],
+        requestedAt: 0,
+        resolvedAt: 0,
+        error: null,
+      },
+    })
+    renderRuntimePageWithState(page, state)
+    const mapContainer = screen.getByTestId('map-container')
+    expect(JSON.parse(mapContainer.dataset.center!)).toEqual([40.4168, -3.7038])
+    expect(mapContainer.dataset.zoom).toBe('9')
+    expect(mapContainer.dataset.bounds).toBeUndefined()
+  })
+
+  it('keeps the first-render bounds unchanged when a later re-render resolves more markerSources items', () => {
+    const page: RuntimePageConfig = {
+      id: 'home',
+      layout: [
+        {
+          type: 'map',
+          props: {
+            autoFitMarkers: true,
+            markerSources: [
+              { source: 'queries.venues.data', position: { lat: 'lat', lng: 'lng' }, label: 'name' },
+            ],
+          },
+        },
+      ],
+    }
+    const initialState = createRuntimePageState(page, {
+      venues: {
+        status: 'success',
+        data: [
+          { name: 'Venue A', lat: 1, lng: 2 },
+          { name: 'Venue B', lat: 5, lng: -3 },
+        ],
+        requestedAt: 0,
+        resolvedAt: 0,
+        error: null,
+      },
+    })
+    const config: RuntimeConfig = {
+      api: {},
+      initialPage: page.id,
+      pages: [page],
+    }
+    const dispatch = vi.fn<(action: RuntimeStateAction) => void>()
+    const dispatchAndSyncState = vi.fn<(action: RuntimeStateAction) => void>()
+
+    const { rerender } = render(
+      <RuntimeStateContext.Provider
+        value={{
+          config,
+          initialState,
+          state: initialState,
+          dispatch,
+          dispatchAndSyncState,
+          getLatestState: () => initialState,
+        }}
+      >
+        <RuntimePage />
+      </RuntimeStateContext.Provider>,
+    )
+
+    const mapContainer = screen.getByTestId('map-container')
+    const firstBounds = mapContainer.dataset.bounds
+    expect(JSON.parse(firstBounds!)).toEqual([
+      [1, -3],
+      [5, 2],
+    ])
+    expect(screen.getAllByTestId('marker')).toHaveLength(2)
+
+    const updatedState: RuntimeState = {
+      ...initialState,
+      queries: {
+        venues: {
+          status: 'success',
+          data: [
+            { name: 'Venue A', lat: 1, lng: 2 },
+            { name: 'Venue B', lat: 5, lng: -3 },
+            { name: 'Venue C', lat: 9, lng: 9 },
+          ],
+          requestedAt: 0,
+          resolvedAt: 0,
+          error: null,
+        },
+      },
+    }
+
+    rerender(
+      <RuntimeStateContext.Provider
+        value={{
+          config,
+          initialState: updatedState,
+          state: updatedState,
+          dispatch,
+          dispatchAndSyncState,
+          getLatestState: () => updatedState,
+        }}
+      >
+        <RuntimePage />
+      </RuntimeStateContext.Provider>,
+    )
+
+    expect(screen.getByTestId('map-container').dataset.bounds).toBe(firstBounds)
+    expect(screen.getAllByTestId('marker')).toHaveLength(3)
+    expect(screen.getByText('Venue C')).toBeInTheDocument()
   })
 })
