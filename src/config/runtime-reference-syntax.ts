@@ -48,17 +48,20 @@ export interface RuntimeInvalidReference {
 
 const SUPPORTED_NAMESPACES = new Set(['forms', 'queries', 'params', 'group', 't', 'tokens'] as const)
 const RESERVED_NAMESPACES = new Set(['navigation', 'routeParams'] as const)
-const REFERENCE_PATTERN = /^(item|row|switch|forms|queries|navigation|routeParams|params|group|t|tokens)(\.[A-Za-z0-9_-]+)*$/
+const REFERENCE_PATTERN = /^(item|row|switch|forms|queries|navigation|routeParams|params|group|t|tokens)(\.[A-Za-z0-9_-]+|\.\$lat|\.\$lng)*$/
 const REFERENCE_SEGMENT_PATTERN = /^[A-Za-z0-9_-]+$/
 const ITEM_KEY_SYNTHETIC_SEGMENT = '$key'
 const ITEM_INDEX_SYNTHETIC_SEGMENT = '$index'
 const ROW_INDEX_SYNTHETIC_SEGMENT = '$index'
 const SWITCH_NEXT_SYNTHETIC_SEGMENT = 'next'
+const FORM_LAT_SYNTHETIC_SEGMENT = '$lat'
+const FORM_LNG_SYNTHETIC_SEGMENT = '$lng'
 
 interface ParseRuntimeReferenceOptions {
   allowItemReference?: boolean
   allowRowReference?: boolean
   allowSwitchNextReference?: boolean
+  allowFormCoordinateReference?: boolean
 }
 
 export function parseRuntimeReference(value: string, options: ParseRuntimeReferenceOptions = {}): RuntimeReferenceParseResult {
@@ -79,7 +82,7 @@ export function parseRuntimeReference(value: string, options: ParseRuntimeRefere
   const parts = value.split('.')
   const [namespace, ...path] = parts as [RuntimeReferenceNamespace, ...string[]]
 
-  if (!hasValidReferenceShape(namespace, path)) {
+  if (!hasValidReferenceShape(namespace, path, options)) {
     return createInvalidReference(namespace, path, value)
   }
 
@@ -199,7 +202,7 @@ function hasRecognizedNamespace(value: string): boolean {
   )
 }
 
-function hasValidReferenceShape(namespace: RuntimeReferenceNamespace, path: string[]) {
+function hasValidReferenceShape(namespace: RuntimeReferenceNamespace, path: string[], options: ParseRuntimeReferenceOptions) {
   if (namespace === 'item' && path.length === 1 && (path[0] === ITEM_KEY_SYNTHETIC_SEGMENT || path[0] === ITEM_INDEX_SYNTHETIC_SEGMENT)) {
     return true
   }
@@ -209,6 +212,15 @@ function hasValidReferenceShape(namespace: RuntimeReferenceNamespace, path: stri
   }
 
   if (namespace === 'switch' && path.length === 1 && path[0] === SWITCH_NEXT_SYNTHETIC_SEGMENT) {
+    return true
+  }
+
+  if (
+    namespace === 'forms' &&
+    path.length === 3 &&
+    (path[2] === FORM_LAT_SYNTHETIC_SEGMENT || path[2] === FORM_LNG_SYNTHETIC_SEGMENT) &&
+    options.allowFormCoordinateReference
+  ) {
     return true
   }
 
