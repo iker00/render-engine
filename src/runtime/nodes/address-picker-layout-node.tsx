@@ -14,10 +14,12 @@ import {
   getFieldErrorClassName,
   getFieldLabelClassName,
   getFieldWrapperClassName,
+  getSecondaryButtonNodeClassName,
 } from '../runtime-node-styling'
 import { getValidationErrorForEditedField } from '../runtime-form-validations'
 import { getMapMarkerIcon } from '../runtime-node-styling-map'
 import { useAddressGeocodeTrigger } from '../runtime-geocode-trigger'
+import { useBrowserGeolocation } from '../use-browser-geolocation'
 import { useRuntimeState, useRuntimeStateActions } from '../runtime-state/use-runtime-state'
 import { selectFormFieldState, selectQueryState } from '../runtime-state/runtime-state-selectors'
 import { MapShell } from './map-shell'
@@ -95,6 +97,19 @@ export function AddressPickerNode({ node, iterationContext }: AddressPickerNodeP
   const lng = typeof synthetic?.lng === 'number' ? synthetic.lng : null
   const position = lat !== null && lng !== null ? { lat, lng } : null
 
+  // Único punto de escritura de coordenadas del nodo (T7): el click del mapa y el botón de
+  // geolocalización (T9) las fijan aquí, y solo aquí. T8 cuelga el disparo de geocodificación de
+  // esta misma función (vía `useAddressGeocodeTrigger`, reaccionando al cambio de `position`);
+  // ningún otro camino debe escribir `synthetic.lat/lng`.
+  const applyMarkerPosition = (nextPosition: { lat: number; lng: number }) => {
+    if (!formContext) {
+      return
+    }
+    setFormFieldSynthetic(formContext.formId, node.props.fieldId, nextPosition, {
+      scopeChain: formContext.scopeChain,
+    })
+  }
+
   const geocodeQueryState = selectQueryState(state, node.props.geocodeOperation)
   const { status: geocodeStatus, lastFiredRequestSignature: geocodeRequestSignature } = useAddressGeocodeTrigger({
     operationName: node.props.geocodeOperation,
@@ -130,6 +145,24 @@ export function AddressPickerNode({ node, iterationContext }: AddressPickerNodeP
     // eslint-disable-next-line react-hooks/exhaustive-deps -- formContext/setFormFieldValue/node.props se comparan por referencia como en runtime-search-trigger.ts; el efecto sólo debe reaccionar a que el resultado de geocodeOperation pase a success con una firma fresca
   }, [isGeocodeResultFresh, geocodeQueryState?.status, geocodeAddressText])
 
+  const {
+    request: requestBrowserGeolocation,
+    status: geolocationStatus,
+    position: geolocationPosition,
+  } = useBrowserGeolocation()
+
+  // El botón entrega la posición al único punto interno de cambio de marcador (T7) reaccionando a
+  // que `geolocationPosition` cambie por valor; nunca llama a `executeQueryOperation` ni escribe
+  // coordenadas por un camino propio (requisito 7 de la spec) — el disparo de T8 sigue colgado
+  // exclusivamente de `applyMarkerPosition`.
+  useEffect(() => {
+    if (geolocationPosition === null) {
+      return
+    }
+    applyMarkerPosition(geolocationPosition)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- applyMarkerPosition/formContext se comparan por referencia como en el resto del fichero; el efecto sólo debe reaccionar a que la posición entregada por el hook de geolocalización cambie por valor
+  }, [geolocationPosition?.lat, geolocationPosition?.lng])
+
   if (!formContext) {
     return null
   }
@@ -157,14 +190,7 @@ export function AddressPickerNode({ node, iterationContext }: AddressPickerNodeP
         : null
     : null
   const displayError = validationError ?? geocodeErrorMessage
-
-  // Único punto de escritura de coordenadas del nodo (T7): el click del mapa las fija aquí. T8
-  // cuelga el disparo de geocodificación de esta misma función (vía `useAddressGeocodeTrigger`,
-  // reaccionando al cambio de `position`) y T9 le entregará las coordenadas de geolocalización;
-  // ningún otro camino debe escribir `synthetic.lat/lng`.
-  const applyMarkerPosition = (nextPosition: { lat: number; lng: number }) => {
-    setFormFieldSynthetic(formId, fieldId, nextPosition, { scopeChain: formContext.scopeChain })
-  }
+  const isRequestingGeolocation = geolocationStatus === 'requesting'
 
   const inputId = `${formId}-${fieldId}`
 
@@ -212,6 +238,20 @@ export function AddressPickerNode({ node, iterationContext }: AddressPickerNodeP
       {displayError ? (
         <span id={`${inputId}-error`} className={getFieldErrorClassName()}>
           {displayError}
+        </span>
+      ) : null}
+      <button
+        type="button"
+        className={getSecondaryButtonNodeClassName()}
+        onClick={requestBrowserGeolocation}
+        disabled={isRequestingGeolocation}
+        aria-busy={isRequestingGeolocation}
+      >
+        Use my location
+      </button>
+      {geolocationStatus === 'error' ? (
+        <span role="alert" className={getFieldErrorClassName()}>
+          Could not get your location.
         </span>
       ) : null}
     </div>

@@ -74,7 +74,23 @@ vi.mock('react-leaflet', () => {
 
 afterEach(() => {
   vi.unstubAllGlobals()
+  Reflect.deleteProperty(globalThis.navigator, 'geolocation')
 })
+
+// Same in-test-file stubbing strategy as `runtime-browser-geolocation.test.tsx`: replace
+// `navigator.geolocation` locally per test, restored by the `afterEach` above — no permanent mock
+// in `src/tests/setup.ts`.
+function stubGeolocation(
+  implementation: (
+    success: (position: { coords: { latitude: number; longitude: number } }) => void,
+    error?: (err: { code: number }) => void,
+  ) => void,
+) {
+  Object.defineProperty(globalThis.navigator, 'geolocation', {
+    configurable: true,
+    value: { getCurrentPosition: vi.fn(implementation) },
+  })
+}
 
 function renderRuntimePage(activePage: RuntimePageConfig, api: RuntimeConfig['api'] = {}) {
   const config: RuntimeConfig = {
@@ -579,5 +595,99 @@ describe('addressPicker layout node — coordinates in payload while hidden', ()
 
     await new Promise((resolve) => setTimeout(resolve, 0))
     expect(fetchMock).not.toHaveBeenCalled()
+  })
+})
+
+describe('addressPicker layout node — browser geolocation button', () => {
+  it('renders a geolocation button with accessible text, locatable by role and name', () => {
+    renderRuntimePage(buildPage())
+
+    expect(screen.getByRole('button', { name: 'Use my location' })).toBeInTheDocument()
+  })
+
+  it('with permission granted, places the marker at the returned position and triggers the same geocode operation as a map click', async () => {
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(createJsonResponse({ results: [{ formatted: 'Calle Mayor 1' }] }))
+    vi.stubGlobal('fetch', fetchMock)
+    stubGeolocation((success) => success({ coords: { latitude: 41.1, longitude: -3.1 } }))
+
+    renderRuntimePage(buildPage(), geocodeApi)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Use my location' }))
+
+    const marker = await screen.findByTestId('marker')
+    expect(marker.dataset.lat).toBe('41.1')
+    expect(marker.dataset.lng).toBe('-3.1')
+
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toEqual({ lat: 41.1, lng: -3.1 })
+    await waitFor(() => expect(screen.getByLabelText('Address')).toHaveValue('Calle Mayor 1'))
+  })
+
+  it('with permission denied, shows an inline error next to the button without blocking the form, and a later map click still triggers geocoding', async () => {
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(createJsonResponse({ results: [{ formatted: 'Calle Mayor 1' }] }))
+    vi.stubGlobal('fetch', fetchMock)
+    stubGeolocation((_success, error) => error?.({ code: 1 }))
+
+    renderRuntimePage(buildPage(), geocodeApi)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Use my location' }))
+
+    expect(await screen.findByRole('alert')).toBeInTheDocument()
+    expect(fetchMock).not.toHaveBeenCalled()
+
+    fireEvent.change(screen.getByLabelText('Address'), { target: { value: 'still usable' } })
+    expect(screen.getByLabelText('Address')).toHaveValue('still usable')
+
+    fireEvent.click(screen.getByTestId('map-container'), { clientX: 10, clientY: 20 })
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+  })
+
+  it('with navigator.geolocation absent, the observable behavior matches permission denied', async () => {
+    renderRuntimePage(buildPage(), geocodeApi)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Use my location' }))
+
+    expect(await screen.findByRole('alert')).toBeInTheDocument()
+    expect(screen.queryByTestId('marker')).not.toBeInTheDocument()
+  })
+
+  it('fires the geocode operation exactly once per successful button use', async () => {
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(createJsonResponse({ results: [{ formatted: 'Calle Mayor 1' }] }))
+    vi.stubGlobal('fetch', fetchMock)
+    stubGeolocation((success) => success({ coords: { latitude: 41.1, longitude: -3.1 } }))
+
+    renderRuntimePage(buildPage(), geocodeApi)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Use my location' }))
+
+    await waitFor(() => expect(screen.getByLabelText('Address')).toHaveValue('Calle Mayor 1'))
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('using the button after a map click moves the marker to the new point and applies the address of the last origin, without mixing results', async () => {
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(createJsonResponse({ results: [{ formatted: 'Click address' }] }))
+      .mockResolvedValueOnce(createJsonResponse({ results: [{ formatted: 'Geolocation address' }] }))
+    vi.stubGlobal('fetch', fetchMock)
+    stubGeolocation((success) => success({ coords: { latitude: 50, longitude: 60 } }))
+
+    renderRuntimePage(buildPage(), geocodeApi)
+
+    fireEvent.click(screen.getByTestId('map-container'), { clientX: 10, clientY: 20 })
+    await waitFor(() => expect(screen.getByLabelText('Address')).toHaveValue('Click address'))
+
+    fireEvent.click(screen.getByRole('button', { name: 'Use my location' }))
+
+    await waitFor(() => expect(screen.getByLabelText('Address')).toHaveValue('Geolocation address'))
+    const marker = screen.getByTestId('marker')
+    expect(marker.dataset.lat).toBe('50')
+    expect(marker.dataset.lng).toBe('60')
   })
 })
