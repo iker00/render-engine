@@ -24,6 +24,7 @@ import { validateTokensConfig } from './validate-tokens-config'
 import { validateShellConfig } from './validate-shell'
 import { validateGroupsConfig } from './validate-groups'
 import { validateRowVisibilityScope } from './validate-row-visibility-scope'
+import { validateAddressPickerReferences } from './validate-address-picker-references'
 import type { BreadcrumbSegment } from './validation-breadcrumb'
 import { buildBreadcrumbSegmentFromNode, enrichedInvalidLayoutFromNode } from './validation-breadcrumb'
 import { computeModalRepeaterOwnership } from './runtime-modal-repeater-ownership'
@@ -255,6 +256,12 @@ export function validateRuntimeConfig(rawConfig: unknown): RuntimeConfigValidati
 
   if (rowVisibilityScopeError) {
     return rowVisibilityScopeError
+  }
+
+  const addressPickerReferencesError = validateAddressPickerReferences(config)
+
+  if (addressPickerReferencesError) {
+    return addressPickerReferencesError
   }
 
   const groupsResult = validateGroupsConfig(rawConfig, config.pages)
