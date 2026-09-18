@@ -119,6 +119,12 @@ La suite completa de tests y el gate de cobertura los ejecuta el orquestador al 
 
 En ambos casos, poblar `blocker_reason` con el motivo concreto y devolver el JSON.
 
+## Si te retoman tras una revisión
+
+Un mensaje posterior en esta misma conversación puede traerte hallazgos de `review-task` sobre lo que acabas de implementar, no una tarea nueva. Corrígelos con el mismo enfoque tests-first: si un hallazgo señala un caso sin cubrir, el test que lo demuestre en rojo va antes que el cambio de implementación. No hace falta releer el contexto compartido ni el bloque de tarea: siguen siendo los mismos del lanzamiento original.
+
+Si algún hallazgo pide un cambio de alcance que tu tarea no contemplaba, o no estás de acuerdo con él, dilo con `status: "blocked"` y el motivo en `blocker_reason` — no lo apliques a ciegas ni lo ignores en silencio. Antes de responder, vuelve a dejar en verde tus tests propios: el hook de cierre repetirá lint y tipos igual que en tu primera pasada. Tu respuesta sigue siendo únicamente el JSON de "Salida obligatoria", sin confirmar que has leído los hallazgos ni prosa adicional.
+
 ## Salida obligatoria
 
 Tu texto final debe ser **únicamente** el JSON estructurado, sin prosa, sin envoltorios, sin marca de código. Estructura exacta:

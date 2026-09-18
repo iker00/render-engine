@@ -2,7 +2,7 @@
 name: implement-task-test-first
 description: Implementa las tareas planificadas de una feature de este proyecto orquestando un subagente con contexto limpio por cada tarea. Úsala cuando `spec.md` y `tasks.md` ya existan y el objetivo sea ejecutar tareas de código de forma segura con enfoque tests-first, dejando la actualización documental amplia para una skill posterior.
 model: sonnet
-allowed-tools: Read, Edit, Bash, Agent
+allowed-tools: Read, Edit, Bash, Agent, SendMessage
 ---
 
 # Implementar tareas con enfoque tests-first
@@ -45,15 +45,17 @@ Si el paso 2 falla, detenerse sin lanzar ningún subagente. La respuesta final d
 
 ## Contexto compartido y validación: automáticos
 
-El orquestador **no** prepara contexto ni ejecuta validaciones por tarea. De eso se encargan la definición del agente y dos hooks registrados en `.claude/settings.json` con matcher `implement-task`:
+El orquestador **no** prepara contexto ni ejecuta validaciones por tarea, ni tampoco arma el contexto de la revisión de cada tarea. De eso se encargan la definición de los agentes y los hooks registrados en `.claude/settings.json` con matcher `implement-task` y `review-task`:
 
 - **System prompt del agente**: `ai-workflow/agents/implement-task.md` contiene solo el contrato de implementación. Es un fichero escrito a mano; ningún script lo genera ni lo modifica.
 - **`SubagentStart` → `hooks/load-context.js`**: concatena los standards del proyecto y las docs estables (`conventions.md`, `architecture.md`, `test-index.md`) en `.subagent-context.md`, extrae de `tasks.md` el bloque de `implementation.in_progress_task_id` de la feature activa en `.subagent-task.md` (ambos gitignored), y le pasa al subagente **las rutas**, no el contenido. El subagente los carga con dos llamadas a `Read`. Si no hay feature activa o tarea en curso, se lo dice y el subagente devuelve `blocked`.
 - **`SubagentStop` → `hooks/validate.js`**: antes de dejar cerrar cada tarea ejecuta `pnpm lint`, `tsc --noEmit` sobre ambos tsconfig y, si la tarea tocó `src/tests/`, `check-test-index.js`. Si algo falla, impide que el subagente termine y le devuelve el error para que lo corrija, con un máximo de 3 intentos.
+- **`SubagentStart` → `hooks/review-task-context.js`**: entrega a `review-task` las rutas del bloque de la tarea, el `git diff` sin commitear y el informe del implementador (`.task-report.json`), todo gitignored igual que el contexto de `implement-task`.
+- **`SubagentStop` → `hooks/count-review.js`**: incrementa `implementation.review_revisions` cada vez que `review-task` termina, sin mirar su veredicto. Es el contador que usa el orquestador para decidir si retoma al implementador o trata la tarea como bloqueada — ver "Ciclo de revisión de la tarea".
 
 Por qué la ruta y no el texto: Claude Code trunca la salida de un hook a partir de ~10KB y descarga el resto a disco, así que el contenido inyectado directamente llegaría como preview. La ruta ocupa ~460 bytes y el fichero (~60KB, ~870 líneas) entra entero en una sola lectura, por debajo del tope de `Read`.
 
-Contrapartida asumida: cada subagente paga la lectura de sus dos ficheros. El prompt de lanzamiento es idéntico entre tareas; lo que varía llega por hook. Es el precio de mantener el fichero del agente limpio y sin generación.
+Contrapartida asumida: cada subagente paga la lectura de sus ficheros de contexto (dos para `implement-task`, tres para `review-task`). El prompt de lanzamiento es idéntico entre tareas; lo que varía llega por hook. Es el precio de mantener el fichero del agente limpio y sin generación.
 
 Consecuencias para el orquestador:
 
@@ -65,21 +67,34 @@ Consecuencias para el orquestador:
 ## Flujo del orquestador
 1. Seleccionar la primera tarea pendiente de `tasks.md` que no esté en `implementation.completed_task_ids` y que entre en el alcance solicitado por el usuario. Si no queda ninguna tarea pendiente en alcance, saltar al paso 8.
 2. Actualizar `status.yaml` para el arranque de la pasada.
-3. Marcar en `status.yaml` la tarea seleccionada como en curso.
-4. Lanzar un subagente para esa tarea con la herramienta `Agent` (ver "Lanzamiento del subagente").
+3. Marcar en `status.yaml` la tarea seleccionada como en curso: `in_progress_task_id: <ID>` y `review_revisions: 0`.
+4. Lanzar un subagente para esa tarea con la herramienta `Agent` (ver "Lanzamiento de implement-task"), guardando el identificador que devuelve la llamada.
 5. Recibir el texto final del subagente y parsearlo como JSON. Tolerar `\`\`\`json` y `\`\`\`` envolventes si el subagente los añade. Si el JSON no se puede parsear o falta algún campo obligatorio, tratarlo como `status: "failed"` con `blocker_reason` describiendo el problema de protocolo y continuar por la rama de fallo del paso 6.
 6. Según el `status` devuelto:
-   - `completed`: actualizar `status.yaml` con la tarea cerrada y, después de actualizarlo, hacer **un único commit con todo lo de esta tarea** — código, tests y la propia actualización de `status.yaml` — usando el `commit_message` que trae el JSON del subagente:
-     ```
-     git add -A
-     git commit -m "<commit_message del subagente>"
-     ```
-     El subagente nunca ejecuta git por su cuenta; el commit lo hace siempre el orquestador, aquí, después de recibir `status: "completed"` y actualizar `status.yaml`. `git add -A` es seguro en este punto porque no queda nada suelto de fases anteriores (el commit de planificación ya recogió `spec.md`/`design.md`/`tasks.md`/el `status.yaml` inicial antes de la primera tarea). Pasar a la siguiente tarea.
+   - `completed`: aplicar el "Ciclo de revisión de la tarea". Si termina en aprobación, pasar a la siguiente tarea. Si termina en bloqueo, saltar al paso 8.
    - `blocked` o `failed`: detener la pasada, registrar el bloqueo en `status.yaml` y saltar al paso 8. No commitear en este caso: los cambios (incluido el `status.yaml` con el bloqueo) quedan sin commitear para que el usuario decida cómo seguir.
 7. Repetir desde el paso 1.
 8. Emitir la respuesta final con dos checklists (tareas implementadas en la pasada y tareas pendientes de la feature) y las notas documentales agregadas que devolvieron los subagentes.
 
-## Lanzamiento del subagente
+## Ciclo de revisión de la tarea
+Se aplica cada vez que el implementador —el lanzamiento inicial o una reanudación tras correcciones— devuelve `status: "completed"`, antes de comitear nada.
+
+1. Volcar el JSON del implementador, tal cual, a `.task-report.json` en la raíz del repo (gitignored).
+2. Lanzar `review-task` con la herramienta `Agent` (ver "Lanzamiento de review-task").
+3. Recibir su veredicto y actuar:
+   - **`aprobado`**: actualizar `status.yaml` —mover el ID a `completed_task_ids`, limpiar `in_progress_task_id`— y hacer **un único commit con todo lo de esta tarea**, código, tests y la propia actualización de `status.yaml`, usando el `commit_message` del JSON del implementador:
+     ```
+     git add -A
+     git commit -m "<commit_message del subagente>"
+     ```
+     `git add -A` es seguro aquí porque no queda nada suelto de fases anteriores (el commit de planificación ya recogió `spec.md`/`design.md`/`tasks.md`/`status.yaml` inicial antes de la primera tarea). El ciclo termina en aprobación.
+   - **`requiere correcciones`**: el hook de cierre de `review-task` ya ha incrementado `implementation.review_revisions`. Leer su valor actual:
+     - **por debajo de 2**: retomar el mismo subagente implementador con `SendMessage` (el identificador guardado en el paso 4 del flujo), pasándole los hallazgos de `review-task` tal cual. Su nueva respuesta vuelve al paso 5 del flujo del orquestador.
+     - **ya en 2**: tratar como bloqueo — registrar en `blocked_by` los hallazgos sin resolver. No commitear. El ciclo termina en bloqueo.
+
+El implementador nunca ejecuta `git` por su cuenta ni habla directamente con `review-task`: el commit y la reanudación los hace siempre el orquestador, aquí.
+
+## Lanzamiento de implement-task
 - Usar la herramienta `Agent` con `subagent_type: implement-task`.
 - El prompt del subagente es siempre el mismo. El bloque de tarea, los standards, las docs estables y el contrato de implementación ya le llegan por hook y por system prompt; no pegues nada de eso.
   ```
@@ -95,11 +110,21 @@ Consecuencias para el orquestador:
   - `blocker_reason`
   - `commit_message` (usado para el commit de la tarea cuando `status` es `completed`)
 
+## Lanzamiento de review-task
+- Usar la herramienta `Agent` con `subagent_type: review-task`, después de volcar el JSON del implementador a `.task-report.json` (paso 1 del "Ciclo de revisión de la tarea").
+- El prompt es siempre el mismo. El bloque de la tarea, el diff sin commitear y el informe del implementador le llegan por hook; no pegues nada de eso.
+  ```
+  Revisa la tarea en curso de la feature activa aplicando tu contrato de revisión.
+  ```
+- Esperar como única salida su veredicto (`aprobado` | `requiere correcciones`) y los hallazgos numerados, en la forma documentada en `ai-workflow/agents/review-task.md`.
+
 ## Reglas de trabajo (orquestador)
 - Mantener el orden definido por `tasks.md`. No reordenar ni fusionar tareas.
 - Lanzar un único subagente por tarea. No agrupar tareas en un mismo subagente aunque compartan ficheros.
 - No avanzar a la siguiente tarea si la anterior devolvió `blocked` o `failed`.
 - `tasks.md` es solo lectura durante la implementación; el orquestador no lo modifica. El estado de la pasada vive únicamente en `status.yaml`, y solo el orquestador lo escribe.
+- No comitear una tarea sin que `review-task` la haya aprobado.
+- Corregir lo que señale `review-task` lo hace siempre el mismo subagente implementador, retomado con `SendMessage`; nunca el orquestador ni un implementador nuevo.
 - Tratar `tasks.md` como contrato de ejecución, no como guía orientativa.
 - Si una tarea revela una discrepancia válida con la spec, señalarla en la respuesta final y dejar la actualización documental marcada para la skill posterior, sin desviarse en silencio.
 - La respuesta final debe incluir siempre:
@@ -113,10 +138,11 @@ Consecuencias para el orquestador:
 - el gate de implementación falla por artefacto, estado bloqueante o línea base del repo en rojo
 - un subagente devuelve `status: "blocked"` o `status: "failed"`
 - un subagente cierra tras agotar los reintentos de la validación automática (lint o tipos en rojo)
+- `review-task` sigue devolviendo `requiere correcciones` tras dos revisiones sobre la misma tarea
 - el hook de cierre agota sus reintentos con la validación final en rojo
 
 ## Terminado cuando
-- cada tarea ejecutada en la pasada está implementada y sus tests propios pasan
+- cada tarea ejecutada en la pasada está implementada, aprobada por `review-task` y sus tests propios pasan
 - una vez implementadas todas las tareas de la pasada, la validación final mantiene el umbral de cobertura exigido por el proyecto
 - ninguna tarea posterior se empezó antes de cerrar correctamente la anterior
 - `status.yaml` refleja qué tareas se cerraron, cuál quedó en curso si la pasada se detuvo, y si `validation.tests_green` y `validation.coverage_gate_passed` quedaron en `true`

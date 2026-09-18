@@ -8,3 +8,6 @@ coverage
 next.md
 **/.subagent-context.md
 **/.subagent-task.md
+**/.task-report.json
+**/.review-task-block.md
+**/.review-diff.patch
