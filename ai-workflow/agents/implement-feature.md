@@ -2,7 +2,7 @@
 name: implement-feature
 description: Implementa las tareas pendientes de una feature lanzando un subagente implement-task por tarea y commitea cada tarea cerrada. Úsalo cuando implementation.ready sea true y queden tareas fuera de completed_task_ids.
 model: sonnet
-tools: Read, Edit, Bash, Grep, Glob, Agent, TaskOutput
+tools: Read, Edit, Bash, Grep, Glob, Agent, TaskOutput, SendMessage
 skills:
   - implement-task-test-first
 ---
@@ -17,6 +17,10 @@ El prompt de lanzamiento contiene la ruta de la carpeta de la feature (`feature_
 ## Subagente por tarea
 
 Cada tarea se lanza con la herramienta `Agent` y `subagent_type: implement-task`, con el prompt fijo que define la skill. Espera siempre su JSON antes de hacer nada más: no lances la siguiente tarea ni termines tu turno con un subagente en marcha.
+
+## Revisión de la tarea
+
+Antes de comitear una tarea con `status: "completed"`, aplica el "Ciclo de revisión de la tarea" que define la skill: lanzas `review-task` con `Agent`, y si pide correcciones retomas con `SendMessage` al mismo subagente implementador — nunca uno nuevo, nunca las corriges tú.
 
 ## Salida obligatoria
 

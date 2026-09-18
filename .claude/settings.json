@@ -50,6 +50,15 @@
             "command": "node $CLAUDE_PROJECT_DIR/ai-workflow/skills/review-implementation-plan/hooks/check-tasks-context.js"
           }
         ]
+      },
+      {
+        "matcher": "review-task",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/ai-workflow/skills/implement-task-test-first/hooks/review-task-context.js"
+          }
+        ]
       }
     ],
     "SubagentStop": [
@@ -80,6 +89,15 @@
             "type": "command",
             "command": "node $CLAUDE_PROJECT_DIR/ai-workflow/skills/implement-task-test-first/hooks/validate-coverage.js",
             "timeout": 600
+          }
+        ]
+      },
+      {
+        "matcher": "review-task",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/ai-workflow/skills/implement-task-test-first/hooks/count-review.js"
           }
         ]
       }

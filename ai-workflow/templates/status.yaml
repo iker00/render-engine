@@ -11,6 +11,7 @@ implementation:
   ready: false
   completed_task_ids: []
   in_progress_task_id: null
+  review_revisions: 0
 validation:
   tests_green: false
   coverage_gate_passed: false
