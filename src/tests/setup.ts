@@ -13,3 +13,8 @@ if (typeof globalThis.ResizeObserver === 'undefined') {
     disconnect() {}
   } as unknown as typeof ResizeObserver
 }
+
+// jsdom define `scrollTo` pero solo para volcar "Not implemented: Window's scrollTo()" por
+// consola; cualquier componente que lo llame al montar dispara ese aviso en cada test, sin que
+// indique un fallo real.
+window.scrollTo = () => {}
