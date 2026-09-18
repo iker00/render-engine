@@ -83,16 +83,6 @@
         ]
       },
       {
-        "matcher": "implement-feature",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node $CLAUDE_PROJECT_DIR/ai-workflow/skills/implement-task-test-first/hooks/validate-coverage.js",
-            "timeout": 600
-          }
-        ]
-      },
-      {
         "matcher": "review-task",
         "hooks": [
           {

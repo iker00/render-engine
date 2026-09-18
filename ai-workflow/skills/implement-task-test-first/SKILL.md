@@ -53,6 +53,8 @@ El orquestador **no** prepara contexto ni ejecuta validaciones por tarea, ni tam
 - **`SubagentStart` → `hooks/review-task-context.js`**: entrega a `review-task` las rutas del bloque de la tarea, el `git diff` sin commitear y el informe del implementador (`.task-report.json`), todo gitignored igual que el contexto de `implement-task`.
 - **`SubagentStop` → `hooks/count-review.js`**: incrementa `implementation.review_revisions` cada vez que `review-task` termina, sin mirar su veredicto. Es el contador que usa el orquestador para decidir si retoma al implementador o trata la tarea como bloqueada — ver "Ciclo de revisión de la tarea".
 
+La validación final de la pasada (la suite completa con cobertura) **no** es automática: la ejecuta el propio orquestador al cerrar, en primer plano — ver "Cierre de la pasada". No hay hook de por medio porque el volumen de salida ya no lo justifica (ver esa sección).
+
 Por qué la ruta y no el texto: Claude Code trunca la salida de un hook a partir de ~10KB y descarga el resto a disco, así que el contenido inyectado directamente llegaría como preview. La ruta ocupa ~460 bytes y el fichero (~60KB, ~870 líneas) entra entero en una sola lectura, por debajo del tope de `Read`.
 
 Contrapartida asumida: cada subagente paga la lectura de sus ficheros de contexto (dos para `implement-task`, tres para `review-task`). El prompt de lanzamiento es idéntico entre tareas; lo que varía llega por hook. Es el precio de mantener el fichero del agente limpio y sin generación.
@@ -60,7 +62,6 @@ Contrapartida asumida: cada subagente paga la lectura de sus ficheros de context
 Consecuencias para el orquestador:
 
 - Un subagente que devuelve `status: "completed"` implica lint y tipos en verde, salvo que agotara los reintentos.
-- El hook de cierre de este propio agente orquestador (`hooks/validate-coverage.js`) actualiza `validation.tests_green` y `validation.coverage_gate_passed` en `status.yaml` al terminar la pasada.
 - Cada tarea paga ~25s de validación. Es el coste de no arrastrar tareas rotas a la siguiente.
 - Si cambias los standards o las docs estables, el hook los recoge en el siguiente subagente sin que haya que regenerar nada. Cambiar el contrato del agente sí exige reabrir sesión.
 
@@ -74,7 +75,19 @@ Consecuencias para el orquestador:
    - `completed`: aplicar el "Ciclo de revisión de la tarea". Si termina en aprobación, pasar a la siguiente tarea. Si termina en bloqueo, saltar al paso 8.
    - `blocked` o `failed`: detener la pasada, registrar el bloqueo en `status.yaml` y saltar al paso 8. No commitear en este caso: los cambios (incluido el `status.yaml` con el bloqueo) quedan sin commitear para que el usuario decida cómo seguir.
 7. Repetir desde el paso 1.
-8. Emitir la respuesta final con dos checklists (tareas implementadas en la pasada y tareas pendientes de la feature) y las notas documentales agregadas que devolvieron los subagentes.
+8. Si `implementation.completed_task_ids` no está vacío, aplicar "Cierre de la pasada" antes de responder.
+9. Emitir la respuesta final con dos checklists (tareas implementadas en la pasada y tareas pendientes de la feature) y las notas documentales agregadas que devolvieron los subagentes.
+
+## Cierre de la pasada
+
+Antes de responder, si se implementó al menos una tarea en esta pasada, ejecutar el comando `test` del proyecto (el script `test` de `package.json`) directamente con `Bash` y esperar a que termine — es la única vez que corre en toda la pasada, así que el volumen de su salida es asumible en este punto.
+
+Leer la salida completa antes de decidir nada:
+
+- Exit code `0`: `validation.tests_green: true` y `coverage_gate_passed: true`.
+- Exit code distinto de `0`: decidir cada flag a partir de lo que dice la propia salida (tests en rojo, umbral de cobertura no alcanzado, o ambos). Si la salida no deja claro cuál de las dos causas es, no asumir éxito en ninguna: las dos a `false`.
+
+Escribir el resultado en `status.yaml` y continuar al paso de la respuesta final. No relanzar el comando ni investigar más allá de esta lectura: el resultado de esta única ejecución es el que se reporta, en verde o en rojo.
 
 ## Ciclo de revisión de la tarea
 Se aplica cada vez que el implementador —el lanzamiento inicial o una reanudación tras correcciones— devuelve `status: "completed"`, antes de comitear nada.
@@ -139,7 +152,7 @@ El implementador nunca ejecuta `git` por su cuenta ni habla directamente con `re
 - un subagente devuelve `status: "blocked"` o `status: "failed"`
 - un subagente cierra tras agotar los reintentos de la validación automática (lint o tipos en rojo)
 - `review-task` sigue devolviendo `requiere correcciones` tras dos revisiones sobre la misma tarea
-- el hook de cierre agota sus reintentos con la validación final en rojo
+- la validación final del "Cierre de la pasada" queda en rojo (`validation.tests_green` o `coverage_gate_passed` en `false`); reportarlo tal cual, no relanzarla
 
 ## Terminado cuando
 - cada tarea ejecutada en la pasada está implementada, aprobada por `review-task` y sus tests propios pasan

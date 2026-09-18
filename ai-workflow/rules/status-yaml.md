@@ -66,7 +66,7 @@ El riesgo influye en si hace falta `design.md`, en la profundidad del plan y en 
 ## Quién lo escribe
 
 - Es OBLIGATORIO desde que se cierra la primera versión de `spec.md`. Si no existe, crearlo desde `ai-workflow/templates/status.yaml`.
-- Lo escribe SOLO la skill de la fase activa. Durante la implementación, lo escribe ÚNICAMENTE el orquestador, con dos excepciones: `validation.tests_green` y `validation.coverage_gate_passed`, que escribe el hook determinista de cierre de `implement-feature` tras ejecutar la suite completa, y `review_revisions`, que incrementa el hook de cierre de `review-task` cada vez que termina una revisión. Ni el subagente de tarea ni `review-task` tocan `status.yaml` de ninguna otra forma.
+- Lo escribe SOLO la skill de la fase activa. Durante la implementación, lo escribe ÚNICAMENTE el orquestador —incluidos `validation.tests_green` y `validation.coverage_gate_passed`, que fija él mismo al cerrar la pasada tras ejecutar la suite completa en primer plano—, con una única excepción: `review_revisions`, que incrementa el hook de cierre de `review-task` cada vez que termina una revisión. Ni el subagente de tarea ni `review-task` tocan `status.yaml` de ninguna otra forma.
 - NUNCA marcar `implementation.ready: true` si falta algún artefacto requerido, hay bloqueos en `blocked_by` o alguna tarea de `tasks.md` no tiene su sub-bloque `tests`.
 
 Justificación: si dos agentes escriben el mismo estado, ninguno puede fiarse de él.
@@ -103,7 +103,7 @@ El cierre definitivo puede ocurrir dentro de la pasada documental. NO hace falta
 3. Tarea `completed` del implementador: antes de comitear, lanzar `review-task`. `aprobado` → seguir en 4. `requiere correcciones` con `review_revisions` por debajo de 2 tras el incremento del hook de cierre de `review-task` → retomar el mismo subagente implementador con los hallazgos y volver a lanzar `review-task`. `requiere correcciones` con `review_revisions` ya en 2 → tratar como bloqueo, ir a 5.
 4. Tarea aprobada por `review-task`: mover el ID a `completed_task_ids`, limpiar `in_progress_task_id` y commitear con la tarea.
 5. Tarea `blocked` o `failed` del implementador, o revisión agotada sin aprobar: dejar el ID en `in_progress_task_id`, registrar el motivo en `blocked_by`, NO commitear y detener la pasada.
-6. Al cerrar la pasada, el hook de cierre de `implement-feature` ejecuta la validación completa y fija `validation.*` con el resultado real; el orquestador no la ejecuta ni la escribe.
+6. Al cerrar la pasada, el propio orquestador ejecuta la validación completa en primer plano y fija `validation.*` con el resultado real.
 
 NUNCA reutilizar `validation.tests_green: true` o `coverage_gate_passed: true` de una pasada anterior. Un `true` heredado tras nuevos cambios es un estado falso.
 
